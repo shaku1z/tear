@@ -4,13 +4,28 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 
 withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, errors }) => {
-  const url = new URL(page.url());
-  url.searchParams.set("stateforge", "1");
-  await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
-  await page.waitForTimeout(100);
+  async function openSurface(query) {
+    const url = new URL(page.url());
+    url.searchParams.delete("scenario-console");
+    url.searchParams.delete("stateforge");
+    url.searchParams.set(query, "1");
+    await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+    await page.waitForTimeout(100);
+  }
+
+  await openSurface("scenario-console");
+  assert.equal(await page.locator('[data-surface="scenario-console"]').count(), 1,
+    `Scenario Console canonical route did not install: ${errors.join("\n")}`);
+  assert.equal(await page.locator('[data-scenario-console-control="editor"]').count(), 1);
+  assert.equal(await page.locator("#tear-state-forge-studio").count(), 1,
+    "canonical route must preserve the C23 root selector");
+
+  await openSurface("stateforge");
   assert.equal(await page.locator("#tear-state-forge-studio").count(), 1,
     `State Forge Studio did not install: ${errors.join("\n")}`);
+  assert.equal(await page.locator('[data-surface="scenario-console"]').count(), 1,
+    "legacy route must expose the canonical Scenario Console selector");
 
   const editor = page.locator("#tear-state-forge-editor");
   const originalSource = await editor.inputValue();

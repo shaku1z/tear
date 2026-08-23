@@ -645,9 +645,12 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
       Console; keep legacy DOM IDs and query links readable for C23 evidence.
 - [x] Prove facade semantic equivalence and unchanged TearSDL fixture/hash
       behavior with focused compatibility tests.
-- [ ] Complete the remaining Scenario Console migration: canonical DOM/route
-      aliases for all old deep links and explicit dual-read coverage for every
-      timeline, replay/capsule, and evidence boundary before retiring aliases.
+- [x] Complete the Scenario Console compatibility slice: canonical DOM/route
+      aliases for the old deep links and explicit dual-read/semantic-equivalence
+      coverage for TearSDL, checkpoint/timeline, replay/capsule, and evidence
+      boundaries, while retaining all legacy selectors and identifiers.
+- [ ] Retire State Forge UI/route aliases only after the registry removal
+      condition `G4-C-SCENARIO-CONSOLE` is signed; this remains unproven.
 
 ### Checkpoint G4-A — midpoint pause
 

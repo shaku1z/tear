@@ -6,6 +6,7 @@ import * as canonicalBrowser from "../../src/tearbench/browser/scenario-console"
 import {
   LEGACY_SCENARIO_CONSOLE_QUERY,
   SCENARIO_CONSOLE_QUERY,
+  SCENARIO_CONSOLE_QUERY_ALIASES,
   isScenarioConsoleRequested,
   normalizeScenarioConsoleSearch,
 } from "../../src/tearbench/browser/scenario-console-route";
@@ -36,6 +37,7 @@ describe("Scenario Console surface compatibility", () => {
   it("accepts canonical and legacy deep links and writes one canonical query", () => {
     expect(SCENARIO_CONSOLE_QUERY).toBe("scenario-console");
     expect(LEGACY_SCENARIO_CONSOLE_QUERY).toBe("stateforge");
+    expect(SCENARIO_CONSOLE_QUERY_ALIASES).toEqual(["scenario-console", "stateforge"]);
     expect(isScenarioConsoleRequested("?scenario-console=1")).toBe(true);
     expect(isScenarioConsoleRequested("?stateforge=1")).toBe(true);
     expect(isScenarioConsoleRequested("?stateforge")).toBe(true);

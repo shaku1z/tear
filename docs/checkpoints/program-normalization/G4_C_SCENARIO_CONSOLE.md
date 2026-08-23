@@ -1,10 +1,10 @@
 # G4-C Scenario Console
 
-Status: first facade slice complete; compatibility aliases remain intentionally
-active for the wider Scenario Console migration.
+Status: compatibility slice complete; legacy compatibility aliases remain
+intentionally active because the removal condition is not yet proven.
 
-Baseline: protected game `main` at `224e02f216bf7d6a529ae4f49068888ee2047e6d`.
-Branch: `codex/g4-scenario-console-facade`.
+Baseline: protected game `main` at `9240cda07e58944258655583064529014b123f93`.
+Branch: `codex/g4-scenario-console-compat`.
 
 ## Scope
 
@@ -23,34 +23,32 @@ The implementation deliberately preserves:
 - Cloudflare configuration and deployment state (production remains frozen).
 
 The active panel heading and accessibility labels now say Scenario Console.
-Legacy DOM IDs remain readable as compatibility selectors; broad DOM/file
-renames are deferred until the remaining timeline, replay/capsule, evidence,
-and deep-link matrix is proven.
+Canonical `data-*` DOM selectors and route aliases now sit beside the preserved
+C23 IDs and `stateforge` deep links. Broad DOM/file renames remain deferred
+until the full timeline, replay/capsule, evidence, and deep-link matrix is
+proven.
 
 ## Focused evidence
 
-Passed on the feature branch:
+Passed on the compatibility branch:
 
-- `pnpm exec vitest run tests/unit/scenario-console-surface-compat.test.ts tests/unit/tearbench-state-forge-studio.test.ts tests/unit/tearbench-tearsdl.test.ts` — 3 files, 15 tests passed;
+- `pnpm exec vitest run tests/unit/scenario-console-surface-compat.test.ts tests/unit/scenario-console-compatibility-boundaries.test.ts tests/unit/tearbench-tearsdl.test.ts tests/unit/tearbench-state-forge-timeline.test.ts tests/unit/ghost-capsule-replay-envelope.test.ts tests/unit/tearbench-release-certification.test.ts` — 6 files, 23 tests passed;
 - `pnpm typecheck`;
 - `node scripts/check-terminology.mjs`;
 - `node scripts/check-active-roster.mjs`;
 - `pnpm check:architecture`;
-- `pnpm exec eslint src/tearbench/browser/scenario-console-route.ts src/tearbench/browser/scenario-console.ts src/tearbench/browser/state-forge-studio.ts src/tearbench/browser/live-state-forge-studio-host.ts src/tearbench/browser/live-runtime-bridge.ts src/tearbench/browser/index.ts tests/unit/scenario-console-surface-compat.test.ts`;
+- `pnpm exec eslint src/tearbench/browser/scenario-console-route.ts src/tearbench/browser/scenario-console-selectors.ts src/tearbench/browser/scenario-console.ts src/tearbench/browser/state-forge-studio.ts tests/unit/scenario-console-surface-compat.test.ts tests/unit/scenario-console-compatibility-boundaries.test.ts`;
 - `pnpm build:test:standalone`;
-- `pnpm test:browser:state-forge-studio` — C23 State Forge compatibility journey passed;
+- `pnpm test:browser:state-forge-studio` — C23 journey passed for canonical `scenario-console=1` and legacy `stateforge=1`, including the preserved C23 selectors;
 - `git diff --check`.
 
-Hosted Validate run `32611997331` / job `97126411713` passed, including the
-required `check:functional` aggregate and artifact upload. This slice does not
-claim a protected merge, post-merge validation, or deployment. Production
-remains frozen.
+The prior facade slice's hosted Validate run `32611997331` / job `97126411713`
+passed. This compatibility slice does not claim a protected merge, hosted
+validation, or deployment yet. Production remains frozen.
 
 ## Remaining checkpoint work
 
-- Add canonical DOM/route aliases for the remaining old deep links while
-  retaining C23 selectors.
-- Exercise old/new `.tearsdl`, state-timeline, replay/capsule, and evidence
-  readers with byte/hash-stable fixtures.
+- Retain and monitor the canonical DOM/route aliases while preserving C23
+  selectors and old deep links.
 - Retire State Forge public aliases only after the registry removal condition
-  `G4-C-SCENARIO-CONSOLE` is signed.
+  `G4-C-SCENARIO-CONSOLE` is signed; this slice does not claim that condition.
