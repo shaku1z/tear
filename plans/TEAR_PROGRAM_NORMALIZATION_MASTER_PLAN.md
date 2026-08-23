@@ -922,12 +922,22 @@ This is a target classification, not permission for a bulk move.
       parents, either deferred dependency source, extra/missing/case-colliding
       sources, cross-partition evidence, and report/manifest provenance
       mismatches. One retention floor runs through
-      `2027-03-31T23:59:59.000Z`; the allowlist is capability-only and does
-      not claim a real second-wave report, manifest, move, or G5 close. The
+      `2027-03-31T23:59:59.000Z`. The five ordinary operations are now real
+      and complete for 43 roots at the exact post-merge main `5f83b1c`; their
+      report, manifest, journal, and receipt hashes are recorded in the G5
+      preservation checkpoint. The two-root opaque-reparse dependency group
+      remains deferred and is not included in that completion claim. The
       compatibility boundary is explicit-partition-v1-only: pre-partition
       second-wave evidence is intentionally invalidated and rejected; the
       failed all-at-once attempt hit the 2 GiB cap and produced no report, so
       no successful prior artifact exists.
+- [x] Execute the five ordinary second-wave operations for the 43 non-deferred
+      roots. Reports, manifests, complete journal receipts, event-log hashes,
+      exact head `5f83b1c`, observed-byte totals, and the
+      `2027-03-31T23:59:59.000Z` retention floor are recorded in
+      `docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md`.
+      The `Tear-budget-architecture` junction and its
+      `Tear-tearscore-normalization` target remain untouched and deferred.
 - [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
       retention date, and recovery procedure receive a separate review; no
       quarantine or deletion is authorized by the report slice.
@@ -952,9 +962,22 @@ This is a target classification, not permission for a bulk move.
       SHA-256 `73d08dc4421dcf961c09d0a4e4cbb9d541eb9d64f433bc7e2db3648326458ff4`,
       retention through `2026-11-23T23:59:59Z`, and manual reverse-move
       prerequisites. No deletion occurred.
-- [ ] Inspect non-Git `Tear-main-publication` and `Tear-receipt-clean` copies for
-      unique files; dispose of them recoverably only after evidence says none
-      are needed.
+- [x] Compare non-Git `Tear-main-publication` and `Tear-receipt-clean` copies
+      against the canonical reachable tree and the preservation corpus by
+      SHA-256/path using the strict v2 read-only comparator. The immutable v1
+      report remains `g5-preserved-copy-comparison-5f83b1c.json` (SHA-256
+      `a363d43a10d6ecaea48963209c27faec781a6a4f82dce522731edf30c27dda7b`),
+      and the new v2 report is
+      `g5-preserved-copy-comparison-5f83b1c-v2.json` (SHA-256
+      `ffc0de545717b9b14345f55f95e3f6117e0ab2960b35957cd2443bdb5c5f567a`).
+      V2 records 5 unmatched hashable contents in `Tear-main-publication` and
+      1 in `Tear-receipt-clean`, including path conflicts with no equal SHA
+      elsewhere. The comparator verifies exact manifest hashes, source
+      identity/restore mappings, canonical origin and expected head, safe
+      realpaths, and manifest coverage of ordinary target files. Its output is
+      read-only evidence and authorizes no disposal; protected entries, all
+      unmatched/path-conflict entries, the other receipt copies, and retention
+      ownership remain explicitly unresolved.
 - [ ] Treat `C:/tmp/Tear-main-publication` as forbidden for development and
       deployment. It is an unregistered, divergent copy and is the likely
       residue behind the earlier `main is already used by worktree` conflict.
@@ -966,8 +989,12 @@ This is a target classification, not permission for a bulk move.
 - [ ] Adopt one parent layout for canonical repositories, active worktrees,
       scratch output, and archives. Do not hardcode the user's absolute path in
       repository logic.
-- [ ] Update Soundtrack Desk configuration to discover/validate the canonical
-      game repository rather than pointing at disposable publication copies.
+- [x] Record that Soundtrack Desk configuration already points at and requires
+      the canonical game repository (`C:/Users/realm/Desktop/game/Tear`, branch
+      `main`, clean tree) in both the canonical and compatibility local config
+      files. A live preflight remains pending until this review slice is
+      integrated into canonical game `main`; it correctly blocks the current
+      feature/dirty checkout.
 
 ### Checkpoint G5-A — midpoint pause
 
