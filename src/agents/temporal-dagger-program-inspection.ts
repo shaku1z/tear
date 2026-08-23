@@ -27,7 +27,7 @@ export class TearTemporalDaggerProgramInspectionController {
 
   constructor(backend: GhostVaultBackend | undefined) {
     this.#backend = backend;
-    if (backend === undefined) this.#state = Object.freeze({ status: "unavailable", reason: "Academy storage is unavailable in this runtime" });
+    if (backend === undefined) this.#state = Object.freeze({ status: "unavailable", reason: "Training Archive storage is unavailable in this runtime" });
   }
 
   snapshot(): TearTemporalDaggerProgramInspectionState { return this.#state; }

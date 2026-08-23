@@ -7,6 +7,7 @@ export * from "./pixel-observation";
 export * from "./pixel-visual-comparison";
 export * from "./black-box-policy";
 export * from "./academy";
+export * from "./training-archive";
 export * from "./academy-candidate-admission";
 export * from "./academy-candidate-tracks";
 export * from "./academy-candidate-source-attestation";

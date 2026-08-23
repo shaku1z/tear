@@ -25,7 +25,7 @@ export interface ScreenActionBindingPorts {
   readonly refreshFoundry: () => void;
   readonly bootstrapFoundry: (profileId: string) => void;
   readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
-  readonly openGhostLab: (destination: "academy" | "foundry" | "vault" | "watch" | "botevidence") => void;
+  readonly openGhostLab: (destination: "academy" | "training-archive" | "foundry" | "vault" | "watch" | "botevidence") => void;
   readonly openGhostPublication: (id: string) => void; readonly grantGhostPublication: () => void; readonly runGhostPublicationOnce: () => void; readonly cancelGhostPublication: () => void;
   readonly openGhostSupport: (id: string) => void; readonly createGhostSupport: () => void;
   readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
@@ -59,6 +59,13 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "settings.step": (action) => { ports.settings.stepSetting(action.key, action.delta); },
     "settings.toggle": (action) => { ports.settings.toggleSetting(action.key); },
     "settings.activate": (action) => { ports.settings.activateSetting(action.key); }, "settings.reset": () => { ports.resetSettings(); },
+    "training-archive.open": () => { ports.setScreen("academy"); ports.refreshAcademy(); ports.resetScroll(); },
+    "training-archive.retry": () => { ports.refreshAcademy(); },
+    "training-archive.dagger.advance": (action) => { ports.advanceAcademyDagger(action.id); },
+    "training-archive.dagger.review": (action) => { ports.reviewAcademyDagger(action.id, action.correctionHash, action.disposition); },
+    "training-archive.record.withdrawModelTraining": (action) => { ports.withdrawAcademyModelTraining(action.candidateHash); },
+    "training-archive.humanCalibration.optIn": (action) => { ports.optInHumanCalibration(action.consent); },
+    "training-archive.humanCalibration.revoke": () => { ports.revokeHumanCalibration(); },
     "academy.retry": () => { ports.refreshAcademy(); },
     "academy.dagger.advance": (action) => { ports.advanceAcademyDagger(action.id); },
     "academy.dagger.review": (action) => { ports.reviewAcademyDagger(action.id, action.correctionHash, action.disposition); },

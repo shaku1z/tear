@@ -67,6 +67,13 @@ export type ScreenAction =
   | { readonly type: "settings.toggle"; readonly key: string }
   | { readonly type: "settings.activate"; readonly key: string }
   | { readonly type: "settings.reset" }
+  | { readonly type: "training-archive.open" }
+  | { readonly type: "training-archive.retry" }
+  | { readonly type: "training-archive.dagger.advance"; readonly id: string }
+  | { readonly type: "training-archive.dagger.review"; readonly id: string; readonly correctionHash: string; readonly disposition: "accepted" | "rejected" }
+  | { readonly type: "training-archive.record.withdrawModelTraining"; readonly candidateHash: string }
+  | { readonly type: "training-archive.humanCalibration.optIn"; readonly consent: "anonymous-improvement" | "public-training" }
+  | { readonly type: "training-archive.humanCalibration.revoke" }
   | { readonly type: "academy.retry" }
   | { readonly type: "academy.dagger.advance"; readonly id: string }
   | { readonly type: "academy.dagger.review"; readonly id: string; readonly correctionHash: string; readonly disposition: "accepted" | "rejected" }
@@ -80,10 +87,10 @@ export type ScreenAction =
   | { readonly type: "game-agent.open" }
   | { readonly type: "run-monitor.open" }
   | { readonly type: "run-monitor.control"; readonly command: "start" | "pause" | "resume" | "stop" }
-  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }

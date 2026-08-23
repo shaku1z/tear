@@ -291,7 +291,7 @@ describe("legacy screen renderer registry", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
     renderer.academy({ id: "academy", status: "unavailable", subtitle: "Academy storage is unavailable", rows: [], records: [], manifests: [] });
-    expect(controls.find((control) => control.action.type === "academy.retry"))
+    expect(controls.find((control) => control.action.type === "training-archive.retry"))
       .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
   });
 
@@ -322,11 +322,11 @@ describe("legacy screen renderer registry", () => {
         { id: "DAGGER BETA", programId: "dagger-beta", state: "COMPLETED", detail: "fit retained; not activated or promoted", canAdvance: true },
       ],
     }); }).not.toThrow();
-    expect(controls.find((control) => control.action.type === "academy.dagger.advance"))
+    expect(controls.find((control) => control.action.type === "training-archive.dagger.advance"))
       .toMatchObject({ label: "ADVANCE PLAN", action: { id: "dagger-beta" } });
-    expect(controls.find((control) => control.action.type === "academy.dagger.review"))
+    expect(controls.find((control) => control.action.type === "training-archive.dagger.review"))
       .toMatchObject({ label: "ACCEPT", action: { id: "dagger-alpha", disposition: "accepted" } });
-    expect(controls.find((control) => control.action.type === "academy.record.withdrawModelTraining"))
+    expect(controls.find((control) => control.action.type === "training-archive.record.withdrawModelTraining"))
       .toMatchObject({ label: "WITHDRAW TRAINING CONSENT", action: { candidateHash: "a".repeat(16) } });
   });
 
@@ -335,9 +335,9 @@ describe("legacy screen renderer registry", () => {
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
     renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
       humanCalibrationConsent: { state: "not-enrolled", detail: "no recorded consent", canOptIn: true, canRevoke: false } });
-    expect(controls.find((control) => control.action.type === "academy.humanCalibration.optIn"))
+    expect(controls.find((control) => control.action.type === "training-archive.humanCalibration.optIn"))
       .toMatchObject({ label: "ALLOW ANONYMOUS CALIBRATION", action: { consent: "anonymous-improvement" } });
-    expect(controls.some((control) => control.action.type === "academy.humanCalibration.revoke")).toBe(false);
+    expect(controls.some((control) => control.action.type === "training-archive.humanCalibration.revoke")).toBe(false);
   });
 
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {

@@ -3,7 +3,7 @@ import { createBrowserAcademyInspectionController, createBrowserAcademyCustodyAc
 import { createIndexedDbGhostVaultBackend } from "../ghost";
 import type { AcademyScreenView } from "../presentation/screens/contracts";
 
-/** Keeps Academy persistence composition outside the frame-sized live runtime. */
+/** Keeps Training Archive persistence composition outside the frame-sized live runtime. */
 export function createLiveAcademyScreen(factory: IDBFactory | undefined, currentSignedInActor: () => string | undefined = () => undefined): Readonly<{ snapshot: () => AcademyScreenView; refresh: () => void; advance: (id: string) => void; review: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void; withdrawModelTraining: (candidateHash: string) => void; setHumanCalibrationConsent: (consent: "anonymous-improvement" | "public-training" | "revoked") => void }> {
   let controller: TearAcademyInspectionController | undefined;
   let daggerPrograms: TearTemporalDaggerProgramInspectionController | undefined;
@@ -32,7 +32,7 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
   const review = (id: string, correctionHash: string, disposition: "accepted" | "rejected"): void => {
     const reviewer = currentSignedInActor();
     if (daggerRuntime !== undefined && reviewer !== undefined) void daggerRuntime.runtime.review(id, correctionHash, disposition, reviewer, new Date().toISOString(),
-      `Authorized signed-in Academy reviewer ${disposition} this immutable DAgger correction.`).then(() => { refresh(); }).catch(() => { refresh(); });
+      `Authorized signed-in Training Archive reviewer ${disposition} this immutable DAgger correction.`).then(() => { refresh(); }).catch(() => { refresh(); });
   };
   const withdrawModelTraining = (candidateHash: string): void => {
     const actor = currentSignedInActor();
@@ -59,11 +59,11 @@ export function createLiveAcademyScreen(factory: IDBFactory | undefined, current
       const programs = daggerPrograms?.snapshot() ?? { status: "loading" as const };
       if (inspection.status === "unavailable" || programs.status === "unavailable") return {
         id: "academy", status: "unavailable", subtitle: inspection.status === "unavailable" ? inspection.reason
-          : programs.status === "unavailable" ? programs.reason : "Academy storage could not be read",
+          : programs.status === "unavailable" ? programs.reason : "Training Archive storage could not be read",
         rows: [], records: [], manifests: [], daggerPrograms: [], humanCalibrationConsent: calibration,
       };
       if (inspection.status === "loading" || programs.status === "loading") return {
-        id: "academy", status: "loading", subtitle: "reading durable Academy custody", rows: [], records: [], manifests: [], daggerPrograms: [], humanCalibrationConsent: calibration,
+        id: "academy", status: "loading", subtitle: "reading durable Training Archive custody", rows: [], records: [], manifests: [], daggerPrograms: [], humanCalibrationConsent: calibration,
       };
       return {
         id: "academy", status: "ready", subtitle: "durable training custody", rows: [

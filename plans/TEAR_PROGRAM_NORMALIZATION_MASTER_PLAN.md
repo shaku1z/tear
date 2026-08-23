@@ -719,6 +719,33 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
       `G4-F-GAME-AGENT` and `G4-F-RUN-MONITOR` are signed; this remains
       unproven.
 
+### Training Archive compatibility slice — G4-G-TRAINING-ARCHIVE
+
+- [x] Establish canonical Training Archive module/API facades over the
+      existing Academy custody, consent, inspection, and corpus stores;
+      keep Academy implementation paths, durable keys, and record formats.
+- [x] Keep the headless intake compatibility facade TearBench-owned so the
+      production agents barrel cannot reach `src/tearbench` through the new
+      normal-build facade.
+- [x] Write canonical `training-archive` route/query/action vocabulary and
+      canonical menu/Ghost Lab links while continuing to read `academy` and
+      `agent-academy` routes, query flags, screen IDs, and Academy actions.
+- [x] Update active normal-build copy, navigation, and accessibility-facing
+      Training Archive labels without renaming the underlying Academy screen
+      contract or persistence namespaces.
+- [x] Prove canonical/legacy route normalization, action pairing, exact API
+      identity, unchanged `tear-behavior-cloning-dataset` bytes/root hashes,
+      and the preserved `tearbench-production-headless-academy-intake`
+      boundary with focused compatibility tests.
+- [x] Update the narrow Training Archive terminology allowlists and record
+      the G4-G checkpoint evidence without changing Training Operations or
+      Foundry implementation names.
+- [ ] Run final proportional hosted validation and open the protected-main
+      PR; protected merge, post-merge validation, and deployment remain
+      outside this slice until reviewed.
+- [ ] Retire Academy/Agent Academy aliases only after the registry condition
+      `G4-G-TRAINING-ARCHIVE` is signed; this remains unproven.
+
 ### Checkpoint G4-A — midpoint pause
 
 - [ ] Public surfaces use only permanent terms.
