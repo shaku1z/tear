@@ -1,9 +1,10 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** G3 acceptance-complete and closed by this record when merged to
-protected `main`; G4 remains locked until that protected merge and a fresh
-post-merge ref/Validate observation both pass. No G4 implementation or
-deployment is opened by G3.
+**Status:** G4 is acceptance-complete and approved for protected-main PR
+review. It becomes canonically CLOSED only when this closure record reaches
+protected `main` and its post-merge `Validate`/ref observation is green. G5
+remains LOCKED until then; production remains frozen and no deployment is
+authorized.
 
 **Prepared:** 2026-08-20
 
@@ -12,30 +13,28 @@ deployment is opened by G3.
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
 **Current canonical game `main`:** `shaku1z/tear` at
-`f6b694e83921da8c69f1ad86af6c14a500482c6a` (`f6b694e`), the protected
-post-G2 canonical tip.
+`0a4cda8b269c690bebb038aa3a422e1e74902c65` (`0a4cda8`), the protected
+post-G4-E canonical tip. Post-merge `Validate` run `32628402314` is green,
+and local `pnpm check:performance` passed on this exact head.
 
-**Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 cleanup and
-recovery evidence complete. G3 is canonical only when this record is present
-on protected `main` and its post-merge Validate/ref observation is green. G4
-opens only after that observation; G6 synchronization repair and G7
+**Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
+acceptance-complete/PR-approved with protected merge and post-merge
+observation pending; G5 LOCKED until then; G6 synchronization repair and G7
 production certification remain future work.
 
-**Music repository state:** `shaku1z/tear-score` protected `main` is clean at
-`1ba4ee4d7a73de32d93fc4212f941f32e779560b` (`1ba4ee4`) after music PR #3.
-Its preserved canonicalization tip is `4f7a872`; hosted checks
-`32592376530` and post-merge `32592533520` are green. The final clean
-`pnpm check` is recorded by log SHA
-`7A9CE1595EB5E5363B8FE3C518A1FBE9B11F676656F3790D0D7A006B2DE3B69C`.
+**Music repository state:** `shaku1z/tear-music` (formerly
+`shaku1z/tear-score`) protected `main` is clean at
+`7e443d9d75089b80bb641ba654eee46615b1abd6` (`7e443d9`). The full music
+`pnpm check` passed on PR #13 head `1577f5c`, including 140 CLI tests. Its
+post-merge `Validate` run `32629490375` is green (job `97169930931`, 1m57s).
 
 **Wiki repository state:** protected/default `main` is clean at
-`37b9a7d92c6566f1ff9b8424c5b12b609c0114e4` (`37b9a7d`). Migration PR #3
-squash-merged at `ec461168591c6b33396ddf3d57976e5709dc204c`; retirement PR #4
-squash-merged at `37b9a7d`. The obsolete `master` ref was retired only after
-the annotated baseline tag and supplemental all-ref restore proof. PR #3
-Validate/post-merge runs were `32602863708`/`32602897926`; PR #4
-Validate/post-merge runs were `32603336657`/`32603365794`. Sync remains
-disabled/fail-closed pending G6, and the `tear-wiki` Worker remains frozen.
+`33a7f86f8f12ce7c98d1805d169142c832afdcf1` (`33a7f86`). Post-merge
+`Validate` run `32626685362` is green. Sync remains disabled/fail-closed
+pending G6, and the `tear-wiki` Worker remains frozen.
+
+**Production state:** Frozen. This G4 slice claims no deployment, Cloudflare,
+DNS, Access, Tunnel, or published-artifact mutation.
 
 This document is the single sequencing authority for correcting the current
 TEAR repository, naming, workspace, documentation, wiki, and deployment state.
@@ -248,7 +247,7 @@ Only one goal may be **OPEN** at a time.
 | G1 | Establish release authority | LOCKED | G0 closed | Protected, green, attributable release path exists |
 | G2 | Reconcile unique work and canonical branches | LOCKED | G1 closed | All unique refs have a written disposition and canonical branches contain approved work |
 | G3 | Remove obsolete refs and normalize worktrees | LOCKED | G2 closed | Branch/worktree targets are met and recovery is proven |
-| G4 | Normalize permanent terminology | LOCKED | G3 closed | Public/internal names and migrations pass their gates |
+| G4 | Normalize permanent terminology | ACCEPTANCE-COMPLETE / PR APPROVED | G3 closed | Public/internal names and migrations pass their gates; protected merge/post-merge observation closes the goal |
 | G5 | Organize repositories, documents, and workspace | LOCKED | G4 closed | Information architecture and local workspace policy are enforced |
 | G6 | Replace the wiki synchronization contract | LOCKED | G5 closed | Wiki proves exact current game SHA and modern content |
 | G7 | Certify and deploy the converged program | LOCKED | G6 closed | Live game/wiki provenance and post-deploy evidence match |
@@ -571,8 +570,8 @@ observation.
       supplemental bundle, succeed with `git fsck --full` exit `0` and recover
       retired refs/tags.
 - [x] G3 closure record is approved by protected merge and post-merge
-      observation; only then may G4 open. G4 remains locked until that final
-      observation is recorded.
+      observation; that observation is recorded and G4 is acceptance-complete
+      for its protected-main closure PR.
 
 ---
 
@@ -784,23 +783,28 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 
 ### Checkpoint G4-A — midpoint pause
 
-- [ ] Public surfaces use only permanent terms.
-- [ ] Deprecated identifiers appear only in allowlisted migration/history code.
-- [ ] Old save/replay/audio fixtures pass migration tests.
-- [ ] TearBench requirements and preserved evidence retain their original
+- [x] Public surfaces use only permanent terms.
+- [x] Deprecated identifiers appear only in allowlisted migration/history code.
+- [x] Old save/replay/audio fixtures pass migration tests.
+- [x] TearBench requirements and preserved evidence retain their original
       hashes and historical wording.
 
 ### Close conditions
 
-- [ ] Game full gate passes.
-- [ ] Music full gate passes.
-- [ ] Wiki content contract schema uses the permanent public names.
-- [ ] Terminology registry has no alias without an owner and expiry condition.
-- [ ] G4 closure record is approved; only then may G5 open.
+- [x] Game full gate passes.
+- [x] Music full gate passes.
+- [x] Wiki content contract schema uses the permanent public names.
+- [x] Terminology registry has no alias without an owner and expiry condition.
+- [x] G4 closure record is approved for protected-main PR; G5 remains locked
+      until protected merge and post-merge `Validate`/ref observation.
 
 ---
 
 ## 9. G5 — Organize repositories, documents, and workspace
+
+**Status:** LOCKED pending protected G4 merge and post-merge `Validate`/ref
+observation. No G5 implementation or reorganization is performed by this
+slice.
 
 **Goal:** Make authority obvious without destabilizing the working architecture.
 
@@ -1102,7 +1106,8 @@ Create one record per goal under the future canonical checkpoint location.
       proven by tags, bundles, and restore/fsck evidence in the G3 closure
       record. This becomes canonical on protected merge and post-merge
       observation of this record.
-- [ ] G4 closed — permanent terminology is implemented with migrations.
+- [ ] G4 closed — permanent terminology is acceptance-complete and approved
+      for PR; protected merge and post-merge observation remain pending.
 - [ ] G5 closed — repositories, docs, and local workspace are organized.
 - [ ] G6 closed — wiki synchronizes from the modern typed manifest.
 - [ ] G7 closed — exact canonical commits are deployed and verified.
