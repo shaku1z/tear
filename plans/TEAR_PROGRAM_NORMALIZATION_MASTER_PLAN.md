@@ -10,13 +10,14 @@ production remains frozen and no deployment is authorized.
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Certified pre-slice baseline for this G5 quarantine-manifest slice:**
-protected game `main` at `2c145d1887db6347634383a34fcf5f3ce004c3f7`
-(`2c145d1`). Exact-main hosted `Validate` run `32646795663` is green and
-certifies the report-only workspace recovery capability. The external inventory
-is recorded separately and remains `no-go`; the current manifest-preparation
-changes are not yet certified. G5 remains OPEN, and no quarantine, deletion,
-artifact mutation, wiki synchronization, or deployment is authorized.
+**Certified G5 workspace-preservation operation:** protected game `main` at
+`753e456c033880af8a1092bb23d324acf0c3071a` (`753e456`). The completed
+whole-root preservation is recorded in
+`docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md` and is
+bound to the report, manifest, journal, and completion receipt recorded there.
+No deletion occurred; production remained frozen. Restore/reverse-move,
+artifact quarantine, remaining workspace normalization, wiki synchronization,
+and deployment remain separately gated work.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
@@ -804,15 +805,17 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 ## 9. G5 — Organize repositories, documents, and workspace
 
 **Status:** OPEN after protected G4 merge and post-merge `Validate`/ref
-observation. This slice records the bounded baseline and authority indexes;
-no local workspace move, quarantine, deletion, or bulk reorganization is
-performed.
+observation. This section records the bounded baseline, authority indexes, and
+the completed report-driven whole-root preservation operation; no deletion or
+bulk reorganization is claimed.
 
 The bounded G5 baseline is recorded in
-`docs/checkpoints/program-normalization/G5_BASELINE_INVENTORY.md`. The
+`docs/checkpoints/program-normalization/G5_BASELINE_INVENTORY.md`; the completed
+preservation receipt is recorded in
+`docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md`. The
 authority indexes are `docs/README.md` and `plans/README.md`; they classify the
-current tree without claiming that workspace cleanup or other future G5 work is
-complete.
+current tree without claiming that the remaining workspace or artifact lanes
+are complete.
 
 This G5 docs-checker slice adds `scripts/check-docs.mjs`, its focused permanent
 `tests/docs-authority-checker.test.mjs` coverage, and the `check:docs`/`test:docs`
@@ -891,8 +894,8 @@ This is a target classification, not permission for a bulk move.
       bounded exact-name reporter. It requires explicit roots, owner, and
       retention date, records protected/review/no-go evidence, and never scans
       archive/recovery roots or emits quarantine eligibility. Running the real
-      local inventory and performing any quarantine remain separate unchecked
-      goals.
+      local inventory remains separately evidenced; artifact quarantine remains
+      a separate unchecked goal.
 - [x] Add the read-only, new-only, integrity-bound quarantine-manifest
       preparer. It consumes a supplied report, revalidates exact clean-main and
       source evidence, and plans only a new same-volume destination mapping with
@@ -916,22 +919,27 @@ This is a target classification, not permission for a bulk move.
 ### Local workspace objectives
 
 - [x] Inventory and hash orphaned `gsm-*` directories; compare for files not
-      reachable from preserved repositories or bundles. The external report
-      `2026-08-23-g5-workspace-recovery/workspace-recovery-report.json` is bound
-      to `2c145d1` with SHA-256
-      `2029eea21567e50cdb524d616c282547f39c9e8106c0710171704cfce1e9aed0`.
-      It found 1,436 distinct review hashes; the July bundle and G3 bare mirror
-      cover 0 of them, including 0 of 138 single-source hashes.
-- [ ] Quarantine candidates to a clearly named recovery location before any
-      deletion, with a retention date and restore instructions.
+      reachable from preserved repositories or bundles. The completed operation
+      consumed `workspace-recovery-report-753e456.json`, SHA-256
+      `f8fd04b326bbd44a5ddc16462996e41e27dde4e63a9f01305d98b60d3ee90ab2`,
+      against protected `main` `753e456`.
+- [x] Preserve the reviewed source roots in the clearly named
+      `quarantine-payload-753e456` recovery location before any deletion. The
+      completion receipt records 28 sources, 61 journal events, event-log
+      SHA-256 `73d08dc4421dcf961c09d0a4e4cbb9d541eb9d64f433bc7e2db3648326458ff4`,
+      retention through `2026-11-23T23:59:59Z`, and manual reverse-move
+      prerequisites. No deletion occurred.
 - [ ] Inspect non-Git `Tear-main-publication` and `Tear-receipt-clean` copies for
       unique files; dispose of them recoverably only after evidence says none
       are needed.
 - [ ] Treat `C:/tmp/Tear-main-publication` as forbidden for development and
       deployment. It is an unregistered, divergent copy and is the likely
       residue behind the earlier `main is already used by worktree` conflict.
-- [ ] Keep the dated recovery bundle in a dedicated `Tear-archives` location
-      outside active repositories, with a manifest and checksum.
+- [x] Keep the dated recovery bundle in the dedicated `Tear-archives`
+      location outside active repositories, with
+      `workspace-quarantine-manifest-753e456.json` (SHA-256
+      `bb23434cf259a9a7ef70e5477e770bb84a467afc04755891d58490b007d83da7`),
+      `workspace-quarantine-journal-753e456`, and the completed receipt.
 - [ ] Adopt one parent layout for canonical repositories, active worktrees,
       scratch output, and archives. Do not hardcode the user's absolute path in
       repository logic.
@@ -942,9 +950,21 @@ This is a target classification, not permission for a bulk move.
 
 - [ ] Every proposed move has a reference/import/link search result.
 - [ ] No build, CI, Vite, Wrangler, TearBench, vendoring, or wiki path is broken.
-- [ ] Quarantined local data has a hash manifest and recovery window.
+- [x] Quarantined local data has an integrity-bound manifest and recovery
+      window; hashes are recorded where policy permits and protected entries
+      remain metadata-only. See the G5 workspace-preservation receipt for the
+      manifest, journal, receipt, and retention date.
 - [ ] `src/` changes, if any, are justified by architecture evidence rather
       than aesthetics.
+
+### Checkpoint G5-B — completed whole-root preservation
+
+The exact operation evidence and fail-closed manual reverse-move procedure are
+recorded in
+`docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md`.
+This checkpoint closes only the bounded preservation lane. G5 remains OPEN for
+the remaining non-Git copy review, parent-layout and Soundtrack Desk policy
+work, artifact-retention/quarantine decisions, and the final close conditions.
 
 ### Close conditions
 
