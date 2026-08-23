@@ -130,19 +130,33 @@ test("rejects case-insensitive duplicate second-wave allowlist names", () => {
   assert.match(validateWorkspaceRecoverySecondWavePolicy(policy).join("\n"), /case-insensitive duplicate name/u);
 });
 
-test("requires five exhaustive ordinary partitions plus the deferred opaque-reparse source", () => {
+test("requires five exhaustive ordinary partitions plus the coordinated deferred dependency group", () => {
   const policy = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
   assert.equal(validateWorkspaceRecoverySecondWavePolicy(policy).length, 0);
   assert.equal(policy.partitions.length, 5);
   const assigned = new Set(policy.partitions.flatMap((partition) => partition.sourceIds));
   const deferred = new Set(policy.deferredSources.map((source) => source.id));
-  assert.equal(assigned.size, 44);
-  assert.equal(deferred.size, 1);
+  assert.equal(assigned.size, 43);
+  assert.equal(deferred.size, 2);
   assert.equal(new Set([...assigned, ...deferred]).size, 45);
-  assert.equal(policy.partitions.reduce((total, partition) => total + partition.auditedObservedBytes, 0), 5749629212);
+  assert.deepEqual(policy.dependencyGroup.sourceIds, [...deferred]);
+  assert.equal(policy.dependencyGroup.junctionSourceId, "second-wave-tear-budget-architecture");
+  assert.equal(policy.dependencyGroup.targetSourceId, "second-wave-tear-tearscore-normalization");
+  assert.equal(policy.dependencyGroup.auditedObservedBytes, 34793487);
+  assert.equal(policy.partitions.reduce((total, partition) => total + partition.auditedObservedBytes, 0), 5718968788);
   assert.equal(policy.partitionAudit.totalObservedBytes, 5753762275);
   assert.equal(policy.partitionAudit.ordinaryPartitionObservedBytes + policy.partitionAudit.deferredObservedBytes, 5753762275);
   assert.ok(policy.partitions.every((partition) => partition.auditedObservedBytes < 2147483648));
+});
+
+test("rejects putting either dependency source into an ordinary partition or breaking its target relationship", () => {
+  const policy = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
+  policy.partitions[2].sourceIds.push("second-wave-tear-tearscore-normalization");
+  assert.match(validateWorkspaceRecoverySecondWavePolicy(policy).join("\n"), /deferred source cannot be included|partition auditedObservedBytes/u);
+
+  const targetBroken = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
+  targetBroken.dependencyGroup.targetSourceId = "second-wave-tear-score-g2-final-3ff4b72";
+  assert.match(validateWorkspaceRecoverySecondWavePolicy(targetBroken).join("\n"), /dependencyGroup.targetSourceId is invalid|dependencyGroup sources/u);
 });
 
 test("rejects partition omission, unknown IDs, and partition arguments for first-wave policy", () => {
@@ -166,9 +180,10 @@ test("rejects partition omission, unknown IDs, and partition arguments for first
   }
 });
 
-test("selects every partition exactly and never selects the deferred source", () => {
+test("selects every partition exactly and never selects either deferred dependency source", () => {
   const fixture = createFixture();
   try {
+    const deferredIds = new Set(fixture.policy.deferredSources.map((source) => source.id));
     for (const partition of fixture.policy.partitions) {
       const report = runWorkspaceRecoveryReport({
         repoRoot: fixture.repoRoot,
@@ -184,7 +199,7 @@ test("selects every partition exactly and never selects the deferred source", ()
       assert.deepEqual(report.inputs.partition.sourceIds, partition.sourceIds);
       assert.equal(report.inputs.partition.auditedObservedBytes, partition.auditedObservedBytes);
       assert.deepEqual(new Set(report.sources.map((source) => source.id)), new Set(partition.sourceIds));
-      assert.equal(report.sources.some((source) => source.id === "second-wave-tear-budget-architecture"), false);
+      assert.equal(report.sources.some((source) => deferredIds.has(source.id)), false);
     }
   } finally {
     cleanup(fixture);
@@ -301,30 +316,31 @@ test("rejects deferred-source substitution and cross-partition evidence before d
   const fixture = createFixture();
   try {
     const evidence = secondWaveEvidence(fixture, "second-wave-partition-1");
-    const deferred = fixture.policy.deferredSources[0];
-    const deferredPath = path.join(fixture.tempRoot, deferred.name);
-    const deferredReport = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
-    const substitutedIndex = 0;
-    deferredReport.sources[substitutedIndex] = {
-      ...deferredReport.sources[substitutedIndex],
-      id: deferred.id,
-      name: deferred.name,
-      absolutePath: deferredPath,
-      rootArgument: deferred.rootArgument,
-    };
-    deferredReport.inputs.candidateRoots[substitutedIndex] = deferredPath;
-    const deferredReportPath = path.join(fixture.archiveGroup, "deferred-substitution-report.json");
-    const deferredReportSha256 = writeJson(deferredReportPath, deferredReport);
-    assert.throws(() => runWorkspaceQuarantinePreparation({
-      reportPath: deferredReportPath,
-      reportSha256: deferredReportSha256,
-      policyPath: fixture.policyPath,
-      repoRoot: fixture.repoRoot,
-      owner: "g5-second-wave-owner",
-      retainUntil,
-      destination: path.join(fixture.archiveGroup, "deferred-substitution-payload"),
-      now,
-    }), /partition|source set|allowlist/u);
+    for (const [deferredIndex, deferred] of fixture.policy.deferredSources.entries()) {
+      const deferredPath = path.join(fixture.tempRoot, deferred.name);
+      const deferredReport = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
+      const substitutedIndex = 0;
+      deferredReport.sources[substitutedIndex] = {
+        ...deferredReport.sources[substitutedIndex],
+        id: deferred.id,
+        name: deferred.name,
+        absolutePath: deferredPath,
+        rootArgument: deferred.rootArgument,
+      };
+      deferredReport.inputs.candidateRoots[substitutedIndex] = deferredPath;
+      const deferredReportPath = path.join(fixture.archiveGroup, `deferred-substitution-report-${deferredIndex}.json`);
+      const deferredReportSha256 = writeJson(deferredReportPath, deferredReport);
+      assert.throws(() => runWorkspaceQuarantinePreparation({
+        reportPath: deferredReportPath,
+        reportSha256: deferredReportSha256,
+        policyPath: fixture.policyPath,
+        repoRoot: fixture.repoRoot,
+        owner: "g5-second-wave-owner",
+        retainUntil,
+        destination: path.join(fixture.archiveGroup, `deferred-substitution-payload-${deferredIndex}`),
+        now,
+      }), /partition|source set|allowlist/u);
+    }
 
     const crossReport = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
     crossReport.inputs.partition = {

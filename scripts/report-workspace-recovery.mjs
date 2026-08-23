@@ -34,8 +34,8 @@ const SECOND_WAVE_CANONICAL_ROOT_NAMES = new Set(["tear", "tear-score", "tear-wi
 const SECOND_WAVE_ARCHIVE_ROOT_PATTERNS = [/^tear-archives$/iu, /^tear-git-recovery-/iu, /^tear-g3-preservation-audit-/iu, /^tear-g5-/iu];
 const SECOND_WAVE_PARTITION_COUNT = 5;
 const SECOND_WAVE_TOTAL_OBSERVED_BYTES = 5753762275;
-const SECOND_WAVE_ORDINARY_OBSERVED_BYTES = 5749629212;
-const SECOND_WAVE_DEFERRED_OBSERVED_BYTES = 4133063;
+const SECOND_WAVE_ORDINARY_OBSERVED_BYTES = 5718968788;
+const SECOND_WAVE_DEFERRED_OBSERVED_BYTES = 34793487;
 const SECOND_WAVE_AUDIT_DATE_UTC = "2026-08-23T00:00:00.000Z";
 const SECOND_WAVE_AUDIT_HEAD = "395d22c5cc107d9583c02e368f113edb69ea6c09";
 const SECOND_WAVE_MAX_BYTES = 2147483648;
@@ -43,8 +43,10 @@ const SECOND_WAVE_DEFERRED_SOURCE_ID = "second-wave-tear-budget-architecture";
 const SECOND_WAVE_DEFERRED_SOURCE_NAME = "Tear-budget-architecture";
 const SECOND_WAVE_DEFERRED_SOURCE_PATH = "node_modules";
 const SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID = "second-wave-tear-tearscore-normalization";
+const SECOND_WAVE_DEFERRED_TARGET_SOURCE_NAME = "Tear-tearscore-normalization";
 const SECOND_WAVE_DEFERRED_TARGET_PATH = "node_modules";
 const SECOND_WAVE_DEFERRED_REASON = "separate-coordinated-opaque-reparse-preservation-required";
+const SECOND_WAVE_DEFERRED_GROUP_ID = "second-wave-dependency-budget-node-modules";
 
 export class WorkspaceRecoveryReportError extends Error {
   constructor(message) {
@@ -324,24 +326,49 @@ export function validateWorkspaceRecoverySecondWavePolicy(policy) {
   }
   const deferredSources = policy?.deferredSources;
   const deferredIds = new Set();
-  if (!Array.isArray(deferredSources) || deferredSources.length !== 1) {
-    errors.push("deferredSources must contain exactly one opaque-reparse source");
+  if (!Array.isArray(deferredSources) || deferredSources.length !== 2) {
+    errors.push("deferredSources must contain exactly two coordinated dependency sources");
   } else {
     for (const [index, deferred] of deferredSources.entries()) {
-      if (typeof deferred?.id !== "string" || deferred.id !== SECOND_WAVE_DEFERRED_SOURCE_ID) errors.push(`deferredSources[${index}].id must be ${SECOND_WAVE_DEFERRED_SOURCE_ID}`);
-      if (typeof deferred?.name !== "string" || deferred.name !== SECOND_WAVE_DEFERRED_SOURCE_NAME) errors.push(`deferredSources[${index}].name must be ${SECOND_WAVE_DEFERRED_SOURCE_NAME}`);
+      if (typeof deferred?.id !== "string" || ![SECOND_WAVE_DEFERRED_SOURCE_ID, SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID].includes(deferred.id)) errors.push(`deferredSources[${index}].id must be a recognized dependency source`);
+      if (deferred?.id === SECOND_WAVE_DEFERRED_SOURCE_ID && deferred.name !== SECOND_WAVE_DEFERRED_SOURCE_NAME) errors.push(`deferredSources[${index}].name must be ${SECOND_WAVE_DEFERRED_SOURCE_NAME}`);
+      if (deferred?.id === SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID && deferred.name !== SECOND_WAVE_DEFERRED_TARGET_SOURCE_NAME) errors.push(`deferredSources[${index}].name must be ${SECOND_WAVE_DEFERRED_TARGET_SOURCE_NAME}`);
       if (deferred?.rootArgument !== "temp-root") errors.push(`deferredSources[${index}].rootArgument must be temp-root`);
-      if (deferred?.relativePath !== SECOND_WAVE_DEFERRED_SOURCE_PATH) errors.push(`deferredSources[${index}].relativePath must be ${SECOND_WAVE_DEFERRED_SOURCE_PATH}`);
-      if (deferred?.targetSourceId !== SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID) errors.push(`deferredSources[${index}].targetSourceId must be ${SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID}`);
-      if (deferred?.targetRelativePath !== SECOND_WAVE_DEFERRED_TARGET_PATH) errors.push(`deferredSources[${index}].targetRelativePath must be ${SECOND_WAVE_DEFERRED_TARGET_PATH}`);
+      if (deferred?.dependencyGroupId !== SECOND_WAVE_DEFERRED_GROUP_ID) errors.push(`deferredSources[${index}].dependencyGroupId must be ${SECOND_WAVE_DEFERRED_GROUP_ID}`);
       if (deferred?.reason !== SECOND_WAVE_DEFERRED_REASON) errors.push(`deferredSources[${index}].reason must be ${SECOND_WAVE_DEFERRED_REASON}`);
       if (deferred?.currentOperation !== "deferred") errors.push(`deferredSources[${index}].currentOperation must be deferred`);
       const key = String(deferred?.id ?? "").toLowerCase();
       if (deferredIds.has(key)) errors.push(`deferredSources has a case-insensitive duplicate id: ${deferred.id}`);
       deferredIds.add(key);
       if (sourceIdsByLower.size > 0 && sourceIdsByLower.get(key) !== deferred?.id) errors.push(`deferred source is not an exact sourceRoots entry: ${deferred.id}`);
-      if (deferred?.targetSourceId !== undefined && sourceIdsByLower.size > 0 && sourceIdsByLower.get(String(deferred.targetSourceId).toLowerCase()) !== deferred.targetSourceId) errors.push(`deferred target source is not an exact sourceRoots entry: ${deferred.targetSourceId}`);
+      if (deferred?.id === SECOND_WAVE_DEFERRED_SOURCE_ID) {
+        if (deferred.role !== "reparse-source") errors.push("budget deferred source role must be reparse-source");
+        if (deferred.relativePath !== SECOND_WAVE_DEFERRED_SOURCE_PATH) errors.push(`budget deferred relativePath must be ${SECOND_WAVE_DEFERRED_SOURCE_PATH}`);
+        if (deferred.targetSourceId !== SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID) errors.push(`budget deferred targetSourceId must be ${SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID}`);
+        if (deferred.targetRelativePath !== SECOND_WAVE_DEFERRED_TARGET_PATH) errors.push(`budget deferred targetRelativePath must be ${SECOND_WAVE_DEFERRED_TARGET_PATH}`);
+        if (deferred.observedBytes !== 4133063) errors.push("budget deferred observedBytes must be 4133063");
+      }
+      if (deferred?.id === SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID) {
+        if (deferred.role !== "dependency-target") errors.push("dependency target role must be dependency-target");
+        if (deferred.heldBecause !== "target-of-opaque-reparse") errors.push("dependency target must be held because it is the opaque-reparse target");
+        if (deferred.observedBytes !== 30660424) errors.push("dependency target observedBytes must be 30660424");
+      }
     }
+  }
+  const dependencyGroup = policy?.dependencyGroup;
+  if (typeof dependencyGroup !== "object" || dependencyGroup === null) {
+    errors.push("dependencyGroup must be present");
+  } else {
+    if (dependencyGroup.id !== SECOND_WAVE_DEFERRED_GROUP_ID) errors.push(`dependencyGroup.id must be ${SECOND_WAVE_DEFERRED_GROUP_ID}`);
+    if (JSON.stringify(dependencyGroup.sourceIds) !== JSON.stringify([SECOND_WAVE_DEFERRED_SOURCE_ID, SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID])) errors.push("dependencyGroup.sourceIds must contain exactly the junction source and its target");
+    if (dependencyGroup.junctionSourceId !== SECOND_WAVE_DEFERRED_SOURCE_ID) errors.push("dependencyGroup.junctionSourceId is invalid");
+    if (dependencyGroup.junctionRelativePath !== SECOND_WAVE_DEFERRED_SOURCE_PATH) errors.push("dependencyGroup.junctionRelativePath is invalid");
+    if (dependencyGroup.targetSourceId !== SECOND_WAVE_DEFERRED_TARGET_SOURCE_ID) errors.push("dependencyGroup.targetSourceId is invalid");
+    if (dependencyGroup.targetRelativePath !== SECOND_WAVE_DEFERRED_TARGET_PATH) errors.push("dependencyGroup.targetRelativePath is invalid");
+    if (dependencyGroup.reason !== SECOND_WAVE_DEFERRED_REASON) errors.push("dependencyGroup.reason is invalid");
+    if (dependencyGroup.currentOperation !== "deferred") errors.push("dependencyGroup.currentOperation must be deferred");
+    if (dependencyGroup.auditedObservedBytes !== SECOND_WAVE_DEFERRED_OBSERVED_BYTES) errors.push(`dependencyGroup.auditedObservedBytes must be ${SECOND_WAVE_DEFERRED_OBSERVED_BYTES}`);
+    if (sourceIdsByLower.size > 0 && (sourceIdsByLower.get(String(dependencyGroup.junctionSourceId ?? "").toLowerCase()) !== dependencyGroup.junctionSourceId || sourceIdsByLower.get(String(dependencyGroup.targetSourceId ?? "").toLowerCase()) !== dependencyGroup.targetSourceId)) errors.push("dependencyGroup sources must be exact sourceRoots entries");
   }
   const partitions = policy?.partitions;
   const partitionIds = new Set();
@@ -382,7 +409,7 @@ export function validateWorkspaceRecoverySecondWavePolicy(policy) {
       }
     }
   }
-  if (sourceIds.size === 45 && deferredIds.size === 1) {
+  if (sourceIds.size === 45 && deferredIds.size === 2) {
     const expectedOrdinaryIds = new Set([...sourceIdsByLower.keys()].filter((key) => !deferredIds.has(key)));
     if (assignedSourceIds.size !== expectedOrdinaryIds.size || [...expectedOrdinaryIds].some((id) => !assignedSourceIds.has(id))) errors.push("partition union must contain exactly all non-deferred source ids");
     if (assignedSourceIds.size + deferredIds.size !== sourceIds.size) errors.push("partition union plus deferred sources must account for all 45 source ids");
@@ -1052,10 +1079,11 @@ function discoverPublicationCandidate(root) {
 function discoverSecondWaveCandidates(roots, policy, partition) {
   const candidates = [];
   const sourcesById = new Map(policy.sourceRoots.map((source) => [source.id, source]));
+  const deferredIds = new Set(policy.deferredSources.map((source) => source.id));
   for (const sourceId of partition.sourceIds) {
     const source = sourcesById.get(sourceId);
     if (source === undefined) throw new WorkspaceRecoveryReportError(`second-wave partition references an unknown source: ${sourceId}`);
-    if (source.id === SECOND_WAVE_DEFERRED_SOURCE_ID) throw new WorkspaceRecoveryReportError(`deferred source cannot be selected for an ordinary partition: ${source.name}`);
+    if (deferredIds.has(source.id)) throw new WorkspaceRecoveryReportError(`deferred dependency source cannot be selected for an ordinary partition: ${source.name}`);
     if (SECOND_WAVE_CANONICAL_ROOT_NAMES.has(source.name.toLowerCase()) || SECOND_WAVE_ARCHIVE_ROOT_PATTERNS.some((pattern) => pattern.test(source.name))) {
       throw new WorkspaceRecoveryReportError(`exact second-wave source is a protected canonical/archive root: ${source.name}`);
     }

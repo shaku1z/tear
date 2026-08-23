@@ -68,8 +68,8 @@
     "method": "read-only metadata sizing using the base preservation policy; protected directories are metadata-only and reparse points are refused",
     "evidenceNote": "Sizing audit of the exact 45-root review set on protected main 395d22c; no content hashes, reports, manifests, moves, or deletions were performed.",
     "totalObservedBytes": 5753762275,
-    "ordinaryPartitionObservedBytes": 5749629212,
-    "deferredObservedBytes": 4133063
+    "ordinaryPartitionObservedBytes": 5718968788,
+    "deferredObservedBytes": 34793487
   },
   "partitions": [
     {
@@ -123,10 +123,9 @@
       "id": "second-wave-partition-3",
       "name": "canonicalized-music-roots",
       "sourceIds": [
-        "second-wave-tear-score-g2-final-3ff4b72",
-        "second-wave-tear-tearscore-normalization"
+        "second-wave-tear-score-g2-final-3ff4b72"
       ],
-      "auditedObservedBytes": 1203418573
+      "auditedObservedBytes": 1172758149
     },
     {
       "id": "second-wave-partition-4",
@@ -152,14 +151,42 @@
       "auditedObservedBytes": 1118916365
     }
   ],
+  "dependencyGroup": {
+    "id": "second-wave-dependency-budget-node-modules",
+    "sourceIds": [
+      "second-wave-tear-budget-architecture",
+      "second-wave-tear-tearscore-normalization"
+    ],
+    "junctionSourceId": "second-wave-tear-budget-architecture",
+    "junctionRelativePath": "node_modules",
+    "targetSourceId": "second-wave-tear-tearscore-normalization",
+    "targetRelativePath": "node_modules",
+    "reason": "separate-coordinated-opaque-reparse-preservation-required",
+    "currentOperation": "deferred",
+    "auditedObservedBytes": 34793487
+  },
   "deferredSources": [
     {
       "id": "second-wave-tear-budget-architecture",
       "name": "Tear-budget-architecture",
       "rootArgument": "temp-root",
+      "role": "reparse-source",
+      "dependencyGroupId": "second-wave-dependency-budget-node-modules",
       "relativePath": "node_modules",
       "targetSourceId": "second-wave-tear-tearscore-normalization",
       "targetRelativePath": "node_modules",
+      "observedBytes": 4133063,
+      "reason": "separate-coordinated-opaque-reparse-preservation-required",
+      "currentOperation": "deferred"
+    },
+    {
+      "id": "second-wave-tear-tearscore-normalization",
+      "name": "Tear-tearscore-normalization",
+      "rootArgument": "temp-root",
+      "role": "dependency-target",
+      "dependencyGroupId": "second-wave-dependency-budget-node-modules",
+      "heldBecause": "target-of-opaque-reparse",
+      "observedBytes": 30660424,
       "reason": "separate-coordinated-opaque-reparse-preservation-required",
       "currentOperation": "deferred"
     }
