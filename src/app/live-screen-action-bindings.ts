@@ -25,7 +25,7 @@ export interface ScreenActionBindingPorts {
   readonly refreshFoundry: () => void;
   readonly bootstrapFoundry: (profileId: string) => void;
   readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
-  readonly openGhostLab: (destination: "academy" | "training-archive" | "foundry" | "vault" | "watch" | "botevidence") => void;
+  readonly openGhostLab: (destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence") => void;
   readonly openGhostPublication: (id: string) => void; readonly grantGhostPublication: () => void; readonly runGhostPublicationOnce: () => void; readonly cancelGhostPublication: () => void;
   readonly openGhostSupport: (id: string) => void; readonly createGhostSupport: () => void;
   readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
@@ -72,6 +72,11 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "academy.record.withdrawModelTraining": (action) => { ports.withdrawAcademyModelTraining(action.candidateHash); },
     "academy.humanCalibration.optIn": (action) => { ports.optInHumanCalibration(action.consent); },
     "academy.humanCalibration.revoke": () => { ports.revokeHumanCalibration(); },
+    "training-operations.open": () => { ports.setScreen("foundry"); ports.refreshFoundry(); ports.resetScroll(); },
+    "training-operations.refresh": () => { ports.refreshFoundry(); },
+    "training-operations.bootstrap": (action) => { ports.bootstrapFoundry(action.profileId); },
+    "training-operations.schedule.enable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, true); },
+    "training-operations.schedule.disable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, false); },
     "foundry.refresh": () => { ports.refreshFoundry(); },
     "foundry.bootstrap": (action) => { ports.bootstrapFoundry(action.profileId); },
     "foundry.schedule.enable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, true); },

@@ -152,7 +152,7 @@
       "owner": "Agent training operations owner across Foundry jobs, launch/recovery persistence, and app routing",
       "compatibilityStrategy": "Dual-read active v1-v4 Foundry artifacts and route/action aliases; canonical-write Training Operations only after job and recovery evidence is observed.",
       "removalCheckpoint": {
-        "id": "G4-B-TRAINING-OPERATIONS",
+        "id": "G4-H-TRAINING-OPERATIONS",
         "condition": "Remove Foundry aliases after all active v1-v4 artifacts, imported jobs, route aliases, recovery, promotion, and monitoring compatibility tests pass and the release checkpoint is signed."
       }
     },
@@ -1008,7 +1008,7 @@
           "tests/unit/live-foundry-screen.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
           "condition": "Remove after all job-family readers/writers use canonical module names."
         }
       },
@@ -1026,7 +1026,7 @@
           "tests/unit/online-rl-training.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
           "condition": "Remove after training module imports and artifacts migrate."
         }
       },
@@ -1043,7 +1043,7 @@
           "tests/unit/live-foundry-scheduler.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
           "condition": "Remove after Training Operations screen and scheduler are canonical."
         }
       },
@@ -1060,8 +1060,25 @@
           "tests/unit/live-foundry-screen.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
           "condition": "Remove after canonical public labels and accessibility copy ship."
+        }
+      },
+      {
+        "id": "compat-training-operations-presentation-facade",
+        "pathPattern": "src/presentation/screens/training-operations.ts",
+        "termIds": [
+          "training-operations"
+        ],
+        "owner": "Training Operations presentation owner",
+        "reason": "The canonical presentation facade retains the implementation renderer import until the underlying screen module is migrated.",
+        "testEvidence": [
+          "tests/unit/training-operations-compat.test.ts",
+          "check:architecture"
+        ],
+        "expiry": {
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
+          "condition": "Remove after the Training Operations renderer implementation itself is canonicalized."
         }
       },
       {
@@ -1080,7 +1097,7 @@
           "tests/unit/screen-registry.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
           "condition": "Remove old route/action aliases only after canonical destinations are proven."
         }
       },
@@ -1118,7 +1135,7 @@
           "build:test:standalone"
         ],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
           "condition": "Remove after canonical chunk names are proven without changing split behavior."
         }
       },
@@ -1548,7 +1565,7 @@
         "reason": "The watch host records the current Foundry monitoring authority while the public surfaces are separated.",
         "testEvidence": ["tests/unit/foundry-job-v3-post-promotion-monitor.test.ts", "tests/unit/foundry-job-v4-post-promotion-monitor.test.ts"],
         "expiry": {
-          "checkpoint": "G4-B-TRAINING-OPERATIONS",
+          "checkpoint": "G4-H-TRAINING-OPERATIONS",
           "condition": "Remove after Foundry monitoring authority is canonicalized under Training Operations."
         }
       },

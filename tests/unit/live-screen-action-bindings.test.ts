@@ -17,11 +17,29 @@ describe("live screen action bindings", () => {
     expect(refreshFoundry).toHaveBeenCalledOnce();
   });
 
+  it("maps canonical Training Operations actions to the preserved local ports", () => {
+    const setScreen = vi.fn(), resetScroll = vi.fn(), refreshFoundry = vi.fn(), bootstrapFoundry = vi.fn(), setFoundryScheduleEnabled = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ setScreen, resetScroll, refreshFoundry, bootstrapFoundry, setFoundryScheduleEnabled } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "training-operations.open" });
+    dispatch({ type: "training-operations.refresh" });
+    dispatch({ type: "training-operations.bootstrap", profileId: "profile" });
+    dispatch({ type: "training-operations.schedule.enable", scheduleHash: "a".repeat(16) });
+    dispatch({ type: "training-operations.schedule.disable", scheduleHash: "b".repeat(16) });
+    expect(setScreen).toHaveBeenCalledWith("foundry");
+    expect(resetScroll).toHaveBeenCalledOnce();
+    expect(refreshFoundry).toHaveBeenCalledTimes(2);
+    expect(bootstrapFoundry).toHaveBeenCalledWith("profile");
+    expect(setFoundryScheduleEnabled).toHaveBeenNthCalledWith(1, "a".repeat(16), true);
+    expect(setFoundryScheduleEnabled).toHaveBeenNthCalledWith(2, "b".repeat(16), false);
+  });
+
   it("opens only the declared safe Ghost Lab destinations", () => {
     const openGhostLab = vi.fn();
     const dispatch = createLiveScreenActionBindings({ openGhostLab } as unknown as ScreenActionBindingPorts);
     dispatch({ type: "ghostlab.open", destination: "vault" });
     expect(openGhostLab).toHaveBeenCalledWith("vault");
+    dispatch({ type: "replay.hub.open", destination: "training-operations" });
+    expect(openGhostLab).toHaveBeenLastCalledWith("training-operations");
     dispatch({ type: "ghostlab.open", destination: "botevidence" });
     expect(openGhostLab).toHaveBeenLastCalledWith("botevidence");
   });

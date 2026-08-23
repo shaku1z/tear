@@ -9,7 +9,7 @@ type FoundrySnapshot = FoundryScreenView;
 
 /** Browser composition for the read-only C36 recovery screen. */
 export class LiveFoundryScreenController {
-  #snapshot: FoundrySnapshot = Object.freeze({ id: "foundry", status: "loading", subtitle: "reading local Foundry recovery projections", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] });
+  #snapshot: FoundrySnapshot = Object.freeze({ id: "foundry", status: "loading", subtitle: "reading local Training Operations recovery projections", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] });
   readonly #backend: GhostVaultBackend | undefined;
 
   readonly #scheduleStatus: (scheduleHash: string) => LiveFoundryScheduleStatus | undefined;
@@ -18,7 +18,7 @@ export class LiveFoundryScreenController {
   snapshot(): FoundrySnapshot { return this.#snapshot; }
 
   async refresh(): Promise<FoundrySnapshot> {
-    if (this.#backend === undefined) return this.#set({ id: "foundry", status: "unavailable", subtitle: "Foundry storage is unavailable in this runtime", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] });
+    if (this.#backend === undefined) return this.#set({ id: "foundry", status: "unavailable", subtitle: "Training Operations storage is unavailable in this runtime", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] });
     try {
       const { vault, custody, authority } = this.#services(), recovery = new TearFoundryRecoveryController(vault), schedules = new TearFoundryJobScheduleVault(this.#backend);
       const projections = (await Promise.all((await vault.list()).map((job) => recovery.project(job.id)))).filter((value): value is NonNullable<typeof value> => value !== undefined);
@@ -29,7 +29,7 @@ export class LiveFoundryScreenController {
         jobHash: projection.jobHash, phase: projection.phase, nextManualPhase: projection.nextManualPhase, resumable: projection.resumable,
         eventCount: projection.provenance.eventCount, lastEventHash: projection.provenance.lastEventHash, projectionHash: projection.projectionHash,
       })), schedules: scheduleProjections.map((schedule) => Object.freeze({ ...schedule, runtimeStatus: this.#scheduleStatus(schedule.scheduleHash) ?? (schedule.state === "disabled" ? "disabled" : schedule.disposition === "due" ? "due" : schedule.disposition.startsWith("blocked-") ? "blocked" : "configured") })) });
-    } catch { return this.#set({ id: "foundry", status: "unavailable", subtitle: "Foundry recovery projections could not be read", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] }); }
+    } catch { return this.#set({ id: "foundry", status: "unavailable", subtitle: "Training Operations recovery projections could not be read", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] }); }
   }
 
   async setScheduleEnabled(scheduleHash: string, enabled: boolean): Promise<void> { if (this.#backend !== undefined) await new TearFoundryJobScheduleVault(this.#backend).setEnabledByHash(scheduleHash, enabled, new Date().toISOString()); await this.refresh(); }
@@ -43,7 +43,7 @@ export class LiveFoundryScreenController {
   }
 
   #services(): Readonly<{ vault: TearFoundryJobVault; custody: TearAcademyCandidateCustodyStore; corpus: TearAcademyCorpusStore; authority: TearFoundryLaunchProfileAuthority }> {
-    if (this.#backend === undefined) throw new TypeError("Foundry storage is unavailable");
+    if (this.#backend === undefined) throw new TypeError("Training Operations storage is unavailable");
     const custody = new TearAcademyCandidateCustodyStore(this.#backend), quality = new TearAcademyCandidateQualityStore(this.#backend, custody), curation = new TearAcademyCandidateCurationStore(this.#backend, custody, quality), splits = new TearAcademyCandidateSplitStore(this.#backend, custody, quality, curation), samples = new TearAcademyReviewedSampleStore(this.#backend, custody, quality, curation, splits), corpus = new TearAcademyCorpusStore(this.#backend, custody, curation, splits, samples);
     return Object.freeze({ vault: new TearFoundryJobVault(this.#backend), custody, corpus, authority: new TearFoundryLaunchProfileAuthority(this.#backend, custody, corpus) });
   }

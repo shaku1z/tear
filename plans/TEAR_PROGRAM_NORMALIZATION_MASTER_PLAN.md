@@ -746,6 +746,37 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 - [ ] Retire Academy/Agent Academy aliases only after the registry condition
       `G4-G-TRAINING-ARCHIVE` is signed; this remains unproven.
 
+### Training Operations compatibility slice — G4-H-TRAINING-OPERATIONS
+
+- [x] Establish a canonical Training Operations agent, application, and
+      presentation facade over the safe local job, schedule, recovery,
+      launch-profile, and bootstrap APIs; keep the Foundry implementation
+      modules and public screen ID as compatibility boundaries.
+- [x] Write canonical `training-operations` route/query/action vocabulary and
+      canonical menu/Ghost Lab links while continuing to read `foundry` links,
+      screen IDs, and action IDs.
+- [x] Update active normal-build copy, navigation, and accessibility-facing
+      labels to Training Operations without changing persisted namespaces or
+      authority inputs.
+- [x] Prove canonical/legacy route normalization, action pairing, exact safe
+      API identity, and unchanged `tear-foundry-*` job/schedule bytes, formats,
+      hashes, and durable keys with focused compatibility tests.
+- [x] Retain all v1-v4 execution-binding, promotion, monitoring, rollback,
+      online-launch authority, and hash-bound receipt modules unchanged; their
+      canonical rename remains a later gated slice.
+- [x] Run proportional focused typecheck, architecture, terminology,
+      active-roster, browser/build, production-isolation, lint, and diff gates.
+- [x] Update the narrow Training Operations terminology expiry references and
+      record the retained legacy boundary in
+      `docs/checkpoints/program-normalization/G4_H_TRAINING_OPERATIONS.md`.
+- [x] Commit, push, and open protected-main PR #19 at head
+      `b65ed8369abb8be5e3f6211b042f7d3ae9099cf6`.
+- [x] Final hosted Validate passed: run `32623991184`, job `97156393776`.
+- [ ] Protected merge, post-merge validation, deployment, and Cloudflare
+      changes remain outside this slice; do not merge or deploy here.
+- [ ] Retire Foundry aliases only after the registry condition
+      `G4-H-TRAINING-OPERATIONS` is signed; this remains unproven.
+
 ### Checkpoint G4-A — midpoint pause
 
 - [ ] Public surfaces use only permanent terms.

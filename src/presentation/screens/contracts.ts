@@ -288,7 +288,7 @@ export interface GhostLabScreenView {
   readonly id: "ghostlab";
   readonly subtitle: string;
   readonly routes: readonly Readonly<{
-    readonly id: "academy" | "training-archive" | "foundry" | "vault" | "watch" | "botevidence";
+    readonly id: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence";
     readonly label: string;
     readonly detail: string;
   }>[];

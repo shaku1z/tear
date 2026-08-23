@@ -11,12 +11,12 @@ describe("C36 live Foundry recovery screen controller", () => {
     const created = createTearFoundryJob({ id: "private-job-id", createdAt: "2026-08-08T00:00:00.000Z", reason: "authorized", inputs });
     await vault.persist(transitionTearFoundryJob(created, "collecting", "2026-08-08T00:01:00.000Z", "held custody"));
     const view = await new LiveFoundryScreenController(backend).refresh();
-    expect(view).toMatchObject({ id: "foundry", status: "ready", automation: "unavailable", launchProfiles: [], jobs: [{ phase: "collecting", nextManualPhase: "collecting", resumable: true, eventCount: 2 }] });
+    expect(view).toMatchObject({ id: "foundry", status: "ready", subtitle: "local, hashes-only restart recovery", automation: "unavailable", launchProfiles: [], jobs: [{ phase: "collecting", nextManualPhase: "collecting", resumable: true, eventCount: 2 }] });
     expect(JSON.stringify(view)).not.toContain("private-job-id");
     expect(JSON.stringify(view)).not.toContain("held custody");
   });
 
   it("fails closed when browser persistence is unavailable", async () => {
-    await expect(new LiveFoundryScreenController(undefined).refresh()).resolves.toEqual({ id: "foundry", status: "unavailable", subtitle: "Foundry storage is unavailable in this runtime", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] });
+    await expect(new LiveFoundryScreenController(undefined).refresh()).resolves.toEqual({ id: "foundry", status: "unavailable", subtitle: "Training Operations storage is unavailable in this runtime", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] });
   });
 });
