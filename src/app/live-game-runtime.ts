@@ -1,7 +1,7 @@
 import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions";
-import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveFoundryScreen, createLiveReplayHub, createLiveInterfaceComposition, LiveBotEvidenceController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
+import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveFoundryScreen, createLiveReplayHub, createLiveInterfaceComposition, GameAgentEvidenceController, RunMonitorController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
 import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
@@ -41,7 +41,7 @@ import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-ses
 import { createLiveHumanCalibrationCaptureComposition } from "./live-human-calibration-capture-composition";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller";
 import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch";
-import { LivePlayerWatchController } from "./live-player-watch-controller"; import { LiveGhostPublicationController } from "./live-ghost-publication-controller"; import { LiveGhostSupportController } from "./live-ghost-support-controller";
+import { LiveGhostPublicationController } from "./live-ghost-publication-controller"; import { LiveGhostSupportController } from "./live-ghost-support-controller";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, ghostPublication, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
@@ -545,8 +545,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
     killRuntime: liveKillRuntime, frameRuntime: liveFrameRuntime, authoritativeStep } = combatHost;
-  const playerWatch = new LivePlayerWatchController(browserIndexedDb, { canonicalState: () => authoritativeStep.lastResult?.state ?? null, availableActions: () => createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }).availableGameActions(), pushAction: (action) => { Input.semantic.push(action); }, setSemanticAuthority: inputAuthority.setSemanticInputAuthority, startNormalRun: () => { startRunWithPreflight("endless", "normal"); } });
-  void playerWatch.refresh(); const replayHub = createLiveReplayHub(playerWatch), botEvidence = new LiveBotEvidenceController(browserIndexedDb);
+  const playerWatch = new RunMonitorController(browserIndexedDb, { canonicalState: () => authoritativeStep.lastResult?.state ?? null, availableActions: () => createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }).availableGameActions(), pushAction: (action) => { Input.semantic.push(action); }, setSemanticAuthority: inputAuthority.setSemanticInputAuthority, startNormalRun: () => { startRunWithPreflight("endless", "normal"); } });
+  void playerWatch.refresh(); const replayHub = createLiveReplayHub(playerWatch), botEvidence = new GameAgentEvidenceController(browserIndexedDb);
   const captureGhostAuthoritativeReceipt = (tick: number): void => {
     if (ghostV3?.active !== true) return;
     const result = authoritativeStep.lastResult;

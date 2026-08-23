@@ -70,7 +70,7 @@ describe("visible journey director", () => {
     const overlay = createWatchOverlay(true, {
       stage: "boss", objective: "defeat-boss", maneuver: "parry", confidence: 0.86,
     });
-    expect(overlay).toMatchObject({ visible: true, title: "TEARBOT WATCH" });
+    expect(overlay).toMatchObject({ visible: true, title: "GAME AGENT · RUN MONITOR" });
     expect(overlay.lines).toContain("Confidence: 86%");
   });
 });

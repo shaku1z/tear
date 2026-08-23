@@ -18,6 +18,9 @@ const bridgeMarkers = [
   "live-watch-agent-host",
   "tear-watch-agent",
   "Watch Agent",
+  "__TEAR_RUN_MONITOR__",
+  "tear-run-monitor",
+  "Start Run Monitor",
 ];
 
 function filesUnder(directory) {

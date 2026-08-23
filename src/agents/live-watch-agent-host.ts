@@ -13,6 +13,7 @@ import { createTearFoundryV3PostPromotionTerminalReceipt, type TearFoundryV3Post
 import { stableVerificationHash } from "../replay/hash";
 import { buildWatchChoiceScore } from "./watch-build-choice";
 import { installLiveWatchAgentPanel } from "./live-watch-agent-panel";
+import { LEGACY_WATCH_AGENT_PANEL, type AgentPanelSurface } from "./panel-surface";
 import {
   C24_LONGITUDINAL_POLICY,
   C24LongitudinalJourneyDirector,
@@ -536,15 +537,24 @@ export function createLiveWatchAgentHost(
 
 export function installLiveWatchAgentHost(
   context: LiveTearRuntimeEnvironmentContext,
-  target: Window & { __TEAR_WATCH_AGENT__?: TearWatchAgentApi },
+  target: Window & { __TEAR_WATCH_AGENT__?: TearWatchAgentApi; __TEAR_RUN_MONITOR__?: TearWatchAgentApi },
   artifactRuntime?: TearActivePolicyRuntime,
   decisionJournal?: TearPolicyDecisionJournal,
   canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
   postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
+  surface: AgentPanelSurface = LEGACY_WATCH_AGENT_PANEL,
 ): void {
   const api = createLiveWatchAgentHost(context, artifactRuntime, decisionJournal, canonicalRuntime, postPromotionMonitor);
-  Object.defineProperty(target, "__TEAR_WATCH_AGENT__", {
+  Object.defineProperty(target, surface.globalId, {
     configurable: false, writable: false, value: api,
   });
-  installLiveWatchAgentPanel(api, DEFAULTS);
+  // Canonical Run Monitor links remain readable by old C32 callers.  Both
+  // globals reference the same host, so this does not create a second policy,
+  // journal, or backend.
+  if (surface.globalId !== LEGACY_WATCH_AGENT_PANEL.globalId && target.__TEAR_WATCH_AGENT__ === undefined) {
+    Object.defineProperty(target, LEGACY_WATCH_AGENT_PANEL.globalId, {
+      configurable: false, writable: false, value: api,
+    });
+  }
+  installLiveWatchAgentPanel(api, DEFAULTS, surface);
 }

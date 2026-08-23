@@ -107,7 +107,6 @@ export * from "./tearbot-human-calibration-capture";
 export * from "./tearbot-human-calibration-admission";
 export * from "./tearbot-human-calibration-distribution";
 export * from "./tearbot-human-likeness-comparison";
-export * from "./live-watch-agent-host";
 export * from "./hierarchical-policy-adapter";
 export * from "./persona-contracts";
 export * from "./mode-completion-contracts";

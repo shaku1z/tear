@@ -168,7 +168,7 @@ export function createWatchOverlay(
 ): TearWatchOverlay {
   return Object.freeze({
     visible: enabled,
-    title: "TEARBOT WATCH",
+    title: "GAME AGENT · RUN MONITOR",
     lines: Object.freeze([
       `Journey: ${input.stage}`,
       `Objective: ${input.objective}`,

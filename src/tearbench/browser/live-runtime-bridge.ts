@@ -10,6 +10,7 @@ import type {
 import { createLiveTearRuntimeEnvironment } from "../live-runtime-environment";
 import { installReplayHubPanel } from "./replay-hub";
 import { installLiveScenarioConsole } from "./scenario-console";
+import { isAgentSurfaceRequested, isCanonicalAgentSurfaceRequested } from "../../agents/surface-route";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import type { GhostCapsuleReplayMapping } from "../../ghost/capsule-replay-envelope";
@@ -100,13 +101,24 @@ export function installLiveTearRuntimeBridge(
   });
   installReplayHubPanel(factory);
   installLiveScenarioConsole(factory);
-  if (new URLSearchParams(target.location.search).get("watchagent") === "1") {
-    void Promise.all([
-      import("../../agents/live-watch-agent-host"),
-      import("../../agents/browser-active-policy-runtime"),
-    ]).then(async ([{ installLiveWatchAgentHost }, { createBrowserActivePolicyRuntime }]) => {
-      const policy = await createBrowserActivePolicyRuntime(target.indexedDB);
-      installLiveWatchAgentHost(context, target, policy?.runtime, policy?.decisionJournal, policy?.canonicalRuntime, policy?.postPromotionMonitor);
-    });
+  const search = target.location.search;
+  if (isAgentSurfaceRequested(search, "run-monitor")) {
+    if (isCanonicalAgentSurfaceRequested(search, "run-monitor")) {
+      void Promise.all([
+        import("../../agents/run-monitor"),
+        import("../../agents/browser-active-policy-runtime"),
+      ]).then(async ([{ installRunMonitor }, { createBrowserActivePolicyRuntime }]) => {
+        const policy = await createBrowserActivePolicyRuntime(target.indexedDB);
+        installRunMonitor(context, target, policy?.runtime, policy?.decisionJournal, policy?.canonicalRuntime, policy?.postPromotionMonitor);
+      });
+    } else {
+      void Promise.all([
+        import("../../agents/live-watch-agent-host"),
+        import("../../agents/browser-active-policy-runtime"),
+      ]).then(async ([{ installLiveWatchAgentHost }, { createBrowserActivePolicyRuntime }]) => {
+        const policy = await createBrowserActivePolicyRuntime(target.indexedDB);
+        installLiveWatchAgentHost(context, target, policy?.runtime, policy?.decisionJournal, policy?.canonicalRuntime, policy?.postPromotionMonitor);
+      });
+    }
   }
 }

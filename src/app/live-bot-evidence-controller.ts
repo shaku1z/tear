@@ -15,14 +15,14 @@ async function loadExact(factory: IDBFactory | undefined, reportHash: string | u
  * trusted route binding; this controller never scans, evaluates, or infers one. */
 export class LiveBotEvidenceController {
   readonly #factory: IDBFactory | undefined; readonly #reportHash: () => string | undefined; readonly #load: BotEvidenceLoader;
-  #view: BotEvidenceScreenView = Object.freeze({ id: "botevidence", status: "unavailable", subtitle: "exact local canonical evidence only", detail: "No exact retained canonical evaluation report is selected locally." });
+  #view: BotEvidenceScreenView = Object.freeze({ id: "botevidence", status: "unavailable", subtitle: "exact local Game Agent evidence only", detail: "No exact retained Game Agent evaluation report is selected locally." });
   constructor(factory: IDBFactory | undefined, reportHash: () => string | undefined = () => undefined, load: BotEvidenceLoader = loadExact) { this.#factory = factory; this.#reportHash = reportHash; this.#load = load; }
   snapshot = (): BotEvidenceScreenView => this.#view;
   async refresh(): Promise<void> {
     try {
       const report = await this.#load(this.#factory, this.#reportHash());
       if (report === undefined) throw new Error("unavailable");
-      this.#view = Object.freeze({ id: "botevidence", status: "ready", subtitle: "exact local canonical evidence only", detail: "Immutable canonical evaluation evidence; it is not a ladder placement, human comparison, or certification.", report: Object.freeze({
+      this.#view = Object.freeze({ id: "botevidence", status: "ready", subtitle: "exact local Game Agent evidence only", detail: "Immutable Game Agent evaluation evidence; it is not a ladder placement, human comparison, or certification.", report: Object.freeze({
         reportHash: report.reportHash, planHash: report.planHash, artifactId: report.provenance.artifactId,
         approvalHash: report.provenance.approvalHash, promotionReceiptHash: report.provenance.promotionReceiptHash,
         artifactHash: report.provenance.artifactHash, activationHash: report.provenance.activationHash,
@@ -31,7 +31,7 @@ export class LiveBotEvidenceController {
         maxTicksPerCase: report.distribution.maxTicksPerCase, placement: "unassigned", humanCalibration: "not-compared", certification: "not-certified",
       }) });
     } catch {
-      this.#view = Object.freeze({ id: "botevidence", status: "unavailable", subtitle: "exact local canonical evidence only", detail: "No current exact retained report is available. Missing, stale, or integrity-invalid evidence is not projected." });
+      this.#view = Object.freeze({ id: "botevidence", status: "unavailable", subtitle: "exact local Game Agent evidence only", detail: "No current exact retained Game Agent report is available. Missing, stale, or integrity-invalid evidence is not projected." });
     }
   }
 }
