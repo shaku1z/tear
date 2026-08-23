@@ -189,7 +189,7 @@
       "owner": "TearBench scenario-console facade owner with State Forge codec/runtime bridge owner",
       "compatibilityStrategy": "Add a Scenario Console facade and route aliases over existing State Forge/TearBench hosts; do not move src/tearbench or rewrite codecs.",
       "removalCheckpoint": {
-        "id": "G4-B-SCENARIO-CONSOLE",
+        "id": "G4-C-SCENARIO-CONSOLE",
         "condition": "Remove State Forge UI/route aliases only after old deep links, timeline/replay/capsule reads, imported .tearsdl artifacts, and evidence hashes pass; TearBench paths remain stable."
       }
     },
@@ -1116,7 +1116,7 @@
           "tests/browser-state-forge-runtime.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-SCENARIO-CONSOLE",
+          "checkpoint": "G4-C-SCENARIO-CONSOLE",
           "condition": "Remove after facade routes and codec adapters are canonical."
         }
       },
@@ -1147,10 +1147,11 @@
         "reason": "Existing browser host and studio UI remain compatible while the facade is added.",
         "testEvidence": [
           "tests/browser-state-forge-studio.js",
-          "tests/unit/tearbench-state-forge-studio.test.ts"
+          "tests/unit/tearbench-state-forge-studio.test.ts",
+          "tests/unit/scenario-console-surface-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-SCENARIO-CONSOLE",
+          "checkpoint": "G4-C-SCENARIO-CONSOLE",
           "condition": "Remove only after Scenario Console UI route aliases and visual labels pass."
         }
       },
@@ -1164,10 +1165,11 @@
         "reason": "Studio host exposes the existing State Forge compatibility surface.",
         "testEvidence": [
           "tests/browser-state-forge-studio.js",
-          "tests/unit/tearbench-state-forge-studio.test.ts"
+          "tests/unit/tearbench-state-forge-studio.test.ts",
+          "tests/unit/scenario-console-surface-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-SCENARIO-CONSOLE",
+          "checkpoint": "G4-C-SCENARIO-CONSOLE",
           "condition": "Remove after canonical host labels are verified without moving src/tearbench."
         }
       },

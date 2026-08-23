@@ -9,7 +9,7 @@ import type {
 } from "../live-runtime-contracts";
 import { createLiveTearRuntimeEnvironment } from "../live-runtime-environment";
 import { installGhostLabPanel } from "./ghost-lab-panel";
-import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
+import { installLiveScenarioConsole } from "./scenario-console";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import type { GhostCapsuleReplayMapping } from "../../ghost/capsule-replay-envelope";
@@ -99,7 +99,7 @@ export function installLiveTearRuntimeBridge(
     value: factory,
   });
   installGhostLabPanel(factory);
-  installLiveStateForgeStudio(factory);
+  installLiveScenarioConsole(factory);
   if (new URLSearchParams(target.location.search).get("watchagent") === "1") {
     void Promise.all([
       import("../../agents/live-watch-agent-host"),

@@ -6,5 +6,6 @@
 export * from "./ghost-lab-panel";
 export * from "./live-physical-input";
 export * from "./live-runtime-bridge";
+export * from "./scenario-console";
 export * from "./state-forge-studio";
 export * from "./live-state-forge-studio-host";
