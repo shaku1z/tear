@@ -1,6 +1,6 @@
 # Phase F — THE MIRROR: a living reflection that learns and echoes you
 
-> Historical implementation record: paths in this document refer to the pre-redesign `js/` tree. The maintained mirror implementation now lives under `src/gameplay/entities/`; use the current architecture documents for new work.
+> Completed historical record only: paths in this document refer to the pre-redesign `js/` tree. It is not an active plan or typed-code authority. The maintained mirror implementation now lives under `src/gameplay/entities/`; future Mirror work requires a new typed plan against the current architecture, and deferred ideas below are non-active.
 
 _The AI Boss Actor, realized. Additive-not-atomic (per `tear-ai-boss-actor-v1.md`), built on the
 two proven seams (`player.aiInput`, `blade.aimOverride`) and the reusable `_segNear` collision.
@@ -90,7 +90,7 @@ so the two blades don't cross-contaminate.
 
 Firewalled out of scope (per doc): all networking / rollback / determinism.
 
-## Status — SHIPPED (F1–F8 complete, pushed to main)
+## Status — COMPLETED HISTORICAL RECORD (F1–F9 complete)
 
 | Sub-phase | Commit | What shipped |
 |---|---|---|

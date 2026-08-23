@@ -1,8 +1,8 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
 **Status:** G4 is CLOSED after its protected-main merge and green post-merge
-`Validate`/ref observation. G5 is OPEN for the bounded baseline and authority
-index slice; production remains frozen and no deployment is authorized.
+`Validate`/ref observation. G5 is OPEN for bounded organization slices;
+production remains frozen and no deployment is authorized.
 
 **Prepared:** 2026-08-20
 
@@ -10,16 +10,17 @@ index slice; production remains frozen and no deployment is authorized.
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Certified baseline for this G5 history-documentation slice:** protected game
-`main` at `682036278db2c6dab04692ad798f5f6731e07508` (`6820362`). Exact-main
-hosted `Validate` run `32639193284` is green and certifies this baseline for
-the two-file move only. G5 remains OPEN; no broader organization objective is
-checked by this slice.
+**Certified baseline for this G5 document-placement slice:** protected game
+`main` at `7963ddb832bc94201fe24ddb20fd7cd498e70ed0` (`7963ddb`). Exact-main
+hosted `Validate` run `32640535154` is green and certifies the four-document
+placement here together with the earlier two-file history placement. G5
+remains OPEN; no workspace, artifact, helper, or wiki objective is checked by
+this slice.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
-CLOSED after protected merge and post-merge observation; G5 OPEN for the
-bounded organization baseline; G6 synchronization repair and G7 production
-certification remain future work.
+CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
+organization work; G6 synchronization repair and G7 production certification
+remain future work.
 
 **Music repository state:** `shaku1z/tear-music` (formerly
 `shaku1z/tear-score`) protected `main` is clean at
@@ -808,7 +809,7 @@ no workspace move, quarantine, deletion, or bulk reorganization is performed.
 The bounded G5 baseline is recorded in
 `docs/checkpoints/program-normalization/G5_BASELINE_INVENTORY.md`. The
 authority indexes are `docs/README.md` and `plans/README.md`; they classify the
-current tree without claiming that any later move or workspace cleanup is
+current tree without claiming that workspace cleanup or other future G5 work is
 complete.
 
 This G5 docs-checker slice adds `scripts/check-docs.mjs`, its focused permanent
@@ -816,9 +817,10 @@ This G5 docs-checker slice adds `scripts/check-docs.mjs`, its focused permanent
 package commands, both gated immediately after `requirements:check` in
 `check:functional`. The checker scans only tracked root/docs/plans/tear-wiki
 Markdown, validates local links without network access, enforces the exact
-nine-file root table, and asserts the ten fixed TearBench paths remain present.
-No document move, workspace cleanup, dependency change, or production mutation
-is claimed.
+three-file root table, and asserts the ten fixed TearBench paths remain present.
+The separate document-placement slice updates only the approved Markdown
+locations and their authority checks; no workspace cleanup, dependency change,
+or production mutation is claimed.
 
 **Goal:** Make authority obvious without destabilizing the working architecture.
 
@@ -858,8 +860,10 @@ This is a target classification, not permission for a bulk move.
       documents.
 - [x] Classify every root Markdown file as current authority, active plan,
       completed plan, or history.
-- [ ] Move root redesign/audit/economy/enemy/shop/mirror plan documents through
-      separate link-checked commits.
+- [x] Move root redesign/audit/economy/enemy/shop/mirror plan documents through
+      link-checked placement slices; the first two are in `docs/history/` and
+      this slice places Economy, Enemy/Boss, Shop, and Phase F in their
+      classified destinations.
 - [ ] Move the game repo's single `tear-wiki/Weapons-and-Abilities.md` handoff to
       an explicit integration/history location after the real wiki owns the
       modern manifest.

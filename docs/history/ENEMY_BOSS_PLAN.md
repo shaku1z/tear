@@ -1,5 +1,7 @@
 # Enemy / Boss Mechanics + AI Boss Actor — Phased Plan
 
+> Legacy-JS historical evidence only; this is not typed `src/` authority. Future Enemy/Boss work requires a new typed audit and plan against the current architecture.
+
 _Audit-first, as usual: each fix is verified against real code, then diff → approve → commit,
 one isolated commit per fix. No saved-data shapes involved in any of the bug fixes below._
 

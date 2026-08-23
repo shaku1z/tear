@@ -1,8 +1,9 @@
 # Tear plan authority index
 
-This index is the G5 Slice 1 plan map. It records the current authority and
-the disposition of every Markdown file directly under `plans/` without moving
-anything. Plan relocation is deferred to separate link-checked slices.
+This index is the G5 plan map. It records the current authority and
+disposition of Markdown files directly under `plans/` and the explicitly
+authorized `active/` and `completed/` destinations. Each placement change or
+combined transaction must remain link-checked and reviewable.
 
 ## Current sequencing authority
 
@@ -26,7 +27,19 @@ their own.
 | [TEARBENCH_MASTER_HANDOFF.md](TEARBENCH_MASTER_HANDOFF.md) | active plan | Program continuation handoff and evidence boundary |
 | [WEAPON_THROW_STATE_MACHINES.md](WEAPON_THROW_STATE_MACHINES.md) | completed plan | Retained combat state-machine contract |
 
-The target `active/`, `completed/`, and `archive/` directories remain future
-G5 destinations. This slice does not create them or change any relative path.
+## Active plans
+
+| Document | Role |
+| --- | --- |
+| [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Partially implemented balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
+
+## Completed plans
+
+| Document | Role |
+| --- | --- |
+| [PHASE_F_MIRROR_PLAN.md](completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
+
+The `active/` and `completed/` directories now contain only the moved Economy
+and Phase F records listed above; `archive/` remains a future G5 destination.
 Generated TearBench inputs and outputs remain at their current paths until an
 atomic scripts/tests/CI migration is authorized.
