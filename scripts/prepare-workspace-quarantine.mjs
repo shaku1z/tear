@@ -304,7 +304,10 @@ function inspectSourceEvidence(source, policy, budget) {
         continue;
       }
       if (stats.isDirectory()) {
-        ordinaryDirectories.set(relativePath.toLowerCase(), relativePath);
+        ordinaryDirectories.set(relativePath.toLowerCase(), {
+          relativePath,
+          mtimeUtc: timestampUtc(stats.mtimeMs),
+        });
         visit(absolute, depth + 1);
         continue;
       }
@@ -393,13 +396,14 @@ function validateReportEntries(source, current, policy) {
   const expectedDirectories = expectedOrdinaryDirectories([...reportEntries.values()].filter((entry) => entry.decision !== "protected"));
   for (const directory of expectedDirectories) if (!current.ordinaryDirectories.has(directory)) fail(`source directory evidence is missing: ${source.name}/${directory}`);
   const emptyDirectories = [];
-  for (const [directoryKey, directory] of current.ordinaryDirectories) {
+  for (const [directoryKey, directoryRecord] of current.ordinaryDirectories) {
     if (expectedDirectories.has(directoryKey)) continue;
     const hasObservedDescendant = current.entries.some((entry) => entry.relativePath.toLowerCase().startsWith(`${directoryKey}/`));
-    if (hasObservedDescendant) fail(`source directory evidence contains added content: ${source.name}/${directory}`);
+    if (hasObservedDescendant) fail(`source directory evidence contains added content: ${source.name}/${directoryRecord.relativePath}`);
     emptyDirectories.push({
-      relativePath: directory,
-      absolutePath: path.join(source.path, directory.split("/").join(path.sep)),
+      relativePath: directoryRecord.relativePath,
+      absolutePath: path.join(source.path, directoryRecord.relativePath.split("/").join(path.sep)),
+      mtimeUtc: directoryRecord.mtimeUtc,
       status: "unverified-empty-directory",
       reason: "report-does-not-record-ordinary-empty-directories",
     });
@@ -508,6 +512,7 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         originalPath: prepared.entry.absolutePath,
         plannedPath: path.join(destination.path, source.name, relativePath.split("/").join(path.sep)),
         restoreRelativePath,
+        kind: prepared.entry.kind,
         bytes: prepared.entry.bytes ?? null,
         mtimeUtc: prepared.entry.timestamps?.mtimeUtc ?? null,
         reportDecision: prepared.entry.decision,
@@ -530,6 +535,7 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         originalPath: emptyDirectory.absolutePath,
         plannedPath: path.join(destination.path, source.name, emptyDirectory.relativePath.split("/").join(path.sep)),
         restoreRelativePath,
+        mtimeUtc: emptyDirectory.mtimeUtc,
         status: emptyDirectory.status,
         reason: emptyDirectory.reason,
       });

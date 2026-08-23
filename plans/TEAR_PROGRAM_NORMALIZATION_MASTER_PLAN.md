@@ -898,6 +898,10 @@ This is a target classification, not permission for a bulk move.
       source evidence, and plans only a new same-volume destination mapping with
       `applyAuthorized:false`; it creates no destination and authorizes no
       quarantine, move, or deletion.
+- [x] Add the acknowledgement-gated, apply-only whole-root preservation
+      journal. It performs same-volume renames only after stable manifest
+      revalidation, records numbered immutable events and a completion receipt,
+      and supports safe resume; restore remains a separate future slice.
 - [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
       retention date, and recovery procedure receive a separate review; no
       quarantine or deletion is authorized by the report slice.
