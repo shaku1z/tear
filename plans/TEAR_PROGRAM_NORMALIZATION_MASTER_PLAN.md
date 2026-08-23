@@ -633,6 +633,22 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 - [ ] Version codec/format aliases where names are serialized. Do not invalidate
       preservation-corpus hashes or replay schemas.
 
+### Scenario Console first slice — G4-C-SCENARIO-CONSOLE
+
+- [x] Add a canonical Scenario Console browser facade and export aliases while
+      retaining the State Forge implementation, `src/tearbench` paths, and
+      TearBench codec names.
+- [x] Accept `scenario-console=1` as the canonical developer route and
+      continue reading `stateforge`/`stateforge=1` without changing scenario,
+      checkpoint, replay, capsule, or evidence identifiers.
+- [x] Change the active panel heading and accessibility labels to Scenario
+      Console; keep legacy DOM IDs and query links readable for C23 evidence.
+- [x] Prove facade semantic equivalence and unchanged TearSDL fixture/hash
+      behavior with focused compatibility tests.
+- [ ] Complete the remaining Scenario Console migration: canonical DOM/route
+      aliases for all old deep links and explicit dual-read coverage for every
+      timeline, replay/capsule, and evidence boundary before retiring aliases.
+
 ### Checkpoint G4-A — midpoint pause
 
 - [ ] Public surfaces use only permanent terms.

@@ -7,6 +7,7 @@ import {
   type StateForgeForkRequest,
   type StateForgeStudioHost,
 } from "./state-forge-studio";
+import { isScenarioConsoleRequested } from "./scenario-console-route";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
 import { TearCheckpointBank } from "../tearsdl";
 
@@ -131,6 +132,6 @@ export function createLiveStateForgeStudioHost(
 }
 
 export function installLiveStateForgeStudio(factory: TearRuntimeBridgeFactory): void {
-  if (new URLSearchParams(window.location.search).get("stateforge") !== "1") return;
+  if (!isScenarioConsoleRequested(window.location.search)) return;
   installStateForgeStudio(createLiveStateForgeStudioHost(factory));
 }

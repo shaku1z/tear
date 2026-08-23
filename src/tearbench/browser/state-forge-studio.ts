@@ -2,6 +2,7 @@ import type { TearProvenanceV1 } from "../contracts";
 import type { StateForgeEvaluation, StateForgeReport, StateForgeValueDiff } from "../state-forge-studio-model";
 import { diffStateForgeValues, evaluateStateForgeSource } from "../state-forge-studio-model";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
+import { isScenarioConsoleRequested } from "./scenario-console-route";
 
 export interface StateForgeCheckpointItem {
   readonly id: string;
@@ -131,7 +132,9 @@ function defaultDiff(
 function createPanel(): HTMLElement {
   const panel = element("aside");
   panel.id = "tear-state-forge-studio";
-  panel.setAttribute("aria-label", "State Forge Studio");
+  panel.dataset.surface = "scenario-console";
+  panel.dataset.legacySurface = "state-forge-studio";
+  panel.setAttribute("aria-label", "Scenario Console");
   Object.assign(panel.style, {
     position: "fixed", inset: "12px", zIndex: "2147483646", overflow: "auto",
     padding: "16px", color: "#e8f8ff", background: "rgba(5, 10, 18, .98)",
@@ -168,7 +171,7 @@ function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioE
   const launch = element("button", "Launch scenario");
   launch.type = "button";
   panel.append(
-    element("h2", "State Forge Studio"),
+    element("h2", "Scenario Console"),
     labelledControl("Scenario editor", editor),
     status,
     reports,
@@ -186,12 +189,12 @@ function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioE
 }
 
 export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement | null {
-  if (new URLSearchParams(window.location.search).get("stateforge") !== "1") return null;
+  if (!isScenarioConsoleRequested(window.location.search)) return null;
   const existing = document.querySelector<HTMLElement>("#tear-state-forge-studio");
   if (existing !== null) return existing;
   const panel = createPanel();
   const controls = element("nav");
-  controls.setAttribute("aria-label", "State Forge actions");
+  controls.setAttribute("aria-label", "Scenario Console actions");
   Object.assign(controls.style, {
     display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center",
     position: "sticky", top: "0", zIndex: "1", paddingBlock: "6px",
