@@ -5,6 +5,10 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { RELEASE_REPOSITORY } from "./release-artifact.mjs";
+import { normalizeRepositoryIdentifier } from "./repository-identity.mjs";
+import { readArtifactRetentionPolicy } from "./report-artifacts.mjs";
+
+export { normalizeRepositoryIdentifier } from "./repository-identity.mjs";
 
 const DEFAULT_CONTRACT_PATH = path.resolve(import.meta.dirname, "..", "config", "workspace-contract.json");
 const ORACLE_COMMIT_PATTERN = /^[0-9a-f]{40}$/u;
@@ -40,35 +44,6 @@ function samePath(left, right) {
   } catch {
     return normalizeComparablePath(left) === normalizeComparablePath(right);
   }
-}
-
-function normalizeRepositoryPath(value) {
-  return String(value).replaceAll("\\", "/").replace(/^\/+|\/+$/gu, "");
-}
-
-/** Normalize SSH, HTTPS, and owner/repository forms to a comparable identity. */
-export function normalizeRepositoryIdentifier(value) {
-  let raw = String(value ?? "").trim();
-  if (raw === "") return "";
-  raw = raw.split(/[?#]/u, 1)[0].replace(/\/+$/u, "").replace(/\.git$/iu, "");
-
-  let hostPath = raw;
-  const urlMatch = raw.match(/^[a-z][a-z0-9+.-]*:\/\//iu);
-  if (urlMatch) {
-    try {
-      const parsed = new URL(raw);
-      hostPath = `${parsed.hostname}/${parsed.pathname.replace(/^\/+/, "")}`;
-    } catch {
-      return "";
-    }
-  } else {
-    const scpMatch = raw.match(/^(?:[^@/]+@)?([^:]+):(.+)$/u);
-    if (scpMatch) hostPath = `${scpMatch[1]}/${scpMatch[2]}`;
-  }
-
-  hostPath = normalizeRepositoryPath(hostPath).toLowerCase();
-  if (hostPath.startsWith("github.com/")) return hostPath.slice("github.com/".length);
-  return hostPath;
 }
 
 function readContract(contractPath) {
@@ -398,10 +373,21 @@ export function runWorkspaceCheck({
   const loaded = readContract(path.resolve(contractPath));
   errors.push(...loaded.errors);
   const contract = loaded.contract;
+  const artifactPolicy = readArtifactRetentionPolicy();
+  errors.push(...artifactPolicy.errors.map((error) => `artifact retention policy: ${error}`));
   if (expectedSha !== undefined) env = { ...env, GITHUB_SHA: expectedSha };
   if (!fs.existsSync(absoluteRoot)) {
     errors.push(`workspace root is missing: ${absoluteRoot}`);
-    return { ok: false, mode, errors, findings, trackedDirectories: [], head: null, oracle: { status: "skipped" } };
+    return {
+      ok: false,
+      mode,
+      errors,
+      findings,
+      trackedDirectories: [],
+      head: null,
+      oracle: { status: "skipped" },
+      artifactPolicy: { status: artifactPolicy.errors.length === 0 ? "validated" : "invalid", path: artifactPolicy.path },
+    };
   }
   const identity = checkIdentity(absoluteRoot, contract, env, errors);
   const trackedDirectories = checkTrackedStructure(absoluteRoot, contract, errors);
@@ -434,6 +420,7 @@ export function runWorkspaceCheck({
     trackedDirectories,
     head: identity.head,
     oracle,
+    artifactPolicy: { status: artifactPolicy.errors.length === 0 ? "validated" : "invalid", path: artifactPolicy.path },
   };
 }
 

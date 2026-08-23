@@ -1,0 +1,78 @@
+{
+  "format": "tear-artifact-retention-policy",
+  "schemaVersion": 1,
+  "repository": "shaku1z/tear",
+  "boundary": {
+    "rootMustBeCanonicalGitRoot": true,
+    "sourceMustBeInsideRoot": true,
+    "destinationMustBeInsideRoot": true,
+    "externalRoots": false
+  },
+  "sourceRoots": [
+    {
+      "id": "ignored-artifacts",
+      "relativePath": "artifacts"
+    }
+  ],
+  "destination": {
+    "relativeParent": ".artifact-quarantine",
+    "mustBeExistingEmptyDirectory": true,
+    "sameVolumeAsSource": true
+  },
+  "age": {
+    "basis": "mtimeUtc",
+    "defaultMinAgeDays": 30,
+    "applyRequiresExplicitMinAgeDays": true,
+    "futureMtime": "refuse"
+  },
+  "limits": {
+    "maxEntries": 100000,
+    "maxBytes": 2147483648,
+    "maxDepth": 64
+  },
+  "protected": {
+    "activeOutputPrefixes": [
+      "dist/",
+      "public/",
+      "build/",
+      "coverage/",
+      "test-results/",
+      "node_modules/",
+      "artifacts/tearbench/generated/",
+      "artifacts/tearbench/receipts/"
+    ],
+    "preservedPrefixes": [
+      "artifacts/t26w/"
+    ],
+    "forbiddenSegments": [
+      ".git"
+    ],
+    "recoveryNamePatterns": [
+      "(?:^|[\\\\/])Tear-archives(?:$|[\\\\/])",
+      "(?:^|[\\\\/])tear-git-recovery-",
+      "(?:^|[\\\\/])tear-g3-preservation-audit-"
+    ],
+    "reparsePoints": "refuse"
+  },
+  "hash": {
+    "algorithm": "sha256",
+    "pathEncoding": "relative-posix-v1"
+  },
+  "preserve": {
+    "operation": "same-volume-rename-only",
+    "relativePaths": true,
+    "timestamps": [
+      "atimeUtc",
+      "mtimeUtc",
+      "birthtimeUtc"
+    ],
+    "restoreInstructions": "required"
+  },
+  "apply": {
+    "requiresCleanMain": true,
+    "sameVolumeRenameOnly": true,
+    "overwrite": false,
+    "deleteSource": false,
+    "journal": "required"
+  }
+}
