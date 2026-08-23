@@ -5,6 +5,7 @@
     ".github",
     "config",
     "docs",
+    "experiments",
     "migrations",
     "plans",
     "preservation",

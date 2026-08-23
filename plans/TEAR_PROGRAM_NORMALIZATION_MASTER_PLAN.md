@@ -10,12 +10,11 @@ production remains frozen and no deployment is authorized.
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Certified baseline for this G5 document-placement slice:** protected game
-`main` at `7963ddb832bc94201fe24ddb20fd7cd498e70ed0` (`7963ddb`). Exact-main
-hosted `Validate` run `32640535154` is green and certifies the four-document
-placement here together with the earlier two-file history placement. G5
-remains OPEN; no workspace, artifact, helper, or wiki objective is checked by
-this slice.
+**Certified baseline for this G5 root-utilities slice:** protected game `main`
+at `dabccde1c56e30b74a6208ae7c845b93374efc62` (`dabccde`). Exact-main hosted
+`Validate` run `32642005329` is green and certifies the root utility placement
+and focused contract changes in this slice. G5 remains OPEN; no local
+workspace, artifact, quarantine, or wiki objective is checked by this slice.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
@@ -804,7 +803,8 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 
 **Status:** OPEN after protected G4 merge and post-merge `Validate`/ref
 observation. This slice records the bounded baseline and authority indexes;
-no workspace move, quarantine, deletion, or bulk reorganization is performed.
+no local workspace move, quarantine, deletion, or bulk reorganization is
+performed.
 
 The bounded G5 baseline is recorded in
 `docs/checkpoints/program-normalization/G5_BASELINE_INVENTORY.md`. The
@@ -864,15 +864,21 @@ This is a target classification, not permission for a bulk move.
       link-checked placement slices; the first two are in `docs/history/` and
       this slice places Economy, Enemy/Boss, Shop, and Phase F in their
       classified destinations.
-- [ ] Move the game repo's single `tear-wiki/Weapons-and-Abilities.md` handoff to
-      an explicit integration/history location after the real wiki owns the
-      modern manifest.
-- [ ] Classify `coop-lab.html` as an experiment and move it only after all
-      references and relative asset paths are updated.
-- [ ] Prove whether `serve.py` still owns any supported workflow; retire or
-      relocate it only after replacement commands are documented.
-- [ ] Separate generated TearBench catalogs from narrative docs only through an
-      atomic scripts+paths+CI migration. Do not move hash-bound files manually.
+- [x] G5 disposition: preserve the game repo's
+      `tear-wiki/Weapons-and-Abilities.md` as a
+      G6-owned handoff exception. G5 does not move or rewrite it. G6 may
+      relocate or supersede it only within the manifest-backed wiki
+      synchronization transaction, after the game manifest schema and wiki
+      consumer contract are ready; until then it remains comparison/handoff
+      material.
+- [x] Classify `experiments/coop-lab.html` as an experiment and move it after
+      updating its tracked references and external-network/export rationale.
+- [x] Relocate `scripts/serve.py` as the documented repository-root helper;
+      its loopback, bounded PNG, and create-only save contract is covered by
+      `tests/serve-contract.test.mjs`.
+- [x] G5 disposition: retain generated TearBench catalogs in their existing
+      path-bound locations. No G5 move is authorized; any future relocation
+      requires a separately reviewed atomic scripts+paths+CI migration.
 - [x] Add `scripts/check-docs.mjs` as the scoped link/path and documentation
       authority check; `pnpm check:docs` is included immediately after
       `requirements:check` in the functional gate, with focused `test:docs`
@@ -886,8 +892,9 @@ This is a target classification, not permission for a bulk move.
       repository structure, active terminology allowlists, exact Final Five
       IDs, generated-document freshness, worktree integrity, and deployment
       root safety.
-- [ ] Keep the current `src/` domain boundaries unless a measured architecture
-      issue justifies a focused refactor.
+- [x] G5 disposition: keep the current `src/` domain boundaries unchanged in
+      G5. A future focused refactor requires measured architecture evidence and
+      a separate review.
 
 ### Local workspace objectives
 
@@ -933,6 +940,11 @@ This is a target classification, not permission for a bulk move.
 
 **Goal:** Make the wiki consume a stable, typed, versioned representation of
 the modern game at an exact verified commit.
+
+The game repo's `tear-wiki/Weapons-and-Abilities.md` is a G6-owned handoff
+exception. G6 may adopt, relocate, or supersede it only as part of the exact
+SHA game-reference manifest transaction, preserving its handoff/history
+semantics and recording the resulting path and hash in the G6 receipt.
 
 ### Game-owned manifest
 

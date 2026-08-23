@@ -22,7 +22,7 @@ Inspect the archive before uploading:
 tar -tf artifacts/tear-crazygames.zip
 ```
 
-The archive must contain generated game assets only. It must not contain `src`, legacy source files, tests, plans, Firebase configuration files, Wrangler configuration, `coop-lab.html`, or repository metadata.
+The archive must contain generated game assets only. It must not contain `src`, legacy source files, tests, plans, Firebase configuration files, Wrangler configuration, `experiments/coop-lab.html`, or repository metadata.
 
 ## Release validation
 
@@ -48,5 +48,5 @@ Yes, using the Data Module from the CrazyGames SDK. Meta progress, settings and 
 | Option | Select? | Why |
 |---|---:|---|
 | The game supports mobile devices | **Yes** | Tear includes touch controls, viewport-safe rendering and touch aiming. Validate the current portal device matrix before each submission. |
-| The game is an online multiplayer game | **No** | The released game is single-player; `coop-lab.html` is not part of generated output. |
+| The game is an online multiplayer game | **No** | The released game is single-player; `experiments/coop-lab.html` is not part of generated output. |
 | The game supports CrazyGames muting audio through SDK | **Yes** | Portal muting is a temporary audio mute reason and does not overwrite the player's Master/Music/SFX/Interface settings. |

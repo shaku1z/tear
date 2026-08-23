@@ -243,9 +243,19 @@ window.saveAll=async function(){
   for(const {c,cv} of window.__covers){
     const dataURL=cv.toDataURL("image/png");
     const r=await fetch("/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:c.name,dataURL})});
-    out.push(await r.json());
+    let payload;
+    try { payload=await r.json(); }
+    catch { payload={ok:false,error:"The save server returned invalid JSON"}; }
+    const entry={name:c.name,status:r.status,...payload};
+    if(!r.ok && r.status===409){
+      entry.error="The existing file was preserved; restart the server with --allow-overwrite for deliberate regeneration.";
+    }
+    if(!r.ok && !entry.error) entry.error=`Save failed with HTTP ${r.status}.`;
+    out.push(entry);
   }
   document.getElementById("log").textContent=JSON.stringify(out);
+  const failures=out.filter(entry=>!entry.ok);
+  if(failures.length) throw new Error(failures.map(entry=>`${entry.name}: ${entry.error}`).join("; "));
   return out;
 };
 // auto-save on load (dev tool) — runs during page load so it isn't lost to harness resets
