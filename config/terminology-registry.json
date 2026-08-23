@@ -95,7 +95,8 @@
         ],
         "Signal": [
           "src/audio/signal/catalog.ts",
-          "tests/unit/music-surface-compat.test.ts"
+          "tests/unit/music-surface-compat.test.ts",
+          "src/presentation/settings-snapshots.ts"
         ]
       },
       "persistenceImpact": {
@@ -117,6 +118,40 @@
       "removalCheckpoint": {
         "id": "G4-B-MUSIC-SURFACE",
         "condition": "Remove signal aliases after settings navigation, catalog dual-read, now-playing snapshots, accessibility labels, and old bookmarks pass the release-window gate."
+      }
+    },
+    {
+      "id": "soundtrack-desk",
+      "displayName": "Soundtrack Desk",
+      "codeId": "soundtrack-desk",
+      "deprecatedAliases": [
+        "Foundry Studio (audio)",
+        "foundry-studio"
+      ],
+      "deprecatedCopyAliases": [
+        "Foundry Studio (audio)"
+      ],
+      "persistenceImpact": {
+        "scope": "private soundtrack host, admin configuration, access/session policy, storage/filesystem, and cross-repository release metadata",
+        "legacyRead": [
+          "Foundry Studio (audio)",
+          "foundry-studio",
+          "foundry host/configuration aliases",
+          "foundry-admin local configuration"
+        ],
+        "canonicalWrite": "Soundtrack Desk host, configuration, route, and package vocabulary",
+        "preserve": [
+          "legacy host redirects",
+          "admin storage and configuration schemas",
+          "access policy boundaries",
+          "music artifact and provenance identity"
+        ]
+      },
+      "owner": "Music/Soundtrack Desk owner with required game-integration and infrastructure reviewers",
+      "compatibilityStrategy": "Dual-read legacy Foundry Studio host, configuration, package, and route aliases; canonical-write Soundtrack Desk only after cross-repository host, access, storage, and release evidence is signed.",
+      "removalCheckpoint": {
+        "id": "G7-SOUNDTRACK-DESK-HOST-AND-ALIAS-RETIREMENT",
+        "condition": "Remove Foundry Studio and foundry-studio aliases only after the canonical Soundtrack Desk host, access policy, storage/filesystem, redirects, package/route aliases, game integration, and infrastructure evidence are signed by the Music/Soundtrack Desk owner with the required game and infrastructure reviewers."
       }
     },
     {
@@ -430,6 +465,7 @@
           "tear-music",
           "adaptive-soundtrack",
           "music",
+          "soundtrack-desk",
           "training-operations",
           "scenario-console",
           "replay-editor",
@@ -457,6 +493,7 @@
           "tear-music",
           "adaptive-soundtrack",
           "music",
+          "soundtrack-desk",
           "training-operations",
           "scenario-console",
           "replay-editor",
@@ -484,6 +521,7 @@
           "tear-music",
           "adaptive-soundtrack",
           "music",
+          "soundtrack-desk",
           "training-operations",
           "scenario-console",
           "replay-editor",
@@ -511,6 +549,7 @@
           "tear-music",
           "adaptive-soundtrack",
           "music",
+          "soundtrack-desk",
           "training-operations",
           "scenario-console",
           "replay-editor",
@@ -1663,6 +1702,18 @@
         "expiry": {
           "checkpoint": "G4-A",
           "condition": "Update menu copy/routes with canonical labels after each destination compatibility gate passes."
+        }
+      },
+      {
+        "id": "compat-music-settings-snapshots",
+        "pathPattern": "src/presentation/settings-snapshots.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Settings snapshots retain the legacy Signal label while the canonical Music surface and compatibility evidence remain staged.",
+        "testEvidence": ["tests/terminology-checkers.test.mjs", "tests/unit/music-surface-compat.test.ts"],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Remove after settings snapshots and accessibility evidence emit only the canonical Music vocabulary."
         }
       },
       {
