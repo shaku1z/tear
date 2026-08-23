@@ -874,7 +874,7 @@ This is a target classification, not permission for a bulk move.
       coverage for canonical success and negative link/table cases.
 - [ ] Add artifact retention commands/policy; generated artifacts remain
       ignored and never enter deployment bundles.
-- [ ] Add `pnpm check:workspace` to verify canonical-root identity, expected
+- [x] Add `pnpm check:workspace` to verify canonical-root identity, expected
       repository structure, active terminology allowlists, exact Final Five
       IDs, generated-document freshness, worktree integrity, and deployment
       root safety.

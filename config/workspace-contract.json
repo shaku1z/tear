@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "repository": "shaku1z/tear",
+  "requiredTrackedDirectories": [
+    ".github",
+    "config",
+    "docs",
+    "migrations",
+    "plans",
+    "preservation",
+    "public",
+    "scripts",
+    "src",
+    "tear-wiki",
+    "tests",
+    "workers"
+  ],
+  "optionalTrackedDirectories": [
+    ".agents",
+    ".claude",
+    "analysis",
+    "branding"
+  ],
+  "forbiddenTrackedDirectories": [
+    ".tmp-tone-host-esm",
+    ".wrangler",
+    "artifacts",
+    "coverage",
+    "dist",
+    "node_modules",
+    "test-results"
+  ],
+  "deployment": {
+    "assetsDirectory": "./dist/standalone",
+    "configs": [
+      "wrangler.jsonc",
+      "wrangler.preview.jsonc"
+    ]
+  },
+  "oracle": {
+    "lockedCommit": "ee5e93141d67cc02505b2227b3be0b10d1819e1c",
+    "requiredState": "detached-clean-comparison-only"
+  }
+}
