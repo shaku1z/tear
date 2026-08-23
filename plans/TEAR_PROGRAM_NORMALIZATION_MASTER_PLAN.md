@@ -912,12 +912,17 @@ This is a target classification, not permission for a bulk move.
       revalidation, records numbered immutable events and a completion receipt,
       and supports safe resume; restore remains a separate future slice.
 - [x] Add a separate, exact-name second-wave source allowlist for the reviewed
-      45 remaining directory roots. Reports bind the allowlist path/SHA and
-      each source's explicit `rootArgument`; preparation and apply reject
-      canonical/archive roots, wrong parents, extra/missing/case-colliding
-      sources, and report/manifest provenance mismatches. One retention floor
-      runs through `2027-03-31T23:59:59.000Z`; the allowlist is capability-only
-      and does not claim a real second-wave report, manifest, move, or G5 close.
+      45 remaining directory roots. The allowlist now defines five immutable
+      ordinary partitions covering 44 roots plus one explicitly deferred
+      opaque-reparse source (`Tear-budget-architecture/node_modules`) whose
+      coordinated preservation is a later slice. Reports require an explicit
+      partition ID and bind its exact source IDs, root arguments, and audited
+      byte provenance; preparation and apply reject canonical/archive roots,
+      wrong parents, deferred-source substitution, extra/missing/case-colliding
+      sources, cross-partition evidence, and report/manifest provenance
+      mismatches. One retention floor runs through
+      `2027-03-31T23:59:59.000Z`; the allowlist is capability-only and does
+      not claim a real second-wave report, manifest, move, or G5 close.
 - [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
       retention date, and recovery procedure receive a separate review; no
       quarantine or deletion is authorized by the report slice.

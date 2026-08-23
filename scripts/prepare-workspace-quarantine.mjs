@@ -8,6 +8,7 @@ import { RELEASE_REPOSITORY } from "./release-artifact.mjs";
 import { normalizeRepositoryIdentifier } from "./repository-identity.mjs";
 import {
   readWorkspaceRecoveryPolicyBundle,
+  resolveWorkspaceRecoverySecondWavePartition,
   rootArgumentForSource,
   WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT,
   WORKSPACE_RECOVERY_REPORT_FORMAT,
@@ -236,6 +237,27 @@ function sourceKindAllowed(source, sourcePath, roots, policyBundle) {
   return false;
 }
 
+export function validateSecondWavePartitionRecord(policyBundle, record, label) {
+  if (policyBundle.kind !== "second-wave") return null;
+  if (record === null || typeof record !== "object") fail(`${label} must carry second-wave partition provenance`);
+  let partition;
+  try {
+    partition = resolveWorkspaceRecoverySecondWavePartition(policyBundle.policy, record.id);
+  } catch (error) {
+    fail(`${label} is invalid: ${error.message}`);
+  }
+  if (!Array.isArray(record.sourceIds) || record.sourceIds.length !== partition.sourceIds.length || record.sourceIds.some((sourceId, index) => sourceId !== partition.sourceIds[index])) {
+    fail(`${label} source IDs do not match partition ${partition.id}`);
+  }
+  if (record.auditedObservedBytes !== partition.auditedObservedBytes) fail(`${label} audited bytes do not match partition ${partition.id}`);
+  const audit = record.audit;
+  const expectedAudit = policyBundle.policy.partitionAudit;
+  if (audit === null || typeof audit !== "object" || audit.auditDateUtc !== expectedAudit.auditDateUtc || audit.repositoryHead !== expectedAudit.repositoryHead || audit.totalObservedBytes !== expectedAudit.totalObservedBytes || audit.ordinaryPartitionObservedBytes !== expectedAudit.ordinaryPartitionObservedBytes || audit.deferredObservedBytes !== expectedAudit.deferredObservedBytes) {
+    fail(`${label} audit provenance does not match the current policy`);
+  }
+  return partition;
+}
+
 function verifySources(report, roots, policyBundle) {
   const sources = report.sources;
   if (!Array.isArray(sources)) fail("report sources are incomplete");
@@ -243,6 +265,9 @@ function verifySources(report, roots, policyBundle) {
   if (new Set(candidateRoots.map(comparablePath)).size !== candidateRoots.length || candidateRoots.length !== sources.length) fail("report candidate roots are not an exact unique source set");
   const seen = new Set();
   const verified = [];
+  const selectedPartition = policyBundle.kind === "second-wave"
+    ? validateSecondWavePartitionRecord(policyBundle, report.inputs?.partition, "report.inputs.partition")
+    : null;
   for (const source of sources) {
     if (!source || typeof source !== "object" || typeof source.id !== "string" || typeof source.name !== "string") fail("report contains an invalid source record");
     const rootArgument = rootArgumentForSource(source);
@@ -260,9 +285,10 @@ function verifySources(report, roots, policyBundle) {
   }
   if (seen.size !== candidateRoots.length) fail("report candidate roots and source records differ");
   if (policyBundle.kind === "second-wave") {
-    const expected = policyBundle.policy.sourceRoots;
+    const expectedIds = new Set(selectedPartition.sourceIds);
     const actual = new Set(verified.map((source) => `${source.id}\0${source.name}\0${source.rootArgument}`));
-    if (actual.size !== expected.length || expected.some((source) => !actual.has(`${source.id}\0${source.name}\0${source.rootArgument}`))) fail("report source set does not exactly match the second-wave allowlist");
+    const expected = selectedPartition.sourceIds.map((sourceId) => policyBundle.policy.sourceRoots.find((source) => source.id === sourceId));
+    if (actual.size !== expectedIds.size || expected.some((source) => !actual.has(`${source.id}\0${source.name}\0${source.rootArgument}`))) fail(`report source set does not exactly match second-wave partition ${selectedPartition.id}`);
   }
   for (let left = 0; left < verified.length; left += 1) {
     for (let right = left + 1; right < verified.length; right += 1) {
@@ -594,6 +620,7 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         "temp-root": roots.temp.path,
         "archive-root": roots.archive.path,
       },
+      ...(report.inputs?.partition ? { partition: JSON.parse(JSON.stringify(report.inputs.partition)) } : {}),
       sourceRoots: sources.map((source) => ({ id: source.id, name: source.name, rootArgument: source.rootArgument, path: source.path })),
     },
     destination: {
@@ -641,6 +668,7 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
           sha256: report.inputs.allowlist.sha256,
         },
       } : {}),
+      ...(report.inputs?.partition ? { partition: JSON.parse(JSON.stringify(report.inputs.partition)) } : {}),
       reportGeneratedAtUtc: report.generatedAtUtc,
       reportStatus: report.summary?.status ?? "unknown",
       destinationCreated: false,
@@ -676,8 +704,11 @@ export function runWorkspaceQuarantinePreparation(options = {}) {
   if (loadedPolicy.kind === "second-wave") {
     if (report.inputs?.allowlist?.format !== WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT || !samePath(report.inputs.allowlist.path, policyInspection.path) || report.inputs.allowlist.sha256 !== loadedPolicy.sha256) fail("second-wave report allowlist provenance does not match the current allowlist");
     if (new Date(report.retainUntilUtc).getTime() < new Date(loadedPolicy.policy.retention.minimumUtc).getTime()) fail(`second-wave retain-until must be on or after ${loadedPolicy.policy.retention.minimumUtc}`);
+    validateSecondWavePartitionRecord(loadedPolicy, report.inputs?.partition, "report.inputs.partition");
   } else if (report.inputs?.allowlist !== undefined) {
     fail("first-wave report must not carry second-wave allowlist provenance");
+  } else if (report.inputs?.partition !== undefined) {
+    fail("first-wave report must not carry second-wave partition provenance");
   }
   const repo = verifyRepository(repoRoot, report.repositoryState);
   const roots = assertRootLayout(report, repo.path, reportRead.path);

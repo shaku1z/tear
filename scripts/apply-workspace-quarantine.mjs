@@ -12,6 +12,7 @@ import {
   WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT,
 } from "./report-workspace-recovery.mjs";
 import {
+  validateSecondWavePartitionRecord,
   runWorkspaceQuarantinePreparation,
 } from "./prepare-workspace-quarantine.mjs";
 
@@ -234,6 +235,16 @@ function sourceRecords(report, manifest, roots, policyBundle) {
       if (!samePath(manifest.roots.rootArguments[argument], expected)) fail(`manifest rootArguments.${argument} does not match its canonical root`);
     }
   }
+  if (policyBundle.kind === "second-wave") {
+    const partition = validateSecondWavePartitionRecord(policyBundle, report.inputs?.partition, "report.inputs.partition");
+    validateSecondWavePartitionRecord(policyBundle, manifest.roots?.partition, "manifest.roots.partition");
+    validateSecondWavePartitionRecord(policyBundle, manifest.evidence?.partition, "manifest.evidence.partition");
+    const manifestPartition = manifest.roots.partition;
+    const evidencePartition = manifest.evidence.partition;
+    if (manifestPartition.id !== partition.id || manifestPartition.sourceIds.some((sourceId, index) => sourceId !== partition.sourceIds[index]) || evidencePartition.id !== partition.id || evidencePartition.sourceIds.some((sourceId, index) => sourceId !== partition.sourceIds[index])) fail("manifest partition provenance does not match report partition");
+  } else if (report.inputs?.partition !== undefined || manifest.roots?.partition !== undefined) {
+    fail("first-wave evidence must not carry second-wave partition provenance");
+  }
   const reportNames = new Set();
   for (const source of report.sources) {
     if (!source || typeof source.name !== "string") fail("report source root is invalid");
@@ -270,9 +281,10 @@ function sourceRecords(report, manifest, roots, policyBundle) {
     records.push({ id: source.id, name: source.name, rootArgument, path: sourcePath, report: reportSource });
   }
   if (policyBundle.kind === "second-wave") {
-    const expected = policyBundle.policy.sourceRoots;
+    const partition = policyBundle.policy.partitions.find((candidate) => candidate.id === report.inputs.partition.id);
+    const expected = partition.sourceIds.map((sourceId) => policyBundle.policy.sourceRoots.find((source) => source.id === sourceId));
     const actual = new Set(records.map((source) => `${source.id}\0${source.name}\0${source.rootArgument}`));
-    if (actual.size !== expected.length || expected.some((source) => !actual.has(`${source.id}\0${source.name}\0${source.rootArgument}`))) fail("manifest source set does not exactly match the second-wave allowlist");
+    if (actual.size !== expected.length || expected.some((source) => !actual.has(`${source.id}\0${source.name}\0${source.rootArgument}`))) fail(`manifest source set does not exactly match second-wave partition ${partition.id}`);
   }
   return records.sort((left, right) => left.name.localeCompare(right.name));
 }

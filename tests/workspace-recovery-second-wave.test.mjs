@@ -75,7 +75,7 @@ function cleanup(fixture) {
   fs.rmSync(fixture.base, { recursive: true, force: true });
 }
 
-function secondWaveEvidence(fixture) {
+function secondWaveEvidence(fixture, partitionId = "second-wave-partition-1") {
   const report = runWorkspaceRecoveryReport({
     repoRoot: fixture.repoRoot,
     workspaceRoot: fixture.workspaceRoot,
@@ -84,6 +84,7 @@ function secondWaveEvidence(fixture) {
     owner: "g5-second-wave-owner",
     retainUntil,
     policyPath: fixture.policyPath,
+    partition: partitionId,
     now,
   });
   const reportPath = path.join(fixture.archiveGroup, "second-wave-report.json");
@@ -129,6 +130,67 @@ test("rejects case-insensitive duplicate second-wave allowlist names", () => {
   assert.match(validateWorkspaceRecoverySecondWavePolicy(policy).join("\n"), /case-insensitive duplicate name/u);
 });
 
+test("requires five exhaustive ordinary partitions plus the deferred opaque-reparse source", () => {
+  const policy = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
+  assert.equal(validateWorkspaceRecoverySecondWavePolicy(policy).length, 0);
+  assert.equal(policy.partitions.length, 5);
+  const assigned = new Set(policy.partitions.flatMap((partition) => partition.sourceIds));
+  const deferred = new Set(policy.deferredSources.map((source) => source.id));
+  assert.equal(assigned.size, 44);
+  assert.equal(deferred.size, 1);
+  assert.equal(new Set([...assigned, ...deferred]).size, 45);
+  assert.equal(policy.partitions.reduce((total, partition) => total + partition.auditedObservedBytes, 0), 5749629212);
+  assert.equal(policy.partitionAudit.totalObservedBytes, 5753762275);
+  assert.equal(policy.partitionAudit.ordinaryPartitionObservedBytes + policy.partitionAudit.deferredObservedBytes, 5753762275);
+  assert.ok(policy.partitions.every((partition) => partition.auditedObservedBytes < 2147483648));
+});
+
+test("rejects partition omission, unknown IDs, and partition arguments for first-wave policy", () => {
+  const fixture = createFixture();
+  try {
+    const baseOptions = {
+      repoRoot: fixture.repoRoot,
+      workspaceRoot: fixture.workspaceRoot,
+      tempRoot: fixture.tempRoot,
+      archiveRoot: fixture.archiveRoot,
+      owner: "g5-second-wave-owner",
+      retainUntil,
+      policyPath: fixture.policyPath,
+      now,
+    };
+    assert.throws(() => runWorkspaceRecoveryReport(baseOptions), /partition is required/u);
+    assert.throws(() => runWorkspaceRecoveryReport({ ...baseOptions, partition: "second-wave-partition-unknown" }), /unknown second-wave partition/u);
+    assert.throws(() => runWorkspaceRecoveryReport({ ...baseOptions, policyPath: path.join(fixture.repoRoot, "preservation", "workspace-recovery-policy.json"), partition: "second-wave-partition-1" }), /first-wave policy does not accept/u);
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test("selects every partition exactly and never selects the deferred source", () => {
+  const fixture = createFixture();
+  try {
+    for (const partition of fixture.policy.partitions) {
+      const report = runWorkspaceRecoveryReport({
+        repoRoot: fixture.repoRoot,
+        workspaceRoot: fixture.workspaceRoot,
+        tempRoot: fixture.tempRoot,
+        archiveRoot: fixture.archiveRoot,
+        owner: "g5-second-wave-owner",
+        retainUntil,
+        policyPath: fixture.policyPath,
+        partition: partition.id,
+        now,
+      });
+      assert.deepEqual(report.inputs.partition.sourceIds, partition.sourceIds);
+      assert.equal(report.inputs.partition.auditedObservedBytes, partition.auditedObservedBytes);
+      assert.deepEqual(new Set(report.sources.map((source) => source.id)), new Set(partition.sourceIds));
+      assert.equal(report.sources.some((source) => source.id === "second-wave-tear-budget-architecture"), false);
+    }
+  } finally {
+    cleanup(fixture);
+  }
+});
+
 test("CLI accepts --policy and binds second-wave allowlist provenance without moving sources", () => {
   const fixture = createFixture();
   try {
@@ -142,6 +204,7 @@ test("CLI accepts --policy and binds second-wave allowlist provenance without mo
       "--owner", "g5-second-wave-cli-owner",
       "--retain-until", retainUntil,
       "--policy", fixture.policyPath,
+      "--partition", "second-wave-partition-1",
       "--output", outputPath,
     ], { encoding: "utf8", stdio: "pipe" });
     assert.equal(result.status, 0, result.stderr);
@@ -149,7 +212,10 @@ test("CLI accepts --policy and binds second-wave allowlist provenance without mo
     assert.equal(report.inputs.allowlist.format, "tear-workspace-recovery-second-wave-policy");
     assert.equal(path.resolve(report.inputs.allowlist.path), path.resolve(fixture.policyPath));
     assert.equal(report.inputs.allowlist.sha256, hashFile(fixture.policyPath));
-    assert.equal(report.sources.length, 45);
+    assert.equal(report.sources.length, 22);
+    assert.equal(report.inputs.partition.id, "second-wave-partition-1");
+    assert.deepEqual(report.inputs.partition.sourceIds, fixture.policy.partitions[0].sourceIds);
+    assert.equal(report.inputs.partition.auditedObservedBytes, 815738355);
     assert.equal(fs.existsSync(path.join(fixture.tempRoot, "tear-score-g2-audit-1611bbb")), true);
     assert.equal(fs.existsSync(path.join(fixture.workspaceRoot, "Tear-cutting-room")), true);
   } finally {
@@ -161,8 +227,9 @@ test("selects exactly the reviewed second-wave directories and propagates root a
   const fixture = createFixture();
   try {
     const evidence = secondWaveEvidence(fixture);
-    assert.equal(evidence.report.sources.length, 45);
-    assert.deepEqual(new Set(evidence.report.sources.map((source) => source.name)), new Set(fixture.policy.sourceRoots.map((source) => source.name)));
+    const selectedPartition = fixture.policy.partitions[0];
+    assert.equal(evidence.report.sources.length, selectedPartition.sourceIds.length);
+    assert.deepEqual(new Set(evidence.report.sources.map((source) => source.id)), new Set(selectedPartition.sourceIds));
     assert.ok(evidence.report.sources.every((source) => source.rootArgument === "workspace-root" || source.rootArgument === "temp-root"));
     assert.deepEqual(evidence.report.inputs.rootArguments, {
       "workspace-root": fixture.workspaceRoot,
@@ -170,9 +237,11 @@ test("selects exactly the reviewed second-wave directories and propagates root a
       "archive-root": fixture.archiveRoot,
     });
     assert.equal(evidence.report.inputs.allowlist.sha256, hashFile(fixture.policyPath));
-    assert.equal(evidence.manifest.roots.sourceRoots.length, 45);
+    assert.equal(evidence.manifest.roots.sourceRoots.length, selectedPartition.sourceIds.length);
     assert.ok(evidence.manifest.roots.sourceRoots.every((source) => source.rootArgument === "workspace-root" || source.rootArgument === "temp-root"));
     assert.equal(evidence.manifest.evidence.allowlist.sha256, hashFile(fixture.policyPath));
+    assert.equal(evidence.manifest.roots.partition.id, selectedPartition.id);
+    assert.deepEqual(evidence.manifest.roots.partition.sourceIds, selectedPartition.sourceIds);
     assert.equal(evidence.manifest.destination.exists, false);
     assert.equal(fs.existsSync(evidence.destination), false);
   } finally {
@@ -228,6 +297,79 @@ test("rejects canonical and wrong-parent second-wave report substitutions before
   }
 });
 
+test("rejects deferred-source substitution and cross-partition evidence before destination creation", () => {
+  const fixture = createFixture();
+  try {
+    const evidence = secondWaveEvidence(fixture, "second-wave-partition-1");
+    const deferred = fixture.policy.deferredSources[0];
+    const deferredPath = path.join(fixture.tempRoot, deferred.name);
+    const deferredReport = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
+    const substitutedIndex = 0;
+    deferredReport.sources[substitutedIndex] = {
+      ...deferredReport.sources[substitutedIndex],
+      id: deferred.id,
+      name: deferred.name,
+      absolutePath: deferredPath,
+      rootArgument: deferred.rootArgument,
+    };
+    deferredReport.inputs.candidateRoots[substitutedIndex] = deferredPath;
+    const deferredReportPath = path.join(fixture.archiveGroup, "deferred-substitution-report.json");
+    const deferredReportSha256 = writeJson(deferredReportPath, deferredReport);
+    assert.throws(() => runWorkspaceQuarantinePreparation({
+      reportPath: deferredReportPath,
+      reportSha256: deferredReportSha256,
+      policyPath: fixture.policyPath,
+      repoRoot: fixture.repoRoot,
+      owner: "g5-second-wave-owner",
+      retainUntil,
+      destination: path.join(fixture.archiveGroup, "deferred-substitution-payload"),
+      now,
+    }), /partition|source set|allowlist/u);
+
+    const crossReport = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
+    crossReport.inputs.partition = {
+      ...crossReport.inputs.partition,
+      id: "second-wave-partition-2",
+      sourceIds: [...fixture.policy.partitions[1].sourceIds],
+      auditedObservedBytes: fixture.policy.partitions[1].auditedObservedBytes,
+    };
+    const crossReportPath = path.join(fixture.archiveGroup, "cross-partition-report.json");
+    const crossReportSha256 = writeJson(crossReportPath, crossReport);
+    assert.throws(() => runWorkspaceQuarantinePreparation({
+      reportPath: crossReportPath,
+      reportSha256: crossReportSha256,
+      policyPath: fixture.policyPath,
+      repoRoot: fixture.repoRoot,
+      owner: "g5-second-wave-owner",
+      retainUntil,
+      destination: path.join(fixture.archiveGroup, "cross-partition-report-payload"),
+      now,
+    }), /partition|source set/u);
+
+    const crossManifest = JSON.parse(fs.readFileSync(evidence.manifestPath, "utf8"));
+    crossManifest.roots.partition = {
+      ...crossManifest.roots.partition,
+      id: "second-wave-partition-2",
+      sourceIds: [...fixture.policy.partitions[1].sourceIds],
+      auditedObservedBytes: fixture.policy.partitions[1].auditedObservedBytes,
+    };
+    const crossManifestPath = path.join(fixture.archiveGroup, "cross-partition-manifest.json");
+    const crossManifestSha256 = writeJson(crossManifestPath, crossManifest);
+    assert.throws(() => runWorkspacePreservationQuarantine(applyOptions(fixture, {
+      ...evidence,
+      reportPath: evidence.reportPath,
+      reportSha256: evidence.reportSha256,
+      manifestPath: crossManifestPath,
+      manifestSha256: crossManifestSha256,
+      destination: path.join(fixture.archiveGroup, "cross-partition-manifest-payload"),
+      journalPath: path.join(fixture.archiveGroup, "cross-partition-manifest-journal"),
+    })), /partition provenance|partition|source set/u);
+    assert.equal(fs.existsSync(path.join(fixture.archiveGroup, "cross-partition-manifest-payload")), false);
+  } finally {
+    cleanup(fixture);
+  }
+});
+
 test("rejects report/manifest root-argument mismatch before destination creation", () => {
   const fixture = createFixture();
   try {
@@ -249,6 +391,7 @@ test("preserves the v1 fallback when rootArgument fields are absent", () => {
     const report = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
     delete report.inputs.rootArguments;
     delete report.inputs.allowlist;
+    delete report.inputs.partition;
     report.policySha256 = hashFile(basePolicySource);
     report.sources = report.sources.slice(0, 1).map((source) => ({ ...source, id: "invalid-gsm-worktrees", name: "gsm-v1-fallback", absolutePath: path.join(fixture.workspaceRoot, "gsm-v1-fallback") }));
     delete report.sources[0].rootArgument;

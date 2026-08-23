@@ -62,6 +62,108 @@
     { "id": "second-wave-tear-system-memory-baseline", "name": "Tear-system-memory-baseline", "rootArgument": "workspace-root" },
     { "id": "second-wave-tear-system-memory-mutation", "name": "Tear-system-memory-mutation", "rootArgument": "workspace-root" }
   ],
+  "partitionAudit": {
+    "auditDateUtc": "2026-08-23T00:00:00.000Z",
+    "repositoryHead": "395d22c5cc107d9583c02e368f113edb69ea6c09",
+    "method": "read-only metadata sizing using the base preservation policy; protected directories are metadata-only and reparse points are refused",
+    "evidenceNote": "Sizing audit of the exact 45-root review set on protected main 395d22c; no content hashes, reports, manifests, moves, or deletions were performed.",
+    "totalObservedBytes": 5753762275,
+    "ordinaryPartitionObservedBytes": 5749629212,
+    "deferredObservedBytes": 4133063
+  },
+  "partitions": [
+    {
+      "id": "second-wave-partition-1",
+      "name": "pre-music-and-audit-roots",
+      "sourceIds": [
+        "second-wave-tear-architectural-main-candidate",
+        "second-wave-tear-budget-baseline",
+        "second-wave-tear-g1-controlled-check",
+        "second-wave-tear-g2-closure-docs",
+        "second-wave-tear-g2-music-rights-mirror",
+        "second-wave-tear-g2-vendor-repro-20260822-1530",
+        "second-wave-tear-g3-dirty-restore-20260822-01",
+        "second-wave-tear-g3-dirty-verify-20260822-01",
+        "second-wave-tear-g3-final-acceptance-185813",
+        "second-wave-tear-g3-phase4-final-restore-20260822-01",
+        "second-wave-tear-g3-phase4-predelete-restore-20260822-01",
+        "second-wave-tear-g3-restore-drill-20260822-01",
+        "second-wave-tear-g4-agent-baseline",
+        "second-wave-tear-main-normalization",
+        "second-wave-tear-music-adaptive-soundtrack-handoff-7662fc9-v2",
+        "second-wave-tear-music-adaptive-soundtrack-handoff-c973362-superseded-v1",
+        "second-wave-tear-ogg-determinism-probe",
+        "second-wave-tear-program-normalization-g1-final-gate",
+        "second-wave-tear-program-normalization-g1-release-gate",
+        "second-wave-tear-program-normalization-g1-release-gate-v2",
+        "second-wave-tear-program-normalization-g1-release-gate-v3",
+        "second-wave-tear-score-g2-audit-1611bbb"
+      ],
+      "auditedObservedBytes": 815738355
+    },
+    {
+      "id": "second-wave-partition-2",
+      "name": "music-and-wiki-review-roots",
+      "sourceIds": [
+        "second-wave-tear-score-g2-clean-702b57e7",
+        "second-wave-tear-score-g2-clean-typecheck",
+        "second-wave-tear-score-g2-determinism-acceptance-4f7a872",
+        "second-wave-tear-score-g2-music-canonicalization",
+        "second-wave-tear-score-pack-check",
+        "second-wave-tear-score-program-normalization-g1",
+        "second-wave-tear-wiki-g3-fresh-20260822-final",
+        "second-wave-tear-wiki-g3-master-retirement-fresh-final-20260822",
+        "second-wave-tear-wiki-g3-master-retirement-restore-20260822",
+        "second-wave-tear-wiki-g3-master-retirement-restore-final-20260822",
+        "second-wave-tear-wiki-g3-master-retirement-restore-final-main-20260822"
+      ],
+      "auditedObservedBytes": 1091947106
+    },
+    {
+      "id": "second-wave-partition-3",
+      "name": "canonicalized-music-roots",
+      "sourceIds": [
+        "second-wave-tear-score-g2-final-3ff4b72",
+        "second-wave-tear-tearscore-normalization"
+      ],
+      "auditedObservedBytes": 1203418573
+    },
+    {
+      "id": "second-wave-partition-4",
+      "name": "large-music-roots",
+      "sourceIds": [
+        "second-wave-tear-score-g2-final-4f7a872-20260822-144925",
+        "second-wave-tear-score-g2-provision-cache-702b57e7"
+      ],
+      "auditedObservedBytes": 1519608813
+    },
+    {
+      "id": "second-wave-partition-5",
+      "name": "remaining-workspace-roots",
+      "sourceIds": [
+        "second-wave-tear-score-g2-final-a051e1ac",
+        "second-wave-tear-cutting-room",
+        "second-wave-tear-cutting-room-ghost3",
+        "second-wave-tear-final-five-weapon-roster",
+        "second-wave-tear-final-five-weapon-roster-redesign",
+        "second-wave-tear-system-memory-baseline",
+        "second-wave-tear-system-memory-mutation"
+      ],
+      "auditedObservedBytes": 1118916365
+    }
+  ],
+  "deferredSources": [
+    {
+      "id": "second-wave-tear-budget-architecture",
+      "name": "Tear-budget-architecture",
+      "rootArgument": "temp-root",
+      "relativePath": "node_modules",
+      "targetSourceId": "second-wave-tear-tearscore-normalization",
+      "targetRelativePath": "node_modules",
+      "reason": "separate-coordinated-opaque-reparse-preservation-required",
+      "currentOperation": "deferred"
+    }
+  ],
   "exclusions": {
     "canonicalRoots": ["Tear", "tear-score", "tear-wiki", "Tear-oracle"],
     "archiveRecoveryRoots": ["Tear-archives", "tear-git-recovery-*", "tear-g3-preservation-audit-*", "tear-g5-*"],
