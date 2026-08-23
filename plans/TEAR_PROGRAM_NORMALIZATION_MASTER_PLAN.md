@@ -10,13 +10,13 @@ production remains frozen and no deployment is authorized.
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Certified pre-slice baseline for this G5 workspace-recovery report slice:**
-protected game `main` at `f24abeb4697ea4e17d08cc6bb2b4cbd7e424926d`
-(`f24abeb`). Exact-main hosted `Validate` run `32644060771` is green and
-certifies the preceding root-utilities slice; the current report-only
-workspace recovery changes are not yet certified. G5 remains OPEN; no local
-workspace inventory, artifact quarantine, mutation, or wiki objective is
-checked by this slice.
+**Certified pre-slice baseline for this G5 quarantine-manifest slice:**
+protected game `main` at `2c145d1887db6347634383a34fcf5f3ce004c3f7`
+(`2c145d1`). Exact-main hosted `Validate` run `32646795663` is green and
+certifies the report-only workspace recovery capability. The external inventory
+is recorded separately and remains `no-go`; the current manifest-preparation
+changes are not yet certified. G5 remains OPEN, and no quarantine, deletion,
+artifact mutation, wiki synchronization, or deployment is authorized.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
@@ -893,6 +893,11 @@ This is a target classification, not permission for a bulk move.
       archive/recovery roots or emits quarantine eligibility. Running the real
       local inventory and performing any quarantine remain separate unchecked
       goals.
+- [x] Add the read-only, new-only, integrity-bound quarantine-manifest
+      preparer. It consumes a supplied report, revalidates exact clean-main and
+      source evidence, and plans only a new same-volume destination mapping with
+      `applyAuthorized:false`; it creates no destination and authorizes no
+      quarantine, move, or deletion.
 - [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
       retention date, and recovery procedure receive a separate review; no
       quarantine or deletion is authorized by the report slice.
@@ -906,8 +911,13 @@ This is a target classification, not permission for a bulk move.
 
 ### Local workspace objectives
 
-- [ ] Inventory and hash orphaned `gsm-*` directories; compare for files not
-      reachable from preserved repositories or bundles.
+- [x] Inventory and hash orphaned `gsm-*` directories; compare for files not
+      reachable from preserved repositories or bundles. The external report
+      `2026-08-23-g5-workspace-recovery/workspace-recovery-report.json` is bound
+      to `2c145d1` with SHA-256
+      `2029eea21567e50cdb524d616c282547f39c9e8106c0710171704cfce1e9aed0`.
+      It found 1,436 distinct review hashes; the July bundle and G3 bare mirror
+      cover 0 of them, including 0 of 138 single-source hashes.
 - [ ] Quarantine candidates to a clearly named recovery location before any
       deletion, with a retention date and restore instructions.
 - [ ] Inspect non-Git `Tear-main-publication` and `Tear-receipt-clean` copies for
