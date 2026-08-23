@@ -73,6 +73,7 @@ test("canonical repository passes the CI workspace contract", () => {
   const result = runWorkspaceCheck({ root: repositoryRoot, mode: "ci", env: emptyEnvironment });
   assert.equal(result.ok, true, result.errors.join("\n"));
   assert.equal(result.oracle.status, "skipped");
+  assert.equal(result.artifactPolicy.status, "validated");
   assert.equal(result.trackedDirectories.includes("src"), true);
 });
 

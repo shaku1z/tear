@@ -11,9 +11,9 @@ index slice; production remains frozen and no deployment is authorized.
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
 **Current canonical game `main`:** `shaku1z/tear` at
-`b3c2066692b75d6fbe1708570e16193011a9a095` (`b3c2066`), the protected
-post-G4 terminology-closure tip. Exact-head post-merge `Validate` run
-`32630369249` is green.
+`f403d1e72128635b5afde60735ceaef7a820dc0c` (`f403d1e`), the protected
+post-G4 baseline for the G5 artifact-reporting slice. Exact-head post-merge
+`Validate` run `32636924808` is green.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 OPEN for the
@@ -246,7 +246,7 @@ Only one goal may be **OPEN** at a time.
 | G2 | Reconcile unique work and canonical branches | LOCKED | G1 closed | All unique refs have a written disposition and canonical branches contain approved work |
 | G3 | Remove obsolete refs and normalize worktrees | LOCKED | G2 closed | Branch/worktree targets are met and recovery is proven |
 | G4 | Normalize permanent terminology | ACCEPTANCE-COMPLETE / PR APPROVED | G3 closed | Public/internal names and migrations pass their gates; protected merge/post-merge observation closes the goal |
-| G5 | Organize repositories, documents, and workspace | LOCKED | G4 closed | Information architecture and local workspace policy are enforced |
+| G5 | Organize repositories, documents, and workspace | OPEN | G4 closed | Information architecture and local workspace policy are enforced |
 | G6 | Replace the wiki synchronization contract | LOCKED | G5 closed | Wiki proves exact current game SHA and modern content |
 | G7 | Certify and deploy the converged program | LOCKED | G6 closed | Live game/wiki provenance and post-deploy evidence match |
 | G8 | Operate the prevention loop | LOCKED | G7 closed | Never permanently closes; produces recurring evidence |
@@ -872,8 +872,11 @@ This is a target classification, not permission for a bulk move.
       authority check; `pnpm check:docs` is included immediately after
       `requirements:check` in the functional gate, with focused `test:docs`
       coverage for canonical success and negative link/table cases.
-- [ ] Add artifact retention commands/policy; generated artifacts remain
-      ignored and never enter deployment bundles.
+- [x] Add the bounded, read-only artifact retention policy and report command;
+      generated artifacts remain ignored and never enter deployment bundles.
+- [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
+      retention date, and recovery procedure receive a separate review; no
+      quarantine or deletion is authorized by the report slice.
 - [x] Add `pnpm check:workspace` to verify canonical-root identity, expected
       repository structure, active terminology allowlists, exact Final Five
       IDs, generated-document freshness, worktree integrity, and deployment
