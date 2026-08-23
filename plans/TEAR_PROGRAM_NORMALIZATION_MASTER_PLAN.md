@@ -896,6 +896,12 @@ This is a target classification, not permission for a bulk move.
       archive/recovery roots or emits quarantine eligibility. Running the real
       local inventory remains separately evidenced; artifact quarantine remains
       a separate unchecked goal.
+- [x] Add the portable, metadata-only remaining-workspace inventory capability.
+      It requires explicit canonical roots, verifies clean `shaku1z/tear` main
+      against `origin/main`, inspects only immediate children and bounded Git
+      identity/status evidence, surfaces unknown Tear-related roots, and has no
+      payload hashing or mutation. This capability does not claim a real
+      external scan or any workspace disposition.
 - [x] Add the read-only, new-only, integrity-bound quarantine-manifest
       preparer. It consumes a supplied report, revalidates exact clean-main and
       source evidence, and plans only a new same-volume destination mapping with

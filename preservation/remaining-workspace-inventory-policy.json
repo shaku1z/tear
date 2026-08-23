@@ -1,0 +1,86 @@
+{
+  "format": "tear-remaining-workspace-inventory-policy",
+  "schemaVersion": 1,
+  "repository": "shaku1z/tear",
+  "boundary": {
+    "fetch": false,
+    "mutation": "report-only",
+    "recurseNonGit": false,
+    "hashPayloads": false,
+    "readGitMetadataOnly": true
+  },
+  "roots": {
+    "repoArgument": "repo-root",
+    "workspaceArgument": "workspace-root",
+    "tempArgument": "temp-root",
+    "archiveArgument": "archive-root",
+    "repoAndArchiveDirectChildrenOfWorkspace": true,
+    "tempDisjointFromWorkspace": true
+  },
+  "canonical": {
+    "game": {
+      "exactName": "Tear",
+      "repository": "shaku1z/tear",
+      "branch": "main",
+      "upstream": "origin/main"
+    },
+    "music": {
+      "exactName": "tear-score",
+      "repository": "shaku1z/tear-music",
+      "branch": "main",
+      "upstream": "origin/main"
+    },
+    "wiki": {
+      "exactName": "tear-wiki",
+      "repository": "shaku1z/tear-wiki",
+      "branch": "main",
+      "upstream": "origin/main"
+    },
+    "oracle": {
+      "exactName": "Tear-oracle",
+      "repository": "shaku1z/tear",
+      "lockedCommit": "ee5e931",
+      "role": "comparison-only"
+    }
+  },
+  "classification": {
+    "archiveRecoveryKeep": [
+      "^Tear-archives$",
+      "^tear-git-recovery-",
+      "^tear-g3-preservation-audit-",
+      "^tear-g5-"
+    ],
+    "evidenceRetentionHold": [
+      "^Tear-receipt-clean(?:2|3)?$",
+      "^Tear-(?:snapshot|snapshots|tombstone|tombstones)(?:[-_].*)?$",
+      "^tear-(?:snapshot|snapshots|tombstone|tombstones|receipt|recovery)(?:[-_].*)?$",
+      "^Tear-(?:cutting-room|final-five-weapon-roster|system-memory)(?:[-_].*)?$",
+      "^Tear-architectural-main-candidate$",
+      "^Tear-budget-",
+      "^Tear-g[124]-",
+      "^Tear-main-normalization$",
+      "^Tear-program-normalization-",
+      "^Tear-tearscore-normalization(?:[-_].*)?$",
+      "^tear-(?:score|wiki)(?:[-_].*)?$",
+      "^tear-g[23]-",
+      "^tear-adaptive-soundtrack-handoff(?:[-_].*)?$",
+      "^tear-ogg-determinism-probe(?:[-_].*)?$"
+    ],
+    "laterQuarantineCandidate": [
+      "^gsm-",
+      "^Tear-main-publication$"
+    ],
+    "tearRelated": "(?:tear|gsm)",
+    "archiveGroup": "^\\d{4}-\\d{2}-\\d{2}-g5-[a-z0-9-]+$"
+  },
+  "limits": {
+    "maxImmediateChildren": 512,
+    "maxGitOutputBytes": 131072,
+    "maxPointerBytes": 4096
+  },
+  "output": {
+    "default": "stdout",
+    "newOnly": true,
+    "mustBeUnderExistingArchiveGroup": true
+  }
+}
