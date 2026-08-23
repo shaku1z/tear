@@ -695,6 +695,30 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
       paired Tone host, provenance, replay, and hosted audio lifecycle gates are
       signed; this remains unproven.
 
+### Game Agent and Run Monitor compatibility slice — G4-F-GAME-AGENT-RUN-MONITOR
+
+- [x] Establish canonical Game Agent and Run Monitor module/API facades over
+      the preserved TearBot evaluation and Watch Agent runtime implementations.
+- [x] Write canonical `game-agent`/`run-monitor` route and query vocabulary,
+      while continuing to read `botevidence`/`tearbot`, `watch`, and
+      `watchagent` aliases without changing screen IDs or action evidence.
+- [x] Add canonical Game Agent and Run Monitor action aliases; existing
+      `replay.hub.*` and `ghostlab.*` action tokens remain readable.
+- [x] Update active normal-build copy, accessibility labels, navigation, and
+      overlays to Game Agent and Run Monitor; the test-only Watch Agent panel
+      remains available through its legacy route.
+- [x] Preserve calibration/ladder/V3 evaluation formats, persistence keys,
+      `watch-policy:v1:*` journal identity, post-promotion authority records,
+      evidence IDs, and hashes byte-for-byte through focused compatibility tests.
+- [x] Record the G4-F boundary and proportional evidence in
+        `docs/checkpoints/program-normalization/G4_F_GAME_AGENT_RUN_MONITOR.md`.
+- [x] Confirm the proportional browser/build evidence and compare production
+      output against protected `main`; no test-only agent bridge/global/panel
+      markers reach production, and no production bridge or global was added.
+- [ ] Retire TearBot/Watch Agent aliases only after the registry conditions
+      `G4-F-GAME-AGENT` and `G4-F-RUN-MONITOR` are signed; this remains
+      unproven.
+
 ### Checkpoint G4-A — midpoint pause
 
 - [ ] Public surfaces use only permanent terms.

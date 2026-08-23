@@ -16,6 +16,8 @@ export { createLiveAcademyScreen } from "./live-academy-screen";
 export { createLiveFoundryScreen } from "./live-foundry-screen";
 export { createLiveReplayHub, createLiveGhostLabHome } from "./replay-hub";
 export { LiveBotEvidenceController } from "./live-bot-evidence-controller";
+export { GameAgentEvidenceController } from "./game-agent";
+export { RunMonitorController } from "./run-monitor";
 
 type SurfaceOptions = Parameters<typeof createLivePresentationSurface>[0];
 type SurfaceWorld = Omit<SurfaceOptions["world"], "screen">;

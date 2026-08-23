@@ -60,6 +60,7 @@
     "test:browser:state-forge": "node tests/browser-state-forge-runtime.js && node tests/browser-state-forge-studio.js && node tests/browser-state-forge-exit-matrix.js",
     "test:browser:state-forge-studio": "node tests/browser-state-forge-studio.js",
     "test:browser:scripted-agent": "node tests/browser-scripted-agent-autonomy.js",
+    "test:browser:game-agent-run-monitor": "node tests/browser-game-agent-run-monitor.js",
     "test:browser:scripted-agent-matrix": "node tests/browser-scripted-agent-matrix.js",
     "test:browser:scripted-agent-longitudinal": "node tests/browser-scripted-agent-longitudinal.js",
     "test:browser:scripted-agent-repeatability": "node tests/browser-scripted-agent-repeatability.js",

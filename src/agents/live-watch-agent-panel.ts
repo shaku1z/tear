@@ -4,24 +4,27 @@ import type {
   TearWatchAgentSnapshot,
 } from "./live-watch-agent-host";
 import type { TearAgentProfileId } from "./contracts";
+import { isAgentSurfaceRequested } from "./surface-route";
+import { LEGACY_WATCH_AGENT_PANEL, type AgentPanelSurface } from "./panel-surface";
 
 export function installLiveWatchAgentPanel(
   api: TearWatchAgentApi,
   defaults: Required<TearWatchAgentOptions>,
+  surface: AgentPanelSurface = LEGACY_WATCH_AGENT_PANEL,
 ): void {
-  const query = new URLSearchParams(window.location.search);
-  if (query.get("watchagent") !== "1" || document.getElementById("tear-watch-agent") !== null) return;
+  if (!isAgentSurfaceRequested(window.location.search, surface.query === "watchagent" || surface.query === "run-monitor" ? "run-monitor" : "game-agent")
+    || document.getElementById(surface.rootId) !== null) return;
   const root = document.createElement("section");
-  root.id = "tear-watch-agent";
-  root.setAttribute("aria-label", "Watch Agent");
+  root.id = surface.rootId;
+  root.setAttribute("aria-label", surface.ariaLabel);
   Object.assign(root.style, {
     position: "fixed", right: "12px", bottom: "12px", zIndex: "2147483645",
     width: "320px", padding: "12px", color: "#e9f6ff", background: "rgba(5,9,16,.92)",
     border: "1px solid #39d0ff", font: "12px/1.35 monospace", whiteSpace: "pre-wrap",
   });
-  const title = document.createElement("strong"); title.textContent = "TEARBOT · WATCH AGENT";
+  const title = document.createElement("strong"); title.textContent = surface.title;
   const fields = document.createElement("div");
-  fields.setAttribute("aria-label", "Watch Agent selection");
+  fields.setAttribute("aria-label", surface.selectionLabel);
   const select = <T extends string>(label: string, values: readonly T[], selected: T): HTMLSelectElement => {
     const wrapper = document.createElement("label");
     wrapper.textContent = `${label}: `;
@@ -93,10 +96,10 @@ export function installLiveWatchAgentPanel(
       `Watchdogs: ${watchdogNotes.length > 0 ? watchdogNotes.join(", ") : "clear"} (progress ${String(snapshot.watchdogs.noProgressTicks)}/${String(snapshot.watchdogs.noProgressLimit)})`,
     ].join("\n");
   };
-  const start = document.createElement("button"); start.textContent = "Start Watch Agent";
+  const start = document.createElement("button"); start.textContent = surface.startLabel;
   start.addEventListener("click", () => {
     const numericSeed = Number(seed.value);
-    if (!Number.isSafeInteger(numericSeed) || numericSeed < 1) throw new RangeError("Watch Agent seed must be positive");
+    if (!Number.isSafeInteger(numericSeed) || numericSeed < 1) throw new RangeError(surface.seedErrorLabel);
     render(api.start({
       profile: profile.value as TearAgentProfileId,
       mode: mode.value as Required<TearWatchAgentOptions>["mode"],

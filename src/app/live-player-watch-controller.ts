@@ -45,10 +45,10 @@ export class LivePlayerWatchController {
       this.#runtime = runtime; this.#set("ready", "Canonical V3 policy is available locally.", 0);
     } catch { this.#set("unavailable", "No validated canonical V3 policy is available locally.", 0); }
   }
-  start = (): void => { if (this.#runtime === undefined || this.#view.status !== "ready") return; this.#set("starting", "Starting a normal-speed local Watch run.", 0); this.#port.setSemanticAuthority(true); this.#port.startNormalRun(); this.#set("running", "Local aggregate health only; no traffic or rollout.", 0); };
-  pause = (): void => { if (this.#view.status === "running") { this.#port.setSemanticAuthority(false); this.#set("paused", "Watch paused; native play remains available.", this.#view.decisions); } };
+  start = (): void => { if (this.#runtime === undefined || this.#view.status !== "ready") return; this.#set("starting", "Starting a normal-speed local Run Monitor.", 0); this.#port.setSemanticAuthority(true); this.#port.startNormalRun(); this.#set("running", "Local aggregate health only; no traffic or rollout.", 0); };
+  pause = (): void => { if (this.#view.status === "running") { this.#port.setSemanticAuthority(false); this.#set("paused", "Run Monitor paused; native play remains available.", this.#view.decisions); } };
   resume = (): void => { if (this.#view.status === "paused" && this.#runtime !== undefined) { this.#port.setSemanticAuthority(true); this.#set("running", "Local aggregate health only; no traffic or rollout.", this.#view.decisions); } };
-  stop = (): void => { if (this.#view.status === "running" || this.#view.status === "paused") { this.#port.setSemanticAuthority(false); this.#set("stopped", "Watch stopped; the native game loop and player input are restored.", this.#view.decisions); } };
+  stop = (): void => { if (this.#view.status === "running" || this.#view.status === "paused") { this.#port.setSemanticAuthority(false); this.#set("stopped", "Run Monitor stopped; the native game loop and player input are restored.", this.#view.decisions); } };
   advance(): void {
     if (this.#view.status !== "running" || this.#runtime === undefined) return;
     const state = this.#port.canonicalState();

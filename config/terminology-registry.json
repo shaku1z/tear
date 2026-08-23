@@ -286,7 +286,7 @@
       "owner": "Agents/ladder/evaluation owner with bot-evidence and Watch integration owners",
       "compatibilityStrategy": "Keep TearBot persistence namespaces readable while changing public labels and route aliases to Game Agent; do not merge Watch Agent persistence.",
       "removalCheckpoint": {
-        "id": "G4-B-GAME-AGENT",
+        "id": "G4-F-GAME-AGENT",
         "condition": "Remove TearBot aliases after calibration, ladder, v3 evaluation, promoted-candidate, report-reader, and browser-journey compatibility passes."
       }
     },
@@ -352,7 +352,7 @@
       "owner": "Watch host/monitoring owner with Game Agent and Foundry post-promotion monitoring owners",
       "compatibilityStrategy": "Map old watchagent query/global/DOM labels to Run Monitor; keep internal watch-policy journal and authority names separate from UI naming.",
       "removalCheckpoint": {
-        "id": "G4-B-RUN-MONITOR",
+        "id": "G4-F-RUN-MONITOR",
         "condition": "Remove public Watch Agent aliases after journals, production isolation, browser journeys, Foundry monitoring, and route aliases pass."
       }
     },
@@ -1346,7 +1346,7 @@
           "tests/unit/tearbot-v3-canonical-evaluation.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-GAME-AGENT",
+          "checkpoint": "G4-F-GAME-AGENT",
           "condition": "Remove after report readers and canonical Game Agent namespaces are dual-read."
         }
       },
@@ -1358,13 +1358,13 @@
           "run-monitor"
         ],
         "owner": "Game Agent/Run Monitor integration owner",
-        "reason": "Panel copy intentionally contains both old TearBot and Watch Agent labels until the surfaces separate.",
+          "reason": "The legacy Watch Agent panel preserves historical TearBot/Watch Agent copy while the canonical Run Monitor panel uses the separated labels.",
         "testEvidence": [
           "tests/unit/watch-build-choice.test.ts",
-          "tests/browser-c32-agent-journeys.js"
+          "tests/browser-game-agent-run-monitor.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-GAME-AGENT",
+          "checkpoint": "G4-F-GAME-AGENT",
           "condition": "Remove old labels after Game Agent and Run Monitor UI boundaries are explicit."
         }
       },
@@ -1375,13 +1375,14 @@
           "game-agent"
         ],
         "owner": "Game Agent evidence owner",
-        "reason": "Bot evidence controller keeps the current evidence route while canonical display naming is staged.",
+          "reason": "The bot-evidence screen ID remains the compatibility route while the controller copy and canonical Game Agent facade use the permanent display name.",
         "testEvidence": [
           "tests/unit/tearbot-v3-canonical-evaluation.test.ts",
-          "tests/unit/ghost-player-experiences.test.ts"
+          "tests/unit/ghost-player-experiences.test.ts",
+          "tests/unit/game-agent-run-monitor-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-GAME-AGENT",
+          "checkpoint": "G4-F-GAME-AGENT",
           "condition": "Remove after Game Agent evidence route labels and report readers pass."
         }
       },
@@ -1398,7 +1399,7 @@
           "tests/unit/ghost-player-experiences.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-GAME-AGENT",
+          "checkpoint": "G4-F-GAME-AGENT",
           "condition": "Remove old labels after Game Agent ghost evidence stays semantically identical."
         }
       },
@@ -1478,13 +1479,13 @@
           "run-monitor"
         ],
         "owner": "Run Monitor host owner",
-        "reason": "Watch host/panel and internal authority names remain active until Run Monitor is surfaced.",
+          "reason": "The Watch host/panel and internal authority names remain the preserved implementation beneath the surfaced Run Monitor facade.",
         "testEvidence": [
           "tests/unit/watch-build-choice.test.ts",
-          "tests/browser-agent-autonomy.js"
+          "tests/browser-game-agent-run-monitor.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-RUN-MONITOR",
+          "checkpoint": "G4-F-RUN-MONITOR",
           "condition": "Remove public labels only after journal and monitor route compatibility passes."
         }
       },
@@ -1498,10 +1499,10 @@
         "reason": "Current Watch Agent screen/controller is the implementation beneath the canonical display surface.",
         "testEvidence": [
           "tests/unit/live-watch-agent-screen.test.ts",
-          "tests/browser-c32-agent-journeys.js"
+          "tests/browser-game-agent-run-monitor.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-RUN-MONITOR",
+          "checkpoint": "G4-F-RUN-MONITOR",
           "condition": "Remove after canonical Run Monitor route and labels pass."
         }
       },
@@ -1514,11 +1515,11 @@
         "owner": "TearBench runtime bridge owner",
         "reason": "Watch-agent query/global bridge is a test-only compatibility contract.",
         "testEvidence": [
-          "tests/browser-c32-agent-journeys.js",
+          "tests/browser-game-agent-run-monitor.js",
           "tests/browser-production-runtime-isolation.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-RUN-MONITOR",
+          "checkpoint": "G4-F-RUN-MONITOR",
           "condition": "Remove only after Run Monitor harness alias and isolation checks pass."
         }
       },

@@ -77,6 +77,9 @@ export type ScreenAction =
   | { readonly type: "foundry.bootstrap"; readonly profileId: string }
   | { readonly type: "foundry.schedule.enable"; readonly scheduleHash: string }
   | { readonly type: "foundry.schedule.disable"; readonly scheduleHash: string }
+  | { readonly type: "game-agent.open" }
+  | { readonly type: "run-monitor.open" }
+  | { readonly type: "run-monitor.control"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "replay.hub.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */

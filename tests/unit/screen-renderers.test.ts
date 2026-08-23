@@ -251,15 +251,19 @@ describe("legacy screen renderer registry", () => {
       { id: "academy", label: "ACADEMY", detail: "local custody" },
       { id: "foundry", label: "FOUNDRY STATUS", detail: "local recovery" },
       { id: "vault", label: "GHOST VAULT", detail: "capsule gated Theater" },
-      { id: "botevidence", label: "BOT EVIDENCE", detail: "exact retained report" },
-      { id: "watch", label: "WATCH", detail: "canonical V3 locally available" },
+      { id: "botevidence", label: "GAME AGENT EVIDENCE", detail: "exact retained report" },
+      { id: "watch", label: "RUN MONITOR", detail: "canonical V3 locally available" },
     ], unavailable: [
       { label: "WATCH", detail: "not player-safe" }, { label: "STATE FORGE", detail: "engineering only" },
     ], watch: { status: "ready", detail: "canonical V3 locally available", decisions: 0 } });
     expect(controls.filter((control) => control.action.type === "replay.hub.open").map((control) => control.action))
-      .toEqual([{ type: "replay.hub.open", destination: "academy" }, { type: "replay.hub.open", destination: "foundry" }, { type: "replay.hub.open", destination: "vault" }, { type: "replay.hub.open", destination: "botevidence" }, { type: "replay.hub.open", destination: "watch" }]);
-    expect(controls.find((control) => control.action.type === "replay.hub.watch"))
-      .toMatchObject({ label: "START WATCH", action: { type: "replay.hub.watch", command: "start" } });
+      .toEqual([{ type: "replay.hub.open", destination: "academy" }, { type: "replay.hub.open", destination: "foundry" }, { type: "replay.hub.open", destination: "vault" }]);
+    expect(controls.find((control) => control.action.type === "game-agent.open"))
+      .toMatchObject({ label: "GAME AGENT EVIDENCE", action: { type: "game-agent.open" } });
+    expect(controls.find((control) => control.action.type === "run-monitor.open"))
+      .toMatchObject({ label: "RUN MONITOR", action: { type: "run-monitor.open" } });
+    expect(controls.find((control) => control.action.type === "run-monitor.control"))
+      .toMatchObject({ label: "START RUN MONITOR", action: { type: "run-monitor.control", command: "start" } });
     expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
   });
 
@@ -269,18 +273,18 @@ describe("legacy screen renderer registry", () => {
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "menu")).toMatchObject({ label: "‹  BACK" });
   });
 
-  it("projects a running Player Watch into the paused screen with semantic pause and stop controls", () => {
+  it("projects a running Run Monitor into the paused screen with semantic pause and stop controls", () => {
     const controls: ScreenControl[] = [];
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
     renderer.paused({ id: "paused", abilities: [], progress: [],
       playerWatch: { status: "running", decisions: 7 } });
-    expect(controls.filter((control) => control.action.type === "replay.hub.watch").map((control) => control.action))
+    expect(controls.filter((control) => control.action.type === "run-monitor.control").map((control) => control.action))
       .toEqual([
-        { type: "replay.hub.watch", command: "pause" },
-        { type: "replay.hub.watch", command: "stop" },
+        { type: "run-monitor.control", command: "pause" },
+        { type: "run-monitor.control", command: "stop" },
       ]);
-    expect(controls.find((control) => control.action.type === "replay.hub.watch" && control.action.command === "pause"))
-      .toMatchObject({ label: "PAUSE PLAYER WATCH", x: 80, y: 426, w: 280, h: 42 });
+    expect(controls.find((control) => control.action.type === "run-monitor.control" && control.action.command === "pause"))
+      .toMatchObject({ label: "PAUSE RUN MONITOR", x: 80, y: 426, w: 280, h: 42 });
   });
 
   it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {
