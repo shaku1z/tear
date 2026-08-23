@@ -211,6 +211,12 @@
   "compatibility": {
     "reportFormat": "tear-workspace-recovery-report",
     "reportSchemaVersion": 1,
+    "partitionBoundary": {
+      "mode": "explicit-partition-v1-only",
+      "prePartitionEvidence": "intentionally-invalidated-and-rejected",
+      "successfulPriorArtifact": false,
+      "failedAllAtOnceReport": "2GiB-cap-rejection-produced-no-report"
+    },
     "legacyRootArgumentFallback": {
       "publication-copy": "temp-root",
       "other": "workspace-root"

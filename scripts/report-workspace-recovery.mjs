@@ -47,6 +47,10 @@ const SECOND_WAVE_DEFERRED_TARGET_SOURCE_NAME = "Tear-tearscore-normalization";
 const SECOND_WAVE_DEFERRED_TARGET_PATH = "node_modules";
 const SECOND_WAVE_DEFERRED_REASON = "separate-coordinated-opaque-reparse-preservation-required";
 const SECOND_WAVE_DEFERRED_GROUP_ID = "second-wave-dependency-budget-node-modules";
+const SECOND_WAVE_PARTITION_BOUNDARY_MODE = "explicit-partition-v1-only";
+const SECOND_WAVE_PRE_PARTITION_EVIDENCE_STATUS = "intentionally-invalidated-and-rejected";
+const SECOND_WAVE_SUCCESSFUL_PRIOR_ARTIFACT = false;
+const SECOND_WAVE_FAILED_ALL_AT_ONCE_REPORT = "2GiB-cap-rejection-produced-no-report";
 
 export class WorkspaceRecoveryReportError extends Error {
   constructor(message) {
@@ -281,6 +285,7 @@ export function validateWorkspaceRecoverySecondWavePolicy(policy) {
   if (policy?.retention?.minimumUtc !== SECOND_WAVE_RETENTION_FLOOR_UTC) errors.push(`retention.minimumUtc must be ${SECOND_WAVE_RETENTION_FLOOR_UTC}`);
   const sourceIds = new Set();
   const sourceIdsByLower = new Map();
+  const sourceRecordsById = new Map();
   if (!Array.isArray(policy?.sourceRoots) || policy.sourceRoots.length !== 45) {
     errors.push("sourceRoots must contain exactly the reviewed 45 directory roots");
   } else {
@@ -296,6 +301,7 @@ export function validateWorkspaceRecoverySecondWavePolicy(policy) {
       if (names.has(nameKey)) errors.push(`sourceRoots has a case-insensitive duplicate name: ${source.name}`);
       sourceIds.add(source?.id);
       sourceIdsByLower.set(idKey, source?.id);
+      sourceRecordsById.set(source?.id, source);
       names.add(nameKey);
       if (SECOND_WAVE_CANONICAL_ROOT_NAMES.has(nameKey)) errors.push(`sourceRoots[${index}] cannot name a canonical root: ${source.name}`);
       if (SECOND_WAVE_ARCHIVE_ROOT_PATTERNS.some((pattern) => pattern.test(String(source?.name ?? "")))) errors.push(`sourceRoots[${index}] cannot name an archive/recovery root: ${source.name}`);
@@ -341,6 +347,11 @@ export function validateWorkspaceRecoverySecondWavePolicy(policy) {
       if (deferredIds.has(key)) errors.push(`deferredSources has a case-insensitive duplicate id: ${deferred.id}`);
       deferredIds.add(key);
       if (sourceIdsByLower.size > 0 && sourceIdsByLower.get(key) !== deferred?.id) errors.push(`deferred source is not an exact sourceRoots entry: ${deferred.id}`);
+      const sourceRecord = sourceRecordsById.get(deferred?.id);
+      if (sourceRecord !== undefined) {
+        if (deferred?.name !== sourceRecord.name) errors.push(`deferred source name must match sourceRoots entry: ${deferred.id}`);
+        if (deferred?.rootArgument !== sourceRecord.rootArgument) errors.push(`deferred source rootArgument must match sourceRoots entry: ${deferred.id}`);
+      }
       if (deferred?.id === SECOND_WAVE_DEFERRED_SOURCE_ID) {
         if (deferred.role !== "reparse-source") errors.push("budget deferred source role must be reparse-source");
         if (deferred.relativePath !== SECOND_WAVE_DEFERRED_SOURCE_PATH) errors.push(`budget deferred relativePath must be ${SECOND_WAVE_DEFERRED_SOURCE_PATH}`);
@@ -420,6 +431,7 @@ export function validateWorkspaceRecoverySecondWavePolicy(policy) {
   if (policy?.exclusions?.looseFiles !== "all" || policy?.exclusions?.unlistedDirectories !== "all" || policy?.exclusions?.unrelatedRoots !== "all") errors.push("second-wave exclusions must reject loose, unlisted, and unrelated roots");
   if (policy?.runtime?.operation !== "same-volume-whole-root-rename-only" || policy?.runtime?.copy !== false || policy?.runtime?.delete !== false || policy?.runtime?.overwrite !== false || policy?.runtime?.fetch !== false) errors.push("second-wave runtime must remain apply-only whole-root rename with no copy/delete/overwrite/fetch");
   if (policy?.compatibility?.reportFormat !== WORKSPACE_RECOVERY_REPORT_FORMAT || policy?.compatibility?.reportSchemaVersion !== 1) errors.push("second-wave report compatibility must remain v1");
+  if (policy?.compatibility?.partitionBoundary?.mode !== SECOND_WAVE_PARTITION_BOUNDARY_MODE || policy?.compatibility?.partitionBoundary?.prePartitionEvidence !== SECOND_WAVE_PRE_PARTITION_EVIDENCE_STATUS || policy?.compatibility?.partitionBoundary?.successfulPriorArtifact !== SECOND_WAVE_SUCCESSFUL_PRIOR_ARTIFACT || policy?.compatibility?.partitionBoundary?.failedAllAtOnceReport !== SECOND_WAVE_FAILED_ALL_AT_ONCE_REPORT) errors.push("second-wave compatibility must reject pre-partition evidence and record that the failed all-at-once attempt produced no report");
   if (policy?.protected?.reparsePoints !== undefined && policy.protected.reparsePoints !== "refuse") errors.push("second-wave protected.reparsePoints must be refuse when supplied");
   if (!Array.isArray(policy?.protected?.segments) || !policy.protected.segments.includes(".git")) errors.push("second-wave protected.segments must include .git");
   if (!Array.isArray(policy?.protected?.namePatterns) || policy.protected.namePatterns.length === 0) errors.push("second-wave protected.namePatterns must not be empty");

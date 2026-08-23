@@ -242,7 +242,7 @@ function sourceRecords(report, manifest, roots, policyBundle) {
     const manifestPartition = manifest.roots.partition;
     const evidencePartition = manifest.evidence.partition;
     if (manifestPartition.id !== partition.id || manifestPartition.sourceIds.some((sourceId, index) => sourceId !== partition.sourceIds[index]) || evidencePartition.id !== partition.id || evidencePartition.sourceIds.some((sourceId, index) => sourceId !== partition.sourceIds[index])) fail("manifest partition provenance does not match report partition");
-  } else if (report.inputs?.partition !== undefined || manifest.roots?.partition !== undefined) {
+  } else if (report.inputs?.partition !== undefined || manifest.roots?.partition !== undefined || manifest.evidence?.partition !== undefined) {
     fail("first-wave evidence must not carry second-wave partition provenance");
   }
   const reportNames = new Set();

@@ -139,6 +139,14 @@ function rewriteManifest(evidence, mutate) {
   evidence.manifestSha256 = createHash("sha256").update(raw, "utf8").digest("hex");
 }
 
+function rewriteReport(evidence, mutate) {
+  const report = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
+  mutate(report);
+  const raw = `${JSON.stringify(report, null, 2)}\n`;
+  fs.writeFileSync(evidence.reportPath, raw, "utf8");
+  evidence.reportSha256 = createHash("sha256").update(raw, "utf8").digest("hex");
+}
+
 test("applies whole-root preservation, moves protected content intact, and writes a receipt", () => {
   const fixture = createFixture();
   try {
@@ -184,6 +192,37 @@ test("requires exact acknowledgements and refuses changed evidence", () => {
     assert.equal(fs.existsSync(evidence.destination), false);
   } finally {
     cleanup(fixture);
+  }
+});
+
+test("rejects first-wave partition provenance in report and both manifest locations before mutation", () => {
+  for (const location of ["report.inputs", "manifest.roots", "manifest.evidence"]) {
+    const fixture = createFixture();
+    try {
+      const evidence = createEvidence(fixture);
+      const partition = { id: "second-wave-partition-1", sourceIds: [], auditedObservedBytes: 0 };
+      if (location === "report.inputs") {
+        rewriteReport(evidence, (report) => {
+          report.inputs.partition = partition;
+        });
+        rewriteManifest(evidence, (manifest) => {
+          manifest.evidence.externalRecoveryReport.sha256 = evidence.reportSha256;
+        });
+      } else if (location === "manifest.roots") {
+        rewriteManifest(evidence, (manifest) => {
+          manifest.roots.partition = partition;
+        });
+      } else {
+        rewriteManifest(evidence, (manifest) => {
+          manifest.evidence.partition = partition;
+        });
+      }
+      assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence)), /first-wave evidence must not carry second-wave partition provenance/u);
+      assert.equal(fs.existsSync(evidence.destination), false);
+      assert.equal(fs.existsSync(path.join(fixture.workspaceRoot, "gsm-one")), true);
+    } finally {
+      cleanup(fixture);
+    }
   }
 });
 

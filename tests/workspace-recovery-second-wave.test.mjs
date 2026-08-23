@@ -159,6 +159,37 @@ test("rejects putting either dependency source into an ordinary partition or bre
   assert.match(validateWorkspaceRecoverySecondWavePolicy(targetBroken).join("\n"), /dependencyGroup.targetSourceId is invalid|dependencyGroup sources/u);
 });
 
+test("binds both deferred dependency records to exact sourceRoots names and root arguments", () => {
+  const baseline = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
+  assert.deepEqual(baseline.compatibility.partitionBoundary, {
+    mode: "explicit-partition-v1-only",
+    prePartitionEvidence: "intentionally-invalidated-and-rejected",
+    successfulPriorArtifact: false,
+    failedAllAtOnceReport: "2GiB-cap-rejection-produced-no-report",
+  });
+  for (const deferred of baseline.deferredSources) {
+    const sourceRootNameMutation = JSON.parse(JSON.stringify(baseline));
+    const sourceRootForName = sourceRootNameMutation.sourceRoots.find((source) => source.id === deferred.id);
+    sourceRootForName.name = `${sourceRootForName.name}-mismatch`;
+    assert.match(validateWorkspaceRecoverySecondWavePolicy(sourceRootNameMutation).join("\n"), /deferred source name must match sourceRoots entry/u);
+
+    const sourceRootArgumentMutation = JSON.parse(JSON.stringify(baseline));
+    const sourceRootForArgument = sourceRootArgumentMutation.sourceRoots.find((source) => source.id === deferred.id);
+    sourceRootForArgument.rootArgument = sourceRootForArgument.rootArgument === "temp-root" ? "workspace-root" : "temp-root";
+    assert.match(validateWorkspaceRecoverySecondWavePolicy(sourceRootArgumentMutation).join("\n"), /deferred source rootArgument must match sourceRoots entry/u);
+
+    const deferredNameMutation = JSON.parse(JSON.stringify(baseline));
+    const deferredForName = deferredNameMutation.deferredSources.find((source) => source.id === deferred.id);
+    deferredForName.name = `${deferredForName.name}-mismatch`;
+    assert.match(validateWorkspaceRecoverySecondWavePolicy(deferredNameMutation).join("\n"), /deferred source name must match sourceRoots entry|deferredSources\[\d+\]\.name must be/u);
+
+    const deferredArgumentMutation = JSON.parse(JSON.stringify(baseline));
+    const deferredForArgument = deferredArgumentMutation.deferredSources.find((source) => source.id === deferred.id);
+    deferredForArgument.rootArgument = deferredForArgument.rootArgument === "temp-root" ? "workspace-root" : "temp-root";
+    assert.match(validateWorkspaceRecoverySecondWavePolicy(deferredArgumentMutation).join("\n"), /deferred source rootArgument must match sourceRoots entry|deferredSources\[\d+\]\.rootArgument must be/u);
+  }
+});
+
 test("rejects partition omission, unknown IDs, and partition arguments for first-wave policy", () => {
   const fixture = createFixture();
   try {

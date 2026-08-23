@@ -923,7 +923,11 @@ This is a target classification, not permission for a bulk move.
       sources, cross-partition evidence, and report/manifest provenance
       mismatches. One retention floor runs through
       `2027-03-31T23:59:59.000Z`; the allowlist is capability-only and does
-      not claim a real second-wave report, manifest, move, or G5 close.
+      not claim a real second-wave report, manifest, move, or G5 close. The
+      compatibility boundary is explicit-partition-v1-only: pre-partition
+      second-wave evidence is intentionally invalidated and rejected; the
+      failed all-at-once attempt hit the 2 GiB cap and produced no report, so
+      no successful prior artifact exists.
 - [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
       retention date, and recovery procedure receive a separate review; no
       quarantine or deletion is authorized by the report slice.
