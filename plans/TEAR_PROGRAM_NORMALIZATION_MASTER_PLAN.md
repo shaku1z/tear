@@ -10,10 +10,11 @@ index slice; production remains frozen and no deployment is authorized.
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Current canonical game `main`:** `shaku1z/tear` at
-`f403d1e72128635b5afde60735ceaef7a820dc0c` (`f403d1e`), the protected
-post-G4 baseline for the G5 artifact-reporting slice. Exact-head post-merge
-`Validate` run `32636924808` is green.
+**Certified baseline for this G5 history-documentation slice:** protected game
+`main` at `682036278db2c6dab04692ad798f5f6731e07508` (`6820362`). Exact-main
+hosted `Validate` run `32639193284` is green and certifies this baseline for
+the two-file move only. G5 remains OPEN; no broader organization objective is
+checked by this slice.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 OPEN for the

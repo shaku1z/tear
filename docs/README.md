@@ -1,9 +1,8 @@
 # Tear documentation authority index
 
-This index is the G5 Slice 1 authority map. It classifies the current tree
-without moving or rewriting any document. A later G5 move must update this
-index, its links, the path checker, and the owning CI/script references in one
-reviewable transaction.
+This index is the G5 authority map for current and historical documentation.
+Each atomic move must update this index, its links, the path checker, and the
+owning test/script references in one reviewable transaction.
 
 ## Current authorities
 
@@ -23,12 +22,17 @@ append-only checkpoint/history locations. `docs/source/` is the preserved
 non-lossy source specification. Generated TearBench catalogs retain their
 current paths and hashes until a separately authorized atomic migration.
 
-## Root Markdown classification (no moves in Slice 1)
+## Historical documents
+
+| Document | Role |
+| --- | --- |
+| [ARCHITECTURE_REDESIGN.md](history/ARCHITECTURE_REDESIGN.md) | Historical redesign plan; current typed architecture authority is [ARCHITECTURE.md](ARCHITECTURE.md). |
+| [AUDIT_PLAN.md](history/AUDIT_PLAN.md) | Historical JS-era audit; its legacy source paths are comparison-only. |
+
+## Root Markdown classification (remaining root documents)
 
 | File | Classification |
 | --- | --- |
-| `ARCHITECTURE_REDESIGN.md` | history |
-| `AUDIT_PLAN.md` | history |
 | `CONTRIBUTING.md` | current authority |
 | `CRAZYGAMES.md` | current authority |
 | `DEPLOYMENT.md` | current authority |
@@ -37,9 +41,9 @@ current paths and hashes until a separately authorized atomic migration.
 | `PHASE_F_MIRROR_PLAN.md` | completed plan |
 | `SHOP_UPGRADE_DESIGN.md` | current authority |
 
-The root allowlist will receive a dedicated checker in a later G5 slice while
-the documents remain in place. Root policy changes and each later move require
-a corresponding index/checker update; no bulk relocation is implied here.
+The root allowlist is enforced by `scripts/check-docs.mjs` and its focused
+authority-checker test. Root policy changes and each later move require a
+corresponding index/checker/test update; no bulk relocation is implied here.
 
 ## Preserved evidence boundaries
 

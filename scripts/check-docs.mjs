@@ -5,8 +5,6 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
-  "ARCHITECTURE_REDESIGN.md": "history",
-  "AUDIT_PLAN.md": "history",
   "CONTRIBUTING.md": "current authority",
   "CRAZYGAMES.md": "current authority",
   "DEPLOYMENT.md": "current authority",

@@ -15,8 +15,6 @@ import {
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootFiles = [
-  "ARCHITECTURE_REDESIGN.md",
-  "AUDIT_PLAN.md",
   "CONTRIBUTING.md",
   "CRAZYGAMES.md",
   "DEPLOYMENT.md",
@@ -29,7 +27,7 @@ const rootFiles = [
 test("docs checker passes the canonical tracked documentation baseline", () => {
   const result = runDocsCheck({ root: repositoryRoot });
   assert.equal(result.ok, true, result.errors.join("\n"));
-  assert.equal(result.rootMarkdownFiles, 9);
+  assert.equal(result.rootMarkdownFiles, 7);
   assert.equal(result.pathBoundArtifacts, 10);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
@@ -74,7 +72,7 @@ test("root classification parser accepts the explanatory history suffix", () => 
   const index = fs.readFileSync(path.join(repositoryRoot, "docs", "README.md"), "utf8");
   const parsed = parseRootClassificationTable(index);
   assert.equal(parsed.errors.length, 0, parsed.errors.join("\n"));
-  assert.equal(parsed.rows.size, 9);
+  assert.equal(parsed.rows.size, 7);
   assert.equal(parsed.rows.get("ENEMY_BOSS_PLAN.md"), "history");
 });
 
@@ -84,7 +82,7 @@ test("root policy rejects a mutated classification table in a temporary fixture"
     fs.mkdirSync(path.join(fixtureRoot, "docs"), { recursive: true });
     const index = fs.readFileSync(path.join(repositoryRoot, "docs", "README.md"), "utf8")
       .replace("| `SHOP_UPGRADE_DESIGN.md` | current authority |", "| `SHOP_UPGRADE_DESIGN.md` | unknown |")
-      .replace("| `AUDIT_PLAN.md` | history |", "| `AUDIT_PLAN.md` | history |\n| `AUDIT_PLAN.md` | history |\n");
+      .replace("| `CONTRIBUTING.md` | current authority |", "| `CONTRIBUTING.md` | current authority |\n| `CONTRIBUTING.md` | current authority |\n");
     fs.writeFileSync(path.join(fixtureRoot, "docs", "README.md"), index, "utf8");
     const result = checkRootDocumentationPolicy(fixtureRoot, [...rootFiles, "docs/README.md"]);
     assert.equal(result.errors.some((error) => /unknown classification/u.test(error)), true);
