@@ -18,16 +18,12 @@ const rootFiles = [
   "CONTRIBUTING.md",
   "CRAZYGAMES.md",
   "DEPLOYMENT.md",
-  "ECONOMY_REWORK_PLAN.md",
-  "ENEMY_BOSS_PLAN.md",
-  "PHASE_F_MIRROR_PLAN.md",
-  "SHOP_UPGRADE_DESIGN.md",
 ];
 
 test("docs checker passes the canonical tracked documentation baseline", () => {
   const result = runDocsCheck({ root: repositoryRoot });
   assert.equal(result.ok, true, result.errors.join("\n"));
-  assert.equal(result.rootMarkdownFiles, 7);
+  assert.equal(result.rootMarkdownFiles, 3);
   assert.equal(result.pathBoundArtifacts, 10);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
@@ -72,8 +68,8 @@ test("root classification parser accepts the explanatory history suffix", () => 
   const index = fs.readFileSync(path.join(repositoryRoot, "docs", "README.md"), "utf8");
   const parsed = parseRootClassificationTable(index);
   assert.equal(parsed.errors.length, 0, parsed.errors.join("\n"));
-  assert.equal(parsed.rows.size, 7);
-  assert.equal(parsed.rows.get("ENEMY_BOSS_PLAN.md"), "history");
+  assert.equal(parsed.rows.size, 3);
+  assert.equal(parsed.rows.get("DEPLOYMENT.md"), "current authority");
 });
 
 test("root policy rejects a mutated classification table in a temporary fixture", () => {
@@ -81,7 +77,7 @@ test("root policy rejects a mutated classification table in a temporary fixture"
   try {
     fs.mkdirSync(path.join(fixtureRoot, "docs"), { recursive: true });
     const index = fs.readFileSync(path.join(repositoryRoot, "docs", "README.md"), "utf8")
-      .replace("| `SHOP_UPGRADE_DESIGN.md` | current authority |", "| `SHOP_UPGRADE_DESIGN.md` | unknown |")
+      .replace("| `DEPLOYMENT.md` | current authority |", "| `DEPLOYMENT.md` | unknown |")
       .replace("| `CONTRIBUTING.md` | current authority |", "| `CONTRIBUTING.md` | current authority |\n| `CONTRIBUTING.md` | current authority |\n");
     fs.writeFileSync(path.join(fixtureRoot, "docs", "README.md"), index, "utf8");
     const result = checkRootDocumentationPolicy(fixtureRoot, [...rootFiles, "docs/README.md"]);

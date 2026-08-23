@@ -11,6 +11,7 @@ owning test/script references in one reviewable transaction.
 | Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) and [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
 | Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) |
+| Shop and upgrade design contract | [SHOP_UPGRADE_DESIGN.md](product/SHOP_UPGRADE_DESIGN.md) |
 | Audio integration and compatibility | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) |
 | Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) and [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) |
@@ -28,18 +29,23 @@ current paths and hashes until a separately authorized atomic migration.
 | --- | --- |
 | [ARCHITECTURE_REDESIGN.md](history/ARCHITECTURE_REDESIGN.md) | Historical redesign plan; current typed architecture authority is [ARCHITECTURE.md](ARCHITECTURE.md). |
 | [AUDIT_PLAN.md](history/AUDIT_PLAN.md) | Historical JS-era audit; its legacy source paths are comparison-only. |
+| [ENEMY_BOSS_PLAN.md](history/ENEMY_BOSS_PLAN.md) | Legacy-JS enemy/boss evidence only; future work requires a new typed audit and plan. |
 
-## Root Markdown classification (remaining root documents)
+## Plan destinations
+
+| Document | Role |
+| --- | --- |
+| [ECONOMY_REWORK_PLAN.md](../plans/active/ECONOMY_REWORK_PLAN.md) | Active balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
+| [PHASE_F_MIRROR_PLAN.md](../plans/completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
+| [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |
+
+## Root Markdown classification (remaining 3 root documents)
 
 | File | Classification |
 | --- | --- |
 | `CONTRIBUTING.md` | current authority |
 | `CRAZYGAMES.md` | current authority |
 | `DEPLOYMENT.md` | current authority |
-| `ECONOMY_REWORK_PLAN.md` | active plan |
-| `ENEMY_BOSS_PLAN.md` | history (legacy JS-era; any remaining Phase F idea requires fresh typed-code audit) |
-| `PHASE_F_MIRROR_PLAN.md` | completed plan |
-| `SHOP_UPGRADE_DESIGN.md` | current authority |
 
 The root allowlist is enforced by `scripts/check-docs.mjs` and its focused
 authority-checker test. Root policy changes and each later move require a

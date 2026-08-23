@@ -8,10 +8,6 @@ const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
   "CONTRIBUTING.md": "current authority",
   "CRAZYGAMES.md": "current authority",
   "DEPLOYMENT.md": "current authority",
-  "ECONOMY_REWORK_PLAN.md": "active plan",
-  "ENEMY_BOSS_PLAN.md": "history",
-  "PHASE_F_MIRROR_PLAN.md": "completed plan",
-  "SHOP_UPGRADE_DESIGN.md": "current authority",
 });
 
 const ROOT_CLASSIFICATION_HEADING = "## Root Markdown classification";

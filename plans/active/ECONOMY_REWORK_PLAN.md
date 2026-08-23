@@ -1,6 +1,13 @@
 # Tear Economy Rework
 
-Design plan only. No gameplay or save behavior has been changed.
+Partially implemented. Active remaining scope is live-balance validation and
+achievement-pool reconciliation; no gameplay change is authorized by this
+document.
+
+The document's **97 achievements / 69,200 coins** totals disagree with the
+current typed-test totals of **98 achievements / 70,100 coins**. That
+discrepancy is unresolved and must be reconciled before treating the balance
+model as closed; gameplay is unchanged by this documentation update.
 
 ## Executive summary
 
@@ -109,7 +116,7 @@ One-time purchases and Reroll use explicit prices because their value is discret
 
 ## Approved new upgrades and prices
 
-Effects and rank counts remain as recorded in `SHOP_UPGRADE_DESIGN.md`.
+Effects and rank counts remain as recorded in [SHOP_UPGRADE_DESIGN.md](../../docs/product/SHOP_UPGRADE_DESIGN.md).
 
 | Upgrade | Rank prices | Total |
 | --- | --- | ---: |
