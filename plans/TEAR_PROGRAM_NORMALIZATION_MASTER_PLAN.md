@@ -671,6 +671,30 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
       `G4-D-REPLAY-EDITOR` and `G4-D-REPLAY-HUB` are signed; this remains
       unproven.
 
+### Adaptive Soundtrack loader compatibility slice — G4-E-ADAPTIVE-SOUNDTRACK
+
+- [x] Establish canonical `AdaptiveSoundtrackClient`,
+      `AdaptiveSoundtrackMusicBackend`, and
+      `preparePinnedAdaptiveSoundtrackClient` game-facing facades over the
+      existing pinned audio contract.
+- [x] Make runtime loading canonical-first for the future
+      `public/vendor/tear-music/adaptive-soundtrack.esm.js` pair, while
+      delegating absent/unloadable canonical assets to the current pinned
+      `public/vendor/tear-score/*` preparation path.
+- [x] Preserve current vendored bytes, `TearScore*` adapters/imports, backend
+      identifiers, replay metadata readers/fields, shared AudioContext,
+      exactly-one backend behavior, and lifecycle/failure fallback semantics.
+- [x] Add focused loader-order, canonical-success, fallback, concurrent
+      preparation, shared-host, backend lifecycle, and replay metadata tests.
+- [x] Record the compatibility boundary in the terminology registry and
+      `docs/checkpoints/program-normalization/G4_E_ADAPTIVE_SOUNDTRACK.md`.
+- [x] Record proportional typecheck, architecture, terminology, focused audio,
+      browser lifecycle, provenance, and diff evidence in the G4-E checkpoint;
+      hosted Validate and protected merge remain pending.
+- [ ] Retire the old `tear-score` loader/path only after the canonical artifact,
+      paired Tone host, provenance, replay, and hosted audio lifecycle gates are
+      signed; this remains unproven.
+
 ### Checkpoint G4-A — midpoint pause
 
 - [ ] Public surfaces use only permanent terms.
