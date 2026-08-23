@@ -1,10 +1,8 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** G4 is acceptance-complete and approved for protected-main PR
-review. It becomes canonically CLOSED only when this closure record reaches
-protected `main` and its post-merge `Validate`/ref observation is green. G5
-remains LOCKED until then; production remains frozen and no deployment is
-authorized.
+**Status:** G4 is CLOSED after its protected-main merge and green post-merge
+`Validate`/ref observation. G5 is OPEN for the bounded baseline and authority
+index slice; production remains frozen and no deployment is authorized.
 
 **Prepared:** 2026-08-20
 
@@ -13,14 +11,14 @@ authorized.
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
 **Current canonical game `main`:** `shaku1z/tear` at
-`0a4cda8b269c690bebb038aa3a422e1e74902c65` (`0a4cda8`), the protected
-post-G4-E canonical tip. Post-merge `Validate` run `32628402314` is green,
-and local `pnpm check:performance` passed on this exact head.
+`b3c2066692b75d6fbe1708570e16193011a9a095` (`b3c2066`), the protected
+post-G4 terminology-closure tip. Exact-head post-merge `Validate` run
+`32630369249` is green.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
-acceptance-complete/PR-approved with protected merge and post-merge
-observation pending; G5 LOCKED until then; G6 synchronization repair and G7
-production certification remain future work.
+CLOSED after protected merge and post-merge observation; G5 OPEN for the
+bounded organization baseline; G6 synchronization repair and G7 production
+certification remain future work.
 
 **Music repository state:** `shaku1z/tear-music` (formerly
 `shaku1z/tear-score`) protected `main` is clean at
@@ -795,16 +793,22 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 - [x] Music full gate passes.
 - [x] Wiki content contract schema uses the permanent public names.
 - [x] Terminology registry has no alias without an owner and expiry condition.
-- [x] G4 closure record is approved for protected-main PR; G5 remains locked
-      until protected merge and post-merge `Validate`/ref observation.
+- [x] G4 closure record reached protected `main` and its post-merge
+      `Validate`/ref observation is green; G5 is open.
 
 ---
 
 ## 9. G5 — Organize repositories, documents, and workspace
 
-**Status:** LOCKED pending protected G4 merge and post-merge `Validate`/ref
-observation. No G5 implementation or reorganization is performed by this
-slice.
+**Status:** OPEN after protected G4 merge and post-merge `Validate`/ref
+observation. This slice records the bounded baseline and authority indexes;
+no workspace move, quarantine, deletion, or bulk reorganization is performed.
+
+The bounded G5 baseline is recorded in
+`docs/checkpoints/program-normalization/G5_BASELINE_INVENTORY.md`. The
+authority indexes are `docs/README.md` and `plans/README.md`; they classify the
+current tree without claiming that any later move or workspace cleanup is
+complete.
 
 **Goal:** Make authority obvious without destabilizing the working architecture.
 
@@ -840,9 +844,9 @@ This is a target classification, not permission for a bulk move.
 
 ### Repository organization objectives
 
-- [ ] Add `docs/README.md` and `plans/README.md` authority indexes before moving
+- [x] Add `docs/README.md` and `plans/README.md` authority indexes before moving
       documents.
-- [ ] Classify every root Markdown file as current authority, active plan,
+- [x] Classify every root Markdown file as current authority, active plan,
       completed plan, or history.
 - [ ] Move root redesign/audit/economy/enemy/shop/mirror plan documents through
       separate link-checked commits.
@@ -1106,8 +1110,8 @@ Create one record per goal under the future canonical checkpoint location.
       proven by tags, bundles, and restore/fsck evidence in the G3 closure
       record. This becomes canonical on protected merge and post-merge
       observation of this record.
-- [ ] G4 closed — permanent terminology is acceptance-complete and approved
-      for PR; protected merge and post-merge observation remain pending.
+- [x] G4 closed — permanent terminology reached protected game `main` at
+      `b3c2066`, with exact-head post-merge `Validate` run `32630369249` green.
 - [ ] G5 closed — repositories, docs, and local workspace are organized.
 - [ ] G6 closed — wiki synchronizes from the modern typed manifest.
 - [ ] G7 closed — exact canonical commits are deployed and verified.
