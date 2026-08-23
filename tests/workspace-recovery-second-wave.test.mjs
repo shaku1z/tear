@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +19,7 @@ import { runWorkspacePreservationQuarantine } from "../scripts/apply-workspace-q
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const secondWavePolicySource = DEFAULT_WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_PATH;
 const basePolicySource = path.join(repositoryRoot, "preservation", "workspace-recovery-policy.json");
+const reporterPath = path.join(repositoryRoot, "scripts", "report-workspace-recovery.mjs");
 const now = new Date("2026-08-23T12:00:00.000Z");
 const retainUntil = "2027-04-01T00:00:00.000Z";
 
@@ -125,6 +127,34 @@ test("rejects case-insensitive duplicate second-wave allowlist names", () => {
   const policy = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
   policy.sourceRoots[1].name = policy.sourceRoots[0].name.toUpperCase();
   assert.match(validateWorkspaceRecoverySecondWavePolicy(policy).join("\n"), /case-insensitive duplicate name/u);
+});
+
+test("CLI accepts --policy and binds second-wave allowlist provenance without moving sources", () => {
+  const fixture = createFixture();
+  try {
+    const outputPath = path.join(fixture.archiveGroup, "cli-second-wave-report.json");
+    const result = spawnSync(process.execPath, [
+      reporterPath,
+      "--repo-root", fixture.repoRoot,
+      "--workspace-root", fixture.workspaceRoot,
+      "--temp-root", fixture.tempRoot,
+      "--archive-root", fixture.archiveRoot,
+      "--owner", "g5-second-wave-cli-owner",
+      "--retain-until", retainUntil,
+      "--policy", fixture.policyPath,
+      "--output", outputPath,
+    ], { encoding: "utf8", stdio: "pipe" });
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(fs.readFileSync(outputPath, "utf8"));
+    assert.equal(report.inputs.allowlist.format, "tear-workspace-recovery-second-wave-policy");
+    assert.equal(path.resolve(report.inputs.allowlist.path), path.resolve(fixture.policyPath));
+    assert.equal(report.inputs.allowlist.sha256, hashFile(fixture.policyPath));
+    assert.equal(report.sources.length, 45);
+    assert.equal(fs.existsSync(path.join(fixture.tempRoot, "tear-score-g2-audit-1611bbb")), true);
+    assert.equal(fs.existsSync(path.join(fixture.workspaceRoot, "Tear-cutting-room")), true);
+  } finally {
+    cleanup(fixture);
+  }
 });
 
 test("selects exactly the reviewed second-wave directories and propagates root arguments/provenance", () => {
@@ -255,6 +285,55 @@ test("preserves the v1 fallback when rootArgument fields are absent", () => {
     });
     assert.equal(receipt.status, "complete");
     assert.equal(fs.existsSync(fallbackEvidence.destination), true);
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test("legacy v1 publication-copy entries retain their temp-root during stable comparison", () => {
+  const fixture = createFixture();
+  try {
+    const publication = path.join(fixture.tempRoot, "Tear-main-publication");
+    fs.mkdirSync(publication);
+    fs.writeFileSync(path.join(publication, "publication.txt"), "legacy publication\n", "utf8");
+    const report = runWorkspaceRecoveryReport({
+      repoRoot: fixture.repoRoot,
+      workspaceRoot: fixture.workspaceRoot,
+      tempRoot: fixture.tempRoot,
+      archiveRoot: fixture.archiveRoot,
+      owner: "g5-second-wave-owner",
+      retainUntil,
+      policyPath: path.join(fixture.repoRoot, "preservation", "workspace-recovery-policy.json"),
+      now,
+    });
+    assert.equal(report.sources[0].id, "publication-copy");
+    delete report.inputs.rootArguments;
+    delete report.sources[0].rootArgument;
+    const reportPath = path.join(fixture.archiveGroup, "legacy-publication-report.json");
+    const reportSha256 = writeJson(reportPath, report);
+    const policyPath = path.join(fixture.repoRoot, "preservation", "workspace-recovery-policy.json");
+    const destination = path.join(fixture.archiveGroup, "legacy-publication-payload");
+    const manifest = runWorkspaceQuarantinePreparation({
+      reportPath,
+      reportSha256,
+      policyPath,
+      repoRoot: fixture.repoRoot,
+      owner: "g5-second-wave-owner",
+      retainUntil,
+      destination,
+      now,
+    });
+    delete manifest.roots.rootArguments;
+    delete manifest.roots.sourceRoots[0].rootArgument;
+    for (const entry of [...manifest.entries, ...manifest.emptyDirectories]) delete entry.rootArgument;
+    const manifestPath = path.join(fixture.archiveGroup, "legacy-publication-manifest.json");
+    const manifestSha256 = writeJson(manifestPath, manifest);
+    const receipt = runWorkspacePreservationQuarantine({
+      ...applyOptions(fixture, { reportPath, reportSha256, manifestPath, manifestSha256, journalPath: path.join(fixture.archiveGroup, "legacy-publication-journal"), destination }),
+      policyPath,
+    });
+    assert.equal(receipt.status, "complete");
+    assert.equal(fs.readFileSync(path.join(destination, "Tear-main-publication", "publication.txt"), "utf8"), "legacy publication\n");
   } finally {
     cleanup(fixture);
   }

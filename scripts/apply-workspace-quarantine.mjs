@@ -334,6 +334,11 @@ function stableProjection(value, isRoot = true) {
 function legacyCompatibilityProjection(manifest, core) {
   const clone = JSON.parse(JSON.stringify(manifest));
   const sourceRoots = clone.roots?.sourceRoots;
+  const rootArgumentBySourceName = new Map();
+  for (const source of [...(core.sources ?? []), ...(sourceRoots ?? [])]) {
+    if (typeof source?.name !== "string") continue;
+    rootArgumentBySourceName.set(source.name.toLowerCase(), rootArgumentForSource(source));
+  }
   if (Array.isArray(sourceRoots)) {
     for (const source of sourceRoots) {
       if (source.rootArgument === undefined) source.rootArgument = rootArgumentForSource(source);
@@ -347,7 +352,10 @@ function legacyCompatibilityProjection(manifest, core) {
     }
   }
   for (const entry of [...(clone.entries ?? []), ...(clone.emptyDirectories ?? [])]) {
-    if (entry.rootArgument === undefined) entry.rootArgument = rootArgumentForSource(entry);
+    if (entry.rootArgument === undefined) {
+      entry.rootArgument = rootArgumentBySourceName.get(String(entry.sourceName ?? "").toLowerCase())
+        ?? rootArgumentForSource({ id: entry.sourceId });
+    }
   }
   return clone;
 }

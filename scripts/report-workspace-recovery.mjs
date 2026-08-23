@@ -1226,6 +1226,7 @@ function parseArguments(argumentsList) {
     ["--workspace-root", "workspaceRoot"],
     ["--temp-root", "tempRoot"],
     ["--archive-root", "archiveRoot"],
+    ["--policy", "policyPath"],
     ["--owner", "owner"],
     ["--retain-until", "retainUntil"],
     ["--output", "outputPath"],
@@ -1256,7 +1257,7 @@ function parseArguments(argumentsList) {
     seenSingletons.add(argument);
     const value = argumentsList[++index];
     if (value === undefined || value.startsWith("--")) throw new WorkspaceRecoveryReportError(`${argument} requires a value`);
-    options[optionName] = ["repoRoot", "workspaceRoot", "tempRoot", "archiveRoot", "outputPath"].includes(optionName) ? path.resolve(value) : value;
+    options[optionName] = ["repoRoot", "workspaceRoot", "tempRoot", "archiveRoot", "policyPath", "outputPath"].includes(optionName) ? path.resolve(value) : value;
   }
   if (options.help) return options;
   for (const field of ["repoRoot", "workspaceRoot", "tempRoot", "archiveRoot", "owner", "retainUntil"]) {
@@ -1269,7 +1270,7 @@ function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
     if (options.help) {
-      console.log("Usage: node scripts/report-workspace-recovery.mjs --repo-root <repo> --workspace-root <dir> --temp-root <dir> --archive-root <dir> --owner <id> --retain-until <UTC> [--output <new-report.json>] [--summary-only] [--preserved-manifest <manifest.json>]");
+      console.log("Usage: node scripts/report-workspace-recovery.mjs --repo-root <repo> --workspace-root <dir> --temp-root <dir> --archive-root <dir> --owner <id> --retain-until <UTC> [--policy <policy.json>] [--output <new-report.json>] [--summary-only] [--preserved-manifest <manifest.json>]");
       return;
     }
     const report = runWorkspaceRecoveryReport(options);
