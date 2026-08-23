@@ -100,6 +100,7 @@ export * from "./foundry-job-v4-source-evaluation-execution";
 export * from "./foundry-job-v4-decision";
 export * from "./foundry-job-v4-monitoring-entry";
 export * from "./foundry-job-due-dispatcher";
+export * from "./training-operations";
 export * from "./tearbot-ladder-evaluation";
 export * from "./tearbot-v3-canonical-evaluation";
 export * from "./tearbot-human-calibration-source";

@@ -8,7 +8,7 @@ import { createPlaygroundRenderers } from "./playground";
 import { createProfileAchievementRenderers } from "./profile-achievements";
 import { createSettingsRenameRenderers } from "./settings-rename";
 import { createAcademyRenderers } from "./academy";
-import { createFoundryRenderers } from "./foundry";
+import { createTrainingOperationsRenderers } from "./training-operations";
 import { createGhostLabRenderers } from "./ghost-lab";
 
 export type * from "./contracts";
@@ -27,7 +27,7 @@ export function createLegacyScreenRenderers(context: ScreenRenderContext): Legac
   const results = createPauseResultRenderers(context);
   const playground = createPlaygroundRenderers(context);
   const academy = createAcademyRenderers(context);
-  const foundry = createFoundryRenderers(context);
+  const foundry = createTrainingOperationsRenderers(context);
   const ghostLab = createGhostLabRenderers(context);
 
   return {

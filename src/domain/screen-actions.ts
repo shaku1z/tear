@@ -80,6 +80,11 @@ export type ScreenAction =
   | { readonly type: "academy.record.withdrawModelTraining"; readonly candidateHash: string }
   | { readonly type: "academy.humanCalibration.optIn"; readonly consent: "anonymous-improvement" | "public-training" }
   | { readonly type: "academy.humanCalibration.revoke" }
+  | { readonly type: "training-operations.open" }
+  | { readonly type: "training-operations.refresh" }
+  | { readonly type: "training-operations.bootstrap"; readonly profileId: string }
+  | { readonly type: "training-operations.schedule.enable"; readonly scheduleHash: string }
+  | { readonly type: "training-operations.schedule.disable"; readonly scheduleHash: string }
   | { readonly type: "foundry.refresh" }
   | { readonly type: "foundry.bootstrap"; readonly profileId: string }
   | { readonly type: "foundry.schedule.enable"; readonly scheduleHash: string }
@@ -87,10 +92,10 @@ export type ScreenAction =
   | { readonly type: "game-agent.open" }
   | { readonly type: "run-monitor.open" }
   | { readonly type: "run-monitor.control"; readonly command: "start" | "pause" | "resume" | "stop" }
-  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }

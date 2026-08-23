@@ -249,7 +249,7 @@ describe("legacy screen renderer registry", () => {
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
     renderer.ghostlab({ id: "ghostlab", subtitle: "local routes", routes: [
       { id: "academy", label: "ACADEMY", detail: "local custody" },
-      { id: "foundry", label: "FOUNDRY STATUS", detail: "local recovery" },
+      { id: "training-operations", label: "TRAINING OPERATIONS", detail: "local recovery" },
       { id: "vault", label: "GHOST VAULT", detail: "capsule gated Theater" },
       { id: "botevidence", label: "GAME AGENT EVIDENCE", detail: "exact retained report" },
       { id: "watch", label: "RUN MONITOR", detail: "canonical V3 locally available" },
@@ -257,7 +257,7 @@ describe("legacy screen renderer registry", () => {
       { label: "WATCH", detail: "not player-safe" }, { label: "STATE FORGE", detail: "engineering only" },
     ], watch: { status: "ready", detail: "canonical V3 locally available", decisions: 0 } });
     expect(controls.filter((control) => control.action.type === "replay.hub.open").map((control) => control.action))
-      .toEqual([{ type: "replay.hub.open", destination: "academy" }, { type: "replay.hub.open", destination: "foundry" }, { type: "replay.hub.open", destination: "vault" }]);
+      .toEqual([{ type: "replay.hub.open", destination: "academy" }, { type: "replay.hub.open", destination: "training-operations" }, { type: "replay.hub.open", destination: "vault" }]);
     expect(controls.find((control) => control.action.type === "game-agent.open"))
       .toMatchObject({ label: "GAME AGENT EVIDENCE", action: { type: "game-agent.open" } });
     expect(controls.find((control) => control.action.type === "run-monitor.open"))
@@ -304,9 +304,9 @@ describe("legacy screen renderer registry", () => {
       jobHash: "a".repeat(16), phase: "collecting", nextManualPhase: "curating", resumable: true, eventCount: 2,
       lastEventHash: "b".repeat(16), projectionHash: "c".repeat(16),
     }], schedules: [] });
-    expect(controls.find((control) => control.action.type === "foundry.bootstrap"))
+    expect(controls.find((control) => control.action.type === "training-operations.bootstrap"))
       .toMatchObject({ label: "START LOCAL CYCLE", action: { profileId: "eligible-local-cycle" }, enabled: true });
-    expect(controls.find((control) => control.action.type === "foundry.bootstrap" && control.action.profileId === "blocked-local-cycle"))
+    expect(controls.find((control) => control.action.type === "training-operations.bootstrap" && control.action.profileId === "blocked-local-cycle"))
       .toMatchObject({ label: "BLOCKED", enabled: false });
     expect(JSON.stringify(controls)).not.toContain("artifactHash");
     expect(JSON.stringify(controls)).not.toContain("custody");

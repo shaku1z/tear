@@ -40,8 +40,8 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     }); });
     context.enqueue({ x: railX, y: 426 + rail.length * 61, w: railWidth, h: 52, glyph: "◇", label: "TRAINING ARCHIVE", ghost: true,
       action: { type: "training-archive.open" } });
-    context.enqueue({ x: railX + railWidth + 18, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "F", label: "FOUNDRY STATUS", ghost: true,
-      action: { type: "navigate", to: "foundry", resetScroll: true } });
+    context.enqueue({ x: railX + railWidth + 18, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "T", label: "TRAINING OPERATIONS", ghost: true,
+      action: { type: "training-operations.open" } });
     context.enqueue({ x: railX + railWidth + 250, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "◇", label: "REPLAY HUB", ghost: true,
       sub: "LOCAL ROUTES", action: { type: "navigate", to: "ghostlab", resetScroll: true } });
     if (view.nowPlaying) {

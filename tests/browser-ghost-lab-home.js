@@ -15,7 +15,7 @@ withJourney({ name: "C37 normal Replay Hub home", port: 8179 }, async ({ page, w
   await page.mouse.click(780, 757); // normal main-menu REPLAY HUB control
   await waitScreen("ghostlab");
   const labText = await page.evaluate(() => window.__TEAR_C37_GHOST_LAB_TEXT__);
-  for (const expected of ["REPLAY HUB", "AVAILABLE LOCALLY", "NOT YET PLAYER-SAFE", "UNAVAILABLE / WATCH", "UNAVAILABLE / SCENARIO CONSOLE", "UNAVAILABLE / BOT LADDER", "UNAVAILABLE / REPLAY EDITOR"]) {
+  for (const expected of ["REPLAY HUB", "AVAILABLE LOCALLY", "TRAINING ARCHIVE", "TRAINING OPERATIONS", "NOT YET PLAYER-SAFE", "UNAVAILABLE / RUN MONITOR", "UNAVAILABLE / SCENARIO CONSOLE", "UNAVAILABLE / GAME AGENT LADDER", "UNAVAILABLE / REPLAY EDITOR"]) {
     assert.ok(labText.includes(expected), `Replay Hub did not visibly render ${expected}: ${labText.slice(-80).join(" | ")}`);
   }
   await page.mouse.click(475, 224); // Academy
@@ -23,7 +23,7 @@ withJourney({ name: "C37 normal Replay Hub home", port: 8179 }, async ({ page, w
   await page.mouse.click(800, 850); // BACK
   await waitScreen("menu");
   await page.mouse.click(780, 757); await waitScreen("ghostlab");
-  await page.mouse.click(475, 336); // Foundry Status
+  await page.mouse.click(475, 336); // Training Operations
   await waitScreen("foundry");
   await page.mouse.click(800, 850); await waitScreen("menu");
   await page.mouse.click(780, 757); await waitScreen("ghostlab");
