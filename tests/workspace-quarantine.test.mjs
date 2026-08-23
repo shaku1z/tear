@@ -278,3 +278,23 @@ test("aggregate policy limits apply across all source roots", () => {
     cleanup(fixture);
   }
 });
+
+test("new ordinary empty directories are recorded, but added content is refused", () => {
+  const fixture = createFixture();
+  try {
+    const evidence = createReport(fixture);
+    const emptyDirectory = path.join(fixture.workspaceRoot, "gsm-one", ".pnpm-store", "v11", "files");
+    fs.mkdirSync(emptyDirectory, { recursive: true });
+    const manifest = runWorkspaceQuarantinePreparation(options(fixture, evidence));
+    const mapped = manifest.emptyDirectories.find((entry) => entry.relativePath === ".pnpm-store/v11/files");
+    assert.equal(mapped.status, "unverified-empty-directory");
+    assert.equal(mapped.plannedPath, path.join(manifest.destination.path, "gsm-one", ".pnpm-store", "v11", "files"));
+    assert.equal(manifest.summary.emptyDirectories, 3);
+    assert.equal(fs.existsSync(manifest.destination.path), false);
+
+    addFile(emptyDirectory, "added-after-report.txt", "new content\n");
+    assert.throws(() => runWorkspaceQuarantinePreparation(options(fixture, evidence)), /source evidence was added/u);
+  } finally {
+    cleanup(fixture);
+  }
+});

@@ -259,7 +259,7 @@ function matchesProtection(relativePath, policy) {
 
 function inspectSourceEvidence(source, policy, budget) {
   const entries = [];
-  const ordinaryDirectories = new Set();
+  const ordinaryDirectories = new Map();
   let observedBytes = 0;
   function pushEntry(entry) {
     entries.push(entry);
@@ -304,7 +304,7 @@ function inspectSourceEvidence(source, policy, budget) {
         continue;
       }
       if (stats.isDirectory()) {
-        ordinaryDirectories.add(relativePath.toLowerCase());
+        ordinaryDirectories.set(relativePath.toLowerCase(), relativePath);
         visit(absolute, depth + 1);
         continue;
       }
@@ -392,7 +392,18 @@ function validateReportEntries(source, current, policy) {
   }
   const expectedDirectories = expectedOrdinaryDirectories([...reportEntries.values()].filter((entry) => entry.decision !== "protected"));
   for (const directory of expectedDirectories) if (!current.ordinaryDirectories.has(directory)) fail(`source directory evidence is missing: ${source.name}/${directory}`);
-  for (const directory of current.ordinaryDirectories) if (!expectedDirectories.has(directory)) fail(`source directory evidence was added: ${source.name}/${directory}`);
+  const emptyDirectories = [];
+  for (const [directoryKey, directory] of current.ordinaryDirectories) {
+    if (expectedDirectories.has(directoryKey)) continue;
+    const hasObservedDescendant = current.entries.some((entry) => entry.relativePath.toLowerCase().startsWith(`${directoryKey}/`));
+    if (hasObservedDescendant) fail(`source directory evidence contains added content: ${source.name}/${directory}`);
+    emptyDirectories.push({
+      relativePath: directory,
+      absolutePath: path.join(source.path, directory.split("/").join(path.sep)),
+      status: "unverified-empty-directory",
+      reason: "report-does-not-record-ordinary-empty-directories",
+    });
+  }
 
   const preparedEntries = [];
   for (const entry of reportEntries.values()) {
@@ -409,7 +420,7 @@ function validateReportEntries(source, current, policy) {
     if (actual.sha256 !== entry.sha256.toLowerCase()) fail(`source hash changed: ${source.name}/${entry.relativePath}`);
     preparedEntries.push({ entry, status: "review", reason: entry.decision === "duplicate" ? "approved-duplicate-still-requires-review" : "review-only-source-evidence", sha256: actual.sha256 });
   }
-  return preparedEntries;
+  return { preparedEntries, emptyDirectories };
 }
 
 function destinationPlan(destination, roots, reportPath, sources) {
@@ -445,9 +456,10 @@ function outputPathSafe(output, roots, destination, sources) {
   return absolute;
 }
 
-function sourceSummary(preparedEntries) {
+function sourceSummary(preparedEntries, emptyDirectories) {
   return {
     entries: preparedEntries.length,
+    emptyDirectories: emptyDirectories.length,
     protected: preparedEntries.filter((entry) => entry.status === "protected").length,
     hashed: preparedEntries.filter((entry) => entry.sha256 !== null).length,
     review: preparedEntries.filter((entry) => entry.status === "review").length,
@@ -482,6 +494,7 @@ function buildClusters(preparedEntriesBySource) {
 
 function buildManifest({ report, reportPath, reportSha256, policySha256, repo, roots, sources, destination, generatedAtUtc, owner, retainUntilUtc, preparedEntriesBySource }) {
   const entries = [];
+  const emptyDirectories = [];
   for (const { source, entries: preparedEntries } of preparedEntriesBySource) {
     for (const prepared of preparedEntries) {
       const relativePath = prepared.entry.relativePath;
@@ -502,6 +515,23 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         sha256: prepared.sha256,
         status: prepared.status,
         reason: prepared.reason,
+      });
+    }
+  }
+  for (const { source, emptyDirectories: sourceEmptyDirectories } of preparedEntriesBySource) {
+    for (const emptyDirectory of sourceEmptyDirectories) {
+      const restoreRelativePath = `${source.name}/${emptyDirectory.relativePath}`;
+      safeRelativePath(restoreRelativePath, "empty-directory restore mapping");
+      emptyDirectories.push({
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceRoot: source.path,
+        relativePath: emptyDirectory.relativePath,
+        originalPath: emptyDirectory.absolutePath,
+        plannedPath: path.join(destination.path, source.name, emptyDirectory.relativePath.split("/").join(path.sep)),
+        restoreRelativePath,
+        status: emptyDirectory.status,
+        reason: emptyDirectory.reason,
       });
     }
   }
@@ -547,11 +577,13 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
       hashedEntries: entries.filter((entry) => entry.sha256 !== null).length,
       protectedEntries: protectedCount,
       reviewEntries: entries.filter((entry) => entry.status === "review").length,
+      emptyDirectories: emptyDirectories.length,
       crossSourceHashClusters: buildClusters(preparedEntriesBySource).length,
       quarantineEligibleEntries: 0,
     },
     crossSourceHashClusters: buildClusters(preparedEntriesBySource),
     entries,
+    emptyDirectories,
     restoreGuidance: {
       status: "read-only-plan",
       instructions: [
@@ -559,7 +591,7 @@ function buildManifest({ report, reportPath, reportSha256, policySha256, repo, r
         "Protected, changed, unknown, and cross-source material remains review-only; any protected content makes this plan no-go.",
         "A future authorized operation must revalidate this report SHA-256, policy SHA, exact clean main, source metadata, content hashes, owner, retention date, and restore mapping.",
       ],
-      restoreMapping: "entries[].originalPath and entries[].restoreRelativePath are the only proposed restore coordinates; no operation is performed here.",
+      restoreMapping: "entries[] and emptyDirectories[] carry the proposed restore coordinates; no operation is performed here.",
     },
     evidence: {
       externalRecoveryReport: {
@@ -610,8 +642,8 @@ export function runWorkspaceQuarantinePreparation(options = {}) {
   const evidenceBudget = { entries: 0, bytes: 0 };
   const preparedEntriesBySource = sources.map((source) => {
     const current = inspectSourceEvidence(source, loadedPolicy.policy, evidenceBudget);
-    const preparedEntries = validateReportEntries(source, current, loadedPolicy.policy);
-    return { source, entries: preparedEntries, summary: sourceSummary(preparedEntries) };
+    const { preparedEntries, emptyDirectories } = validateReportEntries(source, current, loadedPolicy.policy);
+    return { source, entries: preparedEntries, emptyDirectories, summary: sourceSummary(preparedEntries, emptyDirectories) };
   });
   const generatedAtUtc = new Date(now.getTime()).toISOString();
   const manifest = buildManifest({
