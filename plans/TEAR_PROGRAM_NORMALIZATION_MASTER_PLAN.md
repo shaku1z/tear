@@ -686,6 +686,11 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
       exactly-one backend behavior, and lifecycle/failure fallback semantics.
 - [x] Add focused loader-order, canonical-success, fallback, concurrent
       preparation, shared-host, backend lifecycle, and replay metadata tests.
+- [x] Vendor the accepted `shaku1z/tear-music` schema-v2 ESM entrypoint
+      byte-exactly, with its manifest, independent provenance, paired Tone
+      host/license, and fixed source commit/hash record.
+- [x] Add a canonical Adaptive Soundtrack provenance check and same-limit
+      bundle budget while retaining the legacy TearScore check/key and path.
 - [x] Record the compatibility boundary in the terminology registry and
       `docs/checkpoints/program-normalization/G4_E_ADAPTIVE_SOUNDTRACK.md`.
 - [x] Record proportional typecheck, architecture, terminology, focused audio,

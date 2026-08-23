@@ -1,0 +1,37 @@
+{
+  "format": "tear-music-adaptive-soundtrack-provenance",
+  "schemaVersion": 1,
+  "engineRepository": "shaku1z/tear-music",
+  "engineCommit": "7662fc95769d2ed022593c10f308ec10f054edfc",
+  "engineVersion": "0.1.0-alpha.1",
+  "builtAt": "2026-08-23T06:35:29.104Z",
+  "releaseManifest": "adaptive-soundtrack.manifest.json",
+  "releaseManifestSha256": "e6d9a62ebadfdea26a98a1371ba7e084bc8878f7623ad510deafe12d6a945c2a",
+  "releaseSchemaVersion": 2,
+  "releaseVersion": "0.1.0-alpha.1",
+  "artifact": "adaptive-soundtrack.esm.js",
+  "sourceEntrypoint": "index.mjs",
+  "artifactFormat": "esm",
+  "artifactBytes": 67717,
+  "artifactSha256": "9b88e9597657c44ae5830c67666d089730c156e4b17a993596e9d0c0ab3a5eb7",
+  "toneArtifact": "tone-host-14.9.17.esm.js",
+  "toneFormat": "host-context-esm",
+  "toneVersion": "14.9.17",
+  "toneBytes": 337361,
+  "toneSha256": "5dd8825c21f50486eea7353b0abdf06119dd76409e4271e3fa54fe8545463446",
+  "trustedToneArtifact": "../tear-score/tone-host-14.9.17.esm.js",
+  "trustedToneSha256": "5dd8825c21f50486eea7353b0abdf06119dd76409e4271e3fa54fe8545463446",
+  "toneLicense": "TONE-LICENSE.md",
+  "toneLicenseBytes": 1072,
+  "toneLicenseSha256": "391ed5af60b7b5d1f74b31040c5fa645e6e238f3d9b4c971941a262a675bbdcd",
+  "trustedToneLicense": "../tear-score/TONE-LICENSE.md",
+  "trustedToneLicenseSha256": "391ed5af60b7b5d1f74b31040c5fa645e6e238f3d9b4c971941a262a675bbdcd",
+  "sourceStateAtVendoring": "accepted-read-only-handoff",
+  "globalRuntimeDependencies": [
+    "Tone@14.9.17 via the paired host module"
+  ],
+  "compatibilityPatches": [],
+  "legacyFallback": {
+    "validationScript": "scripts/verify-tear-score-provenance.mjs"
+  }
+}

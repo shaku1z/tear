@@ -29,7 +29,7 @@
           "tear-signal-catalog",
           "public/vendor/tear-score/**"
         ],
-        "canonicalWrite": "TEAR Music / tear-music naming only after the compatibility window",
+        "canonicalWrite": "TEAR Music / tear-music naming for canonical vendor artifacts; retain old paths for compatibility reads",
         "preserve": [
           "provenance URLs",
           "sourceRootHash",
@@ -41,7 +41,7 @@
       "compatibilityStrategy": "Dual-read old audio metadata, cue/catalog formats, vendor paths, package aliases, and imported artifacts; canonical-write new names while preserving provenance and unknown fields.",
       "removalCheckpoint": {
         "id": "G4-B-MUSIC",
-        "condition": "Remove legacy aliases only after redirects, provenance URLs, package aliases, vendoring scripts, the Soundtrack Desk target, old replay/save readers, and imported-artifact reads pass the music migration gate."
+        "condition": "Remove legacy aliases only after the shipped canonical vendor provenance, redirects, provenance URLs, package aliases, vendoring scripts, the Soundtrack Desk target, old replay/save readers, and imported-artifact reads pass the music migration gate."
       }
     },
     {
@@ -73,7 +73,7 @@
       "compatibilityStrategy": "Rename only audio-specific product vocabulary; retain generic runtime infrastructure and legacy synth fallback as implementation details.",
       "removalCheckpoint": {
         "id": "G4-B-ADAPTIVE-SOUNDTRACK",
-        "condition": "Retire audio-specific legacy runtime aliases after adaptive tier/session behavior, fallback, metadata, and replay round-trip gates pass; generic runtime names remain unchanged."
+        "condition": "Retire audio-specific legacy runtime aliases only after the shipped canonical artifact, paired Tone host/license, adaptive tier/session behavior, fallback, metadata, and replay round-trip gates pass; generic runtime names remain unchanged."
       }
     },
     {
@@ -570,7 +570,7 @@
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Retain until shipped canonical provenance is verified; then remove only through the audio migration PR."
+          "condition": "Canonical provenance is now verified; retain this legacy path and its hashes until the hosted audio migration/removal gate is signed, then remove only through that audio migration PR."
         }
       },
       {
@@ -596,20 +596,56 @@
     ],
     "mutableCompatibility": [
       {
+        "id": "compat-audio-canonical-manifest",
+        "pathPattern": "public/vendor/tear-music/adaptive-soundtrack.manifest.json",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack"
+        ],
+        "owner": "Audio vendor provenance owner",
+        "reason": "The canonical schema-v2 release manifest preserves the upstream legacy package compatibility record while the selected game entrypoint is TEAR Music.",
+        "testEvidence": [
+          "check:adaptive-soundtrack",
+          "tests/unit/adaptive-soundtrack-vendor.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
+          "condition": "Retain the manifest compatibility record until the legacy package/path migration gate is signed; never rewrite the accepted release manifest for terminology alone."
+        }
+      },
+      {
+        "id": "compat-audio-canonical-provenance",
+        "pathPattern": "public/vendor/tear-music/adaptive-soundtrack.provenance.json",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack"
+        ],
+        "owner": "Audio vendor provenance owner",
+        "reason": "Canonical provenance explicitly records the retained legacy fallback and trusted Tone source paths so the migration remains auditable.",
+        "testEvidence": [
+          "check:adaptive-soundtrack",
+          "tests/unit/adaptive-soundtrack-vendor.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
+          "condition": "Retain while the old TearScore fallback remains readable; remove only when its explicit migration/removal gate is signed."
+        }
+      },
+      {
         "id": "compat-audio-source",
         "pathPattern": "src/audio/tear-score-*.ts",
         "termIds": [
           "tear-music"
         ],
         "owner": "Audio platform owner",
-        "reason": "Existing adapter/module names remain readable until the narrow audio rename slice.",
+        "reason": "The canonical facade intentionally reuses the existing adapter/module implementation while the old TearScore vendor remains the explicit fallback.",
         "testEvidence": [
           "tests/unit/tear-score-module.test.ts",
           "tests/contract/audio-tear-score.test.ts"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove after canonical TEAR Music adapter/module imports and provenance checks pass."
+          "condition": "Retain until a separate adapter/module rename slice replaces the compatibility imports and preserves the canonical and legacy provenance gates."
         }
       },
       {
@@ -620,7 +656,7 @@
           "adaptive-soundtrack"
         ],
         "owner": "Audio platform owner",
-        "reason": "The canonical facade names the future tear-music assets while explicitly retaining the current TearScore loader as a provenance-safe fallback.",
+        "reason": "The canonical facade loads the shipped tear-music assets while explicitly retaining the current TearScore loader as a provenance-safe fallback.",
         "testEvidence": [
           "tests/unit/adaptive-soundtrack.test.ts",
           "tests/unit/tear-score-module.test.ts",
@@ -628,7 +664,7 @@
         ],
         "expiry": {
           "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
-          "condition": "Remove only after the canonical adaptive-soundtrack artifact and paired Tone host ship with verified provenance, replay metadata, shared-context lifecycle, and fallback gates."
+          "condition": "Remove only after the shipped canonical adaptive-soundtrack artifact, paired Tone host/license, verified provenance, replay metadata, shared-context lifecycle, and fallback gates remain green through the hosted migration window."
         }
       },
       {
@@ -910,7 +946,7 @@
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove after canonical vendoring script and manifest are shipped."
+          "condition": "Retain while the legacy vendor path remains readable; remove only after the canonical verifier and legacy-retirement migration gate are signed."
         }
       },
       {
@@ -926,7 +962,7 @@
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Replace only after canonical provenance verification is equivalent."
+          "condition": "Retain as the independent legacy fallback gate; remove only after canonical provenance and legacy-retirement verification are signed."
         }
       },
       {
@@ -936,13 +972,13 @@
           "tear-music"
         ],
         "owner": "Build/bundle owner",
-        "reason": "Bundle budget currently names the legacy audio vendor.",
+        "reason": "The bundle budget retains the legacy TearScore key while also checking the canonical Adaptive Soundtrack artifact at the same non-increased limit.",
         "testEvidence": [
           "check:bundles"
         ],
         "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove after canonical bundle budget key is established without changing limits."
+          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
+          "condition": "Canonical Adaptive Soundtrack and legacy TearScore checks are both established at the existing limits; retain the legacy key until the fallback-removal gate is signed."
         }
       },
       {
@@ -957,8 +993,8 @@
           "check:bundles"
         ],
         "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove after canonical budget key migration and fixture update."
+          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
+          "condition": "The canonical Adaptive Soundtrack budget key is now established at the existing TearScore limit; retain the legacy key until fallback retirement is signed."
         }
       },
       {
@@ -968,14 +1004,14 @@
           "tear-music"
         ],
         "owner": "Build/package owner",
-        "reason": "Existing check script remains a compatibility gate until the audio rename slice.",
+        "reason": "Package scripts retain the legacy check and add the independent canonical provenance gate without weakening either validation path.",
         "testEvidence": [
           "check:tear-score",
           "check:functional"
         ],
         "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove after canonical package script aliases are wired."
+          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
+          "condition": "Retain both check scripts while the legacy fallback remains readable; remove the legacy alias only at its signed migration gate."
         }
       },
       {
@@ -992,7 +1028,7 @@
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove after canonical vendor path attributes are present."
+          "condition": "Canonical and legacy vendor path attributes are now present; retain both until the signed legacy-retirement migration gate."
         }
       },
       {
@@ -1637,14 +1673,14 @@
           "adaptive-soundtrack"
         ],
         "owner": "Program documentation owner",
-        "reason": "Current integration document is a mutable migration target, retained until the audio slice updates it.",
+        "reason": "The integration document now records canonical-first TEAR Music/Adaptive Soundtrack vendoring while retaining the old TearScore fallback boundary.",
         "testEvidence": [
           "check:terminology",
           "check:tear-score"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Update to canonical TEAR Music/Adaptive Soundtrack names in the audio migration PR."
+          "condition": "Retain the compatibility document until the hosted canonical migration window closes; keep legacy fallback and provenance instructions truthful."
         }
       },
       {
@@ -1709,7 +1745,7 @@
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Update after canonical audio vendor/provenance gate is shipped."
+          "condition": "Update in the follow-up release-document slice once the hosted canonical migration is accepted; do not rewrite historical release rows."
         }
       },
       {
@@ -1726,7 +1762,7 @@
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Update after canonical vendoring workflow lands."
+          "condition": "Update in the follow-up contributor-document slice once the hosted canonical vendoring workflow is accepted."
         }
       }
     ]

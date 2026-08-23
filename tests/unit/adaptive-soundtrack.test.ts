@@ -6,6 +6,7 @@ import {
   ADAPTIVE_SOUNDTRACK_TONE_HOST_PATH,
   AdaptiveSoundtrackMusicBackend,
   preparePinnedAdaptiveSoundtrackClient,
+  withPinnedToneHost,
   type AdaptiveSoundtrackClient,
 } from "../../src/audio/adaptive-soundtrack";
 import type { AudioGraphContext, AudioNodePort } from "../../src/audio/mixer";
@@ -135,12 +136,14 @@ function browserHost() {
 }
 
 describe("Adaptive Soundtrack compatibility facade", () => {
-  it("defines canonical future asset locations without creating vendor artifacts", () => {
+  it("defines canonical asset locations while retaining the explicit legacy fallback", () => {
     const root = resolve(import.meta.dirname, "../..");
     expect(ADAPTIVE_SOUNDTRACK_MODULE_PATH).toBe("vendor/tear-music/adaptive-soundtrack.esm.js");
     expect(ADAPTIVE_SOUNDTRACK_TONE_HOST_PATH).toBe("vendor/tear-music/tone-host-14.9.17.esm.js");
-    expect(existsSync(resolve(root, "public", ADAPTIVE_SOUNDTRACK_MODULE_PATH))).toBe(false);
-    expect(existsSync(resolve(root, "public", ADAPTIVE_SOUNDTRACK_TONE_HOST_PATH))).toBe(false);
+    expect(existsSync(resolve(root, "public", ADAPTIVE_SOUNDTRACK_MODULE_PATH))).toBe(true);
+    expect(existsSync(resolve(root, "public", ADAPTIVE_SOUNDTRACK_TONE_HOST_PATH))).toBe(true);
+    expect(existsSync(resolve(root, "public", "vendor/tear-score/tear-score.esm.js"))).toBe(true);
+    expect(existsSync(resolve(root, "public", "vendor/tear-score/tone-host-14.9.17.esm.js"))).toBe(true);
   });
 
   it("loads the canonical module first and does not invoke the fallback after success", async () => {
@@ -179,6 +182,55 @@ describe("Adaptive Soundtrack compatibility facade", () => {
 
     expect(client).toBe(fallback);
     expect(calls).toEqual(["canonical", "fallback"]);
+  });
+
+  it("deletes the temporary Tone global after successful canonical evaluation", async () => {
+    const runtime = globalThis as typeof globalThis & { Tone?: unknown };
+    const hadOwnTone = Object.prototype.hasOwnProperty.call(runtime, "Tone");
+    const previousTone = runtime.Tone;
+
+    try {
+      delete runtime.Tone;
+      const result = await withPinnedToneHost(
+        { marker: "canonical-success" },
+        () => Promise.resolve().then(() => {
+          expect(Object.prototype.hasOwnProperty.call(runtime, "Tone")).toBe(true);
+          expect(runtime.Tone).toEqual({ marker: "canonical-success" });
+          return "loaded";
+        }),
+      );
+
+      expect(result).toBe("loaded");
+      expect(Object.prototype.hasOwnProperty.call(runtime, "Tone")).toBe(false);
+    } finally {
+      if (hadOwnTone) runtime.Tone = previousTone;
+      else delete runtime.Tone;
+    }
+  });
+
+  it("restores an existing Tone global when canonical evaluation rejects", async () => {
+    const runtime = globalThis as typeof globalThis & { Tone?: unknown };
+    const hadOwnTone = Object.prototype.hasOwnProperty.call(runtime, "Tone");
+    const previousTone = runtime.Tone;
+    const existingTone = { marker: "pre-existing" };
+
+    try {
+      runtime.Tone = existingTone;
+      await expect(
+        withPinnedToneHost(
+          { marker: "canonical-rejected" },
+          () => Promise.resolve().then(() => {
+            expect(runtime.Tone).toEqual({ marker: "canonical-rejected" });
+            throw new Error("canonical import rejected");
+          }),
+        ),
+      ).rejects.toThrow("canonical import rejected");
+
+      expect(runtime.Tone).toBe(existingTone);
+    } finally {
+      if (hadOwnTone) runtime.Tone = previousTone;
+      else delete runtime.Tone;
+    }
   });
 
   it("shares one preparation promise for concurrent callers", async () => {

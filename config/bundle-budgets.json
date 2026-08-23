@@ -2,5 +2,6 @@
   "standaloneMainGzipBytes": 260000,
   "crazygamesMainGzipBytes": 260000,
   "tearScoreGzipBytes": 180000,
+  "adaptiveSoundtrackGzipBytes": 180000,
   "toneGzipBytes": 120000
 }

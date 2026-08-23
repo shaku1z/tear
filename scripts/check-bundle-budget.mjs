@@ -15,15 +15,17 @@ async function largestJavaScriptGzip(directory) {
   return sizes.sort((left, right) => right.bytes - left.bytes)[0];
 }
 
-async function staticGzip(file) {
-  return gzipSync(await readFile(resolve(root, "public", "vendor", "tear-score", file))).byteLength;
+async function staticGzip(vendor, file) {
+  return gzipSync(await readFile(resolve(root, "public", "vendor", vendor, file))).byteLength;
 }
 
 const checks = [
   ["standalone main", await largestJavaScriptGzip("standalone"), budgets.standaloneMainGzipBytes],
   ["CrazyGames main", await largestJavaScriptGzip("crazygames"), budgets.crazygamesMainGzipBytes],
-  ["TearScore", { file: "tear-score.esm.js", bytes: await staticGzip("tear-score.esm.js") }, budgets.tearScoreGzipBytes],
-  ["Tone host", { file: "tone-host-14.9.17.esm.js", bytes: await staticGzip("tone-host-14.9.17.esm.js") }, budgets.toneGzipBytes],
+  ["TearScore", { file: "tear-score.esm.js", bytes: await staticGzip("tear-score", "tear-score.esm.js") }, budgets.tearScoreGzipBytes],
+  ["Adaptive Soundtrack", { file: "adaptive-soundtrack.esm.js", bytes: await staticGzip("tear-music", "adaptive-soundtrack.esm.js") }, budgets.adaptiveSoundtrackGzipBytes],
+  ["Tone host", { file: "tone-host-14.9.17.esm.js", bytes: await staticGzip("tear-score", "tone-host-14.9.17.esm.js") }, budgets.toneGzipBytes],
+  ["Adaptive Soundtrack Tone host", { file: "tone-host-14.9.17.esm.js", bytes: await staticGzip("tear-music", "tone-host-14.9.17.esm.js") }, budgets.toneGzipBytes],
 ];
 
 let failed = false;
