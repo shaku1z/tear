@@ -1,0 +1,112 @@
+{
+  "format": "tear-workspace-recovery-policy",
+  "schemaVersion": 1,
+  "repository": "shaku1z/tear",
+  "boundary": {
+    "repoRoot": "canonical-clean-main-exact-origin-main",
+    "sourceRoots": "explicit-cli-roots-and-exact-child-allowlist",
+    "archiveRoot": "explicit-existing-canonical-directory-outside-sources",
+    "output": "new-json-only-under-existing-dated-archive-group",
+    "fetch": false,
+    "mutation": "report-only"
+  },
+  "sourceCategories": [
+    {
+      "id": "invalid-gsm-worktrees",
+      "rootArgument": "workspace-root",
+      "discovery": "direct-child-name-matches-gsm-dash",
+      "maxMatches": 64
+    },
+    {
+      "id": "receipt-copies",
+      "rootArgument": "workspace-root",
+      "exactNames": [
+        "Tear-receipt-clean",
+        "Tear-receipt-clean2",
+        "Tear-receipt-clean3"
+      ]
+    },
+    {
+      "id": "publication-copy",
+      "rootArgument": "temp-root",
+      "exactNames": [
+        "Tear-main-publication"
+      ]
+    }
+  ],
+  "protectedRoots": {
+    "archiveNames": [
+      "Tear-archives",
+      "tear-git-recovery-",
+      "tear-g3-preservation-audit-"
+    ],
+    "neverSourceCandidates": true,
+    "mode": "metadata-only-no-descent"
+  },
+  "limits": {
+    "maxSourceCandidates": 64,
+    "maxEntries": 100000,
+    "maxBytes": 2147483648,
+    "maxDepth": 64,
+    "maxPointerBytes": 4096,
+    "maxSingleFileBytes": 134217728,
+    "maxPreservedManifestBytes": 16777216
+  },
+  "protected": {
+    "segments": [
+      ".git",
+      ".github",
+      "node_modules",
+      "dist",
+      "build",
+      "coverage",
+      "test-results",
+      "artifacts",
+      ".wrangler",
+      ".tmp-tone-host-esm",
+      "Tear-archives",
+      "Tear-oracle"
+    ],
+    "namePatterns": [
+      "^Tear-archives$",
+      "^tear-git-recovery-",
+      "^tear-g3-preservation-audit-",
+      "^Tear-oracle$",
+      "^\\.env(?:\\..*)?$",
+      "\\.local.*$",
+      "^settings\\.local\\.json$",
+      "(?:secret|credential|token|password)",
+      "^id_rsa(?:\\..*)?$",
+      "\\.(?:pem|key|p12|pfx|kdbx|crt|cer)$"
+    ],
+    "reparsePoints": "refuse",
+    "gitPointer": "metadata-only-with-pointer-byte-cap",
+    "hashProtectedContent": false
+  },
+  "hash": {
+    "algorithm": "sha256",
+    "pathEncoding": "relative-posix-v1"
+  },
+  "comparisonTiers": [
+    "canonical-same-relative-path",
+    "reachable-git-blob",
+    "preserved-manifest-sha256",
+    "review-unknown-or-unique"
+  ],
+  "report": {
+    "statusValues": [
+      "review",
+      "no-go"
+    ],
+    "defaultOutput": "stdout",
+    "outputOverwrite": false,
+    "externalAbsolutePaths": "raw-report-only",
+    "restoreGuidance": "future-reviewed-manifest-required"
+  },
+  "quarantine": {
+    "implemented": false,
+    "eligibility": "never-emitted-by-this-reporter",
+    "sameVolumeRenameOnly": true,
+    "ownerAndRetainUntilRequired": true
+  }
+}
