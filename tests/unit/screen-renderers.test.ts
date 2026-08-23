@@ -256,10 +256,10 @@ describe("legacy screen renderer registry", () => {
     ], unavailable: [
       { label: "WATCH", detail: "not player-safe" }, { label: "STATE FORGE", detail: "engineering only" },
     ], watch: { status: "ready", detail: "canonical V3 locally available", decisions: 0 } });
-    expect(controls.filter((control) => control.action.type === "ghostlab.open").map((control) => control.action))
-      .toEqual([{ type: "ghostlab.open", destination: "academy" }, { type: "ghostlab.open", destination: "foundry" }, { type: "ghostlab.open", destination: "vault" }, { type: "ghostlab.open", destination: "botevidence" }, { type: "ghostlab.open", destination: "watch" }]);
-    expect(controls.find((control) => control.action.type === "ghostlab.watch"))
-      .toMatchObject({ label: "START WATCH", action: { type: "ghostlab.watch", command: "start" } });
+    expect(controls.filter((control) => control.action.type === "replay.hub.open").map((control) => control.action))
+      .toEqual([{ type: "replay.hub.open", destination: "academy" }, { type: "replay.hub.open", destination: "foundry" }, { type: "replay.hub.open", destination: "vault" }, { type: "replay.hub.open", destination: "botevidence" }, { type: "replay.hub.open", destination: "watch" }]);
+    expect(controls.find((control) => control.action.type === "replay.hub.watch"))
+      .toMatchObject({ label: "START WATCH", action: { type: "replay.hub.watch", command: "start" } });
     expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
   });
 
@@ -274,12 +274,12 @@ describe("legacy screen renderer registry", () => {
     const renderer = createLegacyScreenRenderers(createRenderContext(controls));
     renderer.paused({ id: "paused", abilities: [], progress: [],
       playerWatch: { status: "running", decisions: 7 } });
-    expect(controls.filter((control) => control.action.type === "ghostlab.watch").map((control) => control.action))
+    expect(controls.filter((control) => control.action.type === "replay.hub.watch").map((control) => control.action))
       .toEqual([
-        { type: "ghostlab.watch", command: "pause" },
-        { type: "ghostlab.watch", command: "stop" },
+        { type: "replay.hub.watch", command: "pause" },
+        { type: "replay.hub.watch", command: "stop" },
       ]);
-    expect(controls.find((control) => control.action.type === "ghostlab.watch" && control.action.command === "pause"))
+    expect(controls.find((control) => control.action.type === "replay.hub.watch" && control.action.command === "pause"))
       .toMatchObject({ label: "PAUSE PLAYER WATCH", x: 80, y: 426, w: 280, h: 42 });
   });
 

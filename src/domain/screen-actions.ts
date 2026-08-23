@@ -55,6 +55,8 @@ export type ScreenAction =
   | { readonly type: "replay.coach.selectBaseline"; readonly id: string }
   | { readonly type: "replay.coach.practice"; readonly findingId: string }
   | { readonly type: "replay.runDna.toggle" }
+  | { readonly type: "replay.editor.toggle" }
+  | { readonly type: "replay.editor.createCutList" }
   | { readonly type: "replay.studio.toggle" }
   | { readonly type: "replay.studio.createCutList" }
   | { readonly type: "replay.toggleInfo" }
@@ -75,6 +77,8 @@ export type ScreenAction =
   | { readonly type: "foundry.bootstrap"; readonly profileId: string }
   | { readonly type: "foundry.schedule.enable"; readonly scheduleHash: string }
   | { readonly type: "foundry.schedule.disable"; readonly scheduleHash: string }
+  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
   | { readonly type: "ghostlab.open"; readonly destination: "academy" | "foundry" | "vault" | "watch" | "botevidence" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }

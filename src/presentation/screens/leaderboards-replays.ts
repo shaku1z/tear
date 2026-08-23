@@ -1,5 +1,6 @@
 import type { LeaderboardsScreenView, ReplayScreenView, ScreenRenderContext } from "./contracts";
 import { backControl, chips, replayRow, scrollHint, tabs } from "./screen-primitives";
+import { REPLAY_EDITOR_ACTIONS } from "../../replay/surface-route";
 
 const LEADERBOARD_HUE = "#e0a326";
 const REPLAY_CYAN = "#13c4d6";
@@ -191,8 +192,8 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     ui.tag(canvas, `${view.elapsed}  /  ${view.duration}`, width / 2, y + 86, REPLAY_CYAN, "center", ui.t.type.label);
     ui.wrappedText(canvas, "This Ghost replays the durable capsule through the shared production simulation. At a verified checkpoint, PRACTICE starts an unranked child without changing the source capsule or your profile.",
       x + 42, y + 122, panelWidth - 84, 22, ui.t.type.body, "left", ui.t.alpha.soft);
-    context.enqueue({ x: width / 2 - 110, y: y + panelHeight - 58, w: 220, h: 34, label: "STUDIO CUT LIST",
-      action: { type: "replay.studio.toggle" } });
+    context.enqueue({ x: width / 2 - 110, y: y + panelHeight - 58, w: 220, h: 34, label: "REPLAY EDITOR",
+      action: { type: REPLAY_EDITOR_ACTIONS.toggle } });
     ui.text(canvas, "USE TRANSPORT TO SEEK  ·  ESC TO RETURN", width / 2, y + panelHeight - 24,
       ui.t.type.micro, "center", ui.t.alpha.muted);
   }
@@ -204,7 +205,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     const panelWidth = Math.min(820, width - 80 - safe.l - safe.r), panelHeight = 270;
     const x = width / 2 - panelWidth / 2, y = 78 + safe.t;
     ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
-    ui.title(canvas, "STUDIO CUT LIST · LOCAL EDL ONLY", width / 2, y + 40, ui.t.type.lead);
+    ui.title(canvas, "REPLAY EDITOR · LOCAL EDL ONLY", width / 2, y + 40, ui.t.type.lead);
     ui.tag(canvas, "MEDIA EXPORT UNAVAILABLE", width / 2, y + 64, ui.t.color.danger, "center", ui.t.type.label);
     if (!cut.available) {
       ui.wrappedText(canvas, `UNAVAILABLE · ${cut.unavailable ?? "current Theater source is not eligible"}`,
@@ -215,7 +216,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       ui.wrappedText(canvas, "Create one immutable local decision list from this exact verified checkpoint window. It records only supported EDL fields and never changes the source capsule.",
         x + 28, y + 102, panelWidth - 56, 20, ui.t.type.body, "left", ui.t.alpha.soft);
       context.enqueue({ x: width / 2 - 150, y: y + 184, w: 300, h: 38, label: "CREATE LOCAL EDL",
-        action: { type: "replay.studio.createCutList" } });
+        action: { type: REPLAY_EDITOR_ACTIONS.createCutList } });
       return;
     }
     ui.text(canvas, `SOURCE ${cut.sourceGhostId ?? "UNAVAILABLE"}`, x + 28, y + 100, ui.t.type.caption, "left", ui.t.alpha.soft);

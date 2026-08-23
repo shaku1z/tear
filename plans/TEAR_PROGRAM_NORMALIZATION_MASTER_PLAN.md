@@ -652,6 +652,25 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 - [ ] Retire State Forge UI/route aliases only after the registry removal
       condition `G4-C-SCENARIO-CONSOLE` is signed; this remains unproven.
 
+### Replay surfaces compatibility slice — G4-D-REPLAY-SURFACES
+
+- [x] Establish canonical Replay Editor and Replay Hub API/module names over
+      the existing replay, Ghost Studio, and Ghost Lab implementations.
+- [x] Write canonical `replay-hub=1` browser links while continuing to read
+      `ghostlab=1`; retain the `replay`/`ghostlab` screen IDs and old action IDs.
+- [x] Add canonical Replay Editor/Replay Hub action aliases and route resolution
+      with semantic-equivalence coverage for old actions and bookmarks.
+- [x] Update active copy/accessibility to Replay Editor and Replay Hub while
+      preserving `ghost-studio-edl` v1, EDL source/root/clip/hash fields, replay
+      schemas, capsule hashes, evidence IDs, and legacy DOM selectors.
+- [x] Prove canonical/legacy EDL creation and local export produce identical
+      bytes and hashes through focused compatibility tests.
+- [x] Record proportional typecheck, architecture, terminology, active-roster,
+      focused test, browser journey, and diff evidence in the G4-D checkpoint.
+- [ ] Retire Ghost Studio/Ghost Lab aliases only after registry conditions
+      `G4-D-REPLAY-EDITOR` and `G4-D-REPLAY-HUB` are signed; this remains
+      unproven.
+
 ### Checkpoint G4-A — midpoint pause
 
 - [ ] Public surfaces use only permanent terms.

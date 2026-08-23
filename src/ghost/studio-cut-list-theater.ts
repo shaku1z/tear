@@ -11,7 +11,7 @@ export interface GhostStudioCutListTheaterProjection {
 /**
  * Creates one immutable local EDL from the already-open verified Theater
  * source. This deliberately has no Vault write or media-rendering dependency:
- * Studio may describe a cut, but it cannot alter the durable capsule.
+ * Replay Editor may describe a cut, but it cannot alter the durable capsule.
  */
 export function createGhostStudioCutListFromTheater(
   capsule: GhostReadCapsule,
@@ -19,13 +19,13 @@ export function createGhostStudioCutListFromTheater(
   currentTick: number,
 ): GhostStudioCutListTheaterProjection {
   if (capsule.manifest.schemaVersion !== 2 || capsule.manifest.status !== "complete") {
-    return Object.freeze({ available: false, unavailable: "Studio requires a complete current V3 capsule." });
+    return Object.freeze({ available: false, unavailable: "Replay Editor requires a complete current V3 capsule." });
   }
   if (capsule.manifest.id !== session.sourceId || capsule.manifest.rootIntegrity !== session.sourceCapsuleRootIntegrity) {
     return Object.freeze({ available: false, unavailable: "Theater source custody no longer matches this verified replay." });
   }
   if (!Number.isSafeInteger(currentTick) || !session.verifiedReceiptTicks.includes(currentTick)) {
-    return Object.freeze({ available: false, unavailable: "Studio requires the current verified replay checkpoint." });
+    return Object.freeze({ available: false, unavailable: "Replay Editor requires the current verified replay checkpoint." });
   }
   const priorCheckpoint = [...session.verifiedReceiptTicks].reverse().find((tick) => tick < currentTick) ?? 0;
   const edl = createStudioEdl({

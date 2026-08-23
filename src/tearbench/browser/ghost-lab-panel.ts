@@ -2,9 +2,10 @@ import type { GameAction } from "../../input/game-action";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1, type TearScenarioV1 } from "../contracts";
 import { runInvariantChecks } from "../invariants";
 import type { TearRuntimeBridgeFactory } from "../live-runtime-contracts";
+import { isReplayHubRequested } from "./replay-hub-route";
 
 export function installGhostLabPanel(factory: TearRuntimeBridgeFactory): void {
-  if (new URLSearchParams(window.location.search).get("ghostlab") !== "1") return;
+  if (!isReplayHubRequested(window.location.search)) return;
   const environment = factory.create("A");
   const scenario: TearScenarioV1 = Object.freeze({
     format: TEAR_CONTRACT_FORMAT, kind: "scenario", schemaVersion: TEAR_CONTRACT_VERSION,
@@ -18,6 +19,9 @@ export function installGhostLabPanel(factory: TearRuntimeBridgeFactory): void {
   });
   const panel = document.createElement("aside");
   panel.id = "tear-ghost-lab";
+  panel.dataset.surface = "replay-hub";
+  panel.dataset.legacySurface = "ghost-lab";
+  panel.setAttribute("aria-label", "Replay Hub");
   Object.assign(panel.style, {
     position: "fixed", inset: "12px 12px 12px auto", width: "min(460px, 42vw)",
     zIndex: "2147483647", overflow: "auto", padding: "14px", color: "#e8f8ff",
@@ -25,11 +29,12 @@ export function installGhostLabPanel(factory: TearRuntimeBridgeFactory): void {
     font: "12px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace",
   });
   const title = document.createElement("h2");
-  title.textContent = "Ghost Lab · Live Disposable Runtime";
+  title.textContent = "Replay Hub · Live Disposable Runtime";
   title.style.margin = "0 0 10px";
   const controls = document.createElement("div");
   const output = document.createElement("pre");
   output.id = "tear-ghost-lab-state";
+  output.dataset.replayHub = "state";
   output.style.whiteSpace = "pre-wrap";
   const button = (label: string, run: () => void): HTMLButtonElement => {
     const value = document.createElement("button");

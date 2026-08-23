@@ -220,7 +220,7 @@
       "owner": "Replay presentation/EDL owner with ghost replay compatibility owner",
       "compatibilityStrategy": "Read old EDL/action aliases and write canonical Replay Editor labels without changing clip or source-root hashes.",
       "removalCheckpoint": {
-        "id": "G4-B-REPLAY-EDITOR",
+        "id": "G4-D-REPLAY-EDITOR",
         "condition": "Remove Ghost Studio aliases after EDL v1 reads, canonical writes, local export, replay-screen routes, and old bookmarks pass."
       }
     },
@@ -252,7 +252,7 @@
       "owner": "Legacy navigation/replay hub owner with TearBench disposable panel owner",
       "compatibilityStrategy": "Route old Ghost Lab IDs/deep links to Replay Hub while retaining the disposable inspection panel contract and safe unavailable cards.",
       "removalCheckpoint": {
-        "id": "G4-B-REPLAY-HUB",
+        "id": "G4-D-REPLAY-HUB",
         "condition": "Remove Ghost Lab aliases after deep links, card destinations, unavailable-state behavior, and disposable-panel compatibility evidence pass."
       }
     },
@@ -1082,7 +1082,7 @@
           "tests/browser-ghost-lab-home.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-REPLAY-HUB",
+          "checkpoint": "G4-D-REPLAY-HUB",
           "condition": "Remove old card labels after Replay Hub routes and canonical surface labels pass."
         }
       },
@@ -1200,10 +1200,11 @@
         "reason": "Ghost replay/EDL implementation remains the source of truth beneath Replay Editor.",
         "testEvidence": [
           "tests/unit/ghost-player-experiences.test.ts",
-          "tests/unit/ghost-studio-cut-list-theater.test.ts"
+          "tests/unit/ghost-studio-cut-list-theater.test.ts",
+          "tests/unit/replay-surfaces-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-REPLAY-EDITOR",
+          "checkpoint": "G4-D-REPLAY-EDITOR",
           "condition": "Remove only after EDL v1 dual-read and canonical Replay Editor exports pass."
         }
       },
@@ -1216,11 +1217,11 @@
         "owner": "Replay screen owner",
         "reason": "Replay action adapters retain studio aliases until Replay Editor routing is available.",
         "testEvidence": [
-          "tests/unit/live-replay-screen-adapter.test.ts",
-          "tests/unit/ghost-studio-cut-list-theater.test.ts"
+          "tests/unit/ghost-studio-cut-list-theater.test.ts",
+          "tests/unit/replay-surfaces-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-REPLAY-EDITOR",
+          "checkpoint": "G4-D-REPLAY-EDITOR",
           "condition": "Remove after canonical replay-editor action IDs and old route aliases pass."
         }
       },
@@ -1234,11 +1235,29 @@
         "reason": "replay.studio action IDs are serialized UI compatibility names.",
         "testEvidence": [
           "tests/unit/live-screen-action-bindings.test.ts",
-          "tests/unit/app-legacy-state-controller.test.ts"
+          "tests/unit/app-legacy-state-controller.test.ts",
+          "tests/unit/replay-surfaces-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-REPLAY-EDITOR",
+          "checkpoint": "G4-D-REPLAY-EDITOR",
           "condition": "Remove only after old replay.studio actions map to canonical Replay Editor actions."
+        }
+      },
+      {
+        "id": "compat-replay-surface-route",
+        "pathPattern": "src/replay/surface-route.ts",
+        "termIds": [
+          "replay-editor",
+          "replay-hub"
+        ],
+        "owner": "Replay surface route owner",
+        "reason": "Canonical replay routes and legacy screen/action tokens share one explicit dual-read boundary.",
+        "testEvidence": [
+          "tests/unit/replay-surfaces-compat.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-D-REPLAY-SURFACES",
+          "condition": "Remove legacy route/action aliases only after both Replay Editor and Replay Hub close conditions are signed."
         }
       },
       {
@@ -1251,10 +1270,11 @@
         "reason": "Existing Ghost Lab screen is the active surface to be aliased, not rewritten in this slice.",
         "testEvidence": [
           "tests/unit/screen-renderers.test.ts",
-          "tests/browser-ghost-lab-home.js"
+          "tests/browser-ghost-lab-home.js",
+          "tests/unit/replay-surfaces-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-REPLAY-HUB",
+          "checkpoint": "G4-D-REPLAY-HUB",
           "condition": "Remove after Replay Hub public copy and unavailable cards ship."
         }
       },
@@ -1267,11 +1287,11 @@
         "owner": "Replay Hub navigation owner",
         "reason": "Legacy ghostlab home route remains readable while canonical Replay Hub route is introduced.",
         "testEvidence": [
-          "tests/unit/live-ghost-lab-home.test.ts",
+          "tests/unit/replay-surfaces-compat.test.ts",
           "tests/browser-ghost-lab-home.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-REPLAY-HUB",
+          "checkpoint": "G4-D-REPLAY-HUB",
           "condition": "Remove old ghostlab labels after route aliases and cards pass."
         }
       },
@@ -1285,10 +1305,11 @@
         "reason": "Ghost Lab disposable live-run panel is a test harness compatibility surface.",
         "testEvidence": [
           "tests/browser-ghost-lab-home.js",
-          "tests/browser-ghost-lab-production-isolation.js"
+          "tests/browser-tear-runtime-environment.js",
+          "tests/unit/replay-surfaces-compat.test.ts"
         ],
         "expiry": {
-          "checkpoint": "G4-B-REPLAY-HUB",
+          "checkpoint": "G4-D-REPLAY-HUB",
           "condition": "Remove after Replay Hub harness alias and production isolation evidence pass."
         }
       },

@@ -3,6 +3,7 @@ import type {
   ScreenAction, ScreenRenderContext, WinScreenView,
 } from "./contracts";
 import { verticalMenu } from "./screen-primitives";
+import { REPLAY_HUB_ACTIONS } from "../../replay/surface-route";
 
 const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 
@@ -152,9 +153,9 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       ui.tag(canvas, `PLAYER WATCH / ${String(watch.decisions)} DECISIONS`, 220, 410, ui.t.color.accent, "center", ui.t.type.micro);
       context.enqueue({ x: 80, y: 426, w: 280, h: 42,
         label: watch.status === "running" ? "PAUSE PLAYER WATCH" : "RESUME PLAYER WATCH",
-        action: { type: "ghostlab.watch", command: watch.status === "running" ? "pause" : "resume" } });
+        action: { type: REPLAY_HUB_ACTIONS.watch, command: watch.status === "running" ? "pause" : "resume" } });
       context.enqueue({ x: 80, y: 476, w: 280, h: 42, label: "STOP PLAYER WATCH",
-        action: { type: "ghostlab.watch", command: "stop" } });
+        action: { type: REPLAY_HUB_ACTIONS.watch, command: "stop" } });
     }
     // ---- middle column: the player's arsenal (scrollable) ----
     arsenalPanel(view.abilities, 400, 210, 640, 600);

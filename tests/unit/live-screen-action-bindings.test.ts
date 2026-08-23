@@ -26,6 +26,31 @@ describe("live screen action bindings", () => {
     expect(openGhostLab).toHaveBeenLastCalledWith("botevidence");
   });
 
+  it("maps canonical Replay Hub actions and legacy Ghost Lab actions to one port", () => {
+    const openGhostLab = vi.fn(), controlGhostLabWatch = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ openGhostLab, controlGhostLabWatch } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "replay.hub.open", destination: "vault" });
+    dispatch({ type: "ghostlab.open", destination: "vault" });
+    dispatch({ type: "replay.hub.watch", command: "pause" });
+    dispatch({ type: "ghostlab.watch", command: "pause" });
+    expect(openGhostLab).toHaveBeenNthCalledWith(1, "vault");
+    expect(openGhostLab).toHaveBeenNthCalledWith(2, "vault");
+    expect(controlGhostLabWatch).toHaveBeenCalledTimes(2);
+    expect(controlGhostLabWatch).toHaveBeenNthCalledWith(1, "pause");
+    expect(controlGhostLabWatch).toHaveBeenNthCalledWith(2, "pause");
+  });
+
+  it("maps canonical Replay Editor actions and legacy Studio actions to one adapter", () => {
+    const toggleStudio = vi.fn(), createStudioCutList = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ replay: { toggleStudio, createStudioCutList } } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "replay.editor.toggle" });
+    dispatch({ type: "replay.studio.toggle" });
+    dispatch({ type: "replay.editor.createCutList" });
+    dispatch({ type: "replay.studio.createCutList" });
+    expect(toggleStudio).toHaveBeenCalledTimes(2);
+    expect(createStudioCutList).toHaveBeenCalledTimes(2);
+  });
+
   it("routes only an opaque Foundry schedule toggle through the composed local controller", () => {
     const setFoundryScheduleEnabled = vi.fn(), dispatch = createLiveScreenActionBindings({ setFoundryScheduleEnabled } as unknown as ScreenActionBindingPorts);
     dispatch({ type: "foundry.schedule.enable", scheduleHash: "a".repeat(16) });

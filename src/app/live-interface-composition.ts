@@ -14,7 +14,7 @@ import { TouchOnboardingController } from "./touch-onboarding-controller";
 
 export { createLiveAcademyScreen } from "./live-academy-screen";
 export { createLiveFoundryScreen } from "./live-foundry-screen";
-export { createLiveGhostLabHome } from "./live-ghost-lab-home";
+export { createLiveReplayHub, createLiveGhostLabHome } from "./replay-hub";
 export { LiveBotEvidenceController } from "./live-bot-evidence-controller";
 
 type SurfaceOptions = Parameters<typeof createLivePresentationSurface>[0];

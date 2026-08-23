@@ -117,7 +117,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
       ...(currentContext.studioOpen ? { studioCutList: currentContext.studioCutList === undefined
         ? Object.freeze({ available: context.checkpoints.includes(current), ...(context.checkpoints.includes(current)
-          ? {} : { unavailable: "Studio requires the current verified replay checkpoint." }) })
+          ? {} : { unavailable: "Replay Editor requires the current verified replay checkpoint." }) })
         : Object.freeze({ available: true, sourceGhostId: currentContext.studioCutList.sourceGhostId,
           sourceRootHash: currentContext.studioCutList.sourceRootHash, fromTick: currentContext.studioCutList.clips[0]?.sourceFromTick ?? 0,
           toTick: currentContext.studioCutList.clips[0]?.sourceToTick ?? 0, edlHash: currentContext.studioCutList.edlHash }) } : {}),
@@ -251,9 +251,9 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     createStudioCutList(): void {
       if (context === undefined) return;
       const projected = createGhostStudioCutListFromTheater(context.capsule, context.session, context.result.tick);
-      if (projected.edl === undefined) { context.message = projected.unavailable ?? "Studio Cut List is unavailable."; return; }
+       if (projected.edl === undefined) { context.message = projected.unavailable ?? "Replay Editor Cut List is unavailable."; return; }
       context.studioCutList = projected.edl;
-      context.message = "Local immutable Cut List created. Media export is unavailable in this build.";
+       context.message = "Replay Editor decision list created locally. Media export is unavailable in this build.";
     },
     toggleInfo(): void { if (context !== undefined) context.infoVisible = !context.infoVisible; },
     setSpeed(value: number): void { if (context !== undefined && isSpeed(value)) context.transport.speed(value); },

@@ -2,8 +2,8 @@ import { createLiveScreenRenderers, type LiveScreenRendererOptions } from "../pr
 import { createLiveLibraryScreenAdapters, type LibraryScreenAdapters,
   type LibraryScreenServices } from "./live-library-screen-adapters";
 import { createLiveMenuScreenAdapters, type MenuScreenServices, type MenuScreenState } from "./live-menu-screen-adapters";
-import { createLiveReplayScreenAdapter, type ReplayScreenAdapter,
-  type ReplayScreenServices } from "./live-replay-screen-adapter";
+import { createLiveReplayEditor, type ReplayEditorAdapter as ReplayScreenAdapter,
+  type ReplayEditorServices as ReplayScreenServices } from "./replay-editor";
 import { createLiveRunScreenAdapters, type RunScreenServices, type RunScreenState } from "./live-run-screen-adapters";
 import { createLiveScreenActionBindings, type ScreenActionBindingPorts } from "./live-screen-action-bindings";
 import { createLiveSettingsRenameAdapters, type SettingsRenameAdapters,
@@ -74,7 +74,7 @@ export function createLiveScreenPresentationComposition(
       else library.drawReplayPreview(id, bounds);
     },
   });
-  const replay: ReplayScreenAdapter = createLiveReplayScreenAdapter({
+  const replay: ReplayScreenAdapter = createLiveReplayEditor({
     ...options.replay, renderers: renderer,
     categories: () => library.categories,
     fallbackCategory: () => library.fallbackCategory,

@@ -42,7 +42,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       action: { type: "navigate", to: "academy", resetScroll: true } });
     context.enqueue({ x: railX + railWidth + 18, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "F", label: "FOUNDRY STATUS", ghost: true,
       action: { type: "navigate", to: "foundry", resetScroll: true } });
-    context.enqueue({ x: railX + railWidth + 250, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "◇", label: "GHOST LAB", ghost: true,
+    context.enqueue({ x: railX + railWidth + 250, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "◇", label: "REPLAY HUB", ghost: true,
       sub: "LOCAL ROUTES", action: { type: "navigate", to: "ghostlab", resetScroll: true } });
     if (view.nowPlaying) {
       context.enqueue({

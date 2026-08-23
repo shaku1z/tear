@@ -1,7 +1,7 @@
 import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions";
-import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveFoundryScreen, createLiveGhostLabHome, createLiveInterfaceComposition, LiveBotEvidenceController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
+import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveFoundryScreen, createLiveReplayHub, createLiveInterfaceComposition, LiveBotEvidenceController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
 import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
@@ -546,7 +546,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
     killRuntime: liveKillRuntime, frameRuntime: liveFrameRuntime, authoritativeStep } = combatHost;
   const playerWatch = new LivePlayerWatchController(browserIndexedDb, { canonicalState: () => authoritativeStep.lastResult?.state ?? null, availableActions: () => createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }).availableGameActions(), pushAction: (action) => { Input.semantic.push(action); }, setSemanticAuthority: inputAuthority.setSemanticInputAuthority, startNormalRun: () => { startRunWithPreflight("endless", "normal"); } });
-  void playerWatch.refresh(); const ghostLabHome = createLiveGhostLabHome(playerWatch), botEvidence = new LiveBotEvidenceController(browserIndexedDb);
+  void playerWatch.refresh(); const replayHub = createLiveReplayHub(playerWatch), botEvidence = new LiveBotEvidenceController(browserIndexedDb);
   const captureGhostAuthoritativeReceipt = (tick: number): void => {
     if (ghostV3?.active !== true) return;
     const result = authoritativeStep.lastResult;
@@ -622,7 +622,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck }, playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
       academy: academyScreen.snapshot,
       foundry: foundryScreen.snapshot,
-      ghostLab: ghostLabHome.snapshot,
+      ghostLab: replayHub.snapshot,
       botEvidence: botEvidence.snapshot,
       ghostPublication: ghostPublicationScreen.snapshot,
       ghostSupport: ghostSupportScreen.snapshot,
