@@ -10,11 +10,13 @@ production remains frozen and no deployment is authorized.
 
 **Initial canonical game baseline:** `shaku1z/tear` `main` at `0bef91dc4970740c80b1969416c0573680bcaf89`
 
-**Certified baseline for this G5 root-utilities slice:** protected game `main`
-at `dabccde1c56e30b74a6208ae7c845b93374efc62` (`dabccde`). Exact-main hosted
-`Validate` run `32642005329` is green and certifies the root utility placement
-and focused contract changes in this slice. G5 remains OPEN; no local
-workspace, artifact, quarantine, or wiki objective is checked by this slice.
+**Certified pre-slice baseline for this G5 workspace-recovery report slice:**
+protected game `main` at `f24abeb4697ea4e17d08cc6bb2b4cbd7e424926d`
+(`f24abeb`). Exact-main hosted `Validate` run `32644060771` is green and
+certifies the preceding root-utilities slice; the current report-only
+workspace recovery changes are not yet certified. G5 remains OPEN; no local
+workspace inventory, artifact quarantine, mutation, or wiki objective is
+checked by this slice.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
@@ -885,6 +887,12 @@ This is a target classification, not permission for a bulk move.
       coverage for canonical success and negative link/table cases.
 - [x] Add the bounded, read-only artifact retention policy and report command;
       generated artifacts remain ignored and never enter deployment bundles.
+- [x] Add the portable, report-only external workspace recovery policy and
+      bounded exact-name reporter. It requires explicit roots, owner, and
+      retention date, records protected/review/no-go evidence, and never scans
+      archive/recovery roots or emits quarantine eligibility. Running the real
+      local inventory and performing any quarantine remain separate unchecked
+      goals.
 - [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
       retention date, and recovery procedure receive a separate review; no
       quarantine or deletion is authorized by the report slice.
