@@ -3,6 +3,9 @@ import type { StateForgeEvaluation, StateForgeReport, StateForgeValueDiff } from
 import { diffStateForgeValues, evaluateStateForgeSource } from "../state-forge-studio-model";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
 import { isScenarioConsoleRequested } from "./scenario-console-route";
+import {
+  SCENARIO_CONSOLE_DOM_SELECTOR_ALIASES,
+} from "./scenario-console-selectors";
 
 export interface StateForgeCheckpointItem {
   readonly id: string;
@@ -66,6 +69,12 @@ function button(label: string, action: () => void): HTMLButtonElement {
   const value = element("button", label);
   value.type = "button";
   value.addEventListener("click", action);
+  return value;
+}
+
+function actionButton(label: string, action: () => void, actionName: string): HTMLButtonElement {
+  const value = button(label, action);
+  value.dataset.scenarioConsoleAction = actionName;
   return value;
 }
 
@@ -146,30 +155,40 @@ function createPanel(): HTMLElement {
 function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioElements {
   const editor = element("textarea");
   editor.id = "tear-state-forge-editor";
+  editor.dataset.scenarioConsoleControl = "editor";
   editor.value = host.initialSource;
   editor.rows = 20;
   editor.style.width = "100%";
   const status = element("p", "Ready.");
   status.setAttribute("role", "status");
+  status.dataset.scenarioConsole = "status";
   const reports = element("section");
   reports.setAttribute("aria-label", "Validation reports");
+  reports.dataset.scenarioConsole = "validation-reports";
   const structural = element("article");
   const reachability = element("article");
   const plausibility = element("article");
   reports.append(structural, reachability, plausibility);
   const timeline = element("select");
   timeline.id = "tear-state-forge-timeline";
+  timeline.dataset.scenarioConsoleControl = "timeline";
   const comparison = element("select");
   comparison.id = "tear-state-forge-comparison";
+  comparison.dataset.scenarioConsoleControl = "comparison";
   const provenance = element("section");
+  provenance.dataset.scenarioConsole = "provenance";
   const diff = element("section");
+  diff.dataset.scenarioConsole = "diff";
   const forkId = element("input");
+  forkId.dataset.scenarioConsoleControl = "fork-id";
   forkId.placeholder = "fork-id";
   const forkPatch = element("textarea");
+  forkPatch.dataset.scenarioConsoleControl = "fork-patch";
   forkPatch.value = "{}";
   forkPatch.rows = 5;
   const launch = element("button", "Launch scenario");
   launch.type = "button";
+  launch.dataset.scenarioConsoleAction = "launch";
   panel.append(
     element("h2", "Scenario Console"),
     labelledControl("Scenario editor", editor),
@@ -190,11 +209,12 @@ function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioE
 
 export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement | null {
   if (!isScenarioConsoleRequested(window.location.search)) return null;
-  const existing = document.querySelector<HTMLElement>("#tear-state-forge-studio");
+  const existing = document.querySelector<HTMLElement>(SCENARIO_CONSOLE_DOM_SELECTOR_ALIASES.root);
   if (existing !== null) return existing;
   const panel = createPanel();
   const controls = element("nav");
   controls.setAttribute("aria-label", "Scenario Console actions");
+  controls.dataset.scenarioConsole = "actions";
   Object.assign(controls.style, {
     display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center",
     position: "sticky", top: "0", zIndex: "1", paddingBlock: "6px",
@@ -237,6 +257,7 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
   importInput.type = "file";
   importInput.accept = ".json,.tearsdl,application/json";
   importInput.setAttribute("aria-label", "Import TearSDL");
+  importInput.dataset.scenarioConsoleControl = "import";
   importInput.addEventListener("change", () => {
     const file = importInput.files?.[0];
     if (file === undefined) return;
@@ -246,12 +267,12 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
     }, (error: unknown) => { parts.status.textContent = `Import failed: ${String(error)}`; });
   });
   controls.append(
-    button("Validate", validate),
+    actionButton("Validate", validate, "validate"),
     importInput,
-    button("Export", () => {
+    actionButton("Export", () => {
       host.exportScenario(`${evaluation.document?.id ?? "scenario"}.tearsdl.json`, parts.editor.value);
-    }),
-    button("Watch checkpoint", () => {
+    }, "export"),
+    actionButton("Watch checkpoint", () => {
       const checkpoint = selectedCheckpoint();
       if (checkpoint === undefined) return;
       try {
@@ -260,9 +281,9 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
       } catch (error) {
         parts.status.textContent = `Watch failed: ${error instanceof Error ? error.message : "unknown error"}`;
       }
-    }),
+    }, "watch"),
     parts.launch,
-    button("Fork checkpoint", () => {
+    actionButton("Fork checkpoint", () => {
       const checkpoint = selectedCheckpoint();
       if (checkpoint === undefined) return;
       try {
@@ -278,7 +299,7 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
       } catch (error) {
         parts.status.textContent = `Fork failed: ${error instanceof Error ? error.message : "unknown error"}`;
       }
-    }),
+    }, "fork"),
   );
   parts.launch.addEventListener("click", () => {
     if (evaluation.resolved === undefined) return;
