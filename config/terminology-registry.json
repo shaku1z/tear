@@ -613,6 +613,25 @@
         }
       },
       {
+        "id": "compat-audio-adaptive-facade",
+        "pathPattern": "src/audio/adaptive-soundtrack.ts",
+        "termIds": [
+          "tear-music",
+          "adaptive-soundtrack"
+        ],
+        "owner": "Audio platform owner",
+        "reason": "The canonical facade names the future tear-music assets while explicitly retaining the current TearScore loader as a provenance-safe fallback.",
+        "testEvidence": [
+          "tests/unit/adaptive-soundtrack.test.ts",
+          "tests/unit/tear-score-module.test.ts",
+          "tests/browser-audio.js"
+        ],
+        "expiry": {
+          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
+          "condition": "Remove only after the canonical adaptive-soundtrack artifact and paired Tone host ship with verified provenance, replay metadata, shared-context lifecycle, and fallback gates."
+        }
+      },
+      {
         "id": "compat-audio-bootstrap",
         "pathPattern": "src/entrypoints/bootstrap.ts",
         "termIds": [
@@ -620,14 +639,14 @@
           "adaptive-soundtrack"
         ],
         "owner": "Audio composition owner",
-        "reason": "Bootstrap still installs the legacy audio adapter while canonical governance is introduced.",
+        "reason": "Bootstrap retains the compatibility-named installer entry point while that installer now performs canonical-first Adaptive Soundtrack loading and the legacy fallback remains readable.",
         "testEvidence": [
           "tests/unit/audio-system.test.ts",
           "tests/browser-audio.js"
         ],
         "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove when the canonical adapter is installed and fallback behavior is proven."
+          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
+          "condition": "Remove after the canonical installer name is adopted by all target entrypoints and hosted audio lifecycle evidence proves the old entry point can be retired."
         }
       },
       {
