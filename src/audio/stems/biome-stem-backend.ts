@@ -11,15 +11,15 @@ import type {
 } from "../music-contracts";
 import { isMusicShell } from "../music-contracts";
 import { applyMusicMode, onMusicModeChange } from "../music-mode";
-import { onLoadoutChange, resolveMenuCueId } from "../signal/loadout";
-import { getActiveStation, onStationChange } from "../signal/active-station";
-import { setNowPlaying } from "../signal/now-playing";
-import { createStationState, pickNext, remember, type StationState } from "../signal/station";
-import type { SignalCatalog } from "../signal/catalog";
-import { StingerPlayer } from "../signal/stingers";
-import { nextBoundaryTime, secondsPerBar } from "../signal/quantize";
-import { resolveMusicRoute } from "../signal/music-routing-resolver";
-import type { MusicRoutingManifest, RoutingScene } from "../signal/music-routing-types";
+import { onLoadoutChange, resolveMenuCueId } from "../music/loadout";
+import { getActiveStation, onStationChange } from "../music/active-station";
+import { setNowPlaying } from "../music/now-playing";
+import { createStationState, pickNext, remember, type StationState } from "../music/station";
+import type { MusicCatalog } from "../music/catalog";
+import { StingerPlayer } from "../music/stingers";
+import { nextBoundaryTime, secondsPerBar } from "../music/quantize";
+import { resolveMusicRoute } from "../music/music-routing-resolver";
+import type { MusicRoutingManifest, RoutingScene } from "../music/music-routing-types";
 import { StemCuePlayer } from "./StemCuePlayer";
 import { loopSeconds } from "./tier";
 import { tierFromSnapshot } from "./tier-from-snapshot";
@@ -75,7 +75,7 @@ export class BiomeStemBackend implements MusicBackend {
   #stopLoadoutWatch: (() => void) | null = null;
   /** While paused, ignore the user's music mode and use the adaptive tier. */
   #modeExempt = false;
-  #catalog: SignalCatalog | null = null;
+  #catalog: MusicCatalog | null = null;
   #lastBossId: string | null = null;
   #stationState: StationState = createStationState();
   #stopStationWatch: (() => void) | null = null;
@@ -94,7 +94,7 @@ export class BiomeStemBackend implements MusicBackend {
   #lastBiomeId = "menu";
   #lastScene: MusicScene = "main-menu";
 
-  constructor(cues: readonly LoadedCueRef[], routing: MusicRoutingManifest, catalog: SignalCatalog | null = null) {
+  constructor(cues: readonly LoadedCueRef[], routing: MusicRoutingManifest, catalog: MusicCatalog | null = null) {
     this.#catalog = catalog;
     for (const cue of cues) this.#cues.set(cue.id, cue);
     this.#routing = routing;
@@ -309,7 +309,7 @@ export class BiomeStemBackend implements MusicBackend {
     return entry.workId;
   }
 
-  /** Publish what is sounding so THE SIGNAL's UI can show it. */
+  /** Publish what is sounding so the Music UI can show it. */
   #publishNowPlaying(cueId: string): void {
     const station = getActiveStation();
     const work = this.#catalog?.works.find((w) => w.id === cueId);

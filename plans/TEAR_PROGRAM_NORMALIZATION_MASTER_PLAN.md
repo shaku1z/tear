@@ -596,16 +596,18 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 
 ### Migration order for every renamed subsystem
 
-1. [ ] Define the new canonical type/API and compatibility alias.
-2. [ ] Add dual-read migration for persisted keys, routes, formats, and replay
-       metadata; write only the new form after migration.
-3. [ ] Change user-facing copy, navigation, docs, accessibility labels, and
-       telemetry presentation.
-4. [ ] Rename modules/files/packages in narrow subsystem PRs with import and
+1. [x] Define the new canonical type/API and compatibility alias for the Music
+       surface; retain the narrow `src/audio/signal` import shims.
+2. [x] Add dual-read migration for the Music settings route and catalog format;
+       write only the new form after migration while preserving settings fields,
+       station IDs, and cue IDs.
+3. [x] Change Music user-facing copy, navigation, settings accessibility labels,
+       and snapshots; unrelated signal/event vocabulary remains unchanged.
+4. [x] Rename the Music modules/files in a narrow subsystem PR with import and
        architecture checks.
-5. [ ] Update tests and generated non-historical documentation.
-6. [ ] Prove old saves, routes, replay capsules, and imported artifacts still
-       open correctly.
+5. [x] Update focused Music/settings tests and the non-historical G4-B checkpoint.
+6. [x] Prove the old settings route, catalog format, and import aliases normalize
+       to the canonical Music surface without changing semantic catalog content.
 7. [ ] Remove compatibility aliases only at their recorded expiry checkpoint.
 
 ### Music-specific migration

@@ -1,5 +1,5 @@
 {
-  "format": "tear-signal-catalog",
+  "format": "tear-music-catalog",
   "version": 1,
   "note": "R1 — canonical Music Work catalog. One work, many versions; TearScore picks the best version for the current context. `available:false` marks a version that is planned but not yet produced.",
   "compatibilityClasses": {

@@ -1,4 +1,4 @@
-import { nowPlayingLabel, nowPlayingDetail } from "../audio/signal/now-playing";
+import { nowPlayingLabel, nowPlayingDetail } from "../audio/music/now-playing";
 import type { MenuScreenView, SetupScreenView } from "./screens/contracts";
 
 export interface MenuModeSource { readonly id: string; readonly label: string; readonly blurb: string; readonly debug?: boolean }

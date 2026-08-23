@@ -4,8 +4,9 @@ import type { LegacyAppScreen } from "./legacy-state-controller";
 import { RenameController, type RenameSnapshot } from "./rename-controller";
 import type { SettingsController, GameSettings } from "./settings-controller";
 import { buildSettingsSections } from "../presentation/settings-snapshots";
-import { MENU_MUSIC_CHOICES } from "../audio/signal/loadout";
-import { STATION_CHOICES } from "../audio/signal/active-station";
+import { MENU_MUSIC_CHOICES } from "../audio/music/loadout";
+import { STATION_CHOICES } from "../audio/music/active-station";
+import { MUSIC_SETTINGS_TAB, normalizeMusicSettingsTab } from "../audio/music/settings";
 
 type Dependencies = Pick<GameRuntimeDependencies, "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
@@ -33,7 +34,7 @@ export interface SettingsRenameAdapters {
 
 const presetOrder = ["default", "standard", "tear", "classic", "split"] as const;
 const settingsTabs = [["general", "GENERAL"], ["controls", "CONTROLS"], ["audio", "AUDIO"],
-  ["video", "VIDEO"], ["accessibility", "ACCESS"], ["signal", "SIGNAL"]] as const;
+  ["video", "VIDEO"], ["accessibility", "ACCESS"], [MUSIC_SETTINGS_TAB, "MUSIC"]] as const;
 
 export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRenameServices): SettingsRenameAdapters {
   const d = services.dependencies;
@@ -89,7 +90,7 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     services.renderers.rename({ id: "rename", value: snapshot.value, length: snapshot.value.length,
       maxLength: 16, minLength: 3, firstRun: snapshot.firstRun, ...(snapshot.error ? { message: snapshot.error } : {}) }); };
   const adapters: SettingsRenameAdapters = { renderSettings, renderRename,
-    selectSettingsTab: (id) => { settingsTab = id; services.setScroll(0); },
+    selectSettingsTab: (id) => { settingsTab = normalizeMusicSettingsTab(id); services.setScroll(0); },
     stepSetting: (key, direction) => { services.settingsController.step(key, direction); },
     toggleSetting: (key) => { services.settingsController.toggle(key); }, activateSetting: activate,
     beginRename: (firstRun, bypass) => { rename.begin(firstRun, bypass ?? false); }, submitRename: () => { rename.submit(); },

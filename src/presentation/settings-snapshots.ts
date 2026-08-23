@@ -1,7 +1,8 @@
 import type { SettingRowView, SettingsScreenView } from "./screens/contracts";
-import { menuMusicLabel } from "../audio/signal/loadout";
-import { stationLabel, stationNote } from "../audio/signal/active-station";
-import { nowPlayingLabel, getNowPlaying } from "../audio/signal/now-playing";
+import { menuMusicLabel } from "../audio/music/loadout";
+import { stationLabel, stationNote } from "../audio/music/active-station";
+import { nowPlayingLabel, getNowPlaying } from "../audio/music/now-playing";
+import { MUSIC_SETTINGS_TAB, normalizeMusicSettingsTab } from "../audio/music/settings";
 
 export interface ControllerPresetView { readonly name: string; readonly tag: string; readonly line: string; readonly map: string }
 export interface SettingsSnapshotSource {
@@ -31,21 +32,22 @@ const musicModeNote = (mode: string | undefined): string =>
   musicModeNotes[mode ?? "adaptive"] ?? "LAYERS FOLLOW THE FIGHT";
 
 export function buildSettingsSections(tab: string, settings: SettingsSnapshotSource, environment: SettingsEnvironmentSnapshot): SettingsSections {
-  if (tab === "audio") return [{ label: "AUDIO MIX", rows: [
+  const normalizedTab = normalizeMusicSettingsTab(tab);
+  if (normalizedTab === "audio") return [{ label: "AUDIO MIX", rows: [
     { key: "masterVolume", label: "Master volume", value: percent(settings.masterVolume), kind: "stepper" },
     { key: "musicVolume", label: "Music volume", value: percent(settings.musicVolume), kind: "stepper" },
     { key: "sfxVolume", label: "Sound effects volume", value: percent(settings.sfxVolume), kind: "stepper" },
     { key: "interfaceVolume", label: "Interface volume", value: percent(settings.interfaceVolume), kind: "stepper" },
-    { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "THE SIGNAL · SHELL SLOT" },
+    { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "MUSIC · SHELL SLOT" },
     { key: "musicMode", label: "Soundtrack behavior", value: (settings.musicMode ?? "adaptive").toUpperCase(), kind: "cycle", note: musicModeNote(settings.musicMode) },
     { key: "masterMuted", label: "Master audio", value: "", kind: "toggle", on: !settings.masterMuted },
     { key: "musicMuted", label: "Music", value: "", kind: "toggle", on: !settings.musicMuted },
     { key: "sfxMuted", label: "Sound effects", value: "", kind: "toggle", on: !settings.sfxMuted },
     { key: "interfaceMuted", label: "Interface sounds", value: "", kind: "toggle", on: !settings.interfaceMuted },
   ] }];
-  if (tab === "signal") {
+  if (normalizedTab === MUSIC_SETTINGS_TAB) {
     const np = getNowPlaying();
-    return [{ label: "THE SIGNAL", rows: [
+    return [{ label: "MUSIC", rows: [
       { key: "nowPlaying", label: "Now playing", value: nowPlayingLabel(np), kind: "cycle", enabled: false },
       { key: "station", label: "Station", value: stationLabel(settings.station ?? "canonical"), kind: "cycle", note: stationNote(settings.station ?? "canonical") },
       { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "SHELL SLOT" },

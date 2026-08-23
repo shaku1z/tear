@@ -48,7 +48,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       context.enqueue({
         x: railX, y: 426 + (rail.length + 1) * 61 + 10, w: railWidth, h: 46, glyph: "♪", ghost: true,
         label: view.nowPlaying.label, sub: view.nowPlaying.detail,
-        action: { type: "navigate", to: "settings", tab: "signal" },
+        action: { type: "navigate", to: "settings", tab: "music" },
       });
     }
     if (view.pendingFinale) {

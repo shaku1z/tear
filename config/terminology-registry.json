@@ -90,18 +90,12 @@
       ],
       "deprecatedCopyAliasPathPatterns": {
         "THE SIGNAL": [
-          "src/audio/signal/now-playing.ts",
-          "src/app/settings-controller.ts",
-          "src/presentation/menu-setup-snapshots.ts",
-          "src/presentation/screens/menu-setup.ts",
-          "src/presentation/settings-snapshots.ts"
+          "src/audio/signal/catalog.ts",
+          "tests/unit/music-catalog.test.ts"
         ],
         "Signal": [
-          "src/audio/signal/now-playing.ts",
-          "src/app/settings-controller.ts",
-          "src/presentation/menu-setup-snapshots.ts",
-          "src/presentation/screens/menu-setup.ts",
-          "src/presentation/settings-snapshots.ts"
+          "src/audio/signal/catalog.ts",
+          "tests/unit/music-surface-compat.test.ts"
         ]
       },
       "persistenceImpact": {
@@ -118,7 +112,7 @@
           "old bookmarks"
         ]
       },
-      "owner": "Audio signal/catalog owner with settings navigation and presentation owners",
+      "owner": "Music-surface/catalog owner with settings navigation and presentation owners",
       "compatibilityStrategy": "Accept old signal tab/deep links and catalog format while emitting Music labels/routes and preserving station/cue identity.",
       "removalCheckpoint": {
         "id": "G4-B-MUSIC-SURFACE",
@@ -401,6 +395,7 @@
       "src/app/live-screen-*.ts",
       "src/app/settings-controller.ts",
       "src/audio/signal/*.ts",
+      "src/audio/music/*.ts",
       "src/agents/live-watch-agent-*.ts",
       "src/ghost/player-experiences.ts",
       "src/tearbench/browser/*.ts",
@@ -657,15 +652,14 @@
         "id": "compat-audio-stems",
         "pathPattern": "src/audio/stems/stem-cue-backend.ts",
         "termIds": [
-          "tear-music",
-          "music"
+          "tear-music"
         ],
         "owner": "Audio catalog/stems owner",
         "reason": "Stem cue and station contracts consume legacy catalog/cue formats during dual-read.",
         "testEvidence": [
-          "tests/unit/signal-catalog.test.ts",
+          "tests/unit/music-catalog.test.ts",
           "tests/unit/music-routing.test.ts",
-          "tests/unit/signal-station.test.ts"
+          "tests/unit/music-station.test.ts"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC-SURFACE",
@@ -673,47 +667,151 @@
         }
       },
       {
-        "id": "compat-audio-signal",
-        "pathPattern": "src/audio/signal/now-playing.ts",
+        "id": "compat-audio-catalog-parser",
+        "pathPattern": "src/audio/music/catalog.ts",
         "termIds": [
-          "music",
-          "tear-music"
+          "music"
         ],
-        "owner": "Audio signal/catalog owner",
-        "reason": "Signal module names and literal compatibility labels remain active until the Music surface migration.",
+        "owner": "Music catalog compatibility owner",
+        "reason": "The canonical parser accepts the legacy tear-signal-catalog wire discriminator while authored output emits tear-music-catalog.",
         "testEvidence": [
-          "tests/unit/signal-catalog.test.ts",
-          "tests/unit/signal-now-playing.test.ts",
-          "tests/unit/signal-shell-routing.test.ts"
+          "tests/unit/music-catalog.test.ts",
+          "tests/unit/music-surface-compat.test.ts"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC-SURFACE",
-          "condition": "Remove after Music route/catalog aliases and snapshots pass."
+          "condition": "Remove after legacy catalog imports are retired and canonical catalog provenance is established across all consumers."
+        }
+      },
+      {
+        "id": "compat-audio-signal",
+        "pathPattern": "src/audio/signal/catalog.ts",
+        "termIds": [
+          "music"
+        ],
+        "owner": "Music-surface compatibility owner",
+        "reason": "The legacy catalog import path preserves the SignalCatalog type alias while consumers move to the canonical MusicCatalog API.",
+        "testEvidence": [
+          "tests/unit/music-surface-compat.test.ts",
+          "tests/unit/music-catalog.test.ts"
+        ],
+        "expiry": {
+          "checkpoint": "G4-B-MUSIC-SURFACE",
+          "condition": "Remove after downstream imports move to src/audio/music and the compatibility release window closes."
         }
       },
       {
         "id": "compat-audio-routing-loader",
-        "pathPattern": "src/audio/signal/music-routing-loader/*.ts",
+        "pathPattern": "src/audio/signal/music-routing-loader.ts",
         "termIds": [
           "music"
         ],
         "owner": "Audio routing owner",
-        "reason": "Routing-loader compatibility paths retain old signal vocabulary.",
+        "reason": "The legacy routing-loader import path remains a thin shim while canonical Music routing modules are adopted.",
         "testEvidence": [
           "tests/unit/music-routing.test.ts",
           "tests/unit/music-routing-vocabulary.test.ts"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC-SURFACE",
-          "condition": "Remove after canonical Music routing format is the sole writer."
+          "condition": "Remove after downstream routing imports move to src/audio/music and the compatibility release window closes."
         }
+      },
+      {
+        "id": "compat-audio-signal-shim-active-station",
+        "pathPattern": "src/audio/signal/active-station.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy active-station import path remains a thin Music API shim.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-advanced-loadout",
+        "pathPattern": "src/audio/signal/advanced-loadout.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy advanced-loadout import path remains a thin Music API shim.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-loadout",
+        "pathPattern": "src/audio/signal/loadout.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy loadout import path remains a thin Music API shim while menuMusic values stay stable.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-routing-resolver",
+        "pathPattern": "src/audio/signal/music-routing-resolver.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy routing-resolver import path remains a thin Music API shim.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-routing-types",
+        "pathPattern": "src/audio/signal/music-routing-types.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy routing-types import path remains a thin Music API shim.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-routing-validate",
+        "pathPattern": "src/audio/signal/music-routing-validate.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy routing-validation import path remains a thin Music API shim.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-now-playing",
+        "pathPattern": "src/audio/signal/now-playing.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy now-playing import path remains a thin Music API shim while labels are canonicalized.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts", "tests/unit/music-now-playing.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-quantize",
+        "pathPattern": "src/audio/signal/quantize.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy quantize import path remains a thin Music API shim.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-station",
+        "pathPattern": "src/audio/signal/station.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy station import path remains a thin Music API shim while station IDs stay stable.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts", "tests/unit/music-station.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
+      },
+      {
+        "id": "compat-audio-signal-shim-stingers",
+        "pathPattern": "src/audio/signal/stingers.ts",
+        "termIds": ["music"],
+        "owner": "Music-surface compatibility owner",
+        "reason": "Legacy stingers import path remains a thin Music API shim.",
+        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
+        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
       },
       {
         "id": "compat-audio-legacy",
         "pathPattern": "src/audio/legacy-synth*.ts",
         "termIds": [
-          "adaptive-soundtrack",
-          "music"
+          "adaptive-soundtrack"
         ],
         "owner": "Audio fallback owner",
         "reason": "Legacy synth fallback must remain readable and is not a generic runtime rename.",
@@ -749,18 +847,17 @@
         "id": "compat-audio-public-catalog",
         "pathPattern": "public/audio/catalog.json",
         "termIds": [
-          "tear-music",
-          "music"
+          "tear-music"
         ],
         "owner": "Audio catalog owner",
-        "reason": "Current catalog format and notes remain readable while new canonical catalog provenance is introduced.",
+        "reason": "The authored catalog note preserves TearScore provenance while this slice changes only the player-facing Signal surface and catalog wire discriminator.",
         "testEvidence": [
-          "tests/unit/signal-catalog.test.ts",
+          "tests/unit/music-catalog.test.ts",
           "check:tear-score"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
-          "condition": "Remove after canonical catalog ships with verified provenance."
+          "condition": "Remove after the separate TEAR Music provenance/catalog migration is approved; do not rewrite vendored artifacts here."
         }
       },
       {
@@ -1420,30 +1517,6 @@
         }
       },
       {
-        "id": "compat-settings-controller-signal",
-        "pathPattern": "src/app/settings-controller.ts",
-        "termIds": ["music"],
-        "owner": "Music settings owner",
-        "reason": "Settings controller retains the signal tab alias and snapshots during the Music surface migration.",
-        "testEvidence": ["tests/unit/settings-controller.test.ts", "tests/unit/settings-snapshots.test.ts"],
-        "expiry": {
-          "checkpoint": "G4-B-MUSIC-SURFACE",
-          "condition": "Remove after Music settings route aliases and snapshots pass."
-        }
-      },
-      {
-        "id": "compat-menu-setup-snapshots-signal",
-        "pathPattern": "src/presentation/menu-setup-snapshots.ts",
-        "termIds": ["music"],
-        "owner": "Music presentation owner",
-        "reason": "Menu/setup snapshots preserve the current signal vocabulary until copy migration.",
-        "testEvidence": ["tests/unit/menu-setup-snapshots.test.ts", "tests/unit/settings-snapshots.test.ts"],
-        "expiry": {
-          "checkpoint": "G4-B-MUSIC-SURFACE",
-          "condition": "Update snapshots with canonical Music labels and retain old fixture coverage."
-        }
-      },
-      {
         "id": "compat-cold-screen-renderers",
         "pathPattern": "src/presentation/screens/cold-screen-renderers.ts",
         "termIds": ["training-archive", "training-operations"],
@@ -1470,25 +1543,13 @@
       {
         "id": "compat-menu-setup-surfaces",
         "pathPattern": "src/presentation/screens/menu-setup.ts",
-        "termIds": ["training-archive", "training-operations", "replay-hub", "music"],
+        "termIds": ["training-archive", "training-operations", "replay-hub"],
         "owner": "Menu/navigation owner",
         "reason": "Main menu labels and settings route aliases remain current until canonical surface migration.",
         "testEvidence": ["tests/unit/menu-setup-snapshots.test.ts", "tests/unit/ui-navigation.test.ts", "tests/browser-navigation-journeys.js"],
         "expiry": {
           "checkpoint": "G4-A",
           "condition": "Update menu copy/routes with canonical labels after each destination compatibility gate passes."
-        }
-      },
-      {
-        "id": "compat-settings-snapshots-signal",
-        "pathPattern": "src/presentation/settings-snapshots.ts",
-        "termIds": ["music"],
-        "owner": "Music presentation owner",
-        "reason": "Settings snapshot headings/tabs retain THE SIGNAL compatibility copy.",
-        "testEvidence": ["tests/unit/settings-snapshots.test.ts", "tests/unit/signal-now-playing.test.ts"],
-        "expiry": {
-          "checkpoint": "G4-B-MUSIC-SURFACE",
-          "condition": "Update snapshot labels after Music tab route and accessibility aliases pass."
         }
       },
       {
@@ -1520,8 +1581,7 @@
           "game-agent",
           "training-archive",
           "run-monitor",
-          "scenario-console",
-          "music"
+          "scenario-console"
         ],
         "owner": "Program documentation owner",
         "reason": "Current feature inventory records active implementation names and is updated in terminology slices.",
@@ -1545,8 +1605,7 @@
           "replay-hub",
           "game-agent",
           "training-archive",
-          "run-monitor",
-          "music"
+          "run-monitor"
         ],
         "owner": "Program architecture documentation owner",
         "reason": "Current architecture docs describe active legacy modules before narrow rename PRs.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canFire } from "../../src/audio/signal/stingers";
+import { canFire } from "../../src/audio/music/stingers";
 
 const NEVER = Number.NEGATIVE_INFINITY;
 
@@ -27,7 +27,7 @@ describe("stinger rate limiting", () => {
 
 describe("stingers are opt-in", () => {
   it("is disabled by default so accents never intrude on an unrelated track", async () => {
-    const { stingersEnabled } = await import("../../src/audio/signal/stingers");
+    const { stingersEnabled } = await import("../../src/audio/music/stingers");
     expect(stingersEnabled()).toBe(false);
   });
 });
