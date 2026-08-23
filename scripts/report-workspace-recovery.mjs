@@ -13,7 +13,14 @@ export const DEFAULT_WORKSPACE_RECOVERY_POLICY_PATH = path.resolve(
   "preservation",
   "workspace-recovery-policy.json",
 );
+export const DEFAULT_WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_PATH = path.resolve(
+  import.meta.dirname,
+  "..",
+  "preservation",
+  "workspace-recovery-second-wave-sources.json",
+);
 export const WORKSPACE_RECOVERY_POLICY_FORMAT = "tear-workspace-recovery-policy";
+export const WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT = "tear-workspace-recovery-second-wave-policy";
 export const WORKSPACE_RECOVERY_REPORT_FORMAT = "tear-workspace-recovery-report";
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
@@ -21,6 +28,10 @@ const GIT_OBJECT_PATTERN = /^[0-9a-f]{40,64}$/u;
 const SOURCE_NAME_PATTERN = /^gsm-[^\\/]+$/iu;
 const RECOVERY_GROUP_PATTERN = /^\d{4}-\d{2}-\d{2}-g5-[a-z0-9-]+$/u;
 const HASH_CHUNK_SIZE = 1024 * 1024;
+const SECOND_WAVE_RETENTION_FLOOR_UTC = "2027-03-31T23:59:59.000Z";
+const SECOND_WAVE_ROOT_ARGUMENTS = new Set(["workspace-root", "temp-root"]);
+const SECOND_WAVE_CANONICAL_ROOT_NAMES = new Set(["tear", "tear-score", "tear-wiki", "tear-oracle"]);
+const SECOND_WAVE_ARCHIVE_ROOT_PATTERNS = [/^tear-archives$/iu, /^tear-git-recovery-/iu, /^tear-g3-preservation-audit-/iu, /^tear-g5-/iu];
 
 export class WorkspaceRecoveryReportError extends Error {
   constructor(message) {
@@ -241,12 +252,79 @@ export function validateWorkspaceRecoveryPolicy(policy) {
   return errors;
 }
 
+export function validateWorkspaceRecoverySecondWavePolicy(policy) {
+  const errors = [];
+  if (policy?.format !== WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT) errors.push(`format must be ${WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT}`);
+  if (policy?.schemaVersion !== 1) errors.push("schemaVersion must be 1");
+  if (policy?.repository !== RELEASE_REPOSITORY) errors.push(`repository must be ${RELEASE_REPOSITORY}`);
+  if (policy?.boundary?.fetch !== false) errors.push("boundary.fetch must be false");
+  if (policy?.boundary?.selection !== "exact-source-name-and-root-argument-only") errors.push("boundary.selection must be exact-source-name-and-root-argument-only");
+  if (policy?.boundary?.looseFiles !== "excluded") errors.push("boundary.looseFiles must be excluded");
+  if (policy?.boundary?.archiveRecoveryRoots !== "excluded") errors.push("boundary.archiveRecoveryRoots must be excluded");
+  if (policy?.boundary?.canonicalRoots !== "excluded") errors.push("boundary.canonicalRoots must be excluded");
+  if (policy?.retention?.mode !== "one-floor-for-entire-operation") errors.push("retention.mode must be one-floor-for-entire-operation");
+  if (policy?.retention?.minimumUtc !== SECOND_WAVE_RETENTION_FLOOR_UTC) errors.push(`retention.minimumUtc must be ${SECOND_WAVE_RETENTION_FLOOR_UTC}`);
+  if (!Array.isArray(policy?.sourceRoots) || policy.sourceRoots.length !== 45) {
+    errors.push("sourceRoots must contain exactly the reviewed 45 directory roots");
+  } else {
+    const ids = new Set();
+    const names = new Set();
+    for (const [index, source] of policy.sourceRoots.entries()) {
+      if (typeof source?.id !== "string" || !/^second-wave-[^\\/]+$/u.test(source.id)) errors.push(`sourceRoots[${index}].id must be an exact second-wave identifier`);
+      if (typeof source?.name !== "string" || source.name.trim() === "") errors.push(`sourceRoots[${index}].name must be non-empty`);
+      if (!SECOND_WAVE_ROOT_ARGUMENTS.has(source?.rootArgument)) errors.push(`sourceRoots[${index}].rootArgument must be workspace-root or temp-root`);
+      const idKey = String(source?.id ?? "").toLowerCase();
+      const nameKey = String(source?.name ?? "").toLowerCase();
+      if (ids.has(idKey)) errors.push(`sourceRoots has a case-insensitive duplicate id: ${source.id}`);
+      if (names.has(nameKey)) errors.push(`sourceRoots has a case-insensitive duplicate name: ${source.name}`);
+      ids.add(idKey);
+      names.add(nameKey);
+      if (SECOND_WAVE_CANONICAL_ROOT_NAMES.has(nameKey)) errors.push(`sourceRoots[${index}] cannot name a canonical root: ${source.name}`);
+      if (SECOND_WAVE_ARCHIVE_ROOT_PATTERNS.some((pattern) => pattern.test(String(source?.name ?? "")))) errors.push(`sourceRoots[${index}] cannot name an archive/recovery root: ${source.name}`);
+      if (source?.retentionClass !== undefined && source.retentionClass !== "high-risk-long-retention") errors.push(`sourceRoots[${index}].retentionClass is invalid`);
+    }
+    if (!policy.sourceRoots.some((source) => source.name === "tear-score-g2-audit-1611bbb" && source.retentionClass === "high-risk-long-retention")) {
+      errors.push("tear-score-g2-audit-1611bbb must be the high-risk long-retention source");
+    }
+  }
+  if (JSON.stringify(policy?.exclusions?.canonicalRoots) !== JSON.stringify(["Tear", "tear-score", "tear-wiki", "Tear-oracle"])) errors.push("exclusions.canonicalRoots must exclude all canonical roots");
+  if (policy?.exclusions?.looseFiles !== "all" || policy?.exclusions?.unlistedDirectories !== "all" || policy?.exclusions?.unrelatedRoots !== "all") errors.push("second-wave exclusions must reject loose, unlisted, and unrelated roots");
+  if (policy?.runtime?.operation !== "same-volume-whole-root-rename-only" || policy?.runtime?.copy !== false || policy?.runtime?.delete !== false || policy?.runtime?.overwrite !== false || policy?.runtime?.fetch !== false) errors.push("second-wave runtime must remain apply-only whole-root rename with no copy/delete/overwrite/fetch");
+  if (policy?.compatibility?.reportFormat !== WORKSPACE_RECOVERY_REPORT_FORMAT || policy?.compatibility?.reportSchemaVersion !== 1) errors.push("second-wave report compatibility must remain v1");
+  if (policy?.protected?.reparsePoints !== undefined && policy.protected.reparsePoints !== "refuse") errors.push("second-wave protected.reparsePoints must be refuse when supplied");
+  if (!Array.isArray(policy?.protected?.segments) || !policy.protected.segments.includes(".git")) errors.push("second-wave protected.segments must include .git");
+  if (!Array.isArray(policy?.protected?.namePatterns) || policy.protected.namePatterns.length === 0) errors.push("second-wave protected.namePatterns must not be empty");
+  for (const [index, pattern] of (policy?.protected?.namePatterns ?? []).entries()) {
+    try {
+      new RegExp(pattern, "iu");
+    } catch (error) {
+      errors.push(`protected.namePatterns[${index}] is invalid: ${error.message}`);
+    }
+  }
+  for (const field of [
+    "maxSourceCandidates",
+    "maxEntries",
+    "maxBytes",
+    "maxDepth",
+    "maxPointerBytes",
+    "maxSingleFileBytes",
+    "maxPreservedManifestBytes",
+  ]) {
+    const error = validateInteger(policy?.limits?.[field], `limits.${field}`);
+    if (error !== null) errors.push(error);
+  }
+  if (policy?.hash?.algorithm !== "sha256" || policy?.hash?.pathEncoding !== "relative-posix-v1") errors.push("second-wave hash contract must be sha256 relative-posix-v1");
+  return errors;
+}
+
 export function readWorkspaceRecoveryPolicy(policyPath = DEFAULT_WORKSPACE_RECOVERY_POLICY_PATH) {
   const absolutePath = path.resolve(policyPath);
   try {
     const { parsed, raw } = readJsonFile(absolutePath, absolutePath);
     return {
       policy: parsed,
+      scanPolicy: parsed,
+      kind: "first-wave",
       errors: validateWorkspaceRecoveryPolicy(parsed),
       path: absolutePath,
       sha256: sha256Bytes(Buffer.from(raw, "utf8")),
@@ -254,6 +332,51 @@ export function readWorkspaceRecoveryPolicy(policyPath = DEFAULT_WORKSPACE_RECOV
   } catch (error) {
     return { policy: null, errors: [error.message], path: absolutePath, sha256: null };
   }
+}
+
+export function readWorkspaceRecoverySecondWavePolicy(policyPath = DEFAULT_WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_PATH) {
+  const absolutePath = path.resolve(policyPath);
+  try {
+    const { parsed, raw } = readJsonFile(absolutePath, absolutePath);
+    const basePolicy = readWorkspaceRecoveryPolicy(DEFAULT_WORKSPACE_RECOVERY_POLICY_PATH);
+    const errors = validateWorkspaceRecoverySecondWavePolicy(parsed);
+    if (basePolicy.errors.length > 0) errors.push(...basePolicy.errors.map((error) => `base policy: ${error}`));
+    return {
+      policy: parsed,
+      scanPolicy: basePolicy.policy,
+      kind: "second-wave",
+      errors,
+      path: absolutePath,
+      sha256: sha256Bytes(Buffer.from(raw, "utf8")),
+      allowlistPath: absolutePath,
+      allowlistSha256: sha256Bytes(Buffer.from(raw, "utf8")),
+      basePolicyPath: basePolicy.path,
+      basePolicySha256: basePolicy.sha256,
+    };
+  } catch (error) {
+    return { policy: null, scanPolicy: null, kind: "second-wave", errors: [error.message], path: absolutePath, sha256: null, allowlistPath: absolutePath, allowlistSha256: null };
+  }
+}
+
+export function readWorkspaceRecoveryPolicyBundle(policyPath = DEFAULT_WORKSPACE_RECOVERY_POLICY_PATH) {
+  const absolutePath = path.resolve(policyPath);
+  try {
+    const { parsed } = readJsonFile(absolutePath, absolutePath);
+    if (parsed?.format === WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT) return readWorkspaceRecoverySecondWavePolicy(absolutePath);
+  } catch {
+    // Preserve the canonical base-policy reader's detailed error below.
+  }
+  return readWorkspaceRecoveryPolicy(absolutePath);
+}
+
+export function legacyRootArgumentForSource(source) {
+  return source?.id === "publication-copy" ? "temp-root" : "workspace-root";
+}
+
+export function rootArgumentForSource(source) {
+  return typeof source?.rootArgument === "string" && source.rootArgument.trim() !== ""
+    ? source.rootArgument
+    : legacyRootArgumentForSource(source);
 }
 
 function validateNoOverlap(roots) {
@@ -589,6 +712,7 @@ function sourceRootEntry({ source, candidate, inspection, policy, repo, budget }
   const result = {
     id: source.id,
     name: source.name,
+    rootArgument: rootArgumentForSource(source),
     absolutePath: candidate,
     rootKind: entryKind(inspection.stats),
     rootDecision: inspection.reason === null && inspection.stats?.isDirectory() ? "scanned" : "refused",
@@ -799,6 +923,27 @@ function discoverPublicationCandidate(root) {
   return [{ id: "publication-copy", name: "Tear-main-publication", candidate }];
 }
 
+function discoverSecondWaveCandidates(roots, policy) {
+  const candidates = [];
+  for (const source of policy.sourceRoots) {
+    if (SECOND_WAVE_CANONICAL_ROOT_NAMES.has(source.name.toLowerCase()) || SECOND_WAVE_ARCHIVE_ROOT_PATTERNS.some((pattern) => pattern.test(source.name))) {
+      throw new WorkspaceRecoveryReportError(`exact second-wave source is a protected canonical/archive root: ${source.name}`);
+    }
+    const parent = source.rootArgument === "workspace-root" ? roots.workspaceRoot : roots.tempRoot;
+    const candidate = path.join(parent, source.name);
+    let stats;
+    try {
+      stats = fs.lstatSync(candidate);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw new WorkspaceRecoveryReportError(`cannot inspect exact second-wave source ${source.name}: ${error.message}`);
+      stats = null;
+    }
+    if (stats?.isSymbolicLink()) throw new WorkspaceRecoveryReportError(`exact second-wave source is a symlink or reparse point: ${source.name}`);
+    candidates.push({ id: source.id, name: source.name, rootArgument: source.rootArgument, candidate });
+  }
+  return candidates;
+}
+
 function inspectProtectedMetadata(roots, policy) {
   const records = [];
   const protectedPatterns = policy.protectedRoots.archiveNames;
@@ -929,17 +1074,28 @@ export function runWorkspaceRecoveryReport(options = {}) {
       throw new WorkspaceRecoveryReportError(`${field} is required`);
     }
   }
-  const loaded = suppliedPolicy === undefined ? readWorkspaceRecoveryPolicy(policyPath) : {
+  const loaded = suppliedPolicy === undefined ? readWorkspaceRecoveryPolicyBundle(policyPath) : {
     policy: suppliedPolicy,
-    errors: validateWorkspaceRecoveryPolicy(suppliedPolicy),
+    scanPolicy: suppliedPolicy?.format === WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT
+      ? readWorkspaceRecoveryPolicy(DEFAULT_WORKSPACE_RECOVERY_POLICY_PATH).policy
+      : suppliedPolicy,
+    kind: suppliedPolicy?.format === WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT ? "second-wave" : "first-wave",
+    errors: suppliedPolicy?.format === WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT
+      ? validateWorkspaceRecoverySecondWavePolicy(suppliedPolicy)
+      : validateWorkspaceRecoveryPolicy(suppliedPolicy),
     path: path.resolve(policyPath),
     sha256: sha256Bytes(Buffer.from(JSON.stringify(suppliedPolicy), "utf8")),
+    allowlistPath: suppliedPolicy?.format === WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT ? path.resolve(policyPath) : undefined,
+    allowlistSha256: suppliedPolicy?.format === WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT ? sha256Bytes(Buffer.from(JSON.stringify(suppliedPolicy), "utf8")) : undefined,
   };
   if (loaded.errors.length > 0) throw new WorkspaceRecoveryReportError(`workspace recovery policy is invalid:\n- ${loaded.errors.join("\n- ")}`);
-  const policy = loaded.policy;
+  const policy = loaded.scanPolicy ?? loaded.policy;
   const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (!Number.isFinite(nowMs)) throw new WorkspaceRecoveryReportError("now must be a valid date");
   const retainUntilUtc = parseRetainUntil(retainUntil, nowMs);
+  if (loaded.kind === "second-wave" && new Date(retainUntilUtc).getTime() < new Date(loaded.policy.retention.minimumUtc).getTime()) {
+    throw new WorkspaceRecoveryReportError(`second-wave retain-until must be on or after ${loaded.policy.retention.minimumUtc}`);
+  }
   if (typeof owner !== "string" || owner.trim() === "") throw new WorkspaceRecoveryReportError("owner must be a non-empty identifier");
 
   const repositoryState = resolveRepositoryIdentity(repoRoot);
@@ -955,11 +1111,13 @@ export function runWorkspaceRecoveryReport(options = {}) {
     throw new WorkspaceRecoveryReportError("temp-root must be disjoint from workspace-root");
   }
 
-  const candidates = [
-    ...discoverDirectCandidates(roots.workspaceRoot, "invalid-gsm-worktrees", policy),
-    ...discoverDirectCandidates(roots.workspaceRoot, "receipt-copies", policy),
-    ...discoverPublicationCandidate(roots.tempRoot),
-  ];
+  const candidates = loaded.kind === "second-wave"
+    ? discoverSecondWaveCandidates(roots, loaded.policy)
+    : [
+      ...discoverDirectCandidates(roots.workspaceRoot, "invalid-gsm-worktrees", policy),
+      ...discoverDirectCandidates(roots.workspaceRoot, "receipt-copies", policy),
+      ...discoverPublicationCandidate(roots.tempRoot),
+    ];
   if (candidates.length > policy.limits.maxSourceCandidates) throw new WorkspaceRecoveryReportError(`source candidates exceed maxSourceCandidates ${policy.limits.maxSourceCandidates}`);
   assertCandidateRootsDisjoint(candidates, repositoryState.root, roots.archiveRoot);
   const candidateRoots = Object.fromEntries(candidates.map((candidate, index) => [`candidate-${index}`, candidate.candidate]));
@@ -978,7 +1136,9 @@ export function runWorkspaceRecoveryReport(options = {}) {
   const repo = { ...repositoryState, preservedHashes };
   const budget = { entries: 0, bytes: 0 };
   const sources = candidates.map((source) => {
-    const inspection = inspectPath(source.candidate, source.id === "publication-copy" ? roots.tempRoot : roots.workspaceRoot);
+    const rootArgument = rootArgumentForSource(source);
+    const sourceParent = rootArgument === "temp-root" ? roots.tempRoot : roots.workspaceRoot;
+    const inspection = inspectPath(source.candidate, sourceParent);
     return sourceRootEntry({ source, candidate: source.candidate, inspection, policy, repo, budget });
   });
   const summary = {
@@ -1023,7 +1183,19 @@ export function runWorkspaceRecoveryReport(options = {}) {
       workspaceRoot: roots.workspaceRoot,
       tempRoot: roots.tempRoot,
       archiveRoot: roots.archiveRoot,
+      rootArguments: {
+        "workspace-root": roots.workspaceRoot,
+        "temp-root": roots.tempRoot,
+        "archive-root": roots.archiveRoot,
+      },
       candidateRoots: sources.map((source) => source.absolutePath),
+      ...(loaded.kind === "second-wave" ? {
+        allowlist: {
+          format: WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT,
+          path: loaded.allowlistPath ?? loaded.path,
+          sha256: loaded.allowlistSha256 ?? loaded.sha256,
+        },
+      } : {}),
     },
     protectedRoots: inspectProtectedMetadata({ workspaceRoot: roots.workspaceRoot, tempRoot: roots.tempRoot, archiveRoot: roots.archiveRoot }, policy),
     preservedManifests: preservedHashes.metadata,
@@ -1054,6 +1226,7 @@ function parseArguments(argumentsList) {
     ["--workspace-root", "workspaceRoot"],
     ["--temp-root", "tempRoot"],
     ["--archive-root", "archiveRoot"],
+    ["--policy", "policyPath"],
     ["--owner", "owner"],
     ["--retain-until", "retainUntil"],
     ["--output", "outputPath"],
@@ -1084,7 +1257,7 @@ function parseArguments(argumentsList) {
     seenSingletons.add(argument);
     const value = argumentsList[++index];
     if (value === undefined || value.startsWith("--")) throw new WorkspaceRecoveryReportError(`${argument} requires a value`);
-    options[optionName] = ["repoRoot", "workspaceRoot", "tempRoot", "archiveRoot", "outputPath"].includes(optionName) ? path.resolve(value) : value;
+    options[optionName] = ["repoRoot", "workspaceRoot", "tempRoot", "archiveRoot", "policyPath", "outputPath"].includes(optionName) ? path.resolve(value) : value;
   }
   if (options.help) return options;
   for (const field of ["repoRoot", "workspaceRoot", "tempRoot", "archiveRoot", "owner", "retainUntil"]) {
@@ -1097,7 +1270,7 @@ function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
     if (options.help) {
-      console.log("Usage: node scripts/report-workspace-recovery.mjs --repo-root <repo> --workspace-root <dir> --temp-root <dir> --archive-root <dir> --owner <id> --retain-until <UTC> [--output <new-report.json>] [--summary-only] [--preserved-manifest <manifest.json>]");
+      console.log("Usage: node scripts/report-workspace-recovery.mjs --repo-root <repo> --workspace-root <dir> --temp-root <dir> --archive-root <dir> --owner <id> --retain-until <UTC> [--policy <policy.json>] [--output <new-report.json>] [--summary-only] [--preserved-manifest <manifest.json>]");
       return;
     }
     const report = runWorkspaceRecoveryReport(options);

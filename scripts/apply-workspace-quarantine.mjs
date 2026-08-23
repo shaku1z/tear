@@ -6,7 +6,11 @@ import process from "node:process";
 
 import { RELEASE_REPOSITORY } from "./release-artifact.mjs";
 import { normalizeRepositoryIdentifier } from "./repository-identity.mjs";
-import { readWorkspaceRecoveryPolicy } from "./report-workspace-recovery.mjs";
+import {
+  readWorkspaceRecoveryPolicyBundle,
+  rootArgumentForSource,
+  WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT,
+} from "./report-workspace-recovery.mjs";
 import {
   runWorkspaceQuarantinePreparation,
 } from "./prepare-workspace-quarantine.mjs";
@@ -164,7 +168,7 @@ function gitValue(root, argumentsList, label) {
   return result.stdout.trim();
 }
 
-function verifyRepository(repoRoot, report, manifest) {
+function verifyRepository(repoRoot, report, manifest, { allowRecordedHeadAncestor = false } = {}) {
   const repo = inspectCanonical(repoRoot, "repo-root", "directory");
   const reportedRoot = path.resolve(gitValue(repo.path, ["rev-parse", "--show-toplevel"], "git root"));
   if (!samePath(repo.path, reportedRoot)) fail("repo-root is not the canonical Git root");
@@ -184,9 +188,18 @@ function verifyRepository(repoRoot, report, manifest) {
   if (typeof manifestState?.canonicalPath !== "string" || !samePath(manifestState.canonicalPath, repo.path)) fail("manifest canonical path does not match repo-root");
   if (normalizeRepositoryIdentifier(reportState.origin) !== origin || reportState.branch !== "main" || reportState.upstream !== "origin/main") fail("report repository state is not exact clean main");
   if (normalizeRepositoryIdentifier(manifestState.origin) !== origin || manifestState.branch !== "main" || manifestState.upstream !== "origin/main") fail("manifest repository state is not exact clean main");
-  if (String(reportState.head).toLowerCase() !== head || String(reportState.originMain).toLowerCase() !== originMain) fail("report head does not match current exact origin/main");
-  if (String(manifestState.head).toLowerCase() !== head || String(manifestState.originMain).toLowerCase() !== originMain) fail("manifest head does not match current exact origin/main");
-  return { ...repo, origin, head, originMain };
+  const reportHead = String(reportState.head).toLowerCase();
+  const reportOriginMain = String(reportState.originMain).toLowerCase();
+  const manifestHead = String(manifestState.head).toLowerCase();
+  const manifestOriginMain = String(manifestState.originMain).toLowerCase();
+  if (!GIT_OBJECT_PATTERN.test(reportHead) || !GIT_OBJECT_PATTERN.test(reportOriginMain) || !GIT_OBJECT_PATTERN.test(manifestHead) || !GIT_OBJECT_PATTERN.test(manifestOriginMain)) fail("recorded repository heads are invalid");
+  if (reportHead !== reportOriginMain || manifestHead !== manifestOriginMain || reportHead !== manifestHead) fail("report and manifest evidence heads diverge");
+  if (reportHead !== head || reportOriginMain !== originMain) {
+    if (!allowRecordedHeadAncestor) fail("report head does not match current exact origin/main");
+    const ancestor = runGit(repo.path, ["merge-base", "--is-ancestor", reportHead, head]);
+    if (!ancestor.ok) fail("recorded evidence head is not an ancestor of current exact origin/main");
+  }
+  return { ...repo, origin, head, originMain, evidenceHead: reportHead };
 }
 
 function recoveryGroup(filePath, archiveRoot, label) {
@@ -207,10 +220,20 @@ function policyProtected(relativePath, policy) {
   return policy.protected.namePatterns.some((pattern) => segments.some((candidate) => new RegExp(pattern, "iu").test(candidate)));
 }
 
-function sourceRecords(report, manifest, roots) {
+function sourceRecords(report, manifest, roots, policyBundle) {
   if (!Array.isArray(report.sources) || !Array.isArray(manifest.roots?.sourceRoots) || report.sources.length !== manifest.roots.sourceRoots.length) fail("report and manifest source sets differ");
   const candidateRoots = report.inputs?.candidateRoots;
   if (!Array.isArray(candidateRoots) || candidateRoots.length !== report.sources.length) fail("report candidate roots are incomplete");
+  if (report.inputs?.rootArguments !== undefined) {
+    for (const [argument, expected] of [["workspace-root", roots.workspace.path], ["temp-root", roots.temp.path], ["archive-root", roots.archive.path]]) {
+      if (!samePath(report.inputs.rootArguments[argument], expected)) fail(`report rootArguments.${argument} does not match its canonical root`);
+    }
+  }
+  if (manifest.roots?.rootArguments !== undefined) {
+    for (const [argument, expected] of [["workspace-root", roots.workspace.path], ["temp-root", roots.temp.path], ["archive-root", roots.archive.path]]) {
+      if (!samePath(manifest.roots.rootArguments[argument], expected)) fail(`manifest rootArguments.${argument} does not match its canonical root`);
+    }
+  }
   const reportNames = new Set();
   for (const source of report.sources) {
     if (!source || typeof source.name !== "string") fail("report source root is invalid");
@@ -230,11 +253,26 @@ function sourceRecords(report, manifest, roots) {
     if (reportSource === undefined || !samePath(reportSource.absolutePath, source.path) || !candidateRoots.some((candidate) => samePath(candidate, source.path))) fail(`manifest source does not match report: ${source.name}`);
     const sourcePath = path.resolve(source.path);
     const parent = path.dirname(sourcePath);
-    if (source.id === "publication-copy" ? !samePath(parent, roots.temp.path) : !samePath(parent, roots.workspace.path)) fail(`source parent is not exact for ${source.name}`);
-    if (samePath(sourcePath, roots.repo.path) || samePath(sourcePath, roots.archive.path) || isPathInside(roots.repo.path, sourcePath, { allowEqual: true }) || isPathInside(roots.archive.path, sourcePath, { allowEqual: true })) fail(`source overlaps protected root: ${source.name}`);
+    const rootArgument = rootArgumentForSource(source);
+    const reportRootArgument = rootArgumentForSource(reportSource);
+    if (rootArgument !== reportRootArgument || (policyBundle.kind === "second-wave" && source.rootArgument !== rootArgument)) fail(`manifest/report rootArgument mismatch: ${source.name}`);
+    const expectedParent = rootArgument === "temp-root" ? roots.temp.path : rootArgument === "workspace-root" ? roots.workspace.path : null;
+    if (expectedParent === null || !samePath(parent, expectedParent)) fail(`source parent is not exact for ${source.name}`);
+    if (policyBundle.kind === "second-wave") {
+      const allowlisted = policyBundle.policy.sourceRoots.find((candidate) => candidate.id === source.id && candidate.name === source.name && candidate.rootArgument === rootArgument);
+      if (allowlisted === undefined) fail(`source is not in the exact second-wave allowlist: ${source.name}`);
+    }
+    const workspaceOverlap = (samePath(sourcePath, roots.workspace.path) || isPathInside(roots.workspace.path, sourcePath, { allowEqual: true }) || isPathInside(sourcePath, roots.workspace.path, { allowEqual: true })) && !samePath(expectedParent, roots.workspace.path);
+    const tempOverlap = (samePath(sourcePath, roots.temp.path) || isPathInside(roots.temp.path, sourcePath, { allowEqual: true }) || isPathInside(sourcePath, roots.temp.path, { allowEqual: true })) && !samePath(expectedParent, roots.temp.path);
+    if (samePath(sourcePath, roots.repo.path) || samePath(sourcePath, roots.archive.path) || isPathInside(roots.repo.path, sourcePath, { allowEqual: true }) || isPathInside(roots.archive.path, sourcePath, { allowEqual: true }) || workspaceOverlap || tempOverlap) fail(`source overlaps protected root: ${source.name}`);
     if (seen.has(comparablePath(sourcePath))) fail(`duplicate source root: ${source.name}`);
     seen.add(comparablePath(sourcePath));
-    records.push({ id: source.id, name: source.name, path: sourcePath, report: reportSource });
+    records.push({ id: source.id, name: source.name, rootArgument, path: sourcePath, report: reportSource });
+  }
+  if (policyBundle.kind === "second-wave") {
+    const expected = policyBundle.policy.sourceRoots;
+    const actual = new Set(records.map((source) => `${source.id}\0${source.name}\0${source.rootArgument}`));
+    if (actual.size !== expected.length || expected.some((source) => !actual.has(`${source.id}\0${source.name}\0${source.rootArgument}`))) fail("manifest source set does not exactly match the second-wave allowlist");
   }
   return records.sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -254,6 +292,7 @@ function validateManifestShape(manifest, reportRead, roots, records) {
   for (const entry of manifest.entries) {
     if (!sourceByName.has(entry.sourceName) || typeof entry.relativePath !== "string") fail("manifest entry source is invalid");
     const source = sourceByName.get(entry.sourceName);
+    if (entry.rootArgument !== undefined && entry.rootArgument !== source.rootArgument) fail(`manifest entry rootArgument is invalid: ${entry.sourceName}/${entry.relativePath}`);
     const relativePath = safeRelativePath(entry.relativePath, "manifest entry");
     const key = `${entry.sourceName.toLowerCase()}\0${relativePath.toLowerCase()}`;
     if (seen.has(key)) fail(`manifest has duplicate path: ${entry.sourceName}/${relativePath}`);
@@ -271,6 +310,7 @@ function validateManifestShape(manifest, reportRead, roots, records) {
   for (const entry of manifest.emptyDirectories) {
     if (!sourceByName.has(entry.sourceName) || typeof entry.relativePath !== "string") fail("manifest empty-directory source is invalid");
     const source = sourceByName.get(entry.sourceName);
+    if (entry.rootArgument !== undefined && entry.rootArgument !== source.rootArgument) fail(`manifest empty-directory rootArgument is invalid: ${entry.sourceName}/${entry.relativePath}`);
     const relativePath = safeRelativePath(entry.relativePath, "manifest empty directory");
     const key = `${entry.sourceName.toLowerCase()}\0${relativePath.toLowerCase()}`;
     if (seen.has(key)) fail(`manifest has duplicate path: ${entry.sourceName}/${relativePath}`);
@@ -291,6 +331,35 @@ function stableProjection(value, isRoot = true) {
   return value;
 }
 
+function legacyCompatibilityProjection(manifest, core) {
+  const clone = JSON.parse(JSON.stringify(manifest));
+  const sourceRoots = clone.roots?.sourceRoots;
+  const rootArgumentBySourceName = new Map();
+  for (const source of [...(core.sources ?? []), ...(sourceRoots ?? [])]) {
+    if (typeof source?.name !== "string") continue;
+    rootArgumentBySourceName.set(source.name.toLowerCase(), rootArgumentForSource(source));
+  }
+  if (Array.isArray(sourceRoots)) {
+    for (const source of sourceRoots) {
+      if (source.rootArgument === undefined) source.rootArgument = rootArgumentForSource(source);
+    }
+    if (clone.roots.rootArguments === undefined) {
+      clone.roots.rootArguments = {
+        "workspace-root": core.workspace.path,
+        "temp-root": core.temp.path,
+        "archive-root": core.archive.path,
+      };
+    }
+  }
+  for (const entry of [...(clone.entries ?? []), ...(clone.emptyDirectories ?? [])]) {
+    if (entry.rootArgument === undefined) {
+      entry.rootArgument = rootArgumentBySourceName.get(String(entry.sourceName ?? "").toLowerCase())
+        ?? rootArgumentForSource({ id: entry.sourceId });
+    }
+  }
+  return clone;
+}
+
 function verifyStablePreparedManifest(core, options) {
   if (optionalCanonical(core.destination, "destination", "directory") !== null) fail("destination must be absent before the first apply");
   const regenerated = runWorkspaceQuarantinePreparation({
@@ -303,7 +372,7 @@ function verifyStablePreparedManifest(core, options) {
     destination: core.destination,
     now: options.now,
   });
-  if (JSON.stringify(stableProjection(regenerated)) !== JSON.stringify(stableProjection(core.manifest))) fail("manifest stable evidence does not match a fresh read-only preparation");
+  if (JSON.stringify(stableProjection(regenerated)) !== JSON.stringify(stableProjection(legacyCompatibilityProjection(core.manifest, core)))) fail("manifest stable evidence does not match a fresh read-only preparation");
   return regenerated;
 }
 
@@ -562,7 +631,7 @@ function writeReceipt(journalPath, core, sourceCount, eventCount) {
     reportSha256: core.reportRead.sha256,
     manifestSha256: core.manifestRead.sha256,
     policySha256: core.policySha256,
-    head: core.repo.head,
+    head: core.evidenceHead,
     destination: core.destination,
     sourceCount,
     eventCount,
@@ -608,7 +677,7 @@ function eventDestinationPath(event) {
   return typeof event.destination === "object" && event.destination !== null ? event.destination.path : event.destination;
 }
 
-function validateJournalIntegrity(journal, core) {
+function validateJournalIntegrity(journal, core, { requireApplyComplete = false } = {}) {
   const sourceByName = new Map(core.sources.map((source) => [source.name.toLowerCase(), source]));
   const sourceIndex = new Map(core.sources.map((source, index) => [source.name, index]));
   const started = new Set();
@@ -619,6 +688,7 @@ function validateJournalIntegrity(journal, core) {
   let destinationCreated = false;
   let resumePreflightCompleted = false;
   let applyCompleted = false;
+  let applyCompleteCount = 0;
 
   for (const [index, record] of journal.records.entries()) {
     const event = record.event;
@@ -666,20 +736,22 @@ function validateJournalIntegrity(journal, core) {
       case "apply-complete":
         if (!destinationCreateStarted || applyCompleted || terminal.size !== core.sources.length || event.sourceCount !== core.sources.length || !samePath(eventDestinationPath(event), core.destination)) fail(`journal apply-complete is invalid: ${record.name}`);
         applyCompleted = true;
+        applyCompleteCount += 1;
         break;
       default:
         fail(`journal event type is not allowed: ${record.name}`);
     }
   }
   if (!runStarted || !preflightCompleted || !destinationCreateStarted) fail("journal lifecycle is incomplete");
+  if (requireApplyComplete && applyCompleteCount !== 1) fail("journal must contain exactly one apply-complete terminal event before receipt validation");
 }
 
 function validateCompletionReceipt(receiptRecord, journalPath, core) {
+  const journal = journalFiles(journalPath);
+  validateJournalIntegrity(journal, core, { requireApplyComplete: true });
   const receipt = receiptRecord.receipt;
   if (receipt.format !== WORKSPACE_PRESERVATION_QUARANTINE_FORMAT || receipt.schemaVersion !== 1 || receipt.kind !== "completion-receipt" || receipt.status !== "complete") fail("completion receipt format or status is invalid");
-  if (receipt.reportSha256 !== core.reportRead.sha256 || receipt.manifestSha256 !== core.manifestRead.sha256 || receipt.policySha256 !== core.policySha256 || String(receipt.head).toLowerCase() !== core.repo.head || !samePath(receipt.destination, core.destination) || receipt.sourceCount !== core.sources.length || receipt.mutation !== "same-volume-whole-root-rename-only") fail("completion receipt identity does not match supplied evidence");
-  const journal = journalFiles(journalPath);
-  validateJournalIntegrity(journal, core);
+  if (receipt.reportSha256 !== core.reportRead.sha256 || receipt.manifestSha256 !== core.manifestRead.sha256 || receipt.policySha256 !== core.policySha256 || String(receipt.head).toLowerCase() !== core.evidenceHead || !samePath(receipt.destination, core.destination) || receipt.sourceCount !== core.sources.length || receipt.mutation !== "same-volume-whole-root-rename-only") fail("completion receipt identity does not match supplied evidence");
   if (receipt.eventCount !== journal.records.length || receipt.eventsSha256 !== eventHash(journal)) fail("completion receipt event hash or count does not match the immutable journal");
   return receipt;
 }
@@ -710,8 +782,20 @@ function performMoves(core, journalPath, options, journal) {
     if (options.interruptAfterMoves !== undefined && moveCount >= options.interruptAfterMoves) throw new WorkspacePreservationQuarantineError("injected interruption after whole-root rename");
     writeEvent(journalPath, "move-complete", { sourceName: source.name, sourcePath: source.path, destinationPath: targetPath });
   }
+  if (typeof options.beforeFinalCompletionVerification === "function") options.beforeFinalCompletionVerification(core);
+  preflightCompleted(core);
   writeEvent(journalPath, "apply-complete", { sourceCount: core.sources.length, destination: core.destination });
   return writeReceipt(journalPath, core, core.sources.length, journalFiles(journalPath).records.length);
+}
+
+function hasCompletionReceiptCandidate(journalPath) {
+  if (typeof journalPath !== "string" || journalPath.trim() === "") return false;
+  try {
+    const stats = fs.lstatSync(path.join(path.resolve(journalPath), "completion-receipt.json"));
+    return stats.isFile() && !stats.isSymbolicLink();
+  } catch {
+    return false;
+  }
 }
 
 function loadCore(options) {
@@ -725,10 +809,21 @@ function loadCore(options) {
   const repoRoot = path.resolve(options.repoRoot);
   const policyPath = path.resolve(options.policyPath);
   const policyInspection = inspectCanonical(policyPath, "policy", "file");
-  if (!samePath(policyInspection.path, path.join(repoRoot, "preservation", "workspace-recovery-policy.json"))) fail("policy must be the current canonical repository policy");
-  const loadedPolicy = readWorkspaceRecoveryPolicy(policyInspection.path);
+  const expectedPolicyPaths = [
+    path.join(repoRoot, "preservation", "workspace-recovery-policy.json"),
+    path.join(repoRoot, "preservation", "workspace-recovery-second-wave-sources.json"),
+  ];
+  if (!expectedPolicyPaths.some((expectedPath) => samePath(policyInspection.path, expectedPath))) fail("policy must be a current canonical repository recovery policy");
+  const loadedPolicy = readWorkspaceRecoveryPolicyBundle(policyInspection.path);
   if (loadedPolicy.errors.length > 0) fail(`workspace recovery policy is invalid:\n- ${loadedPolicy.errors.join("\n- ")}`);
-  const repo = verifyRepository(repoRoot, report, manifest);
+  if (loadedPolicy.sha256 !== String(report.policySha256 ?? "").toLowerCase()) fail("current policy SHA-256 does not match supplied report");
+  if (loadedPolicy.kind === "second-wave") {
+    if (report.inputs?.allowlist?.format !== WORKSPACE_RECOVERY_SECOND_WAVE_POLICY_FORMAT || !samePath(report.inputs.allowlist.path, policyInspection.path) || report.inputs.allowlist.sha256 !== loadedPolicy.sha256) fail("second-wave report allowlist provenance does not match the current allowlist");
+    if (new Date(report.retainUntilUtc).getTime() < new Date(loadedPolicy.policy.retention.minimumUtc).getTime()) fail(`second-wave retain-until must be on or after ${loadedPolicy.policy.retention.minimumUtc}`);
+  } else if (report.inputs?.allowlist !== undefined) {
+    fail("first-wave report must not carry second-wave allowlist provenance");
+  }
+  const repo = verifyRepository(repoRoot, report, manifest, { allowRecordedHeadAncestor: options.resume === true && hasCompletionReceiptCandidate(options.journalPath) });
   const workspace = inspectCanonical(report.inputs?.workspaceRoot, "workspace-root", "directory");
   const temp = inspectCanonical(report.inputs?.tempRoot, "temp-root", "directory");
   const archive = inspectCanonical(report.inputs?.archiveRoot, "archive-root", "directory");
@@ -736,10 +831,20 @@ function loadCore(options) {
   if (!samePath(manifestRead.path, path.join(group.path, path.basename(manifestRead.path)))) fail("manifest must be in the report recovery group");
   if (!samePath(manifest.evidence?.externalRecoveryReport?.path, reportRead.path) || manifest.evidence?.externalRecoveryReport?.sha256 !== reportRead.sha256) fail("manifest external report evidence does not match supplied report");
   if (!samePath(manifest.roots?.workspaceRoot, workspace.path) || !samePath(manifest.roots?.tempRoot, temp.path) || !samePath(manifest.roots?.archiveRoot, archive.path)) fail("manifest roots do not match report roots");
+  if (report.inputs?.rootArguments !== undefined) {
+    for (const [argument, expected] of [["workspace-root", workspace.path], ["temp-root", temp.path], ["archive-root", archive.path]]) {
+      if (!samePath(report.inputs.rootArguments[argument], expected)) fail(`report rootArguments.${argument} does not match canonical roots`);
+    }
+  }
+  if (manifest.roots?.rootArguments !== undefined) {
+    for (const [argument, expected] of [["workspace-root", workspace.path], ["temp-root", temp.path], ["archive-root", archive.path]]) {
+      if (!samePath(manifest.roots.rootArguments[argument], expected)) fail(`manifest rootArguments.${argument} does not match canonical roots`);
+    }
+  }
   if (!samePath(path.dirname(repo.path), workspace.path) || !samePath(path.dirname(archive.path), workspace.path)) fail("repo and archive roots must be direct workspace children");
   if (isPathInside(workspace.path, temp.path, { allowEqual: true }) || isPathInside(temp.path, workspace.path, { allowEqual: true })) fail("temp-root must be disjoint from workspace-root");
   const roots = { repo, workspace, temp, archive, group, policySha256: loadedPolicy.sha256 };
-  const records = sourceRecords(report, manifest, roots);
+  const records = sourceRecords(report, manifest, roots, loadedPolicy);
   const destination = path.resolve(manifest.destination?.path ?? "");
   if (!samePath(path.dirname(destination), group.path) && !isPathInside(group.path, destination)) fail("destination is outside recovery group");
   assertNoOverlap("destination", destination, { repo: repo.path, temp: temp.path, report: reportRead.path, manifest: manifestRead.path, ...Object.fromEntries(records.map((source) => [`source:${source.name}`, source.path])) });
@@ -748,7 +853,7 @@ function loadCore(options) {
   if (owner === "" || owner !== String(report.owner ?? "").trim() || owner !== String(manifest.owner ?? "").trim()) fail("owner does not match report and manifest");
   const retainUntilUtc = parseRetention(String(options.retainUntil ?? ""), now);
   if (retainUntilUtc !== report.retainUntilUtc || retainUntilUtc !== manifest.retainUntilUtc) fail("retain-until does not match report and manifest");
-  const core = { now, reportRead, manifestRead, report, manifest, repo, policyPath, policy: loadedPolicy.policy, policySha256: loadedPolicy.sha256, workspace, temp, archive, group, sources: records, destination, owner, retainUntilUtc };
+  const core = { now, reportRead, manifestRead, report, manifest, repo, policyPath, policyBundle: loadedPolicy, policy: loadedPolicy.scanPolicy ?? loadedPolicy.policy, policySha256: loadedPolicy.sha256, workspace, temp, archive, group, sources: records, destination, owner, retainUntilUtc, evidenceHead: repo.evidenceHead };
   validateManifestShape(manifest, reportRead, { ...roots, repo, policySha256: loadedPolicy.sha256 }, records);
   return core;
 }
