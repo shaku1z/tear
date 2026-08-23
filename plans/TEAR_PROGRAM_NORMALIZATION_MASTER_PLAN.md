@@ -583,15 +583,15 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 
 ### Naming architecture
 
-- [ ] Add one canonical terminology registry with: permanent display name,
+- [x] Add one canonical terminology registry with: permanent display name,
       canonical code identifier, deprecated aliases, persistence impact,
       migration owner, and removal checkpoint.
-- [ ] Mark historical specifications and hash-bound TearBench sources as
+- [x] Mark historical specifications and hash-bound TearBench sources as
       historical; do not rewrite their content or regenerate requirement IDs
       solely for naming.
-- [ ] Add a user-facing-copy check that rejects deprecated names outside
+- [x] Add a user-facing-copy check that rejects deprecated names outside
       explicit compatibility/history allowlists.
-- [ ] Add an active-roster check asserting the exact five weapon IDs and
+- [x] Add an active-roster check asserting the exact five weapon IDs and
       rejecting Spear/Ringblade outside migration/history allowlists.
 
 ### Migration order for every renamed subsystem
