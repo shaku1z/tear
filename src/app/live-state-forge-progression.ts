@@ -1,5 +1,4 @@
 import { planRunStart, type DifficultyStartDefinition } from "../gameplay/run/run-start-plan";
-import type { RunDifficulty } from "../gameplay/run/session";
 import {
   replayProgressionConfiguration,
   type TearProgressionReplayResult,
@@ -38,7 +37,7 @@ export function replayLiveStateForgeProgression(
     setupRun(mode, difficulty) {
       if (run.mode !== mode) throw new TypeError(`active mode ${run.mode} does not match ledger mode ${mode}`);
       const definitions = d.CONFIG.difficulties.map((entry): DifficultyStartDefinition => ({
-        id: entry.id as RunDifficulty, ...(entry.oneHit === undefined ? {} : { oneHit: entry.oneHit }),
+        id: entry.id, ...(entry.oneHit === undefined ? {} : { oneHit: entry.oneHit }),
         mods: entry.mods,
       }));
       const plan = planRunStart(difficulty, definitions, d.REMOTE);

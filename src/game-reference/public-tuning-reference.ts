@@ -36,11 +36,6 @@ function exactKeys(value: Record<string, unknown>, path: string, expected: reado
   }
 }
 
-function exactOrderedKeys(value: Record<string, unknown>, path: string, expected: readonly string[]): void {
-  exactKeys(value, path, expected);
-  if (Object.keys(value).some((key, index) => key !== expected[index])) throw new TypeError(`${path} has non-canonical field order`);
-}
-
 function finitePositive(value: unknown, path: string): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) throw new TypeError(`${path} must be a positive finite number`);
   return value;
@@ -53,13 +48,13 @@ function boolean(value: unknown, path: string): boolean {
 
 function assertDifficultyMatchesExpected(value: unknown, expected: DifficultyDefinition, path: string): void {
   const source = record(value, path);
-  exactOrderedKeys(source, path, ["id", "label", "description", "oneHit", "modifiers"]);
+  exactKeys(source, path, ["id", "label", "description", "oneHit", "modifiers"]);
   if (source.id !== expected.id) throw new TypeError(`${path}.id is not in canonical authored order`);
   if (source.label !== expected.label) throw new TypeError(`${path}.label does not match authored difficulty ${expected.id}`);
   if (source.description !== expected.description) throw new TypeError(`${path}.description does not match authored difficulty ${expected.id}`);
   if (boolean(source.oneHit, `${path}.oneHit`) !== expected.oneHit) throw new TypeError(`${path}.oneHit does not match authored difficulty ${expected.id}`);
   const modifiers = record(source.modifiers, `${path}.modifiers`);
-  exactOrderedKeys(modifiers, `${path}.modifiers`, MODIFIER_KEYS);
+  exactKeys(modifiers, `${path}.modifiers`, MODIFIER_KEYS);
   for (const key of MODIFIER_KEYS) {
     const valueAtKey = finitePositive(modifiers[key], `${path}.modifiers.${key}`);
     if (valueAtKey !== expected.modifiers[key]) throw new TypeError(`${path}.modifiers.${key} does not match authored difficulty ${expected.id}`);
@@ -104,7 +99,7 @@ export function projectPublicTuning(difficulties: readonly DifficultyDefinition[
 /** Strictly validate an imported public tuning value against the current authored catalog. */
 export function assertValidPublicTuning(value: unknown, path = "publicTuning"): asserts value is GameReferencePublicTuningV1 {
   const source = record(value, path);
-  exactOrderedKeys(source, path, ["schemaVersion", "difficultyCatalog"]);
+  exactKeys(source, path, ["schemaVersion", "difficultyCatalog"]);
   if (source.schemaVersion !== PUBLIC_TUNING_SCHEMA_VERSION) throw new TypeError(`${path}.schemaVersion is unsupported`);
   assertDifficultyCatalog(source.difficultyCatalog, `${path}.difficultyCatalog`);
 }

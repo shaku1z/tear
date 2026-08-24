@@ -71,7 +71,7 @@ function productionRunSeed(seed: string): number {
 
 function productionDifficultyPlan(difficulty: RunDifficulty) {
   return planRunStart(difficulty, CONFIG.difficulties.map((definition) => ({
-    id: definition.id as RunDifficulty,
+    id: definition.id,
     ...(definition.oneHit === undefined ? {} : { oneHit: definition.oneHit }),
     mods: definition.mods,
   })), REMOTE);

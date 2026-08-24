@@ -84,6 +84,26 @@ describe("game-reference public tuning", () => {
     expect(() => { assertValidPublicTuning(wrongSchema); }).toThrow(/unsupported/u);
   });
 
+  it("accepts equivalent JSON with reordered object keys while retaining strict array order", () => {
+    const source = mutablePublicTuning();
+    const first = firstDifficulty(source);
+    const reorderedFirst: MutablePublicDifficulty = {
+      modifiers: { ...first.modifiers },
+      oneHit: first.oneHit,
+      description: first.description,
+      label: first.label,
+      id: first.id,
+    };
+    const reorderedRoot = {
+      difficultyCatalog: [reorderedFirst, ...source.difficultyCatalog.slice(1)],
+      schemaVersion: source.schemaVersion,
+    };
+    expect(() => { assertValidPublicTuning(reorderedRoot); }).not.toThrow();
+
+    reorderedRoot.difficultyCatalog.reverse();
+    expect(() => { assertValidPublicTuning(reorderedRoot); }).toThrow(/canonical authored order|authored difficulty/u);
+  });
+
   it("rejects a reordered source catalog instead of normalizing it", () => {
     expect(() => { projectPublicTuning(DIFFICULTY_CATALOG.slice().reverse()); }).toThrow(/canonical authored order|authored difficulty/u);
   });

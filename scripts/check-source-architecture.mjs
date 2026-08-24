@@ -32,7 +32,7 @@ const c27aPortableCoreRoots = Object.freeze([
 const forbiddenDependencyRules = Object.freeze([
   Object.freeze({
     roots: Object.freeze(["src/game-reference/"]),
-    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:config\/game-config|app\/|platform\/|presentation\/|entrypoints\/|browser\/|remote(?:\/|-))[^"]*["']/u,
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:config\/game-config|app\/|platform\/|presentation\/|entrypoints\/|browser\/|remote(?:\/|-))[^"']*["']/u,
     message: "game-reference projections must remain pure authored data and cannot depend on runtime, browser, or remote adapters",
   }),
   Object.freeze({
@@ -448,6 +448,9 @@ for (const forbiddenGameReferenceImport of [
   if (dependencyErrors("src/game-reference/__planted-runtime-violation.ts", `import type { RuntimeValue } from "${forbiddenGameReferenceImport}";`).length !== 1) {
     throw new Error(`source architecture game-reference purity self-test failed for ${forbiddenGameReferenceImport}`);
   }
+}
+if (dependencyErrors("src/game-reference/__planted-runtime-violation.ts", "import type { RuntimeValue } from '../remote/config';").length !== 1) {
+  throw new Error("source architecture game-reference purity quote self-test failed");
 }
 if (dependencyErrors("src/gameplay/runtime/tear-simulation-runtime.ts",
   'import { startLiveGame } from "../../app/live-game-runtime";').length !== 1) {
