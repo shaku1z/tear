@@ -115,9 +115,61 @@ export function validateReceipt(receipt, { sourceSha, repository = GAME_REFERENC
   return receipt;
 }
 
+function comparablePath(value) {
+  const resolved = path.resolve(value);
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+function isWithinPath(base, target) {
+  const relative = path.relative(comparablePath(base), comparablePath(target));
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+function lstatIfPresent(target) {
+  try {
+    return fs.lstatSync(target);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+/**
+ * Rejects aliases at every existing path component. The lexical path is
+ * deliberately compared with native realpaths so junctions/reparse points
+ * cannot redirect artifact writes, even when the final directory is absent.
+ */
 export function assertSafeArtifactDirectory(outputDirectory, repositoryRoot = root) {
-  const expected = path.resolve(repositoryRoot, "artifacts", "game-reference");
-  if (path.resolve(outputDirectory) !== expected) throw new Error("game-reference artifact output must remain artifacts/game-reference");
+  const resolvedRoot = path.resolve(repositoryRoot);
+  const expected = path.resolve(resolvedRoot, "artifacts", "game-reference");
+  if (comparablePath(outputDirectory) !== comparablePath(expected)) throw new Error("game-reference artifact output must remain artifacts/game-reference");
+  const rootStat = lstatIfPresent(resolvedRoot);
+  if (rootStat === undefined || !rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error("canonical repository root must be a real directory");
+  let canonicalRoot;
+  try {
+    canonicalRoot = path.resolve(fs.realpathSync.native(resolvedRoot));
+  } catch (error) {
+    throw new Error("canonical repository root realpath could not be verified", { cause: error });
+  }
+  if (comparablePath(canonicalRoot) !== comparablePath(resolvedRoot)) throw new Error("canonical repository root is an alias");
+  const relative = path.relative(resolvedRoot, expected);
+  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("game-reference artifact path escapes the repository root");
+  let current = resolvedRoot;
+  for (const segment of relative.split(path.sep)) {
+    current = path.join(current, segment);
+    const stat = lstatIfPresent(current);
+    if (stat === undefined) break;
+    if (stat.isSymbolicLink()) throw new Error(`game-reference artifact path contains a symlink, junction, or reparse point: ${current}`);
+    if (!stat.isDirectory()) throw new Error(`game-reference artifact path component is not a directory: ${current}`);
+    let realCurrent;
+    try {
+      realCurrent = path.resolve(fs.realpathSync.native(current));
+    } catch (error) {
+      throw new Error(`game-reference artifact path realpath could not be verified: ${current}`, { cause: error });
+    }
+    if (!isWithinPath(canonicalRoot, realCurrent)) throw new Error(`game-reference artifact path escapes the repository root through an alias: ${current}`);
+    if (comparablePath(realCurrent) !== comparablePath(current)) throw new Error(`game-reference artifact path contains an alias: ${current}`);
+  }
   return expected;
 }
 
@@ -180,7 +232,14 @@ function runExporter(sourceSha, repositoryRoot = root) {
   return result.stdout;
 }
 
-export function publishGameReferenceArtifact({
+function assertOutputDirectoryEmpty(outputDirectory) {
+  const stat = fs.lstatSync(outputDirectory);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("game-reference artifact output must be a real directory");
+  const entries = fs.readdirSync(outputDirectory, { withFileTypes: true });
+  if (entries.length > 0) throw new Error("game-reference artifact output already contains files");
+}
+
+function publishGameReferenceArtifactInternal({
   repositoryRoot = root,
   sourceSha = process.env.GITHUB_SHA,
   repository = process.env.GITHUB_REPOSITORY ?? GAME_REFERENCE_REPOSITORY,
@@ -188,7 +247,7 @@ export function publishGameReferenceArtifact({
   validationEvent = process.env.GITHUB_EVENT_NAME,
   validationRef = process.env.GITHUB_REF,
   validationRunId = process.env.GITHUB_RUN_ID,
-} = {}) {
+} = {}, exporter = runExporter) {
   const resolvedRoot = path.resolve(repositoryRoot);
   const headSha = git(resolvedRoot, "rev-parse", "HEAD");
   const status = git(resolvedRoot, "status", "--porcelain=v1", "--untracked-files=all");
@@ -205,14 +264,9 @@ export function publishGameReferenceArtifact({
     validationRunId,
   });
   const outputDirectory = assertSafeArtifactDirectory(path.resolve(resolvedRoot, "artifacts", "game-reference"), resolvedRoot);
-  if (fs.existsSync(outputDirectory)) {
-    const outputStat = fs.lstatSync(outputDirectory);
-    if (!outputStat.isDirectory() || outputStat.isSymbolicLink()) throw new Error("game-reference artifact output must be a real directory");
-    const existing = fs.readdirSync(outputDirectory, { withFileTypes: true }).map((entry) => entry.name);
-    if (existing.length > 0) throw new Error("game-reference artifact output already contains files");
-  }
+  if (lstatIfPresent(outputDirectory) !== undefined) assertOutputDirectoryEmpty(outputDirectory);
 
-  const encoded = runExporter(requestedSha, resolvedRoot);
+  const encoded = exporter(requestedSha, resolvedRoot);
   let manifest;
   try {
     manifest = JSON.parse(encoded);
@@ -231,11 +285,24 @@ export function publishGameReferenceArtifact({
     validationRef,
   });
   fs.mkdirSync(outputDirectory, { recursive: true });
+  assertSafeArtifactDirectory(outputDirectory, resolvedRoot);
+  assertOutputDirectoryEmpty(outputDirectory);
   fs.writeFileSync(path.join(outputDirectory, MANIFEST_FILENAME), encoded, "utf8");
   fs.writeFileSync(path.join(outputDirectory, RECEIPT_FILENAME), canonicalJson(receipt), "utf8");
   validateArtifactFiles(fs.readdirSync(outputDirectory, { withFileTypes: true }));
   console.log(`Published ${resolvedArtifactName}: ${MANIFEST_FILENAME} sha256=${manifestSha256}`);
   return { outputDirectory, artifactName: resolvedArtifactName, sourceSha: requestedSha, manifestSha256 };
+}
+
+export function publishGameReferenceArtifact(options = {}) {
+  return publishGameReferenceArtifactInternal(options, runExporter);
+}
+
+/** Explicitly test-only seam; production CLI always uses the real Vite exporter above. */
+export function publishGameReferenceArtifactForTest(options = {}) {
+  const { exporter, ...publicationOptions } = options;
+  if (typeof exporter !== "function") throw new TypeError("test publisher requires an exporter function");
+  return publishGameReferenceArtifactInternal(publicationOptions, exporter);
 }
 
 if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

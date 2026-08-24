@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
   assertSafeArtifactDirectory,
   buildReceipt,
+  publishGameReferenceArtifactForTest,
   validateArtifactFiles,
   validateManifestEnvelope,
   validatePublicationInputs,
@@ -31,13 +37,39 @@ function validManifest(sha = sourceSha) {
   };
 }
 
+function git(root, ...args) {
+  return execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" }).trim();
+}
+
+function createPublisherFixture() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-publisher-"));
+  fs.writeFileSync(path.join(fixtureRoot, ".gitignore"), "artifacts/\ndist/\n", "utf8");
+  fs.writeFileSync(path.join(fixtureRoot, "README.md"), "publisher fixture\n", "utf8");
+  git(fixtureRoot, "init", "-b", "main");
+  git(fixtureRoot, "config", "user.name", "Tear Artifact Test");
+  git(fixtureRoot, "config", "user.email", "artifact-test@invalid.example");
+  git(fixtureRoot, "add", ".gitignore", "README.md");
+  git(fixtureRoot, "commit", "-m", "fixture baseline");
+  fs.mkdirSync(path.join(fixtureRoot, "artifacts", "tearbench"), { recursive: true });
+  fs.mkdirSync(path.join(fixtureRoot, "dist"), { recursive: true });
+  fs.writeFileSync(path.join(fixtureRoot, "artifacts", "tearbench", "prior.json"), "retained evidence\n", "utf8");
+  fs.writeFileSync(path.join(fixtureRoot, "dist", "bundle.js"), "generated output\n", "utf8");
+  return { fixtureRoot, sourceSha: git(fixtureRoot, "rev-parse", "HEAD") };
+}
+
 test("Validate publishes the exact game-reference artifact only after functional success", () => {
   const functionalIndex = workflow.indexOf("- run: xvfb-run -a pnpm check:functional");
+  const releaseUploadIndex = workflow.indexOf("- uses: actions/upload-artifact@v4", functionalIndex);
   const publishIndex = workflow.indexOf("- name: Publish exact game-reference manifest");
   const uploadIndex = workflow.indexOf("- uses: actions/upload-artifact@v4", publishIndex);
   assert.ok(functionalIndex >= 0, "Validate must retain the functional gate");
-  assert.ok(publishIndex > functionalIndex, "publication must follow the functional gate");
+  assert.ok(releaseUploadIndex > functionalIndex, "release artifact must remain immediately after the functional gate");
+  assert.ok(publishIndex > releaseUploadIndex, "publication must follow the existing release artifact");
   assert.ok(uploadIndex > publishIndex, "upload must follow manifest generation");
+  const releaseArtifact = workflow.slice(releaseUploadIndex, publishIndex);
+  assert.match(releaseArtifact, /name:\s*tear-release-targets-\$\{\{\s*github\.sha\s*\}\}/u);
+  assert.match(releaseArtifact, /path:\s*\|\s*dist\s+artifacts\/tear-crazygames\.zip\s+artifacts\/tearbench/us);
+  assert.match(releaseArtifact, /retention-days:\s*14/u);
   const publication = workflow.slice(publishIndex, workflow.indexOf("- uses: actions/upload-artifact@v4", uploadIndex + 1));
   assert.match(publication, /GITHUB_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/u);
   assert.match(publication, /GITHUB_REPOSITORY:\s*\$\{\{\s*github\.repository\s*\}\}/u);
@@ -160,5 +192,98 @@ test("artifact output is fixed-scope and the publisher performs the required che
   assert.match(publisher, /game-reference\.v1\.json/u);
   assert.match(publisher, /game-reference\.v1\.receipt\.json/u);
   assert.match(publisher, /validateArtifactFiles\(fs\.readdirSync/u);
+  assert.match(publisher, /fs\.mkdirSync\(outputDirectory, \{ recursive: true \}\);\s+assertSafeArtifactDirectory\(outputDirectory, resolvedRoot\);\s+assertOutputDirectoryEmpty\(outputDirectory\)/u);
   assert.doesNotMatch(publisher, /wrangler|cloudflare|dispatch/iu, "publisher must not contain deployment or dispatch logic");
+});
+
+test("rejects symlink or junction aliases, including an aliased parent with no final directory", (t) => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-path-"));
+  const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-outside-"));
+  const aliasKind = process.platform === "win32" ? "junction" : "dir";
+  let aliasCreated = false;
+  try {
+    fs.mkdirSync(path.join(fixtureRoot, "artifacts"), { recursive: true });
+    try {
+      fs.symlinkSync(outsideRoot, path.join(fixtureRoot, "artifacts", "game-reference"), aliasKind);
+      aliasCreated = true;
+    } catch (error) {
+      if (process.platform === "win32") {
+        try {
+          fs.symlinkSync(outsideRoot, path.join(fixtureRoot, "artifacts", "game-reference"), "dir");
+          aliasCreated = true;
+        } catch {
+          // The host may disallow both junction and directory-link creation.
+        }
+      }
+      if (!aliasCreated && !(error && typeof error === "object" && "code" in error)) throw error;
+    }
+    if (!aliasCreated) {
+      t.skip("host disallows the symlink/junction fixture required for alias testing");
+      return;
+    }
+    assert.throws(
+      () => assertSafeArtifactDirectory(path.join(fixtureRoot, "artifacts", "game-reference"), fixtureRoot),
+      /symlink|junction|reparse|alias|escapes/u,
+    );
+
+    const parentFixture = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-parent-alias-"));
+    const parentOutside = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-parent-outside-"));
+    try {
+      fs.symlinkSync(parentOutside, path.join(parentFixture, "artifacts"), aliasKind);
+      assert.throws(
+        () => assertSafeArtifactDirectory(path.join(parentFixture, "artifacts", "game-reference"), parentFixture),
+        /symlink|junction|reparse|alias|escapes/u,
+      );
+    } finally {
+      fs.rmSync(parentFixture, { recursive: true, force: true });
+      fs.rmSync(parentOutside, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(outsideRoot, { recursive: true, force: true });
+  }
+});
+
+test("publishes through the test-only exporter seam without dirtying ignored outputs and refuses stale overwrite", () => {
+  const { fixtureRoot, sourceSha: fixtureSha } = createPublisherFixture();
+  const fixtureArtifactName = `tear-game-reference-v1-${fixtureSha}`;
+  const exporter = (requestedSha) => `${JSON.stringify(validManifest(requestedSha))}\n`;
+  const options = {
+    repositoryRoot: fixtureRoot,
+    sourceSha: fixtureSha,
+    repository: "shaku1z/tear",
+    artifactName: fixtureArtifactName,
+    validationEvent: "push",
+    validationRef: "refs/heads/main",
+    validationRunId: "987654321",
+    exporter,
+  };
+  try {
+    assert.equal(fs.readFileSync(path.join(fixtureRoot, "artifacts", "tearbench", "prior.json"), "utf8"), "retained evidence\n");
+    assert.equal(fs.readFileSync(path.join(fixtureRoot, "dist", "bundle.js"), "utf8"), "generated output\n");
+    assert.equal(git(fixtureRoot, "status", "--porcelain=v1", "--untracked-files=all"), "", "ignored operational outputs must not dirty-block publication");
+    const result = publishGameReferenceArtifactForTest(options);
+    const outputDirectory = result.outputDirectory;
+    const names = fs.readdirSync(outputDirectory).sort();
+    assert.deepEqual(names, ["game-reference.v1.json", "game-reference.v1.receipt.json"]);
+    const manifestBytes = fs.readFileSync(path.join(outputDirectory, "game-reference.v1.json"));
+    const receiptPath = path.join(outputDirectory, "game-reference.v1.receipt.json");
+    const receiptBytes = fs.readFileSync(receiptPath);
+    const receipt = JSON.parse(receiptBytes.toString("utf8"));
+    const manifestDigest = createHash("sha256").update(manifestBytes).digest("hex");
+    assert.equal(receipt.manifestSha256, manifestDigest);
+    assert.equal(receipt.sourceSha, fixtureSha);
+    assert.equal(receipt.artifactName, fixtureArtifactName);
+    assert.equal(receipt.validationRunId, "987654321");
+    assert.equal(receipt.validationEvent, "push");
+    assert.equal(receipt.validationRef, "refs/heads/main");
+    assert.equal(git(fixtureRoot, "status", "--porcelain=v1", "--untracked-files=all"), "", "ignored artifacts must remain outside Git status");
+    const beforeManifest = Buffer.from(manifestBytes);
+    const beforeReceipt = Buffer.from(receiptBytes);
+    assert.throws(() => publishGameReferenceArtifactForTest(options), /already contains files/u);
+    assert.deepEqual(fs.readFileSync(path.join(outputDirectory, "game-reference.v1.json")), beforeManifest);
+    assert.deepEqual(fs.readFileSync(receiptPath), beforeReceipt);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });

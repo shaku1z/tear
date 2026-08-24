@@ -44,6 +44,15 @@ jobs:
       - name: Check game-reference artifact publication contract
         run: pnpm test:game-reference-artifact
       - run: xvfb-run -a pnpm check:functional
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tear-release-targets-${{ github.sha }}
+          path: |
+            dist
+            artifacts/tear-crazygames.zip
+            artifacts/tearbench
+          if-no-files-found: error
+          retention-days: 14
       # This step is intentionally after the full functional gate and has no
       # always() condition. A failed Validate run cannot publish a reference.
       - name: Publish exact game-reference manifest
@@ -63,12 +72,3 @@ jobs:
           path: artifacts/game-reference
           if-no-files-found: error
           retention-days: 90
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tear-release-targets-${{ github.sha }}
-          path: |
-            dist
-            artifacts/tear-crazygames.zip
-            artifacts/tearbench
-          if-no-files-found: error
-          retention-days: 14

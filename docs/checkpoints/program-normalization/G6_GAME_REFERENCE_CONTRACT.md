@@ -111,8 +111,9 @@ release approval.
   manifest filename, manifest SHA-256, artifact name, validation run ID,
   event/ref, and 90-day retention. The publisher repeats the clean-HEAD/SHA
   preflight and rejects extra output files before upload. Pull-request Validate
-  runs do not publish this dedicated artifact; the existing release-target
-  artifact behavior remains separate and unchanged.
+  runs do not publish this dedicated artifact. The existing release-target
+  upload remains immediately after the functional gate, with its paths and
+  behavior separate and unchanged.
 
 ## Deliberate boundary
 

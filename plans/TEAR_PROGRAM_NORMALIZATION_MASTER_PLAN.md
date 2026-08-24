@@ -1206,7 +1206,9 @@ semantics and recording the resulting path and hash in the G6 receipt.
       90-day retention and validation run/event/ref provenance. Publication
       requires a clean checkout whose `HEAD` equals `GITHUB_SHA`; pull-request
       runs do not publish this dedicated artifact, and it has no wiki, dispatch,
-      Cloudflare, or snapshot promotion side effect. See
+      Cloudflare, or snapshot promotion side effect. The pre-existing
+      `tear-release-targets-<GITHUB_SHA>` artifact remains immediately after
+      the functional gate and is independent of this publication block. See
       `docs/checkpoints/program-normalization/G6_REFERENCE_ARTIFACT_PUBLICATION.md`.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.

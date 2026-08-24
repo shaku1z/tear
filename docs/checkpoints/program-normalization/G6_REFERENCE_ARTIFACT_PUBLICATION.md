@@ -13,12 +13,15 @@ authorize a Cloudflare action.
 - The `Validate` workflow is `.github/workflows/ci.yml` (workflow name
   `Validate`). It runs the focused publication contract test, then the full
   `pnpm check:functional` gate.
+- The pre-existing `tear-release-targets-<GITHUB_SHA>` upload remains directly
+  after the successful functional gate and before this new publication block;
+  its paths and 14-day retention are unchanged.
 - Only after that gate succeeds on a `push` to protected
   `refs/heads/main` does the workflow run `pnpm publish:game-reference` and
   upload this artifact. Both steps are explicitly gated to that event/ref and
   have no `always()` condition, so a failed Validate run or pull-request run
-  cannot publish this artifact. The existing
-  `tear-release-targets-<GITHUB_SHA>` upload remains unchanged and separate.
+  cannot publish this artifact. The existing release-target upload remains
+  independent and separate.
 - The publisher requires `GITHUB_SHA` to be a full 40-character SHA, requires
   the checked-out clean `HEAD` to equal it, and requires
   `GITHUB_REPOSITORY=shaku1z/tear`, `GITHUB_EVENT_NAME=push`,
