@@ -234,6 +234,24 @@ test("strict inspection classifies the exact legacy comparison bundle without a 
   }
 });
 
+test("strict inspection treats a legacy comparison bundle kind mismatch as no-go", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    fs.mkdirSync(path.join(fixture.tempRoot, "tear-crazygames-ee5.zip"));
+    const result = strictResult(fixture);
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /tear-crazygames-ee5\.zip has kind directory, expected file/u);
+    assert.equal(result.review.some((message) => /tear-crazygames-ee5\.zip/u.test(message)), false);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
 test("strict inspection reports loose Tear-related items without failing the run", (t) => {
   const fixture = createStrictFixture({ loose: true });
   try {

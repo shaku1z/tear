@@ -615,7 +615,7 @@ function classifyChildren(children, location, policy, review, noGo) {
     let classification = "unrelated";
     if (explicitRetention !== undefined && child.kind !== explicitRetention.kind) {
       classification = "legacy-comparison-only-retention-kind-mismatch";
-      recordReview(review, `${location} explicit retention ${child.name} has kind ${child.kind}, expected ${explicitRetention.kind}`);
+      recordNoGo(noGo, `${location} explicit retention ${child.name} has kind ${child.kind}, expected ${explicitRetention.kind}`);
     } else if (explicitRetention !== undefined) {
       classification = explicitRetention.classification;
     } else if (forbidden.some((pattern) => pattern.test(child.name))) {

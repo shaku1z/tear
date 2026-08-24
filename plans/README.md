@@ -16,22 +16,22 @@ their own.
 
 | File | Classification | Owner | Status | Closure condition | Role |
 | --- | --- | --- | --- | --- | --- |
-| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | QA owner | Active | All listed controller/navigation checks pass on the supported standalone and CrazyGames builds. | Manual controller/navigation release checklist |
-| [FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md](FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md) | active plan | Combat/weapon owner | Active | The locked Final Five pass implementation, deterministic, browser, and release evidence gates. | Weapon design and implementation specification |
+| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | QA owner | Active | All listed controller and navigation checks pass on the supported standalone and CrazyGames builds, with the exact pad/preset and evidence recorded. | Manual controller/navigation release checklist |
+| [FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md](FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md) | active plan | Combat/weapon owner | Active | The locked Final Five (Sword, Hammer, Greatsword, Chainblade, Riftlock) pass implementation, deterministic, browser, and release evidence gates; Spear and Ringblade remain historical/outdated roster references only. | Weapon design and implementation specification |
 | [PARITY_RESTORATION_PLAN.md](PARITY_RESTORATION_PLAN.md) | active plan | Parity owner | Active | Required oracle comparison traces and current-build parity gates pass with documented, approved divergences only. | Oracle/parity restoration and evidence plan |
 | [TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md](TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md) | current authority | Release governance owner | Active | The master plan records the current G0–G8 state and the protected-main evidence for every closed goal. | Program sequencing and governance |
 | [TEARBENCH_C27A_HANDOFF.md](TEARBENCH_C27A_HANDOFF.md) | completed plan | — | Closed | — | Closed C27A continuation handoff |
-| [TEARBENCH_C40_EXECUTION_GUIDE.md](TEARBENCH_C40_EXECUTION_GUIDE.md) | active plan | TearBench release owner | Active | The required C40 certification artifact verifies the exact clean protected HEAD and all unmet requirements have authorized dispositions. | Current TearBench execution discipline |
+| [TEARBENCH_C40_EXECUTION_GUIDE.md](TEARBENCH_C40_EXECUTION_GUIDE.md) | active plan | TearBench release owner | Active | The required C40 certification artifact verifies the exact clean protected HEAD and every unmet requirement has an explicit authorized disposition with evidence. | Current TearBench execution discipline |
 | [TEARBENCH_GHOST3_ACTION_PLAN.md](TEARBENCH_GHOST3_ACTION_PLAN.md) | history | — | Historical | — | Superseded C0–C20 scaffold |
-| [TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md) | active plan | TearBench program owner | Active | C21–C40 checkpoint exit gates pass with completion-grade evidence or explicit authorized dispositions. | Current C21–C40 completion plan |
-| [TEARBENCH_MASTER_HANDOFF.md](TEARBENCH_MASTER_HANDOFF.md) | active plan | TearBench handoff owner | Active | A succeeding agent can follow the exact next-slice boundary and reproduce the last verified gate without relying on stale branch state. | Program continuation handoff and evidence boundary |
+| [TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md) | active plan | TearBench program owner | Active | C21–C40 checkpoint exit gates pass with completion-grade evidence or explicit authorized dispositions; foundation gates alone never close the program. | Current C21–C40 completion plan |
+| [TEARBENCH_MASTER_HANDOFF.md](TEARBENCH_MASTER_HANDOFF.md) | active plan | TearBench handoff owner | Active | A succeeding agent can follow the exact next-slice boundary and reproduce the last verified gate from protected `main` without relying on stale branch state. | Program continuation handoff and evidence boundary |
 | [WEAPON_THROW_STATE_MACHINES.md](WEAPON_THROW_STATE_MACHINES.md) | completed plan | — | Closed | — | Retained combat state-machine contract |
 
 ## Active plans
 
 | Document | Owner | Status | Closure condition | Role |
 | --- | --- | --- | --- | --- |
-| [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model. | Partially implemented balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
+| [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone. | Partially implemented balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
 
 ## Completed plans
 
@@ -43,3 +43,8 @@ The `active/` and `completed/` directories now contain only the moved Economy
 and Phase F records listed above; `archive/` remains a future G5 destination.
 Generated TearBench inputs and outputs remain at their current paths until an
 atomic scripts/tests/CI migration is authorized.
+
+The active-plan set is exactly the seven rows classified as `active plan` in
+this index. `check:docs` derives that set from these tables, requires each
+plan's file metadata to match its Owner/Status/Closure condition cells, and
+fails closed on duplicate, malformed, empty, or additional active rows.
