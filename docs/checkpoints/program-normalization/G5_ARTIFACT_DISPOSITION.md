@@ -17,7 +17,7 @@ moved, deleted, overwritten, or deduplicated.
 | Evidence | Value |
 | --- | --- |
 | Tracked disposition | `preservation/artifact-retention-disposition.json` |
-| Disposition SHA-256 | `a2fb4fe3ea37d474d11f5488e4e3d4184ea336b7fa11f37d97c8c25237f48f1e` |
+| Disposition SHA-256 | `89ab84227545886cf0b05675f7658acaf081b177abb37de68b7b115f64f1744c` |
 | Source report | `Tear-archives/2026-08-23-g5-artifact-disposition/artifact-retention-report-5281470.json` |
 | Source report SHA-256 | `9e8e8274e5d773ae2507c6feb4a2563202fca4cf9b0eb20d2ef704b9de9edbb4` |
 | Report generation time | `2026-08-23T23:56:19.082Z` |
@@ -47,15 +47,17 @@ silently included in this disposition.
 
 ## Focused validation
 
-The permanent validator checks the manifest schema, exact group path set,
-count/byte totals, current file existence, SHA-256 and mtime bindings, policy
-hash, ancestry of the evidence head, and the unused quarantine path. The
-focused tests also prove that a later eligible file is reported as unreviewed
-and that a changed hash fails closed.
+The permanent validator checks the manifest schema, exact group IDs, counts,
+byte totals, path prefixes, and rationale text; current file existence,
+SHA-256 and mtime bindings; policy hash; ancestry of the evidence head; the
+unused quarantine path; and the external source report's exact path, size, and
+SHA-256 binding. The focused tests also prove that malformed paths fail with
+clear validation errors, a later eligible file is reported as unreviewed, and
+changed or missing evidence fails closed.
 
 ```text
-pnpm test:artifact-disposition                         PASS (3/3)
-node scripts/validate-artifact-disposition.mjs         PASS (104/104, 31,683,314 bytes)
+pnpm test:artifact-disposition                         PASS (8/8)
+pnpm check:artifact-disposition                        PASS (104/104, 31,683,314 bytes)
 ```
 
 ## Soundtrack Desk canonical-root preflight

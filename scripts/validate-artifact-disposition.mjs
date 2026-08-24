@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -17,9 +18,24 @@ export const ARTIFACT_DISPOSITION_FORMAT = "tear-artifact-retention-disposition"
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
 const EXPECTED_GROUPS = new Map([
-  ["c24-mixed-age-build-assets", { count: 90, bytes: 31_657_362 }],
-  ["c3-path-bound-scenarios", { count: 8, bytes: 10_774 }],
-  ["historical-provenance", { count: 6, bytes: 15_178 }],
+  ["c24-mixed-age-build-assets", {
+    count: 90,
+    bytes: 31_657_362,
+    pathPrefix: "artifacts/tearbench/c24/",
+    reason: "C24 build outputs contain mixed-age generated assets and must remain coherent at their existing path-bound build locations for historical comparison and evidence.",
+  }],
+  ["c3-path-bound-scenarios", {
+    count: 8,
+    bytes: 10_774,
+    pathPrefix: "artifacts/tearbench/c3-",
+    reason: "C3 scenario evidence is path-bound to the TearBench evidence layout and remains available for reproducible historical inspection.",
+  }],
+  ["historical-provenance", {
+    count: 6,
+    bytes: 15_178,
+    pathPrefix: "artifacts/tearbench/",
+    reason: "C20/C21/C6 and non-lossy selection records are historical provenance references; retaining their exact paths avoids breaking evidence links.",
+  }],
 ]);
 const HISTORICAL_PATHS = new Set([
   "artifacts/tearbench/c20-ci-selection.json",
@@ -48,6 +64,7 @@ export function readArtifactDisposition(dispositionPath = DEFAULT_ARTIFACT_DISPO
 }
 
 function expectedGroupFor(relativePath) {
+  if (typeof relativePath !== "string") return null;
   if (relativePath.startsWith("artifacts/tearbench/c24/")) return "c24-mixed-age-build-assets";
   if (relativePath.startsWith("artifacts/tearbench/c3-") && relativePath.endsWith(".json")) return "c3-path-bound-scenarios";
   if (HISTORICAL_PATHS.has(relativePath)) return "historical-provenance";
@@ -60,6 +77,28 @@ function isSafeArtifactPath(relativePath) {
   return normalized === relativePath
     && normalized.startsWith("artifacts/")
     && !normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..");
+}
+
+function isSafeRelativePath(relativePath) {
+  if (typeof relativePath !== "string" || relativePath.length === 0) return false;
+  const normalized = relativePath.replaceAll("\\", "/");
+  return normalized === relativePath
+    && !normalized.startsWith("/")
+    && !/^[A-Za-z]:/u.test(normalized)
+    && !normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..");
+}
+
+function isPathInside(root, candidate, { allowEqual = false } = {}) {
+  const relativePath = path.relative(root, candidate);
+  if (relativePath === "") return allowEqual;
+  return relativePath !== ".."
+    && !relativePath.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relativePath);
+}
+
+function samePath(left, right) {
+  const normalize = (value) => path.resolve(value).toLowerCase();
+  return normalize(left) === normalize(right);
 }
 
 export function validateArtifactDispositionShape(disposition) {
@@ -84,25 +123,31 @@ export function validateArtifactDispositionShape(disposition) {
   if (!Array.isArray(entries) || entries.length !== 104) {
     errors.push("entries must contain exactly 104 files");
   }
-  if (!Array.isArray(disposition?.groups) || disposition.groups.length !== EXPECTED_GROUPS.size) {
+  const groups = Array.isArray(disposition?.groups) ? disposition.groups : [];
+  if (groups.length !== EXPECTED_GROUPS.size) {
     errors.push("groups must contain exactly the three reviewed disposition groups");
   }
+  const groupIds = new Set();
   for (const [id, expected] of EXPECTED_GROUPS) {
-    const group = disposition?.groups?.find((candidate) => candidate?.id === id);
+    const group = groups.find((candidate) => candidate?.id === id);
     if (group === undefined) {
       errors.push(`missing disposition group ${id}`);
     } else {
+      groupIds.add(group.id);
       if (group.count !== expected.count) errors.push(`${id}.count must be ${expected.count}`);
       if (group.bytes !== expected.bytes) errors.push(`${id}.bytes must be ${expected.bytes}`);
-      if (typeof group.reason !== "string" || group.reason.trim() === "") errors.push(`${id}.reason must explain the retain-in-place decision`);
+      if (group.pathPrefix !== expected.pathPrefix) errors.push(`${id}.pathPrefix must be ${expected.pathPrefix}`);
+      if (group.reason !== expected.reason) errors.push(`${id}.reason does not match the reviewed retain-in-place rationale`);
     }
   }
+  for (const group of groups) if (!EXPECTED_GROUPS.has(group?.id)) errors.push(`unexpected disposition group ${String(group?.id)}`);
+  if (groupIds.size !== groups.length) errors.push("disposition group IDs must be unique");
   const seen = new Set();
   const groupTotals = new Map([...EXPECTED_GROUPS.keys()].map((id) => [id, { count: 0, bytes: 0 }]));
   for (const [index, entry] of (Array.isArray(entries) ? entries : []).entries()) {
     const label = `entries[${index}]`;
     if (!isSafeArtifactPath(entry?.path)) errors.push(`${label}.path must be a safe artifacts-relative POSIX path`);
-    const pathKey = String(entry?.path ?? "").toLowerCase();
+    const pathKey = typeof entry?.path === "string" ? entry.path.toLowerCase() : `invalid-entry-path-${index}`;
     if (seen.has(pathKey)) errors.push(`${label}.path is duplicated case-insensitively`);
     seen.add(pathKey);
     if (!Number.isSafeInteger(entry?.bytes) || entry.bytes < 0) errors.push(`${label}.bytes must be a non-negative safe integer`);
@@ -144,6 +189,87 @@ export function validateArtifactDispositionShape(disposition) {
   return errors;
 }
 
+export function validateUnusedQuarantinePath(root) {
+  const quarantinePath = path.resolve(root, ".artifact-quarantine");
+  let stats;
+  try {
+    stats = fs.lstatSync(quarantinePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    return [`could not inspect .artifact-quarantine: ${error instanceof Error ? error.message : String(error)}`];
+  }
+  if (stats.isSymbolicLink()) return [".artifact-quarantine must be absent; a symlink/reparse point exists"];
+  try {
+    const realPath = fs.realpathSync.native(quarantinePath);
+    if (!samePath(realPath, quarantinePath)) return [".artifact-quarantine must be absent; a symlink/reparse point exists"];
+  } catch (error) {
+    return [`could not resolve .artifact-quarantine: ${error instanceof Error ? error.message : String(error)}`];
+  }
+  return [".artifact-quarantine must be absent; an entry exists"];
+}
+
+export function verifyArchivedSourceReport({ root, sourceReport, archiveRoot } = {}) {
+  const errors = [];
+  if (!isSafeRelativePath(sourceReport?.archiveRoot) || sourceReport.archiveRoot !== "Tear-archives") {
+    errors.push("sourceReport.archiveRoot must be the safe external archive root name Tear-archives");
+    return { ok: false, errors, path: null };
+  }
+  if (!isSafeRelativePath(sourceReport?.archivePath)) {
+    errors.push("sourceReport.archivePath must be a safe relative archive path");
+    return { ok: false, errors, path: null };
+  }
+  if (!SHA256_PATTERN.test(sourceReport?.sha256 ?? "")) errors.push("sourceReport.sha256 must be a SHA-256");
+  if (!Number.isSafeInteger(sourceReport?.bytes) || sourceReport.bytes < 0) errors.push("sourceReport.bytes must be a non-negative safe integer");
+  if (archiveRoot !== undefined && typeof archiveRoot !== "string") errors.push("archiveRoot must be a path string");
+  if (errors.length > 0) return { ok: false, errors, path: null };
+
+  const absoluteRoot = path.resolve(root ?? process.cwd());
+  const absoluteArchiveRoot = path.resolve(archiveRoot ?? path.resolve(absoluteRoot, "..", sourceReport.archiveRoot));
+  if (isPathInside(absoluteRoot, absoluteArchiveRoot, { allowEqual: true })) {
+    errors.push("source report archive root must remain external to the game repository");
+    return { ok: false, errors, path: null };
+  }
+  const reportPath = path.resolve(absoluteArchiveRoot, sourceReport.archivePath);
+  if (!isPathInside(absoluteArchiveRoot, reportPath)) {
+    errors.push("sourceReport.archivePath escapes the explicit archive root");
+    return { ok: false, errors, path: null };
+  }
+  let stats;
+  try {
+    stats = fs.lstatSync(reportPath);
+  } catch (error) {
+    errors.push(error?.code === "ENOENT"
+      ? `archived source report is missing: ${reportPath}`
+      : `could not inspect archived source report: ${error instanceof Error ? error.message : String(error)}`);
+    return { ok: false, errors, path: reportPath };
+  }
+  if (stats.isSymbolicLink()) {
+    errors.push("archived source report must not be a symlink/reparse point");
+    return { ok: false, errors, path: reportPath };
+  }
+  if (!stats.isFile()) {
+    errors.push("archived source report must be a regular file");
+    return { ok: false, errors, path: reportPath };
+  }
+  try {
+    const realPath = fs.realpathSync.native(reportPath);
+    if (!samePath(realPath, reportPath)) errors.push("archived source report must not be a symlink/reparse point");
+  } catch (error) {
+    errors.push(`could not resolve archived source report: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  let contents;
+  try {
+    contents = fs.readFileSync(reportPath);
+  } catch (error) {
+    errors.push(`could not read archived source report: ${error instanceof Error ? error.message : String(error)}`);
+    return { ok: false, errors, path: reportPath };
+  }
+  const sha256 = createHash("sha256").update(contents).digest("hex");
+  if (contents.byteLength !== sourceReport.bytes) errors.push(`archived source report size ${contents.byteLength} does not match bound size ${sourceReport.bytes}`);
+  if (sha256 !== sourceReport.sha256) errors.push(`archived source report SHA-256 ${sha256} does not match bound SHA-256 ${sourceReport.sha256}`);
+  return { ok: errors.length === 0, errors, path: reportPath, bytes: contents.byteLength, sha256 };
+}
+
 export function compareArtifactDispositionEntries(dispositionEntries, currentEntries) {
   const expected = new Map(dispositionEntries.map((entry) => [entry.path, entry]));
   const current = new Map(currentEntries.map((entry) => [entry.repoRelativePath, entry]));
@@ -168,6 +294,7 @@ export function validateArtifactDisposition({
   root = process.cwd(),
   dispositionPath = DEFAULT_ARTIFACT_DISPOSITION_PATH,
   policyPath = DEFAULT_ARTIFACT_RETENTION_POLICY_PATH,
+  archiveRoot,
   now = new Date(),
 } = {}) {
   const absoluteRoot = path.resolve(root);
@@ -182,12 +309,9 @@ export function validateArtifactDisposition({
     const ancestor = git(absoluteRoot, ["merge-base", "--is-ancestor", disposition.canonical.head, headResult.stdout]);
     if (!ancestor.ok) errors.push(`disposition evidence head ${disposition.canonical.head} is not an ancestor of current HEAD ${headResult.stdout}`);
   }
-  const quarantinePath = path.resolve(absoluteRoot, ".artifact-quarantine");
-  if (fs.existsSync(quarantinePath)) {
-    let children = [];
-    try { children = fs.readdirSync(quarantinePath); } catch (error) { errors.push(`could not inspect .artifact-quarantine: ${error instanceof Error ? error.message : String(error)}`); }
-    if (children.length > 0) errors.push(".artifact-quarantine is not unused; it contains entries");
-  }
+  errors.push(...validateUnusedQuarantinePath(absoluteRoot));
+  const archivedSourceReport = verifyArchivedSourceReport({ root: absoluteRoot, sourceReport: disposition.sourceReport, archiveRoot });
+  errors.push(...archivedSourceReport.errors);
 
   let report;
   try {
@@ -211,9 +335,40 @@ export function validateArtifactDisposition({
   return { ok: errors.length === 0, status, errors, unreviewed: comparison.unreviewed, missing: comparison.missing, changed: comparison.changed, current: { head: report.head, summary: report.summary } };
 }
 
+function parseArguments(argumentsList) {
+  const options = {
+    root: process.cwd(),
+    ...(process.env.TEAR_ARTIFACT_ARCHIVE_ROOT ? { archiveRoot: process.env.TEAR_ARTIFACT_ARCHIVE_ROOT } : {}),
+  };
+  for (let index = 0; index < argumentsList.length; index += 1) {
+    const argument = argumentsList[index];
+    if (argument === "--help") {
+      options.help = true;
+      continue;
+    }
+    const valueFlags = new Map([
+      ["--root", "root"],
+      ["--archive-root", "archiveRoot"],
+      ["--disposition", "dispositionPath"],
+      ["--policy", "policyPath"],
+    ]);
+    const optionName = valueFlags.get(argument);
+    if (optionName === undefined) throw new Error(`unknown argument: ${argument}`);
+    const value = argumentsList[++index];
+    if (value === undefined || value.startsWith("--")) throw new Error(`${argument} requires a value`);
+    options[optionName] = path.resolve(value);
+  }
+  return options;
+}
+
 function main() {
   try {
-    const result = validateArtifactDisposition();
+    const options = parseArguments(process.argv.slice(2));
+    if (options.help) {
+      console.log("Usage: node scripts/validate-artifact-disposition.mjs [--root <game-root>] [--archive-root <external-archive-root>] [--disposition <manifest.json>] [--policy <policy.json>]");
+      return;
+    }
+    const result = validateArtifactDisposition(options);
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     if (!result.ok) process.exitCode = 1;
   } catch (error) {

@@ -11,7 +11,8 @@
   },
   "sourceReport": {
     "format": "tear-artifact-retention-manifest",
-    "archivePath": "Tear-archives/2026-08-23-g5-artifact-disposition/artifact-retention-report-5281470.json",
+    "archiveRoot": "Tear-archives",
+    "archivePath": "2026-08-23-g5-artifact-disposition/artifact-retention-report-5281470.json",
     "bytes": 546561,
     "sha256": "9e8e8274e5d773ae2507c6feb4a2563202fca4cf9b0eb20d2ef704b9de9edbb4",
     "policyPath": "preservation/artifact-retention-policy.json",
