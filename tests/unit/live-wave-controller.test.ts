@@ -7,7 +7,6 @@ import {
   LiveWaveController,
   type LiveWavePort,
   type LiveWaveRun,
-  type LiveWaveStageSource,
 } from "../../src/gameplay/run/live-wave-controller";
 import { STAGES } from "../../src/gameplay/stages";
 
@@ -49,7 +48,7 @@ function harness(initial: LiveWaveRun) {
   const port: LiveWavePort = {
     run: () => initial,
     tuning: () => CONFIG.run,
-    stages: STAGES as unknown as readonly LiveWaveStageSource[],
+    stages: STAGES,
     presets: PRESETS,
     random: new SeededRandom("live-wave"),
     modeDefinition: () => ({}),

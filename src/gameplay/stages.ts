@@ -8,12 +8,63 @@
 // readable; dramatic inversions (e.g. a true dark Voidspire) are a later polish pass.
 
 import type { CONFIG as GAME_CONFIG } from "../config/game-config";
-import type { EnemyKind } from "./run/content-director";
+import type { BossId, EnemyKind } from "./run/content-director";
+
+/** Stable authored stage identifiers used by the game-reference projection. */
+export const STAGE_IDS = Object.freeze([
+  "grounds", "undercroft", "crimson-fields", "voidspire", "tear",
+] as const);
+export type StageId = typeof STAGE_IDS[number];
+
+export interface StagePlatformDefinition {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly oneway: boolean;
+}
+
+export interface StageChapterPage {
+  readonly label: string;
+  readonly text: string;
+}
+
+export interface StageChapterDefinition {
+  readonly number: string;
+  readonly title: string;
+  readonly symbol: string;
+  readonly intro: string;
+  readonly transition: string;
+  readonly pages: readonly StageChapterPage[];
+  readonly bossOutro: Readonly<StageChapterPage>;
+}
+
+export interface StageChapterArtDefinition {
+  readonly composition: string;
+  readonly wash: string;
+}
+
+export interface StageDefinition {
+  readonly id: StageId;
+  readonly name: string;
+  readonly blurb: string;
+  readonly musicId: string;
+  readonly boss: BossId;
+  readonly chapter: StageChapterDefinition;
+  readonly chapterArt: StageChapterArtDefinition;
+  readonly bg: string;
+  readonly plat: string;
+  readonly accent: string;
+  readonly dark?: boolean;
+  readonly pool: readonly (readonly [EnemyKind, number, number?])[];
+  readonly layout: readonly StagePlatformDefinition[];
+}
 
 const enemyPool = (...entries: readonly (readonly [EnemyKind, number, number?])[]) => entries;
 
-const STAGES = [
+const STAGES: readonly StageDefinition[] = [
   {
+    id: "grounds",
     name: "The Grounds", blurb: "Where order is kept.",
     musicId: "grounds",
     boss: "warden",
@@ -37,6 +88,7 @@ const STAGES = [
     ],
   },
   {
+    id: "undercroft",
     name: "The Undercroft", blurb: "Gray industry, deep below.",
     musicId: "undercroft",
     boss: "colossus",
@@ -61,6 +113,7 @@ const STAGES = [
     ],
   },
   {
+    id: "crimson-fields",
     name: "The Crimson Fields", blurb: "Red and gold, and old rage.",
     musicId: "crimson-fields",
     boss: "aldric",
@@ -83,6 +136,7 @@ const STAGES = [
     ],
   },
   {
+    id: "voidspire",
     name: "The Voidspire", blurb: "Where the rules thin out.",
     musicId: "voidspire",
     boss: "echo",
@@ -107,6 +161,7 @@ const STAGES = [
     ],
   },
   {
+    id: "tear",
     name: "The Tear", blurb: "Everything, all at once.",
     musicId: "tear",
     dark: true,   // the void at the end of everything — HUD + player flip to light here

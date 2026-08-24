@@ -5,7 +5,6 @@ import { SeededRandom, type RandomSource } from "../../src/domain/random";
 import { STAGES } from "../../src/gameplay/stages";
 import {
   BOSS_ROSTER,
-  type BossId,
   type EnemyKind,
 } from "../../src/gameplay/run/content-director";
 import {
@@ -23,7 +22,7 @@ class ConstantRandom implements RandomSource {
 
 const STAGE_INPUT: readonly WaveStage[] = STAGES.map((stage) => ({
   name: stage.name,
-  boss: stage.boss as BossId,
+  boss: stage.boss,
   pool: stage.pool.map((entry) => {
     const [kind, weight, unlockWave] = entry;
     if (typeof weight !== "number" || typeof unlockWave !== "number") throw new TypeError("invalid campaign pool tuple");

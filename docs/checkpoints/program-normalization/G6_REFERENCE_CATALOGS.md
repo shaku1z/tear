@@ -1,4 +1,4 @@
-# G6 Reference Catalogs — Slice 2
+# G6 Reference Catalogs — Slices 2–3
 
 Status: implemented on the G6 catalog branch; merge, consumer, and deployment
 gates remain open.
@@ -12,8 +12,13 @@ fixed-key
 - `weapons`: complete, canonical Final Five order.
 - `upgrades`: complete, 60 authored entries in canonical authored order.
 - `achievements`: complete, 98 authored entries in canonical authored order.
-- `enemies`, `bosses`, `stages`, `modes`, and `public-tuning`: deferred
-  envelopes with explicit reasons.
+- `stages`: complete, five stable stage IDs with normalized pools, authored
+  layout, narrative/art, theme, and boss/enemy ID references.
+- `modes`: complete, seven canonical `RunMode` entries with authored order,
+  presentation metadata, lifecycle classification, and explicit training,
+  boss-only, and sandbox flags.
+- `enemies`, `bosses`, and `public-tuning`: deferred envelopes with explicit
+  reasons.
 
 The former top-level `deferredCollections` side list is removed. A consumer
 must inspect the fixed collection key and its envelope status; there is no
@@ -46,20 +51,33 @@ behavior remains a join over the static catalog. The projected JSON contains
 no functions, browser objects, mutable runtime state, or inferred completion
 behavior.
 
+Stage metadata is authoritative in the typed `STAGES` definition and its
+stable `STAGE_IDS` list. The projection maps authored pool tuples to
+`{kind, weight, unlockWave}` entries and maps source layout, chapter, art, and
+colors to normalized data. It never calls `stagePlatforms`, generates a floor
+or viewport offset, or serializes mutable hazards.
+
+Mode metadata is authoritative in the immutable `MODE_CATALOG`, which is also
+the source used to derive runtime `CONFIG.modes`. The exporter omits the
+runtime-only `debug` flag and all planner/runtime callbacks. The seven catalog
+IDs are exactly the `RunMode` union and remain in authored order.
+
 ## Evidence
 
 - `src/game-reference/game-reference.ts` — fixed envelopes, projections, and
   strict imported-artifact validation.
-- `scripts/export-game-reference.mjs` — loads typed weapon, upgrade, and
-  immutable achievement catalog sources and exports only data projections; it
-  never constructs `createAchievements` with dummy ports.
+- `scripts/export-game-reference.mjs` — loads typed weapon, upgrade, stage, and
+  immutable achievement/mode catalog sources and exports only data projections;
+  it never constructs `createAchievements` with dummy ports or executes stage
+  generation/planner functions.
 - `tests/unit/game-reference.test.ts` — counts, order, determinism, rule
   boundaries, fixed keys, malformed entries, and JSON safety.
 - `tests/unit/gameplay-definitions.test.ts` and
   `tests/unit/progression-systems.test.ts` — existing runtime catalog counts
   and progression behavior.
 - `pnpm check:game-reference` — clean CLI/Vite export into a temporary path,
-  exact local HEAD provenance, fixed keys, and 60/98 catalog counts.
+  exact local HEAD provenance, fixed keys, Final Five roster, and 60/98/5/7
+  catalog counts.
 
 This slice does not prove protected-main/origin state, wiki transport, snapshot
 promotion, consumer rendering, Cloudflare deployment, or the deferred

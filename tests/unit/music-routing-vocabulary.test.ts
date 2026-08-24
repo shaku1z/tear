@@ -9,7 +9,7 @@ function biomeId(musicId: string): string {
 describe("music routing vocabulary parity", () => {
   it("never names a campaign biome or boss absent from the authored stage definitions", () => {
     const biomes = new Set(STAGES.map((stage) => biomeId(stage.musicId)));
-    const bosses = new Set(STAGES.map((stage) => stage.boss));
+    const bosses = new Set<string>(STAGES.map((stage) => stage.boss));
     for (const rule of routing.rules) {
       if (rule.match.biome) expect(biomes.has(rule.match.biome)).toBe(true);
       if (rule.match.bossId) expect(bosses.has(rule.match.bossId)).toBe(true);

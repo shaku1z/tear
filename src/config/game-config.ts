@@ -1,4 +1,5 @@
 import type { GamepadSettings } from "../input/legacy-input-contracts";
+import { MODE_CATALOG } from "../gameplay/run/mode-catalog";
 
 // ============================================================
 //  TUNING — everything you'd want to tweak for "feel" lives here.
@@ -534,23 +535,19 @@ const CONFIG = {
     { id: "onehit",  label: "One-Hit", desc: "One touch and you fall. Rewards surge after wave 8.", oneHit: true, mods: { hp: 0.90, dmg: 1.00, count: 1.00, coin: 0.70, score: 2.20 } },
   ],
 
-  // ---- modes (endless live; others reserved for later) ----
-  modes: [
-    { id: "campaign", label: "Adventure",          enabled: true,
-      blurb: "Journey through biomes — 9 waves then a boss, stage after stage, ever deeper." },
-    { id: "endless", label: "Endless",            enabled: true,
-      blurb: "Survive forever — biomes cycle, hordes swell, mini-bosses crash in. Chase your best." },
-    { id: "gauntlet", label: "Gauntlet",           enabled: true,
-      blurb: "Endless, but a full boss storms in every 8 waves — cycling all five, ever tougher." },
-    { id: "playground", label: "Playground",       enabled: true, training: true,
-      blurb: "An open arena — spawn any enemy, grab any ability at any tier, test everything." },
-    { id: "tutorial", label: "Tutorial",            enabled: true, training: true,
-      blurb: "Learn the blade: swings, slams, power slams, launches, juggles, updrafts, throws, parries." },
-    { id: "bossonly", label: "Boss Test",          enabled: true, bossOnly: true, debug: true,
-      blurb: "Boss gauntlet — fight every boss in a row, evolving an ability after each." },
-    { id: "sandbox",  label: "Enemy Test",          enabled: true, sandbox: true, debug: true,
-      blurb: "Sandbox: every enemy variant spawns from wave 1 — try the full roster." },
-  ],
+  // Runtime config derives authored metadata from MODE_CATALOG but projects the
+  // historical runtime shape. Reference-only order/classification fields and
+  // explicit false flags must not enter configuration or replay hashes.
+  modes: MODE_CATALOG.map((mode) => ({
+    id: mode.id,
+    label: mode.label,
+    blurb: mode.blurb,
+    enabled: mode.enabled,
+    ...(mode.training ? { training: true } : {}),
+    ...(mode.bossOnly ? { bossOnly: true } : {}),
+    ...(mode.sandbox ? { sandbox: true } : {}),
+    ...(mode.id === "bossonly" || mode.id === "sandbox" ? { debug: true } : {}),
+  })),
 };
 
 // live theme: foreground "ink" colour + a separating "rim" halo, derived from the

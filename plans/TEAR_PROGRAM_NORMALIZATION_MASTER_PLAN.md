@@ -1161,10 +1161,16 @@ semantics and recording the resulting path and hash in the G6 receipt.
       preserve canonical order, uniqueness, categories/rarities, explicit
       upgrade/achievement rule kinds, and tier descriptors while excluding
       runtime apply/current/check callbacks and inferred closure mechanics.
-- [ ] Add enemies, bosses, stages, modes, and global public tuning. These
-      collections remain explicit `deferred` envelopes in the single fixed-key
-      `collections` authority until each has a separate safe data-only
-      projection; the contract does not pretend they are complete.
+- [x] Add safe data-only projections for the five authored stages and seven
+      published modes. Stages have stable canonical IDs and normalized
+      pool/layout/narrative/theme fields with boss/enemy ID references; modes
+      have canonical order, presentation metadata, classification, and
+      training/bossOnly/sandbox flags. Runtime stage generation, mutable
+      hazards, mode planners, and debug flags remain excluded.
+- [ ] Add enemies, bosses, and global public tuning. These collections remain
+      explicit `deferred` envelopes in the single fixed-key `collections`
+      authority until each has a separate safe data-only projection; the
+      contract does not pretend they are complete.
 - [x] Exclude secrets, private diagnostics, mutable runtime state, callbacks,
       browser objects, and other implementation-only objects from the
       projection; canonical JSON validation fails closed if unsafe data enters.
@@ -1178,9 +1184,10 @@ semantics and recording the resulting path and hash in the G6 receipt.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.
 
-The slice-1 and slice-2 evidence and deferred-collection boundary are recorded
-in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md` and
-`docs/checkpoints/program-normalization/G6_REFERENCE_CATALOGS.md`.
+The slice-1 through slice-3 evidence and deferred-collection boundary are
+recorded in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md`,
+`docs/checkpoints/program-normalization/G6_REFERENCE_CATALOGS.md`, and
+`docs/checkpoints/program-normalization/G6_STAGE_MODE_REFERENCE.md`.
 
 ### Wiki consumer
 

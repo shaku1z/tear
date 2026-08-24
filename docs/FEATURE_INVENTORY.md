@@ -19,10 +19,17 @@ This is the migration checklist for the architectural redesign. A checked featur
   order, categories/rarities, explicit rule/tier metadata, and no runtime
   callbacks in the projection. `achievement-catalog.ts` is the immutable
   achievement metadata authority; runtime behavior joins onto it.
-- [ ] Complete reference collections — enemies, bosses, stages, modes, and
-  global public tuning remain explicitly deferred until each has a separate
-  safe data-only projection; this slice does not imply wiki synchronization or
-  release readiness.
+- [x] Stage and mode reference catalogs — the fixed game-reference collections
+  now include the five stable authored stages and seven published `RunMode`
+  entries. Stage projections contain normalized pools/layout/narrative/theme
+  data plus boss/enemy ID references, while mode projections contain authored
+  order, presentation metadata, lifecycle classification, and explicit
+  training/boss-only/sandbox flags. Runtime stage generation, mutable hazards,
+  mode planners, and debug flags remain outside the handoff.
+- [ ] Remaining reference collections — enemies, bosses, and global public
+  tuning remain explicitly deferred until each has a separate safe data-only
+  projection; this slice does not imply wiki synchronization or release
+  readiness.
 
 ## Runtime and releases
 

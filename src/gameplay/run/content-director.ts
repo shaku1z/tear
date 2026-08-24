@@ -10,9 +10,11 @@ export const BOSS_ROSTER = Object.freeze([
 
 export type BossId = typeof BOSS_ROSTER[number]["id"];
 export type MiniBossId = Exclude<BossId, "source">;
-export type EnemyKind =
-  | "charger" | "ranged" | "flyer" | "bomber" | "armored"
-  | "priest" | "mender" | "herald" | "anchor" | "wraith" | "chimera";
+export const ENEMY_KIND_IDS = Object.freeze([
+  "charger", "ranged", "flyer", "bomber", "armored",
+  "priest", "mender", "herald", "anchor", "wraith", "chimera",
+] as const);
+export type EnemyKind = typeof ENEMY_KIND_IDS[number];
 
 export interface CampaignPoolEntry {
   readonly kind: EnemyKind;
