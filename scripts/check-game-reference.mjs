@@ -16,8 +16,11 @@ try {
   });
   if (result.status !== 0) throw new Error(`game reference exporter failed with status ${String(result.status)}`);
   const reference = JSON.parse(fs.readFileSync(output, "utf8"));
-  if (reference.format !== "game-reference.v1" || reference.source?.repository !== "shaku1z/tear" || reference.source?.sha !== sha) throw new Error("game reference check produced invalid provenance");
+  if (reference.format !== "game-reference.v1" || reference.schemaVersion !== 2 || reference.source?.repository !== "shaku1z/tear" || reference.source?.sha !== sha) throw new Error("game reference check produced invalid schema/provenance");
   if (JSON.stringify(reference.roster?.activeWeaponIds) !== JSON.stringify(["sword", "hammer", "greatsword", "chainblade", "riftlock"])) throw new Error("game reference check produced an invalid Final Five roster");
+  if (JSON.stringify(Object.keys(reference.collections ?? {}).sort()) !== JSON.stringify(["achievements", "bosses", "enemies", "modes", "public-tuning", "stages", "upgrades", "weapons"])) throw new Error("game reference check produced an invalid fixed collection authority");
+  if (reference.collections.upgrades?.status !== "complete" || reference.collections.upgrades.items?.length !== 60) throw new Error("game reference check produced an incomplete upgrade catalog");
+  if (reference.collections.achievements?.status !== "complete" || reference.collections.achievements.items?.length !== 98) throw new Error("game reference check produced an incomplete achievement catalog");
   console.log(`PASS game reference check: ${reference.source.repository}@${reference.source.sha}`);
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true });

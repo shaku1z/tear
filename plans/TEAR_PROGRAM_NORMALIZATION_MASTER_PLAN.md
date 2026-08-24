@@ -1145,7 +1145,9 @@ semantics and recording the resulting path and hash in the G6 receipt.
 ### Game-owned manifest
 
 - [x] Define a JSON-safe `game-reference.v1` schema owned by the game. The
-      slice-1 contract lives in `src/game-reference/game-reference.ts`.
+      current fixed-collection contract is schema version `2` in
+      `src/game-reference/game-reference.ts`; the unsupported PR43 schema-1
+      foundation is rejected and no backward compatibility is claimed.
 - [x] Generate it deterministically from the current typed weapon definitions
       and flat weapon tuning through `scripts/export-game-reference.mjs`; the
       exporter loads only those source modules and never concatenates or
@@ -1153,10 +1155,16 @@ semantics and recording the resulting path and hash in the G6 receipt.
 - [x] Include the repository, full source SHA, schema and Final Five roster
       versions, exact Final Five catalog, weapon metadata/mechanics/ratings,
       channels, flat weapon tuning, and terminology registry version.
-- [ ] Add upgrades, enemies, bosses, stages, modes, achievements, and global
-      public tuning. These collections are explicitly marked `deferred` in the
-      v1 contract until each has a separate safe data-only projection; the
-      foundation does not pretend they are complete.
+- [x] Add authored data-only projections for the 60 upgrades and 98
+      achievements. The immutable achievement catalog is authoritative and
+      runtime `createAchievements` joins behavior onto it; the projections
+      preserve canonical order, uniqueness, categories/rarities, explicit
+      upgrade/achievement rule kinds, and tier descriptors while excluding
+      runtime apply/current/check callbacks and inferred closure mechanics.
+- [ ] Add enemies, bosses, stages, modes, and global public tuning. These
+      collections remain explicit `deferred` envelopes in the single fixed-key
+      `collections` authority until each has a separate safe data-only
+      projection; the contract does not pretend they are complete.
 - [x] Exclude secrets, private diagnostics, mutable runtime state, callbacks,
       browser objects, and other implementation-only objects from the
       projection; canonical JSON validation fails closed if unsafe data enters.
@@ -1170,8 +1178,9 @@ semantics and recording the resulting path and hash in the G6 receipt.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.
 
-The slice-1 evidence and deferred-collection boundary are recorded in
-`docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md`.
+The slice-1 and slice-2 evidence and deferred-collection boundary are recorded
+in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md` and
+`docs/checkpoints/program-normalization/G6_REFERENCE_CATALOGS.md`.
 
 ### Wiki consumer
 
