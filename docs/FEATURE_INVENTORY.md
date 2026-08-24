@@ -2,6 +2,21 @@
 
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
+## G6 game-reference foundation
+
+- [x] Game-owned `game-reference.v1` foundation — `src/game-reference/game-reference.ts`
+  projects only JSON-safe Final Five metadata, ratings, mechanics, channels, and
+  flat weapon tuning from the current typed definitions. `scripts/export-game-reference.mjs`
+  loads only those typed source modules, binds the full repository SHA and
+  terminology registry version, and emits canonical deterministic JSON.
+- [x] Final Five/stale-generation guard — the projection requires exactly
+  Sword, Hammer, Greatsword, Chainblade, and Riftlock, rejects Spear/Ringblade
+  as active IDs, and supports `--expected-sha` fail-closed export validation.
+- [ ] Complete reference collections — upgrades, enemies, bosses, stages, modes,
+  achievements, and global public tuning remain explicitly deferred until each
+  has a separate safe data-only projection; this slice does not imply wiki
+  synchronization or release readiness.
+
 ## Runtime and releases
 
 - [x] Standalone browser release — `platform-browser-smoke.js` (standalone), `browser-smoke.js`, and the standalone build/reproducibility gates.

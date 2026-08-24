@@ -94,6 +94,8 @@ export interface WeaponDefinition {
   playstyle: string;
   description: string;
   blurb: string;
+  /** JSON-safe names for the authored mechanics; runtime hooks remain below. */
+  mechanics: readonly string[];
   tags: readonly string[];
   weaknesses: readonly string[];
   throwIdentity: string;
@@ -133,6 +135,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     playstyle: "Control, parries, and deliberate reversals.",
     description: "The responsive baseline. Leave a first cut, reverse through the line with a new swing, then Threadcut your throw route home.",
     blurb: "Responsive precision · Reversal · Threadcut recall",
+    mechanics: ["Reversal", "Threadcut"],
     tags: ["Precision", "Parry", "Recall"], weaknesses: ["Low burst", "Narrow control", "Requires timing"],
     throwIdentity: "Threadcut", ratings: { handling: 5, impact: 3, reach: 3, difficulty: 2 },
     throwCollisionPad: 4, channels: weaponChannels(),
@@ -162,6 +165,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     playstyle: "Impact, control, and destruction.",
     description: "Slow and devastating. Committed hits build Break, while Meteor throws erupt into seismic shockwaves.",
     blurb: "Committed impact · Break · Meteor shockwave",
+    mechanics: ["Break", "Meteor"],
     tags: ["Break", "Slam", "Crowd"], weaknesses: ["Slow", "Short control", "Hard parries"],
     throwIdentity: "Meteor", ratings: { handling: 1, impact: 5, reach: 2, difficulty: 3 },
     throwCollisionPad: 13,
@@ -192,6 +196,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     playstyle: "Formation cleaving and committed routes.",
     description: "A broad steel edge carries through lighter foes. Throw a spinning Wheel Cut and call it back edge-first.",
     blurb: "Broad edge · Cleaving Momentum · Wheel Cut",
+    mechanics: ["Cleave", "Wheel Cut"],
     tags: ["Reach", "Cleave", "Formation"], weaknesses: ["Slow", "Weak near hilt", "Committed"],
     throwIdentity: "Wheel Cut", ratings: { handling: 2, impact: 4, reach: 5, difficulty: 4 },
     throwCollisionPad: 10,
@@ -218,6 +223,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     playstyle: "Crowd control through physical reach and sling momentum.",
     description: "A compact blade with a full-damage Lash. Hook a target, swing it through the arena, and release it tangentially on recall.",
     blurb: "Compact Lash · Hook & Sling · Tangential release",
+    mechanics: ["Lash", "Hook & Sling"],
     tags: ["Control", "Sling", "Expert"], weaknesses: ["Needs space", "Setup", "Low boss damage"],
     throwIdentity: "Hook & Sling", ratings: { handling: 3, impact: 3, reach: 5, difficulty: 5 },
     throwCollisionPad: 9,
@@ -242,6 +248,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     playstyle: "Ranged pressure, recoil routes, and bayonet recovery.",
     description: "Fire Razor Rounds from four reforming chambers, then throw the whole weapon as a Loose Cannon and command it remotely.",
     blurb: "Razor Rounds · Recoil Cut · Loose Cannon",
+    mechanics: ["Razor Rounds", "Recoil Cut", "Capture", "Loose Cannon", "Backblast"],
     tags: ["Ranged", "Recoil", "Resource"], weaknesses: ["Chambers", "Precise fire", "No wide control"],
     throwIdentity: "Loose Cannon", ratings: { handling: 4, impact: 3, reach: 5, difficulty: 5 },
     throwCollisionPad: 7,
