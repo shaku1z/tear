@@ -6,7 +6,8 @@ separately, while merge, wiki consumer, and deployment gates remain open.
 
 This checkpoint records only the safe data-only boss handoff for the modern
 typed game. It does not claim that boss runtime behavior, presentation, or
-global tuning has been extracted, and it does not authorize wiki or production
+broader runtime/remote tuning has been extracted. The adjacent narrow authored
+base-difficulty public-tuning slice does not authorize wiki or production
 changes.
 
 ## Authority and shape

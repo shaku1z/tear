@@ -9,6 +9,7 @@ import { MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
 import { STAGE_IDS, type StageDefinition } from "../gameplay/stages";
 import { CANONICAL_BOSS_IDS, EXPECTED_BOSS_COUNT, projectBossReference, validateProjectedBosses, type GameReferenceBossV1 } from "./boss-reference";
 import type { BossDefinition } from "../gameplay/run/boss-definitions";
+import { FINAL_FIVE_WEAPON_TUNING } from "../gameplay/weapon-tuning";
 import { projectEnemyReference, validateProjectedEnemies, type EnemyReferenceFamilySource, type GameReferenceEnemiesV1 } from "./enemy-reference";
 import { projectMode, projectStage, validateProjectedMode, validateProjectedStage, type GameReferenceModeV1, type GameReferenceStageV1 } from "./stage-mode-reference";
 import { assertValidPublicTuning, projectPublicTuning, type GameReferencePublicTuningV1 } from "./public-tuning-reference";
@@ -219,10 +220,16 @@ function channels(value: WeaponChannels, path: string): Readonly<WeaponChannels>
   return Object.freeze(result);
 }
 
-function tuning(value: unknown, path: string): Readonly<Record<string, number>> {
+function tuning(value: unknown, path: string, id: WeaponId): Readonly<Record<string, number>> {
   const source = record(value, path);
-  const entries = Object.keys(source).sort().map((key) => [text(key, `${path} key`), finite(source[key], `${path}.${key}`)] as const);
-  if (entries.length === 0) throw new TypeError(`${path} must contain at least one public numeric value`);
+  const expected = FINAL_FIVE_WEAPON_TUNING[id] as Readonly<Record<string, number>>;
+  const expectedKeys = Object.keys(expected);
+  exactKeys(source, path, expectedKeys);
+  const entries = expectedKeys.map((key) => {
+    const actual = finite(source[key], `${path}.${key}`);
+    if (actual !== expected[key]) throw new TypeError(`${path}.${key} does not match canonical ${id} tuning`);
+    return [key, actual] as const;
+  });
   return Object.freeze(Object.fromEntries(entries));
 }
 
@@ -349,8 +356,9 @@ function validateProjectedWeapon(value: unknown, path: string): GameReferenceWea
   const id = text(source.id, `${path}.id`);
   if (isRetiredWeaponSelection(id)) throw new TypeError(`${path}.id ${id} is retired and cannot be active`);
   if (!CANONICAL_FINAL_FIVE_WEAPON_IDS.includes(id as WeaponId)) throw new TypeError(`${path}.id ${id} is not an active Final Five weapon`);
+  const weaponId = id as WeaponId;
   return Object.freeze({
-    id: id as WeaponId,
+    id: weaponId,
     name: text(source.name, `${path}.name`),
     model: text(source.model, `${path}.model`),
     playstyle: text(source.playstyle, `${path}.playstyle`),
@@ -363,7 +371,7 @@ function validateProjectedWeapon(value: unknown, path: string): GameReferenceWea
     ratings: ratings(source.ratings as WeaponRatings, `${path}.ratings`),
     throwCollisionPad: finite(source.throwCollisionPad, `${path}.throwCollisionPad`),
     channels: channels(source.channels as WeaponChannels, `${path}.channels`),
-    tuning: tuning(source.tuning, `${path}.tuning`),
+    tuning: tuning(source.tuning, `${path}.tuning`, weaponId),
   });
 }
 
@@ -458,7 +466,7 @@ function projectWeapon(source: WeaponDefinition, tuningByWeapon: GameReferencePr
     ratings: ratings(source.ratings, `weapon ${id}.ratings`),
     throwCollisionPad: finite(source.throwCollisionPad, `weapon ${id}.throwCollisionPad`),
     channels: channels(source.channels, `weapon ${id}.channels`),
-    tuning: tuning(weaponTuning, `weapon ${id}.tuning`),
+    tuning: tuning(weaponTuning, `weapon ${id}.tuning`, id as WeaponId),
   }, `weapon ${id}`);
 }
 
@@ -471,6 +479,7 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
   if (terminologyVersion !== GAME_REFERENCE_TERMINOLOGY_VERSION) throw new TypeError(`terminologyVersion must be ${GAME_REFERENCE_TERMINOLOGY_VERSION}`);
   const ids = input.weapons.map((weapon) => text(weapon.id, "weapon.id"));
   assertExactRoster(ids, "weapons");
+  assertExactRoster(Object.keys(input.tuningByWeapon), "tuningByWeapon");
   const byId = new Map(input.weapons.map((weapon) => [weapon.id, weapon] as const));
   if (byId.size !== input.weapons.length) throw new TypeError("weapons must not contain duplicate definitions");
   const weapons = Object.freeze(CANONICAL_FINAL_FIVE_WEAPON_IDS.map((id) => {

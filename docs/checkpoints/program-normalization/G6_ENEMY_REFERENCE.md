@@ -1,8 +1,8 @@
 # G6 Enemy Reference — Slice 4
 
 Status: structural enemy catalog implemented on the G6 branch; the authored
-boss catalog is now complete, while merge, wiki consumer, public-tuning, and
-deployment gates remain open.
+boss catalog and narrow authored base-difficulty public-tuning envelope are now
+complete, while merge, wiki consumer, and deployment gates remain open.
 
 This checkpoint records only the safe data-only enemy handoff for the modern
 typed game. It does not claim that enemy runtime behavior has been extracted or
@@ -40,8 +40,9 @@ the output contains no `undefined` values or functions.
 
 The authored boss catalog is a separate complete collection, but boss runtime
 behavior/tuning beyond its identity, stage join, and phase thresholds remains
-outside this slice. Global public tuning remains an explicit deferred
-collection. There is no wiki synchronization, snapshot promotion, Cloudflare
+outside this slice. The narrow base-difficulty public-tuning collection is
+complete; broad runtime/remote tuning and upgrade tuning remain outside this
+slice. There is no wiki synchronization, snapshot promotion, Cloudflare
 deployment, or release-readiness claim here.
 
 ## Evidence

@@ -62,10 +62,10 @@ not serialized.
   mode order, booleans, and text are validated.
 - The fixed `collections` envelope remains schema version `2`. Weapons,
   upgrades, achievements, stages, modes, and the structural enemy catalog are
-  complete; the authored boss catalog and phase thresholds are complete, while
-  global `public-tuning` remains an explicit deferred envelope. Boss and enemy
-  runtime behavior/tuning beyond the authored catalogs is outside this
-  stage/mode checkpoint.
+  complete; the authored boss catalog and phase thresholds plus the narrow
+  authored base-difficulty `public-tuning` envelope are complete. Broad
+  runtime/remote tuning, upgrade tuning, and boss/enemy runtime behavior beyond
+  the authored catalogs remain outside this stage/mode checkpoint.
 
 ## Focused checks
 
@@ -78,4 +78,4 @@ not serialized.
 - `git diff --check`
 
 No browser suite, wiki change, snapshot promotion, merge, or deployment is
-part of this slice.
+part of this slice; those gates remain open.
