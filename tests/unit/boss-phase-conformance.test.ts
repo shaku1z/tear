@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import type { ArenaZone, EnemyPlatform, EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
 import { BOSS_ROSTER, pickMiniBoss, type BossId } from "../../src/gameplay/run/content-director";
+import { bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
 import { STAGES } from "../../src/gameplay/stages";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
 import { createMirrorTestHarness } from "./mirror-test-harness";
@@ -110,12 +111,13 @@ describe("boss phase conformance", () => {
   it("preserves Aldric fire, kneel cleanup and witnessed/angered continuation boundary", () => {
     const { boss, platforms, player } = createBoss("aldric");
     const projectiles: EnemyProjectile[] = [];
-    boss.hp = boss.maxHp * (CONFIG.aldric.fireTier - 0.01);
+    const [fireTier, fakeTier] = bossPhaseMarks("aldric");
+    boss.hp = boss.maxHp * (fireTier - 0.01);
     updateBoss(boss, platforms, player, projectiles);
     expect(boss.mode).toBe("fire");
     expect(boss.fireZones.length).toBeGreaterThan(0);
 
-    boss.hp = boss.maxHp * (CONFIG.aldric.fakeTier - 0.01);
+    boss.hp = boss.maxHp * (fakeTier - 0.01);
     updateBoss(boss, platforms, player, projectiles);
     expect(boss).toMatchObject({ mode: "downed", phaseTag: "THE KNEEL" });
     expect(boss.zones).toEqual([]);
@@ -163,12 +165,13 @@ describe("boss phase conformance", () => {
   it("preserves Source collapse, frozen kneel, true-form thaw and death cleanup", () => {
     const { boss, platforms, player } = createBoss("source");
     const projectiles: EnemyProjectile[] = [];
-    boss.hp = boss.maxHp * (CONFIG.source.voidTier - 0.01);
+    const [voidTier, fakeTier] = bossPhaseMarks("source");
+    boss.hp = boss.maxHp * (voidTier - 0.01);
     updateBoss(boss, platforms, player, projectiles);
     expect(boss).toMatchObject({ phaseMarker: 2, mode: "collapse", collapsing: true, requestVoidCinematic: true });
 
     boss.cinematicRequest = null;
-    boss.hp = boss.maxHp * (CONFIG.source.fakeTier - 0.01);
+    boss.hp = boss.maxHp * (fakeTier - 0.01);
     updateBoss(boss, platforms, player, projectiles);
     expect(boss).toMatchObject({ phaseMarker: 3, mode: "downed", freezeVoid: true });
     boss.hit(100_000, 1, 0);

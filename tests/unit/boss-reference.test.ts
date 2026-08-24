@@ -23,6 +23,12 @@ describe("authored boss reference", () => {
     for (const definition of BOSS_DEFINITIONS) expect(Object.isFrozen(definition.phaseMarks)).toBe(true);
     expect(BOSS_ROSTER).toEqual(expected.map(({ id, name }) => ({ id, name })));
     expect(Object.isFrozen(BOSS_ROSTER)).toBe(true);
+    const first = BOSS_ROSTER[0];
+    const firstId: "warden" = first.id;
+    const firstName: "The Warden" = first.name;
+    expect(firstId).toBe("warden");
+    expect(firstName).toBe("The Warden");
+    expect(Object.keys(first)).toEqual(["id", "name"]);
   });
 
   it("projects the exact stage bijection and imported shape", () => {
@@ -74,5 +80,7 @@ describe("authored boss reference", () => {
     expect(CONFIG.aldric.fakeTier).toBe(bossPhaseMarks("aldric")[1]);
     expect(CONFIG.source.voidTier).toBe(bossPhaseMarks("source")[0]);
     expect(CONFIG.source.fakeTier).toBe(bossPhaseMarks("source")[1]);
+    expect({ fireTier: CONFIG.aldric.fireTier, fakeTier: CONFIG.aldric.fakeTier }).toEqual({ fireTier: 0.65, fakeTier: 0.20 });
+    expect({ voidTier: CONFIG.source.voidTier, fakeTier: CONFIG.source.fakeTier }).toEqual({ voidTier: 0.58, fakeTier: 0.28 });
   });
 });

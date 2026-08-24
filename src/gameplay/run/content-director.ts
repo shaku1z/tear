@@ -1,8 +1,18 @@
 import type { RandomSource } from "../../domain/random";
-import { BOSS_DEFINITIONS } from "./boss-definitions";
+import { BOSS_DEFINITIONS, type BossDefinition } from "./boss-definitions";
+
+type BossRosterProjection<T extends readonly BossDefinition[]> = {
+  readonly [K in keyof T]: T[K] extends BossDefinition
+    ? Readonly<{ id: T[K]["id"]; name: T[K]["name"] }>
+    : never;
+};
+
+function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T): BossRosterProjection<T> {
+  return definitions.map(({ id, name }) => Object.freeze({ id, name })) as BossRosterProjection<T>;
+}
 
 /** Compatibility roster view; identity and order are authored in BOSS_DEFINITIONS. */
-export const BOSS_ROSTER = Object.freeze(BOSS_DEFINITIONS.map(({ id, name }) => Object.freeze({ id, name })));
+export const BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
 
 export type BossId = typeof BOSS_DEFINITIONS[number]["id"];
 export type MiniBossId = Exclude<BossId, "source">;

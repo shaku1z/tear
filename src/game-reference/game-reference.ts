@@ -7,7 +7,7 @@ import type { WeaponChannels, WeaponDefinition, WeaponRatings } from "../gamepla
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
 import { MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
 import { STAGE_IDS, type StageDefinition } from "../gameplay/stages";
-import { projectBossReference, validateProjectedBosses, type GameReferenceBossV1 } from "./boss-reference";
+import { CANONICAL_BOSS_IDS, EXPECTED_BOSS_COUNT, projectBossReference, validateProjectedBosses, type GameReferenceBossV1 } from "./boss-reference";
 import type { BossDefinition } from "../gameplay/run/boss-definitions";
 import { projectEnemyReference, validateProjectedEnemies, type EnemyReferenceFamilySource, type GameReferenceEnemiesV1 } from "./enemy-reference";
 import { projectMode, projectStage, validateProjectedMode, validateProjectedStage, type GameReferenceModeV1, type GameReferenceStageV1 } from "./stage-mode-reference";
@@ -307,6 +307,34 @@ function deferredCollection(value: unknown, path: string): DeferredGameReference
   return Object.freeze({ status: "deferred", reason: text(source.reason, `${path}.reason`) });
 }
 
+function assertBossStageConsistency(
+  stages: readonly GameReferenceStageV1[],
+  bosses: readonly GameReferenceBossV1[],
+): void {
+  const stagesById = new Map(stages.map((stage) => [stage.id, stage] as const));
+  const stageByBoss = new Map<string, string>();
+  for (const stage of stages) {
+    if (stageByBoss.has(stage.boss)) throw new TypeError("gameReference stage boss references must form a five-way bijection");
+    stageByBoss.set(stage.boss, stage.id);
+  }
+  const bossByStage = new Map<string, string>();
+  for (const boss of bosses) {
+    if (bossByStage.has(boss.stageId)) throw new TypeError("gameReference boss stage references must form a five-way bijection");
+    const stage = stagesById.get(boss.stageId);
+    if (stage?.boss !== boss.id || stageByBoss.get(boss.id) !== boss.stageId) {
+      throw new TypeError(`gameReference boss/stage reference mismatch for ${boss.id}`);
+    }
+    bossByStage.set(boss.stageId, boss.id);
+  }
+  if (
+    stageByBoss.size !== EXPECTED_BOSS_COUNT
+    || bossByStage.size !== EXPECTED_BOSS_COUNT
+    || CANONICAL_BOSS_IDS.some((id) => !stageByBoss.has(id) || !bosses.some((boss) => boss.id === id))
+  ) {
+    throw new TypeError("gameReference boss/stage references must form a canonical five-way bijection");
+  }
+}
+
 function assertExactRoster(ids: readonly string[], path: string): asserts ids is readonly WeaponId[] {
   if (ids.length !== CANONICAL_FINAL_FIVE_WEAPON_IDS.length) throw new TypeError(`${path} must contain exactly the Final Five roster`);
   const unique = new Set(ids);
@@ -576,6 +604,7 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   exactKeys(bossesCollection, "gameReference.collections.bosses", ["status", "items"]);
   if (bossesCollection.status !== "complete" || !Array.isArray(bossesCollection.items)) throw new TypeError("gameReference.collections.bosses must be a complete collection");
   validateProjectedBosses(bossesCollection.items, "gameReference.collections.bosses.items");
+  assertBossStageConsistency(stagesCollection.items, bossesCollection.items);
   deferredCollection(collections["public-tuning"], "gameReference.collections.public-tuning");
   canonicalStringify(value);
 }

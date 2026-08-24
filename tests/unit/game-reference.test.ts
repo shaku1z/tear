@@ -332,6 +332,12 @@ describe("game-reference.v1", () => {
     firstStage.boss = "not-a-boss";
     expect(() => { assertValidGameReferenceV1(wrongBoss); }).toThrow(/canonical boss ID/u);
 
+    const mismatchedBoss = structuredClone(reference()) as unknown as { collections: { stages: { items: { boss: string }[] } } };
+    const mismatchedStage = mismatchedBoss.collections.stages.items.at(0);
+    if (mismatchedStage === undefined) throw new Error("missing stage fixture");
+    mismatchedStage.boss = "source";
+    expect(() => { assertValidGameReferenceV1(mismatchedBoss); }).toThrow(/boss\/stage reference mismatch|five-way bijection/u);
+
     const wrongEnemy = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { kind: string }[] }[] } } };
     const enemyStage = wrongEnemy.collections.stages.items.at(0);
     const enemyEntry = enemyStage?.pool[0];
