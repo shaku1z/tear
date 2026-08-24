@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +14,8 @@ import {
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const policyPath = path.join(repositoryRoot, "preservation", "workspace-parent-layout-policy.json");
 const canonicalPolicy = JSON.parse(fs.readFileSync(policyPath, "utf8"));
+const checkerPath = path.join(repositoryRoot, "scripts", "check-parent-layout.mjs");
+const contractPath = path.join(repositoryRoot, "config", "workspace-contract.json");
 
 function clonePolicy() {
   return JSON.parse(JSON.stringify(canonicalPolicy));
@@ -22,6 +25,117 @@ function assertInvalid(policy, pattern) {
   const errors = validateParentLayoutPolicy(policy);
   assert.notEqual(errors.length, 0, "the malformed policy should be rejected");
   if (pattern !== undefined) assert.match(errors.join("\n"), pattern);
+}
+
+function git(root, argumentsList, { allowFailure = false } = {}) {
+  const result = spawnSync("git", argumentsList, { cwd: root, encoding: "utf8", stdio: "pipe", windowsHide: true });
+  if (!allowFailure) assert.equal(result.status, 0, `git ${argumentsList.join(" ")} failed: ${result.stderr || result.stdout}`);
+  return { status: result.status, stdout: String(result.stdout ?? "").trim(), stderr: String(result.stderr ?? "").trim() };
+}
+
+function writeFixtureFile(root, relativePath, contents) {
+  const filePath = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, contents, "utf8");
+}
+
+function createFixtureRepository(root, remote, { oracleCommit = false } = {}) {
+  if (oracleCommit) {
+    const clone = spawnSync("git", ["clone", "--shared", "--no-tags", "--no-checkout", "--quiet", repositoryRoot, root], {
+      cwd: path.dirname(root),
+      encoding: "utf8",
+      stdio: "pipe",
+      windowsHide: true,
+    });
+    assert.equal(clone.status, 0, `fixture clone failed: ${clone.stderr || clone.stdout}`);
+    git(root, ["remote", "set-url", "origin", remote]);
+    git(root, ["checkout", "-q", "-B", "main", canonicalPolicy.canonical.oracle.lockedCommit]);
+    git(root, ["sparse-checkout", "init", "--no-cone"]);
+    git(root, ["sparse-checkout", "set", "--no-cone", "README.md"]);
+  } else {
+    fs.mkdirSync(root, { recursive: true });
+    writeFixtureFile(root, "README.md", "parent-layout fixture\n");
+    git(root, ["init", "-q"]);
+  }
+  git(root, ["config", "user.name", "Tear parent-layout test"]);
+  git(root, ["config", "user.email", "tear-parent-layout@example.test"]);
+  if (!oracleCommit) {
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "fixture"]);
+    git(root, ["branch", "-M", "main"]);
+    git(root, ["remote", "add", "origin", remote]);
+  }
+  git(root, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
+  git(root, ["config", "branch.main.remote", "origin"]);
+  git(root, ["config", "branch.main.merge", "refs/heads/main"]);
+}
+
+function createStrictFixture({ loose = false, forbidden = false, invalidPointer = false, extraReparse = false } = {}) {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "tear-parent-layout-strict-"));
+  const workspaceRoot = path.join(base, "workspace");
+  const tempRoot = path.join(base, "temp");
+  const gameRoot = path.join(workspaceRoot, "Tear");
+  const musicRoot = path.join(workspaceRoot, "tear-score");
+  const wikiRoot = path.join(workspaceRoot, "tear-wiki");
+  const oracleRoot = path.join(workspaceRoot, "Tear-oracle");
+  const archiveRoot = path.join(workspaceRoot, "Tear-archives");
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  fs.mkdirSync(tempRoot, { recursive: true });
+  fs.mkdirSync(archiveRoot, { recursive: true });
+  createFixtureRepository(gameRoot, "git@github.com:shaku1z/tear.git", { oracleCommit: true });
+  createFixtureRepository(musicRoot, "git@github.com:shaku1z/tear-music.git");
+  createFixtureRepository(wikiRoot, "git@github.com:shaku1z/tear-wiki.git");
+  git(gameRoot, ["worktree", "add", "-q", "--detach", oracleRoot, "HEAD"]);
+  git(gameRoot, ["worktree", "lock", "--reason", "comparison-only fixture", oracleRoot]);
+
+  const deferredSourceRoot = path.join(tempRoot, "Tear-budget-architecture");
+  const deferredTargetRoot = path.join(tempRoot, "Tear-tearscore-normalization");
+  const deferredSourceNode = path.join(deferredSourceRoot, "node_modules");
+  const deferredTargetNode = path.join(deferredTargetRoot, "node_modules");
+  fs.mkdirSync(deferredSourceRoot, { recursive: true });
+  fs.mkdirSync(deferredTargetNode, { recursive: true });
+  let junctionAvailable = true;
+  try {
+    fs.symlinkSync(deferredTargetNode, deferredSourceNode, "junction");
+  } catch {
+    junctionAvailable = false;
+  }
+  fs.mkdirSync(path.join(archiveRoot, "tear-g5-fixture", "nested", "Tear-main-publication"), { recursive: true });
+  if (loose) writeFixtureFile(tempRoot, "tear-loose-notes.txt", "review only\n");
+  if (forbidden) fs.mkdirSync(path.join(tempRoot, "Tear-main-publication"));
+  if (invalidPointer) {
+    fs.mkdirSync(path.join(workspaceRoot, "Tear-invalid"));
+    fs.writeFileSync(path.join(workspaceRoot, "Tear-invalid", ".git"), "gitdir: missing-admin\n", "utf8");
+  }
+  if (extraReparse) {
+    const outside = path.join(base, "outside");
+    fs.mkdirSync(outside, { recursive: true });
+    try {
+      fs.symlinkSync(outside, path.join(workspaceRoot, "Tear-extra-link"), "junction");
+    } catch {
+      junctionAvailable = false;
+    }
+  }
+  return { base, workspaceRoot, tempRoot, gameRoot, musicRoot, wikiRoot, oracleRoot, archiveRoot, junctionAvailable };
+}
+
+function cleanupStrictFixture(fixture) {
+  try { git(fixture.gameRoot, ["worktree", "unlock", fixture.oracleRoot], { allowFailure: true }); } catch { /* fixture cleanup */ }
+  try { git(fixture.gameRoot, ["worktree", "remove", "--force", fixture.oracleRoot], { allowFailure: true }); } catch { /* fixture cleanup */ }
+  fs.rmSync(fixture.base, { recursive: true, force: true });
+}
+
+function strictResult(fixture) {
+  return runParentLayoutCheck({
+    root: fixture.gameRoot,
+    strict: true,
+    policyPath,
+    contractPath,
+    workspaceRoot: fixture.workspaceRoot,
+    tempRoot: fixture.tempRoot,
+    archiveRoot: fixture.archiveRoot,
+    oracleRoot: fixture.oracleRoot,
+  });
 }
 
 test("canonical parent-layout policy passes the portable checker", () => {
@@ -58,6 +172,100 @@ test("explicit policy paths remain bound to the workspace contract by default", 
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test("strict inspection passes a clean fixture without descending archive payloads", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    const result = strictResult(fixture);
+    assert.equal(result.ok, true, result.errors.join("\n"));
+    assert.equal(result.status, "pass");
+    assert.equal(result.checks.deferredPair.status, "validated");
+    assert.equal(result.classifications.some((entry) => entry.name === "Tear-main-publication"), false, "archive payload must remain opaque");
+    assert.equal(result.noGo.length, 0);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection reports loose Tear-related items without failing the run", (t) => {
+  const fixture = createStrictFixture({ loose: true });
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    const result = strictResult(fixture);
+    assert.equal(result.ok, true, result.errors.join("\n"));
+    assert.equal(result.status, "review");
+    assert.match(result.review.join("\n"), /tear-loose-notes\.txt/u);
+    assert.deepEqual(result.noGo, []);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection marks forbidden development/deployment names as no-go", (t) => {
+  const fixture = createStrictFixture({ forbidden: true });
+  try {
+    if (!fixture.junctionAvailable) t.diagnostic("directory junction unavailable; deferred pair also contributes a no-go");
+    const result = strictResult(fixture);
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /forbidden name Tear-main-publication/u);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection rejects invalid .git pointers without descending into their payloads", (t) => {
+  const fixture = createStrictFixture({ invalidPointer: true });
+  try {
+    if (!fixture.junctionAvailable) t.diagnostic("directory junction unavailable; deferred pair also contributes a no-go");
+    const result = strictResult(fixture);
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /invalid \.git pointer target/u);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection rejects extra immediate reparses but does not inspect nested archive payloads", (t) => {
+  const fixture = createStrictFixture({ extraReparse: true });
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    const result = strictResult(fixture);
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /Tear-extra-link.*immediate symlink or reparse/u);
+    assert.equal(result.noGo.some((error) => /Tear-main-publication/u.test(error)), false, "nested archive contents must not be inspected");
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict CLI requires all explicit runtime roots and returns nonzero no-go JSON", () => {
+  const result = spawnSync(process.execPath, [checkerPath, "--strict", "--root", repositoryRoot], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    stdio: "pipe",
+    windowsHide: true,
+  });
+  assert.notEqual(result.status, 0);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.status, "no-go");
+  assert.match(output.noGo.join("\n"), /requires explicit --workspace-root/u);
+  assert.match(output.noGo.join("\n"), /requires explicit --temp-root/u);
+  assert.match(output.noGo.join("\n"), /requires explicit --archive-root/u);
+  assert.match(output.noGo.join("\n"), /requires explicit --oracle-root/u);
 });
 
 test("malformed policy shape, format, schema, and repository are rejected", () => {

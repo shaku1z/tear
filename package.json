@@ -119,6 +119,7 @@
     "check:active-roster": "node scripts/check-active-roster.mjs",
     "check:artifact-disposition": "node scripts/validate-artifact-disposition.mjs",
     "check:parent-layout": "node scripts/check-parent-layout.mjs",
+    "check:parent-layout:local": "node scripts/check-parent-layout.mjs --strict",
     "report:artifacts": "node scripts/report-artifacts.mjs",
     "report:workspace-recovery": "node scripts/report-workspace-recovery.mjs",
     "compare:preserved-copies": "node scripts/compare-preserved-copies.mjs",
