@@ -69,5 +69,8 @@ their existing runtime contracts and require separate safe projections.
 - targeted ESLint and `git diff --check`
 
 The clean-HEAD exporter gate proves only local source identity and contract
-shape. It does not prove protected-main/origin state, artifact transport, wiki
-consumption, or Cloudflare deployment.
+shape. This tuning slice does not prove protected-main/origin state, wiki
+consumption, or Cloudflare deployment. Game-side post-Validate artifact
+transport is recorded separately in
+`G6_REFERENCE_ARTIFACT_PUBLICATION.md` and does not authorize consumer
+promotion.

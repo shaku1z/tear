@@ -2,8 +2,8 @@
 
 Status: game-reference foundation, progression catalogs, safe stage/mode
 catalog projections, the structural enemy catalog, the authored boss catalog,
-and the authored base difficulty public-tuning envelope are implemented; G6
-remains open.
+the authored base difficulty public-tuning envelope, and game-side post-Validate
+artifact transport are implemented; G6 remains open.
 
 This checkpoint records the first six game-owned handoff slices for the modern
 typed runtime. It is a contract foundation, not a wiki synchronization or
@@ -33,6 +33,9 @@ release approval.
 - Boss projection boundary: `src/game-reference/boss-reference.ts`.
 - Public tuning projection boundary: `src/game-reference/public-tuning-reference.ts`.
 - Deterministic exporter: `scripts/export-game-reference.mjs`
+- Post-Validate artifact publisher:
+  `scripts/publish-game-reference-artifact.mjs` and the `Validate` workflow in
+  `.github/workflows/ci.yml`.
 - Focused evidence: `tests/unit/game-reference.test.ts`,
   `tests/unit/boss-reference.test.ts`, and `tests/unit/boss-phase-conformance.test.ts`.
 - Command: `pnpm export:game-reference`
@@ -100,6 +103,17 @@ release approval.
 - The CLI refuses dirty tracked or untracked worktrees and refuses a supplied
   SHA that differs from the current `HEAD`; this prevents a working tree from
   being falsely attributed to an older commit.
+- After the full `pnpm check:functional` gate succeeds on a `push` to
+  protected `refs/heads/main`, Validate publishes a separate
+  `tear-game-reference-v1-<GITHUB_SHA>` artifact. It contains exactly
+  `game-reference.v1.json` and `game-reference.v1.receipt.json`; the receipt
+  binds the repository, exact source SHA, format/schema/terminology versions,
+  manifest filename, manifest SHA-256, artifact name, validation run ID,
+  event/ref, and 90-day retention. The publisher repeats the clean-HEAD/SHA
+  preflight and rejects extra output files before upload. Pull-request Validate
+  runs do not publish this dedicated artifact. The existing release-target
+  upload remains immediately after the functional gate, with its paths and
+  behavior separate and unchanged.
 
 ## Deliberate boundary
 
@@ -112,6 +126,8 @@ in the handoff.
 
 The wiki consumer, dispatch workflow, game-reference snapshot promotion, and
 Cloudflare deployment are outside this slice and remain locked by the G6 plan.
+Artifact publication is transport evidence only; it does not authorize a
+consumer to fetch, promote, synchronize, or deploy the manifest.
 
 ## Focused checks
 
@@ -125,6 +141,9 @@ Cloudflare deployment are outside this slice and remain locked by the G6 plan.
 - `pnpm check:game-reference` exercises clean CLI/Vite export with an exact
   SHA, temporary output path, and provenance check; it is part of
   `check:functional`.
+- `pnpm test:game-reference-artifact` checks post-gate workflow ordering,
+  exact SHA binding, manifest/receipt/digest presence, fixed artifact scope,
+  retention, and the absence of deployment/dispatch commands.
 - The preflight proves only the local checkout's clean `HEAD` identity. It does
   not prove protected-main/origin state, artifact transport, snapshot
   promotion, or deployment; those remain deferred to later G6/G7 gates.

@@ -121,7 +121,9 @@ remain excluded.
   11/5 catalog counts plus the complete five-entry public difficulty catalog
   (with enemy affix/preset and boss stage/phase shape checked as well).
 
-This slice does not prove protected-main/origin state, wiki transport, snapshot
-promotion, consumer rendering, Cloudflare deployment, or broad public tuning.
-Boss and enemy runtime behavior/tuning, wiki transport, and deployment remain
+This catalog slice does not prove protected-main/origin state, wiki consumer
+transport, snapshot promotion, consumer rendering, Cloudflare deployment, or
+broad public tuning. The separate G6 Slice 7 checkpoint records the game-side
+post-Validate artifact transport only; it does not close the later wiki,
+promotion, or deployment gates. Boss and enemy runtime behavior/tuning remain
 later G6/G7 gates.
