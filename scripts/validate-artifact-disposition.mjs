@@ -114,10 +114,22 @@ export function validateArtifactDispositionShape(disposition) {
   const source = disposition?.sourceReport;
   if (source?.format !== "tear-artifact-retention-manifest") errors.push("sourceReport.format must identify the artifact report");
   if (source?.sourceId !== "ignored-artifacts" || source?.sourceRelativePath !== "artifacts") errors.push("sourceReport must identify the ignored-artifacts/artifacts source");
+  if (source?.archiveRoot !== "Tear-archives" || !isSafeRelativePath(source?.archiveRoot)) errors.push("sourceReport.archiveRoot must be the external Tear-archives root name");
+  if (!isSafeRelativePath(source?.archivePath)) errors.push("sourceReport.archivePath must be a safe relative archive path");
+  if (!Number.isSafeInteger(source?.bytes) || source.bytes < 0) errors.push("sourceReport.bytes must be a non-negative safe integer");
+  if (source?.policyPath !== "preservation/artifact-retention-policy.json") errors.push("sourceReport.policyPath must bind the tracked retention policy");
   if (!SHA256_PATTERN.test(source?.sha256 ?? "")) errors.push("sourceReport.sha256 must be a SHA-256");
   if (!SHA256_PATTERN.test(source?.policySha256 ?? "")) errors.push("sourceReport.policySha256 must be a SHA-256");
+  if (typeof source?.generatedAtUtc !== "string" || Number.isNaN(Date.parse(source.generatedAtUtc))) errors.push("sourceReport.generatedAtUtc must be an ISO timestamp");
+  if (source?.age?.basis !== "mtimeUtc") errors.push("sourceReport.age.basis must be mtimeUtc");
+  if (!Number.isSafeInteger(source?.age?.minAgeDays) || source.age.minAgeDays < 0) errors.push("sourceReport.age.minAgeDays must be a non-negative safe integer");
+  if (typeof source?.age?.cutoffUtc !== "string" || Number.isNaN(Date.parse(source.age.cutoffUtc))) errors.push("sourceReport.age.cutoffUtc must be an ISO timestamp");
   if (!Number.isSafeInteger(source?.summary?.eligibleEntries) || source.summary.eligibleEntries !== 104) errors.push("sourceReport.summary.eligibleEntries must be 104");
   if (!Number.isSafeInteger(source?.summary?.eligibleBytes) || source.summary.eligibleBytes !== 31_683_314) errors.push("sourceReport.summary.eligibleBytes must be 31683314");
+  for (const field of ["scannedEntries", "protectedEntries", "refusedEntries", "tooYoungEntries", "futureEntries", "observedBytes"]) {
+    if (!Number.isSafeInteger(source?.summary?.[field]) || source.summary[field] < 0) errors.push(`sourceReport.summary.${field} must be a non-negative safe integer`);
+  }
+  if (typeof source?.generationCommand !== "string" || source.generationCommand.trim() === "") errors.push("sourceReport.generationCommand must be recorded");
 
   const entries = disposition?.entries;
   if (!Array.isArray(entries) || entries.length !== 104) {
@@ -297,15 +309,20 @@ export function validateArtifactDisposition({
   root = process.cwd(),
   dispositionPath = DEFAULT_ARTIFACT_DISPOSITION_PATH,
   policyPath = DEFAULT_ARTIFACT_RETENTION_POLICY_PATH,
+  verifyFiles = false,
   archiveRoot,
   now = new Date(),
 } = {}) {
   const absoluteRoot = path.resolve(root);
   const loaded = readArtifactDisposition(dispositionPath);
   const errors = [...loaded.errors, ...validateArtifactDispositionShape(loaded.disposition)];
+  if (verifyFiles !== undefined && typeof verifyFiles !== "boolean") errors.push("verifyFiles must be boolean");
   if (loaded.disposition === null || errors.length > 0) return { ok: false, status: "invalid", errors, unreviewed: [], missing: [], changed: [] };
 
   const disposition = loaded.disposition;
+  const shouldVerifyFiles = verifyFiles === true || archiveRoot !== undefined;
+  if (!shouldVerifyFiles) return { ok: true, status: "valid", errors: [], unreviewed: [], missing: [], changed: [] };
+
   const headResult = git(absoluteRoot, ["rev-parse", "HEAD"]);
   if (!headResult.ok) errors.push("could not read current Git HEAD");
   else {
@@ -343,10 +360,15 @@ export function validateArtifactDisposition({
 function parseArguments(argumentsList) {
   const options = {
     root: process.cwd(),
+    verifyFiles: false,
     ...(process.env.TEAR_ARTIFACT_ARCHIVE_ROOT ? { archiveRoot: process.env.TEAR_ARTIFACT_ARCHIVE_ROOT } : {}),
   };
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index];
+    if (argument === "--verify-files") {
+      options.verifyFiles = true;
+      continue;
+    }
     if (argument === "--help") {
       options.help = true;
       continue;
@@ -370,7 +392,7 @@ function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
     if (options.help) {
-      console.log("Usage: node scripts/validate-artifact-disposition.mjs [--root <game-root>] [--archive-root <external-archive-root>] [--disposition <manifest.json>] [--policy <policy.json>]");
+      console.log("Usage: node scripts/validate-artifact-disposition.mjs [--root <game-root>] [--verify-files] [--archive-root <external-archive-root>] [--disposition <manifest.json>] [--policy <policy.json>]");
       return;
     }
     const result = validateArtifactDisposition(options);

@@ -18,9 +18,11 @@ moved, deleted, overwritten, or deduplicated.
 | --- | --- |
 | Tracked disposition | `preservation/artifact-retention-disposition.json` |
 | Disposition SHA-256 | `89ab84227545886cf0b05675f7658acaf081b177abb37de68b7b115f64f1744c` |
+| Portable shape/metadata validation | Default `pnpm check:artifact-disposition` is clean-clone safe and does not enumerate ignored artifacts |
+| Explicit local file verification | `--verify-files` passed against the current local 104-file set |
 | Source report | `Tear-archives/2026-08-23-g5-artifact-disposition/artifact-retention-report-5281470.json` |
 | Source report SHA-256 | `9e8e8274e5d773ae2507c6feb4a2563202fca4cf9b0eb20d2ef704b9de9edbb4` |
-| Explicit archive verification | `C:/Users/realm/Desktop/game/Tear-archives` passed as `--archive-root`; report path, size, and SHA-256 matched |
+| Explicit archive verification | `C:/Users/realm/Desktop/game/Tear-archives` passed as `--archive-root` (which implies file verification); report path, size, and SHA-256 matched |
 | Report generation time | `2026-08-23T23:56:19.082Z` |
 | Policy SHA-256 | `81c6547a785e9cbc63927c0560f3ceb32e81e8ca67ae18b4792e66c4c002b1dc` |
 | Age rule | `mtimeUtc`, minimum age 30 days |
@@ -48,21 +50,23 @@ silently included in this disposition.
 
 ## Focused validation
 
-The permanent validator checks the manifest schema, exact group IDs, counts,
-byte totals, path prefixes, and rationale text; current file existence,
-SHA-256 and mtime bindings; policy hash; ancestry of the evidence head; and the
-unused quarantine path. External source-report path, size, and SHA-256
-verification is fail-closed when an explicit archive root is supplied, while
-the default tracked/CI validation does not assume that a sibling archive is
-available. The focused tests also prove that malformed paths fail with clear
-validation errors, a later eligible file is reported as unreviewed, and changed
-or missing evidence fails closed.
+The validator has three deliberate tiers. The portable default checks only the
+tracked manifest schema, exact totals/groups/authorization, and source-report
+metadata; it does not assume ignored artifact files or a sibling archive exist.
+`--verify-files` (or API `verifyFiles: true`) adds canonical-root checks,
+current artifact enumeration, SHA-256/mtime comparison, quarantine absence,
+and unreviewed/missing/changed-file detection. An explicit `--archive-root`
+(or API `archiveRoot`) implies file verification and additionally fails closed
+on the external report's exact path, size, and SHA-256 binding. The focused
+tests prove clean-clone portability, fixture file verification, malformed-path
+handling, and changed or missing evidence failures.
 
 ```text
-pnpm test:artifact-disposition                         PASS (9/9)
-pnpm check:artifact-disposition                        PASS (104/104, 31,683,314 bytes; tracked/current files)
+pnpm test:artifact-disposition                         PASS (11/11)
+pnpm check:artifact-disposition                        PASS (tracked shape/metadata; no ignored files required)
+pnpm check:artifact-disposition -- --verify-files      PASS (104/104, 31,683,314 bytes; local files)
 pnpm check:artifact-disposition -- --archive-root C:/Users/realm/Desktop/game/Tear-archives
-                                                        PASS (external report path/SHA-256/size verified)
+                                                        PASS (local files + external report path/SHA-256/size)
 ```
 
 ## Soundtrack Desk canonical-root preflight
