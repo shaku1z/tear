@@ -1,5 +1,12 @@
 # TearBench → C40 Execution Guide
 
+## Authority metadata
+
+- **Owner:** TearBench release owner
+- **Status:** Active
+- **Closure condition:** The required C40 certification artifact verifies the exact clean protected HEAD and every unmet requirement has an explicit authorized disposition with evidence.
+- **Branch policy:** Start each slice from protected canonical `main` in a short-lived `codex/*` branch; do not use a long-lived or stale branch as the live execution target.
+
 **This file is the working discipline, not the scope.** Scope lives in
 [`TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md)
 (goals, deliverables, exit gates per checkpoint) and in
@@ -318,9 +325,10 @@ subgate covering 10 files / 36 tests, the 1,176-transition browser route, one
 detached finale-parity test, Slice 37's 1 file / 5 tests, Slice 38's 7 files /
 18 tests, and Slice 39's 4 files / 10 tests. The affected same-worktree sweep
 is green: the C22 live-runtime browser proof and C23 through C27 package gates
-passed. Slice 39 commit `30c4877` is pushed to
-`origin/codex/ghost3-autonomous-completion-plan`; Slice 40 is ready to commit
-and not yet pushed.
+passed. Slice 39 commit `30c4877` was recorded on the historical
+`codex/ghost3-autonomous-completion-plan` branch; Slice 40 was its then-current
+boundary. New slices start from protected `main` on a short-lived `codex/*`
+branch.
 
 Slice 38 adds a data-only audio dispatch journal and a typed in-memory outcome
 chronology. In a refreshed 1,176-transition browser Source victory, explicit
@@ -1131,7 +1139,7 @@ portability, concurrent complete worlds, or C27A completion.
 
 ## 9. Working-tree rules
 
-- Branch: `codex/ghost3-autonomous-completion-plan`.
+- Branch: a short-lived `codex/*` branch created from protected canonical `main`; the historical `codex/ghost3-autonomous-completion-plan` name is retained only as provenance for earlier slices.
 - `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` is unrelated user work.
   **Never stage, edit, or delete it.**
 - Inspect `git status` and the staged diff before committing; stage only files

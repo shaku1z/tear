@@ -51,6 +51,17 @@ const EXPECTED_DEFERRED_RELATION = Object.freeze({
   source: Object.freeze({ exactName: "Tear-budget-architecture", relativePath: "node_modules" }),
   target: Object.freeze({ exactName: "Tear-tearscore-normalization", relativePath: "node_modules" }),
 });
+const EXPECTED_EXPLICIT_RETENTION = Object.freeze({
+  scope: "temporary-root",
+  exactName: "tear-crazygames-ee5.zip",
+  kind: "file",
+  classification: "legacy-comparison-only-retention",
+  owner: "G5 release governance",
+  retainThrough: "2027-03-31",
+  allowedUse: "comparison-only",
+  forbiddenUses: Object.freeze(["development", "deployment"]),
+  disposition: "retain-in-place",
+});
 
 // The forbidden canonical scratch family is intentionally a more-specific
 // exception to the approved tear-g5 archive prefix. The checker gives the
@@ -236,10 +247,27 @@ function validateReparse(policy, errors) {
 }
 
 function validateLooseItems(policy, errors) {
-  if (!exactKeys(policy?.looseItems, ["mode", "autoMove", "autoDelete", "autoDeploy", "autoMerge"], "looseItems", errors)) return;
+  if (!exactKeys(policy?.looseItems, ["mode", "autoMove", "autoDelete", "autoDeploy", "autoMerge", "explicitRetentions"], "looseItems", errors)) return;
   if (policy.looseItems.mode !== "report-only") errors.push("looseItems.mode must be report-only");
   for (const field of ["autoMove", "autoDelete", "autoDeploy", "autoMerge"]) {
     if (policy.looseItems[field] !== false) errors.push(`looseItems.${field} must be false`);
+  }
+  const retentions = policy.looseItems.explicitRetentions;
+  if (!Array.isArray(retentions) || retentions.length !== 1) {
+    errors.push("looseItems.explicitRetentions must contain exactly one mandated retention");
+    return;
+  }
+  const retention = retentions[0];
+  if (!exactKeys(retention, Object.keys(EXPECTED_EXPLICIT_RETENTION), "looseItems.explicitRetentions[0]", errors)) return;
+  for (const [key, expectedValue] of Object.entries(EXPECTED_EXPLICIT_RETENTION)) {
+    if (key === "forbiddenUses") continue;
+    if (retention[key] !== expectedValue) errors.push(`looseItems.explicitRetentions[0].${key} must be ${JSON.stringify(expectedValue)}`);
+  }
+  if (JSON.stringify(retention.forbiddenUses) !== JSON.stringify(EXPECTED_EXPLICIT_RETENTION.forbiddenUses)) {
+    errors.push("looseItems.explicitRetentions[0].forbiddenUses must forbid development and deployment");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(String(retention.retainThrough ?? ""))) {
+    errors.push("looseItems.explicitRetentions[0].retainThrough must be an ISO date");
   }
 }
 
@@ -578,11 +606,19 @@ function classifyChildren(children, location, policy, review, noGo) {
     policy.reparse.deferredAuditRelation.source.exactName,
     policy.reparse.deferredAuditRelation.target.exactName,
   ].map((value) => value.toLocaleLowerCase("en-US")));
+  const scope = location === "temporary root" ? "temporary-root" : location === "workspace root" ? "workspace-root" : location === "archive root" ? "archive-root" : null;
+  const explicitRetentions = policy.looseItems.explicitRetentions.filter((entry) => entry.scope === scope);
   const classifications = [];
   for (const child of children) {
     const nameKey = child.name.toLocaleLowerCase("en-US");
+    const explicitRetention = explicitRetentions.find((entry) => entry.exactName.toLocaleLowerCase("en-US") === nameKey);
     let classification = "unrelated";
-    if (forbidden.some((pattern) => pattern.test(child.name))) {
+    if (explicitRetention !== undefined && child.kind !== explicitRetention.kind) {
+      classification = "legacy-comparison-only-retention-kind-mismatch";
+      recordReview(review, `${location} explicit retention ${child.name} has kind ${child.kind}, expected ${explicitRetention.kind}`);
+    } else if (explicitRetention !== undefined) {
+      classification = explicitRetention.classification;
+    } else if (forbidden.some((pattern) => pattern.test(child.name))) {
       classification = "forbidden-no-go";
       recordNoGo(noGo, `${location} contains forbidden name ${child.name}`);
     } else if (approved.some((pattern) => pattern.test(child.name))) {
@@ -595,7 +631,7 @@ function classifyChildren(children, location, policy, review, noGo) {
       classification = "loose-tear-related-review";
       recordReview(review, `${location} contains loose Tear-related ${child.kind}: ${child.name}`);
     }
-    classifications.push({ location, name: child.name, kind: child.kind, classification });
+    classifications.push({ location, name: child.name, kind: child.kind, classification, ...(explicitRetention === undefined ? {} : { retention: explicitRetention }) });
   }
   return classifications;
 }

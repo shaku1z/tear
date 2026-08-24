@@ -6,7 +6,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  ACTIVE_PLAN_METADATA_PATHS,
   checkRootDocumentationPolicy,
+  checkActivePlanMetadata,
+  checkPlansAuthorityIndex,
   parseMarkdownLinks,
   parseRootClassificationTable,
   resolveLocalLink,
@@ -27,6 +30,33 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
   assert.equal(result.pathBoundArtifacts, 10);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
+  assert.equal(result.activePlans, ACTIVE_PLAN_METADATA_PATHS.length);
+});
+
+test("active plans carry explicit owner, active status, closure condition, and index columns", () => {
+  const metadata = checkActivePlanMetadata(repositoryRoot);
+  assert.deepEqual(metadata.errors, []);
+  assert.deepEqual(checkPlansAuthorityIndex(repositoryRoot).errors, []);
+});
+
+test("active-plan metadata rejects missing owner or non-active status", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-plan-metadata-"));
+  try {
+    for (const relativePath of ACTIVE_PLAN_METADATA_PATHS) {
+      const source = path.join(repositoryRoot, relativePath);
+      const destination = path.join(fixtureRoot, relativePath);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.copyFileSync(source, destination);
+    }
+    const target = path.join(fixtureRoot, ACTIVE_PLAN_METADATA_PATHS[0]);
+    fs.writeFileSync(target, fs.readFileSync(target, "utf8")
+      .replace("- **Owner:** QA owner", "- **Owner:**")
+      .replace("- **Status:** Active", "- **Status:** Paused"), "utf8");
+    const result = checkActivePlanMetadata(fixtureRoot);
+    assert.match(result.errors.join("\n"), /nonempty Owner|Status: Active/u);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test("local links reject missing, traversal, drive, and UNC destinations", () => {

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -202,6 +203,32 @@ test("strict inspection passes a clean fixture without descending archive payloa
     assert.equal(cli.status, 0, cli.stderr || cli.stdout);
     assert.equal(JSON.parse(cli.stdout).status, "pass");
     assert.equal(result.noGo.length, 0);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection classifies the exact legacy comparison bundle without a review or mutation", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    const bundle = path.join(fixture.tempRoot, "tear-crazygames-ee5.zip");
+    fs.writeFileSync(bundle, "historical comparison bundle\n", "utf8");
+    const before = fs.statSync(bundle);
+    const result = strictResult(fixture);
+    assert.equal(result.ok, true, result.errors.join("\n"));
+    assert.equal(result.status, "pass");
+    const classification = result.classifications.find((entry) => entry.name === "tear-crazygames-ee5.zip");
+    assert.equal(classification.classification, "legacy-comparison-only-retention");
+    assert.equal(classification.retention.owner, "G5 release governance");
+    assert.equal(classification.retention.retainThrough, "2027-03-31");
+    assert.deepEqual(classification.retention.forbiddenUses, ["development", "deployment"]);
+    assert.equal(result.review.some((message) => /tear-crazygames-ee5\.zip/u.test(message)), false);
+    const after = fs.statSync(bundle);
+    assert.equal(after.size, before.size);
   } finally {
     cleanupStrictFixture(fixture);
   }
@@ -523,4 +550,12 @@ test("loose items remain report-only and cannot mutate the workspace", () => {
   const mode = clonePolicy();
   mode.looseItems.mode = "auto-move";
   assertInvalid(mode, /looseItems\.mode must be report-only/u);
+
+  const owner = clonePolicy();
+  owner.looseItems.explicitRetentions[0].owner = "";
+  assertInvalid(owner, /explicitRetentions\[0\]\.owner/u);
+
+  const forbidden = clonePolicy();
+  forbidden.looseItems.explicitRetentions[0].forbiddenUses = ["development"];
+  assertInvalid(forbidden, /forbiddenUses must forbid development and deployment/u);
 });

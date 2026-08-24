@@ -13,6 +13,17 @@ const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
 const ROOT_CLASSIFICATION_HEADING = "## Root Markdown classification";
 const SCOPED_MARKDOWN_ROOTS = Object.freeze(["docs/", "plans/", "tear-wiki/"]);
 const INDEX_PATH = "docs/README.md";
+const PLANS_INDEX_PATH = "plans/README.md";
+
+export const ACTIVE_PLAN_METADATA_PATHS = Object.freeze([
+  "plans/CONTROLLER_QA.md",
+  "plans/FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md",
+  "plans/PARITY_RESTORATION_PLAN.md",
+  "plans/TEARBENCH_C40_EXECUTION_GUIDE.md",
+  "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
+  "plans/TEARBENCH_MASTER_HANDOFF.md",
+  "plans/active/ECONOMY_REWORK_PLAN.md",
+]);
 
 const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
@@ -167,6 +178,47 @@ export function checkLocalLinks(root, files = collectTrackedMarkdownFiles(root))
   return { errors, links };
 }
 
+function metadataValue(markdown, label) {
+  const pattern = new RegExp(`^[ \\t]*-[ \\t]*\\*\\*${label}:\\*\\*[ \\t]*([^\\r\\n]+?)[ \\t]*$`, "imu");
+  return markdown.match(pattern)?.[1]?.trim() ?? "";
+}
+
+export function checkActivePlanMetadata(root, activePlanPaths = ACTIVE_PLAN_METADATA_PATHS) {
+  const errors = [];
+  for (const relativePath of activePlanPaths) {
+    const absolutePath = path.join(root, relativePath);
+    if (!fs.existsSync(absolutePath)) {
+      errors.push(`active plan is missing: ${relativePath}`);
+      continue;
+    }
+    const markdown = fs.readFileSync(absolutePath, "utf8");
+    const owner = metadataValue(markdown, "Owner");
+    const status = metadataValue(markdown, "Status");
+    const closureCondition = metadataValue(markdown, "Closure condition");
+    if (owner === "") errors.push(`${relativePath} must have nonempty Owner metadata`);
+    if (status !== "Active") errors.push(`${relativePath} must have Status: Active metadata`);
+    if (closureCondition === "") errors.push(`${relativePath} must have nonempty Closure condition metadata`);
+  }
+  return { errors, activePlanPaths: [...activePlanPaths] };
+}
+
+export function checkPlansAuthorityIndex(root, activePlanPaths = ACTIVE_PLAN_METADATA_PATHS) {
+  const errors = [];
+  const absolutePath = path.join(root, PLANS_INDEX_PATH);
+  if (!fs.existsSync(absolutePath)) return { errors: [`authority index is missing: ${PLANS_INDEX_PATH}`] };
+  const markdown = fs.readFileSync(absolutePath, "utf8");
+  if (!/\|\s*File\s*\|\s*Classification\s*\|\s*Owner\s*\|\s*Status\s*\|\s*Closure condition\s*\|\s*Role\s*\|/iu.test(markdown)) {
+    errors.push(`${PLANS_INDEX_PATH} must expose File, Classification, Owner, Status, Closure condition, and Role columns`);
+  }
+  for (const relativePath of activePlanPaths) {
+    const linkPath = relativePath.slice("plans/".length);
+    const fileName = path.posix.basename(relativePath);
+    const expectedLink = `[${fileName}](${linkPath})`;
+    if (!markdown.includes(expectedLink)) errors.push(`${PLANS_INDEX_PATH} must list active plan ${relativePath}`);
+  }
+  return { errors };
+}
+
 function classificationSection(indexText) {
   const start = indexText.indexOf(ROOT_CLASSIFICATION_HEADING);
   if (start === -1) return "";
@@ -244,7 +296,9 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
   const links = checkLocalLinks(absoluteRoot, trackedFiles);
   const policy = checkRootDocumentationPolicy(absoluteRoot, trackedFiles);
   const artifacts = checkPathBoundArtifacts(absoluteRoot);
-  const errors = [...links.errors, ...policy.errors, ...artifacts.errors];
+  const activePlans = checkActivePlanMetadata(absoluteRoot);
+  const plansIndex = checkPlansAuthorityIndex(absoluteRoot);
+  const errors = [...links.errors, ...policy.errors, ...artifacts.errors, ...activePlans.errors, ...plansIndex.errors];
   return {
     ok: errors.length === 0,
     errors,
@@ -252,6 +306,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
     rootMarkdownFiles: policy.rootFiles.length,
     localLinks: links.links.length,
     pathBoundArtifacts: artifacts.artifacts.length,
+    activePlans: activePlans.activePlanPaths.length,
   };
 }
 

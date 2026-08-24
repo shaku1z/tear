@@ -2,13 +2,17 @@
 
 ## Document status
 
-- **Status:** Approved design direction and implementation specification.
+- **Document state:** Approved design direction and implementation specification.
 - **Repository:** `shaku1z/tear`
-- **Implementation baseline:** `main` at `ee5e93141d67cc02505b2227b3be0b10d1819e1c`
+- **Implementation baseline:** protected canonical `main`; compare behavior against `ee5e93141d67cc02505b2227b3be0b10d1819e1c` only through the locked comparison-only oracle.
 - **Supersedes:** The weapon-roster sections of `TEAR_WEAPONS_AND_ABILITIES_COMPLETE_PLAN.md`.
 - **Preserves:** The current capability-based weapon architecture, normalized combat events, six universal throw upgrades, Stormbank, Overrun, and Sever.
 - **Implementation owner:** Codex or another repository-aware coding agent.
 - **Rule:** Nothing is considered implemented until repository state, tests, and browser evidence prove it.
+- **Owner:** Combat/weapon owner
+- **Status:** Active
+- **Closure condition:** The locked Final Five (Sword, Hammer, Greatsword, Chainblade, Riftlock) pass implementation, deterministic, browser, and release evidence gates; Spear and Ringblade remain historical/outdated roster references only.
+- **Branch policy:** Start each change from protected `main` in a short-lived `codex/*` branch. Do not develop on `codex/final-five-weapon-roster` or another long-lived branch; historical branch names are references only.
 
 This is both a design source of truth and a live implementation checklist. Codex should commit a copy into the repository and update the task boxes as work progresses.
 
@@ -1684,13 +1688,10 @@ Do not combine this with an unrelated module-system migration.
 
 ## Branch
 
-Suggested:
-
-```text
-codex/final-five-weapon-roster
-```
-
-Do not mix biome implementation or recovery WIP into this branch.
+Use a short-lived `codex/<ticket>-final-five` branch created from protected
+canonical `main`. Do not mix biome implementation or recovery WIP into it. The
+historical `codex/final-five-weapon-roster` name is retained only as provenance
+and is not a live development target.
 
 ## Checklist rule
 

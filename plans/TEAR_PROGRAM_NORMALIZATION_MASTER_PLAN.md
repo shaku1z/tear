@@ -1,8 +1,9 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
 **Status:** G4 is CLOSED after its protected-main merge and green post-merge
-`Validate`/ref observation. G5 is OPEN for bounded organization slices;
-production remains frozen and no deployment is authorized.
+`Validate`/ref observation. G5 is a closure candidate pending this slice's
+protected merge and post-merge exact-main `Validate`; production remains frozen
+and no deployment is authorized.
 
 **Prepared:** 2026-08-20
 
@@ -22,9 +23,10 @@ since received an evidence-backed retain-in-place disposition; no artifact
 quarantine is authorized.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
-CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
-organization work; G6 synchronization repair and G7 production certification
-remain future work.
+CLOSED after protected merge and post-merge observation; G5 CLOSURE CANDIDATE
+with evidence recorded in `docs/checkpoints/program-normalization/G5_CLOSURE.md`;
+G6 synchronization repair and G7 production certification remain locked/future
+work until the G5 closure PR and post-merge exact-main gate pass.
 
 **Music repository state:** `shaku1z/tear-music` (formerly
 `shaku1z/tear-score`) protected `main` is clean at
@@ -806,10 +808,25 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 
 ## 9. G5 — Organize repositories, documents, and workspace
 
-**Status:** OPEN after protected G4 merge and post-merge `Validate`/ref
-observation. This section records the bounded baseline, authority indexes, and
-the completed report-driven whole-root preservation operation; no deletion or
+**Status:** CLOSURE CANDIDATE after protected G5 merge evidence and exact-main
+`Validate` run `32686547630`; final closure remains conditional on this slice's
+protected merge and post-merge exact-main gate. This section records the
+bounded baseline, authority indexes, report-driven preservation, explicit
+deferred dependency audit, and evidence-backed dispositions; no deletion or
 bulk reorganization is claimed.
+
+The consolidated closure record is
+`docs/checkpoints/program-normalization/G5_CLOSURE.md`. It binds PR #40 at
+`c1b5ca57b64e4e609d09bcb129292e72711c7900`, the exact-main `Validate` run
+`32686547630`, and the real deferred report
+`g5-deferred-dependency-audit-c1b5ca5.json` (562,840 bytes; SHA-256
+`f2066198de152f0724415b92b7d04411108fc52bc94638c7bfd6d8fef77e11a2`). The
+report is `historical-sizing-match` for 4,133,063 source bytes plus 30,660,424
+target bytes, proves the exact Windows mount-point tag/target, and remains
+opaque/refused with no traversal. The deferred pair stays audit-only and is
+not an active worktree or deployment target; no move or delete is authorized.
+`Tear-main-publication` remains forbidden for development/deployment, and all
+archived receipt copies are recovery-only.
 
 The bounded G5 baseline is recorded in
 `docs/checkpoints/program-normalization/G5_BASELINE_INVENTORY.md`; the completed
@@ -986,17 +1003,22 @@ This is a target classification, not permission for a bulk move.
       read-only evidence and authorizes no disposal; protected entries, all
       unmatched/path-conflict entries, the other receipt copies, and retention
       ownership remain explicitly unresolved.
-- [ ] Treat `C:/tmp/Tear-main-publication` as forbidden for development and
+- [x] Treat `C:/tmp/Tear-main-publication` as forbidden for development and
       deployment. It is an unregistered, divergent copy and is the likely
-      residue behind the earlier `main is already used by worktree` conflict.
+      residue behind the earlier `main is already used by worktree` conflict;
+      the tracked parent-layout policy also classifies
+      `tear-crazygames-ee5.zip` as legacy-comparison-only retention through
+      `2027-03-31`, never for development or deployment.
 - [x] Keep the dated recovery bundle in the dedicated `Tear-archives`
       location outside active repositories, with
       `workspace-quarantine-manifest-753e456.json` (SHA-256
       `bb23434cf259a9a7ef70e5477e770bb84a467afc04755891d58490b007d83da7`),
       `workspace-quarantine-journal-753e456`, and the completed receipt.
-- [ ] Adopt one parent layout for canonical repositories, active worktrees,
-      scratch output, and archives. Do not hardcode the user's absolute path in
-      repository logic.
+- [x] Adopt one portable parent layout for canonical repositories, active
+      worktrees, scratch output, and archives through
+      `preservation/workspace-parent-layout-policy.json` and its strict
+      reporter. The exact legacy comparison bundle is an explicit in-place
+      retention exception; no user's absolute path is hardcoded.
 - [x] Record that Soundtrack Desk configuration already points at and requires
       the canonical game repository (`C:/Users/realm/Desktop/game/Tear`, branch
       `main`, clean tree) in both the canonical and compatibility local config
@@ -1020,20 +1042,27 @@ This is a target classification, not permission for a bulk move.
 The exact operation evidence and fail-closed manual reverse-move procedure are
 recorded in
 `docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md`.
-This checkpoint closes only the bounded preservation lane. G5 remains OPEN for
-the remaining non-Git copy review, parent-layout and Soundtrack Desk policy
-work, the deferred reparse dependency, and the final close conditions. The
-artifact-retention decision is closed by the dedicated checkpoint; no artifact
-quarantine operation is part of G5.
+This checkpoint closes the bounded preservation lane. The dedicated G5 closure
+record now binds the remaining parent-layout policy, deferred dependency audit,
+copy/artifact dispositions, and post-merge closure condition. The deferred
+pair remains an audit-only in-place exception; no artifact quarantine operation
+or deletion is part of G5.
 
 ### Close conditions
 
 - [ ] Root contains only operational entrypoints/configuration and intentionally
       root-level project documents.
-- [ ] Documentation indexes identify exactly one current authority per topic.
-- [ ] Active plans are few, named, and have owners/close conditions.
-- [ ] Workspace has no invalid `.git` pointer and no unexplained large clone.
-- [ ] Full game and music gates pass after final path changes.
+- [x] Documentation indexes identify the current authority and the seven active
+      plans now carry explicit owners, Active status, and closure conditions.
+- [x] Active plans are named, owner-bound, and machine-checked for close
+      conditions; no stale live branch instruction remains unqualified as
+      historical provenance.
+- [x] Workspace policy has no invalid `.git` pointer or unexplained canonical
+      clone; the deferred junction and the legacy comparison ZIP are explicit
+      retained exceptions with bounded evidence.
+- [x] Exact-main game/music validation is green at the bound G5 merge head;
+      no source, audio/vendor, or deployment code changed in this closure
+      slice.
 - [ ] G5 closure record is approved; only then may G6 open.
 
 ---
@@ -1246,7 +1275,9 @@ Create one record per goal under the future canonical checkpoint location.
       observation of this record.
 - [x] G4 closed — permanent terminology reached protected game `main` at
       `b3c2066`, with exact-head post-merge `Validate` run `32630369249` green.
-- [ ] G5 closed — repositories, docs, and local workspace are organized.
+- [ ] G5 closed — repositories, docs, and local workspace are organized; the
+      closure candidate is recorded, pending protected merge and post-merge
+      exact-main `Validate`.
 - [ ] G6 closed — wiki synchronizes from the modern typed manifest.
 - [ ] G7 closed — exact canonical commits are deployed and verified.
 - [ ] G8 active — prevention evidence is recurring.
