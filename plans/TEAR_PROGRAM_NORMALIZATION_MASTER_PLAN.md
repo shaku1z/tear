@@ -1199,6 +1199,15 @@ semantics and recording the resulting path and hash in the G6 receipt.
       `pnpm export:game-reference`. The unit suite is already included by the
       repository's full `pnpm test` gate, and `pnpm check:game-reference` is
       included in the full `check:functional` gate for clean CLI/Vite output.
+- [x] Add game-side post-Validate transport for the exact manifest. A successful
+      `push` Validate run on protected `refs/heads/main` publishes the dedicated
+      `tear-game-reference-v1-<GITHUB_SHA>` artifact containing only the
+      `game-reference.v1.json` manifest and its SHA-256-bound receipt, with
+      90-day retention and validation run/event/ref provenance. Publication
+      requires a clean checkout whose `HEAD` equals `GITHUB_SHA`; pull-request
+      runs do not publish this dedicated artifact, and it has no wiki, dispatch,
+      Cloudflare, or snapshot promotion side effect. See
+      `docs/checkpoints/program-normalization/G6_REFERENCE_ARTIFACT_PUBLICATION.md`.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.
 
@@ -1207,8 +1216,9 @@ recorded in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.m
 `docs/checkpoints/program-normalization/G6_REFERENCE_CATALOGS.md`,
 `docs/checkpoints/program-normalization/G6_STAGE_MODE_REFERENCE.md`, and
 `docs/checkpoints/program-normalization/G6_ENEMY_REFERENCE.md`, plus
-`docs/checkpoints/program-normalization/G6_BOSS_REFERENCE.md` and
-`docs/checkpoints/program-normalization/G6_PUBLIC_TUNING_REFERENCE.md`.
+`docs/checkpoints/program-normalization/G6_BOSS_REFERENCE.md`,
+`docs/checkpoints/program-normalization/G6_PUBLIC_TUNING_REFERENCE.md`, and
+`docs/checkpoints/program-normalization/G6_REFERENCE_ARTIFACT_PUBLICATION.md`.
 
 ### Wiki consumer
 
