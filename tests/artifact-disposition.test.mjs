@@ -149,3 +149,63 @@ test("archived source report verification uses an explicit external root and exa
     fs.rmSync(archiveRoot, { recursive: true, force: true });
   }
 });
+
+test("external archive verification is opt-in and fail-closed when requested", () => {
+  const dispositionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-artifact-disposition-manifest-"));
+  const archiveRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-artifact-disposition-archive-"));
+  try {
+    const loaded = readArtifactDisposition();
+    const reportContents = Buffer.from("{\"format\":\"fixture\"}\n", "utf8");
+    const reportPath = path.join(archiveRoot, "evidence", "report.json");
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+    fs.writeFileSync(reportPath, reportContents);
+    const writeDisposition = (name, sourceReportChanges) => {
+      const disposition = JSON.parse(JSON.stringify(loaded.disposition));
+      disposition.sourceReport = { ...disposition.sourceReport, ...sourceReportChanges };
+      const dispositionPath = path.join(dispositionRoot, name);
+      fs.writeFileSync(dispositionPath, `${JSON.stringify(disposition)}\n`);
+      return dispositionPath;
+    };
+    const noArchive = validateArtifactDisposition({
+      root: repositoryRoot,
+      dispositionPath: writeDisposition("no-archive.json", { archivePath: "missing/no-report.json" }),
+      now: evidenceTime,
+    });
+    assert.equal(noArchive.ok, true, JSON.stringify(noArchive, null, 2));
+
+    const sourceReport = {
+      archiveRoot: "Tear-archives",
+      archivePath: "evidence/report.json",
+      bytes: reportContents.byteLength,
+      sha256: createHash("sha256").update(reportContents).digest("hex"),
+    };
+    const correct = validateArtifactDisposition({
+      root: repositoryRoot,
+      dispositionPath: writeDisposition("correct-archive.json", sourceReport),
+      archiveRoot,
+      now: evidenceTime,
+    });
+    assert.equal(correct.ok, true, JSON.stringify(correct, null, 2));
+
+    const missing = validateArtifactDisposition({
+      root: repositoryRoot,
+      dispositionPath: writeDisposition("missing-report.json", sourceReport),
+      archiveRoot: path.join(dispositionRoot, "missing-archive"),
+      now: evidenceTime,
+    });
+    assert.equal(missing.ok, false);
+    assert.match(missing.errors.join("\n"), /archived source report is missing/u);
+
+    const wrong = validateArtifactDisposition({
+      root: repositoryRoot,
+      dispositionPath: writeDisposition("wrong-report.json", { ...sourceReport, archivePath: "evidence/wrong-report.json" }),
+      archiveRoot,
+      now: evidenceTime,
+    });
+    assert.equal(wrong.ok, false);
+    assert.match(wrong.errors.join("\n"), /archived source report is missing/u);
+  } finally {
+    fs.rmSync(dispositionRoot, { recursive: true, force: true });
+    fs.rmSync(archiveRoot, { recursive: true, force: true });
+  }
+});

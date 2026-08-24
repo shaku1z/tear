@@ -210,6 +210,9 @@ export function validateUnusedQuarantinePath(root) {
 
 export function verifyArchivedSourceReport({ root, sourceReport, archiveRoot } = {}) {
   const errors = [];
+  if (archiveRoot === undefined) {
+    return { ok: false, errors: ["archiveRoot is required for external source report verification"], path: null };
+  }
   if (!isSafeRelativePath(sourceReport?.archiveRoot) || sourceReport.archiveRoot !== "Tear-archives") {
     errors.push("sourceReport.archiveRoot must be the safe external archive root name Tear-archives");
     return { ok: false, errors, path: null };
@@ -220,11 +223,11 @@ export function verifyArchivedSourceReport({ root, sourceReport, archiveRoot } =
   }
   if (!SHA256_PATTERN.test(sourceReport?.sha256 ?? "")) errors.push("sourceReport.sha256 must be a SHA-256");
   if (!Number.isSafeInteger(sourceReport?.bytes) || sourceReport.bytes < 0) errors.push("sourceReport.bytes must be a non-negative safe integer");
-  if (archiveRoot !== undefined && typeof archiveRoot !== "string") errors.push("archiveRoot must be a path string");
+  if (typeof archiveRoot !== "string" || archiveRoot.length === 0) errors.push("archiveRoot must be a non-empty path string");
   if (errors.length > 0) return { ok: false, errors, path: null };
 
   const absoluteRoot = path.resolve(root ?? process.cwd());
-  const absoluteArchiveRoot = path.resolve(archiveRoot ?? path.resolve(absoluteRoot, "..", sourceReport.archiveRoot));
+  const absoluteArchiveRoot = path.resolve(archiveRoot);
   if (isPathInside(absoluteRoot, absoluteArchiveRoot, { allowEqual: true })) {
     errors.push("source report archive root must remain external to the game repository");
     return { ok: false, errors, path: null };
@@ -310,8 +313,10 @@ export function validateArtifactDisposition({
     if (!ancestor.ok) errors.push(`disposition evidence head ${disposition.canonical.head} is not an ancestor of current HEAD ${headResult.stdout}`);
   }
   errors.push(...validateUnusedQuarantinePath(absoluteRoot));
-  const archivedSourceReport = verifyArchivedSourceReport({ root: absoluteRoot, sourceReport: disposition.sourceReport, archiveRoot });
-  errors.push(...archivedSourceReport.errors);
+  if (archiveRoot !== undefined) {
+    const archivedSourceReport = verifyArchivedSourceReport({ root: absoluteRoot, sourceReport: disposition.sourceReport, archiveRoot });
+    errors.push(...archivedSourceReport.errors);
+  }
 
   let report;
   try {

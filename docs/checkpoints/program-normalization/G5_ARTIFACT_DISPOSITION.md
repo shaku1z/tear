@@ -20,6 +20,7 @@ moved, deleted, overwritten, or deduplicated.
 | Disposition SHA-256 | `89ab84227545886cf0b05675f7658acaf081b177abb37de68b7b115f64f1744c` |
 | Source report | `Tear-archives/2026-08-23-g5-artifact-disposition/artifact-retention-report-5281470.json` |
 | Source report SHA-256 | `9e8e8274e5d773ae2507c6feb4a2563202fca4cf9b0eb20d2ef704b9de9edbb4` |
+| Explicit archive verification | `C:/Users/realm/Desktop/game/Tear-archives` passed as `--archive-root`; report path, size, and SHA-256 matched |
 | Report generation time | `2026-08-23T23:56:19.082Z` |
 | Policy SHA-256 | `81c6547a785e9cbc63927c0560f3ceb32e81e8ca67ae18b4792e66c4c002b1dc` |
 | Age rule | `mtimeUtc`, minimum age 30 days |
@@ -49,15 +50,19 @@ silently included in this disposition.
 
 The permanent validator checks the manifest schema, exact group IDs, counts,
 byte totals, path prefixes, and rationale text; current file existence,
-SHA-256 and mtime bindings; policy hash; ancestry of the evidence head; the
-unused quarantine path; and the external source report's exact path, size, and
-SHA-256 binding. The focused tests also prove that malformed paths fail with
-clear validation errors, a later eligible file is reported as unreviewed, and
-changed or missing evidence fails closed.
+SHA-256 and mtime bindings; policy hash; ancestry of the evidence head; and the
+unused quarantine path. External source-report path, size, and SHA-256
+verification is fail-closed when an explicit archive root is supplied, while
+the default tracked/CI validation does not assume that a sibling archive is
+available. The focused tests also prove that malformed paths fail with clear
+validation errors, a later eligible file is reported as unreviewed, and changed
+or missing evidence fails closed.
 
 ```text
-pnpm test:artifact-disposition                         PASS (8/8)
-pnpm check:artifact-disposition                        PASS (104/104, 31,683,314 bytes)
+pnpm test:artifact-disposition                         PASS (9/9)
+pnpm check:artifact-disposition                        PASS (104/104, 31,683,314 bytes; tracked/current files)
+pnpm check:artifact-disposition -- --archive-root C:/Users/realm/Desktop/game/Tear-archives
+                                                        PASS (external report path/SHA-256/size verified)
 ```
 
 ## Soundtrack Desk canonical-root preflight
