@@ -556,6 +556,9 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     ] },
 ];
 
+/** Authored order is the stable progression catalog order used by exported references. */
+export const CANONICAL_UPGRADE_IDS = Object.freeze(UPGRADES.map((upgrade) => upgrade.id));
+
 // draft weighting:
 //   STACKS  (w 1)    — the frequent baseline; repeat them freely
 //   UNIQUE  (w 0.6)  — slightly rarer than stacks, but still common (each only once)

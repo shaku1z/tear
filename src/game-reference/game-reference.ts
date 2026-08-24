@@ -1,5 +1,7 @@
 import { canonicalStringify } from "../replay/hash";
 import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, isRetiredWeaponSelection, WEAPON_IDS, type WeaponId } from "../gameplay/weapon-selection";
+import { CANONICAL_ACHIEVEMENT_IDS, type Achievement, type AchievementCategory, type AchievementRarity } from "../gameplay/progression/achievements";
+import { CANONICAL_UPGRADE_IDS, type UpgradeCategory, type UpgradeDefinition } from "../gameplay/upgrades";
 import type { WeaponChannels, WeaponDefinition, WeaponRatings } from "../gameplay/weapons";
 
 /** The game-owned, data-only handoff consumed by future external tooling. */
@@ -34,8 +36,48 @@ export interface GameReferenceWeaponV1 {
   readonly tuning: Readonly<Record<string, number>>;
 }
 
-export interface DeferredGameReferenceCollectionV1 {
+export type GameReferenceUpgradeRuleKind = "stackable" | "unique" | "tiered";
+
+export interface GameReferenceUpgradeTierV1 {
+  readonly description: string;
+}
+
+export interface GameReferenceUpgradeV1 {
   readonly id: string;
+  readonly name: string;
+  readonly category: UpgradeCategory;
+  readonly description: string;
+  readonly unique: boolean;
+  readonly rare: boolean;
+  readonly maxStacks: number | null;
+  readonly rule: Readonly<{ kind: GameReferenceUpgradeRuleKind }>;
+  readonly tiers: readonly GameReferenceUpgradeTierV1[];
+}
+
+export type GameReferenceAchievementRuleKind = "stat-threshold" | "manual" | "runtime";
+
+export interface GameReferenceAchievementV1 {
+  readonly id: string;
+  readonly category: AchievementCategory;
+  readonly rarity: AchievementRarity;
+  readonly name: string;
+  readonly description: string;
+  readonly hidden: boolean;
+  readonly manual: boolean;
+  readonly master: boolean;
+  readonly rule: Readonly<{
+    kind: GameReferenceAchievementRuleKind;
+    stat: string | null;
+    goal: number | null;
+  }>;
+}
+
+export interface GameReferenceCompleteCollectionV1<T> {
+  readonly status: "complete";
+  readonly items: readonly T[];
+}
+
+export interface DeferredGameReferenceCollectionV1 {
   readonly status: "deferred";
   readonly reason: string;
 }
@@ -52,9 +94,15 @@ export interface GameReferenceV1 {
     retiredWeaponIds: readonly (typeof RETIRED_WEAPON_IDS[number])[];
   }>;
   readonly collections: Readonly<{
-    weapons: Readonly<{ status: "complete"; items: readonly GameReferenceWeaponV1[] }>;
+    weapons: GameReferenceCompleteCollectionV1<GameReferenceWeaponV1>;
+    upgrades: GameReferenceCompleteCollectionV1<GameReferenceUpgradeV1>;
+    enemies: DeferredGameReferenceCollectionV1;
+    bosses: DeferredGameReferenceCollectionV1;
+    stages: DeferredGameReferenceCollectionV1;
+    modes: DeferredGameReferenceCollectionV1;
+    achievements: GameReferenceCompleteCollectionV1<GameReferenceAchievementV1>;
+    "public-tuning": DeferredGameReferenceCollectionV1;
   }>;
-  readonly deferredCollections: readonly DeferredGameReferenceCollectionV1[];
 }
 
 export interface GameReferenceProjectionInput {
@@ -62,19 +110,25 @@ export interface GameReferenceProjectionInput {
   readonly sourceSha: string;
   readonly terminologyVersion: string;
   readonly weapons: readonly WeaponDefinition[];
+  readonly upgrades: readonly UpgradeDefinition[];
+  readonly achievements: readonly Achievement[];
   readonly tuningByWeapon: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
-const DEFERRED_COLLECTIONS: readonly DeferredGameReferenceCollectionV1[] = Object.freeze([
-  Object.freeze({ id: "upgrades", status: "deferred", reason: "No complete data-only projection is selected in G6 slice 1." }),
-  Object.freeze({ id: "enemies", status: "deferred", reason: "Enemy behavior definitions still include runtime constructors and hooks." }),
-  Object.freeze({ id: "bosses", status: "deferred", reason: "Boss definitions require a separate data-only projection boundary." }),
-  Object.freeze({ id: "stages", status: "deferred", reason: "Stage generation and hazards are not yet represented by a stable data-only contract." }),
-  Object.freeze({ id: "modes", status: "deferred", reason: "Mode availability is assembled through application/runtime composition." }),
-  Object.freeze({ id: "achievements", status: "deferred", reason: "Achievement definitions include runtime predicates and are not exported here." }),
-  Object.freeze({ id: "public-tuning", status: "deferred", reason: "Only flat weapon tuning is safe to project in this foundation slice." }),
-]);
-const DEFERRED_COLLECTION_IDS = Object.freeze(DEFERRED_COLLECTIONS.map((entry) => entry.id));
+const DEFERRED_COLLECTION_REASONS = Object.freeze({
+  enemies: "Enemy behavior definitions still include runtime constructors and hooks.",
+  bosses: "Boss definitions require a separate data-only projection boundary.",
+  stages: "Stage generation and hazards are not yet represented by a stable data-only contract.",
+  modes: "Mode availability is assembled through application/runtime composition.",
+  "public-tuning": "Only flat weapon tuning is safe to project in this contract slice.",
+});
+const EXPECTED_UPGRADE_COUNT = 60;
+const EXPECTED_ACHIEVEMENT_COUNT = 98;
+const UPGRADE_CATEGORIES = Object.freeze(["offense", "throw", "parry", "mobility", "resilience", "utility"] as const);
+const ACHIEVEMENT_CATEGORIES = Object.freeze(["combat", "skill", "progress", "boss", "survival", "mastery"] as const);
+const ACHIEVEMENT_RARITIES = Object.freeze(["common", "uncommon", "rare", "epic", "legendary"] as const);
+if (CANONICAL_UPGRADE_IDS.length !== EXPECTED_UPGRADE_COUNT) throw new Error("canonical upgrade catalog count changed without a reference-contract update");
+if (CANONICAL_ACHIEVEMENT_IDS.length !== EXPECTED_ACHIEVEMENT_COUNT) throw new Error("canonical achievement catalog count changed without a reference-contract update");
 
 function record(value: unknown, path: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${path} must be an object`);
@@ -96,6 +150,11 @@ function exactKeys(value: Record<string, unknown>, path: string, expected: reado
 
 function finite(value: unknown, path: string): number {
   if (typeof value !== "number" || !Number.isFinite(value)) throw new TypeError(`${path} must be a finite number`);
+  return value;
+}
+
+function boolean(value: unknown, path: string): boolean {
+  if (typeof value !== "boolean") throw new TypeError(`${path} must be a boolean`);
   return value;
 }
 
@@ -134,6 +193,73 @@ function tuning(value: unknown, path: string): Readonly<Record<string, number>> 
   const entries = Object.keys(source).sort().map((key) => [text(key, `${path} key`), finite(source[key], `${path}.${key}`)] as const);
   if (entries.length === 0) throw new TypeError(`${path} must contain at least one public numeric value`);
   return Object.freeze(Object.fromEntries(entries));
+}
+
+function projectUpgrade(source: UpgradeDefinition, path: string): GameReferenceUpgradeV1 {
+  const id = text(source.id, `${path}.id`);
+  const name = text(source.name, `${path}.name`);
+  const category = text(source.cat, `${path}.category`) as UpgradeCategory;
+  if (!UPGRADE_CATEGORIES.includes(category)) throw new TypeError(`${path}.category is not a supported upgrade category`);
+  const description = text(source.desc, `${path}.description`);
+  const unique = boolean(source.unique, `${path}.unique`);
+  const rare = source.rare ?? false;
+  if (typeof rare !== "boolean") throw new TypeError(`${path}.rare must be a boolean when present`);
+  const maxStacks = source.maxStacks ?? null;
+  if (maxStacks !== null && (!Number.isInteger(maxStacks) || maxStacks < 1)) throw new RangeError(`${path}.maxStacks must be a positive integer when present`);
+  const tiers = Object.freeze((source.tiers ?? []).map((tier, index) => Object.freeze({
+    description: text(tier.desc, `${path}.tiers[${String(index)}].description`),
+  })));
+  const kind: GameReferenceUpgradeRuleKind = tiers.length > 0 ? "tiered" : unique ? "unique" : "stackable";
+  return Object.freeze({
+    id, name, category, description, unique, rare, maxStacks,
+    rule: Object.freeze({ kind }),
+    tiers,
+  });
+}
+
+function projectAchievement(source: Achievement, path: string): GameReferenceAchievementV1 {
+  const id = text(source.id, `${path}.id`);
+  const category = text(source.cat, `${path}.category`) as AchievementCategory;
+  if (!ACHIEVEMENT_CATEGORIES.includes(category)) throw new TypeError(`${path}.category is not a supported achievement category`);
+  const rarity = text(source.rarity, `${path}.rarity`) as AchievementRarity;
+  if (!ACHIEVEMENT_RARITIES.includes(rarity)) throw new TypeError(`${path}.rarity is not a supported achievement rarity`);
+  const name = text(source.name, `${path}.name`);
+  const description = text(source.desc, `${path}.description`);
+  const hidden = source.hidden ?? false;
+  const manual = source.manual ?? false;
+  const master = source.master ?? false;
+  if (typeof hidden !== "boolean" || typeof manual !== "boolean" || typeof master !== "boolean") throw new TypeError(`${path} visibility flags must be booleans when present`);
+  const stat = typeof source.stat === "string" ? text(source.stat, `${path}.rule.stat`) : null;
+  const goal = typeof source.goal === "number" && Number.isFinite(source.goal) ? source.goal : null;
+  const kind: GameReferenceAchievementRuleKind = manual ? "manual" : stat !== null && goal !== null ? "stat-threshold" : "runtime";
+  return Object.freeze({
+    id, category, rarity, name, description, hidden, manual, master,
+    rule: Object.freeze({ kind, stat, goal }),
+  });
+}
+
+function assertUniqueCount(ids: readonly string[], expected: number, path: string): void {
+  if (ids.length !== expected) throw new TypeError(`${path} must contain exactly ${String(expected)} entries`);
+  if (new Set(ids).size !== ids.length) throw new TypeError(`${path} must not contain duplicate IDs`);
+}
+
+function assertCanonicalOrderedIds(ids: readonly string[], expected: readonly string[], path: string): void {
+  if (ids.length !== expected.length || ids.some((id, index) => id !== expected[index])) throw new TypeError(`${path} must use canonical authored order`);
+}
+
+function completeCollection<T>(value: unknown, path: string, validateItem: (item: unknown, itemPath: string) => T): GameReferenceCompleteCollectionV1<T> {
+  const source = record(value, path);
+  exactKeys(source, path, ["status", "items"]);
+  if (source.status !== "complete" || !Array.isArray(source.items)) throw new TypeError(`${path} must be a complete collection`);
+  const items = Object.freeze(source.items.map((item, index) => validateItem(item, `${path}.items[${String(index)}]`)));
+  return Object.freeze({ status: "complete", items });
+}
+
+function deferredCollection(value: unknown, path: string): DeferredGameReferenceCollectionV1 {
+  const source = record(value, path);
+  exactKeys(source, path, ["status", "reason"]);
+  if (source.status !== "deferred") throw new TypeError(`${path} must be deferred`);
+  return Object.freeze({ status: "deferred", reason: text(source.reason, `${path}.reason`) });
 }
 
 function assertExactRoster(ids: readonly string[], path: string): asserts ids is readonly WeaponId[] {
@@ -180,6 +306,72 @@ function validateProjectedWeapon(value: unknown, path: string): GameReferenceWea
   });
 }
 
+function validateProjectedUpgrade(value: unknown, path: string): GameReferenceUpgradeV1 {
+  const source = record(value, path);
+  exactKeys(source, path, ["id", "name", "category", "description", "unique", "rare", "maxStacks", "rule", "tiers"]);
+  const id = text(source.id, `${path}.id`);
+  const category = text(source.category, `${path}.category`) as UpgradeCategory;
+  if (!UPGRADE_CATEGORIES.includes(category)) throw new TypeError(`${path}.category is not a supported upgrade category`);
+  const unique = boolean(source.unique, `${path}.unique`);
+  const rare = boolean(source.rare, `${path}.rare`);
+  const maxStacks = source.maxStacks === null ? null : finite(source.maxStacks, `${path}.maxStacks`);
+  if (maxStacks !== null && (!Number.isInteger(maxStacks) || maxStacks < 1)) throw new RangeError(`${path}.maxStacks must be a positive integer or null`);
+  const rule = record(source.rule, `${path}.rule`);
+  exactKeys(rule, `${path}.rule`, ["kind"]);
+  const kind = text(rule.kind, `${path}.rule.kind`) as GameReferenceUpgradeRuleKind;
+  if (!["stackable", "unique", "tiered"].includes(kind)) throw new TypeError(`${path}.rule.kind is not a supported upgrade rule`);
+  const tiersValue = source.tiers;
+  if (!Array.isArray(tiersValue)) throw new TypeError(`${path}.tiers must be an array`);
+  const tiers = Object.freeze(tiersValue.map((tier, index) => {
+    const item = record(tier, `${path}.tiers[${String(index)}]`);
+    exactKeys(item, `${path}.tiers[${String(index)}]`, ["description"]);
+    return Object.freeze({ description: text(item.description, `${path}.tiers[${String(index)}].description`) });
+  }));
+  const expectedKind: GameReferenceUpgradeRuleKind = tiers.length > 0 ? "tiered" : unique ? "unique" : "stackable";
+  if (kind !== expectedKind) throw new TypeError(`${path}.rule.kind does not match its authored metadata`);
+  if (kind === "stackable" && maxStacks === null && unique) throw new TypeError(`${path}.stackable rule cannot be unique`);
+  return Object.freeze({
+    id,
+    name: text(source.name, `${path}.name`),
+    category,
+    description: text(source.description, `${path}.description`),
+    unique,
+    rare,
+    maxStacks,
+    rule: Object.freeze({ kind }),
+    tiers,
+  });
+}
+
+function validateProjectedAchievement(value: unknown, path: string): GameReferenceAchievementV1 {
+  const source = record(value, path);
+  exactKeys(source, path, ["id", "category", "rarity", "name", "description", "hidden", "manual", "master", "rule"]);
+  const rule = record(source.rule, `${path}.rule`);
+  exactKeys(rule, `${path}.rule`, ["kind", "stat", "goal"]);
+  const kind = text(rule.kind, `${path}.rule.kind`) as GameReferenceAchievementRuleKind;
+  if (!["stat-threshold", "manual", "runtime"].includes(kind)) throw new TypeError(`${path}.rule.kind is not a supported achievement rule`);
+  const category = text(source.category, `${path}.category`) as AchievementCategory;
+  if (!ACHIEVEMENT_CATEGORIES.includes(category)) throw new TypeError(`${path}.category is not a supported achievement category`);
+  const rarity = text(source.rarity, `${path}.rarity`) as AchievementRarity;
+  if (!ACHIEVEMENT_RARITIES.includes(rarity)) throw new TypeError(`${path}.rarity is not a supported achievement rarity`);
+  const stat = rule.stat === null ? null : text(rule.stat, `${path}.rule.stat`);
+  const goal = rule.goal === null ? null : finite(rule.goal, `${path}.rule.goal`);
+  const manual = boolean(source.manual, `${path}.manual`);
+  const expectedKind: GameReferenceAchievementRuleKind = manual ? "manual" : stat !== null && goal !== null ? "stat-threshold" : "runtime";
+  if (kind !== expectedKind) throw new TypeError(`${path}.rule.kind does not match its authored metadata`);
+  return Object.freeze({
+    id: text(source.id, `${path}.id`),
+    category,
+    rarity,
+    name: text(source.name, `${path}.name`),
+    description: text(source.description, `${path}.description`),
+    hidden: boolean(source.hidden, `${path}.hidden`),
+    manual,
+    master: boolean(source.master, `${path}.master`),
+    rule: Object.freeze({ kind, stat, goal }),
+  });
+}
+
 function projectWeapon(source: WeaponDefinition, tuningByWeapon: GameReferenceProjectionInput["tuningByWeapon"]): GameReferenceWeaponV1 {
   const id = text(source.id, "weapon.id");
   if (isRetiredWeaponSelection(id)) throw new TypeError(`weapon ${id} is retired and cannot be active`);
@@ -220,6 +412,20 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
     if (weapon === undefined) throw new TypeError(`missing canonical weapon definition ${id}`);
     return projectWeapon(weapon, input.tuningByWeapon);
   }));
+  const upgradesById = new Map(input.upgrades.map((upgrade) => [upgrade.id, upgrade] as const));
+  assertUniqueCount([...upgradesById.keys()], EXPECTED_UPGRADE_COUNT, "upgrades");
+  const upgrades = Object.freeze(CANONICAL_UPGRADE_IDS.map((id, index) => {
+    const upgrade = upgradesById.get(id);
+    if (upgrade === undefined) throw new TypeError(`missing canonical upgrade definition ${id}`);
+    return projectUpgrade(upgrade, `upgrade[${String(index)}]`);
+  }));
+  const achievementsById = new Map(input.achievements.map((achievement) => [achievement.id, achievement] as const));
+  assertUniqueCount([...achievementsById.keys()], EXPECTED_ACHIEVEMENT_COUNT, "achievements");
+  const achievements = Object.freeze(CANONICAL_ACHIEVEMENT_IDS.map((id, index) => {
+    const achievement = achievementsById.get(id);
+    if (achievement === undefined) throw new TypeError(`missing canonical achievement definition ${id}`);
+    return projectAchievement(achievement, `achievement[${String(index)}]`);
+  }));
   const reference: GameReferenceV1 = Object.freeze({
     format: GAME_REFERENCE_FORMAT,
     schemaVersion: GAME_REFERENCE_SCHEMA_VERSION,
@@ -231,8 +437,16 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
       activeWeaponIds: Object.freeze([...CANONICAL_FINAL_FIVE_WEAPON_IDS]),
       retiredWeaponIds: Object.freeze([...RETIRED_WEAPON_IDS]),
     }),
-    collections: Object.freeze({ weapons: Object.freeze({ status: "complete", items: weapons }) }),
-    deferredCollections: DEFERRED_COLLECTIONS,
+    collections: Object.freeze({
+      weapons: Object.freeze({ status: "complete", items: weapons }),
+      upgrades: Object.freeze({ status: "complete", items: upgrades }),
+      enemies: Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS.enemies }),
+      bosses: Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS.bosses }),
+      stages: Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS.stages }),
+      modes: Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS.modes }),
+      achievements: Object.freeze({ status: "complete", items: achievements }),
+      "public-tuning": Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS["public-tuning"] }),
+    }),
   });
   assertValidGameReferenceV1(reference);
   return reference;
@@ -247,7 +461,7 @@ export function assertCurrentSourceSha(reference: Pick<GameReferenceV1, "source"
 /** Validates an imported reference before a consumer trusts it. */
 export function assertValidGameReferenceV1(value: unknown): asserts value is GameReferenceV1 {
   const source = record(value, "gameReference");
-  exactKeys(source, "gameReference", ["format", "schemaVersion", "source", "terminologyVersion", "roster", "collections", "deferredCollections"]);
+  exactKeys(source, "gameReference", ["format", "schemaVersion", "source", "terminologyVersion", "roster", "collections"]);
   if (source.format !== GAME_REFERENCE_FORMAT || source.schemaVersion !== GAME_REFERENCE_SCHEMA_VERSION) throw new TypeError("unsupported game-reference.v1 schema");
   const sourceInfo = record(source.source, "gameReference.source");
   exactKeys(sourceInfo, "gameReference.source", ["repository", "sha"]);
@@ -262,28 +476,20 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   const retiredIds = stringList(roster.retiredWeaponIds, "gameReference.roster.retiredWeaponIds", RETIRED_WEAPON_IDS.length);
   if (retiredIds.length !== RETIRED_WEAPON_IDS.length || retiredIds.some((id, index) => id !== RETIRED_WEAPON_IDS[index])) throw new TypeError("gameReference retired roster is not canonical");
   const collections = record(source.collections, "gameReference.collections");
-  exactKeys(collections, "gameReference.collections", ["weapons"]);
-  const weaponsCollection = record(collections.weapons, "gameReference.collections.weapons");
-  exactKeys(weaponsCollection, "gameReference.collections.weapons", ["status", "items"]);
-  if (weaponsCollection.status !== "complete" || !Array.isArray(weaponsCollection.items)) throw new TypeError("gameReference weapon collection is incomplete");
-  const projectedWeapons = weaponsCollection.items.map((weapon, index) => validateProjectedWeapon(weapon, `gameReference.collections.weapons.items[${String(index)}]`));
+  exactKeys(collections, "gameReference.collections", ["weapons", "upgrades", "enemies", "bosses", "stages", "modes", "achievements", "public-tuning"]);
+  const weaponsCollection = completeCollection(collections.weapons, "gameReference.collections.weapons", validateProjectedWeapon);
+  const projectedWeapons = weaponsCollection.items;
   const weaponIds = projectedWeapons.map((weapon) => weapon.id);
   assertCanonicalRosterOrder(weaponIds, "gameReference.collections.weapons.items");
-  const deferred = source.deferredCollections;
-  if (!Array.isArray(deferred)) throw new TypeError("gameReference.deferredCollections must be an array");
-  const deferredIds: string[] = [];
-  for (const [index, entry] of deferred.entries()) {
-    const item = record(entry, `gameReference.deferredCollections[${String(index)}]`);
-    exactKeys(item, `gameReference.deferredCollections[${String(index)}]`, ["id", "status", "reason"]);
-    text(item.id, `gameReference.deferredCollections[${String(index)}].id`);
-    if (item.status !== "deferred") throw new TypeError("gameReference deferred collection has an invalid status");
-    text(item.reason, `gameReference.deferredCollections[${String(index)}].reason`);
-    const id = item.id as string;
-    if (deferredIds.includes(id)) throw new TypeError(`gameReference deferred collection ${id} is duplicated`);
-    if (!DEFERRED_COLLECTION_IDS.includes(id)) throw new TypeError(`gameReference deferred collection ${id} is not canonical`);
-    deferredIds.push(id);
+  const upgradesCollection = completeCollection(collections.upgrades, "gameReference.collections.upgrades", validateProjectedUpgrade);
+  assertUniqueCount(upgradesCollection.items.map((upgrade) => upgrade.id), EXPECTED_UPGRADE_COUNT, "gameReference.collections.upgrades.items");
+  assertCanonicalOrderedIds(upgradesCollection.items.map((upgrade) => upgrade.id), CANONICAL_UPGRADE_IDS, "gameReference.collections.upgrades.items");
+  const achievementsCollection = completeCollection(collections.achievements, "gameReference.collections.achievements", validateProjectedAchievement);
+  assertUniqueCount(achievementsCollection.items.map((achievement) => achievement.id), EXPECTED_ACHIEVEMENT_COUNT, "gameReference.collections.achievements.items");
+  assertCanonicalOrderedIds(achievementsCollection.items.map((achievement) => achievement.id), CANONICAL_ACHIEVEMENT_IDS, "gameReference.collections.achievements.items");
+  for (const id of ["enemies", "bosses", "stages", "modes", "public-tuning"] as const) {
+    deferredCollection(collections[id], `gameReference.collections.${id}`);
   }
-  if (deferredIds.length !== DEFERRED_COLLECTION_IDS.length || deferredIds.some((id, index) => id !== DEFERRED_COLLECTION_IDS[index])) throw new TypeError("gameReference deferred collections are incomplete or out of order");
   canonicalStringify(value);
 }
 

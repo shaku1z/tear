@@ -1,16 +1,18 @@
-# G6 Game Reference Contract — Slice 1
+# G6 Game Reference Contract — Slices 1–2
 
-Status: foundation implemented; G6 remains open.
+Status: game-reference foundation and progression catalogs implemented; G6 remains open.
 
-This checkpoint establishes the first game-owned handoff for the modern typed
-runtime. It is a contract foundation, not a wiki synchronization or release
-approval.
+This checkpoint records the first two game-owned handoff slices for the modern
+typed runtime. It is a contract foundation, not a wiki synchronization or
+release approval.
 
 ## Authority
 
 - Schema/projection: `src/game-reference/game-reference.ts`
-- Typed source definitions: `src/gameplay/weapons.ts` and
-  `src/config/game-config.ts` (`WEAPONS` and `CONFIG.weapons` only)
+- Typed source definitions: `src/gameplay/weapons.ts`,
+  `src/gameplay/upgrades.ts`, `src/gameplay/progression/achievements.ts`, and
+  `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the achievement `_all`
+  catalog, and `CONFIG.weapons` only)
 - Deterministic exporter: `scripts/export-game-reference.mjs`
 - Focused evidence: `tests/unit/game-reference.test.ts`
 - Command: `pnpm export:game-reference`
@@ -27,6 +29,15 @@ approval.
   names, ratings, channels, and flat numeric weapon tuning. Runtime callbacks,
   browser objects, mutable world state, diagnostics, and secrets are never
   serialized.
+- The fixed `collections` object is the only collection authority. Weapons,
+  upgrades, and achievements are complete envelopes; enemies, bosses, stages,
+  modes, and `public-tuning` are explicit deferred envelopes. There is no
+  duplicate deferred side list.
+- Upgrade entries preserve the authored 60-item order, category, uniqueness,
+  rare flag, stack limit, rule kind, and tier descriptions. Achievement entries
+  preserve the authored 98-item order, category, rarity, visibility flags, and
+  only safe rule metadata. Runtime `apply`, `current`, `check`, and tier
+  callbacks are never projected or invoked for the catalog output.
 - Canonical JSON key ordering and canonical roster ordering make repeated
   exports byte-identical. `--expected-sha` rejects an artifact generated from a
   stale source tree before writing it.
@@ -36,11 +47,10 @@ approval.
 
 ## Deliberate boundary
 
-The complete `upgrades`, `enemies`, `bosses`, `stages`, `modes`, `achievements`,
-and global `public-tuning` collections are explicitly represented as deferred
-in the contract. They are not absent by accident and are not implied complete.
-Each requires its own data-only projection review before G6 can move the
-collection to `complete`.
+The complete `enemies`, `bosses`, `stages`, `modes`, and global `public-tuning`
+collections remain explicitly represented as deferred in the contract. They
+are not absent by accident and are not implied complete. Each requires its own
+data-only projection review before G6 can move the collection to `complete`.
 
 The wiki consumer, dispatch workflow, game-reference snapshot promotion, and
 Cloudflare deployment are outside this slice and remain locked by the G6 plan.
@@ -48,6 +58,7 @@ Cloudflare deployment are outside this slice and remain locked by the G6 plan.
 ## Focused checks
 
 - `pnpm exec vitest run tests/unit/game-reference.test.ts --no-file-parallelism`
+- `pnpm exec vitest run tests/unit/gameplay-definitions.test.ts tests/unit/progression-systems.test.ts --no-file-parallelism`
 - `pnpm test` includes this unit suite in the full Vitest gate.
 - `pnpm check:game-reference` exercises clean CLI/Vite export with an exact
   SHA, temporary output path, and provenance check; it is part of

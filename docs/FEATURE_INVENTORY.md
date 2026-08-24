@@ -10,12 +10,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   loads only those typed source modules, binds the full repository SHA and
   terminology registry version, and emits canonical deterministic JSON.
 - [x] Final Five/stale-generation guard — the projection requires exactly
-  Sword, Hammer, Greatsword, Chainblade, and Riftlock, rejects Spear/Ringblade
-  as active IDs, and supports `--expected-sha` fail-closed export validation.
-- [ ] Complete reference collections — upgrades, enemies, bosses, stages, modes,
-  achievements, and global public tuning remain explicitly deferred until each
-  has a separate safe data-only projection; this slice does not imply wiki
-  synchronization or release readiness.
+    Sword, Hammer, Greatsword, Chainblade, and Riftlock, rejects Spear/Ringblade
+    as active IDs, and supports `--expected-sha` fail-closed export validation.
+- [x] Progression reference catalogs — the fixed game-reference collections
+  now include 60 authored upgrades and 98 authored achievements with canonical
+  order, categories/rarities, rule/tier metadata, and no runtime callbacks in
+  the projection.
+- [ ] Complete reference collections — enemies, bosses, stages, modes, and
+  global public tuning remain explicitly deferred until each has a separate
+  safe data-only projection; this slice does not imply wiki synchronization or
+  release readiness.
 
 ## Runtime and releases
 

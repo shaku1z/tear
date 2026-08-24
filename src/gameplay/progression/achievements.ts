@@ -302,4 +302,19 @@ ACH._build();
   return ACH;
 }
 
+const REFERENCE_PROFILE: AchievementProfilePort = {
+  unlocked: () => false,
+  stat: () => 0,
+  unlock: () => false,
+};
+
+/** The authored `_all` order is the stable achievement catalog order for references. */
+export const CANONICAL_ACHIEVEMENT_IDS = Object.freeze(createAchievements({
+  meta: { level: () => 0 },
+  profile: REFERENCE_PROFILE,
+  audio: { rankup: () => undefined },
+  shop: [],
+  clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
+})._all.map((achievement) => achievement.id));
+
 export { createAchievements };
