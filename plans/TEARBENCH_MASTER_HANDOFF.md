@@ -1,8 +1,15 @@
 # TearBench / State Forge / TearBot / Ghost 3 Master Continuation Handoff
 
-**Branch:** `codex/ghost3-autonomous-completion-plan`
+**Branch:** short-lived `codex/*` branch from protected canonical `main` (historical source boundary: `codex/ghost3-autonomous-completion-plan`)
 **State:** Paused at a deliberate handoff boundary during C27/C27A
 **Purpose:** Enable a succeeding agent to continue the complete TearBench program through C40 without losing requirements, repeating architectural mistakes, or overstating evidence.
+
+## Authority metadata
+
+- **Owner:** TearBench handoff owner
+- **Status:** Active
+- **Closure condition:** A succeeding agent can follow the exact next-slice boundary and reproduce the last verified gate from protected `main` without relying on stale branch state.
+- **Branch policy:** New work starts from protected canonical `main` in a short-lived `codex/*` branch. `codex/ghost3-autonomous-completion-plan` is historical provenance only and must not receive new live work.
 
 This is the program-wide continuation document. It does not replace the original specification, non-lossy requirement registry, completion plan, or checkpoint reports. It records how to use those authorities and the exact implementation boundary inherited in this working tree.
 
@@ -793,7 +800,7 @@ After each slice, record exact commands/results, test counts, browser artifacts,
 
 ## 13. Working-tree and Git safety
 
-- Current branch: `codex/ghost3-autonomous-completion-plan`.
+- Current work boundary: a short-lived `codex/*` branch from protected canonical `main`; `codex/ghost3-autonomous-completion-plan` is historical provenance only.
 - Slice 31 is the last pushed coherent green boundary. Slice 32 moves detached
   parity onto that assembly and is the current validation/commit boundary. After that
   boundary, the only expected unrelated working-tree item is the rendering
@@ -801,8 +808,9 @@ After each slice, record exact commands/results, test counts, browser artifacts,
 - `plans/EXTREME_RENDERING_IMPLEMENTATION_PLAN.md` is unrelated untracked user work. Never stage, edit, delete, or include it in a TearBench commit.
 - Preserve existing changes; do not use destructive reset/checkout.
 - Before committing, inspect status, diff/stat, and staged diff; stage only related files.
-- Keep later slices on the active branch and publish only after their own
-  canonical gates and documentation are green.
+- Start each later slice from protected canonical `main` on its own short-lived
+  `codex/*` branch, and publish only after that slice's canonical gates and
+  documentation are green.
 
 ## 14. Succeeding agent's first-turn checklist
 

@@ -11,8 +11,25 @@ const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
 });
 
 const ROOT_CLASSIFICATION_HEADING = "## Root Markdown classification";
+const CURRENT_AUTHORITIES_HEADING = "## Current authorities";
 const SCOPED_MARKDOWN_ROOTS = Object.freeze(["docs/", "plans/", "tear-wiki/"]);
 const INDEX_PATH = "docs/README.md";
+const PLANS_INDEX_PATH = "plans/README.md";
+
+export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
+  "plans/CONTROLLER_QA.md",
+  "plans/FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md",
+  "plans/PARITY_RESTORATION_PLAN.md",
+  "plans/TEARBENCH_C40_EXECUTION_GUIDE.md",
+  "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
+  "plans/TEARBENCH_MASTER_HANDOFF.md",
+  "plans/active/ECONOMY_REWORK_PLAN.md",
+]);
+
+// Compatibility export for callers that need the canonical seven-plan list.
+// The checker derives the active set from plans/README.md and compares it to
+// this allowlist; it does not use this list as the source of active rows.
+export const ACTIVE_PLAN_METADATA_PATHS = CANONICAL_ACTIVE_PLAN_PATHS;
 
 const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
@@ -52,7 +69,7 @@ export function collectTrackedMarkdownFiles(root) {
     .sort();
 }
 
-function maskMarkdownCode(markdown) {
+function maskMarkdownFencedCode(markdown) {
   const lines = markdown.split(/(\r?\n)/u);
   let fenced = false;
   const masked = [];
@@ -66,7 +83,11 @@ function maskMarkdownCode(markdown) {
       masked.push(line);
     }
   }
-  return masked.join("").replace(/(`+)([^\r\n]*?)\1/gu, (match) => match.replace(/[^\r\n]/gu, " "));
+  return masked.join("");
+}
+
+function maskMarkdownCode(markdown) {
+  return maskMarkdownFencedCode(markdown).replace(/(`+)([^\r\n]*?)\1/gu, (match) => match.replace(/[^\r\n]/gu, " "));
 }
 
 function stripDestination(destination) {
@@ -167,6 +188,233 @@ export function checkLocalLinks(root, files = collectTrackedMarkdownFiles(root))
   return { errors, links };
 }
 
+function metadataEntries(markdown, label) {
+  const maskedMarkdown = maskMarkdownFencedCode(markdown);
+  const pattern = new RegExp(`^[ \\t]*-[ \\t]*\\*\\*${label}:\\*\\*[ \\t]*([^\\r\\n]*)[ \\t]*$`, "gmu");
+  return [...maskedMarkdown.matchAll(pattern)].map((match) => match[1].trim());
+}
+
+function planSection(indexText, heading) {
+  const start = indexText.indexOf(heading);
+  if (start === -1) return "";
+  const rest = indexText.slice(start + heading.length);
+  const nextHeading = rest.search(/^##\s+/mu);
+  return nextHeading === -1 ? rest : rest.slice(0, nextHeading);
+}
+
+function parsePlanTableRows(section) {
+  const rows = [];
+  for (const line of section.split(/\r?\n/u)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
+    const cells = trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
+    if (cells.length === 0 || cells.every((cell) => /^:?-{3,}:?$/u.test(cell))) continue;
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function parsePlanLink(cell) {
+  const match = cell.match(/^\[[^\]]+\]\(([^)]+)\)$/u);
+  if (!match) return null;
+  const rawDestination = stripDestination(match[1]);
+  if (rawDestination === "" || rawDestination.startsWith("#") || isExternalDestination(rawDestination)) return null;
+  const destination = destinationWithoutFragment(rawDestination).replaceAll("\\", "/");
+  if (isAbsoluteLocalPath(destination) || destination.startsWith("../") || destination === "..") return null;
+  const normalized = normalizeRepoPath(path.posix.normalize(path.posix.join("plans", destination)));
+  if (!normalized.startsWith("plans/") || !normalized.endsWith(".md")) return null;
+  return normalized;
+}
+
+function nonemptyPlanCell(value) {
+  return value !== undefined && value.trim() !== "" && value.trim() !== "—" && value.trim() !== "-";
+}
+
+function markdownLinkDestinations(markdown) {
+  const pattern = /!?\[[^\]]*\]\(\s*(<[^>]+>|[^\s)]+)(?:\s+[^)]*)?\)/gu;
+  return [...markdown.matchAll(pattern)]
+    .filter((match) => match[0].startsWith("!") === false)
+    .map((match) => ({ destination: stripDestination(match[1]) }));
+}
+
+export function parseCurrentAuthoritiesTable(indexText) {
+  const errors = [];
+  const rows = [];
+  const seenTopics = new Set();
+  const seenPrimaryPaths = new Set();
+  const maskedIndexText = maskMarkdownFencedCode(indexText);
+  const section = planSection(maskedIndexText, CURRENT_AUTHORITIES_HEADING);
+  if (section === "") return { errors: [`${INDEX_PATH} is missing the ${CURRENT_AUTHORITIES_HEADING} section`], rows };
+
+  let headerSeen = false;
+  for (const [rowIndex, cells] of parsePlanTableRows(section).entries()) {
+    if (cells.length === 3 && cells[0].toLowerCase() === "topic" && cells[1].toLowerCase() === "primary authority") {
+      if (headerSeen) errors.push(`${INDEX_PATH} current authorities table has duplicate headers`);
+      headerSeen = true;
+      continue;
+    }
+    if (cells.length !== 3) {
+      errors.push(`${INDEX_PATH} current authorities row ${rowIndex + 1} must have Topic, Primary authority, and Supporting contract/evidence cells`);
+      continue;
+    }
+    const topic = cells[0].trim();
+    if (!nonemptyPlanCell(topic)) {
+      errors.push(`${INDEX_PATH} current authorities row ${rowIndex + 1} has an empty topic`);
+      continue;
+    }
+    const topicKey = topic.toLocaleLowerCase("en-US");
+    if (seenTopics.has(topicKey)) errors.push(`${INDEX_PATH} current authorities has a duplicate topic: ${topic}`);
+    else seenTopics.add(topicKey);
+
+    const links = markdownLinkDestinations(cells[1]);
+    const localLinks = links.filter(({ destination }) => {
+      const normalized = destination.replaceAll("\\", "/");
+      return normalized !== ""
+        && !normalized.startsWith("#")
+        && !isExternalDestination(normalized)
+        && !isAbsoluteLocalPath(normalized);
+    });
+    let primaryDestination = localLinks.length === 1 ? destinationWithoutFragment(localLinks[0].destination).replaceAll("\\", "/") : "";
+    if (links.length !== 1 || localLinks.length !== 1) {
+      errors.push(`${INDEX_PATH} current authority topic ${topic} must have exactly one local Markdown primary link`);
+    } else if (!primaryDestination.toLowerCase().endsWith(".md")) {
+      errors.push(`${INDEX_PATH} current authority topic ${topic} primary link must target a Markdown document`);
+      primaryDestination = "";
+    }
+
+    let primaryPath = "";
+    if (primaryDestination !== "") {
+      primaryPath = normalizeRepoPath(path.posix.normalize(path.posix.join("docs", primaryDestination)));
+      if (seenPrimaryPaths.has(primaryPath)) errors.push(`${INDEX_PATH} current authorities reuses a primary authority path: ${primaryPath}`);
+      else seenPrimaryPaths.add(primaryPath);
+    }
+    rows.push({ topic, primaryDestination, primaryPath, supporting: cells[2] });
+  }
+  if (!headerSeen) errors.push(`${INDEX_PATH} current authorities table must expose Topic, Primary authority, and Supporting contract/evidence columns`);
+  return { errors, rows };
+}
+
+export function checkCurrentAuthorityTable(root) {
+  const absolutePath = path.join(root, INDEX_PATH);
+  if (!fs.existsSync(absolutePath)) return { errors: [`authority index is missing: ${INDEX_PATH}`], rows: [] };
+  const parsed = parseCurrentAuthoritiesTable(fs.readFileSync(absolutePath, "utf8"));
+  const errors = [...parsed.errors];
+  for (const row of parsed.rows) {
+    if (row.primaryDestination === "") continue;
+    const result = resolveLocalLink(root, INDEX_PATH, row.primaryDestination);
+    if (!result.ok) errors.push(result.error);
+  }
+  return { errors, rows: parsed.rows };
+}
+
+export function parsePlansAuthorityIndex(indexText) {
+  const errors = [];
+  const rows = [];
+  const seenPaths = new Set();
+  const maskedIndexText = maskMarkdownFencedCode(indexText);
+  const classificationSectionText = planSection(maskedIndexText, "## Plan classification");
+  const activeSectionText = planSection(maskedIndexText, "## Active plans");
+  if (classificationSectionText === "") errors.push(`${PLANS_INDEX_PATH} is missing the ## Plan classification section`);
+  if (activeSectionText === "") errors.push(`${PLANS_INDEX_PATH} is missing the ## Active plans section`);
+
+  const parseRows = (section, sectionName, activeSection) => {
+    const tableRows = parsePlanTableRows(section);
+    for (const [rowIndex, cells] of tableRows.entries()) {
+      const firstCell = cells[0] ?? "";
+      if (/^(?:File|Document)$/iu.test(firstCell)) continue;
+      const relativePath = parsePlanLink(firstCell);
+      if (relativePath === null) {
+        errors.push(`${PLANS_INDEX_PATH} has a malformed plan link in ${sectionName} row ${rowIndex + 1}`);
+        continue;
+      }
+      const expectedCellCount = activeSection ? 5 : 6;
+      if (cells.length !== expectedCellCount) {
+        errors.push(`${PLANS_INDEX_PATH} ${sectionName} row for ${relativePath} must have ${expectedCellCount} cells`);
+        continue;
+      }
+      if (seenPaths.has(relativePath)) {
+        errors.push(`${PLANS_INDEX_PATH} lists a plan more than once: ${relativePath}`);
+        continue;
+      }
+      seenPaths.add(relativePath);
+      const owner = activeSection ? cells[1] : cells[2];
+      const status = activeSection ? cells[2] : cells[3];
+      const closureCondition = activeSection ? cells[3] : cells[4];
+      if (activeSection || /^active plan(?:\s|$)/iu.test(cells[1] ?? "")) {
+        if (!nonemptyPlanCell(owner)) errors.push(`${PLANS_INDEX_PATH} has empty Owner metadata for ${relativePath}`);
+        if (!nonemptyPlanCell(status)) errors.push(`${PLANS_INDEX_PATH} has empty Status metadata for ${relativePath}`);
+        if (!nonemptyPlanCell(closureCondition)) errors.push(`${PLANS_INDEX_PATH} has empty Closure condition metadata for ${relativePath}`);
+      }
+      rows.push({
+        relativePath,
+        classification: activeSection ? "active plan" : (cells[1] ?? "").trim().toLowerCase(),
+        owner: owner.trim(),
+        status: status.trim(),
+        closureCondition: closureCondition.trim(),
+        active: activeSection || /^active plan(?:\s|$)/iu.test(cells[1] ?? ""),
+      });
+    }
+  };
+  if (classificationSectionText !== "") parseRows(classificationSectionText, "classification", false);
+  if (activeSectionText !== "") parseRows(activeSectionText, "active", true);
+  return { errors, rows, activePlanPaths: rows.filter((row) => row.active).map((row) => row.relativePath) };
+}
+
+export function checkActivePlanMetadata(root, indexResult = undefined) {
+  const index = indexResult ?? checkPlansAuthorityIndex(root);
+  const errors = indexResult === undefined ? [...index.errors] : [];
+  const activeRows = index.activeRows ?? index.rows?.filter((row) => row.active) ?? [];
+  const activePlanPaths = activeRows.map((row) => row.relativePath);
+  for (const row of activeRows) {
+    const relativePath = row.relativePath;
+    const absolutePath = path.join(root, relativePath);
+    if (!fs.existsSync(absolutePath)) {
+      errors.push(`active plan is missing: ${relativePath}`);
+      continue;
+    }
+    const markdown = fs.readFileSync(absolutePath, "utf8");
+    const metadata = {};
+    for (const label of ["Owner", "Status", "Closure condition"]) {
+      const values = metadataEntries(markdown, label);
+      if (values.length === 0) errors.push(`${relativePath} is missing ${label} metadata`);
+      if (values.length > 1) errors.push(`${relativePath} has duplicate ${label} metadata`);
+      metadata[label] = values.length === 1 ? values[0] : "";
+    }
+    if (metadata.Owner === "") errors.push(`${relativePath} must have nonempty Owner metadata`);
+    if (metadata.Status !== "Active") errors.push(`${relativePath} must have Status: Active metadata`);
+    if (metadata["Closure condition"] === "") errors.push(`${relativePath} must have nonempty Closure condition metadata`);
+    if (metadata.Owner !== row.owner) errors.push(`${relativePath} Owner metadata does not match ${PLANS_INDEX_PATH}`);
+    if (metadata.Status !== row.status) errors.push(`${relativePath} Status metadata does not match ${PLANS_INDEX_PATH}`);
+    if (metadata["Closure condition"] !== row.closureCondition) errors.push(`${relativePath} Closure condition metadata does not match ${PLANS_INDEX_PATH}`);
+  }
+  return { errors, activePlanPaths };
+}
+
+export function checkPlansAuthorityIndex(root) {
+  const errors = [];
+  const absolutePath = path.join(root, PLANS_INDEX_PATH);
+  if (!fs.existsSync(absolutePath)) return { errors: [`authority index is missing: ${PLANS_INDEX_PATH}`], rows: [], activeRows: [], activePlanPaths: [] };
+  const markdown = fs.readFileSync(absolutePath, "utf8");
+  if (!/\|\s*File\s*\|\s*Classification\s*\|\s*Owner\s*\|\s*Status\s*\|\s*Closure condition\s*\|\s*Role\s*\|/iu.test(maskMarkdownCode(markdown))) {
+    errors.push(`${PLANS_INDEX_PATH} must expose File, Classification, Owner, Status, Closure condition, and Role columns`);
+  }
+  const parsed = parsePlansAuthorityIndex(markdown);
+  errors.push(...parsed.errors);
+  const activeRows = parsed.rows.filter((row) => row.active);
+  const actual = new Set(activeRows.map((row) => row.relativePath));
+  const canonical = new Set(CANONICAL_ACTIVE_PLAN_PATHS);
+  if (activeRows.length !== CANONICAL_ACTIVE_PLAN_PATHS.length || actual.size !== activeRows.length) {
+    errors.push(`${PLANS_INDEX_PATH} active plan set must contain exactly the canonical seven plans; update the canonical allowlist intentionally when it changes`);
+  }
+  for (const relativePath of CANONICAL_ACTIVE_PLAN_PATHS) {
+    if (!actual.has(relativePath)) errors.push(`${PLANS_INDEX_PATH} must list canonical active plan ${relativePath}`);
+  }
+  for (const relativePath of actual) {
+    if (!canonical.has(relativePath)) errors.push(`${PLANS_INDEX_PATH} contains an extra active plan; update the canonical allowlist intentionally: ${relativePath}`);
+  }
+  return { errors, rows: parsed.rows, activeRows, activePlanPaths: [...actual] };
+}
+
 function classificationSection(indexText) {
   const start = indexText.indexOf(ROOT_CLASSIFICATION_HEADING);
   if (start === -1) return "";
@@ -244,14 +492,19 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
   const links = checkLocalLinks(absoluteRoot, trackedFiles);
   const policy = checkRootDocumentationPolicy(absoluteRoot, trackedFiles);
   const artifacts = checkPathBoundArtifacts(absoluteRoot);
-  const errors = [...links.errors, ...policy.errors, ...artifacts.errors];
+  const authorities = checkCurrentAuthorityTable(absoluteRoot);
+  const plansIndex = checkPlansAuthorityIndex(absoluteRoot);
+  const activePlans = checkActivePlanMetadata(absoluteRoot, plansIndex);
+  const errors = [...links.errors, ...policy.errors, ...artifacts.errors, ...authorities.errors, ...activePlans.errors, ...plansIndex.errors];
   return {
     ok: errors.length === 0,
     errors,
     trackedMarkdownFiles: trackedFiles.length,
     rootMarkdownFiles: policy.rootFiles.length,
     localLinks: links.links.length,
+    currentAuthorities: authorities.rows.length,
     pathBoundArtifacts: artifacts.artifacts.length,
+    activePlans: activePlans.activePlanPaths.length,
   };
 }
 

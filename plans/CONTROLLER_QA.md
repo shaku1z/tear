@@ -1,5 +1,12 @@
 # TEAR: BLADE — Controller & Navigation QA checklist
 
+## Authority metadata
+
+- **Owner:** QA owner
+- **Status:** Active
+- **Closure condition:** All listed controller and navigation checks pass on the supported standalone and CrazyGames builds, with the exact pad/preset and evidence recorded.
+- **Branch policy:** Start each change from protected `main` in a short-lived `codex/*` branch; historical branches are references only and never live development targets.
+
 Manual pass to run with a real controller (DualSense / Xbox / generic XInput) on
 the standalone build and inside the CrazyGames iframe. Covers everything shipped
 in Controller P1–P7. Tick each; note the preset + pad used.

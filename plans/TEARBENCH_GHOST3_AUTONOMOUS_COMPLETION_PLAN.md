@@ -1,6 +1,13 @@
 # TearBench, TearBot, State Forge, and Ghost 3.0 Autonomous Completion Plan
 
-**Status:** In progress during C27/C27A
+## Authority metadata
+
+- **Owner:** TearBench program owner
+- **Status:** Active
+- **Closure condition:** C21–C40 checkpoint exit gates pass with completion-grade evidence or explicit authorized dispositions; foundation gates alone never close the program.
+- **Branch policy:** Start each checkpoint slice from protected canonical `main` in a short-lived `codex/*` branch; historical branch names identify provenance only and are not live development targets.
+
+**Progress state:** In progress during C27/C27A
 **Created:** 2026-07-23
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
@@ -596,9 +603,10 @@ live-runtime internals into a second platform.
   1,176-transition real browser route, and one detached finale-parity test;
   Slice 37 adds 1 file / 5 tests, Slice 38 adds 7 files / 18 tests, and Slice 39
   adds 4 files / 10 tests. Its C22 live-runtime proof and C23 through C27 package
-  gates pass in the same worktree. Slice 39 commit `30c4877` is pushed to
-  `origin/codex/ghost3-autonomous-completion-plan`; Slice 40 is ready to commit
-  and not yet pushed.
+  gates pass in the same worktree. Slice 39 commit `30c4877` was recorded on
+  the historical `codex/ghost3-autonomous-completion-plan` branch; Slice 40 was
+  its then-current boundary. New slices start from protected `main` on a
+  short-lived `codex/*` branch.
 - Slice 38 captures 12 `executing` and 12 matching `completed` audio-dispatch
   receipts in the refreshed 1,176-transition browser route after explicit audio
   context activation. All seven finale mix requests are `logical-target-only`

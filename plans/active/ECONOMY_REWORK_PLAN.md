@@ -1,5 +1,12 @@
 # Tear Economy Rework
 
+## Authority metadata
+
+- **Owner:** Economy/balance owner
+- **Status:** Active
+- **Closure condition:** Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone.
+- **Branch policy:** Start each change from protected canonical `main` in a short-lived `codex/*` branch; do not use a stale feature branch as the live development target.
+
 Partially implemented. Active remaining scope is live-balance validation and
 achievement-pool reconciliation; no gameplay change is authorized by this
 document.

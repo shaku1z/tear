@@ -6,17 +6,17 @@ owning test/script references in one reviewable transaction.
 
 ## Current authorities
 
-| Topic | Current authority |
-| --- | --- |
-| Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) and [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
-| Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) |
-| Shop and upgrade design contract | [SHOP_UPGRADE_DESIGN.md](product/SHOP_UPGRADE_DESIGN.md) |
-| Audio integration and compatibility | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) |
-| Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) and [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
-| Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) |
-| Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) |
-| TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) and its preserved generated registries |
+| Topic | Primary authority | Supporting contract/evidence |
+| --- | --- | --- |
+| Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) | Current typed module boundaries and architecture checks |
+| Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
+| Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | — |
+| Shop and upgrade design contract | [SHOP_UPGRADE_DESIGN.md](product/SHOP_UPGRADE_DESIGN.md) | — |
+| Audio integration and compatibility | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) | Audio compatibility and vendor provenance checks |
+| Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) | [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
+| Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
+| Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
+| TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | Preserved generated registries and evidence catalogs |
 
 `docs/checkpoints/` and `docs/checkpoints/program-normalization/` are
 append-only checkpoint/history locations. `docs/source/` is the preserved

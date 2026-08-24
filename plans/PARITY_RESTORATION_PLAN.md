@@ -1,6 +1,13 @@
 # TEAR — Source-of-Truth Parity Restoration Plan
 
-**Oracle commit:** `ee5e93141d67cc02505b2227b3be0b10d1819e1c` ("fix(weapons): align throw range and handling") — the last pre-redesign monolith (`js/*.js`). Everything in this plan is measured against that commit's *behavior*, not just its text.
+**Oracle commit:** `ee5e93141d67cc02505b2227b3be0b10d1819e1c` ("fix(weapons): align throw range and handling") — the last pre-redesign monolith (`js/*.js`), retained for comparison only. Everything in this plan is measured against that commit's *behavior*, not just its text; it is never an implementation or deployment target.
+
+## Authority metadata
+
+- **Owner:** Parity owner
+- **Status:** Active
+- **Closure condition:** Required oracle comparison traces and current-build parity gates pass with documented, approved divergences only.
+- **Branch policy:** Start each change from protected canonical `main` in a short-lived `codex/*` branch; `Tear-oracle`, `ee5e931`, and `js/` remain comparison-only references.
 
 **Problem statement:** the architectural redesign (`0829094` + `3318931`, 571 files, js/ monolith → modular TS `src/`) introduced "lazy" divergences. Four restore commits already re-matched some code textually (`937a09c`…`b98497b`), yet the blade/cursor/mouse still doesn't feel like the source, and UI screens like the draft differ. That tells us the remaining bugs are **systemic** (frame order, state ownership, dt model, adapter plumbing) rather than line-level — so this plan attacks parity as a *measurable property*, not a vibe.
 
@@ -61,7 +68,7 @@ The oracle's `enemy.js` (4225 lines), `player.js`, `mirror.js`, `projectile.js`,
 
 1. Convert every trace/screenshot comparison that found a bug into a permanent test: golden input-replay checksums for blade/player, snapshot tests for screens, conformance fixtures for enemies.
 2. `docs/PARITY.md`: the contract table (cursor policy, pointer-lock lifecycle, frame model, draft guarantees) so future refactors have a spec instead of re-deriving from the monolith.
-3. Commit per phase, push after each commit (project rule). Suggested branch: continue on `codex/architectural-redesign`.
+3. Commit per phase, push after each commit (project rule). Use a short-lived `codex/*` branch created from protected canonical `main`; do not continue work on the historical `codex/architectural-redesign` branch.
 
 ## Confirmed parity repairs
 

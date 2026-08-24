@@ -1,7 +1,9 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
 **Status:** G4 is CLOSED after its protected-main merge and green post-merge
-`Validate`/ref observation. G5 is OPEN for bounded organization slices;
+`Validate`/ref observation. G5 is a closure candidate pending this slice's
+protected merge, post-merge exact-main `Validate`, verified merged-head branch
+cleanup, clean/equal canonical refs, and a final strict parent-layout result;
 production remains frozen and no deployment is authorized.
 
 **Prepared:** 2026-08-20
@@ -22,15 +24,19 @@ since received an evidence-backed retain-in-place disposition; no artifact
 quarantine is authorized.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
-CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
-organization work; G6 synchronization repair and G7 production certification
-remain future work.
+CLOSED after protected merge and post-merge observation; G5 CLOSURE CANDIDATE
+with evidence recorded in `docs/checkpoints/program-normalization/G5_CLOSURE.md`;
+G6 synchronization repair and G7 production certification remain locked/future
+work until the G5 closure PR, post-merge exact-main gate, branch-cleanup
+receipt, clean/equal canonical refs, and final strict parent-layout result pass.
 
 **Music repository state:** `shaku1z/tear-music` (formerly
-`shaku1z/tear-score`) protected `main` is clean at
-`7e443d9d75089b80bb641ba654eee46615b1abd6` (`7e443d9`). The full music
-`pnpm check` passed on PR #13 head `1577f5c`, including 140 CLI tests. Its
-post-merge `Validate` run `32629490375` is green (job `97169930931`, 1m57s).
+`shaku1z/tear-score`) protected `main` is clean and equal to its canonical
+remote at `6a60139e969b987a1de7bbfdcd20d2e804aab835` (`6a60139`). The current
+canonical `Validate` run `32634453401` is green. The earlier observed
+`7e443d9d75089b80bb641ba654eee46615b1abd6` (`7e443d9`) and `Validate` run
+`32629490375` remain historical provenance only, not the current music
+authority.
 
 **Wiki repository state:** protected/default `main` is clean at
 `33a7f86f8f12ce7c98d1805d169142c832afdcf1` (`33a7f86`). Post-merge
@@ -806,10 +812,31 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 
 ## 9. G5 — Organize repositories, documents, and workspace
 
-**Status:** OPEN after protected G4 merge and post-merge `Validate`/ref
-observation. This section records the bounded baseline, authority indexes, and
-the completed report-driven whole-root preservation operation; no deletion or
-bulk reorganization is claimed.
+**Status:** CLOSURE CANDIDATE after the prior protected G5 merge evidence and
+exact-main `Validate` run `32686547630`; that run predates this closure slice
+and the entire closure candidate (`7c19bd4`, `0e78467`, and `81aea87`); it does
+not validate any of those commits. Final closure remains conditional on this
+slice's protected merge, post-merge exact-main gate, verified merged-head
+branch cleanup receipt, clean/equal canonical refs, and final strict
+parent-layout result. This section records the bounded baseline, authority
+indexes, report-driven preservation, explicit deferred dependency audit, and
+evidence-backed dispositions; no deletion or bulk reorganization is claimed.
+
+The consolidated closure record is
+`docs/checkpoints/program-normalization/G5_CLOSURE.md`. It binds PR #40 at
+`c1b5ca57b64e4e609d09bcb129292e72711c7900`, the exact-main `Validate` run
+`32686547630` as prior evidence only; that run predates the entire closure
+candidate (`7c19bd4`, `0e78467`, and `81aea87`). The real deferred report is
+`g5-deferred-dependency-audit-c1b5ca5.json` (562,840 bytes; SHA-256
+`f2066198de152f0724415b92b7d04411108fc52bc94638c7bfd6d8fef77e11a2`). The
+report is `historical-sizing-match` for 4,133,063 source bytes plus 30,660,424
+target bytes, proves the exact Windows mount-point tag/target, and remains
+opaque/refused with no traversal. The deferred pair stays audit-only and is
+not an active worktree or deployment target; no move or delete is authorized.
+`Tear-main-publication` remains forbidden for development/deployment, and all
+archived receipt copies are recovery-only. G5 cannot be called closed from the
+merge and Validate facts alone: the cleanup receipt, final strict result, and
+clean/equal canonical-reference observation are required.
 
 The bounded G5 baseline is recorded in
 `docs/checkpoints/program-normalization/G5_BASELINE_INVENTORY.md`; the completed
@@ -986,17 +1013,22 @@ This is a target classification, not permission for a bulk move.
       read-only evidence and authorizes no disposal; protected entries, all
       unmatched/path-conflict entries, the other receipt copies, and retention
       ownership remain explicitly unresolved.
-- [ ] Treat `C:/tmp/Tear-main-publication` as forbidden for development and
+- [x] Treat `C:/tmp/Tear-main-publication` as forbidden for development and
       deployment. It is an unregistered, divergent copy and is the likely
-      residue behind the earlier `main is already used by worktree` conflict.
+      residue behind the earlier `main is already used by worktree` conflict;
+      the tracked parent-layout policy also classifies
+      `tear-crazygames-ee5.zip` as legacy-comparison-only retention through
+      `2027-03-31`, never for development or deployment.
 - [x] Keep the dated recovery bundle in the dedicated `Tear-archives`
       location outside active repositories, with
       `workspace-quarantine-manifest-753e456.json` (SHA-256
       `bb23434cf259a9a7ef70e5477e770bb84a467afc04755891d58490b007d83da7`),
       `workspace-quarantine-journal-753e456`, and the completed receipt.
-- [ ] Adopt one parent layout for canonical repositories, active worktrees,
-      scratch output, and archives. Do not hardcode the user's absolute path in
-      repository logic.
+- [x] Adopt one portable parent layout for canonical repositories, active
+      worktrees, scratch output, and archives through
+      `preservation/workspace-parent-layout-policy.json` and its strict
+      reporter. The exact legacy comparison bundle is an explicit in-place
+      retention exception; no user's absolute path is hardcoded.
 - [x] Record that Soundtrack Desk configuration already points at and requires
       the canonical game repository (`C:/Users/realm/Desktop/game/Tear`, branch
       `main`, clean tree) in both the canonical and compatibility local config
@@ -1006,35 +1038,102 @@ This is a target classification, not permission for a bulk move.
 
 ### Checkpoint G5-A — midpoint pause
 
-- [ ] Every proposed move has a reference/import/link search result.
-- [ ] No build, CI, Vite, Wrangler, TearBench, vendoring, or wiki path is broken.
+- [x] Every actual move has a reference/import/link search result recorded in
+      the placement and preservation evidence; no unreviewed move is claimed.
+- [ ] Final protected-main exact-main Validate and focused checks prove that
+      no build, CI, Vite, Wrangler, TearBench, vendoring, or wiki path is
+      broken by this closure slice. The prior run `32686547630` predates the
+      entire closure candidate (`7c19bd4`, `0e78467`, and `81aea87`) and is not
+      closure-slice validation.
 - [x] Quarantined local data has an integrity-bound manifest and recovery
       window; hashes are recorded where policy permits and protected entries
       remain metadata-only. See the G5 workspace-preservation receipt for the
       manifest, journal, receipt, and retention date.
-- [ ] `src/` changes, if any, are justified by architecture evidence rather
-      than aesthetics.
+- [x] No `src/` changes are part of this closure slice; the existing `src/`
+      domain boundaries are intentionally unchanged, so no aesthetic refactor
+      is being smuggled into G5.
+
+### G5 post-merge branch-cleanup gate
+
+The G5 closure record is not complete when its PR merges or when Validate is
+green. The current audit found zero live GitHub remote heads matching
+`codex/g4-*` or `codex/g5-*`; the 22 stale refs are local
+`refs/remotes/origin/*` tracking refs. After the merge, revalidate this state.
+Before pruning, snapshot local codex branches, stale remote-tracking refs, the
+live `git ls-remote --heads origin` result for both patterns, and each
+applicable PR's state/head OID. Hash these pre-cleanup inventories.
+
+For every stale tracking ref, prove the PR is `MERGED` and its stale tracking
+OID equals the PR head OID. If `ls-remote` has no matching live remote head,
+record it as already absent and do not attempt a remote deletion; a live tip
+with commits beyond the PR head is not deletable. Preserve `main`,
+`origin/main`, the checked-out closure branch, locked oracle/comparison
+references, and historical/non-scope refs while proof is collected. Switch to
+canonical `main`, pull and verify exact equality with `origin/main`, prune,
+then delete every exact proven local stale branch, including
+`codex/g5-closure` once it is no longer checked out. Re-list and verify the
+stale refs' absence before writing the receipt.
+
+The durable receipt is retained at
+`Tear-archives/2026-08-23-g5-workspace-recovery/g5-branch-cleanup-receipt-<closure-main7>.json`,
+where `<closure-main7>` is the protected-main squash-merge SHA produced after
+this PR. It is written/finalized only after the canonical-main switch,
+exact-equality verification, exact proven local stale-branch deletions
+(including `codex/g5-closure`), and the post-cleanup re-list. It must include
+`preCleanupLocalBranches`, `preCleanupRemoteTrackingRefs`,
+`preCleanupLiveRemoteHeads`, `pullRequestProofs`, `remoteHeadsAlreadyAbsent`,
+the exact deletion allowlist/protected refs, local squash divergences,
+post-cleanup inventories, final strict parent-layout result, and Validate run.
+It must include `preCleanupRefInventorySha256`, `prProofSha256`,
+`postCleanupRefInventorySha256`, `strictParentLayoutReportSha256`, and
+`receiptSha256`, with the self-hash convention defined explicitly. No G5
+closure claim or G6 unlock is valid until this receipt, the post-merge
+exact-main gate, clean/equal canonical refs, and final strict parent-layout
+result all pass.
 
 ### Checkpoint G5-B — completed whole-root preservation
 
 The exact operation evidence and fail-closed manual reverse-move procedure are
 recorded in
 `docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md`.
-This checkpoint closes only the bounded preservation lane. G5 remains OPEN for
-the remaining non-Git copy review, parent-layout and Soundtrack Desk policy
-work, the deferred reparse dependency, and the final close conditions. The
-artifact-retention decision is closed by the dedicated checkpoint; no artifact
-quarantine operation is part of G5.
+This checkpoint closes the bounded preservation lane. The dedicated G5 closure
+record now binds the remaining parent-layout policy, deferred dependency audit,
+copy/artifact dispositions, and post-merge closure condition. The deferred
+pair remains an audit-only in-place exception; no artifact quarantine operation
+or deletion is part of G5.
 
 ### Close conditions
 
-- [ ] Root contains only operational entrypoints/configuration and intentionally
-      root-level project documents.
-- [ ] Documentation indexes identify exactly one current authority per topic.
-- [ ] Active plans are few, named, and have owners/close conditions.
-- [ ] Workspace has no invalid `.git` pointer and no unexplained large clone.
-- [ ] Full game and music gates pass after final path changes.
-- [ ] G5 closure record is approved; only then may G6 open.
+- [x] The **tracked repository root inventory** contains only operational
+      entrypoints/configuration and intentionally root-level project documents;
+      this is the inventory enforced by `config/workspace-contract.json` and
+      `scripts/check-workspace.mjs` through `git ls-tree`, not a claim about
+      every ignored filesystem output. The separate
+      `G5_ARTIFACT_DISPOSITION` retain-in-place exception covers exactly 104
+      files and 31,683,314 bytes; it does not cover ignored root outputs.
+      `dist/`, `.tmp-tone-host-esm/`, `test-results/`, `node_modules/`,
+      `.wrangler/`, `*.log`, and `*.tsbuildinfo` are `.gitignore`-excluded,
+      generated/operational outputs outside repository authority. They are not
+      alternate authorities and are not moved or deleted by G5. No unexplained
+      **tracked** root entry remains; path-bound generated outputs and the
+      separate 104-file disposition are deliberate policy exceptions.
+- [x] Documentation indexes identify exactly one current authority per topic;
+      the seven active plans are explicitly named and each carries a matching
+      owner, Active status, and closure condition.
+- [x] The seven active plans are machine-checked for close conditions; no stale
+      live branch instruction remains unqualified as historical provenance.
+- [x] Workspace policy has no invalid `.git` pointer or unexplained canonical
+      clone; the deferred junction and the legacy comparison ZIP are explicit
+      retained exceptions with bounded evidence.
+- [ ] Final protected-main exact-main validation for this closure slice is
+      green; the earlier game gate predates this slice. Current canonical music
+      validation remains green, but no source, audio/vendor, or deployment code
+      changed in this closure slice. This is necessary evidence, not sufficient
+      closure by itself.
+- [ ] G5 closure record is approved. Approval requires this slice's merge,
+      post-merge exact-main Validate, a verified merged-head branch-cleanup
+      receipt, clean/equal canonical refs, and a final strict parent-layout
+      result; only then may G6 open.
 
 ---
 
@@ -1246,7 +1345,9 @@ Create one record per goal under the future canonical checkpoint location.
       observation of this record.
 - [x] G4 closed — permanent terminology reached protected game `main` at
       `b3c2066`, with exact-head post-merge `Validate` run `32630369249` green.
-- [ ] G5 closed — repositories, docs, and local workspace are organized.
+- [ ] G5 closed — repositories, docs, and local workspace are organized; the
+      closure candidate is recorded, pending protected merge and post-merge
+      exact-main `Validate`.
 - [ ] G6 closed — wiki synchronizes from the modern typed manifest.
 - [ ] G7 closed — exact canonical commits are deployed and verified.
 - [ ] G8 active — prevention evidence is recurring.

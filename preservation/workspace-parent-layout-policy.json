@@ -74,6 +74,22 @@
     "autoMove": false,
     "autoDelete": false,
     "autoDeploy": false,
-    "autoMerge": false
+    "autoMerge": false,
+    "explicitRetentions": [
+      {
+        "scope": "temporary-root",
+        "exactName": "tear-crazygames-ee5.zip",
+        "kind": "file",
+        "classification": "legacy-comparison-only-retention",
+        "owner": "G5 release governance",
+        "retainThrough": "2027-03-31",
+        "allowedUse": "comparison-only",
+        "forbiddenUses": [
+          "development",
+          "deployment"
+        ],
+        "disposition": "retain-in-place"
+      }
+    ]
   }
 }
