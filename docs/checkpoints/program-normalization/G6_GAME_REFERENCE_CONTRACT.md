@@ -49,6 +49,12 @@ Cloudflare deployment are outside this slice and remain locked by the G6 plan.
 
 - `pnpm exec vitest run tests/unit/game-reference.test.ts --no-file-parallelism`
 - `pnpm test` includes this unit suite in the full Vitest gate.
+- `pnpm check:game-reference` exercises clean CLI/Vite export with an exact
+  SHA, temporary output path, and provenance check; it is part of
+  `check:functional`.
+- The preflight proves only the local checkout's clean `HEAD` identity. It does
+  not prove protected-main/origin state, artifact transport, snapshot
+  promotion, or deployment; those remain deferred to later G6/G7 gates.
 - `pnpm typecheck`
 - `pnpm export:game-reference -- --expected-sha <current-full-sha>`
 - `git diff --check`

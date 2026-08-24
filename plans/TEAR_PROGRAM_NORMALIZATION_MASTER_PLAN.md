@@ -1165,7 +1165,8 @@ semantics and recording the resulting path and hash in the G6 receipt.
 - [x] Add focused schema, determinism, source-SHA, JSON-safety, roster, dirty
       tree, and stale-generation checks; wire the exporter as
       `pnpm export:game-reference`. The unit suite is already included by the
-      repository's full `pnpm test` gate.
+      repository's full `pnpm test` gate, and `pnpm check:game-reference` is
+      included in the full `check:functional` gate for clean CLI/Vite output.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.
 

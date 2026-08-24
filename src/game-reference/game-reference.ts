@@ -114,6 +114,7 @@ function stringList(value: unknown, path: string, minimum = 1): readonly string[
 
 function ratings(value: WeaponRatings, path: string): Readonly<WeaponRatings> {
   const source = record(value, path);
+  exactKeys(source, path, RATING_KEYS);
   const result = Object.fromEntries(RATING_KEYS.map((key) => [key, finite(source[key], `${path}.${key}`)])) as unknown as WeaponRatings;
   for (const key of RATING_KEYS) {
     if (!Number.isInteger(result[key]) || result[key] < 1 || result[key] > 5) throw new RangeError(`${path}.${key} must be an integer from 1 to 5`);
@@ -123,6 +124,7 @@ function ratings(value: WeaponRatings, path: string): Readonly<WeaponRatings> {
 
 function channels(value: WeaponChannels, path: string): Readonly<WeaponChannels> {
   const source = record(value, path);
+  exactKeys(source, path, CHANNEL_KEYS);
   const result = Object.fromEntries(CHANNEL_KEYS.map((key) => [key, finite(source[key], `${path}.${key}`)])) as unknown as WeaponChannels;
   return Object.freeze(result);
 }
@@ -144,6 +146,11 @@ function assertExactRoster(ids: readonly string[], path: string): asserts ids is
   for (const id of CANONICAL_FINAL_FIVE_WEAPON_IDS) {
     if (!unique.has(id)) throw new TypeError(`${path} is missing canonical weapon ID ${id}`);
   }
+}
+
+function assertCanonicalRosterOrder(ids: readonly string[], path: string): asserts ids is readonly WeaponId[] {
+  assertExactRoster(ids, path);
+  if (ids.some((id, index) => id !== CANONICAL_FINAL_FIVE_WEAPON_IDS[index])) throw new TypeError(`${path} must use canonical Final Five order`);
 }
 
 function validateProjectedWeapon(value: unknown, path: string): GameReferenceWeaponV1 {
@@ -237,15 +244,6 @@ export function assertCurrentSourceSha(reference: Pick<GameReferenceV1, "source"
   if (reference.source.sha !== expected) throw new Error(`stale game reference: expected ${expected}, received ${reference.source.sha}`);
 }
 
-/** Export preflight identity: no dirty tree and no caller-supplied SHA drift. */
-export function assertCleanSourceIdentity(input: { readonly headSha: string; readonly requestedSha: string; readonly status: string }): string {
-  const headSha = fullSha(input.headSha, "headSha");
-  const requestedSha = fullSha(input.requestedSha, "requestedSha");
-  if (input.status.length > 0) throw new Error("game reference export requires a clean worktree");
-  if (requestedSha !== headSha) throw new Error(`game reference source SHA must equal HEAD ${headSha}`);
-  return headSha;
-}
-
 /** Validates an imported reference before a consumer trusts it. */
 export function assertValidGameReferenceV1(value: unknown): asserts value is GameReferenceV1 {
   const source = record(value, "gameReference");
@@ -260,7 +258,7 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   exactKeys(roster, "gameReference.roster", ["id", "schemaVersion", "activeWeaponIds", "retiredWeaponIds"]);
   if (roster.id !== "final-five" || roster.schemaVersion !== FINAL_FIVE_WEAPON_SCHEMA_VERSION) throw new TypeError("gameReference roster schema is not final-five-v1");
   const activeIds = stringList(roster.activeWeaponIds, "gameReference.roster.activeWeaponIds", CANONICAL_FINAL_FIVE_WEAPON_IDS.length);
-  assertExactRoster(activeIds, "gameReference.roster.activeWeaponIds");
+  assertCanonicalRosterOrder(activeIds, "gameReference.roster.activeWeaponIds");
   const retiredIds = stringList(roster.retiredWeaponIds, "gameReference.roster.retiredWeaponIds", RETIRED_WEAPON_IDS.length);
   if (retiredIds.length !== RETIRED_WEAPON_IDS.length || retiredIds.some((id, index) => id !== RETIRED_WEAPON_IDS[index])) throw new TypeError("gameReference retired roster is not canonical");
   const collections = record(source.collections, "gameReference.collections");
@@ -270,7 +268,7 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   if (weaponsCollection.status !== "complete" || !Array.isArray(weaponsCollection.items)) throw new TypeError("gameReference weapon collection is incomplete");
   const projectedWeapons = weaponsCollection.items.map((weapon, index) => validateProjectedWeapon(weapon, `gameReference.collections.weapons.items[${String(index)}]`));
   const weaponIds = projectedWeapons.map((weapon) => weapon.id);
-  assertExactRoster(weaponIds, "gameReference.collections.weapons.items");
+  assertCanonicalRosterOrder(weaponIds, "gameReference.collections.weapons.items");
   const deferred = source.deferredCollections;
   if (!Array.isArray(deferred)) throw new TypeError("gameReference.deferredCollections must be an array");
   const deferredIds: string[] = [];

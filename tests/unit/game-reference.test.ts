@@ -4,7 +4,6 @@ import { CONFIG } from "../../src/config/game-config";
 import { canonicalStringify } from "../../src/replay/hash";
 import {
   assertCurrentSourceSha,
-  assertCleanSourceIdentity,
   assertValidGameReferenceV1,
   buildGameReferenceV1,
   encodeGameReferenceV1,
@@ -94,13 +93,6 @@ describe("game-reference.v1", () => {
     })).toThrow(/repository must be shaku1z\/tear/u);
   });
 
-  it("requires a clean source tree and an exact HEAD SHA for export", () => {
-    const sha = "a".repeat(40);
-    expect(assertCleanSourceIdentity({ headSha: sha, requestedSha: sha, status: "" })).toBe(sha);
-    expect(() => assertCleanSourceIdentity({ headSha: sha, requestedSha: sha, status: " M src/gameplay/weapons.ts" })).toThrow(/clean worktree/u);
-    expect(() => assertCleanSourceIdentity({ headSha: sha, requestedSha: "b".repeat(40), status: "" })).toThrow(/equal HEAD/u);
-  });
-
   it("rejects a runtime callback accidentally entering the projected mechanics", () => {
     const unsafe = { ...firstWeapon, mechanics: [(() => undefined) as unknown as string] } as unknown as WeaponDefinition;
     expect(() => reference("a".repeat(40), [unsafe, ...WEAPONS.slice(1)])).toThrow(/non-empty string/u);
@@ -134,6 +126,30 @@ describe("game-reference.v1", () => {
     const wrongTerminology = structuredClone(reference()) as unknown as { terminologyVersion: string };
     wrongTerminology.terminologyVersion = "unsupported-terminology-v9";
     expect(() => { assertValidGameReferenceV1(wrongTerminology); }).toThrow(/terminologyVersion/u);
+  });
+
+  it("requires canonical positional order for imported roster arrays", () => {
+    const activePermutation = structuredClone(reference()) as unknown as { roster: { activeWeaponIds: string[] } };
+    activePermutation.roster.activeWeaponIds.reverse();
+    expect(() => { assertValidGameReferenceV1(activePermutation); }).toThrow(/canonical Final Five order/u);
+
+    const weaponPermutation = structuredClone(reference()) as unknown as { collections: { weapons: { items: { id: string }[] } } };
+    weaponPermutation.collections.weapons.items.reverse();
+    expect(() => { assertValidGameReferenceV1(weaponPermutation); }).toThrow(/canonical Final Five order/u);
+  });
+
+  it("rejects extra rating and channel keys from imported artifacts", () => {
+    const extraRating = structuredClone(reference()) as unknown as { collections: { weapons: { items: { ratings: Record<string, unknown> }[] } } };
+    const rating = extraRating.collections.weapons.items.at(0);
+    if (rating === undefined) throw new Error("missing weapon fixture");
+    rating.ratings.extra = 1;
+    expect(() => { assertValidGameReferenceV1(extraRating); }).toThrow(/ratings has unexpected/u);
+
+    const extraChannel = structuredClone(reference()) as unknown as { collections: { weapons: { items: { channels: Record<string, unknown> }[] } } };
+    const channel = extraChannel.collections.weapons.items.at(0);
+    if (channel === undefined) throw new Error("missing weapon fixture");
+    channel.channels.extra = 1;
+    expect(() => { assertValidGameReferenceV1(extraChannel); }).toThrow(/channels has unexpected/u);
   });
 
   it("rejects duplicate or unknown deferred collection IDs", () => {

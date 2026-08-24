@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { spawnSync } from "node:child_process";
 import { createServer } from "vite";
+import { readCleanSourceIdentity } from "./game-reference-export-preflight.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 
@@ -14,32 +14,21 @@ function option(name) {
   return value;
 }
 
-function git(...args) {
-  const result = spawnSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
-  return result.stdout.trim();
-}
-
 function numericTuning(value) {
   return Object.fromEntries(Object.entries(value));
 }
 
-const headSha = git("rev-parse", "HEAD");
-const requestedSha = option("--sha") ?? process.env.TEAR_GAME_REFERENCE_SHA ?? headSha;
+const requestedSha = option("--sha") ?? process.env.TEAR_GAME_REFERENCE_SHA;
 const expectedSha = option("--expected-sha");
 const terminologyVersion = option("--terminology") ?? JSON.parse(fs.readFileSync(path.join(root, "config", "terminology-registry.json"), "utf8")).registryId;
 const output = option("--output");
+const sourceSha = readCleanSourceIdentity(root, requestedSha);
 
 const server = await createServer({ root, configFile: false, logLevel: "error", server: { middlewareMode: true }, appType: "custom" });
 try {
   const referenceModule = await server.ssrLoadModule("/src/game-reference/game-reference.ts");
   const weaponModule = await server.ssrLoadModule("/src/gameplay/weapons.ts");
   const configModule = await server.ssrLoadModule("/src/config/game-config.ts");
-  const sourceSha = referenceModule.assertCleanSourceIdentity({
-    headSha,
-    requestedSha,
-    status: git("status", "--porcelain=v1", "--untracked-files=all"),
-  });
   const repository = option("--repository") ?? process.env.TEAR_BUILD_REPOSITORY ?? referenceModule.GAME_REFERENCE_REPOSITORY;
   const tuningByWeapon = Object.fromEntries(Object.entries(configModule.CONFIG.weapons).map(([id, tuning]) => [id, numericTuning(tuning)]));
   const reference = referenceModule.buildGameReferenceV1({ repository, sourceSha, terminologyVersion, weapons: weaponModule.WEAPONS, tuningByWeapon });
