@@ -1,0 +1,79 @@
+{
+  "format": "tear-workspace-parent-layout-policy",
+  "schemaVersion": 1,
+  "repository": "shaku1z/tear",
+  "canonical": {
+    "game": {
+      "exactName": "Tear",
+      "repository": "shaku1z/tear",
+      "branch": "main",
+      "upstream": "origin/main"
+    },
+    "music": {
+      "exactName": "tear-score",
+      "repository": "shaku1z/tear-music",
+      "branch": "main",
+      "upstream": "origin/main"
+    },
+    "wiki": {
+      "exactName": "tear-wiki",
+      "repository": "shaku1z/tear-wiki",
+      "branch": "main",
+      "upstream": "origin/main"
+    },
+    "oracle": {
+      "exactName": "Tear-oracle",
+      "repository": "shaku1z/tear",
+      "lockedCommit": "ee5e93141d67cc02505b2227b3be0b10d1819e1c",
+      "role": "comparison-only",
+      "requiredState": "detached-clean-comparison-only",
+      "requiredLockReason": "comparison-only",
+      "lockReason": "comparison-only; never merge or develop here"
+    }
+  },
+  "names": {
+    "approvedArchiveRecoveryPatterns": [
+      "^Tear-archives$",
+      "^tear-git-recovery-",
+      "^tear-g3-preservation-audit-",
+      "^tear-g5-"
+    ],
+    "forbiddenPatterns": [
+      "^Tear-main-publication$",
+      "^Tear-g5-canonical-"
+    ],
+    "forbiddenFor": [
+      "development",
+      "deployment"
+    ],
+    "collisionPolicy": {
+      "comparison": "case-insensitive",
+      "onCollision": "reject"
+    }
+  },
+  "reparse": {
+    "default": "refuse",
+    "deferredAuditRelation": {
+      "status": "deferred",
+      "operation": "audit-only",
+      "auditVisible": true,
+      "move": false,
+      "kind": "junction",
+      "source": {
+        "exactName": "Tear-budget-architecture",
+        "relativePath": "node_modules"
+      },
+      "target": {
+        "exactName": "Tear-tearscore-normalization",
+        "relativePath": "node_modules"
+      }
+    }
+  },
+  "looseItems": {
+    "mode": "report-only",
+    "autoMove": false,
+    "autoDelete": false,
+    "autoDeploy": false,
+    "autoMerge": false
+  }
+}

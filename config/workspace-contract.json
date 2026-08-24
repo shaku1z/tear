@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "repository": "shaku1z/tear",
+  "parentLayoutPolicy": "./preservation/workspace-parent-layout-policy.json",
   "requiredTrackedDirectories": [
     ".github",
     "config",
