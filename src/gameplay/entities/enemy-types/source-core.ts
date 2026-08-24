@@ -1,6 +1,7 @@
 import type { ArenaZone, EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
+import { bossPhaseMarks } from "../../run/boss-definitions";
 
 export function createSourceCore(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime) {
   const { CLOCK, CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, len, lerp, segSegmentDist } = dependencies;
@@ -34,7 +35,7 @@ export function createSourceCore(dependencies: EnemyDependencies, Enemy: EnemyBa
           this.color = "#8b3bd6"; this.kind = "boss"; this.isBoss = true; this.bossName = "THE SOURCE";
           this._noBar = true;   // the final boss speaks through the authored HUD, never a second head bar
           this.presentationId = "source";
-          this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [CONFIG.source.voidTier, CONFIG.source.fakeTier]; this.phaseTag = "THE CYCLE";
+          this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [...bossPhaseMarks("source")]; this.phaseTag = "THE CYCLE";
           this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
           this.zones = []; this.fireZones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
           this.firePattern = 0; this.fireState = "idle"; this.fireClock = 0; this.fireWarnStep = -1;

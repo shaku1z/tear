@@ -16,6 +16,7 @@ import { WEAPONS, type WeaponDefinition } from "../../src/gameplay/weapons";
 import { STAGES } from "../../src/gameplay/stages";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
 import { ENEMY_KIND_IDS } from "../../src/gameplay/run/content-director";
+import { BOSS_DEFINITIONS } from "../../src/gameplay/run/boss-definitions";
 import { VARIANTS } from "../../src/gameplay/variants";
 import { AFFIXES, PRESETS } from "../../src/gameplay/affixes";
 
@@ -28,7 +29,7 @@ const enemyFamilySource = ENEMY_KIND_IDS.map((id) => ({ id, variants: VARIANTS[i
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
   upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
   stages = STAGES, modes = MODE_CATALOG, enemyFamilies = enemyFamilySource,
-  enemyAffixes = AFFIXES, enemyPresets = PRESETS): GameReferenceV1 {
+  enemyAffixes = AFFIXES, enemyPresets = PRESETS, bossDefinitions = BOSS_DEFINITIONS): GameReferenceV1 {
   return buildGameReferenceV1({
     repository: "shaku1z/tear",
     sourceSha,
@@ -39,6 +40,7 @@ function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinitio
     enemyFamilies,
     enemyAffixes,
     enemyPresets,
+    bossDefinitions,
     stages,
     modes,
     tuningByWeapon,
@@ -89,6 +91,14 @@ describe("game-reference.v1", () => {
       { familyId: "ranged", affixIds: ["rapid", "volley"] },
       { familyId: "charger", affixIds: ["tank", "armed"] },
       { familyId: "armored", affixIds: ["warded", "tank"] },
+    ]);
+    expect(result.collections.bosses.status).toBe("complete");
+    expect(result.collections.bosses.items).toEqual([
+      { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.30] },
+      { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
+      { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
+      { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
+      { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
     ]);
     expect(result.collections["public-tuning"].status).toBe("deferred");
   });
@@ -221,6 +231,7 @@ describe("game-reference.v1", () => {
       enemyFamilies: enemyFamilySource,
       enemyAffixes: AFFIXES,
       enemyPresets: PRESETS,
+      bossDefinitions: BOSS_DEFINITIONS,
       stages: STAGES,
       modes: MODE_CATALOG,
       tuningByWeapon,

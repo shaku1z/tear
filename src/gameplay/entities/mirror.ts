@@ -4,6 +4,7 @@ import { createMirrorActions } from "./mirror-actions";
 import type {
   MirrorController, MirrorDependencies, MirrorMods, MirrorPlayerPort, MirrorProjectilePort,
 } from "./mirror-contracts";
+import { bossPhaseMarks } from "../run/boss-definitions";
 
 export * from "./mirror-contracts";
 
@@ -53,8 +54,8 @@ const Mirror: MirrorController = {
 
   get phase() {   // 1 sealed -> 2 torn -> 3 final (same thresholds as the classic Echo)
     if (!this.host) return 1;
-    const f = this.host.hp / this.host.maxHp;
-    return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3);
+    const f = this.host.hp / this.host.maxHp, marks = bossPhaseMarks("echo");
+    return f > marks[0] ? 1 : (f > marks[1] ? 2 : 3);
   },
 
   // ---- attach the brain to a freshly spawned host ----
@@ -286,7 +287,7 @@ class MirrorHost extends Enemy {
     super(x, y, Object.assign({}, CONFIG.echo, { knockbackTaken: 5.5, weight: 1.35 }));
     this.kind = "boss"; this.isBoss = true; this.isMirrorBoss = true;
     this.bossName = "THE ECHO"; this.color = "#b06cff";
-    this.epithet = "YOUR REFLECTION"; this.phaseMarks = [0.60, 0.25]; this.phaseTag = "SEALED";
+    this.epithet = "YOUR REFLECTION"; this.phaseMarks = [...bossPhaseMarks("echo")]; this.phaseTag = "SEALED";
     this.spawnClone = false; this.mode = "mirror";
     this._mods = mods ?? null;
     this._live = false;   // set true by the game when actually fought (bestiary previews stay inert)

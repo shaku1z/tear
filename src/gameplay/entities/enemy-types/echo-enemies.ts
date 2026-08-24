@@ -1,6 +1,7 @@
 import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
+import { bossPhaseMarks } from "../../run/boss-definitions";
 
 export function createEchoEnemyTypes(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, clamp, len, lerp } = dependencies;
@@ -19,6 +20,7 @@ export function createEchoEnemyTypes(dependencies: EnemyDependencies, Enemy: Ene
       this.color = "#000";
       this.kind = "boss"; this.isBoss = !isClone; this.bossName = "THE ECHO";
       this.presentationId = "echo";
+      this.phaseMarks = [...bossPhaseMarks("echo")];
       this.isClone = isClone;
       this.mode = "mirror"; this.state = "idle"; this.stateT = 0; this.facing = 1;
       this.seenTrickT = 0; this.copyKind = "hit"; this.copyT = -1; this.lastCopied = "";
@@ -29,7 +31,7 @@ export function createEchoEnemyTypes(dependencies: EnemyDependencies, Enemy: Ene
       this.harmonyLockT = 0; this.edgeTrail = [];
       if (isClone) { this.hp *= 0.5; this.maxHp = this.hp; this.hpDisplay = this.hp; }
     }
-    get phase() { const f = this.hp / this.maxHp; return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3); }
+    get phase() { const f = this.hp / this.maxHp, marks = bossPhaseMarks("echo"); return f > marks[0] ? 1 : (f > marks[1] ? 2 : 3); }
     _shock(projectiles: EnemyProjectile[], dir: number) {
       const C = CONFIG.echo, footY = this.y + this.hh;
       const p = new Projectile(this.x + dir * this.hw, footY - 12, dir * C.shockSpeed, 0);

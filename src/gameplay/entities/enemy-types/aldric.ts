@@ -2,6 +2,7 @@ import type { EnemyDependencies, ArenaZone, EnemyPlatform, EnemyPlayerPort, Enem
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
 import type { ThroneFireRuntime } from "./throne-fire";
+import { bossPhaseMarks } from "../../run/boss-definitions";
 
 export function createAldricType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime, throneFireRuntime: ThroneFireRuntime) {
   const { CONFIG, FX, Projectile, SFX, clamp, cosmeticRandom, lerp } = dependencies;
@@ -29,7 +30,7 @@ export function createAldricType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.color = CONFIG.colors.charger;
       this.kind = "boss"; this.isBoss = true; this.bossName = "ALDRIC";
       this.presentationId = "aldric";
-      this.epithet = "THE BERSERKER KING"; this.phaseMarks = [0.65, 0.20]; this.phaseTag = "THE DUEL";
+      this.epithet = "THE BERSERKER KING"; this.phaseMarks = [...bossPhaseMarks("aldric")]; this.phaseTag = "THE DUEL";
       this.mode = "duel"; this.state = "idle"; this.stateT = 0; this.atkT = 1.6; this.facing = 1;
       this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
       this.spawnAdds = false; this.faked = false; this.reviveCap = 0; this.chargeT = 0;

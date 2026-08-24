@@ -33,6 +33,7 @@ try {
   const enemyKindModule = await server.ssrLoadModule("/src/gameplay/run/content-director.ts");
   const variantModule = await server.ssrLoadModule("/src/gameplay/variants.ts");
   const affixModule = await server.ssrLoadModule("/src/gameplay/affixes.ts");
+  const bossDefinitionModule = await server.ssrLoadModule("/src/gameplay/run/boss-definitions.ts");
   const stageModule = await server.ssrLoadModule("/src/gameplay/stages.ts");
   const modeModule = await server.ssrLoadModule("/src/gameplay/run/mode-catalog.ts");
   const configModule = await server.ssrLoadModule("/src/config/game-config.ts");
@@ -49,6 +50,7 @@ try {
     enemyFamilies,
     enemyAffixes: affixModule.AFFIXES,
     enemyPresets: affixModule.PRESETS,
+    bossDefinitions: bossDefinitionModule.BOSS_DEFINITIONS,
     stages: stageModule.STAGES,
     modes: modeModule.MODE_CATALOG,
     tuningByWeapon,

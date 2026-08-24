@@ -32,9 +32,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   family/affix signatures. Source order is fail-closed; runtime callbacks,
   behavior/stat mutations, base stats, eligibility, CONFIG, and presentation
   objects are excluded. `null` represents an absent `minWave` gate.
-- [ ] Remaining reference collections — boss runtime data and global public
-  tuning remain explicitly deferred until each has a separate safe data-only
-  projection. Enemy runtime behavior beyond this structural catalog, wiki
+- [x] Authored boss reference catalog — the fixed game-reference collection
+  contains the exact five boss identities in authored order, exact names,
+  five-way stage mapping, and two descending phase thresholds per boss. The
+  pure `boss-definitions.ts` authority and `boss-reference.ts` projection
+  exclude constructors, runtime behavior, and tuning beyond those thresholds.
+- [ ] Remaining reference collections — global public tuning remains explicitly
+  deferred until it has a separate safe data-only projection. Boss and enemy
+  runtime behavior/tuning beyond the authored fields above, wiki
   synchronization, and release readiness are not implied.
 
 ## Runtime and releases

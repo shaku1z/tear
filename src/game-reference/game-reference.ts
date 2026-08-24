@@ -7,8 +7,13 @@ import type { WeaponChannels, WeaponDefinition, WeaponRatings } from "../gamepla
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
 import { MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
 import { STAGE_IDS, type StageDefinition } from "../gameplay/stages";
+import { projectBossReference, validateProjectedBosses, type GameReferenceBossV1 } from "./boss-reference";
+import type { BossDefinition } from "../gameplay/run/boss-definitions";
 import { projectEnemyReference, validateProjectedEnemies, type EnemyReferenceFamilySource, type GameReferenceEnemiesV1 } from "./enemy-reference";
 import { projectMode, projectStage, validateProjectedMode, validateProjectedStage, type GameReferenceModeV1, type GameReferenceStageV1 } from "./stage-mode-reference";
+export type { BossReferenceProjectionInput } from "./boss-reference";
+export type { BossDefinition, BossDefinitionId } from "../gameplay/run/boss-definitions";
+export type { GameReferenceBossV1 } from "./boss-reference";
 export type {
   EnemyReferenceFamilySource,
   GameReferenceEnemyAffixV1,
@@ -125,7 +130,7 @@ export interface GameReferenceV1 {
     weapons: GameReferenceCompleteCollectionV1<GameReferenceWeaponV1>;
     upgrades: GameReferenceCompleteCollectionV1<GameReferenceUpgradeV1>;
     enemies: GameReferenceCompleteValueCollectionV1<GameReferenceEnemiesV1>;
-    bosses: DeferredGameReferenceCollectionV1;
+    bosses: GameReferenceCompleteCollectionV1<GameReferenceBossV1>;
     stages: GameReferenceCompleteCollectionV1<GameReferenceStageV1>;
     modes: GameReferenceCompleteCollectionV1<GameReferenceModeV1>;
     achievements: GameReferenceCompleteCollectionV1<GameReferenceAchievementV1>;
@@ -143,13 +148,13 @@ export interface GameReferenceProjectionInput {
   readonly enemyFamilies: readonly EnemyReferenceFamilySource[];
   readonly enemyAffixes: readonly EnemyAffix[];
   readonly enemyPresets: readonly EnemyPreset[];
+  readonly bossDefinitions: readonly BossDefinition[];
   readonly stages: readonly StageDefinition[];
   readonly modes: readonly ModeDefinition[];
   readonly tuningByWeapon: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
 const DEFERRED_COLLECTION_REASONS = Object.freeze({
-  bosses: "Boss definitions require a separate data-only projection boundary.",
   "public-tuning": "Only flat weapon tuning is safe to project in this contract slice.",
 });
 const EXPECTED_UPGRADE_COUNT = 60;
@@ -478,6 +483,7 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
     enemyAffixes: input.enemyAffixes,
     enemyPresets: input.enemyPresets,
   });
+  const bosses = projectBossReference({ bossDefinitions: input.bossDefinitions, stages: input.stages });
   const stageIds = input.stages.map((stage, index) => text(stage.id, `stage[${String(index)}].id`));
   assertCanonicalSourceIds(stageIds, STAGE_IDS, "stages");
   const stagesById = new Map(input.stages.map((stage) => [stage.id, stage] as const));
@@ -509,7 +515,7 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
       weapons: Object.freeze({ status: "complete", items: weapons }),
       upgrades: Object.freeze({ status: "complete", items: upgrades }),
       enemies: Object.freeze({ status: "complete", items: enemies }),
-      bosses: Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS.bosses }),
+      bosses: Object.freeze({ status: "complete", items: bosses }),
       stages: Object.freeze({ status: "complete", items: stages }),
       modes: Object.freeze({ status: "complete", items: modes }),
       achievements: Object.freeze({ status: "complete", items: achievements }),
@@ -566,9 +572,11 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   exactKeys(enemiesCollection, "gameReference.collections.enemies", ["status", "items"]);
   if (enemiesCollection.status !== "complete") throw new TypeError("gameReference.collections.enemies must be a complete collection");
   validateProjectedEnemies(enemiesCollection.items, "gameReference.collections.enemies.items");
-  for (const id of ["bosses", "public-tuning"] as const) {
-    deferredCollection(collections[id], `gameReference.collections.${id}`);
-  }
+  const bossesCollection = record(collections.bosses, "gameReference.collections.bosses");
+  exactKeys(bossesCollection, "gameReference.collections.bosses", ["status", "items"]);
+  if (bossesCollection.status !== "complete" || !Array.isArray(bossesCollection.items)) throw new TypeError("gameReference.collections.bosses must be a complete collection");
+  validateProjectedBosses(bossesCollection.items, "gameReference.collections.bosses.items");
+  deferredCollection(collections["public-tuning"], "gameReference.collections.public-tuning");
   canonicalStringify(value);
 }
 

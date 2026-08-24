@@ -1,14 +1,10 @@
 import type { RandomSource } from "../../domain/random";
+import { BOSS_DEFINITIONS } from "./boss-definitions";
 
-export const BOSS_ROSTER = Object.freeze([
-  Object.freeze({ id: "warden", name: "The Warden" }),
-  Object.freeze({ id: "colossus", name: "Iron Colossus" }),
-  Object.freeze({ id: "aldric", name: "Berserker King" }),
-  Object.freeze({ id: "echo", name: "The Echo" }),
-  Object.freeze({ id: "source", name: "The Source" }),
-] as const);
+/** Compatibility roster view; identity and order are authored in BOSS_DEFINITIONS. */
+export const BOSS_ROSTER = Object.freeze(BOSS_DEFINITIONS.map(({ id, name }) => Object.freeze({ id, name })));
 
-export type BossId = typeof BOSS_ROSTER[number]["id"];
+export type BossId = typeof BOSS_DEFINITIONS[number]["id"];
 export type MiniBossId = Exclude<BossId, "source">;
 export const ENEMY_KIND_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",

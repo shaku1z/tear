@@ -1,4 +1,4 @@
-# G6 Reference Catalogs — Slices 2–4
+# G6 Reference Catalogs — Slices 2–5
 
 Status: implemented on the G6 catalog branch; merge, consumer, and deployment
 gates remain open.
@@ -20,7 +20,9 @@ fixed-key
 - `enemies`: complete structural catalog with the exact eleven enemy families,
   authored variant metadata, six affixes, and three authored preset signatures.
   Families without variants are represented by empty arrays.
-- `bosses` and `public-tuning`: deferred envelopes with explicit reasons.
+- `bosses`: complete authored identity/phase catalog with an exact stage
+  bijection.
+- `public-tuning`: deferred envelope with an explicit reason.
 
 The former top-level `deferredCollections` side list is removed. A consumer
 must inspect the fixed collection key and its envelope status; there is no
@@ -72,14 +74,21 @@ silently normalizing them. It copies no runtime callbacks or mutable behavior;
 it uses `null` for an absent variant wave gate and deep-freezes the result.
 The enemy boundary deliberately excludes family roles/display metadata, base
 stats, eligibility, comments, behavior/stat mutations, CONFIG blobs, and
-presentation/runtime objects. Bosses and global public tuning remain deferred.
+presentation/runtime objects. The authored boss catalog is authoritative in
+`src/gameplay/run/boss-definitions.ts`, projected through
+`src/game-reference/boss-reference.ts`. It preserves the exact five IDs,
+names, order, and phase marks and joins them to the exact stage boss mapping as
+a five-way bijection. Runtime boss constructors, behavior, presentation,
+epithets, phase labels, and tuning beyond the phase thresholds are excluded;
+global public tuning remains deferred.
 
 ## Evidence
 
 - `src/game-reference/game-reference.ts` — fixed envelopes, projections, and
   strict imported-artifact validation.
-- `scripts/export-game-reference.mjs` — loads typed weapon, upgrade, stage, and
-  immutable achievement/mode and enemy catalog sources and exports only data
+- `scripts/export-game-reference.mjs` — loads typed weapon, upgrade, stage,
+  immutable achievement/mode/enemy catalog sources, and the pure boss catalog,
+  and exports only data
   projections;
   it never constructs `createAchievements` with dummy ports or executes stage
   generation/planner functions.
@@ -90,11 +99,15 @@ presentation/runtime objects. Bosses and global public tuning remain deferred.
 - `tests/unit/gameplay-definitions.test.ts` and
   `tests/unit/progression-systems.test.ts` — existing runtime catalog counts
   and progression behavior.
+- `tests/unit/boss-reference.test.ts` — exact boss identity/phase data, stage
+  bijection, deep-freezing, strict imported validation, and runtime threshold
+  parity.
 - `pnpm check:game-reference` — clean CLI/Vite export into a temporary path,
   exact local HEAD provenance, fixed keys, Final Five roster, and 60/98/5/7/
-  11 catalog counts (with the enemy affix/preset shape checked as well).
+  11/5 catalog counts (with enemy affix/preset and boss stage/phase shape
+  checked as well).
 
 This slice does not prove protected-main/origin state, wiki transport, snapshot
-promotion, consumer rendering, Cloudflare deployment, or the deferred
-collections. Boss runtime projection, public tuning, wiki transport, and
-deployment remain later G6/G7 gates.
+promotion, consumer rendering, Cloudflare deployment, or public tuning. Boss
+and enemy runtime behavior/tuning, wiki transport, and deployment remain later
+G6/G7 gates.
