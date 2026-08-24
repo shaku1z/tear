@@ -41,8 +41,11 @@ authorize a Cloudflare action.
     `retentionDays: 90`.
 
 - The GitHub artifact retention is 90 days. No wall-clock value is written, so
-  repeated publication for the same SHA has stable manifest and receipt
-  content.
+  the manifest bytes and its SHA-256 remain stable for the same source SHA.
+  Receipt bytes are intentionally stable only for the same source SHA and
+  validation-run identity (`validationRunId`, `validationEvent`, and
+  `validationRef`); rerunning Validate at the same SHA produces a new receipt
+  run ID and therefore a different receipt.
 
 ## Fail-closed boundaries
 
