@@ -2,9 +2,11 @@ import type { EnemyDependencies, ArenaZone, EnemyPlatform, EnemyPlayerPort, Enem
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
 import type { ThroneFireRuntime } from "./throne-fire";
+import { bossPhaseMarks } from "../../run/boss-definitions";
 
 export function createAldricType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime, throneFireRuntime: ThroneFireRuntime) {
   const { CONFIG, FX, Projectile, SFX, clamp, cosmeticRandom, lerp } = dependencies;
+  const [ALDRIC_FIRE_TIER, ALDRIC_FAKE_TIER] = bossPhaseMarks("aldric");
   const { bossFeedback, bossPhaseBeat, bossTransformation, perilPing, springWeapon, greatCleaverPose, weaponHullHitsTarget, weaponDebugGeometry } = bossRuntime;
   const { clearThroneFire, startThroneFire, tickThroneFire } = throneFireRuntime;
   interface CrownPose extends Point { rot: number }
@@ -29,7 +31,7 @@ export function createAldricType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.color = CONFIG.colors.charger;
       this.kind = "boss"; this.isBoss = true; this.bossName = "ALDRIC";
       this.presentationId = "aldric";
-      this.epithet = "THE BERSERKER KING"; this.phaseMarks = [0.65, 0.20]; this.phaseTag = "THE DUEL";
+      this.epithet = "THE BERSERKER KING"; this.phaseMarks = [...bossPhaseMarks("aldric")]; this.phaseTag = "THE DUEL";
       this.mode = "duel"; this.state = "idle"; this.stateT = 0; this.atkT = 1.6; this.facing = 1;
       this.zones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
       this.spawnAdds = false; this.faked = false; this.reviveCap = 0; this.chargeT = 0;
@@ -189,12 +191,12 @@ export function createAldricType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.facing = Math.sign(player.x - this.x) || this.facing;
       this._animWeapon(dt);
       const f = this.hp / this.maxHp;
-      this.crownHeat = clamp((C.fireTier - f) / Math.max(0.01, C.fireTier - C.fakeTier), 0, 1);
-      if (this.mode === "duel" && f < C.fireTier) {
+      this.crownHeat = clamp((ALDRIC_FIRE_TIER - f) / Math.max(0.01, ALDRIC_FIRE_TIER - ALDRIC_FAKE_TIER), 0, 1);
+      if (this.mode === "duel" && f < ALDRIC_FIRE_TIER) {
         this.mode = "fire"; this.phaseTag = "THRONE BURNS"; this._lightFire();
         bossPhaseBeat(this, "THE THRONE BURNS", CONFIG.colors.bomber);
       }
-      if (this.mode === "fire" && f < C.fakeTier && !this.faked) { this._enterDowned(); }
+      if (this.mode === "fire" && f < ALDRIC_FAKE_TIER && !this.faked) { this._enterDowned(); }
       if (this.cinematicRequest) return;
       tickThroneFire(this, dt);
       for (const z of this.seams) z.life = (z.life ?? 0) - dt;

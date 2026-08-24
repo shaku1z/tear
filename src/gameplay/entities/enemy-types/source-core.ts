@@ -1,9 +1,11 @@
 import type { ArenaZone, EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
+import { bossPhaseMarks } from "../../run/boss-definitions";
 
 export function createSourceCore(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime) {
   const { CLOCK, CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, len, lerp, segSegmentDist } = dependencies;
+  const [SOURCE_VOID_TIER, SOURCE_FAKE_TIER] = bossPhaseMarks("source");
   const { bossFeedback, perilPing } = bossRuntime;
   class SourceCore extends Enemy {
     mode: string; zones: ArenaZone[]; fireZones: ArenaZone[]; zoneColor: string; zoneCycleT: number;
@@ -34,7 +36,7 @@ export function createSourceCore(dependencies: EnemyDependencies, Enemy: EnemyBa
           this.color = "#8b3bd6"; this.kind = "boss"; this.isBoss = true; this.bossName = "THE SOURCE";
           this._noBar = true;   // the final boss speaks through the authored HUD, never a second head bar
           this.presentationId = "source";
-          this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [CONFIG.source.voidTier, CONFIG.source.fakeTier]; this.phaseTag = "THE CYCLE";
+          this.epithet = "THE TEAR ITSELF"; this.phaseMarks = [...bossPhaseMarks("source")]; this.phaseTag = "THE CYCLE";
           this.mode = "cycle"; this.atkT = 2.2; this.castIdx = 0; this.facing = 1;
           this.zones = []; this.fireZones = []; this.zoneColor = CONFIG.colors.bomber; this.zoneCycleT = 0;
           this.firePattern = 0; this.fireState = "idle"; this.fireClock = 0; this.fireWarnStep = -1;
@@ -79,8 +81,8 @@ export function createSourceCore(dependencies: EnemyDependencies, Enemy: EnemyBa
           this.siphon = null; this.siphonFalls = 0; this.siphonHealed = 0;
         }
         get phase() {
-          const f = this.hp / this.maxHp, C = CONFIG.source;
-          const fromHp = f > C.voidTier ? 1 : (f > C.fakeTier ? 2 : 3);
+          const f = this.hp / this.maxHp;
+          const fromHp = f > SOURCE_VOID_TIER ? 1 : (f > SOURCE_FAKE_TIER ? 2 : 3);
           return Math.max(this.phaseMarker || 1, fromHp);   // siphon healing never reopens a completed phase
         }
         override damageTakenMult() { return this.mode === "downed" ? 0.3 : (this.mode === "void" ? CONFIG.source.voidDamageTaken : 1); }
@@ -104,7 +106,7 @@ export function createSourceCore(dependencies: EnemyDependencies, Enemy: EnemyBa
         // deleting the player's damage: part of the overflow crosses the line, capped
         // far above the next phase gate so every form still gets to act.
         override limitIncomingDamage(dmg: number) {
-          const C = CONFIG.source, gate = this.phase === 1 ? C.voidTier : (this.phase === 2 ? C.fakeTier : 0);
+          const C = CONFIG.source, gate = this.phase === 1 ? SOURCE_VOID_TIER : (this.phase === 2 ? SOURCE_FAKE_TIER : 0);
           const gateHp = this.maxHp * gate;
           if (gate > 0 && this.mode !== "downed" && this.hp > gateHp && this.hp - dmg < gateHp) {
             const toGate = this.hp - gateHp, overflow = Math.max(0, dmg - toGate);
@@ -203,9 +205,8 @@ export function createSourceCore(dependencies: EnemyDependencies, Enemy: EnemyBa
         }
 
         _healCeiling() {
-          const C = CONFIG.source;
-          if (this.phaseMarker >= 3) return this.maxHp * C.fakeTier;
-          if (this.phaseMarker >= 2) return this.maxHp * C.voidTier;
+          if (this.phaseMarker >= 3) return this.maxHp * SOURCE_FAKE_TIER;
+          if (this.phaseMarker >= 2) return this.maxHp * SOURCE_VOID_TIER;
           return this.maxHp;
         }
         _receiveSiphonHeal(amount: number) {

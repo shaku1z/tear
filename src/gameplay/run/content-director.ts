@@ -1,14 +1,20 @@
 import type { RandomSource } from "../../domain/random";
+import { BOSS_DEFINITIONS, type BossDefinition } from "./boss-definitions";
 
-export const BOSS_ROSTER = Object.freeze([
-  Object.freeze({ id: "warden", name: "The Warden" }),
-  Object.freeze({ id: "colossus", name: "Iron Colossus" }),
-  Object.freeze({ id: "aldric", name: "Berserker King" }),
-  Object.freeze({ id: "echo", name: "The Echo" }),
-  Object.freeze({ id: "source", name: "The Source" }),
-] as const);
+type BossRosterProjection<T extends readonly BossDefinition[]> = {
+  readonly [K in keyof T]: T[K] extends BossDefinition
+    ? Readonly<{ id: T[K]["id"]; name: T[K]["name"] }>
+    : never;
+};
 
-export type BossId = typeof BOSS_ROSTER[number]["id"];
+function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T): BossRosterProjection<T> {
+  return definitions.map(({ id, name }) => Object.freeze({ id, name })) as BossRosterProjection<T>;
+}
+
+/** Compatibility roster view; identity and order are authored in BOSS_DEFINITIONS. */
+export const BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
+
+export type BossId = typeof BOSS_DEFINITIONS[number]["id"];
 export type MiniBossId = Exclude<BossId, "source">;
 export const ENEMY_KIND_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",

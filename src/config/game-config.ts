@@ -1,5 +1,6 @@
 import type { GamepadSettings } from "../input/legacy-input-contracts";
 import { MODE_CATALOG } from "../gameplay/run/mode-catalog";
+import { bossPhaseMark } from "../gameplay/run/boss-definitions";
 
 // ============================================================
 //  TUNING — everything you'd want to tweak for "feel" lives here.
@@ -302,7 +303,7 @@ const CONFIG = {
     w: 116, h: 128, hp: 6400, speed: 125, contactDmg: 22, knockbackTaken: 0.35, weight: 7,
     // the VOID RUN is the fight's centerpiece: it begins at voidTier and runs to
     // the death; the kneel (fake death) happens ON the frozen conveyor
-    voidTier: 0.58, fakeTier: 0.28, kneelDur: 3.6, thawSpeedMult: 1.35,
+    voidTier: bossPhaseMark("source", 0), fakeTier: bossPhaseMark("source", 1), kneelDur: 3.6, thawSpeedMult: 1.35,
     voidDamageTaken: 0.92, voidFormScale: 1.28, voidDamageMult: 1.12, voidWeightMult: 1.35,
     phaseOverflowCarry: 0.45, phaseOverflowCap: 0.04,
     // DEPTH COMBAT: the Source withdraws behind the route, attacks through
@@ -365,7 +366,7 @@ const CONFIG = {
   aldric: {
     w: 116, h: 132, hp: 4300, speed: 130, contactDmg: 22, knockbackTaken: 0.3, weight: 7,
     atkCd: 1.7, windup: 0.45, lungeSpeed: 1150, shockDmg: 18, shockSpeed: 740, shockR: 20,
-    fireTier: 0.65, fakeTier: 0.20, regenRate: 0.05, reviveFrac: 0.5,   // regen 5%/s up to 50% during the fake
+    fireTier: bossPhaseMark("aldric", 0), fakeTier: bossPhaseMark("aldric", 1), regenRate: 0.05, reviveFrac: 0.5,   // regen 5%/s up to 50% during the fake
     fireCols: 8, fireCycle: 3.0, fireWarn: 0.8,                         // 2.2s stable + 0.8s authored lane warning
     frenzyDmgTaken: 1.35, downedDmgTaken: 0.3, chargeCd: 9.5, chargeWindup: 0.5, chargeSpeed: 1550,
     rallyWindow: 1.5, recoverableFrac: 0.65, rallyHealPerDamage: 0.55,

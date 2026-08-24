@@ -1,6 +1,7 @@
 import type { EnemyDependencies, ArenaZone, EnemyPlatform, EnemyPlayerPort, EnemyProjectile, Point } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
+import { bossPhaseMarks } from "../../run/boss-definitions";
 
 export function createWardenType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, len, lerp } = dependencies;
@@ -24,7 +25,7 @@ export function createWardenType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.color = CONFIG.colors.boss;
       this.kind = "boss"; this.isBoss = true; this.bossName = "THE WARDEN";
       this.presentationId = "warden";
-      this.epithet = "KEEPER OF THE GROUNDS"; this.phaseMarks = [0.65, 0.30]; this.phaseTag = "ON DUTY";
+      this.epithet = "KEEPER OF THE GROUNDS"; this.phaseMarks = [...bossPhaseMarks("warden")]; this.phaseTag = "ON DUTY";
       this.state = "idle"; this.stateT = 0;
       this.atkT = 1.8; this.pendingAtk = "baton";
       this.facing = 1;
@@ -44,7 +45,7 @@ export function createWardenType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.stringIdx = 0; this.stringN = 2; this.beatPh = "wind"; this.beatHeavy = false; this.beatParried = false;   // baton strings
       this.mortarKickT = 0;
     }
-    get phase() { const f = this.hp / this.maxHp; return f > 0.65 ? 1 : (f > 0.30 ? 2 : 3); }
+    get phase() { const f = this.hp / this.maxHp, marks = bossPhaseMarks("warden"); return f > marks[0] ? 1 : (f > marks[1] ? 2 : 3); }
     override damageTakenMult() { return this.guardBrokenT > 0 ? CONFIG.warden.guardBreakMult : 1; }
     override tickTimers(dt: number) {
       super.tickTimers(dt);

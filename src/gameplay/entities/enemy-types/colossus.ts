@@ -1,6 +1,7 @@
 import type { EnemyDependencies, ArenaZone, EnemyDamageContext, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
+import { bossPhaseMarks } from "../../run/boss-definitions";
 
 export function createColossusType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, lerp } = dependencies;
@@ -22,7 +23,7 @@ export function createColossusType(dependencies: EnemyDependencies, Enemy: Enemy
       this.color = CONFIG.colors.armored;
       this.kind = "boss"; this.isBoss = true; this.bossName = "IRON COLOSSUS";
       this.presentationId = "colossus";
-      this.epithet = "THE CONTAINMENT ENGINE"; this.phaseMarks = [0.60, 0.25]; this.phaseTag = "SEALED";
+      this.epithet = "THE CONTAINMENT ENGINE"; this.phaseMarks = [...bossPhaseMarks("colossus")]; this.phaseTag = "SEALED";
       this.blockStyle = "plate";   // blocked hits CLANG off fortress plating (not an Armored reskin)
       this.state = "idle"; this.stateT = 0; this.atkT = 2.2; this.pendingAtk = "sweep";
       this.facing = 1; this.exposed = false; this.shielded = true;
@@ -36,7 +37,7 @@ export function createColossusType(dependencies: EnemyDependencies, Enemy: Enemy
       this.chargeStop = false; this.smashTX = 0; this.grabCd = 0;   // bruiser kit
       this.plateKickT = 0; this.servoCompression = 0;
     }
-    get phase() { const f = this.hp / this.maxHp; return f > 0.6 ? 1 : (f > 0.25 ? 2 : 3); }
+    get phase() { const f = this.hp / this.maxHp, marks = bossPhaseMarks("colossus"); return f > marks[0] ? 1 : (f > marks[1] ? 2 : 3); }
     get guardSide() { return this.facing; }
     // phase-1 front shield: only an aerial hit (you striking from above) gets through
     override blocks() { return this.shielded && !this.exposed; }
