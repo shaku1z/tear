@@ -975,7 +975,7 @@ export function createDetachedWaveRuntime(
   const waves = createLiveWaveHost({
     run: () => run() as never,
     tuning: () => config.run,
-    stages: STAGES as never,
+    stages: STAGES,
     presets: PRESETS,
     random: random.streams.stream("world"),
     modeDefinition: (mode: string) => config.modes.find((candidate) => candidate.id === mode) ?? {},
