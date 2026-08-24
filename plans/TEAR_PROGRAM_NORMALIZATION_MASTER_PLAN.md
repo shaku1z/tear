@@ -814,7 +814,8 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
 
 **Status:** CLOSURE CANDIDATE after the prior protected G5 merge evidence and
 exact-main `Validate` run `32686547630`; that run predates this closure slice
-and does not validate its commit. Final closure remains conditional on this
+and the entire closure candidate (`7c19bd4`, `0e78467`, and `81aea87`); it does
+not validate any of those commits. Final closure remains conditional on this
 slice's protected merge, post-merge exact-main gate, verified merged-head
 branch cleanup receipt, clean/equal canonical refs, and final strict
 parent-layout result. This section records the bounded baseline, authority
@@ -824,7 +825,8 @@ evidence-backed dispositions; no deletion or bulk reorganization is claimed.
 The consolidated closure record is
 `docs/checkpoints/program-normalization/G5_CLOSURE.md`. It binds PR #40 at
 `c1b5ca57b64e4e609d09bcb129292e72711c7900`, the exact-main `Validate` run
-`32686547630`, and the real deferred report
+`32686547630` as prior evidence only; that run predates the entire closure
+candidate (`7c19bd4`, `0e78467`, and `81aea87`). The real deferred report is
 `g5-deferred-dependency-audit-c1b5ca5.json` (562,840 bytes; SHA-256
 `f2066198de152f0724415b92b7d04411108fc52bc94638c7bfd6d8fef77e11a2`). The
 report is `historical-sizing-match` for 4,133,063 source bytes plus 30,660,424
@@ -1040,8 +1042,9 @@ This is a target classification, not permission for a bulk move.
       the placement and preservation evidence; no unreviewed move is claimed.
 - [ ] Final protected-main exact-main Validate and focused checks prove that
       no build, CI, Vite, Wrangler, TearBench, vendoring, or wiki path is
-      broken by this closure slice. The prior run `32686547630` predates this
-      slice and is not closure-slice validation.
+      broken by this closure slice. The prior run `32686547630` predates the
+      entire closure candidate (`7c19bd4`, `0e78467`, and `81aea87`) and is not
+      closure-slice validation.
 - [x] Quarantined local data has an integrity-bound manifest and recovery
       window; hashes are recorded where policy permits and protected entries
       remain metadata-only. See the G5 workspace-preservation receipt for the
@@ -1064,16 +1067,20 @@ For every stale tracking ref, prove the PR is `MERGED` and its stale tracking
 OID equals the PR head OID. If `ls-remote` has no matching live remote head,
 record it as already absent and do not attempt a remote deletion; a live tip
 with commits beyond the PR head is not deletable. Preserve `main`,
-`origin/main`, the checked-out closure branch until the receipt exists, locked
-oracle/comparison references, and historical/non-scope refs. Switch to
+`origin/main`, the checked-out closure branch, locked oracle/comparison
+references, and historical/non-scope refs while proof is collected. Switch to
 canonical `main`, pull and verify exact equality with `origin/main`, prune,
-then delete only exact proven local squash-divergent refs. Re-list and verify
-the stale refs' absence. The checked-out `codex/g5-closure` branch is deleted
-only after switching and writing the receipt.
+then delete every exact proven local stale branch, including
+`codex/g5-closure` once it is no longer checked out. Re-list and verify the
+stale refs' absence before writing the receipt.
 
 The durable receipt is retained at
-`Tear-archives/2026-08-23-g5-workspace-recovery/g5-branch-cleanup-receipt-c1b5ca5.json`
-and must include `preCleanupLocalBranches`, `preCleanupRemoteTrackingRefs`,
+`Tear-archives/2026-08-23-g5-workspace-recovery/g5-branch-cleanup-receipt-<closure-main7>.json`,
+where `<closure-main7>` is the protected-main squash-merge SHA produced after
+this PR. It is written/finalized only after the canonical-main switch,
+exact-equality verification, exact proven local stale-branch deletions
+(including `codex/g5-closure`), and the post-cleanup re-list. It must include
+`preCleanupLocalBranches`, `preCleanupRemoteTrackingRefs`,
 `preCleanupLiveRemoteHeads`, `pullRequestProofs`, `remoteHeadsAlreadyAbsent`,
 the exact deletion allowlist/protected refs, local squash divergences,
 post-cleanup inventories, final strict parent-layout result, and Validate run.

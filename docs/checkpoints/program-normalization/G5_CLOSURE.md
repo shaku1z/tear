@@ -21,7 +21,7 @@ parent-layout result.
 | Evidence | Bound fact |
 | --- | --- |
 | Protected merge boundary | PR #40 merged to game main at c1b5ca57b64e4e609d09bcb129292e72711c7900 (c1b5ca5). |
-| Prior protected-main repository gate | Exact-main Validate run 32686547630 passed for the prior protected merge at c1b5ca5; it predates this closure slice and does not validate commit 0e78467. |
+| Prior protected-main repository gate | Exact-main Validate run 32686547630 passed for the prior protected merge at c1b5ca5; it predates the entire closure candidate (`7c19bd4`, `0e78467`, and `81aea87`) and does not validate any of those commits. |
 | Closure-slice repository gate | [ ] Pending this slice's protected merge followed by an exact-main Validate run and focused path checks. |
 | Current music authority | Canonical `shaku1z/tear-music` protected `main` is clean/equal at 6a60139e969b987a1de7bbfdcd20d2e804aab835 (6a60139); current Validate run 32634453401 is green. The earlier 7e443d9 / 32629490375 observation is historical provenance only. |
 | Deferred dependency report | Tear-archives/2026-08-23-g5-workspace-recovery/g5-deferred-dependency-audit-c1b5ca5.json; 562,840 bytes; SHA-256 f2066198de152f0724415b92b7d04411108fc52bc94638c7bfd6d8fef77e11a2. |
@@ -38,9 +38,10 @@ parent-layout result.
   link search result in the placement and preservation evidence. The closure
   slice does not claim an unreviewed move.
 - Final protected-main exact-main Validate and focused path checks are pending
-  for this closure slice. The prior exact-main run `32686547630` predates
-  commit `0e78467` and cannot prove that its changes preserve build, CI, Vite,
-  Wrangler, TearBench, vendoring, or wiki consumers.
+  for this closure slice. The prior exact-main run `32686547630` predates the
+  entire closure candidate (`7c19bd4`, `0e78467`, and `81aea87`) and cannot
+  prove that any of those changes preserve build, CI, Vite, Wrangler,
+  TearBench, vendoring, or wiki consumers.
 - No `src/` file changed in the closure slice. The existing `src/` domain
   boundaries are an intentional G5 invariant, not an unexamined refactor.
 - The root condition is the **tracked repository root inventory**, enforced by
@@ -103,20 +104,26 @@ operator must:
    `ls-remote` result has no matching remote head, record it as already absent
    and do not attempt a remote deletion. A live remote tip with commits beyond
    the PR head is not deletable.
-3. Preserve `main`, `origin/main`, the checked-out closure branch until the
-   receipt exists, locked oracle/comparison references, and every explicitly
-   recorded historical/non-scope ref. Switch to canonical `main`, pull and
-   verify exact equality with `origin/main`, then prune stale remote-tracking
-   refs. Never infer deletion from a branch name alone.
+3. Preserve `main`, `origin/main`, the checked-out closure branch, locked
+   oracle/comparison references, and every explicitly recorded
+   historical/non-scope ref while proof is collected. Switch to canonical
+   `main`, pull and verify exact equality with `origin/main`, then prune stale
+   remote-tracking refs. Never infer deletion from a branch name alone.
 4. Delete only exact proven local squash-divergent refs after the PR-head proof;
    record each divergence, re-list local branches/tracking refs, and verify
    the proven stale refs are absent. The known local stale names are
    `codex/g4-closure`, `codex/g5-docs-checker`,
    `codex/g5-organization-audit`, and `codex/g5-workspace-check`; they are not
-   deleted by this slice. The checked-out `codex/g5-closure` branch is deleted
-   only after switching to canonical `main` and writing the receipt.
+   deleted by this slice. After the canonical-main switch, `codex/g5-closure`
+   is no longer checked out and is included in the exact proven local deletion
+   set; re-list and verify every deleted stale branch is absent.
 5. Write the durable receipt at
-   `Tear-archives/2026-08-23-g5-workspace-recovery/g5-branch-cleanup-receipt-c1b5ca5.json`.
+   `Tear-archives/2026-08-23-g5-workspace-recovery/g5-branch-cleanup-receipt-<closure-main7>.json`,
+   where `<closure-main7>` is the protected-main squash-merge SHA produced
+   after this PR. Write/finalize it only after the canonical-main switch,
+   exact-equality verification, exact local stale-branch deletions (including
+   `codex/g5-closure`), and the post-cleanup re-list have completed. Its
+   `deletedLocalRefs` and post-cleanup inventories must contain that deletion.
    It must contain `format`, `schemaVersion`, `generatedAtUtc`, `repository`,
    `closureCommit`, `canonicalMainHead`, `originMainHead`,
    `preCleanupLocalBranches`, `preCleanupRemoteTrackingRefs`,
