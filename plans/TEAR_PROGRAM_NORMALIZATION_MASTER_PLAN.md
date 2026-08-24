@@ -1167,10 +1167,19 @@ semantics and recording the resulting path and hash in the G6 receipt.
       have canonical order, presentation metadata, classification, and
       training/bossOnly/sandbox flags. Runtime stage generation, mutable
       hazards, mode planners, and debug flags remain excluded.
-- [ ] Add enemies, bosses, and global public tuning. These collections remain
+- [x] Add the structural enemy catalog through the dedicated
+      `src/game-reference/enemy-reference.ts` boundary. It preserves the exact
+      eleven `ENEMY_KIND_IDS`, authored variant/affix/preset order, empty
+      variant arrays, positive finite weights, nullable positive wave gates,
+      six-digit colors, and canonical references. Runtime constructors,
+      callbacks, behavior/stat mutations, base stats, eligibility, comments,
+      CONFIG, and presentation objects remain excluded; reordered source
+      catalogs fail closed rather than being normalized.
+- [ ] Add boss runtime data and global public tuning. These collections remain
       explicit `deferred` envelopes in the single fixed-key `collections`
       authority until each has a separate safe data-only projection; the
-      contract does not pretend they are complete.
+      contract does not pretend they are complete. Enemy runtime behavior
+      beyond the structural catalog also remains outside this slice.
 - [x] Exclude secrets, private diagnostics, mutable runtime state, callbacks,
       browser objects, and other implementation-only objects from the
       projection; canonical JSON validation fails closed if unsafe data enters.
@@ -1184,10 +1193,11 @@ semantics and recording the resulting path and hash in the G6 receipt.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.
 
-The slice-1 through slice-3 evidence and deferred-collection boundary are
+The slice-1 through slice-4 evidence and deferred-collection boundary are
 recorded in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md`,
-`docs/checkpoints/program-normalization/G6_REFERENCE_CATALOGS.md`, and
-`docs/checkpoints/program-normalization/G6_STAGE_MODE_REFERENCE.md`.
+`docs/checkpoints/program-normalization/G6_REFERENCE_CATALOGS.md`,
+`docs/checkpoints/program-normalization/G6_STAGE_MODE_REFERENCE.md`, and
+`docs/checkpoints/program-normalization/G6_ENEMY_REFERENCE.md`.
 
 ### Wiki consumer
 
