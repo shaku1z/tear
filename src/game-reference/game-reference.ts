@@ -1,12 +1,13 @@
 import { canonicalStringify } from "../replay/hash";
 import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, isRetiredWeaponSelection, WEAPON_IDS, type WeaponId } from "../gameplay/weapon-selection";
-import { CANONICAL_ACHIEVEMENT_IDS, type Achievement, type AchievementCategory, type AchievementRarity } from "../gameplay/progression/achievements";
+import type { AchievementCategory, AchievementRarity } from "../gameplay/progression/achievements";
+import { CANONICAL_ACHIEVEMENT_IDS, type AchievementCatalogEntry } from "../gameplay/progression/achievement-catalog";
 import { CANONICAL_UPGRADE_IDS, type UpgradeCategory, type UpgradeDefinition } from "../gameplay/upgrades";
 import type { WeaponChannels, WeaponDefinition, WeaponRatings } from "../gameplay/weapons";
 
 /** The game-owned, data-only handoff consumed by future external tooling. */
 export const GAME_REFERENCE_FORMAT = "game-reference.v1" as const;
-export const GAME_REFERENCE_SCHEMA_VERSION = 1 as const;
+export const GAME_REFERENCE_SCHEMA_VERSION = 2 as const;
 export const GAME_REFERENCE_REPOSITORY = "shaku1z/tear" as const;
 export const GAME_REFERENCE_TERMINOLOGY_VERSION = "g4-terminology-v1" as const;
 
@@ -54,7 +55,7 @@ export interface GameReferenceUpgradeV1 {
   readonly tiers: readonly GameReferenceUpgradeTierV1[];
 }
 
-export type GameReferenceAchievementRuleKind = "stat-threshold" | "manual" | "runtime";
+export type GameReferenceAchievementRuleKind = "stat-threshold" | "manual" | "all-shop-items" | "category-complete" | "all-achievements";
 
 export interface GameReferenceAchievementV1 {
   readonly id: string;
@@ -69,6 +70,7 @@ export interface GameReferenceAchievementV1 {
     kind: GameReferenceAchievementRuleKind;
     stat: string | null;
     goal: number | null;
+    category: AchievementCategory | null;
   }>;
 }
 
@@ -111,7 +113,7 @@ export interface GameReferenceProjectionInput {
   readonly terminologyVersion: string;
   readonly weapons: readonly WeaponDefinition[];
   readonly upgrades: readonly UpgradeDefinition[];
-  readonly achievements: readonly Achievement[];
+  readonly achievements: readonly AchievementCatalogEntry[];
   readonly tuningByWeapon: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
@@ -217,7 +219,7 @@ function projectUpgrade(source: UpgradeDefinition, path: string): GameReferenceU
   });
 }
 
-function projectAchievement(source: Achievement, path: string): GameReferenceAchievementV1 {
+function projectAchievement(source: AchievementCatalogEntry, path: string): GameReferenceAchievementV1 {
   const id = text(source.id, `${path}.id`);
   const category = text(source.cat, `${path}.category`) as AchievementCategory;
   if (!ACHIEVEMENT_CATEGORIES.includes(category)) throw new TypeError(`${path}.category is not a supported achievement category`);
@@ -225,22 +227,31 @@ function projectAchievement(source: Achievement, path: string): GameReferenceAch
   if (!ACHIEVEMENT_RARITIES.includes(rarity)) throw new TypeError(`${path}.rarity is not a supported achievement rarity`);
   const name = text(source.name, `${path}.name`);
   const description = text(source.desc, `${path}.description`);
-  const hidden = source.hidden ?? false;
-  const manual = source.manual ?? false;
-  const master = source.master ?? false;
-  if (typeof hidden !== "boolean" || typeof manual !== "boolean" || typeof master !== "boolean") throw new TypeError(`${path} visibility flags must be booleans when present`);
-  const stat = typeof source.stat === "string" ? text(source.stat, `${path}.rule.stat`) : null;
-  const goal = typeof source.goal === "number" && Number.isFinite(source.goal) ? source.goal : null;
-  const kind: GameReferenceAchievementRuleKind = manual ? "manual" : stat !== null && goal !== null ? "stat-threshold" : "runtime";
+  const hidden = source.hidden;
+  const manualFlag = source.manual;
+  const master = source.master;
+  const stat = source.rule.kind === "stat-threshold" ? text(source.rule.stat, `${path}.rule.stat`) : null;
+  const goal = source.rule.kind === "stat-threshold" ? finite(source.rule.goal, `${path}.rule.goal`) : null;
+  const categoryRule = source.rule.kind === "category-complete" ? source.rule.category : null;
+  const kind: GameReferenceAchievementRuleKind = source.rule.kind;
   return Object.freeze({
-    id, category, rarity, name, description, hidden, manual, master,
-    rule: Object.freeze({ kind, stat, goal }),
+    id, category, rarity, name, description, hidden, manual: manualFlag, master,
+    rule: Object.freeze({ kind, stat, goal, category: categoryRule }),
   });
 }
 
 function assertUniqueCount(ids: readonly string[], expected: number, path: string): void {
   if (ids.length !== expected) throw new TypeError(`${path} must contain exactly ${String(expected)} entries`);
   if (new Set(ids).size !== ids.length) throw new TypeError(`${path} must not contain duplicate IDs`);
+}
+
+function assertCanonicalSourceIds(ids: readonly string[], expected: readonly string[], path: string): void {
+  // Input order may vary between typed module composition and tests; the exact
+  // canonical set is checked before reduction, and `expected` defines output order.
+  assertUniqueCount(ids, expected.length, path);
+  const actualSet = [...new Set(ids)].sort();
+  const expectedSet = [...expected].sort();
+  if (actualSet.some((id, index) => id !== expectedSet[index])) throw new TypeError(`${path} must contain the exact canonical ID set`);
 }
 
 function assertCanonicalOrderedIds(ids: readonly string[], expected: readonly string[], path: string): void {
@@ -347,18 +358,23 @@ function validateProjectedAchievement(value: unknown, path: string): GameReferen
   const source = record(value, path);
   exactKeys(source, path, ["id", "category", "rarity", "name", "description", "hidden", "manual", "master", "rule"]);
   const rule = record(source.rule, `${path}.rule`);
-  exactKeys(rule, `${path}.rule`, ["kind", "stat", "goal"]);
+  exactKeys(rule, `${path}.rule`, ["kind", "stat", "goal", "category"]);
   const kind = text(rule.kind, `${path}.rule.kind`) as GameReferenceAchievementRuleKind;
-  if (!["stat-threshold", "manual", "runtime"].includes(kind)) throw new TypeError(`${path}.rule.kind is not a supported achievement rule`);
+  if (!["stat-threshold", "manual", "all-shop-items", "category-complete", "all-achievements"].includes(kind)) throw new TypeError(`${path}.rule.kind is not a supported achievement rule`);
   const category = text(source.category, `${path}.category`) as AchievementCategory;
   if (!ACHIEVEMENT_CATEGORIES.includes(category)) throw new TypeError(`${path}.category is not a supported achievement category`);
   const rarity = text(source.rarity, `${path}.rarity`) as AchievementRarity;
   if (!ACHIEVEMENT_RARITIES.includes(rarity)) throw new TypeError(`${path}.rarity is not a supported achievement rarity`);
   const stat = rule.stat === null ? null : text(rule.stat, `${path}.rule.stat`);
   const goal = rule.goal === null ? null : finite(rule.goal, `${path}.rule.goal`);
+  const ruleCategory = rule.category === null ? null : text(rule.category, `${path}.rule.category`) as AchievementCategory;
+  if (ruleCategory !== null && !ACHIEVEMENT_CATEGORIES.includes(ruleCategory)) throw new TypeError(`${path}.rule.category is not a supported achievement category`);
   const manual = boolean(source.manual, `${path}.manual`);
-  const expectedKind: GameReferenceAchievementRuleKind = manual ? "manual" : stat !== null && goal !== null ? "stat-threshold" : "runtime";
-  if (kind !== expectedKind) throw new TypeError(`${path}.rule.kind does not match its authored metadata`);
+  if (kind === "stat-threshold" && (stat === null || goal === null || ruleCategory !== null)) throw new TypeError(`${path}.stat-threshold requires stat and goal with null category`);
+  if (kind === "category-complete" && (stat !== null || goal !== null || ruleCategory === null)) throw new TypeError(`${path}.category-complete requires category with null stat and goal`);
+  if (kind !== "stat-threshold" && kind !== "category-complete" && (stat !== null || goal !== null || ruleCategory !== null)) throw new TypeError(`${path}.rule ${kind} requires null stat, goal, and category`);
+  if (kind === "manual" && !manual) throw new TypeError(`${path}.manual rule must be marked manual`);
+  if (kind !== "manual" && manual) throw new TypeError(`${path}.manual flag is only valid for manual rules`);
   return Object.freeze({
     id: text(source.id, `${path}.id`),
     category,
@@ -368,7 +384,7 @@ function validateProjectedAchievement(value: unknown, path: string): GameReferen
     hidden: boolean(source.hidden, `${path}.hidden`),
     manual,
     master: boolean(source.master, `${path}.master`),
-    rule: Object.freeze({ kind, stat, goal }),
+    rule: Object.freeze({ kind, stat, goal, category: ruleCategory }),
   });
 }
 
@@ -412,15 +428,17 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
     if (weapon === undefined) throw new TypeError(`missing canonical weapon definition ${id}`);
     return projectWeapon(weapon, input.tuningByWeapon);
   }));
+  const upgradeIds = input.upgrades.map((upgrade, index) => text(upgrade.id, `upgrade[${String(index)}].id`));
+  assertCanonicalSourceIds(upgradeIds, CANONICAL_UPGRADE_IDS, "upgrades");
   const upgradesById = new Map(input.upgrades.map((upgrade) => [upgrade.id, upgrade] as const));
-  assertUniqueCount([...upgradesById.keys()], EXPECTED_UPGRADE_COUNT, "upgrades");
   const upgrades = Object.freeze(CANONICAL_UPGRADE_IDS.map((id, index) => {
     const upgrade = upgradesById.get(id);
     if (upgrade === undefined) throw new TypeError(`missing canonical upgrade definition ${id}`);
     return projectUpgrade(upgrade, `upgrade[${String(index)}]`);
   }));
+  const achievementIds = input.achievements.map((achievement, index) => text(achievement.id, `achievement[${String(index)}].id`));
+  assertCanonicalSourceIds(achievementIds, CANONICAL_ACHIEVEMENT_IDS, "achievements");
   const achievementsById = new Map(input.achievements.map((achievement) => [achievement.id, achievement] as const));
-  assertUniqueCount([...achievementsById.keys()], EXPECTED_ACHIEVEMENT_COUNT, "achievements");
   const achievements = Object.freeze(CANONICAL_ACHIEVEMENT_IDS.map((id, index) => {
     const achievement = achievementsById.get(id);
     if (achievement === undefined) throw new TypeError(`missing canonical achievement definition ${id}`);

@@ -5,7 +5,8 @@ gates remain open.
 
 ## Scope
 
-The game-owned `game-reference.v1` contract now uses one fixed-key
+The game-owned `game-reference.v1` contract now uses schema version `2` and one
+fixed-key
 `collections` authority:
 
 - `weapons`: complete, canonical Final Five order.
@@ -18,29 +19,40 @@ The former top-level `deferredCollections` side list is removed. A consumer
 must inspect the fixed collection key and its envelope status; there is no
 second list that can drift from the collection authority.
 
+Schema version `1` was only the PR43 foundation shape. No external schema-1
+artifact is retained or supported, so consumers must reject it rather than
+claim backward compatibility.
+
 ## Safe projection boundary
 
 Upgrade metadata is projected from `UPGRADES` without `apply` functions. It
 keeps IDs, names, categories, descriptions, uniqueness, rare flags, stack
-limits, explicit rule kinds, and tier descriptions.
+limits, explicit rule kinds, and tier descriptions. The existing typed upgrade
+definitions remain the single metadata source; the callback implementations
+are not rewritten in this slice.
 
-Achievement metadata is projected from the canonical `_all` source without
-calling `current`, `goal`, or `check` callbacks. Stat thresholds are retained
-only when their stat and numeric goal are authored data. Manual and other
-runtime-backed achievements are represented by a rule kind with nullable stat
-and goal fields; no closure mechanics are inferred into the contract.
+Achievement metadata is authoritative in the immutable
+`src/gameplay/progression/achievement-catalog.ts`. Runtime
+`createAchievements` builds/join behavior from that catalog, preserving the
+same order and metadata while attaching only the runtime predicates and ports.
+Stat thresholds, manual unlocks, all-shop-items, category-complete, and
+all-achievements rules are explicit descriptors. No closure mechanics are
+inferred into the contract.
 
-The runtime definitions remain the source of truth. Their authored order is
-exported as canonical ID order and validated on imported artifacts. The
-projected JSON contains no functions, browser objects, mutable runtime state,
-or inferred completion behavior.
+The typed `UPGRADES` definitions and immutable achievement catalog are the
+separate authored metadata sources. Their authored order is exported as
+canonical ID order and validated on imported artifacts; runtime achievement
+behavior remains a join over the static catalog. The projected JSON contains
+no functions, browser objects, mutable runtime state, or inferred completion
+behavior.
 
 ## Evidence
 
 - `src/game-reference/game-reference.ts` — fixed envelopes, projections, and
   strict imported-artifact validation.
 - `scripts/export-game-reference.mjs` — loads typed weapon, upgrade, and
-  achievement sources and exports only data projections.
+  immutable achievement catalog sources and exports only data projections; it
+  never constructs `createAchievements` with dummy ports.
 - `tests/unit/game-reference.test.ts` — counts, order, determinism, rule
   boundaries, fixed keys, malformed entries, and JSON safety.
 - `tests/unit/gameplay-definitions.test.ts` and

@@ -10,18 +10,25 @@ release approval.
 
 - Schema/projection: `src/game-reference/game-reference.ts`
 - Typed source definitions: `src/gameplay/weapons.ts`,
-  `src/gameplay/upgrades.ts`, `src/gameplay/progression/achievements.ts`, and
-  `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the achievement `_all`
-  catalog, and `CONFIG.weapons` only)
+  `src/gameplay/upgrades.ts`, `src/gameplay/progression/achievement-catalog.ts`,
+  and `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the immutable
+  `ACHIEVEMENT_CATALOG`, and `CONFIG.weapons` only). Runtime achievement
+  behavior joins the static catalog in `achievements.ts` and is not an export
+  authority.
 - Deterministic exporter: `scripts/export-game-reference.mjs`
 - Focused evidence: `tests/unit/game-reference.test.ts`
 - Command: `pnpm export:game-reference`
 
 ## Contract guarantees
 
-- Every artifact declares `format: game-reference.v1`, schema version `1`, the
+- Every artifact declares `format: game-reference.v1`, schema version `2`, the
   exact `shaku1z/tear` repository, a full 40-character source SHA, and the
   `g4-terminology-v1` registry version.
+- Schema version `2` is intentional: PR43's schema-1 foundation shape is not
+  retained as an external artifact or supported compatibility input. The fixed
+  collection authority and complete progression envelopes are a breaking
+  contract update; schema-1 artifacts fail closed rather than being treated as
+  backward-compatible.
 - The active roster is exactly Sword, Hammer, Greatsword, Chainblade, and
   Riftlock in canonical order. Spear and Ringblade are retired compatibility
   identifiers and fail closed if supplied as active definitions.

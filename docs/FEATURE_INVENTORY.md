@@ -5,17 +5,20 @@ This is the migration checklist for the architectural redesign. A checked featur
 ## G6 game-reference foundation
 
 - [x] Game-owned `game-reference.v1` foundation — `src/game-reference/game-reference.ts`
-  projects only JSON-safe Final Five metadata, ratings, mechanics, channels, and
-  flat weapon tuning from the current typed definitions. `scripts/export-game-reference.mjs`
-  loads only those typed source modules, binds the full repository SHA and
-  terminology registry version, and emits canonical deterministic JSON.
+    projects only JSON-safe Final Five metadata, ratings, mechanics, channels, and
+    flat weapon tuning from the current typed definitions. `scripts/export-game-reference.mjs`
+    loads only those typed source modules, binds the full repository SHA and
+    terminology registry version, and emits canonical deterministic JSON. The
+    current fixed-collection contract is schema version 2; the unsupported
+    schema-1 foundation is rejected rather than treated as backward compatible.
 - [x] Final Five/stale-generation guard — the projection requires exactly
     Sword, Hammer, Greatsword, Chainblade, and Riftlock, rejects Spear/Ringblade
     as active IDs, and supports `--expected-sha` fail-closed export validation.
 - [x] Progression reference catalogs — the fixed game-reference collections
   now include 60 authored upgrades and 98 authored achievements with canonical
-  order, categories/rarities, rule/tier metadata, and no runtime callbacks in
-  the projection.
+  order, categories/rarities, explicit rule/tier metadata, and no runtime
+  callbacks in the projection. `achievement-catalog.ts` is the immutable
+  achievement metadata authority; runtime behavior joins onto it.
 - [ ] Complete reference collections — enemies, bosses, stages, modes, and
   global public tuning remain explicitly deferred until each has a separate
   safe data-only projection; this slice does not imply wiki synchronization or

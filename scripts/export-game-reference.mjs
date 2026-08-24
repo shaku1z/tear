@@ -29,24 +29,17 @@ try {
   const referenceModule = await server.ssrLoadModule("/src/game-reference/game-reference.ts");
   const weaponModule = await server.ssrLoadModule("/src/gameplay/weapons.ts");
   const upgradeModule = await server.ssrLoadModule("/src/gameplay/upgrades.ts");
-  const achievementModule = await server.ssrLoadModule("/src/gameplay/progression/achievements.ts");
+  const achievementModule = await server.ssrLoadModule("/src/gameplay/progression/achievement-catalog.ts");
   const configModule = await server.ssrLoadModule("/src/config/game-config.ts");
   const repository = option("--repository") ?? process.env.TEAR_BUILD_REPOSITORY ?? referenceModule.GAME_REFERENCE_REPOSITORY;
   const tuningByWeapon = Object.fromEntries(Object.entries(configModule.CONFIG.weapons).map(([id, tuning]) => [id, numericTuning(tuning)]));
-  const achievements = achievementModule.createAchievements({
-    meta: { level: () => 0 },
-    profile: { unlocked: () => false, stat: () => 0, unlock: () => false },
-    audio: { rankup: () => undefined },
-    shop: [],
-    clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
-  });
   const reference = referenceModule.buildGameReferenceV1({
     repository,
     sourceSha,
     terminologyVersion,
     weapons: weaponModule.WEAPONS,
     upgrades: upgradeModule.UPGRADES,
-    achievements: achievements._all,
+    achievements: achievementModule.ACHIEVEMENT_CATALOG,
     tuningByWeapon,
   });
   if (expectedSha !== undefined) referenceModule.assertCurrentSourceSha(reference, expectedSha);

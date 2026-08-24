@@ -10,19 +10,14 @@ import {
   type GameReferenceV1,
 } from "../../src/game-reference/game-reference";
 import { createAchievements } from "../../src/gameplay/progression/achievements";
+import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { UPGRADES, type UpgradeDefinition } from "../../src/gameplay/upgrades";
 import { WEAPONS, type WeaponDefinition } from "../../src/gameplay/weapons";
 
 const tuningByWeapon = Object.fromEntries(Object.entries(CONFIG.weapons).map(([id, tuning]) => [id, Object.fromEntries(Object.entries(tuning))]));
 const firstWeapon = WEAPONS.at(0);
 if (firstWeapon === undefined) throw new Error("Final Five source is empty");
-const achievementSource = createAchievements({
-  meta: { level: () => 0 },
-  profile: { unlocked: () => false, stat: () => 0, unlock: () => false },
-  audio: { rankup: () => undefined },
-  shop: [],
-  clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
-})._all;
+const achievementSource = ACHIEVEMENT_CATALOG;
 
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
   upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource): GameReferenceV1 {
@@ -52,7 +47,7 @@ describe("game-reference.v1", () => {
     const result = reference();
 
     expect(result.format).toBe("game-reference.v1");
-    expect(result.schemaVersion).toBe(1);
+    expect(result.schemaVersion).toBe(2);
     expect(result.source).toEqual({ repository: "shaku1z/tear", sha: "a".repeat(40) });
     expect(result.roster.activeWeaponIds).toEqual(["sword", "hammer", "greatsword", "chainblade", "riftlock"]);
     expect(result.roster.retiredWeaponIds).toEqual(["spear", "ringblade"]);
@@ -83,8 +78,46 @@ describe("game-reference.v1", () => {
     expect(new Set(achievements.map((achievement) => achievement.category))).toEqual(new Set(["combat", "skill", "progress", "boss", "survival", "mastery"]));
     expect(new Set(achievements.map((achievement) => achievement.rarity))).toEqual(new Set(["common", "uncommon", "rare", "epic", "legendary"]));
     expect(achievements.some((achievement) => achievement.rule.kind === "manual")).toBe(true);
-    expect(achievements.some((achievement) => achievement.rule.kind === "runtime")).toBe(true);
+    expect(achievements.some((achievement) => achievement.rule.kind === "all-shop-items")).toBe(true);
+    expect(achievements.some((achievement) => achievement.rule.kind === "category-complete")).toBe(true);
+    expect(achievements.some((achievement) => achievement.rule.kind === "all-achievements")).toBe(true);
     expect(achievements.filter((achievement) => achievement.rule.kind === "stat-threshold").every((achievement) => achievement.rule.stat !== null && achievement.rule.goal !== null)).toBe(true);
+  });
+
+  it("keeps the runtime achievement factory joined to the static authored catalog", () => {
+    const unlocked = new Set<string>();
+    expect(Object.isFrozen(ACHIEVEMENT_CATALOG)).toBe(true);
+    expect(Object.isFrozen(ACHIEVEMENT_CATALOG[0])).toBe(true);
+    const runtime = createAchievements({
+      meta: { level: () => 0 },
+      profile: { unlocked: (id) => unlocked.has(id), stat: () => 0, unlock: () => false },
+      audio: { rankup: () => undefined },
+      shop: [],
+      clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
+    });
+    expect(runtime._all.map((achievement) => ({
+      id: achievement.id, cat: achievement.cat, rarity: achievement.rarity, name: achievement.name, desc: achievement.desc,
+      hidden: achievement.hidden ?? false, manual: achievement.manual ?? false, master: achievement.master ?? false,
+    }))).toEqual(ACHIEVEMENT_CATALOG.map((entry) => ({
+      id: entry.id, cat: entry.cat, rarity: entry.rarity, name: entry.name, desc: entry.desc,
+      hidden: entry.hidden, manual: entry.manual, master: entry.master,
+    })));
+    for (const entry of ACHIEVEMENT_CATALOG) {
+      const achievement = runtime.byId(entry.id);
+      if (achievement === undefined) throw new Error(`runtime achievement missing ${entry.id}`);
+      if (entry.rule.kind === "stat-threshold") {
+        expect(achievement.stat).toBe(entry.rule.stat);
+        expect(achievement.goal).toBe(entry.rule.goal);
+      } else if (entry.rule.kind === "manual") {
+        expect(achievement.check).toBeUndefined();
+        expect(achievement.current).toBeUndefined();
+      } else if (entry.rule.kind === "all-shop-items") {
+        expect(achievement.current).toBeTypeOf("function");
+        expect(achievement.goal).toBeTypeOf("function");
+      } else {
+        expect(achievement.check).toBeTypeOf("function");
+      }
+    }
   });
 
   it("is deterministic even when the typed source definitions arrive in another order", () => {
@@ -167,6 +200,20 @@ describe("game-reference.v1", () => {
     expect(() => { assertValidGameReferenceV1(malformedAchievement); }).toThrow(/finite number/u);
   });
 
+  it("enforces explicit achievement rule payloads", () => {
+    const missingStatGoal = structuredClone(reference()) as unknown as { collections: { achievements: { items: Record<string, unknown>[] } } };
+    const statThreshold = missingStatGoal.collections.achievements.items.find((item) => (item.rule as Record<string, unknown>).kind === "stat-threshold");
+    if (statThreshold === undefined) throw new Error("missing stat-threshold fixture");
+    (statThreshold.rule as Record<string, unknown>).goal = null;
+    expect(() => { assertValidGameReferenceV1(missingStatGoal); }).toThrow(/stat-threshold requires stat and goal/u);
+
+    const manualPayload = structuredClone(reference()) as unknown as { collections: { achievements: { items: Record<string, unknown>[] } } };
+    const manual = manualPayload.collections.achievements.items.find((item) => (item.rule as Record<string, unknown>).kind === "manual");
+    if (manual === undefined) throw new Error("missing manual fixture");
+    (manual.rule as Record<string, unknown>).stat = "unexpected";
+    expect(() => { assertValidGameReferenceV1(manualPayload); }).toThrow(/manual requires null stat, goal, and category/u);
+  });
+
   it("binds imported provenance and terminology to their supported values", () => {
     const wrongRepository = structuredClone(reference()) as unknown as { source: { repository: string } };
     wrongRepository.source.repository = "shaku1z/tear-wiki";
@@ -193,6 +240,12 @@ describe("game-reference.v1", () => {
     const achievementPermutation = structuredClone(reference()) as unknown as { collections: { achievements: { items: { id: string }[] } } };
     achievementPermutation.collections.achievements.items.reverse();
     expect(() => { assertValidGameReferenceV1(achievementPermutation); }).toThrow(/canonical authored order/u);
+  });
+
+  it("rejects the unsupported schema-1 foundation shape", () => {
+    const schemaOne = structuredClone(reference()) as unknown as { schemaVersion: number };
+    schemaOne.schemaVersion = 1;
+    expect(() => { assertValidGameReferenceV1(schemaOne); }).toThrow(/unsupported game-reference\.v1 schema/u);
   });
 
   it("rejects extra rating and channel keys from imported artifacts", () => {
@@ -227,6 +280,28 @@ describe("game-reference.v1", () => {
     const missingCollection = structuredClone(reference()) as unknown as { collections: Record<string, unknown> };
     delete missingCollection.collections.achievements;
     expect(() => { assertValidGameReferenceV1(missingCollection); }).toThrow(/unexpected or missing fields/u);
+  });
+
+  it("rejects extra, duplicate, or incomplete source catalogs before reduction", () => {
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES.slice(0, -1))).toThrow(/exactly 60/u);
+    const lastUpgrade = UPGRADES.at(-1);
+    if (lastUpgrade === undefined) throw new Error("missing upgrade source fixture");
+    const firstUpgrade = UPGRADES.at(0);
+    if (firstUpgrade === undefined) throw new Error("missing first upgrade source fixture");
+    const unknownUpgrade = [...UPGRADES.slice(0, -1), { ...lastUpgrade, id: "future-upgrade" }];
+    expect(() => reference("a".repeat(40), WEAPONS, unknownUpgrade)).toThrow(/exact canonical ID set/u);
+    const duplicateUpgrade = [...UPGRADES.slice(0, -1), firstUpgrade];
+    expect(() => reference("a".repeat(40), WEAPONS, duplicateUpgrade)).toThrow(/duplicate IDs/u);
+
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(/exactly 98/u);
+    const lastAchievement = ACHIEVEMENT_CATALOG.at(-1);
+    if (lastAchievement === undefined) throw new Error("missing achievement source fixture");
+    const firstAchievement = ACHIEVEMENT_CATALOG.at(0);
+    if (firstAchievement === undefined) throw new Error("missing first achievement source fixture");
+    const unknownAchievement = [...ACHIEVEMENT_CATALOG.slice(0, -1), { ...lastAchievement, id: "future-achievement" }];
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, unknownAchievement)).toThrow(/exact canonical ID set/u);
+    const duplicateAchievement = [...ACHIEVEMENT_CATALOG.slice(0, -1), firstAchievement];
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, duplicateAchievement)).toThrow(/duplicate IDs/u);
   });
 
   it("does not let canonical JSON silently drop unsafe values", () => {

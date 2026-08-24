@@ -1145,7 +1145,9 @@ semantics and recording the resulting path and hash in the G6 receipt.
 ### Game-owned manifest
 
 - [x] Define a JSON-safe `game-reference.v1` schema owned by the game. The
-      slice-1 contract lives in `src/game-reference/game-reference.ts`.
+      current fixed-collection contract is schema version `2` in
+      `src/game-reference/game-reference.ts`; the unsupported PR43 schema-1
+      foundation is rejected and no backward compatibility is claimed.
 - [x] Generate it deterministically from the current typed weapon definitions
       and flat weapon tuning through `scripts/export-game-reference.mjs`; the
       exporter loads only those source modules and never concatenates or
@@ -1154,10 +1156,11 @@ semantics and recording the resulting path and hash in the G6 receipt.
       versions, exact Final Five catalog, weapon metadata/mechanics/ratings,
       channels, flat weapon tuning, and terminology registry version.
 - [x] Add authored data-only projections for the 60 upgrades and 98
-      achievements. The projections preserve canonical order, uniqueness,
-      categories/rarities, upgrade rule kinds, and tier descriptors while
-      excluding runtime apply/current/check callbacks and inferred closure
-      mechanics.
+      achievements. The immutable achievement catalog is authoritative and
+      runtime `createAchievements` joins behavior onto it; the projections
+      preserve canonical order, uniqueness, categories/rarities, explicit
+      upgrade/achievement rule kinds, and tier descriptors while excluding
+      runtime apply/current/check callbacks and inferred closure mechanics.
 - [ ] Add enemies, bosses, stages, modes, and global public tuning. These
       collections remain explicit `deferred` envelopes in the single fixed-key
       `collections` authority until each has a separate safe data-only
