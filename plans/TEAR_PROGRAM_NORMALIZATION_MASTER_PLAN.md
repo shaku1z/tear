@@ -1144,18 +1144,34 @@ semantics and recording the resulting path and hash in the G6 receipt.
 
 ### Game-owned manifest
 
-- [ ] Define a JSON-safe `game-reference.v1` schema owned by the game.
-- [ ] Generate it deterministically from current authoritative TypeScript
-      definitions; do not concatenate or execute browser runtime files.
-- [ ] Include repository, full source SHA, schema version, Final Five catalog,
-      weapon mechanics/ratings, upgrades, enemies, bosses, stages, modes,
-      achievements, public tuning, and terminology version.
-- [ ] Exclude secrets, private diagnostics, mutable runtime state, and
-      implementation-only objects.
-- [ ] Assert the exact Final Five IDs and fail if retired roster IDs enter the
-      active catalog.
-- [ ] Add schema, determinism, source-SHA, and stale-generation checks to game
-      CI.
+- [x] Define a JSON-safe `game-reference.v1` schema owned by the game. The
+      slice-1 contract lives in `src/game-reference/game-reference.ts`.
+- [x] Generate it deterministically from the current typed weapon definitions
+      and flat weapon tuning through `scripts/export-game-reference.mjs`; the
+      exporter loads only those source modules and never concatenates or
+      executes browser runtime files.
+- [x] Include the repository, full source SHA, schema and Final Five roster
+      versions, exact Final Five catalog, weapon metadata/mechanics/ratings,
+      channels, flat weapon tuning, and terminology registry version.
+- [ ] Add upgrades, enemies, bosses, stages, modes, achievements, and global
+      public tuning. These collections are explicitly marked `deferred` in the
+      v1 contract until each has a separate safe data-only projection; the
+      foundation does not pretend they are complete.
+- [x] Exclude secrets, private diagnostics, mutable runtime state, callbacks,
+      browser objects, and other implementation-only objects from the
+      projection; canonical JSON validation fails closed if unsafe data enters.
+- [x] Assert the exact Final Five IDs and fail if retired Spear or Ringblade
+      IDs enter the active catalog.
+- [x] Add focused schema, determinism, source-SHA, JSON-safety, roster, dirty
+      tree, and stale-generation checks; wire the exporter as
+      `pnpm export:game-reference`. The unit suite is already included by the
+      repository's full `pnpm test` gate, and `pnpm check:game-reference` is
+      included in the full `check:functional` gate for clean CLI/Vite output.
+- [ ] Add an explicit release/consumer promotion gate for the exported
+      manifest after the remaining G6 consumer contract is complete.
+
+The slice-1 evidence and deferred-collection boundary are recorded in
+`docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md`.
 
 ### Wiki consumer
 
