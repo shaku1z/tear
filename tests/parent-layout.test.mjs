@@ -94,6 +94,7 @@ function createStrictFixture({ loose = false, forbidden = false, invalidPointer 
   const deferredTargetNode = path.join(deferredTargetRoot, "node_modules");
   fs.mkdirSync(deferredSourceRoot, { recursive: true });
   fs.mkdirSync(deferredTargetNode, { recursive: true });
+  writeFixtureFile(deferredTargetNode, "Tear-hidden-behind-junction.txt", "opaque\n");
   let junctionAvailable = true;
   try {
     fs.symlinkSync(deferredTargetNode, deferredSourceNode, "junction");
@@ -186,6 +187,20 @@ test("strict inspection passes a clean fixture without descending archive payloa
     assert.equal(result.status, "pass");
     assert.equal(result.checks.deferredPair.status, "validated");
     assert.equal(result.classifications.some((entry) => entry.name === "Tear-main-publication"), false, "archive payload must remain opaque");
+    assert.equal(result.classifications.some((entry) => entry.name === "Tear-hidden-behind-junction.txt"), false, "junction payload must remain opaque");
+    const cli = spawnSync(process.execPath, [
+      checkerPath,
+      "--strict",
+      "--root", fixture.gameRoot,
+      "--policy", policyPath,
+      "--contract", contractPath,
+      "--workspace-root", fixture.workspaceRoot,
+      "--temp-root", fixture.tempRoot,
+      "--archive-root", fixture.archiveRoot,
+      "--oracle-root", fixture.oracleRoot,
+    ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe", windowsHide: true });
+    assert.equal(cli.status, 0, cli.stderr || cli.stdout);
+    assert.equal(JSON.parse(cli.stdout).status, "pass");
     assert.equal(result.noGo.length, 0);
   } finally {
     cleanupStrictFixture(fixture);
@@ -209,6 +224,52 @@ test("strict inspection reports loose Tear-related items without failing the run
   }
 });
 
+test("strict inspection rejects missing canonical and deferred roots", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    fs.rmSync(fixture.musicRoot, { recursive: true, force: true });
+    fs.rmSync(path.join(fixture.tempRoot, "Tear-budget-architecture"), { recursive: true, force: true });
+    const result = strictResult(fixture);
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /canonical music root is missing/u);
+    assert.match(result.noGo.join("\n"), /deferred junction source root is missing/u);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict Git subchecks report representative identity, branch, upstream, head, and dirty drift locally", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    git(fixture.musicRoot, ["remote", "set-url", "origin", "git@github.com:wrong/music.git"]);
+    git(fixture.wikiRoot, ["config", "branch.main.merge", "refs/heads/develop"]);
+    git(fixture.gameRoot, ["checkout", "-q", "-b", "feature"]);
+    const parentHead = git(fixture.gameRoot, ["rev-parse", "HEAD^" ]).stdout;
+    git(fixture.gameRoot, ["update-ref", "refs/remotes/origin/main", parentHead]);
+    writeFixtureFile(fixture.gameRoot, "dirty.txt", "dirty\n");
+    const result = strictResult(fixture);
+    assert.equal(result.status, "no-go");
+    assert.equal(result.checks.roots.oracle.status, "validated");
+    assert.equal(result.checks.deferredPair.status, "validated", "deferred status must not inherit unrelated Git failures");
+    assert.match(result.noGo.join("\n"), /canonical music origin must identify/u);
+    assert.match(result.noGo.join("\n"), /canonical wiki upstream must be origin\/main/u);
+    assert.match(result.noGo.join("\n"), /canonical game branch must be main/u);
+    assert.match(result.noGo.join("\n"), /canonical game HEAD must equal origin\/main/u);
+    assert.match(result.noGo.join("\n"), /canonical game Git worktree must be clean/u);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
 test("strict inspection marks forbidden development/deployment names as no-go", (t) => {
   const fixture = createStrictFixture({ forbidden: true });
   try {
@@ -217,6 +278,36 @@ test("strict inspection marks forbidden development/deployment names as no-go", 
     assert.equal(result.ok, false);
     assert.equal(result.status, "no-go");
     assert.match(result.noGo.join("\n"), /forbidden name Tear-main-publication/u);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection rejects extra, unlocked, and wrong-head oracle worktree states", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    const extraRoot = path.join(fixture.base, "extra-worktree");
+    git(fixture.gameRoot, ["worktree", "add", "-q", "--detach", extraRoot, "HEAD"]);
+    const extra = strictResult(fixture);
+    assert.equal(extra.status, "no-go");
+    assert.match(extra.noGo.join("\n"), /exactly canonical game and locked oracle|unapproved Git worktree/u);
+    git(fixture.gameRoot, ["worktree", "remove", "--force", extraRoot]);
+
+    git(fixture.gameRoot, ["worktree", "unlock", fixture.oracleRoot]);
+    const unlocked = strictResult(fixture);
+    assert.equal(unlocked.status, "no-go");
+    assert.match(unlocked.noGo.join("\n"), /oracle worktree must be locked/u);
+
+    const wrongHead = git(fixture.oracleRoot, ["rev-parse", "HEAD^"]).stdout;
+    git(fixture.oracleRoot, ["reset", "-q", "--hard", wrongHead]);
+    const wrong = strictResult(fixture);
+    assert.equal(wrong.status, "no-go");
+    assert.match(wrong.noGo.join("\n"), /oracle HEAD must be/u);
+    git(fixture.oracleRoot, ["reset", "-q", "--hard", canonicalPolicy.canonical.oracle.lockedCommit]);
   } finally {
     cleanupStrictFixture(fixture);
   }
@@ -247,6 +338,83 @@ test("strict inspection rejects extra immediate reparses but does not inspect ne
     assert.equal(result.status, "no-go");
     assert.match(result.noGo.join("\n"), /Tear-extra-link.*immediate symlink or reparse/u);
     assert.equal(result.noGo.some((error) => /Tear-main-publication/u.test(error)), false, "nested archive contents must not be inspected");
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection rejects a deferred junction resolving to the wrong target", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    const sourceNode = path.join(fixture.tempRoot, "Tear-budget-architecture", "node_modules");
+    const wrongTargetNode = path.join(fixture.tempRoot, "wrong-target", "node_modules");
+    fs.mkdirSync(wrongTargetNode, { recursive: true });
+    fs.unlinkSync(sourceNode);
+    fs.symlinkSync(wrongTargetNode, sourceNode, "junction");
+    const result = strictResult(fixture);
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /deferred junction source must resolve exactly to target/u);
+  } finally {
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection rejects an ancestor junction alias instead of treating it as a physical root", (t) => {
+  const fixture = createStrictFixture();
+  let aliasWorkspace;
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    aliasWorkspace = path.join(fixture.base, "workspace-alias");
+    fs.symlinkSync(fixture.workspaceRoot, aliasWorkspace, "junction");
+    const result = runParentLayoutCheck({
+      root: path.join(aliasWorkspace, "Tear"),
+      strict: true,
+      policyPath,
+      contractPath,
+      workspaceRoot: aliasWorkspace,
+      tempRoot: fixture.tempRoot,
+      archiveRoot: path.join(aliasWorkspace, "Tear-archives"),
+      oracleRoot: path.join(aliasWorkspace, "Tear-oracle"),
+    });
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /workspace root must not be a symlink or reparse|must resolve to itself/u);
+  } finally {
+    if (aliasWorkspace !== undefined) fs.unlinkSync(aliasWorkspace);
+    cleanupStrictFixture(fixture);
+  }
+});
+
+test("strict inspection rejects case-insensitive immediate-child collisions when the host permits both names", (t) => {
+  const fixture = createStrictFixture();
+  try {
+    if (!fixture.junctionAvailable) {
+      t.skip("directory junctions are unavailable in this environment");
+      return;
+    }
+    const first = path.join(fixture.tempRoot, "Tear-case-collision");
+    const second = path.join(fixture.tempRoot, "tear-case-collision");
+    fs.mkdirSync(first);
+    try {
+      fs.mkdirSync(second);
+    } catch {
+      t.skip("host filesystem is case-insensitive");
+      return;
+    }
+    const names = fs.readdirSync(fixture.tempRoot);
+    if (!names.includes("Tear-case-collision") || !names.includes("tear-case-collision")) {
+      t.skip("host filesystem does not preserve case-colliding names");
+      return;
+    }
+    const result = strictResult(fixture);
+    assert.equal(result.status, "no-go");
+    assert.match(result.noGo.join("\n"), /temporary root has a case-insensitive name collision/u);
   } finally {
     cleanupStrictFixture(fixture);
   }

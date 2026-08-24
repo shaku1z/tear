@@ -375,7 +375,10 @@ function inspectRootDirectory(candidate, label, noGo) {
   }
   try {
     const realPath = fs.realpathSync.native(absolute);
-    if (!samePath(absolute, realPath)) {
+    // Compare the requested spelling directly with the physical path. Using
+    // samePath here would realpath both operands and would therefore accept an
+    // ancestor junction/symlink alias.
+    if (comparablePath(absolute) !== comparablePath(realPath)) {
       recordNoGo(noGo, `${label} must resolve to itself`);
       return null;
     }
@@ -430,6 +433,7 @@ function inspectGitPointer(root, label, noGo, { required = true } = {}) {
 }
 
 function inspectGitRepository({ root, label, expectedRepository, expectedBranch, expectedUpstream, expectedHead, noGo }) {
+  const initialNoGoCount = noGo.length;
   const result = { label, status: "no-go", branch: null, upstream: null, head: null, originMain: null };
   if (root === null) return result;
   inspectGitPointer(root, label, noGo);
@@ -468,7 +472,7 @@ function inspectGitRepository({ root, label, expectedRepository, expectedBranch,
   if (expectedUpstream !== undefined && result.head !== null && result.originMain !== null && result.head !== result.originMain) {
     recordNoGo(noGo, `${label} HEAD must equal origin/main`);
   }
-  result.status = "validated";
+  result.status = noGo.length === initialNoGoCount ? "validated" : "no-go";
   return result;
 }
 
@@ -503,6 +507,7 @@ function parseWorktreePorcelain(text) {
 }
 
 function checkExactWorktrees({ gameRoot, oracleRoot, oraclePolicy, noGo }) {
+  const initialNoGoCount = noGo.length;
   const result = { status: "no-go", entries: 0 };
   const list = strictGit(gameRoot, ["worktree", "list", "--porcelain"]);
   if (!list.ok) {
@@ -530,7 +535,7 @@ function checkExactWorktrees({ gameRoot, oracleRoot, oraclePolicy, noGo }) {
   for (const entry of entries) {
     if (!samePath(entry.path, gameRoot) && !samePath(entry.path, oracleRoot)) recordNoGo(noGo, "an unapproved Git worktree is registered");
   }
-  result.status = noGo.length === 0 ? "validated" : "no-go";
+  result.status = noGo.length === initialNoGoCount ? "validated" : "no-go";
   return result;
 }
 
@@ -596,6 +601,7 @@ function classifyChildren(children, location, policy, review, noGo) {
 }
 
 function checkDeferredPair({ tempRoot, policy, noGo, review }) {
+  const initialNoGoCount = noGo.length;
   const relation = policy.reparse.deferredAuditRelation;
   const sourceRoot = path.join(tempRoot, relation.source.exactName);
   const targetRoot = path.join(tempRoot, relation.target.exactName);
@@ -644,7 +650,7 @@ function checkDeferredPair({ tempRoot, policy, noGo, review }) {
       recordNoGo(noGo, `deferred junction source cannot be resolved (${error.code ?? error.message})`);
     }
   }
-  if (noGo.length === 0) result.status = "validated";
+  if (noGo.length === initialNoGoCount) result.status = "validated";
   else recordReview(review, "deferred junction remains audit-only and was not modified");
   return result;
 }
