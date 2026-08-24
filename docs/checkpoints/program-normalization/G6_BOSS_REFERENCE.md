@@ -1,12 +1,13 @@
 # G6 Boss Reference — Slice 5
 
 Status: the authored boss identity/phase catalog is implemented on
-`codex/g6-boss-reference`; merge, wiki consumer, public-tuning, and deployment
-gates remain open.
+`codex/g6-boss-reference`; the base difficulty public-tuning slice is tracked
+separately, while merge, wiki consumer, and deployment gates remain open.
 
 This checkpoint records only the safe data-only boss handoff for the modern
 typed game. It does not claim that boss runtime behavior, presentation, or
-global tuning has been extracted, and it does not authorize wiki or production
+broader runtime/remote tuning has been extracted. The adjacent narrow authored
+base-difficulty public-tuning slice does not authorize wiki or production
 changes.
 
 ## Authority and shape
@@ -59,6 +60,6 @@ changes.
   targeted ESLint/typecheck, `check:architecture`, `check:docs`,
   `check:game-reference` on a clean committed HEAD, and `git diff --check`.
 
-Global public tuning remains deferred. This slice does not prove
+Broad public tuning remains outside this slice. This slice does not prove
 protected-main/origin state, wiki transport, snapshot promotion, consumer
 rendering, Cloudflare deployment, or release readiness.

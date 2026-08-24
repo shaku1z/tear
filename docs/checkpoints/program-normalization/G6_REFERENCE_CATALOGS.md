@@ -1,4 +1,4 @@
-# G6 Reference Catalogs — Slices 2–5
+# G6 Reference Catalogs — Slices 2–6
 
 Status: implemented on the G6 catalog branch; merge, consumer, and deployment
 gates remain open.
@@ -22,7 +22,9 @@ fixed-key
   Families without variants are represented by empty arrays.
 - `bosses`: complete authored identity/phase catalog with an exact stage
   bijection.
-- `public-tuning`: deferred envelope with an explicit reason.
+- `public-tuning`: complete authored base difficulty envelope with inner
+  schema version `1`, exact text/IDs/order, one-hit invariant, and positive
+  finite modifier values.
 
 The former top-level `deferredCollections` side list is removed. A consumer
 must inspect the fixed collection key and its envelope status; there is no
@@ -80,7 +82,14 @@ presentation/runtime objects. The authored boss catalog is authoritative in
 names, order, and phase marks and joins them to the exact stage boss mapping as
 a five-way bijection. Runtime boss constructors, behavior, presentation,
 epithets, phase labels, and tuning beyond the phase thresholds are excluded;
-global public tuning remains deferred.
+global runtime/remote tuning remains outside this checkpoint.
+
+Authored base difficulty metadata is authoritative in
+`src/gameplay/run/difficulty-catalog.ts`, projected through
+`src/game-reference/public-tuning-reference.ts`. It is the only public tuning
+slice here: the runtime `CONFIG.difficulties` adapter preserves the historical
+shape, while remote/run scaling, upgrade tuning, and other `CONFIG` groups
+remain excluded.
 
 ## Evidence
 
@@ -102,12 +111,17 @@ global public tuning remains deferred.
 - `tests/unit/boss-reference.test.ts` — exact boss identity/phase data, stage
   bijection, deep-freezing, strict imported validation, and runtime threshold
   parity.
+- `tests/unit/weapon-tuning.test.ts`, `tests/unit/difficulty-catalog.test.ts`,
+  `tests/unit/public-tuning-reference.test.ts`, and
+  `tests/unit/game-reference-exporter-source.test.ts` — exact pure/runtime
+  parity hashes, mutable adapter isolation, public difficulty validation, and
+  exporter purity.
 - `pnpm check:game-reference` — clean CLI/Vite export into a temporary path,
   exact local HEAD provenance, fixed keys, Final Five roster, and 60/98/5/7/
-  11/5 catalog counts (with enemy affix/preset and boss stage/phase shape
-  checked as well).
+  11/5 catalog counts plus the complete five-entry public difficulty catalog
+  (with enemy affix/preset and boss stage/phase shape checked as well).
 
 This slice does not prove protected-main/origin state, wiki transport, snapshot
-promotion, consumer rendering, Cloudflare deployment, or public tuning. Boss
-and enemy runtime behavior/tuning, wiki transport, and deployment remain later
-G6/G7 gates.
+promotion, consumer rendering, Cloudflare deployment, or broad public tuning.
+Boss and enemy runtime behavior/tuning, wiki transport, and deployment remain
+later G6/G7 gates.

@@ -6,7 +6,8 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 - [x] Game-owned `game-reference.v1` foundation — `src/game-reference/game-reference.ts`
     projects only JSON-safe Final Five metadata, ratings, mechanics, channels, and
-    flat weapon tuning from the current typed definitions. `scripts/export-game-reference.mjs`
+    flat Final Five weapon tuning from the pure `src/gameplay/weapon-tuning.ts`
+    authority. `scripts/export-game-reference.mjs`
     loads only those typed source modules, binds the full repository SHA and
     terminology registry version, and emits canonical deterministic JSON. The
     current fixed-collection contract is schema version 2; the unsupported
@@ -37,10 +38,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   five-way stage mapping, and two descending phase thresholds per boss. The
   pure `boss-definitions.ts` authority and `boss-reference.ts` projection
   exclude constructors, runtime behavior, and tuning beyond those thresholds.
-- [ ] Remaining reference collections — global public tuning remains explicitly
-  deferred until it has a separate safe data-only projection. Boss and enemy
-  runtime behavior/tuning beyond the authored fields above, wiki
-  synchronization, and release readiness are not implied.
+- [x] Authored base difficulty public tuning — the complete `public-tuning`
+  envelope contains schema-versioned, canonical five-difficulty values from
+  `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
+  adapter preserves the legacy runtime shape and remains isolated per world.
+- [ ] Remaining reference collections — runtime/remote difficulty scaling,
+  upgrade tuning, other `CONFIG` groups, and boss/enemy runtime tuning remain
+  outside the safe public projection. Wiki synchronization and release
+  readiness are not implied.
 
 ## Runtime and releases
 

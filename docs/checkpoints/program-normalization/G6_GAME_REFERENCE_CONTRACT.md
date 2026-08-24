@@ -1,10 +1,11 @@
-# G6 Game Reference Contract — Slices 1–5
+# G6 Game Reference Contract — Slices 1–6
 
 Status: game-reference foundation, progression catalogs, safe stage/mode
-catalog projections, the structural enemy catalog, and the authored boss
-catalog are implemented; G6 remains open.
+catalog projections, the structural enemy catalog, the authored boss catalog,
+and the authored base difficulty public-tuning envelope are implemented; G6
+remains open.
 
-This checkpoint records the first five game-owned handoff slices for the modern
+This checkpoint records the first six game-owned handoff slices for the modern
 typed runtime. It is a contract foundation, not a wiki synchronization or
 release approval.
 
@@ -16,17 +17,21 @@ release approval.
   `src/gameplay/stages.ts`, `src/gameplay/run/mode-catalog.ts`, and
   `src/gameplay/run/content-director.ts`, `src/gameplay/variants.ts`,
   `src/gameplay/affixes.ts`, and
-  `src/gameplay/run/boss-definitions.ts`, and
-  `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the immutable
+  `src/gameplay/run/boss-definitions.ts` (`WEAPONS`, `UPGRADES`, the immutable
   `ACHIEVEMENT_CATALOG`, the typed `STAGES`/`STAGE_IDS`, the immutable
   `MODE_CATALOG`, `ENEMY_KIND_IDS`, enemy variant/affix/preset definitions,
-  and `BOSS_DEFINITIONS`/`CONFIG.weapons` only). Runtime achievement behavior
+  and `BOSS_DEFINITIONS`). Pure public tuning authorities are
+  `src/gameplay/weapon-tuning.ts` (`FINAL_FIVE_WEAPON_TUNING`) and
+  `src/gameplay/run/difficulty-catalog.ts` (`DIFFICULTY_CATALOG`); runtime
+  `CONFIG.weapons` and `CONFIG.difficulties` are fresh legacy adapters only.
+  Runtime achievement behavior
   joins the static catalog in `achievements.ts`; runtime mode config projects
   the legacy runtime shape and adds `debug` only for the two internal test
   modes. Enemy behavior callbacks remain source-only. Neither runtime
   composition is an export authority.
 - Enemy projection boundary: `src/game-reference/enemy-reference.ts`.
 - Boss projection boundary: `src/game-reference/boss-reference.ts`.
+- Public tuning projection boundary: `src/game-reference/public-tuning-reference.ts`.
 - Deterministic exporter: `scripts/export-game-reference.mjs`
 - Focused evidence: `tests/unit/game-reference.test.ts`,
   `tests/unit/boss-reference.test.ts`, and `tests/unit/boss-phase-conformance.test.ts`.
@@ -73,10 +78,17 @@ release approval.
   validator reject reordered definitions, broken joins, duplicate IDs, extra
   fields, and unsafe thresholds. Constructors, runtime behavior, and tuning
   beyond those thresholds are excluded.
+- The `public-tuning` entry is complete for the authored base difficulty
+  catalog. Its `items` value has inner `schemaVersion: 1` and exactly five
+  ordered entries with `id`, `label`, `description`, `oneHit`, and positive
+  finite `modifiers` (`enemyHealth`, `playerDamageTaken`, `enemyCount`,
+  `coinReward`, `scoreReward`). Values, text, IDs, order, one-hit invariant,
+  and exact keys are validated against the pure catalog; no runtime callbacks
+  or remote values are included.
 - The fixed `collections` object is the only collection authority. Weapons,
   upgrades, achievements, stages, modes, the structural enemy catalog, and the
-  authored boss catalog are complete envelopes; `public-tuning` remains the
-  only explicit deferred envelope. There is no duplicate deferred side list.
+  authored boss catalog and authored base difficulty public tuning are complete
+  envelopes. There is no duplicate deferred side list.
 - Upgrade entries preserve the authored 60-item order, category, uniqueness,
   rare flag, stack limit, rule kind, and tier descriptions. Achievement entries
   preserve the authored 98-item order, category, rarity, visibility flags, and
@@ -91,11 +103,12 @@ release approval.
 
 ## Deliberate boundary
 
-Global `public-tuning` remains explicitly represented as deferred in the
-contract. It is not absent by accident and is not implied complete. Boss and
-enemy runtime behavior and tuning beyond the authored catalog fields remain
-outside this slice and require separate review; this slice does not imply that
-runtime behavior is complete in the handoff.
+The complete `public-tuning` envelope is intentionally narrow: it contains
+only authored base difficulty values. Runtime/remote difficulty scaling,
+upgrade tuning, other `CONFIG` groups, and boss/enemy runtime behavior or
+tuning beyond the authored catalog fields remain outside this slice and
+require separate review; this slice does not imply those values are complete
+in the handoff.
 
 The wiki consumer, dispatch workflow, game-reference snapshot promotion, and
 Cloudflare deployment are outside this slice and remain locked by the G6 plan.
@@ -105,6 +118,7 @@ Cloudflare deployment are outside this slice and remain locked by the G6 plan.
 - `pnpm exec vitest run tests/unit/game-reference.test.ts --no-file-parallelism`
 - `pnpm exec vitest run tests/unit/enemy-reference.test.ts --no-file-parallelism`
 - `pnpm exec vitest run tests/unit/boss-reference.test.ts tests/unit/boss-phase-conformance.test.ts --no-file-parallelism`
+- `pnpm exec vitest run tests/unit/weapon-tuning.test.ts tests/unit/difficulty-catalog.test.ts tests/unit/public-tuning-reference.test.ts tests/unit/game-reference-exporter-source.test.ts --no-file-parallelism`
 - `pnpm exec vitest run tests/unit/run-wave-planner-conformance.test.ts tests/unit/run-wave-rules.test.ts tests/unit/live-wave-controller.test.ts tests/unit/run-session.test.ts tests/unit/music-routing-vocabulary.test.ts --no-file-parallelism`
 - `pnpm exec vitest run tests/unit/gameplay-definitions.test.ts tests/unit/progression-systems.test.ts --no-file-parallelism`
 - `pnpm test` includes this unit suite in the full Vitest gate.

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { CONFIG } from "../../src/config/game-config";
 import { canonicalStringify } from "../../src/replay/hash";
 import {
   assertCurrentSourceSha,
@@ -17,10 +16,12 @@ import { STAGES } from "../../src/gameplay/stages";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
 import { ENEMY_KIND_IDS } from "../../src/gameplay/run/content-director";
 import { BOSS_DEFINITIONS } from "../../src/gameplay/run/boss-definitions";
+import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
+import { FINAL_FIVE_WEAPON_TUNING } from "../../src/gameplay/weapon-tuning";
 import { VARIANTS } from "../../src/gameplay/variants";
 import { AFFIXES, PRESETS } from "../../src/gameplay/affixes";
 
-const tuningByWeapon = Object.fromEntries(Object.entries(CONFIG.weapons).map(([id, tuning]) => [id, Object.fromEntries(Object.entries(tuning))]));
+const tuningByWeapon = FINAL_FIVE_WEAPON_TUNING;
 const firstWeapon = WEAPONS.at(0);
 if (firstWeapon === undefined) throw new Error("Final Five source is empty");
 const achievementSource = ACHIEVEMENT_CATALOG;
@@ -29,7 +30,9 @@ const enemyFamilySource = ENEMY_KIND_IDS.map((id) => ({ id, variants: VARIANTS[i
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
   upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
   stages = STAGES, modes = MODE_CATALOG, enemyFamilies = enemyFamilySource,
-  enemyAffixes = AFFIXES, enemyPresets = PRESETS, bossDefinitions = BOSS_DEFINITIONS): GameReferenceV1 {
+  enemyAffixes = AFFIXES, enemyPresets = PRESETS, bossDefinitions = BOSS_DEFINITIONS,
+  difficulties = DIFFICULTY_CATALOG,
+  tuningOverride: Readonly<Record<string, Readonly<Record<string, unknown>>>> = tuningByWeapon): GameReferenceV1 {
   return buildGameReferenceV1({
     repository: "shaku1z/tear",
     sourceSha,
@@ -43,8 +46,28 @@ function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinitio
     bossDefinitions,
     stages,
     modes,
-    tuningByWeapon,
+    difficulties,
+    tuningByWeapon: tuningOverride,
   });
+}
+
+type MutableWeaponTuningFixture = Record<string, Record<string, number>>;
+
+function mutableWeaponTuning(): MutableWeaponTuningFixture {
+  return structuredClone(FINAL_FIVE_WEAPON_TUNING);
+}
+
+function tuningEntry(value: MutableWeaponTuningFixture, id: string): Record<string, number> {
+  const entry = value[id];
+  if (entry === undefined) throw new Error(`missing tuning fixture ${id}`);
+  return entry;
+}
+
+function referenceWithTuning(tuningOverride: MutableWeaponTuningFixture): GameReferenceV1 {
+  return reference(
+    "a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, MODE_CATALOG,
+    enemyFamilySource, AFFIXES, PRESETS, BOSS_DEFINITIONS, DIFFICULTY_CATALOG, tuningOverride,
+  );
 }
 
 function assertJsonSafe(value: unknown, path = "$"): void {
@@ -100,7 +123,11 @@ describe("game-reference.v1", () => {
       { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
       { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
     ]);
-    expect(result.collections["public-tuning"].status).toBe("deferred");
+    expect(result.collections["public-tuning"].status).toBe("complete");
+    expect(result.collections["public-tuning"].items.schemaVersion).toBe(1);
+    expect(result.collections["public-tuning"].items.difficultyCatalog.map((difficulty) => difficulty.id)).toEqual([
+      "easy", "normal", "hard", "extreme", "onehit",
+    ]);
   });
 
   it("projects authored progression metadata without runtime callbacks", () => {
@@ -234,6 +261,7 @@ describe("game-reference.v1", () => {
       bossDefinitions: BOSS_DEFINITIONS,
       stages: STAGES,
       modes: MODE_CATALOG,
+      difficulties: DIFFICULTY_CATALOG,
       tuningByWeapon,
     })).toThrow(/repository must be shaku1z\/tear/u);
   });
@@ -273,6 +301,48 @@ describe("game-reference.v1", () => {
     if (achievement === undefined) throw new Error("missing achievement fixture");
     (achievement.rule as Record<string, unknown>).goal = "one";
     expect(() => { assertValidGameReferenceV1(malformedAchievement); }).toThrow(/finite number/u);
+  });
+
+  it("requires canonical Final Five tuning keys and values during projection and import", () => {
+    const missing = mutableWeaponTuning();
+    delete tuningEntry(missing, "greatsword").cleaveDamageMult;
+    expect(() => referenceWithTuning(missing)).toThrow(/tuning has unexpected or missing fields/u);
+
+    const extra = mutableWeaponTuning();
+    tuningEntry(extra, "greatsword").unexpected = 1;
+    expect(() => referenceWithTuning(extra)).toThrow(/tuning has unexpected or missing fields/u);
+
+    const wrong = mutableWeaponTuning();
+    tuningEntry(wrong, "greatsword").cleaveDamageMult = 9;
+    expect(() => referenceWithTuning(wrong)).toThrow(/does not match canonical greatsword tuning/u);
+
+    const reordered = mutableWeaponTuning();
+    reordered.greatsword = Object.fromEntries(Object.entries(tuningEntry(reordered, "greatsword")).reverse());
+    expect(() => referenceWithTuning(reordered)).not.toThrow();
+
+    const importedMissing = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedMissingWeapon = importedMissing.collections.weapons.items.at(2);
+    if (importedMissingWeapon === undefined) throw new Error("missing imported tuning fixture");
+    delete importedMissingWeapon.tuning.cleaveDamageMult;
+    expect(() => { assertValidGameReferenceV1(importedMissing); }).toThrow(/tuning has unexpected or missing fields/u);
+
+    const importedExtra = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedExtraWeapon = importedExtra.collections.weapons.items.at(2);
+    if (importedExtraWeapon === undefined) throw new Error("missing imported tuning fixture");
+    importedExtraWeapon.tuning.unexpected = 1;
+    expect(() => { assertValidGameReferenceV1(importedExtra); }).toThrow(/tuning has unexpected or missing fields/u);
+
+    const importedWrong = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedWrongWeapon = importedWrong.collections.weapons.items.at(2);
+    if (importedWrongWeapon === undefined) throw new Error("missing imported tuning fixture");
+    importedWrongWeapon.tuning.cleaveDamageMult = 9;
+    expect(() => { assertValidGameReferenceV1(importedWrong); }).toThrow(/does not match canonical greatsword tuning/u);
+
+    const importedReordered = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedReorderedWeapon = importedReordered.collections.weapons.items.at(2);
+    if (importedReorderedWeapon === undefined) throw new Error("missing imported tuning fixture");
+    importedReorderedWeapon.tuning = Object.fromEntries(Object.entries(importedReorderedWeapon.tuning).reverse());
+    expect(() => { assertValidGameReferenceV1(importedReordered); }).not.toThrow();
   });
 
   it("enforces explicit achievement rule payloads", () => {

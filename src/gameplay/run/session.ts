@@ -1,5 +1,7 @@
+import type { DifficultyId } from "./difficulty-catalog";
+
 export type RunMode = "campaign" | "endless" | "gauntlet" | "playground" | "tutorial" | "bossonly" | "sandbox";
-export type RunDifficulty = "easy" | "normal" | "hard" | "extreme" | "onehit";
+export type RunDifficulty = DifficultyId;
 
 export interface RunDifficultyScaling {
   readonly coin: number;

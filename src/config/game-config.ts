@@ -1,6 +1,8 @@
 import type { GamepadSettings } from "../input/legacy-input-contracts";
 import { MODE_CATALOG } from "../gameplay/run/mode-catalog";
 import { bossPhaseMark } from "../gameplay/run/boss-definitions";
+import { createLegacyDifficulties } from "../gameplay/run/difficulty-catalog";
+import { createFinalFiveWeaponTuning } from "../gameplay/weapon-tuning";
 
 // ============================================================
 //  TUNING — everything you'd want to tweak for "feel" lives here.
@@ -105,42 +107,7 @@ const CONFIG = {
   },
 
   // ---- five weapon identities (exclusive mechanics live here, not in the draft pool) ----
-  weapons: {
-    sword: {
-      reversalWindow: 1.45, reversalExitRadius: 86, reversalOppositeDot: -0.55,
-      reversalExitPadding: 18, reversalDamageMult: 1.65, reversalStun: 0.24,
-      threadcutDamageMult: 1.35,
-    },
-    hammer: {
-      weakFloor: 0.28, commitmentRef: 760, fullCommitMult: 1.32,
-      breakPerDamage: 1.15, breakThreshold: 82, bossBreakThreshold: 190,
-      meteorGravity: 1850, meteorRadius: 170, meteorStun: 0.85,
-      meteorBreak: 75, recallTargetCap: 2,
-    },
-    greatsword: {
-      weakNearHilt: 0.48, cleaveThreshold: 0.68, cleaveDamageMult: 1,
-      lightMomentumRetention: 0.92, mediumMomentumRetention: 0.78,
-      heavyMomentumRetention: 0.55, bossMomentumRetention: 0.35,
-      wheelSpin: 14, wheelReturnAlign: 13, wheelReturnMult: 1.28,
-    },
-    chainblade: {
-      lashForce: 780, hookDuration: 3.1, slingSpeed: 1650, collisionDamage: 28,
-      releaseStun: 0.38, heavyBreak: 28, bossTug: 0.24,
-      minRadius: 70, maxRadius: 300, tightenRate: 260, linkSegments: 14,
-      angularAcceleration: 34, angularDamping: 4.2, maxAngularSpeed: 8.5,
-      orbitSpring: 18, orbitFollow: 9, releaseOrbitMult: 1.08,
-      releaseMomentumCarry: 0.18, maxReleaseSpeed: 2600, knockbackReference: 10,
-      anchorPull: 11, anchorMaxSpeed: 900, worldCollisionCooldown: 0.16,
-    },
-    riftlock: {
-      chambers: 4, chamberReform: 1.35, razorCooldown: 0.24, razorDamage: 42,
-      razorSpeed: 1450, razorRadius: 6, razorLife: 1.15, recoil: 520,
-      recoilCutWindow: 0.2,
-      bayonetRefill: 1, perfectParryRefill: 2, catchRefill: 1,
-      looseCannonDuration: 4.2, remoteShotCooldown: 0.3, backblastSpeed: 4200,
-      captureDuration: 1.4, captureRecoilTransfer: 0.72, captureBossTransfer: 0.16,
-    },
-  },
+  weapons: createFinalFiveWeaponTuning(),
 
   // New accepted Specials. Tier-specific caps/multipliers are resolved by the
   // ability event handlers, while these values remain the single tuning source.
@@ -528,13 +495,7 @@ const CONFIG = {
   // ---- difficulties (selectable from the menu) ----
   // mods scale enemy HP / your damage-taken / spawn count + the coin & score rewards
   // (risk = reward). Normal is the baseline (all 1.0). One-Hit keeps the deadly flag.
-  difficulties: [
-    { id: "easy",    label: "Easy",    desc: "Gentler enemies, lighter hits.",      mods: { hp: 0.80, dmg: 0.65, count: 0.85, coin: 0.80, score: 0.70 } },
-    { id: "normal",  label: "Normal",  desc: "The intended balance.",                mods: { hp: 1.00, dmg: 1.00, count: 1.00, coin: 1.00, score: 1.00 } },
-    { id: "hard",    label: "Hard",    desc: "Tougher, hungrier, more of them.",     mods: { hp: 1.30, dmg: 1.35, count: 1.15, coin: 1.10, score: 1.40 } },
-    { id: "extreme", label: "Extreme", desc: "Brutal — but fair. Big rewards.",      mods: { hp: 1.70, dmg: 1.80, count: 1.30, coin: 1.15, score: 2.00 } },
-    { id: "onehit",  label: "One-Hit", desc: "One touch and you fall. Rewards surge after wave 8.", oneHit: true, mods: { hp: 0.90, dmg: 1.00, count: 1.00, coin: 0.70, score: 2.20 } },
-  ],
+  difficulties: createLegacyDifficulties(),
 
   // Runtime config derives authored metadata from MODE_CATALOG but projects the
   // historical runtime shape. Reference-only order/classification fields and

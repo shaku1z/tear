@@ -14,10 +14,6 @@ function option(name) {
   return value;
 }
 
-function numericTuning(value) {
-  return Object.fromEntries(Object.entries(value));
-}
-
 const requestedSha = option("--sha") ?? process.env.TEAR_GAME_REFERENCE_SHA;
 const expectedSha = option("--expected-sha");
 const terminologyVersion = option("--terminology") ?? JSON.parse(fs.readFileSync(path.join(root, "config", "terminology-registry.json"), "utf8")).registryId;
@@ -36,9 +32,9 @@ try {
   const bossDefinitionModule = await server.ssrLoadModule("/src/gameplay/run/boss-definitions.ts");
   const stageModule = await server.ssrLoadModule("/src/gameplay/stages.ts");
   const modeModule = await server.ssrLoadModule("/src/gameplay/run/mode-catalog.ts");
-  const configModule = await server.ssrLoadModule("/src/config/game-config.ts");
+  const weaponTuningModule = await server.ssrLoadModule("/src/gameplay/weapon-tuning.ts");
+  const difficultyModule = await server.ssrLoadModule("/src/gameplay/run/difficulty-catalog.ts");
   const repository = option("--repository") ?? process.env.TEAR_BUILD_REPOSITORY ?? referenceModule.GAME_REFERENCE_REPOSITORY;
-  const tuningByWeapon = Object.fromEntries(Object.entries(configModule.CONFIG.weapons).map(([id, tuning]) => [id, numericTuning(tuning)]));
   const enemyFamilies = enemyKindModule.ENEMY_KIND_IDS.map((id) => ({ id, variants: variantModule.VARIANTS[id] ?? [] }));
   const reference = referenceModule.buildGameReferenceV1({
     repository,
@@ -53,7 +49,8 @@ try {
     bossDefinitions: bossDefinitionModule.BOSS_DEFINITIONS,
     stages: stageModule.STAGES,
     modes: modeModule.MODE_CATALOG,
-    tuningByWeapon,
+    difficulties: difficultyModule.DIFFICULTY_CATALOG,
+    tuningByWeapon: weaponTuningModule.FINAL_FIVE_WEAPON_TUNING,
   });
   if (expectedSha !== undefined) referenceModule.assertCurrentSourceSha(reference, expectedSha);
   const encoded = referenceModule.encodeGameReferenceV1(reference);

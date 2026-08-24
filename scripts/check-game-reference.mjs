@@ -34,6 +34,10 @@ try {
   if (reference.collections.stages?.status !== "complete" || reference.collections.stages.items?.length !== 5) throw new Error("game reference check produced an incomplete stage catalog");
   if (JSON.stringify(reference.collections.modes?.items?.map((mode) => mode.id)) !== JSON.stringify(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"])) throw new Error("game reference check produced an invalid mode catalog");
   if (reference.collections.modes?.status !== "complete" || reference.collections.modes.items?.length !== 7) throw new Error("game reference check produced an incomplete mode catalog");
+  const publicTuning = reference.collections["public-tuning"];
+  if (publicTuning?.status !== "complete" || publicTuning.items?.schemaVersion !== 1) throw new Error("game reference check produced an incomplete public tuning catalog");
+  if (JSON.stringify(publicTuning.items?.difficultyCatalog?.map((difficulty) => difficulty.id)) !== JSON.stringify(["easy", "normal", "hard", "extreme", "onehit"])) throw new Error("game reference check produced an invalid difficulty catalog order");
+  if (publicTuning.items?.difficultyCatalog?.filter((difficulty) => difficulty.oneHit).map((difficulty) => difficulty.id).join(",") !== "onehit") throw new Error("game reference check produced an invalid one-hit difficulty invariant");
   console.log(`PASS game reference check: ${reference.source.repository}@${reference.source.sha}`);
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true });
