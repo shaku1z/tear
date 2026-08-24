@@ -18,6 +18,8 @@ import {
 export const DEFERRED_WORKSPACE_DEPENDENCY_FORMAT = "tear-deferred-workspace-dependency-audit";
 export const DEFAULT_DEFERRED_SECOND_WAVE_POLICY_RELATIVE_PATH = "preservation/workspace-recovery-second-wave-sources.json";
 export const DEFAULT_DEFERRED_PARENT_POLICY_RELATIVE_PATH = "preservation/workspace-parent-layout-policy.json";
+export const WINDOWS_IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003;
+export const WINDOWS_IO_REPARSE_TAG_SYMLINK = 0xA000000C;
 
 const SOURCE_ID = "second-wave-tear-budget-architecture";
 const SOURCE_NAME = "Tear-budget-architecture";
@@ -166,6 +168,43 @@ function gitValue(root, argumentsList, label) {
   return result.stdout.trim();
 }
 
+function formatReparseTag(value) {
+  return `0x${value.toString(16).toUpperCase().padStart(8, "0")}`;
+}
+
+function reparseTypeForTag(value) {
+  if (value === WINDOWS_IO_REPARSE_TAG_MOUNT_POINT) return "mount-point";
+  if (value === WINDOWS_IO_REPARSE_TAG_SYMLINK) return "symbolic-link";
+  return "unknown";
+}
+
+function normalizeReparseTagProbeResult(result, candidate) {
+  const rawValue = typeof result === "number" || typeof result === "string" ? result : result?.value ?? result?.tag;
+  const value = typeof rawValue === "string"
+    ? (/^0x[0-9a-f]+$/iu.test(rawValue) ? Number.parseInt(rawValue.slice(2), 16) : Number.NaN)
+    : rawValue;
+  if (!Number.isSafeInteger(value) || value < 0) fail(`reparse tag probe returned an invalid tag for ${candidate} (${String(rawValue)})`);
+  return { value, tag: formatReparseTag(value), type: reparseTypeForTag(value) };
+}
+
+function queryWindowsReparseTag(candidate) {
+  const result = spawnSync("fsutil", ["reparsepoint", "query", candidate], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024,
+    stdio: "pipe",
+    windowsHide: true,
+  });
+  const output = `${String(result.stdout ?? "")}\n${String(result.stderr ?? "")}`;
+  if (result.status !== 0) {
+    fail(`could not query the Windows reparse tag for ${candidate}: ${String(result.error?.message ?? output).trim()}`);
+  }
+  const labeled = output.match(/(?:reparse\s+tag\s+value|tag\s+value)\s*:\s*0x([0-9a-f]+)/iu);
+  const fallback = labeled === null ? [...output.matchAll(/\b0x([0-9a-f]{8})\b/giu)] : [];
+  const rawValue = labeled?.[1] ?? (fallback.length === 1 ? fallback[0][1] : null);
+  if (rawValue === null || rawValue === undefined) fail(`could not parse an exact Windows reparse tag for ${candidate} (labeled=${String(labeled?.[1])}, fallback=${fallback.length})`);
+  return normalizeReparseTagProbeResult(`0x${rawValue}`, candidate);
+}
+
 function verifyCanonicalGame(repoRoot) {
   const root = inspectCanonicalDirectory(repoRoot, "repo-root");
   const git = inspectGitState(root.path, DEFAULT_GIT_POINTER_LIMIT_BYTES);
@@ -184,7 +223,8 @@ function verifyCanonicalGame(repoRoot) {
   if (!clean) fail(`repo-root must be clean; found ${status}`);
   const branch = gitValue(root.path, ["branch", "--show-current"], "git branch --show-current");
   if (branch !== "main") fail(`repo-root must be on main, found ${branch || "detached HEAD"}`);
-  const upstream = gitValue(root.path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], "git rev-parse upstream");
+  const upstreamResult = runGit(root.path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
+  const upstream = upstreamResult.ok ? upstreamResult.stdout.trim() : "";
   if (upstream !== "origin/main") fail(`main must track origin/main, found ${upstream || "none"}`);
   const head = gitValue(root.path, ["rev-parse", "HEAD"], "git rev-parse HEAD").toLowerCase();
   const originMain = gitValue(root.path, ["rev-parse", "origin/main"], "git rev-parse origin/main").toLowerCase();
@@ -295,17 +335,25 @@ function stripWindowsNamespace(value) {
   return result;
 }
 
-function inspectExactSourceJunction(sourcePath, targetPath) {
+function inspectExactSourceJunction(sourcePath, targetPath, reparseTagProbe) {
   let sourceStats;
   try {
     sourceStats = fs.lstatSync(sourcePath);
   } catch (error) {
     fail(`deferred source junction is missing: ${sourcePath} (${error.code ?? error.message})`);
   }
-  if (!sourceStats.isSymbolicLink()) {
-    let sourceRealPath;
-    try { sourceRealPath = fs.realpathSync.native(sourcePath); } catch (error) { fail(`deferred source junction is not resolvable: ${sourcePath} (${error.code ?? error.message})`); }
-    if (samePath(sourcePath, sourceRealPath)) fail(`deferred source node_modules must be the exact opaque junction/reparse: ${sourcePath}`);
+  let sourceRealPath;
+  try { sourceRealPath = fs.realpathSync.native(sourcePath); } catch (error) { fail(`deferred source junction is not resolvable: ${sourcePath} (${error.code ?? error.message})`); }
+  if (!sourceStats.isSymbolicLink() && samePath(sourcePath, sourceRealPath)) fail(`deferred source node_modules must be the exact opaque junction/reparse: ${sourcePath}`);
+  let reparse = { value: null, tag: null, type: process.platform === "win32" ? "unverified" : "symlink-test-fixture" };
+  const probe = reparseTagProbe ?? (process.platform === "win32" ? queryWindowsReparseTag : null);
+  if (probe !== null) {
+    reparse = normalizeReparseTagProbeResult(probe(sourcePath), sourcePath);
+    if (reparse.value !== WINDOWS_IO_REPARSE_TAG_MOUNT_POINT) {
+      fail(`deferred source node_modules must be a Windows mount-point junction (tag ${formatReparseTag(WINDOWS_IO_REPARSE_TAG_MOUNT_POINT)}); found ${reparse.tag} ${reparse.type}: ${sourcePath}`);
+    }
+  } else if (process.platform === "win32") {
+    fail(`deferred source node_modules reparse tag could not be verified: ${sourcePath}`);
   }
   let rawTarget;
   try {
@@ -343,6 +391,9 @@ function inspectExactSourceJunction(sourcePath, targetPath) {
     physicalTarget: sourcePhysicalTarget,
     expectedPhysicalTarget: expectedTarget,
     targetMatches: true,
+    reparseTag: reparse.tag,
+    reparseTagValue: reparse.value,
+    reparseType: reparse.type,
   };
 }
 
@@ -580,7 +631,7 @@ export function runDeferredWorkspaceDependencyAudit(options = {}) {
   }
   if (targetNodeModulesInspection.reparse || !targetNodeModulesInspection.stats.isDirectory()) fail("target node_modules must be a normal protected directory");
   const sourceNodeModulesPath = path.join(sourceRoot.path, RELATIVE_DEPENDENCY_PATH);
-  const sourceJunction = inspectExactSourceJunction(sourceNodeModulesPath, targetNodeModulesPath);
+  const sourceJunction = inspectExactSourceJunction(sourceNodeModulesPath, targetNodeModulesPath, options.reparseTagProbe);
   const budget = { entries: 0, bytes: 0 };
   const sourceScan = scanRoot({ rootPath: sourceRoot.path, role: "source", policy: policies.secondWave.scanPolicy, budget, sourceJunction, targetNodeModules: null });
   const targetScan = scanRoot({ rootPath: targetRoot.path, role: "target", policy: policies.secondWave.scanPolicy, budget, sourceJunction: null, targetNodeModules: targetNodeModulesInspection });
@@ -598,7 +649,7 @@ export function runDeferredWorkspaceDependencyAudit(options = {}) {
   for (const field of Object.keys(historical)) {
     if (current[field] !== historical[field]) discrepancies.push(`${field}: current ${current[field]} != historical ${historical[field]}`);
   }
-  const status = discrepancies.length === 0 ? "match" : "stale-or-unexplained";
+  const status = discrepancies.length === 0 ? "historical-sizing-match" : "stale-or-unexplained";
   const report = {
     format: DEFERRED_WORKSPACE_DEPENDENCY_FORMAT,
     schemaVersion: 1,
@@ -645,11 +696,20 @@ export function runDeferredWorkspaceDependencyAudit(options = {}) {
       payloadHashes: "none",
       sourceObservedBytes: current.sourceObservedBytes,
       targetObservedBytes: current.targetObservedBytes,
+      sizingComparison: {
+        basis: "ordinary-file-byte-totals-only",
+        contentCompared: false,
+        pathsCompared: false,
+        mtimesCompared: false,
+        payloadHashes: "none",
+        equalTotalsDoNotProve: ["content-equivalence", "path-equivalence", "mtime-equivalence"],
+      },
     },
     restoreGuidance: {
       status: "audit-only",
       instructions: [
         "This audit performs no move, copy, overwrite, deletion, fetch, ref mutation, or deployment.",
+        "historical-sizing-match compares only ordinary-file byte totals; equal totals do not prove content, path, or mtime equivalence, and payload hashes are none.",
         "The source node_modules reparse is recorded as opaque and refused; it is never traversed.",
         "Any later preservation requires a separately approved opaque-reparse operation that retains both dependency roots.",
       ],

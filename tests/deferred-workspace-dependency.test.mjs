@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
   DeferredWorkspaceDependencyError,
+  WINDOWS_IO_REPARSE_TAG_MOUNT_POINT,
+  WINDOWS_IO_REPARSE_TAG_SYMLINK,
   runDeferredWorkspaceDependencyAudit,
 } from "../scripts/report-deferred-workspace-dependency.mjs";
 
@@ -111,7 +115,7 @@ function cleanupFixture(fixture) {
   fs.rmSync(fixture.base, { recursive: true, force: true });
 }
 
-function runFixture(fixture, outputName = "audit.json") {
+function runFixture(fixture, outputName = "audit.json", overrides = {}) {
   return runDeferredWorkspaceDependencyAudit({
     repoRoot: fixture.repoRoot,
     tempRoot: fixture.tempRoot,
@@ -120,6 +124,7 @@ function runFixture(fixture, outputName = "audit.json") {
     secondWavePolicyPath: fixture.secondWavePolicyPath,
     parentPolicyPath: fixture.parentPolicyPath,
     now: "2026-08-23T12:00:00.000Z",
+    ...overrides,
   });
 }
 
@@ -137,7 +142,7 @@ test("valid deferred dependency fixture reports a matching, metadata-only audit"
     if (!requireJunction(t, fixture)) return;
     const report = runFixture(fixture);
 
-    assert.equal(report.summary.status, "match");
+    assert.equal(report.summary.status, "historical-sizing-match");
     assert.deepEqual(report.summary.discrepancies, []);
     assert.equal(report.repositoryState.branch, "main");
     assert.equal(report.repositoryState.upstream, "origin/main");
@@ -147,6 +152,9 @@ test("valid deferred dependency fixture reports a matching, metadata-only audit"
     assert.equal(report.roots[1].git.status, "directory");
     assert.equal(report.mutation.payloadHashes, "none");
     assert.equal(report.summary.payloadHashes, "none");
+    assert.deepEqual(report.summary.sizingComparison.equalTotalsDoNotProve, ["content-equivalence", "path-equivalence", "mtime-equivalence"]);
+    assert.equal(report.dependency.relation.reparseTag, process.platform === "win32" ? "0xA0000003" : null);
+    assert.equal(report.dependency.relation.reparseType, process.platform === "win32" ? "mount-point" : "symlink-test-fixture");
     assert.equal(report.roots[0].entries.some((entry) => entry.relativePath === "node_modules/not-counted.bin"), false);
     assert.equal(report.roots[1].entries.some((entry) => entry.relativePath === "node_modules/not-counted.bin"), false);
     assert.equal(report.dependency.relation.targetMatches, true);
@@ -180,8 +188,63 @@ test("an absent deferred-root .git is explicit metadata and does not trigger des
 
     assert.equal(report.roots[0].git.status, "absent");
     assert.equal(report.roots[0].git.valid, false);
-    assert.equal(report.summary.status, "match");
+    assert.equal(report.summary.status, "historical-sizing-match");
     assert.equal(report.roots[1].entries.some((entry) => entry.relativePath.startsWith("node_modules/")), false);
+  } finally {
+    cleanupFixture(fixture);
+  }
+});
+
+test("a .git pointer is bounded metadata, records an invalid target, and counts pointer bytes", (t) => {
+  const fixture = createFixture();
+  try {
+    if (!requireJunction(t, fixture)) return;
+    fs.rmSync(path.join(fixture.sourceRoot, ".git"), { recursive: true, force: true });
+    const pointer = "gitdir: missing-gitdir\n";
+    fs.writeFileSync(path.join(fixture.sourceRoot, ".git"), pointer, "utf8");
+    const report = runFixture(fixture, "git-pointer.json");
+
+    assert.equal(report.roots[0].git.status, "invalid-target");
+    assert.equal(report.roots[0].git.target, path.join(fixture.sourceRoot, "missing-gitdir"));
+    assert.equal(report.roots[0].git.targetExists, false);
+    assert.equal(report.roots[0].git.bytes, Buffer.byteLength(pointer));
+    assert.equal(report.roots[0].summary.observedBytes, 4_133_063 + Buffer.byteLength(pointer));
+    assert.equal(report.summary.status, "stale-or-unexplained");
+  } finally {
+    cleanupFixture(fixture);
+  }
+});
+
+test("a non-junction reparse tag is rejected through the injectable probe", (t) => {
+  const fixture = createFixture();
+  try {
+    if (!requireJunction(t, fixture)) return;
+    assert.throws(
+      () => runFixture(fixture, "symlink-tag.json", {
+        reparseTagProbe: () => ({ value: WINDOWS_IO_REPARSE_TAG_SYMLINK }),
+      }),
+      (error) => error instanceof DeferredWorkspaceDependencyError && /mount-point junction|symbolic-link/u.test(error.message),
+    );
+    const report = runFixture(fixture, "injected-mount-point.json", {
+      reparseTagProbe: () => ({ value: WINDOWS_IO_REPARSE_TAG_MOUNT_POINT }),
+    });
+    assert.equal(report.dependency.relation.reparseTag, "0xA0000003");
+    assert.equal(report.dependency.relation.reparseType, "mount-point");
+  } finally {
+    cleanupFixture(fixture);
+  }
+});
+
+test("a single file over the configured cap fails closed", (t) => {
+  const fixture = createFixture();
+  try {
+    if (!requireJunction(t, fixture)) return;
+    createSizedFile(path.join(fixture.sourceRoot, "too-large.bin"), 134_217_729);
+    assert.throws(
+      () => runFixture(fixture, "cap-failure.json"),
+      (error) => error instanceof DeferredWorkspaceDependencyError && /maxSingleFileBytes/u.test(error.message),
+    );
+    assert.equal(fs.existsSync(path.join(fixture.outputDirectory, "cap-failure.json")), false);
   } finally {
     cleanupFixture(fixture);
   }
@@ -209,6 +272,27 @@ test("wrong junction target and extra reparses fail closed", (t) => {
       () => runFixture(fixture, "extra-reparse.json"),
       (error) => error instanceof DeferredWorkspaceDependencyError && /unexpected symlink or reparse/u.test(error.message),
     );
+  } finally {
+    cleanupFixture(fixture);
+  }
+});
+
+test("an output parent alias is rejected before a report is written", (t) => {
+  const fixture = createFixture();
+  try {
+    if (!requireJunction(t, fixture)) return;
+    const alias = path.join(fixture.archiveRoot, "output-alias");
+    try {
+      fs.symlinkSync(fixture.outputDirectory, alias, process.platform === "win32" ? "junction" : "dir");
+    } catch {
+      t.skip("directory aliases are unavailable in this environment");
+      return;
+    }
+    assert.throws(
+      () => runFixture(fixture, "aliased-output.json", { outputPath: path.join(alias, "aliased-output.json") }),
+      (error) => error instanceof DeferredWorkspaceDependencyError && /symlink or reparse|canonical directory/u.test(error.message),
+    );
+    assert.equal(fs.existsSync(path.join(fixture.outputDirectory, "aliased-output.json")), false);
   } finally {
     cleanupFixture(fixture);
   }
@@ -252,5 +336,44 @@ test("canonical repository drift is rejected before an audit report is written",
     assert.equal(fs.existsSync(path.join(fixture.outputDirectory, "canonical-drift.json")), false);
   } finally {
     cleanupFixture(fixture);
+  }
+});
+
+test("canonical repository identity drift is rejected across origin, branch, upstream, and head", (t) => {
+  const cases = [
+    {
+      name: "wrong origin",
+      mutate: (fixture) => git(fixture.repoRoot, ["remote", "set-url", "origin", "git@github.com:someone/other.git"]),
+      pattern: /origin must identify/u,
+    },
+    {
+      name: "wrong branch",
+      mutate: (fixture) => git(fixture.repoRoot, ["checkout", "-q", "-b", "feature"]),
+      pattern: /must be on main/u,
+    },
+    {
+      name: "wrong upstream",
+      mutate: (fixture) => git(fixture.repoRoot, ["config", "branch.main.merge", "refs/heads/develop"]),
+      pattern: /must track origin\/main/u,
+    },
+    {
+      name: "wrong head",
+      mutate: (fixture) => git(fixture.repoRoot, ["commit", "--allow-empty", "-q", "-m", "head drift"]),
+      pattern: /exactly equal origin\/main/u,
+    },
+  ];
+  for (const identityCase of cases) {
+    const fixture = createFixture();
+    try {
+      if (!requireJunction(t, fixture)) return;
+      identityCase.mutate(fixture);
+      assert.throws(
+        () => runFixture(fixture, `${identityCase.name.replaceAll(" ", "-")}.json`),
+        (error) => error instanceof DeferredWorkspaceDependencyError && identityCase.pattern.test(error.message),
+        identityCase.name,
+      );
+    } finally {
+      cleanupFixture(fixture);
+    }
   }
 });
