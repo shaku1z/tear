@@ -26,10 +26,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   order, presentation metadata, lifecycle classification, and explicit
   training/boss-only/sandbox flags. Runtime stage generation, mutable hazards,
   mode planners, and debug flags remain outside the handoff.
-- [ ] Remaining reference collections — enemies, bosses, and global public
+- [x] Structural enemy reference catalog — the fixed game-reference collection
+  contains the exact eleven `ENEMY_KIND_IDS`, authored variant metadata (with
+  empty arrays where no variants exist), six affixes, and three preset
+  family/affix signatures. Source order is fail-closed; runtime callbacks,
+  behavior/stat mutations, base stats, eligibility, CONFIG, and presentation
+  objects are excluded. `null` represents an absent `minWave` gate.
+- [ ] Remaining reference collections — boss runtime data and global public
   tuning remain explicitly deferred until each has a separate safe data-only
-  projection; this slice does not imply wiki synchronization or release
-  readiness.
+  projection. Enemy runtime behavior beyond this structural catalog, wiki
+  synchronization, and release readiness are not implied.
 
 ## Runtime and releases
 

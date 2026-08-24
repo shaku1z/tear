@@ -4,9 +4,19 @@ import type { AchievementCategory, AchievementRarity } from "../gameplay/progres
 import { CANONICAL_ACHIEVEMENT_IDS, type AchievementCatalogEntry } from "../gameplay/progression/achievement-catalog";
 import { CANONICAL_UPGRADE_IDS, type UpgradeCategory, type UpgradeDefinition } from "../gameplay/upgrades";
 import type { WeaponChannels, WeaponDefinition, WeaponRatings } from "../gameplay/weapons";
+import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
 import { MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
 import { STAGE_IDS, type StageDefinition } from "../gameplay/stages";
+import { projectEnemyReference, validateProjectedEnemies, type EnemyReferenceFamilySource, type GameReferenceEnemiesV1 } from "./enemy-reference";
 import { projectMode, projectStage, validateProjectedMode, validateProjectedStage, type GameReferenceModeV1, type GameReferenceStageV1 } from "./stage-mode-reference";
+export type {
+  EnemyReferenceFamilySource,
+  GameReferenceEnemyAffixV1,
+  GameReferenceEnemyFamilyV1,
+  GameReferenceEnemyPresetV1,
+  GameReferenceEnemyVariantV1,
+  GameReferenceEnemiesV1,
+} from "./enemy-reference";
 export type {
   GameReferenceModeV1,
   GameReferenceStageLayoutV1,
@@ -90,6 +100,11 @@ export interface GameReferenceCompleteCollectionV1<T> {
   readonly items: readonly T[];
 }
 
+export interface GameReferenceCompleteValueCollectionV1<T> {
+  readonly status: "complete";
+  readonly items: T;
+}
+
 export interface DeferredGameReferenceCollectionV1 {
   readonly status: "deferred";
   readonly reason: string;
@@ -109,7 +124,7 @@ export interface GameReferenceV1 {
   readonly collections: Readonly<{
     weapons: GameReferenceCompleteCollectionV1<GameReferenceWeaponV1>;
     upgrades: GameReferenceCompleteCollectionV1<GameReferenceUpgradeV1>;
-    enemies: DeferredGameReferenceCollectionV1;
+    enemies: GameReferenceCompleteValueCollectionV1<GameReferenceEnemiesV1>;
     bosses: DeferredGameReferenceCollectionV1;
     stages: GameReferenceCompleteCollectionV1<GameReferenceStageV1>;
     modes: GameReferenceCompleteCollectionV1<GameReferenceModeV1>;
@@ -125,13 +140,15 @@ export interface GameReferenceProjectionInput {
   readonly weapons: readonly WeaponDefinition[];
   readonly upgrades: readonly UpgradeDefinition[];
   readonly achievements: readonly AchievementCatalogEntry[];
+  readonly enemyFamilies: readonly EnemyReferenceFamilySource[];
+  readonly enemyAffixes: readonly EnemyAffix[];
+  readonly enemyPresets: readonly EnemyPreset[];
   readonly stages: readonly StageDefinition[];
   readonly modes: readonly ModeDefinition[];
   readonly tuningByWeapon: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
 const DEFERRED_COLLECTION_REASONS = Object.freeze({
-  enemies: "Enemy behavior definitions still include runtime constructors and hooks.",
   bosses: "Boss definitions require a separate data-only projection boundary.",
   "public-tuning": "Only flat weapon tuning is safe to project in this contract slice.",
 });
@@ -456,6 +473,11 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
     if (achievement === undefined) throw new TypeError(`missing canonical achievement definition ${id}`);
     return projectAchievement(achievement, `achievement[${String(index)}]`);
   }));
+  const enemies = projectEnemyReference({
+    enemyFamilies: input.enemyFamilies,
+    enemyAffixes: input.enemyAffixes,
+    enemyPresets: input.enemyPresets,
+  });
   const stageIds = input.stages.map((stage, index) => text(stage.id, `stage[${String(index)}].id`));
   assertCanonicalSourceIds(stageIds, STAGE_IDS, "stages");
   const stagesById = new Map(input.stages.map((stage) => [stage.id, stage] as const));
@@ -486,7 +508,7 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
     collections: Object.freeze({
       weapons: Object.freeze({ status: "complete", items: weapons }),
       upgrades: Object.freeze({ status: "complete", items: upgrades }),
-      enemies: Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS.enemies }),
+      enemies: Object.freeze({ status: "complete", items: enemies }),
       bosses: Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS.bosses }),
       stages: Object.freeze({ status: "complete", items: stages }),
       modes: Object.freeze({ status: "complete", items: modes }),
@@ -540,7 +562,11 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   assertUniqueCount(modesCollection.items.map((mode) => mode.id), MODE_IDS.length, "gameReference.collections.modes.items");
   assertCanonicalOrderedIds(modesCollection.items.map((mode) => mode.id), MODE_IDS, "gameReference.collections.modes.items");
   if (modesCollection.items.some((mode, index) => mode.order !== index)) throw new TypeError("gameReference.collections.modes.items must use canonical authored order");
-  for (const id of ["enemies", "bosses", "public-tuning"] as const) {
+  const enemiesCollection = record(collections.enemies, "gameReference.collections.enemies");
+  exactKeys(enemiesCollection, "gameReference.collections.enemies", ["status", "items"]);
+  if (enemiesCollection.status !== "complete") throw new TypeError("gameReference.collections.enemies must be a complete collection");
+  validateProjectedEnemies(enemiesCollection.items, "gameReference.collections.enemies.items");
+  for (const id of ["bosses", "public-tuning"] as const) {
     deferredCollection(collections[id], `gameReference.collections.${id}`);
   }
   canonicalStringify(value);

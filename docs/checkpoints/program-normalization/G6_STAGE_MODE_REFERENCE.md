@@ -61,8 +61,10 @@ not serialized.
   keys. Stage bosses/enemy kinds, pool uniqueness, finite/positive geometry,
   mode order, booleans, and text are validated.
 - The fixed `collections` envelope remains schema version `2`. Weapons,
-  upgrades, achievements, stages, and modes are complete; enemies, bosses, and
-  global `public-tuning` remain explicit deferred envelopes.
+  upgrades, achievements, stages, modes, and the structural enemy catalog are
+  complete; boss runtime data and global `public-tuning` remain explicit
+  deferred envelopes. Enemy behavior beyond that structural catalog is outside
+  this stage/mode checkpoint.
 
 ## Focused checks
 

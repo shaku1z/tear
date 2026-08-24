@@ -15,15 +15,20 @@ import { UPGRADES, type UpgradeDefinition } from "../../src/gameplay/upgrades";
 import { WEAPONS, type WeaponDefinition } from "../../src/gameplay/weapons";
 import { STAGES } from "../../src/gameplay/stages";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
+import { ENEMY_KIND_IDS } from "../../src/gameplay/run/content-director";
+import { VARIANTS } from "../../src/gameplay/variants";
+import { AFFIXES, PRESETS } from "../../src/gameplay/affixes";
 
 const tuningByWeapon = Object.fromEntries(Object.entries(CONFIG.weapons).map(([id, tuning]) => [id, Object.fromEntries(Object.entries(tuning))]));
 const firstWeapon = WEAPONS.at(0);
 if (firstWeapon === undefined) throw new Error("Final Five source is empty");
 const achievementSource = ACHIEVEMENT_CATALOG;
+const enemyFamilySource = ENEMY_KIND_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
 
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
   upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
-  stages = STAGES, modes = MODE_CATALOG): GameReferenceV1 {
+  stages = STAGES, modes = MODE_CATALOG, enemyFamilies = enemyFamilySource,
+  enemyAffixes = AFFIXES, enemyPresets = PRESETS): GameReferenceV1 {
   return buildGameReferenceV1({
     repository: "shaku1z/tear",
     sourceSha,
@@ -31,6 +36,9 @@ function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinitio
     weapons,
     upgrades,
     achievements,
+    enemyFamilies,
+    enemyAffixes,
+    enemyPresets,
     stages,
     modes,
     tuningByWeapon,
@@ -71,7 +79,17 @@ describe("game-reference.v1", () => {
     expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "voidspire", "tear"]);
     expect(result.collections.modes.status).toBe("complete");
     expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
-    expect(result.collections.enemies.status).toBe("deferred");
+    expect(result.collections.enemies.status).toBe("complete");
+    expect(result.collections.enemies.items.families.map((family) => family.id)).toEqual([
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+    ]);
+    expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([]);
+    expect(result.collections.enemies.items.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
+    expect(result.collections.enemies.items.presets).toEqual([
+      { familyId: "ranged", affixIds: ["rapid", "volley"] },
+      { familyId: "charger", affixIds: ["tank", "armed"] },
+      { familyId: "armored", affixIds: ["warded", "tank"] },
+    ]);
     expect(result.collections["public-tuning"].status).toBe("deferred");
   });
 
@@ -200,6 +218,9 @@ describe("game-reference.v1", () => {
       weapons: WEAPONS,
       upgrades: UPGRADES,
       achievements: achievementSource,
+      enemyFamilies: enemyFamilySource,
+      enemyAffixes: AFFIXES,
+      enemyPresets: PRESETS,
       stages: STAGES,
       modes: MODE_CATALOG,
       tuningByWeapon,

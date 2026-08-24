@@ -1,9 +1,10 @@
-# G6 Game Reference Contract — Slices 1–3
+# G6 Game Reference Contract — Slices 1–4
 
-Status: game-reference foundation, progression catalogs, and the safe stage/mode
-catalog projections are implemented; G6 remains open.
+Status: game-reference foundation, progression catalogs, safe stage/mode
+catalog projections, and the structural enemy catalog are implemented; G6
+remains open.
 
-This checkpoint records the first three game-owned handoff slices for the modern
+This checkpoint records the first four game-owned handoff slices for the modern
 typed runtime. It is a contract foundation, not a wiki synchronization or
 release approval.
 
@@ -13,12 +14,17 @@ release approval.
 - Typed source definitions: `src/gameplay/weapons.ts`,
   `src/gameplay/upgrades.ts`, `src/gameplay/progression/achievement-catalog.ts`,
   `src/gameplay/stages.ts`, `src/gameplay/run/mode-catalog.ts`, and
+  `src/gameplay/run/content-director.ts`, `src/gameplay/variants.ts`,
+  `src/gameplay/affixes.ts`, and
   `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the immutable
   `ACHIEVEMENT_CATALOG`, the typed `STAGES`/`STAGE_IDS`, the immutable
-  `MODE_CATALOG`, and `CONFIG.weapons` only). Runtime achievement behavior
+  `MODE_CATALOG`, `ENEMY_KIND_IDS`, enemy variant/affix/preset definitions,
+  and `CONFIG.weapons` only). Runtime achievement behavior
   joins the static catalog in `achievements.ts`; runtime mode config projects
   the legacy runtime shape and adds `debug` only for the two internal test
-  modes. Neither runtime composition is an export authority.
+  modes. Enemy behavior callbacks remain source-only. Neither runtime
+  composition is an export authority.
+- Enemy projection boundary: `src/game-reference/enemy-reference.ts`.
 - Deterministic exporter: `scripts/export-game-reference.mjs`
 - Focused evidence: `tests/unit/game-reference.test.ts`
 - Command: `pnpm export:game-reference`
@@ -51,10 +57,16 @@ release approval.
   `sandbox`. They expose only id/order/label/blurb/enabled/classification and
   the training/bossOnly/sandbox booleans. Runtime `debug` flags and planner
   functions are not part of the contract.
+- Enemy entries are complete for the exact eleven `ENEMY_KIND_IDS` in authored
+  order. They contain only family IDs, variant IDs/names/positive weights and
+  nullable positive `minWave` gates, six-digit affix colors, and preset family
+  and affix references. Families without authored variants have empty arrays.
+  Runtime constructors, callbacks, behavior/stat mutations, base stats,
+  eligibility, roles, comments, and CONFIG/presentation objects are excluded.
 - The fixed `collections` object is the only collection authority. Weapons,
-  upgrades, achievements, stages, and modes are complete envelopes; enemies,
-  bosses, and `public-tuning` remain explicit deferred envelopes. There is no
-  duplicate deferred side list.
+  upgrades, achievements, stages, modes, and the structural enemy catalog are
+  complete envelopes; bosses and `public-tuning` remain explicit deferred
+  envelopes. There is no duplicate deferred side list.
 - Upgrade entries preserve the authored 60-item order, category, uniqueness,
   rare flag, stack limit, rule kind, and tier descriptions. Achievement entries
   preserve the authored 98-item order, category, rarity, visibility flags, and
@@ -69,10 +81,11 @@ release approval.
 
 ## Deliberate boundary
 
-The complete `enemies`, `bosses`, and global `public-tuning` collections remain
-explicitly represented as deferred in the contract. They are not absent by
-accident and are not implied complete. Each requires its own data-only
-projection review before G6 can move the collection to `complete`.
+The complete boss and global `public-tuning` collections remain explicitly
+represented as deferred in the contract. They are not absent by accident and
+are not implied complete. Enemy behavior and tuning beyond the structural
+catalog also remain outside this slice and require separate review; this slice
+does not imply that enemy runtime behavior is complete in the handoff.
 
 The wiki consumer, dispatch workflow, game-reference snapshot promotion, and
 Cloudflare deployment are outside this slice and remain locked by the G6 plan.
@@ -80,6 +93,7 @@ Cloudflare deployment are outside this slice and remain locked by the G6 plan.
 ## Focused checks
 
 - `pnpm exec vitest run tests/unit/game-reference.test.ts --no-file-parallelism`
+- `pnpm exec vitest run tests/unit/enemy-reference.test.ts --no-file-parallelism`
 - `pnpm exec vitest run tests/unit/run-wave-planner-conformance.test.ts tests/unit/run-wave-rules.test.ts tests/unit/live-wave-controller.test.ts tests/unit/run-session.test.ts tests/unit/music-routing-vocabulary.test.ts --no-file-parallelism`
 - `pnpm exec vitest run tests/unit/gameplay-definitions.test.ts tests/unit/progression-systems.test.ts --no-file-parallelism`
 - `pnpm test` includes this unit suite in the full Vitest gate.
@@ -93,4 +107,5 @@ Cloudflare deployment are outside this slice and remain locked by the G6 plan.
 - `pnpm export:game-reference -- --expected-sha <current-full-sha>`
 - `git diff --check`
 
-These checks establish the foundation only; they do not close G6.
+These checks establish the foundation and structural enemy catalog only; they
+do not close G6.
