@@ -76,6 +76,7 @@ function createFileVerificationFixture() {
   assert.equal(entries.length, 104);
   assert.equal(report.summary.eligibleBytes, 31_683_314);
   const disposition = JSON.parse(JSON.stringify(readArtifactDisposition().disposition));
+  disposition.sourceReport.policySha256 = report.policySha256;
   const head = runGit(root, ["rev-parse", "HEAD"]);
   disposition.canonical.head = head;
   disposition.canonical.originMain = head;
@@ -97,13 +98,18 @@ function createFileVerificationFixture() {
 }
 
 test("explicit file verification binds the exact current files", () => {
-  const loaded = readArtifactDisposition();
-  assert.deepEqual(validateArtifactDispositionShape(loaded.disposition), []);
-  const result = validateArtifactDisposition({ root: repositoryRoot, verifyFiles: true, now: evidenceTime });
-  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
-  assert.equal(result.status, "valid");
-  assert.equal(result.current.summary.eligibleEntries, 104);
-  assert.equal(result.current.summary.eligibleBytes, 31_683_314);
+  const fixture = createFileVerificationFixture();
+  try {
+    const loaded = readArtifactDisposition(fixture.dispositionPath);
+    assert.deepEqual(validateArtifactDispositionShape(loaded.disposition), []);
+    const result = validateArtifactDisposition({ root: fixture.root, dispositionPath: fixture.dispositionPath, verifyFiles: true, now: evidenceTime });
+    assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+    assert.equal(result.status, "valid");
+    assert.equal(result.current.summary.eligibleEntries, 104);
+    assert.equal(result.current.summary.eligibleBytes, 31_683_314);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
 });
 
 test("default validation passes for a clean clone with empty artifacts, while verify-files fails closed", () => {
@@ -299,10 +305,11 @@ test("archived source report verification uses an explicit external root and exa
 });
 
 test("external archive verification is opt-in and fail-closed when requested", () => {
+  const fixture = createFileVerificationFixture();
   const dispositionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-artifact-disposition-manifest-"));
   const archiveRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-artifact-disposition-archive-"));
   try {
-    const loaded = readArtifactDisposition();
+    const loaded = readArtifactDisposition(fixture.dispositionPath);
     const reportContents = Buffer.from("{\"format\":\"fixture\"}\n", "utf8");
     const reportPath = path.join(archiveRoot, "evidence", "report.json");
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
@@ -315,7 +322,7 @@ test("external archive verification is opt-in and fail-closed when requested", (
       return dispositionPath;
     };
     const noArchive = validateArtifactDisposition({
-      root: repositoryRoot,
+      root: fixture.root,
       dispositionPath: writeDisposition("no-archive.json", { archivePath: "missing/no-report.json" }),
       now: evidenceTime,
     });
@@ -328,7 +335,7 @@ test("external archive verification is opt-in and fail-closed when requested", (
       sha256: createHash("sha256").update(reportContents).digest("hex"),
     };
     const correct = validateArtifactDisposition({
-      root: repositoryRoot,
+      root: fixture.root,
       dispositionPath: writeDisposition("correct-archive.json", sourceReport),
       archiveRoot,
       now: evidenceTime,
@@ -336,7 +343,7 @@ test("external archive verification is opt-in and fail-closed when requested", (
     assert.equal(correct.ok, true, JSON.stringify(correct, null, 2));
 
     const missing = validateArtifactDisposition({
-      root: repositoryRoot,
+      root: fixture.root,
       dispositionPath: writeDisposition("missing-report.json", sourceReport),
       archiveRoot: path.join(dispositionRoot, "missing-archive"),
       now: evidenceTime,
@@ -345,7 +352,7 @@ test("external archive verification is opt-in and fail-closed when requested", (
     assert.match(missing.errors.join("\n"), /archived source report is missing/u);
 
     const wrong = validateArtifactDisposition({
-      root: repositoryRoot,
+      root: fixture.root,
       dispositionPath: writeDisposition("wrong-report.json", { ...sourceReport, archivePath: "evidence/wrong-report.json" }),
       archiveRoot,
       now: evidenceTime,
@@ -353,6 +360,7 @@ test("external archive verification is opt-in and fail-closed when requested", (
     assert.equal(wrong.ok, false);
     assert.match(wrong.errors.join("\n"), /archived source report is missing/u);
   } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
     fs.rmSync(dispositionRoot, { recursive: true, force: true });
     fs.rmSync(archiveRoot, { recursive: true, force: true });
   }
