@@ -21,7 +21,8 @@ parent-layout result.
 | Evidence | Bound fact |
 | --- | --- |
 | Protected merge boundary | PR #40 merged to game main at c1b5ca57b64e4e609d09bcb129292e72711c7900 (c1b5ca5). |
-| Post-merge repository gate | Exact-main Validate run 32686547630 passed. |
+| Prior protected-main repository gate | Exact-main Validate run 32686547630 passed for the prior protected merge at c1b5ca5; it predates this closure slice and does not validate commit 0e78467. |
+| Closure-slice repository gate | [ ] Pending this slice's protected merge followed by an exact-main Validate run and focused path checks. |
 | Current music authority | Canonical `shaku1z/tear-music` protected `main` is clean/equal at 6a60139e969b987a1de7bbfdcd20d2e804aab835 (6a60139); current Validate run 32634453401 is green. The earlier 7e443d9 / 32629490375 observation is historical provenance only. |
 | Deferred dependency report | Tear-archives/2026-08-23-g5-workspace-recovery/g5-deferred-dependency-audit-c1b5ca5.json; 562,840 bytes; SHA-256 f2066198de152f0724415b92b7d04411108fc52bc94638c7bfd6d8fef77e11a2. |
 | Deferred report result | historical-sizing-match: source 4,133,063 bytes + target 30,660,424 bytes = 34,793,487 bytes. This is a sizing match only; it does not claim content, path, or timestamp identity. |
@@ -36,19 +37,25 @@ parent-layout result.
 - Every actual repository/document move has a recorded reference, import, or
   link search result in the placement and preservation evidence. The closure
   slice does not claim an unreviewed move.
-- Hosted and focused checks, including the bound exact-main Validate evidence,
-  prove that the normalized paths do not break build, CI, Vite, Wrangler,
-  TearBench, vendoring, or wiki consumers.
+- Final protected-main exact-main Validate and focused path checks are pending
+  for this closure slice. The prior exact-main run `32686547630` predates
+  commit `0e78467` and cannot prove that its changes preserve build, CI, Vite,
+  Wrangler, TearBench, vendoring, or wiki consumers.
 - No `src/` file changed in the closure slice. The existing `src/` domain
   boundaries are an intentional G5 invariant, not an unexamined refactor.
-- The root condition is resolved with the existing
-  `G5_ARTIFACT_DISPOSITION` retain-in-place exception: exactly 104 files and
-  31,683,314 bytes remain where they are. They are not ordinary root entries,
-  and this record authorizes neither move nor deletion. Path-bound generated
-  outputs are deliberate policy exceptions. No unexplained root entry remains.
-- The documentation indexes identify exactly one current authority per topic,
-  and exactly seven active plans are named with matching owner, Active status,
-  and closure condition metadata.
+- The root condition is the **tracked repository root inventory**, enforced by
+  `config/workspace-contract.json` and `scripts/check-workspace.mjs` through
+  `git ls-tree`. The existing `G5_ARTIFACT_DISPOSITION` retain-in-place
+  exception covers exactly 104 files and 31,683,314 bytes and does not cover
+  ignored outputs. `dist/`, `.tmp-tone-host-esm/`, `test-results/`,
+  `node_modules/`, `.wrangler/`, `*.log`, and `*.tsbuildinfo` are generated or
+  operational `.gitignore` exclusions, outside repository authority; they are
+  not alternate authorities and are not moved or deleted by G5. No unexplained
+  tracked root entry remains.
+- The documentation authority index identifies exactly one primary current
+  authority per topic, with supporting contracts/evidence in the separate
+  column; exactly seven active plans are named with matching owner, Active
+  status, and closure condition metadata.
 
 ## Deferred pair disposition
 
@@ -81,41 +88,49 @@ repositories, release inputs, or alternate game authorities.
 ## Branch and worktree closure action
 
 This action is a post-merge prerequisite, not evidence already performed by
-this branch. After this closure PR is merged and the exact-main gate is green,
-the operator must:
+this branch. The current audit found zero live GitHub remote heads matching
+`codex/g4-*` or `codex/g5-*`; the 22 observed stale refs are local
+`refs/remotes/origin/*` tracking refs. Revalidate this state at execution time.
+After this closure PR is merged and the final exact-main gate is green, the
+operator must:
 
-1. Fetch and prune, then enumerate the exact remote and local
-   `codex/g4-*`/`codex/g5-*` heads. The current audit observed 22 remote heads,
-   each mapping to a merged PR in the applicable #19–#40 range; this mapping
-   must be re-fetched and re-proven at execution time.
-2. For every candidate, prove the PR state is `MERGED`, record the PR head OID,
-   and prove the current remote tip equals that OID. A remote tip with commits
-   beyond the PR head is not deletable.
-3. Preserve `main`, `origin/main`, the active closure branch until the receipt
-   exists, locked oracle/comparison references, and all explicitly recorded
-   historical/non-scope refs. Delete only the exact verified merged-head
-   allowlist; never infer deletion from a name pattern alone.
-4. After remote-head proof, handle local squash-divergent refs only with the
-   divergence recorded. Delete only verified local/remote heads, re-fetch and
-   re-list, and record their final absence. The known local stale names are
+1. Before pruning, snapshot local `codex/g4-*`/`codex/g5-*` branches, stale
+   `refs/remotes/origin/codex/g4-*`/`origin/codex/g5-*` tracking refs, the live
+   `git ls-remote --heads origin` result for both patterns, and each applicable
+   PR's state/head OID. Hash and retain these pre-cleanup inventories.
+2. For every stale tracking ref, prove the corresponding PR state is `MERGED`
+   and the stale tracking OID equals that PR head OID. If the live
+   `ls-remote` result has no matching remote head, record it as already absent
+   and do not attempt a remote deletion. A live remote tip with commits beyond
+   the PR head is not deletable.
+3. Preserve `main`, `origin/main`, the checked-out closure branch until the
+   receipt exists, locked oracle/comparison references, and every explicitly
+   recorded historical/non-scope ref. Switch to canonical `main`, pull and
+   verify exact equality with `origin/main`, then prune stale remote-tracking
+   refs. Never infer deletion from a branch name alone.
+4. Delete only exact proven local squash-divergent refs after the PR-head proof;
+   record each divergence, re-list local branches/tracking refs, and verify
+   the proven stale refs are absent. The known local stale names are
    `codex/g4-closure`, `codex/g5-docs-checker`,
    `codex/g5-organization-audit`, and `codex/g5-workspace-check`; they are not
-   deleted by this slice.
+   deleted by this slice. The checked-out `codex/g5-closure` branch is deleted
+   only after switching to canonical `main` and writing the receipt.
 5. Write the durable receipt at
    `Tear-archives/2026-08-23-g5-workspace-recovery/g5-branch-cleanup-receipt-c1b5ca5.json`.
    It must contain `format`, `schemaVersion`, `generatedAtUtc`, `repository`,
    `closureCommit`, `canonicalMainHead`, `originMainHead`,
-   `preCleanupRemoteRefs`, `preCleanupLocalRefs`, `pullRequestProofs`,
+   `preCleanupLocalBranches`, `preCleanupRemoteTrackingRefs`,
+   `preCleanupLiveRemoteHeads`, `pullRequestProofs`, `remoteHeadsAlreadyAbsent`,
    `exactDeletionAllowlist`, `protectedRefs`, `localSquashDivergences`,
-   `deletedRemoteRefs`, `deletedLocalRefs`, `postCleanupRemoteRefs`,
-   `postCleanupLocalRefs`, `finalStrictParentLayoutStatus`, and `validateRun`.
-   It must also record `preCleanupRefInventorySha256`, `prProofSha256`,
+   `deletedRemoteRefs`, `deletedLocalRefs`, `postCleanupRemoteTrackingRefs`,
+   `postCleanupLiveRemoteHeads`, `finalStrictParentLayoutStatus`, and
+   `validateRun`.
+6. It must record `preCleanupRefInventorySha256`, `prProofSha256`,
    `postCleanupRefInventorySha256`, `strictParentLayoutReportSha256`, and
    `receiptSha256`, with an explicit no-self-hash convention if the receipt
-   hash is computed before adding its own field.
-6. Delete `codex/g5-closure` only after the receipt is durable. G5 remains
-   unclosed until the receipt, post-merge exact-main gate, clean/equal
-   canonical refs, and final strict parent-layout result all pass.
+   hash is computed before adding its own field. G5 remains unclosed until the
+   receipt, post-merge exact-main gate, clean/equal canonical refs, and final
+   strict parent-layout result all pass.
 
 ## Remaining locked goals
 

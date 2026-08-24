@@ -7,10 +7,12 @@ import { fileURLToPath } from "node:url";
 
 import {
   ACTIVE_PLAN_METADATA_PATHS,
+  checkCurrentAuthorityTable,
   checkRootDocumentationPolicy,
   checkActivePlanMetadata,
   checkPlansAuthorityIndex,
   parsePlansAuthorityIndex,
+  parseCurrentAuthoritiesTable,
   parseMarkdownLinks,
   parseRootClassificationTable,
   resolveLocalLink,
@@ -42,7 +44,32 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
   assert.equal(result.pathBoundArtifacts, 10);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
+  assert.equal(result.currentAuthorities, 9);
   assert.equal(result.activePlans, ACTIVE_PLAN_METADATA_PATHS.length);
+});
+
+test("current authority table has one local primary per unique topic", () => {
+  const result = checkCurrentAuthorityTable(repositoryRoot);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.rows.length, 9);
+});
+
+test("current authority parser rejects duplicate topics, primary paths, and malformed multiple links", () => {
+  const index = [
+    "## Current authorities",
+    "",
+    "| Topic | Primary authority | Supporting contract/evidence |",
+    "| --- | --- | --- |",
+    "| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) | — |",
+    "| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) | — |",
+    "| Multiple | [A.md](A.md) and [B.md](B.md) | — |",
+    "| Missing | no Markdown link | — |",
+  ].join("\n");
+  const result = parseCurrentAuthoritiesTable(index);
+  const errors = result.errors.join("\n");
+  assert.match(errors, /duplicate topic/u);
+  assert.match(errors, /reuses a primary authority path/u);
+  assert.match(errors, /exactly one local Markdown primary link/u);
 });
 
 test("active plans carry explicit owner, active status, closure condition, and index columns", () => {
