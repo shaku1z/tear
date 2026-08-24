@@ -535,10 +535,17 @@ const CONFIG = {
     { id: "onehit",  label: "One-Hit", desc: "One touch and you fall. Rewards surge after wave 8.", oneHit: true, mods: { hp: 0.90, dmg: 1.00, count: 1.00, coin: 0.70, score: 2.20 } },
   ],
 
-  // Runtime config derives authored metadata from MODE_CATALOG and retains the
-  // debug-only visibility flag for internal test modes outside the reference.
+  // Runtime config derives authored metadata from MODE_CATALOG but projects the
+  // historical runtime shape. Reference-only order/classification fields and
+  // explicit false flags must not enter configuration or replay hashes.
   modes: MODE_CATALOG.map((mode) => ({
-    ...mode,
+    id: mode.id,
+    label: mode.label,
+    blurb: mode.blurb,
+    enabled: mode.enabled,
+    ...(mode.training ? { training: true } : {}),
+    ...(mode.bossOnly ? { bossOnly: true } : {}),
+    ...(mode.sandbox ? { sandbox: true } : {}),
     ...(mode.id === "bossonly" || mode.id === "sandbox" ? { debug: true } : {}),
   })),
 };

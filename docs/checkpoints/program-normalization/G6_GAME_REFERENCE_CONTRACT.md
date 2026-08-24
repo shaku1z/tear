@@ -3,7 +3,7 @@
 Status: game-reference foundation, progression catalogs, and the safe stage/mode
 catalog projections are implemented; G6 remains open.
 
-This checkpoint records the first two game-owned handoff slices for the modern
+This checkpoint records the first three game-owned handoff slices for the modern
 typed runtime. It is a contract foundation, not a wiki synchronization or
 release approval.
 
@@ -16,9 +16,9 @@ release approval.
   `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the immutable
   `ACHIEVEMENT_CATALOG`, the typed `STAGES`/`STAGE_IDS`, the immutable
   `MODE_CATALOG`, and `CONFIG.weapons` only). Runtime achievement behavior
-  joins the static catalog in `achievements.ts` and runtime mode config adds
-  only its debug visibility flag; neither runtime composition is an export
-  authority.
+  joins the static catalog in `achievements.ts`; runtime mode config projects
+  the legacy runtime shape and adds `debug` only for the two internal test
+  modes. Neither runtime composition is an export authority.
 - Deterministic exporter: `scripts/export-game-reference.mjs`
 - Focused evidence: `tests/unit/game-reference.test.ts`
 - Command: `pnpm export:game-reference`

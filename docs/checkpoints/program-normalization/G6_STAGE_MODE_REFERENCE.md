@@ -10,8 +10,9 @@ promotion, and deployment gates remain open.
 - Mode definitions: `src/gameplay/run/mode-catalog.ts` (`ModeDefinition`,
   `MODE_IDS`, and immutable `MODE_CATALOG`).
 - Runtime mode compatibility: `src/config/game-config.ts` derives
-  `CONFIG.modes` from `MODE_CATALOG` and adds only the runtime-only `debug`
-  visibility flag for `bossonly` and `sandbox`.
+  `CONFIG.modes` from `MODE_CATALOG`, projects the historical runtime object
+  shape, and adds only the runtime-only `debug` visibility flag for `bossonly`
+  and `sandbox`.
 - Projection and imported-artifact validation:
   `src/game-reference/game-reference.ts`.
 - Clean deterministic exporter: `scripts/export-game-reference.mjs`.
