@@ -1,0 +1,923 @@
+{
+  "format": "tear-artifact-retention-disposition",
+  "schemaVersion": 1,
+  "kind": "retain-in-place",
+  "repository": "shaku1z/tear",
+  "canonical": {
+    "branch": "main",
+    "head": "52814709f8684452a25199664a3d75e9f538be4a",
+    "originMain": "52814709f8684452a25199664a3d75e9f538be4a",
+    "evidence": "artifact report generated from exact clean main before this disposition was committed"
+  },
+  "sourceReport": {
+    "format": "tear-artifact-retention-manifest",
+    "archiveRoot": "Tear-archives",
+    "archivePath": "2026-08-23-g5-artifact-disposition/artifact-retention-report-5281470.json",
+    "bytes": 546561,
+    "sha256": "9e8e8274e5d773ae2507c6feb4a2563202fca4cf9b0eb20d2ef704b9de9edbb4",
+    "policyPath": "preservation/artifact-retention-policy.json",
+    "policySha256": "81c6547a785e9cbc63927c0560f3ceb32e81e8ca67ae18b4792e66c4c002b1dc",
+    "sourceId": "ignored-artifacts",
+    "sourceRelativePath": "artifacts",
+    "generatedAtUtc": "2026-08-23T23:56:19.082Z",
+    "age": {
+      "basis": "mtimeUtc",
+      "minAgeDays": 30,
+      "cutoffUtc": "2026-07-24T23:56:19.082Z"
+    },
+    "summary": {
+      "scannedEntries": 1132,
+      "eligibleEntries": 104,
+      "eligibleBytes": 31683314,
+      "protectedEntries": 2,
+      "refusedEntries": 0,
+      "tooYoungEntries": 908,
+      "futureEntries": 0,
+      "observedBytes": 333724143
+    },
+    "generationCommand": "node scripts/report-artifacts.mjs --root . --policy preservation/artifact-retention-policy.json --source ignored-artifacts --min-age-days 30 --output <external-report> --summary-only"
+  },
+  "groups": [
+    {
+      "id": "c24-mixed-age-build-assets",
+      "count": 90,
+      "bytes": 31657362,
+      "pathPrefix": "artifacts/tearbench/c24/",
+      "reason": "C24 build outputs contain mixed-age generated assets and must remain coherent at their existing path-bound build locations for historical comparison and evidence."
+    },
+    {
+      "id": "c3-path-bound-scenarios",
+      "count": 8,
+      "bytes": 10774,
+      "pathPrefix": "artifacts/tearbench/c3-",
+      "reason": "C3 scenario evidence is path-bound to the TearBench evidence layout and remains available for reproducible historical inspection."
+    },
+    {
+      "id": "historical-provenance",
+      "count": 6,
+      "bytes": 15178,
+      "pathPrefix": "artifacts/tearbench/",
+      "reason": "C20/C21/C6 and non-lossy selection records are historical provenance references; retaining their exact paths avoids breaking evidence links."
+    }
+  ],
+  "entries": [
+    {
+      "path": "artifacts/tearbench/c20-ci-selection.json",
+      "bytes": 544,
+      "sha256": "125b1d96359a37066fc844850ae881d0aada858d8c1494e407f9397a16dede44",
+      "mtimeUtc": "2026-07-23T08:31:28.404Z",
+      "group": "historical-provenance",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c20-selection.json",
+      "bytes": 770,
+      "sha256": "c2f2859a6ba27a7fe16c5257a1be8f12cf5c3fe0a3d92661e60125d3dd652549",
+      "mtimeUtc": "2026-07-23T08:31:27.258Z",
+      "group": "historical-provenance",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c21-completion-plan-ci.json",
+      "bytes": 6138,
+      "sha256": "360e6b6ffe18eb1f101de72b5266ba3f4e41508685efca09327e0d811b251774",
+      "mtimeUtc": "2026-07-23T10:13:42.156Z",
+      "group": "historical-provenance",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c21-completion-plan-selection.json",
+      "bytes": 6138,
+      "sha256": "360e6b6ffe18eb1f101de72b5266ba3f4e41508685efca09327e0d811b251774",
+      "mtimeUtc": "2026-07-23T10:13:40.309Z",
+      "group": "historical-provenance",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/beserker/intro.ogg",
+      "bytes": 1352429,
+      "sha256": "6f425c04c33f995344d63c3b70458e3387e9e1cd43dc03e5a9cda5ee00fdecf6",
+      "mtimeUtc": "2026-07-24T04:15:21.023Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/beserker/opus/foundation.ogg",
+      "bytes": 220753,
+      "sha256": "b3206ecc0b60fa45d9fd1256acf7954a6df42da68afc97c826c2202a9f1a1319",
+      "mtimeUtc": "2026-07-24T04:15:19.344Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/beserker/opus/melody.ogg",
+      "bytes": 205303,
+      "sha256": "21e25756769cec7a0bd741c0ad9112757755c72b3bd52aa3d16cec2433f6562b",
+      "mtimeUtc": "2026-07-24T04:15:19.802Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/beserker/opus/pulse.ogg",
+      "bytes": 186926,
+      "sha256": "f9110217b73a37fdf80347432ed9d5044b70ef4b41a74ef78502f9a86071559d",
+      "mtimeUtc": "2026-07-24T04:15:20.048Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/beserker/opus/rhythm.ogg",
+      "bytes": 186946,
+      "sha256": "598ad24be51ff1e32f828929970261c1525ca51ff1361657530acf4a34a11a76",
+      "mtimeUtc": "2026-07-24T04:15:20.267Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/shopkeeper/opus/foundation.ogg",
+      "bytes": 348386,
+      "sha256": "d6de5bf20bfc0b33c9a676f375481c3c0c23e7daa946e2273c7da0adbe062399",
+      "mtimeUtc": "2026-07-24T04:02:47.187Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/shopkeeper/opus/melody.ogg",
+      "bytes": 371358,
+      "sha256": "c079c1af97e0233e065a1168367c33a31a686386cf0935c7d876f25ddb2d3566",
+      "mtimeUtc": "2026-07-24T04:02:48.042Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/shopkeeper/opus/pulse.ogg",
+      "bytes": 298948,
+      "sha256": "63e76dc3c0f08312557ef05f54e51971cd96acf87ae2194cb07cdae721ec03ee",
+      "mtimeUtc": "2026-07-24T04:02:48.434Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/shopkeeper/opus/rhythm.ogg",
+      "bytes": 255545,
+      "sha256": "91198af6c9801a2f28e32db4c0cde1ef8d8db4d6913f1a4a2ca829c8e40a89ac",
+      "mtimeUtc": "2026-07-24T04:02:48.800Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-1/opus/foundation.ogg",
+      "bytes": 615726,
+      "sha256": "3f5df670801ca15f778dead2b28003aa57cab2217503aa6b903ed53ee25bba6f",
+      "mtimeUtc": "2026-07-24T04:02:54.842Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-1/opus/melody.ogg",
+      "bytes": 562274,
+      "sha256": "8052f545fb0010d4a9cf2cc2759b4a89118ade1866c693d6d834e6aad9792909",
+      "mtimeUtc": "2026-07-24T04:02:56.201Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-1/opus/pulse.ogg",
+      "bytes": 440363,
+      "sha256": "971e48dffcca3ba17475483590b2532d58060d9d3e2b326832bc919898ff15e4",
+      "mtimeUtc": "2026-07-24T04:02:56.787Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-1/opus/rhythm.ogg",
+      "bytes": 522223,
+      "sha256": "beeb1498d0b3acfb885b4871652e7834781886aba559a1dea75658014d38e3b0",
+      "mtimeUtc": "2026-07-24T04:02:57.385Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-2/opus/foundation.ogg",
+      "bytes": 537334,
+      "sha256": "af23219cbe271829723ffa2d13a867ab971fa6a56dda2dee981f1c06dd162eee",
+      "mtimeUtc": "2026-07-24T04:03:06.133Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-2/opus/melody.ogg",
+      "bytes": 650282,
+      "sha256": "92b642c3133a8de4e4fd0fcd0d480e10db29496839c43f2bd45ce245ffc740a4",
+      "mtimeUtc": "2026-07-24T04:03:07.488Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-2/opus/pulse.ogg",
+      "bytes": 458308,
+      "sha256": "9d738e7084b3b5476964a7771d16e634f52b634a422dc684cbf225d677f6946b",
+      "mtimeUtc": "2026-07-24T04:03:08.099Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/slicing-life-2/opus/rhythm.ogg",
+      "bytes": 534855,
+      "sha256": "4b296f2e0ff26c5c51e7a4b8a820f1d3279a1ea49d6698dda715892430ea1345",
+      "mtimeUtc": "2026-07-24T04:03:08.769Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/the-source/opus/foundation.ogg",
+      "bytes": 608341,
+      "sha256": "6aab141b046cc2f1199bd9c1429943608ea893087c15ddd154d076e8b0f05d70",
+      "mtimeUtc": "2026-07-24T04:02:36.041Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/the-source/opus/melody.ogg",
+      "bytes": 609617,
+      "sha256": "39aab56ad9c560118f5b0f7006d5b70698c3463f64e80b03ae2496522f3efd3e",
+      "mtimeUtc": "2026-07-24T04:02:37.263Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/the-source/opus/pulse.ogg",
+      "bytes": 576368,
+      "sha256": "dd9c5dcf2b8b2d15777f6d9dd5ed9d839e7b9aa65e76dbdcad389cdcc565de2d",
+      "mtimeUtc": "2026-07-24T04:02:37.886Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/audio/cues/the-source/opus/rhythm.ogg",
+      "bytes": 515028,
+      "sha256": "0e947af21d58cde50f1c5f2635b282bc1e5cfaf435dd7f375b301338a2c65e4c",
+      "mtimeUtc": "2026-07-24T04:02:38.523Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/branding/icons/apple-touch-icon.png",
+      "bytes": 30529,
+      "sha256": "67a11f51acb8c1e8ebd54ca520c6456344d1fe92d10f826933298c0d9afd1d85",
+      "mtimeUtc": "2026-07-17T02:49:09.521Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/branding/icons/icon-192.png",
+      "bytes": 34583,
+      "sha256": "0811d047cbeff460e1c061c5e548b1b407d4feed4b8695553926775952fe279e",
+      "mtimeUtc": "2026-07-17T02:49:09.503Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/branding/icons/icon-512.png",
+      "bytes": 239251,
+      "sha256": "125bc7c15df4410b18aae6de202fbeefac886af574f0aa2e680c62a100f3c70c",
+      "mtimeUtc": "2026-07-17T02:49:09.482Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/branding/icons/icon-maskable-512.png",
+      "bytes": 132679,
+      "sha256": "c6298038727c331808f7ab688b13d271aba59358169d243dfe313f253d794e0c",
+      "mtimeUtc": "2026-07-17T02:49:09.557Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/fonts/BarlowCondensed-SemiBold.woff2",
+      "bytes": 22308,
+      "sha256": "215a93c696f442034a46fbb382958f753fda60e30490683aeea6b235fcbb2b66",
+      "mtimeUtc": "2026-07-18T18:32:37.941Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/fonts/IBMPlexMono-Medium.woff2",
+      "bytes": 14888,
+      "sha256": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22",
+      "mtimeUtc": "2026-07-18T18:32:38.304Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/fonts/IBMPlexMono-Regular.woff2",
+      "bytes": 14708,
+      "sha256": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7",
+      "mtimeUtc": "2026-07-18T18:32:38.129Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/fonts/OFL.txt",
+      "bytes": 5123,
+      "sha256": "fad73ff1a00047a08dff2e5b16ae858a01cdbe47714a2f3415f053453ded189c",
+      "mtimeUtc": "2026-07-18T18:33:01.630Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-final-7aac78d9/vendor/tear-score/TONE-LICENSE.md",
+      "bytes": 1072,
+      "sha256": "391ed5af60b7b5d1f74b31040c5fa645e6e238f3d9b4c971941a262a675bbdcd",
+      "mtimeUtc": "2026-07-19T04:39:02.462Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/beserker/intro.ogg",
+      "bytes": 1352429,
+      "sha256": "6f425c04c33f995344d63c3b70458e3387e9e1cd43dc03e5a9cda5ee00fdecf6",
+      "mtimeUtc": "2026-07-24T04:15:21.023Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/beserker/opus/foundation.ogg",
+      "bytes": 220753,
+      "sha256": "b3206ecc0b60fa45d9fd1256acf7954a6df42da68afc97c826c2202a9f1a1319",
+      "mtimeUtc": "2026-07-24T04:15:19.344Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/beserker/opus/melody.ogg",
+      "bytes": 205303,
+      "sha256": "21e25756769cec7a0bd741c0ad9112757755c72b3bd52aa3d16cec2433f6562b",
+      "mtimeUtc": "2026-07-24T04:15:19.802Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/beserker/opus/pulse.ogg",
+      "bytes": 186926,
+      "sha256": "f9110217b73a37fdf80347432ed9d5044b70ef4b41a74ef78502f9a86071559d",
+      "mtimeUtc": "2026-07-24T04:15:20.048Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/beserker/opus/rhythm.ogg",
+      "bytes": 186946,
+      "sha256": "598ad24be51ff1e32f828929970261c1525ca51ff1361657530acf4a34a11a76",
+      "mtimeUtc": "2026-07-24T04:15:20.267Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/shopkeeper/opus/foundation.ogg",
+      "bytes": 348386,
+      "sha256": "d6de5bf20bfc0b33c9a676f375481c3c0c23e7daa946e2273c7da0adbe062399",
+      "mtimeUtc": "2026-07-24T04:02:47.187Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/shopkeeper/opus/melody.ogg",
+      "bytes": 371358,
+      "sha256": "c079c1af97e0233e065a1168367c33a31a686386cf0935c7d876f25ddb2d3566",
+      "mtimeUtc": "2026-07-24T04:02:48.042Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/shopkeeper/opus/pulse.ogg",
+      "bytes": 298948,
+      "sha256": "63e76dc3c0f08312557ef05f54e51971cd96acf87ae2194cb07cdae721ec03ee",
+      "mtimeUtc": "2026-07-24T04:02:48.434Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/shopkeeper/opus/rhythm.ogg",
+      "bytes": 255545,
+      "sha256": "91198af6c9801a2f28e32db4c0cde1ef8d8db4d6913f1a4a2ca829c8e40a89ac",
+      "mtimeUtc": "2026-07-24T04:02:48.800Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-1/opus/foundation.ogg",
+      "bytes": 615726,
+      "sha256": "3f5df670801ca15f778dead2b28003aa57cab2217503aa6b903ed53ee25bba6f",
+      "mtimeUtc": "2026-07-24T04:02:54.842Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-1/opus/melody.ogg",
+      "bytes": 562274,
+      "sha256": "8052f545fb0010d4a9cf2cc2759b4a89118ade1866c693d6d834e6aad9792909",
+      "mtimeUtc": "2026-07-24T04:02:56.201Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-1/opus/pulse.ogg",
+      "bytes": 440363,
+      "sha256": "971e48dffcca3ba17475483590b2532d58060d9d3e2b326832bc919898ff15e4",
+      "mtimeUtc": "2026-07-24T04:02:56.787Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-1/opus/rhythm.ogg",
+      "bytes": 522223,
+      "sha256": "beeb1498d0b3acfb885b4871652e7834781886aba559a1dea75658014d38e3b0",
+      "mtimeUtc": "2026-07-24T04:02:57.385Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-2/opus/foundation.ogg",
+      "bytes": 537334,
+      "sha256": "af23219cbe271829723ffa2d13a867ab971fa6a56dda2dee981f1c06dd162eee",
+      "mtimeUtc": "2026-07-24T04:03:06.133Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-2/opus/melody.ogg",
+      "bytes": 650282,
+      "sha256": "92b642c3133a8de4e4fd0fcd0d480e10db29496839c43f2bd45ce245ffc740a4",
+      "mtimeUtc": "2026-07-24T04:03:07.488Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-2/opus/pulse.ogg",
+      "bytes": 458308,
+      "sha256": "9d738e7084b3b5476964a7771d16e634f52b634a422dc684cbf225d677f6946b",
+      "mtimeUtc": "2026-07-24T04:03:08.099Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/slicing-life-2/opus/rhythm.ogg",
+      "bytes": 534855,
+      "sha256": "4b296f2e0ff26c5c51e7a4b8a820f1d3279a1ea49d6698dda715892430ea1345",
+      "mtimeUtc": "2026-07-24T04:03:08.769Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/the-source/opus/foundation.ogg",
+      "bytes": 608341,
+      "sha256": "6aab141b046cc2f1199bd9c1429943608ea893087c15ddd154d076e8b0f05d70",
+      "mtimeUtc": "2026-07-24T04:02:36.041Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/the-source/opus/melody.ogg",
+      "bytes": 609617,
+      "sha256": "39aab56ad9c560118f5b0f7006d5b70698c3463f64e80b03ae2496522f3efd3e",
+      "mtimeUtc": "2026-07-24T04:02:37.263Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/the-source/opus/pulse.ogg",
+      "bytes": 576368,
+      "sha256": "dd9c5dcf2b8b2d15777f6d9dd5ed9d839e7b9aa65e76dbdcad389cdcc565de2d",
+      "mtimeUtc": "2026-07-24T04:02:37.886Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/audio/cues/the-source/opus/rhythm.ogg",
+      "bytes": 515028,
+      "sha256": "0e947af21d58cde50f1c5f2635b282bc1e5cfaf435dd7f375b301338a2c65e4c",
+      "mtimeUtc": "2026-07-24T04:02:38.523Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/branding/icons/apple-touch-icon.png",
+      "bytes": 30529,
+      "sha256": "67a11f51acb8c1e8ebd54ca520c6456344d1fe92d10f826933298c0d9afd1d85",
+      "mtimeUtc": "2026-07-17T02:49:09.521Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/branding/icons/icon-192.png",
+      "bytes": 34583,
+      "sha256": "0811d047cbeff460e1c061c5e548b1b407d4feed4b8695553926775952fe279e",
+      "mtimeUtc": "2026-07-17T02:49:09.503Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/branding/icons/icon-512.png",
+      "bytes": 239251,
+      "sha256": "125bc7c15df4410b18aae6de202fbeefac886af574f0aa2e680c62a100f3c70c",
+      "mtimeUtc": "2026-07-17T02:49:09.482Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/branding/icons/icon-maskable-512.png",
+      "bytes": 132679,
+      "sha256": "c6298038727c331808f7ab688b13d271aba59358169d243dfe313f253d794e0c",
+      "mtimeUtc": "2026-07-17T02:49:09.557Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/fonts/BarlowCondensed-SemiBold.woff2",
+      "bytes": 22308,
+      "sha256": "215a93c696f442034a46fbb382958f753fda60e30490683aeea6b235fcbb2b66",
+      "mtimeUtc": "2026-07-18T18:32:37.941Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/fonts/IBMPlexMono-Medium.woff2",
+      "bytes": 14888,
+      "sha256": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22",
+      "mtimeUtc": "2026-07-18T18:32:38.304Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/fonts/IBMPlexMono-Regular.woff2",
+      "bytes": 14708,
+      "sha256": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7",
+      "mtimeUtc": "2026-07-18T18:32:38.129Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/fonts/OFL.txt",
+      "bytes": 5123,
+      "sha256": "fad73ff1a00047a08dff2e5b16ae858a01cdbe47714a2f3415f053453ded189c",
+      "mtimeUtc": "2026-07-18T18:33:01.630Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-movement-threat-v1/vendor/tear-score/TONE-LICENSE.md",
+      "bytes": 1072,
+      "sha256": "391ed5af60b7b5d1f74b31040c5fa645e6e238f3d9b4c971941a262a675bbdcd",
+      "mtimeUtc": "2026-07-19T04:39:02.462Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/beserker/intro.ogg",
+      "bytes": 1352429,
+      "sha256": "6f425c04c33f995344d63c3b70458e3387e9e1cd43dc03e5a9cda5ee00fdecf6",
+      "mtimeUtc": "2026-07-24T04:15:21.023Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/beserker/opus/foundation.ogg",
+      "bytes": 220753,
+      "sha256": "b3206ecc0b60fa45d9fd1256acf7954a6df42da68afc97c826c2202a9f1a1319",
+      "mtimeUtc": "2026-07-24T04:15:19.344Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/beserker/opus/melody.ogg",
+      "bytes": 205303,
+      "sha256": "21e25756769cec7a0bd741c0ad9112757755c72b3bd52aa3d16cec2433f6562b",
+      "mtimeUtc": "2026-07-24T04:15:19.802Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/beserker/opus/pulse.ogg",
+      "bytes": 186926,
+      "sha256": "f9110217b73a37fdf80347432ed9d5044b70ef4b41a74ef78502f9a86071559d",
+      "mtimeUtc": "2026-07-24T04:15:20.048Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/beserker/opus/rhythm.ogg",
+      "bytes": 186946,
+      "sha256": "598ad24be51ff1e32f828929970261c1525ca51ff1361657530acf4a34a11a76",
+      "mtimeUtc": "2026-07-24T04:15:20.267Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/shopkeeper/opus/foundation.ogg",
+      "bytes": 348386,
+      "sha256": "d6de5bf20bfc0b33c9a676f375481c3c0c23e7daa946e2273c7da0adbe062399",
+      "mtimeUtc": "2026-07-24T04:02:47.187Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/shopkeeper/opus/melody.ogg",
+      "bytes": 371358,
+      "sha256": "c079c1af97e0233e065a1168367c33a31a686386cf0935c7d876f25ddb2d3566",
+      "mtimeUtc": "2026-07-24T04:02:48.042Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/shopkeeper/opus/pulse.ogg",
+      "bytes": 298948,
+      "sha256": "63e76dc3c0f08312557ef05f54e51971cd96acf87ae2194cb07cdae721ec03ee",
+      "mtimeUtc": "2026-07-24T04:02:48.434Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/shopkeeper/opus/rhythm.ogg",
+      "bytes": 255545,
+      "sha256": "91198af6c9801a2f28e32db4c0cde1ef8d8db4d6913f1a4a2ca829c8e40a89ac",
+      "mtimeUtc": "2026-07-24T04:02:48.800Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-1/opus/foundation.ogg",
+      "bytes": 615726,
+      "sha256": "3f5df670801ca15f778dead2b28003aa57cab2217503aa6b903ed53ee25bba6f",
+      "mtimeUtc": "2026-07-24T04:02:54.842Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-1/opus/melody.ogg",
+      "bytes": 562274,
+      "sha256": "8052f545fb0010d4a9cf2cc2759b4a89118ade1866c693d6d834e6aad9792909",
+      "mtimeUtc": "2026-07-24T04:02:56.201Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-1/opus/pulse.ogg",
+      "bytes": 440363,
+      "sha256": "971e48dffcca3ba17475483590b2532d58060d9d3e2b326832bc919898ff15e4",
+      "mtimeUtc": "2026-07-24T04:02:56.787Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-1/opus/rhythm.ogg",
+      "bytes": 522223,
+      "sha256": "beeb1498d0b3acfb885b4871652e7834781886aba559a1dea75658014d38e3b0",
+      "mtimeUtc": "2026-07-24T04:02:57.385Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-2/opus/foundation.ogg",
+      "bytes": 537334,
+      "sha256": "af23219cbe271829723ffa2d13a867ab971fa6a56dda2dee981f1c06dd162eee",
+      "mtimeUtc": "2026-07-24T04:03:06.133Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-2/opus/melody.ogg",
+      "bytes": 650282,
+      "sha256": "92b642c3133a8de4e4fd0fcd0d480e10db29496839c43f2bd45ce245ffc740a4",
+      "mtimeUtc": "2026-07-24T04:03:07.488Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-2/opus/pulse.ogg",
+      "bytes": 458308,
+      "sha256": "9d738e7084b3b5476964a7771d16e634f52b634a422dc684cbf225d677f6946b",
+      "mtimeUtc": "2026-07-24T04:03:08.099Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/slicing-life-2/opus/rhythm.ogg",
+      "bytes": 534855,
+      "sha256": "4b296f2e0ff26c5c51e7a4b8a820f1d3279a1ea49d6698dda715892430ea1345",
+      "mtimeUtc": "2026-07-24T04:03:08.769Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/the-source/opus/foundation.ogg",
+      "bytes": 608341,
+      "sha256": "6aab141b046cc2f1199bd9c1429943608ea893087c15ddd154d076e8b0f05d70",
+      "mtimeUtc": "2026-07-24T04:02:36.041Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/the-source/opus/melody.ogg",
+      "bytes": 609617,
+      "sha256": "39aab56ad9c560118f5b0f7006d5b70698c3463f64e80b03ae2496522f3efd3e",
+      "mtimeUtc": "2026-07-24T04:02:37.263Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/the-source/opus/pulse.ogg",
+      "bytes": 576368,
+      "sha256": "dd9c5dcf2b8b2d15777f6d9dd5ed9d839e7b9aa65e76dbdcad389cdcc565de2d",
+      "mtimeUtc": "2026-07-24T04:02:37.886Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/audio/cues/the-source/opus/rhythm.ogg",
+      "bytes": 515028,
+      "sha256": "0e947af21d58cde50f1c5f2635b282bc1e5cfaf435dd7f375b301338a2c65e4c",
+      "mtimeUtc": "2026-07-24T04:02:38.523Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/branding/icons/apple-touch-icon.png",
+      "bytes": 30529,
+      "sha256": "67a11f51acb8c1e8ebd54ca520c6456344d1fe92d10f826933298c0d9afd1d85",
+      "mtimeUtc": "2026-07-17T02:49:09.521Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/branding/icons/icon-192.png",
+      "bytes": 34583,
+      "sha256": "0811d047cbeff460e1c061c5e548b1b407d4feed4b8695553926775952fe279e",
+      "mtimeUtc": "2026-07-17T02:49:09.503Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/branding/icons/icon-512.png",
+      "bytes": 239251,
+      "sha256": "125bc7c15df4410b18aae6de202fbeefac886af574f0aa2e680c62a100f3c70c",
+      "mtimeUtc": "2026-07-17T02:49:09.482Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/branding/icons/icon-maskable-512.png",
+      "bytes": 132679,
+      "sha256": "c6298038727c331808f7ab688b13d271aba59358169d243dfe313f253d794e0c",
+      "mtimeUtc": "2026-07-17T02:49:09.557Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/fonts/BarlowCondensed-SemiBold.woff2",
+      "bytes": 22308,
+      "sha256": "215a93c696f442034a46fbb382958f753fda60e30490683aeea6b235fcbb2b66",
+      "mtimeUtc": "2026-07-18T18:32:37.941Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/fonts/IBMPlexMono-Medium.woff2",
+      "bytes": 14888,
+      "sha256": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22",
+      "mtimeUtc": "2026-07-18T18:32:38.304Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/fonts/IBMPlexMono-Regular.woff2",
+      "bytes": 14708,
+      "sha256": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7",
+      "mtimeUtc": "2026-07-18T18:32:38.129Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/fonts/OFL.txt",
+      "bytes": 5123,
+      "sha256": "fad73ff1a00047a08dff2e5b16ae858a01cdbe47714a2f3415f053453ded189c",
+      "mtimeUtc": "2026-07-18T18:33:01.630Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c24/build-restored-f2b67690/vendor/tear-score/TONE-LICENSE.md",
+      "bytes": 1072,
+      "sha256": "391ed5af60b7b5d1f74b31040c5fa645e6e238f3d9b4c971941a262a675bbdcd",
+      "mtimeUtc": "2026-07-19T04:39:02.462Z",
+      "group": "c24-mixed-age-build-assets",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-blade-valid-cut.json",
+      "bytes": 1386,
+      "sha256": "5b3e8ff686eecc5b415827e6e36b4d5b784cb3ff987823143e4b5b2ffb7e76ed",
+      "mtimeUtc": "2026-07-23T06:50:13.709Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-boot-start-run.json",
+      "bytes": 1362,
+      "sha256": "8eca3cd1d50662e7add124fb86350bdc361da82f23970f26adc646223512bc16",
+      "mtimeUtc": "2026-07-23T06:49:57.314Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-dash-one-way-platform.json",
+      "bytes": 1310,
+      "sha256": "b2c17161f6e591ed64f1a64b74c33e9ecd079c46064b5c3844300e0a0e668919",
+      "mtimeUtc": "2026-07-23T06:50:07.322Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-draft-selection-to-gameplay.json",
+      "bytes": 1423,
+      "sha256": "eb50e15a99d0a05f955585691ec27a614f3b464895e957a28c6fb30d4dc0bc69",
+      "mtimeUtc": "2026-07-23T06:50:31.190Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-movement-jump.json",
+      "bytes": 1280,
+      "sha256": "be8f95624a4c16d44841b5cdb8a891dc34fde18d6df2d27eb6189c6cdbc167db",
+      "mtimeUtc": "2026-07-23T06:50:01.881Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-projectile-parry-basic.json",
+      "bytes": 1316,
+      "sha256": "c4531c7e92680123e386c0c139512e666c5adb506bcc155259e58522200d4e40",
+      "mtimeUtc": "2026-07-23T06:50:19.396Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-projectile-parry.json",
+      "bytes": 1310,
+      "sha256": "13d9a2581e991d98ea913d4acb473f0080211681eeffbfc37b7b2256bf620b20",
+      "mtimeUtc": "2026-07-23T06:49:39.459Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c3-wave-clear-to-draft.json",
+      "bytes": 1387,
+      "sha256": "d645d4a4d8ecbd49b5f588aad33feaed665f620a28277442f51d338824925c18",
+      "mtimeUtc": "2026-07-23T06:50:25.168Z",
+      "group": "c3-path-bound-scenarios",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/c6-wave99.json",
+      "bytes": 798,
+      "sha256": "5a131ba0ebd5b86ab2529a5caf5e42c32db36dbacc85a3e36e7351b9ce5f2ba5",
+      "mtimeUtc": "2026-07-23T07:08:42.528Z",
+      "group": "historical-provenance",
+      "sourceReport": "artifact-retention-report-5281470"
+    },
+    {
+      "path": "artifacts/tearbench/non-lossy-annex-plan-selection.json",
+      "bytes": 790,
+      "sha256": "05ec70b0fd92bf9fe794f3018566ed04a35b620407b3857cbcfc217bb73bb767",
+      "mtimeUtc": "2026-07-23T10:24:21.538Z",
+      "group": "historical-provenance",
+      "sourceReport": "artifact-retention-report-5281470"
+    }
+  ],
+  "authorization": {
+    "decision": "retain-in-place",
+    "quarantine": "not-authorized",
+    "delete": "not-authorized",
+    "deduplicate": "not-authorized",
+    "overwrite": "not-authorized",
+    "move": "not-authorized",
+    "artifactQuarantine": {
+      "relativePath": ".artifact-quarantine",
+      "status": "unused",
+      "existsAtEvidence": false
+    },
+    "ageEligibilityIsNotMoveAuthorization": true,
+    "futureAgeEligibleFiles": "unreviewed-until-separately-dispositioned"
+  },
+  "validation": {
+    "hashAlgorithm": "sha256",
+    "pathEncoding": "relative-posix-v1",
+    "currentFileSet": "exact",
+    "futureEligibleHandling": "surface-as-unreviewed"
+  },
+  "notes": [
+    "This manifest records disposition only; it is not a move plan or authorization.",
+    "No artifact content, metadata, path, or directory was moved, deleted, overwritten, or deduplicated.",
+    "The tracked reporter remains report-only hygiene and does not grant quarantine authority."
+  ]
+}

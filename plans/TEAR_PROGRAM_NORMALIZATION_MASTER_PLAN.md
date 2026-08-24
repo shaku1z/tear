@@ -17,7 +17,9 @@ whole-root preservation is recorded in
 bound to the report, manifest, journal, and completion receipt recorded there.
 No deletion occurred; production remained frozen. Restore/reverse-move,
 artifact quarantine, remaining workspace normalization, wiki synchronization,
-and deployment remain separately gated work.
+and deployment remain separately gated work. The age-eligible artifact set has
+since received an evidence-backed retain-in-place disposition; no artifact
+quarantine is authorized.
 
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 OPEN for bounded
@@ -894,8 +896,8 @@ This is a target classification, not permission for a bulk move.
       bounded exact-name reporter. It requires explicit roots, owner, and
       retention date, records protected/review/no-go evidence, and never scans
       archive/recovery roots or emits quarantine eligibility. Running the real
-      local inventory remains separately evidenced; artifact quarantine remains
-      a separate unchecked goal.
+      local inventory remains separately evidenced. Artifact cleanup remains
+      report-only unless a separately reviewed disposition authorizes it.
 - [x] Add the portable, metadata-only remaining-workspace inventory capability.
       It requires explicit canonical roots, verifies clean `shaku1z/tear` main
       against `origin/main`, inspects only immediate children and bounded Git
@@ -938,9 +940,15 @@ This is a target classification, not permission for a bulk move.
       `docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md`.
       The `Tear-budget-architecture` junction and its
       `Tear-tearscore-normalization` target remain untouched and deferred.
-- [ ] Add `quarantine-artifacts.mjs` only after the report manifest, owner,
-      retention date, and recovery procedure receive a separate review; no
-      quarantine or deletion is authorized by the report slice.
+- [x] Close the artifact-retention lane with the evidence-backed
+      retain-in-place disposition in
+      `preservation/artifact-retention-disposition.json` and checkpoint
+      `docs/checkpoints/program-normalization/G5_ARTIFACT_DISPOSITION.md`.
+      The exact 104-file/31,683,314-byte set is hash-bound and validated in
+      place. The reporter remains report-only hygiene; age eligibility is not
+      move authorization. `.artifact-quarantine` remains unused, and no
+      quarantine mover, ignore rule, deletion, overwrite, or deduplication is
+      authorized. Future eligible files are surfaced as unreviewed.
 - [x] Add `pnpm check:workspace` to verify canonical-root identity, expected
       repository structure, active terminology allowlists, exact Final Five
       IDs, generated-document freshness, worktree integrity, and deployment
@@ -1014,7 +1022,9 @@ recorded in
 `docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md`.
 This checkpoint closes only the bounded preservation lane. G5 remains OPEN for
 the remaining non-Git copy review, parent-layout and Soundtrack Desk policy
-work, artifact-retention/quarantine decisions, and the final close conditions.
+work, the deferred reparse dependency, and the final close conditions. The
+artifact-retention decision is closed by the dedicated checkpoint; no artifact
+quarantine operation is part of G5.
 
 ### Close conditions
 
