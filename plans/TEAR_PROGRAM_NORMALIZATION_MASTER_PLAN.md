@@ -1149,9 +1149,9 @@ semantics and recording the resulting path and hash in the G6 receipt.
       `src/game-reference/game-reference.ts`; the unsupported PR43 schema-1
       foundation is rejected and no backward compatibility is claimed.
 - [x] Generate it deterministically from the current typed weapon definitions
-      and flat weapon tuning through `scripts/export-game-reference.mjs`; the
-      exporter loads only those source modules and never concatenates or
-      executes browser runtime files.
+      and pure Final Five tuning authorities through
+      `scripts/export-game-reference.mjs`; the exporter loads only those source
+      modules and never concatenates or executes browser runtime files.
 - [x] Include the repository, full source SHA, schema and Final Five roster
       versions, exact Final Five catalog, weapon metadata/mechanics/ratings,
       channels, flat weapon tuning, and terminology registry version.
@@ -1181,10 +1181,14 @@ semantics and recording the resulting path and hash in the G6 receipt.
       the five boss IDs/names/order, the canonical five-way stage mapping, and
       two descending phase thresholds per boss. Constructors, runtime behavior,
       presentation, and tuning beyond those thresholds remain excluded.
-- [ ] Add global public tuning. It remains the explicit `deferred` envelope in
-      the single fixed-key `collections` authority until it has a separate safe
-      data-only projection; boss and enemy runtime behavior/tuning beyond the
-      authored catalogs remain outside this slice.
+- [x] Add the narrow authored base-difficulty public-tuning projection through
+      `src/gameplay/run/difficulty-catalog.ts` and
+      `src/game-reference/public-tuning-reference.ts`. The complete envelope
+      has inner schema version `1`, exact five-entry order/text/IDs, positive
+      finite modifiers, and the one-hit invariant. `CONFIG.difficulties`
+      remains a fresh mutable legacy adapter; runtime/remote scaling, upgrade
+      tuning, other `CONFIG` groups, and boss/enemy runtime behavior remain
+      outside this slice.
 - [x] Exclude secrets, private diagnostics, mutable runtime state, callbacks,
       browser objects, and other implementation-only objects from the
       projection; canonical JSON validation fails closed if unsafe data enters.
@@ -1198,12 +1202,13 @@ semantics and recording the resulting path and hash in the G6 receipt.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.
 
-The slice-1 through slice-5 evidence and deferred-collection boundary are
+The slice-1 through slice-6 evidence and public-tuning boundary are
 recorded in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md`,
 `docs/checkpoints/program-normalization/G6_REFERENCE_CATALOGS.md`,
 `docs/checkpoints/program-normalization/G6_STAGE_MODE_REFERENCE.md`, and
 `docs/checkpoints/program-normalization/G6_ENEMY_REFERENCE.md`, plus
-`docs/checkpoints/program-normalization/G6_BOSS_REFERENCE.md`.
+`docs/checkpoints/program-normalization/G6_BOSS_REFERENCE.md` and
+`docs/checkpoints/program-normalization/G6_PUBLIC_TUNING_REFERENCE.md`.
 
 ### Wiki consumer
 

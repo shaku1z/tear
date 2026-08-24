@@ -11,6 +11,8 @@ import { CANONICAL_BOSS_IDS, EXPECTED_BOSS_COUNT, projectBossReference, validate
 import type { BossDefinition } from "../gameplay/run/boss-definitions";
 import { projectEnemyReference, validateProjectedEnemies, type EnemyReferenceFamilySource, type GameReferenceEnemiesV1 } from "./enemy-reference";
 import { projectMode, projectStage, validateProjectedMode, validateProjectedStage, type GameReferenceModeV1, type GameReferenceStageV1 } from "./stage-mode-reference";
+import { assertValidPublicTuning, projectPublicTuning, type GameReferencePublicTuningV1 } from "./public-tuning-reference";
+import type { DifficultyDefinition } from "../gameplay/run/difficulty-catalog";
 export type { BossReferenceProjectionInput } from "./boss-reference";
 export type { BossDefinition, BossDefinitionId } from "../gameplay/run/boss-definitions";
 export type { GameReferenceBossV1 } from "./boss-reference";
@@ -30,6 +32,7 @@ export type {
   GameReferenceStagePoolEntryV1,
   GameReferenceStageV1,
 } from "./stage-mode-reference";
+export type { GameReferenceDifficultyV1, GameReferencePublicTuningV1 } from "./public-tuning-reference";
 
 /** The game-owned, data-only handoff consumed by future external tooling. */
 export const GAME_REFERENCE_FORMAT = "game-reference.v1" as const;
@@ -110,11 +113,6 @@ export interface GameReferenceCompleteValueCollectionV1<T> {
   readonly items: T;
 }
 
-export interface DeferredGameReferenceCollectionV1 {
-  readonly status: "deferred";
-  readonly reason: string;
-}
-
 export interface GameReferenceV1 {
   readonly format: typeof GAME_REFERENCE_FORMAT;
   readonly schemaVersion: typeof GAME_REFERENCE_SCHEMA_VERSION;
@@ -134,7 +132,7 @@ export interface GameReferenceV1 {
     stages: GameReferenceCompleteCollectionV1<GameReferenceStageV1>;
     modes: GameReferenceCompleteCollectionV1<GameReferenceModeV1>;
     achievements: GameReferenceCompleteCollectionV1<GameReferenceAchievementV1>;
-    "public-tuning": DeferredGameReferenceCollectionV1;
+    "public-tuning": GameReferenceCompleteValueCollectionV1<GameReferencePublicTuningV1>;
   }>;
 }
 
@@ -151,12 +149,9 @@ export interface GameReferenceProjectionInput {
   readonly bossDefinitions: readonly BossDefinition[];
   readonly stages: readonly StageDefinition[];
   readonly modes: readonly ModeDefinition[];
+  readonly difficulties: readonly DifficultyDefinition[];
   readonly tuningByWeapon: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
-
-const DEFERRED_COLLECTION_REASONS = Object.freeze({
-  "public-tuning": "Only flat weapon tuning is safe to project in this contract slice.",
-});
 const EXPECTED_UPGRADE_COUNT = 60;
 const EXPECTED_ACHIEVEMENT_COUNT = 98;
 const EXPECTED_STAGE_COUNT = 5;
@@ -298,13 +293,6 @@ function completeCollection<T>(value: unknown, path: string, validateItem: (item
   if (source.status !== "complete" || !Array.isArray(source.items)) throw new TypeError(`${path} must be a complete collection`);
   const items = Object.freeze(source.items.map((item, index) => validateItem(item, `${path}.items[${String(index)}]`)));
   return Object.freeze({ status: "complete", items });
-}
-
-function deferredCollection(value: unknown, path: string): DeferredGameReferenceCollectionV1 {
-  const source = record(value, path);
-  exactKeys(source, path, ["status", "reason"]);
-  if (source.status !== "deferred") throw new TypeError(`${path} must be deferred`);
-  return Object.freeze({ status: "deferred", reason: text(source.reason, `${path}.reason`) });
 }
 
 function assertBossStageConsistency(
@@ -528,6 +516,7 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
     if (mode === undefined) throw new TypeError(`missing canonical mode definition ${id}`);
     return projectMode(mode, `mode[${String(index)}]`);
   }));
+  const publicTuning = projectPublicTuning(input.difficulties);
   const reference: GameReferenceV1 = Object.freeze({
     format: GAME_REFERENCE_FORMAT,
     schemaVersion: GAME_REFERENCE_SCHEMA_VERSION,
@@ -547,7 +536,7 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
       stages: Object.freeze({ status: "complete", items: stages }),
       modes: Object.freeze({ status: "complete", items: modes }),
       achievements: Object.freeze({ status: "complete", items: achievements }),
-      "public-tuning": Object.freeze({ status: "deferred", reason: DEFERRED_COLLECTION_REASONS["public-tuning"] }),
+      "public-tuning": Object.freeze({ status: "complete", items: publicTuning }),
     }),
   });
   assertValidGameReferenceV1(reference);
@@ -605,7 +594,10 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   if (bossesCollection.status !== "complete" || !Array.isArray(bossesCollection.items)) throw new TypeError("gameReference.collections.bosses must be a complete collection");
   validateProjectedBosses(bossesCollection.items, "gameReference.collections.bosses.items");
   assertBossStageConsistency(stagesCollection.items, bossesCollection.items);
-  deferredCollection(collections["public-tuning"], "gameReference.collections.public-tuning");
+  const publicTuningCollection = record(collections["public-tuning"], "gameReference.collections.public-tuning");
+  exactKeys(publicTuningCollection, "gameReference.collections.public-tuning", ["status", "items"]);
+  if (publicTuningCollection.status !== "complete") throw new TypeError("gameReference.collections.public-tuning must be a complete collection");
+  assertValidPublicTuning(publicTuningCollection.items, "gameReference.collections.public-tuning.items");
   canonicalStringify(value);
 }
 

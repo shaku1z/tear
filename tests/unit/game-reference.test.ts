@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { CONFIG } from "../../src/config/game-config";
 import { canonicalStringify } from "../../src/replay/hash";
 import {
   assertCurrentSourceSha,
@@ -17,10 +16,12 @@ import { STAGES } from "../../src/gameplay/stages";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
 import { ENEMY_KIND_IDS } from "../../src/gameplay/run/content-director";
 import { BOSS_DEFINITIONS } from "../../src/gameplay/run/boss-definitions";
+import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
+import { FINAL_FIVE_WEAPON_TUNING } from "../../src/gameplay/weapon-tuning";
 import { VARIANTS } from "../../src/gameplay/variants";
 import { AFFIXES, PRESETS } from "../../src/gameplay/affixes";
 
-const tuningByWeapon = Object.fromEntries(Object.entries(CONFIG.weapons).map(([id, tuning]) => [id, Object.fromEntries(Object.entries(tuning))]));
+const tuningByWeapon = FINAL_FIVE_WEAPON_TUNING;
 const firstWeapon = WEAPONS.at(0);
 if (firstWeapon === undefined) throw new Error("Final Five source is empty");
 const achievementSource = ACHIEVEMENT_CATALOG;
@@ -29,7 +30,8 @@ const enemyFamilySource = ENEMY_KIND_IDS.map((id) => ({ id, variants: VARIANTS[i
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
   upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
   stages = STAGES, modes = MODE_CATALOG, enemyFamilies = enemyFamilySource,
-  enemyAffixes = AFFIXES, enemyPresets = PRESETS, bossDefinitions = BOSS_DEFINITIONS): GameReferenceV1 {
+  enemyAffixes = AFFIXES, enemyPresets = PRESETS, bossDefinitions = BOSS_DEFINITIONS,
+  difficulties = DIFFICULTY_CATALOG): GameReferenceV1 {
   return buildGameReferenceV1({
     repository: "shaku1z/tear",
     sourceSha,
@@ -43,6 +45,7 @@ function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinitio
     bossDefinitions,
     stages,
     modes,
+    difficulties,
     tuningByWeapon,
   });
 }
@@ -100,7 +103,11 @@ describe("game-reference.v1", () => {
       { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
       { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
     ]);
-    expect(result.collections["public-tuning"].status).toBe("deferred");
+    expect(result.collections["public-tuning"].status).toBe("complete");
+    expect(result.collections["public-tuning"].items.schemaVersion).toBe(1);
+    expect(result.collections["public-tuning"].items.difficultyCatalog.map((difficulty) => difficulty.id)).toEqual([
+      "easy", "normal", "hard", "extreme", "onehit",
+    ]);
   });
 
   it("projects authored progression metadata without runtime callbacks", () => {
@@ -234,6 +241,7 @@ describe("game-reference.v1", () => {
       bossDefinitions: BOSS_DEFINITIONS,
       stages: STAGES,
       modes: MODE_CATALOG,
+      difficulties: DIFFICULTY_CATALOG,
       tuningByWeapon,
     })).toThrow(/repository must be shaku1z\/tear/u);
   });

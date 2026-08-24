@@ -31,6 +31,11 @@ const c27aPortableCoreRoots = Object.freeze([
 ]);
 const forbiddenDependencyRules = Object.freeze([
   Object.freeze({
+    roots: Object.freeze(["src/game-reference/"]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:config\/game-config|app\/|platform\/|presentation\/|entrypoints\/|browser\/|remote(?:\/|-))[^"]*["']/u,
+    message: "game-reference projections must remain pure authored data and cannot depend on runtime, browser, or remote adapters",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/ghost/", "src/agents/", "src/tearbench/"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*replay\/legacy-compat["']/u,
     message: "portable Ghost, agent, and TearBench modules cannot depend on the Ghost 2 compatibility adapter",
@@ -430,6 +435,19 @@ if (dependencyErrors("src/tearbench/__planted-violation.ts",
 if (dependencyErrors("src/tearbench/__planted-world-violation.ts",
   'import type { GameEnemy } from "../app/game-runtime-state";').length !== 1) {
   throw new Error("source architecture world-port rule self-test failed");
+}
+for (const forbiddenGameReferenceImport of [
+  "../config/game-config",
+  "../app/live-game-runtime",
+  "../platform/browser",
+  "../presentation/canvas",
+  "../entrypoints/standalone",
+  "../browser/runtime",
+  "../remote/config",
+]) {
+  if (dependencyErrors("src/game-reference/__planted-runtime-violation.ts", `import type { RuntimeValue } from "${forbiddenGameReferenceImport}";`).length !== 1) {
+    throw new Error(`source architecture game-reference purity self-test failed for ${forbiddenGameReferenceImport}`);
+  }
 }
 if (dependencyErrors("src/gameplay/runtime/tear-simulation-runtime.ts",
   'import { startLiveGame } from "../../app/live-game-runtime";').length !== 1) {
