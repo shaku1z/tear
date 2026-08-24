@@ -21,6 +21,10 @@ try {
   if (JSON.stringify(Object.keys(reference.collections ?? {}).sort()) !== JSON.stringify(["achievements", "bosses", "enemies", "modes", "public-tuning", "stages", "upgrades", "weapons"])) throw new Error("game reference check produced an invalid fixed collection authority");
   if (reference.collections.upgrades?.status !== "complete" || reference.collections.upgrades.items?.length !== 60) throw new Error("game reference check produced an incomplete upgrade catalog");
   if (reference.collections.achievements?.status !== "complete" || reference.collections.achievements.items?.length !== 98) throw new Error("game reference check produced an incomplete achievement catalog");
+  if (JSON.stringify(reference.collections.stages?.items?.map((stage) => stage.id)) !== JSON.stringify(["grounds", "undercroft", "crimson-fields", "voidspire", "tear"])) throw new Error("game reference check produced an invalid stage catalog");
+  if (reference.collections.stages?.status !== "complete" || reference.collections.stages.items?.length !== 5) throw new Error("game reference check produced an incomplete stage catalog");
+  if (JSON.stringify(reference.collections.modes?.items?.map((mode) => mode.id)) !== JSON.stringify(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"])) throw new Error("game reference check produced an invalid mode catalog");
+  if (reference.collections.modes?.status !== "complete" || reference.collections.modes.items?.length !== 7) throw new Error("game reference check produced an incomplete mode catalog");
   console.log(`PASS game reference check: ${reference.source.repository}@${reference.source.sha}`);
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true });

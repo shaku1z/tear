@@ -30,6 +30,8 @@ try {
   const weaponModule = await server.ssrLoadModule("/src/gameplay/weapons.ts");
   const upgradeModule = await server.ssrLoadModule("/src/gameplay/upgrades.ts");
   const achievementModule = await server.ssrLoadModule("/src/gameplay/progression/achievement-catalog.ts");
+  const stageModule = await server.ssrLoadModule("/src/gameplay/stages.ts");
+  const modeModule = await server.ssrLoadModule("/src/gameplay/run/mode-catalog.ts");
   const configModule = await server.ssrLoadModule("/src/config/game-config.ts");
   const repository = option("--repository") ?? process.env.TEAR_BUILD_REPOSITORY ?? referenceModule.GAME_REFERENCE_REPOSITORY;
   const tuningByWeapon = Object.fromEntries(Object.entries(configModule.CONFIG.weapons).map(([id, tuning]) => [id, numericTuning(tuning)]));
@@ -40,6 +42,8 @@ try {
     weapons: weaponModule.WEAPONS,
     upgrades: upgradeModule.UPGRADES,
     achievements: achievementModule.ACHIEVEMENT_CATALOG,
+    stages: stageModule.STAGES,
+    modes: modeModule.MODE_CATALOG,
     tuningByWeapon,
   });
   if (expectedSha !== undefined) referenceModule.assertCurrentSourceSha(reference, expectedSha);

@@ -13,6 +13,8 @@ import { createAchievements } from "../../src/gameplay/progression/achievements"
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { UPGRADES, type UpgradeDefinition } from "../../src/gameplay/upgrades";
 import { WEAPONS, type WeaponDefinition } from "../../src/gameplay/weapons";
+import { STAGES } from "../../src/gameplay/stages";
+import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
 
 const tuningByWeapon = Object.fromEntries(Object.entries(CONFIG.weapons).map(([id, tuning]) => [id, Object.fromEntries(Object.entries(tuning))]));
 const firstWeapon = WEAPONS.at(0);
@@ -20,7 +22,8 @@ if (firstWeapon === undefined) throw new Error("Final Five source is empty");
 const achievementSource = ACHIEVEMENT_CATALOG;
 
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
-  upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource): GameReferenceV1 {
+  upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
+  stages = STAGES, modes = MODE_CATALOG): GameReferenceV1 {
   return buildGameReferenceV1({
     repository: "shaku1z/tear",
     sourceSha,
@@ -28,6 +31,8 @@ function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinitio
     weapons,
     upgrades,
     achievements,
+    stages,
+    modes,
     tuningByWeapon,
   });
 }
@@ -62,6 +67,10 @@ describe("game-reference.v1", () => {
     expect(result.collections.upgrades.items).toHaveLength(60);
     expect(result.collections.achievements.status).toBe("complete");
     expect(result.collections.achievements.items).toHaveLength(98);
+    expect(result.collections.stages.status).toBe("complete");
+    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "voidspire", "tear"]);
+    expect(result.collections.modes.status).toBe("complete");
+    expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
     expect(result.collections.enemies.status).toBe("deferred");
     expect(result.collections["public-tuning"].status).toBe("deferred");
   });
@@ -82,6 +91,38 @@ describe("game-reference.v1", () => {
     expect(achievements.some((achievement) => achievement.rule.kind === "category-complete")).toBe(true);
     expect(achievements.some((achievement) => achievement.rule.kind === "all-achievements")).toBe(true);
     expect(achievements.filter((achievement) => achievement.rule.kind === "stat-threshold").every((achievement) => achievement.rule.stat !== null && achievement.rule.goal !== null)).toBe(true);
+  });
+
+  it("projects only stable stage data and cross-reference IDs", () => {
+    const result = reference();
+    const stages = result.collections.stages.items;
+    expect(stages).toHaveLength(5);
+    expect(stages[0]).toMatchObject({
+      id: "grounds", name: "The Grounds", musicId: "grounds", boss: "warden",
+      theme: { background: "#ffffff", platform: "#111111", accent: "#e23b3b", dark: false },
+    });
+    expect(stages[0]?.pool[0]).toEqual({ kind: "charger", weight: 1, unlockWave: 1 });
+    expect(stages[0]?.layout[0]).toEqual({ x: 230, y: 650, w: 280, h: 24, oneway: true });
+    expect(stages[0]?.narrative.chapter.pages).toHaveLength(2);
+    expect(stages[0]?.narrative.art).toEqual({ composition: "left", wash: "light" });
+    expect(stages[4]?.theme.dark).toBe(true);
+    expect(Object.keys(stages[0] ?? {})).not.toContain("stagePlatforms");
+    expect(Object.keys(stages[0] ?? {})).not.toContain("hazards");
+    expect(Object.values(stages).every((stage) => stage.pool.every((entry) => entry.weight > 0 && entry.unlockWave > 0))).toBe(true);
+  });
+
+  it("projects the seven authored modes without runtime debug flags or planners", () => {
+    const result = reference();
+    const modes = result.collections.modes.items;
+    expect(modes.map((mode) => mode.order)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(modes.map((mode) => mode.classification)).toEqual([
+      "campaign", "endless", "gauntlet", "training", "training", "boss-only", "sandbox",
+    ]);
+    expect(modes.find((mode) => mode.id === "tutorial")).toMatchObject({ training: true, bossOnly: false, sandbox: false });
+    expect(modes.find((mode) => mode.id === "bossonly")).toMatchObject({ training: false, bossOnly: true, sandbox: false });
+    expect(modes.find((mode) => mode.id === "sandbox")).toMatchObject({ training: false, bossOnly: false, sandbox: true });
+    expect(modes.every((mode) => !Object.prototype.hasOwnProperty.call(mode, "debug"))).toBe(true);
+    expect(Object.keys(modes[0] ?? {})).not.toContain("planner");
   });
 
   it("keeps the runtime achievement factory joined to the static authored catalog", () => {
@@ -122,7 +163,7 @@ describe("game-reference.v1", () => {
 
   it("is deterministic even when the typed source definitions arrive in another order", () => {
     const first = encodeGameReferenceV1(reference());
-    const reordered = encodeGameReferenceV1(reference("a".repeat(40), WEAPONS.slice().reverse(), UPGRADES.slice().reverse(), achievementSource.slice().reverse()));
+    const reordered = encodeGameReferenceV1(reference("a".repeat(40), WEAPONS.slice().reverse(), UPGRADES.slice().reverse(), achievementSource.slice().reverse(), STAGES.slice().reverse(), MODE_CATALOG.slice().reverse()));
     expect(reordered).toBe(first);
   });
 
@@ -159,6 +200,8 @@ describe("game-reference.v1", () => {
       weapons: WEAPONS,
       upgrades: UPGRADES,
       achievements: achievementSource,
+      stages: STAGES,
+      modes: MODE_CATALOG,
       tuningByWeapon,
     })).toThrow(/repository must be shaku1z\/tear/u);
   });
@@ -240,6 +283,76 @@ describe("game-reference.v1", () => {
     const achievementPermutation = structuredClone(reference()) as unknown as { collections: { achievements: { items: { id: string }[] } } };
     achievementPermutation.collections.achievements.items.reverse();
     expect(() => { assertValidGameReferenceV1(achievementPermutation); }).toThrow(/canonical authored order/u);
+
+    const stagePermutation = structuredClone(reference()) as unknown as { collections: { stages: { items: { id: string }[] } } };
+    stagePermutation.collections.stages.items.reverse();
+    expect(() => { assertValidGameReferenceV1(stagePermutation); }).toThrow(/canonical authored order/u);
+
+    const modePermutation = structuredClone(reference()) as unknown as { collections: { modes: { items: { id: string }[] } } };
+    modePermutation.collections.modes.items.reverse();
+    expect(() => { assertValidGameReferenceV1(modePermutation); }).toThrow(/canonical authored order/u);
+  });
+
+  it("strictly validates stage references, geometry, and normalized narrative fields", () => {
+    const wrongBoss = structuredClone(reference()) as unknown as { collections: { stages: { items: { boss: string }[] } } };
+    const firstStage = wrongBoss.collections.stages.items.at(0);
+    if (firstStage === undefined) throw new Error("missing stage fixture");
+    firstStage.boss = "not-a-boss";
+    expect(() => { assertValidGameReferenceV1(wrongBoss); }).toThrow(/canonical boss ID/u);
+
+    const wrongEnemy = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { kind: string }[] }[] } } };
+    const enemyStage = wrongEnemy.collections.stages.items.at(0);
+    const enemyEntry = enemyStage?.pool[0];
+    if (enemyEntry === undefined) throw new Error("missing stage pool fixture");
+    enemyEntry.kind = "not-an-enemy";
+    expect(() => { assertValidGameReferenceV1(wrongEnemy); }).toThrow(/canonical enemy kind/u);
+
+    const duplicatePool = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { kind: string }[] }[] } } };
+    const duplicateStage = duplicatePool.collections.stages.items.at(0);
+    const duplicateEntry = duplicateStage?.pool[0];
+    if (duplicateStage === undefined || duplicateEntry === undefined) throw new Error("missing stage pool fixture");
+    duplicateStage.pool.push({ ...duplicateEntry });
+    expect(() => { assertValidGameReferenceV1(duplicatePool); }).toThrow(/duplicate enemy kinds/u);
+
+    const nonPositive = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { weight: number }[] }[] } } };
+    const weightedStage = nonPositive.collections.stages.items.at(0);
+    const weightedEntry = weightedStage?.pool[0];
+    if (weightedEntry === undefined) throw new Error("missing stage pool fixture");
+    weightedEntry.weight = 0;
+    expect(() => { assertValidGameReferenceV1(nonPositive); }).toThrow(/must be positive/u);
+
+    const badLayout = structuredClone(reference()) as unknown as { collections: { stages: { items: { layout: { w: number }[] }[] } } };
+    const layoutStage = badLayout.collections.stages.items.at(0);
+    const layoutEntry = layoutStage?.layout[0];
+    if (layoutEntry === undefined) throw new Error("missing stage layout fixture");
+    layoutEntry.w = 0;
+    expect(() => { assertValidGameReferenceV1(badLayout); }).toThrow(/must be positive/u);
+
+    const extraNarrative = structuredClone(reference()) as unknown as { collections: { stages: { items: { narrative: { art: Record<string, unknown> } }[] } } };
+    const narrativeStage = extraNarrative.collections.stages.items.at(0);
+    if (narrativeStage === undefined) throw new Error("missing narrative fixture");
+    narrativeStage.narrative.art.extra = true;
+    expect(() => { assertValidGameReferenceV1(extraNarrative); }).toThrow(/unexpected or missing fields/u);
+  });
+
+  it("strictly validates mode metadata and excludes runtime-only flags", () => {
+    const extraDebug = structuredClone(reference()) as unknown as { collections: { modes: { items: Record<string, unknown>[] } } };
+    const mode = extraDebug.collections.modes.items.at(0);
+    if (mode === undefined) throw new Error("missing mode fixture");
+    mode.debug = true;
+    expect(() => { assertValidGameReferenceV1(extraDebug); }).toThrow(/unexpected or missing fields/u);
+
+    const badClassification = structuredClone(reference()) as unknown as { collections: { modes: { items: { classification: string }[] } } };
+    const classified = badClassification.collections.modes.items.at(0);
+    if (classified === undefined) throw new Error("missing mode fixture");
+    classified.classification = "debug";
+    expect(() => { assertValidGameReferenceV1(badClassification); }).toThrow(/classification is not supported/u);
+
+    const badOrder = structuredClone(reference()) as unknown as { collections: { modes: { items: { order: number }[] } } };
+    const ordered = badOrder.collections.modes.items.at(0);
+    if (ordered === undefined) throw new Error("missing mode fixture");
+    ordered.order = 99;
+    expect(() => { assertValidGameReferenceV1(badOrder); }).toThrow(/canonical authored order/u);
   });
 
   it("rejects the unsupported schema-1 foundation shape", () => {
@@ -302,6 +415,16 @@ describe("game-reference.v1", () => {
     expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, unknownAchievement)).toThrow(/exact canonical ID set/u);
     const duplicateAchievement = [...ACHIEVEMENT_CATALOG.slice(0, -1), firstAchievement];
     expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, duplicateAchievement)).toThrow(/duplicate IDs/u);
+
+    const unknownStage = [...STAGES.slice(0, -1), { ...STAGES.at(-1), id: "future-stage" } as never];
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, unknownStage)).toThrow(/exact canonical ID set/u);
+    const duplicateStage = [...STAGES.slice(0, -1), STAGES.at(0)];
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, duplicateStage as never)).toThrow(/duplicate IDs|exact canonical ID set/u);
+
+    const unknownMode = [...MODE_CATALOG.slice(0, -1), { ...MODE_CATALOG.at(-1), id: "future-mode" } as never];
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, unknownMode)).toThrow(/exact canonical ID set/u);
+    const duplicateMode = [...MODE_CATALOG.slice(0, -1), MODE_CATALOG.at(0)];
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, duplicateMode as never)).toThrow(/duplicate IDs|exact canonical ID set/u);
   });
 
   it("does not let canonical JSON silently drop unsafe values", () => {

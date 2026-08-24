@@ -1,6 +1,7 @@
-# G6 Game Reference Contract — Slices 1–2
+# G6 Game Reference Contract — Slices 1–3
 
-Status: game-reference foundation and progression catalogs implemented; G6 remains open.
+Status: game-reference foundation, progression catalogs, and the safe stage/mode
+catalog projections are implemented; G6 remains open.
 
 This checkpoint records the first two game-owned handoff slices for the modern
 typed runtime. It is a contract foundation, not a wiki synchronization or
@@ -11,9 +12,12 @@ release approval.
 - Schema/projection: `src/game-reference/game-reference.ts`
 - Typed source definitions: `src/gameplay/weapons.ts`,
   `src/gameplay/upgrades.ts`, `src/gameplay/progression/achievement-catalog.ts`,
-  and `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the immutable
-  `ACHIEVEMENT_CATALOG`, and `CONFIG.weapons` only). Runtime achievement
-  behavior joins the static catalog in `achievements.ts` and is not an export
+  `src/gameplay/stages.ts`, `src/gameplay/run/mode-catalog.ts`, and
+  `src/config/game-config.ts` (`WEAPONS`, `UPGRADES`, the immutable
+  `ACHIEVEMENT_CATALOG`, the typed `STAGES`/`STAGE_IDS`, the immutable
+  `MODE_CATALOG`, and `CONFIG.weapons` only). Runtime achievement behavior
+  joins the static catalog in `achievements.ts` and runtime mode config adds
+  only its debug visibility flag; neither runtime composition is an export
   authority.
 - Deterministic exporter: `scripts/export-game-reference.mjs`
 - Focused evidence: `tests/unit/game-reference.test.ts`
@@ -36,9 +40,20 @@ release approval.
   names, ratings, channels, and flat numeric weapon tuning. Runtime callbacks,
   browser objects, mutable world state, diagnostics, and secrets are never
   serialized.
+- Stage entries are complete, canonical data projections for the five authored
+  stages (`grounds`, `undercroft`, `crimson-fields`, `voidspire`, `tear`). They
+  include normalized enemy pools, authored platform layout, chapter/narrative
+  text, chapter art hints, theme colors, and boss/enemy cross-reference IDs.
+  They intentionally exclude `stagePlatforms`, generated floors/viewport
+  offsets, mutable hazards, and other runtime geometry.
+- Mode entries are complete for the seven `RunMode` values in authored order:
+  `campaign`, `endless`, `gauntlet`, `playground`, `tutorial`, `bossonly`, and
+  `sandbox`. They expose only id/order/label/blurb/enabled/classification and
+  the training/bossOnly/sandbox booleans. Runtime `debug` flags and planner
+  functions are not part of the contract.
 - The fixed `collections` object is the only collection authority. Weapons,
-  upgrades, and achievements are complete envelopes; enemies, bosses, stages,
-  modes, and `public-tuning` are explicit deferred envelopes. There is no
+  upgrades, achievements, stages, and modes are complete envelopes; enemies,
+  bosses, and `public-tuning` remain explicit deferred envelopes. There is no
   duplicate deferred side list.
 - Upgrade entries preserve the authored 60-item order, category, uniqueness,
   rare flag, stack limit, rule kind, and tier descriptions. Achievement entries
@@ -54,10 +69,10 @@ release approval.
 
 ## Deliberate boundary
 
-The complete `enemies`, `bosses`, `stages`, `modes`, and global `public-tuning`
-collections remain explicitly represented as deferred in the contract. They
-are not absent by accident and are not implied complete. Each requires its own
-data-only projection review before G6 can move the collection to `complete`.
+The complete `enemies`, `bosses`, and global `public-tuning` collections remain
+explicitly represented as deferred in the contract. They are not absent by
+accident and are not implied complete. Each requires its own data-only
+projection review before G6 can move the collection to `complete`.
 
 The wiki consumer, dispatch workflow, game-reference snapshot promotion, and
 Cloudflare deployment are outside this slice and remain locked by the G6 plan.
@@ -65,6 +80,7 @@ Cloudflare deployment are outside this slice and remain locked by the G6 plan.
 ## Focused checks
 
 - `pnpm exec vitest run tests/unit/game-reference.test.ts --no-file-parallelism`
+- `pnpm exec vitest run tests/unit/run-wave-planner-conformance.test.ts tests/unit/run-wave-rules.test.ts tests/unit/live-wave-controller.test.ts tests/unit/run-session.test.ts tests/unit/music-routing-vocabulary.test.ts --no-file-parallelism`
 - `pnpm exec vitest run tests/unit/gameplay-definitions.test.ts tests/unit/progression-systems.test.ts --no-file-parallelism`
 - `pnpm test` includes this unit suite in the full Vitest gate.
 - `pnpm check:game-reference` exercises clean CLI/Vite export with an exact
