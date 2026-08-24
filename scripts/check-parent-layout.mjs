@@ -298,7 +298,7 @@ export function runParentLayoutCheck({
   root = process.cwd(),
   policyPath,
   contractPath,
-  checkContract = policyPath === undefined,
+  checkContract = true,
 } = {}) {
   const absoluteRoot = path.resolve(root);
   const errors = [];

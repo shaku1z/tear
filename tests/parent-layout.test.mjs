@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -29,6 +30,34 @@ test("canonical parent-layout policy passes the portable checker", () => {
   assert.equal(result.ok, true, result.errors.join("\n"));
   assert.equal(result.status, "valid");
   assert.equal(result.policyRelativePath, "preservation/workspace-parent-layout-policy.json");
+});
+
+test("explicit policy paths remain bound to the workspace contract by default", () => {
+  const missingContract = runParentLayoutCheck({
+    root: repositoryRoot,
+    policyPath,
+    contractPath: path.join(repositoryRoot, "config", "missing-workspace-contract.json"),
+  });
+  assert.equal(missingContract.ok, false);
+  assert.match(missingContract.errors.join("\n"), /could not read workspace contract/u);
+
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-parent-layout-contract-"));
+  const contractPath = path.join(fixtureRoot, "workspace-contract.json");
+  try {
+    const contract = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "config", "workspace-contract.json"), "utf8"));
+    contract.parentLayoutPolicy = "./preservation/other-policy.json";
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`, "utf8");
+    const wrongContract = runParentLayoutCheck({ root: repositoryRoot, policyPath, contractPath });
+    assert.equal(wrongContract.ok, false);
+    assert.match(wrongContract.errors.join("\n"), /workspace contract parentLayoutPolicy/u);
+
+    contract.parentLayoutPolicy = "./preservation/workspace-parent-layout-policy.json";
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`, "utf8");
+    const correctContract = runParentLayoutCheck({ root: repositoryRoot, policyPath, contractPath });
+    assert.equal(correctContract.ok, true, correctContract.errors.join("\n"));
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test("malformed policy shape, format, schema, and repository are rejected", () => {
