@@ -262,14 +262,14 @@ values as current branch or ruleset state.
 
 Only one goal may be **OPEN** at a time.
 
-| Order | Goal | Initial state | Opens when | Closes when |
+| Order | Goal | Current state | Opens when | Closes when |
 |---:|---|---|---|---|
-| G0 | Freeze and record truth | ELIGIBLE | User authorizes execution | Baseline ledger and backups are verified |
-| G1 | Establish release authority | LOCKED | G0 closed | Protected, green, attributable release path exists |
-| G2 | Reconcile unique work and canonical branches | LOCKED | G1 closed | All unique refs have a written disposition and canonical branches contain approved work |
-| G3 | Remove obsolete refs and normalize worktrees | LOCKED | G2 closed | Branch/worktree targets are met and recovery is proven |
-| G4 | Normalize permanent terminology | ACCEPTANCE-COMPLETE / PR APPROVED | G3 closed | Public/internal names and migrations pass their gates; protected merge/post-merge observation closes the goal |
-| G5 | Organize repositories, documents, and workspace | OPEN | G4 closed | Information architecture and local workspace policy are enforced |
+| G0 | Freeze and record truth | CLOSED | User authorizes execution | Baseline ledger and backups are verified |
+| G1 | Establish release authority | CLOSED | G0 closed | Protected, green, attributable release path exists |
+| G2 | Reconcile unique work and canonical branches | CLOSED | G1 closed | All unique refs have a written disposition and canonical branches contain approved work |
+| G3 | Remove obsolete refs and normalize worktrees | CLOSED | G2 closed | Branch/worktree targets are met and recovery is proven |
+| G4 | Normalize permanent terminology | CLOSED | G3 closed | Public/internal names and migrations pass their gates; protected merge/post-merge observation closes the goal |
+| G5 | Organize repositories, documents, and workspace | CLOSED | G4 closed | Information architecture and local workspace policy are enforced |
 | G6 | Replace the wiki synchronization contract | CLOSED | G5 closed | Wiki proves exact current game SHA, modern content, promotion, and preview evidence |
 | G7 | Certify and deploy the converged program | ELIGIBLE/OPEN | G6 closed | Live game/wiki provenance and post-deploy evidence match |
 | G8 | Operate the prevention loop | LOCKED | G7 closed | Never permanently closes; produces recurring evidence |
