@@ -129,8 +129,8 @@ function action(tick, id, command) {
 function actionsAt(tick) {
   if (tick === 2) return [action(tick, 1, { type: "aim", turn: 0, magnitude: 1000 })];
   if (tick === 4) return [action(tick, 2, { type: "move", x: 1000, y: 0 })];
-  if (tick === 12) return [action(tick, 3, { type: "weapon", intent: "primary", phase: "pressed" })];
-  if (tick === 40) return [action(tick, 4, { type: "weapon", intent: "primary", phase: "released" })];
+  if (tick === 12) return [action(tick, 3, { type: "weapon", intent: "throw", phase: "pressed" })];
+  if (tick === 24) return [action(tick, 4, { type: "weapon", intent: "recall", phase: "pressed" })];
   if (tick === 55) return [action(tick, 5, { type: "jump", phase: "pressed" })];
   if (tick === 56) return [action(tick, 6, { type: "jump", phase: "released" })];
   if (tick === 80) return [action(tick, 7, { type: "dash", x: 1000, y: 0 })];

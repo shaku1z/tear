@@ -70,11 +70,15 @@ describe.skipIf(!parityRequired)("current live/detached mechanic parity", () => 
     const blades = states.map(({ blade }) => blade).filter((blade) => blade !== null);
     expect(blades.length).toBe(trace.hashes.length);
     expect(new Set(blades.map((blade) => `${blade.state}:${String(blade.x)}:${String(blade.y)}`)).size).toBeGreaterThan(1);
-    expect(Object.values(trace.schedule).flat().some((entry) => entry.command.type === "weapon")).toBe(true);
-    const nativeMechanicEvents = trace.engineEventProjection.events.filter((event) => [
-      "wave.started", "wave.cleared", "enemy.spawned", "blade.thrown", "blade.caught",
-      "blade.throw-resolved", "player.dash-started",
-    ].includes(event.type));
-    expect(nativeMechanicEvents.length).toBeGreaterThan(0);
+    const bladeStates = new Set(blades.map(({ state }) => state));
+    expect(bladeStates.has("held")).toBe(true);
+    expect(bladeStates.has("flying")).toBe(true);
+    const commands = Object.values(trace.schedule).flat().map((entry) => entry.command);
+    expect(commands.some((command) => command.type === "weapon" && command.intent === "throw")).toBe(true);
+    expect(commands.some((command) => command.type === "weapon" && command.intent === "recall")).toBe(true);
+    const swordTransport = trace.engineEventProjection.events.filter((event) =>
+      event.type === "blade.thrown" || event.type === "blade.caught");
+    expect(swordTransport.map(({ type }) => type)).toEqual(["blade.thrown", "blade.caught"]);
+    expect(swordTransport.every((event) => event.payload.weaponId === "sword")).toBe(true);
   });
 });
