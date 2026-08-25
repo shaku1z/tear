@@ -23,6 +23,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
         kind: "command", id: nextActionId++, tick: environment.observe().tick + 1, command,
       })));
       let proved = false;
+      let evidence = {};
       switch (source.subject.id) {
         case "boot": {
           const transition = step();
@@ -80,9 +81,25 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           break;
         }
         case "wave": {
-          const ownedOpening = initial.diagnostics.waveOwnership === "source-events"
-            && initial.diagnostics.livingWaveEnemies > 0
-            && initial.entities.length >= initial.diagnostics.livingWaveEnemies;
+          const ownershipScenario = { ...scenario, id: `${scenario.id}.ownership`,
+            start: { ...scenario.start, mode: "endless" } };
+          initial = environment.reset(ownershipScenario);
+          nextActionId = 1;
+          const ownershipEvents = [];
+          for (let tick = 0; tick < 240 && !(initial.diagnostics.waveOwnership === "source-events"
+            && initial.diagnostics.livingWaveEnemies > 0); tick += 1) {
+            const transition = step();
+            ownershipEvents.push(...transition.events.map((event) => ({ type: event.type, payload: event.payload })));
+            initial = transition.observation;
+          }
+          window.__PANTHEON_TEST.addUnownedWaveObserverActor();
+          const withUnrelatedActor = environment.observe();
+          const ownedAndUnrelated = withUnrelatedActor.diagnostics.waveOwnership === "source-events"
+            && withUnrelatedActor.diagnostics.livingWaveEnemies > 0
+            && withUnrelatedActor.entities.length > withUnrelatedActor.diagnostics.livingWaveEnemies;
+
+          initial = environment.reset(scenario);
+          nextActionId = 1;
           window.__PANTHEON_TEST.prepareNaturalWaveClearScenario();
           let cleared = false;
           let rewardReady = false;
@@ -94,12 +111,16 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
               && transition.observation.diagnostics.waveComplete
               && transition.observation.availableActions.includes("draft-choice");
           }
-          window.__PANTHEON_TEST.addUnownedWaveObserverActor();
-          const withUnrelatedActor = environment.observe();
-          proved = ownedOpening && rewardReady
-            && withUnrelatedActor.entities.length === 1
-            && withUnrelatedActor.diagnostics.waveOwnership === "source-events"
-            && withUnrelatedActor.diagnostics.livingWaveEnemies === 0;
+          evidence = {
+            ownedAndUnrelated,
+            ownershipEntities: withUnrelatedActor.entities.length,
+            ownershipWaveOwnership: withUnrelatedActor.diagnostics.waveOwnership,
+            ownershipLivingWaveEnemies: withUnrelatedActor.diagnostics.livingWaveEnemies,
+            ownershipWave: withUnrelatedActor.run.wave,
+            ownershipEvents,
+            rewardReady,
+          };
+          proved = ownedAndUnrelated && rewardReady;
           break;
         }
         case "draft": {
@@ -115,7 +136,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
         default: throw new Error(`no live scenario evidence exists for current gameplay subject ${source.subject.id}`);
       }
       const final = environment.observe();
-      return { id: scenario.id, subject: scenario.subject.id, mode: final.run.mode, proved,
+      return { id: scenario.id, subject: scenario.subject.id, mode: final.run.mode, proved, evidence,
         initial: { x: initial.player.x, y: initial.player.y, grounded: initial.player.grounded },
         final: { x: final.player.x, y: final.player.y, grounded: final.player.grounded }, tick: final.tick };
     }, entry);

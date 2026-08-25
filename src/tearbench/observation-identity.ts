@@ -10,8 +10,14 @@ export function createSourceWaveOwnershipTracker() {
   return Object.freeze({
     consume(event: TearGameplayEvent): void {
       if (event.kind === "run" && event.transition === "started") {
-        activeWave = event.wave;
-        actorIds.clear();
+        // Live opening content publishes its wave fact before the run-start
+        // fact so recording can begin after synchronous chapter setup. The
+        // owner must not regress from that newer wave back to the session's
+        // pre-opening wave. Callers invalidate explicitly between runs.
+        if (activeWave === undefined || event.wave > activeWave) {
+          activeWave = event.wave;
+          actorIds.clear();
+        }
       } else if (event.kind === "wave" && (event.event === "start" || event.event === "boss")) {
         if (activeWave !== event.wave) actorIds.clear();
         activeWave = event.wave;

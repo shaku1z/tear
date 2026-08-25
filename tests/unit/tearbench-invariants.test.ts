@@ -64,6 +64,8 @@ describe("TearBench current-game invariants", () => {
   it("tracks wave-owned actors from source events without counting unrelated living entities", () => {
     const ownership = createSourceWaveOwnershipTracker();
     ownership.consume({ kind: "wave", tick: 0, wave: 1, event: "start" });
+    ownership.consume({ kind: "run", tick: 0, transition: "started", runId: "run:opening",
+      mode: "endless", difficulty: "normal", weaponId: "sword", wave: 0, score: 0, runTimeSeconds: 0 });
     ownership.consume({ kind: "spawn", tick: 0, actorId: "enemy:old", actorKind: "charger", x: 1, y: 2 });
     expect([...ownership.actors(1) ?? []]).toEqual(["enemy:old"]);
 

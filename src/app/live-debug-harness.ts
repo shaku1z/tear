@@ -90,8 +90,8 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     },
     /** Adds a real live actor without a wave-spawn fact so ownership projection can prove it stays unrelated. */
     addUnownedWaveObserverActor() {
-      if (context.lifecycle.phase !== "wave-cleared" && context.lifecycle.phase !== "reward-pending") {
-        throw new Error(`Unowned wave observer requires a cleared live wave, received ${context.lifecycle.phase}`);
+      if (context.lifecycle.phase !== "wave-active") {
+        throw new Error(`Unowned wave observer requires an active live wave, received ${context.lifecycle.phase}`);
       }
       const actor = context.entities.createEnemy("charger", context.width - 180,
         d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, runOf(context.state));
