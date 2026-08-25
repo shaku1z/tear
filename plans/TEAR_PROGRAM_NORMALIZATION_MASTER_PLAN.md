@@ -1,11 +1,17 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
-**Status:** G4 is CLOSED after its protected-main merge and green post-merge
-`Validate`/ref observation. G5 is CLOSED after PR #41 merged to protected
-`main` at `d0567e3`, exact-main Validate run `32690766274` succeeded, the
-branch-cleanup receipt and final strict layout evidence were recorded, and
-canonical refs were verified clean/equal. G6 is eligible/open under the
-sequence; production remains frozen and G7 remains locked.
+**Status:** G4 and G5 are CLOSED under their protected-main receipts. G6 is
+CLOSED after the exact game-reference dispatch, protected wiki promotion,
+post-merge validation, and non-production preview evidence recorded in
+`docs/checkpoints/program-normalization/G6_CLOSURE.md`. G7 is now
+ELIGIBLE/OPEN for independent certification; production remains frozen.
+
+The G6 evidence baseline is game `main` at `71df06260b9ee2b41f729048dce3f910130ea234`
+and wiki `main` at `ecec8c9aeba189fe7b254329010571dd71f7cc3d`. A later
+docs-only merge of this closure record will advance the game SHA, so the
+existing G6 preview is not evidence for that future SHA; G7 must repeat the
+exact-main Validate, artifact dispatch, wiki promotion, and preview checks
+before any production release decision.
 
 **Prepared:** 2026-08-20
 
@@ -27,8 +33,9 @@ quarantine is authorized.
 **Current goal state:** G0 CLOSED; G1 CLOSED; G2 CLOSED; G3 CLOSED; G4
 CLOSED after protected merge and post-merge observation; G5 CLOSED with
 evidence recorded in `docs/checkpoints/program-normalization/G5_CLOSURE.md`;
-G6 synchronization repair is eligible/open, while G7 production
-certification remains frozen/locked pending G6's independent gates.
+G6 CLOSED with evidence recorded in
+`docs/checkpoints/program-normalization/G6_CLOSURE.md`; G7 is
+ELIGIBLE/OPEN for independent certification and production remains frozen.
 
 **Music repository state:** `shaku1z/tear-music` (formerly
 `shaku1z/tear-score`) protected `main` is clean and equal to its canonical
@@ -39,14 +46,16 @@ canonical `Validate` run `32634453401` is green. The earlier observed
 authority.
 
 **Wiki repository state:** protected/default `main` is clean at
-`723532d531040c576e182fc31c2acde16f723be4` (`723532d`). Post-merge
-`Validate` run `32800870477` is green. The modern consumer and protected
-receiver are integrated; the game sender is under the separate
-`codex/g6-reference-dispatch` candidate. No cross-repository dispatch or
-Worker deployment is claimed here; the `tear-wiki` Worker remains frozen.
+`ecec8c9aeba189fe7b254329010571dd71f7cc3d` (`ecec8c9`). Exact-main
+`Validate` run `32803865687` is green after the exact-triplet synchronization
+PR. The modern consumer, protected receiver, game sender, and non-production
+preview are operationally proven. The current promoted manifest hash is
+`afc4eb0e7b051c76eb583be852b00a80f4c2b7632744e1a7f4199faffbba7254`.
+Production `tear-wiki` remains frozen and unchanged.
 
 **Production state:** Frozen. G5 closure claims no deployment, Cloudflare,
-DNS, Access, Tunnel, or published-artifact mutation; G7 remains locked.
+DNS, Access, Tunnel, or published-artifact mutation; G7 is eligible/open but
+its production gates remain unsatisfied.
 
 This document is the single sequencing authority for correcting the current
 TEAR repository, naming, workspace, documentation, wiki, and deployment state.
@@ -253,16 +262,16 @@ values as current branch or ruleset state.
 
 Only one goal may be **OPEN** at a time.
 
-| Order | Goal | Initial state | Opens when | Closes when |
+| Order | Goal | Current state | Opens when | Closes when |
 |---:|---|---|---|---|
-| G0 | Freeze and record truth | ELIGIBLE | User authorizes execution | Baseline ledger and backups are verified |
-| G1 | Establish release authority | LOCKED | G0 closed | Protected, green, attributable release path exists |
-| G2 | Reconcile unique work and canonical branches | LOCKED | G1 closed | All unique refs have a written disposition and canonical branches contain approved work |
-| G3 | Remove obsolete refs and normalize worktrees | LOCKED | G2 closed | Branch/worktree targets are met and recovery is proven |
-| G4 | Normalize permanent terminology | ACCEPTANCE-COMPLETE / PR APPROVED | G3 closed | Public/internal names and migrations pass their gates; protected merge/post-merge observation closes the goal |
-| G5 | Organize repositories, documents, and workspace | OPEN | G4 closed | Information architecture and local workspace policy are enforced |
-| G6 | Replace the wiki synchronization contract | LOCKED | G5 closed | Wiki proves exact current game SHA and modern content |
-| G7 | Certify and deploy the converged program | LOCKED | G6 closed | Live game/wiki provenance and post-deploy evidence match |
+| G0 | Freeze and record truth | CLOSED | User authorizes execution | Baseline ledger and backups are verified |
+| G1 | Establish release authority | CLOSED | G0 closed | Protected, green, attributable release path exists |
+| G2 | Reconcile unique work and canonical branches | CLOSED | G1 closed | All unique refs have a written disposition and canonical branches contain approved work |
+| G3 | Remove obsolete refs and normalize worktrees | CLOSED | G2 closed | Branch/worktree targets are met and recovery is proven |
+| G4 | Normalize permanent terminology | CLOSED | G3 closed | Public/internal names and migrations pass their gates; protected merge/post-merge observation closes the goal |
+| G5 | Organize repositories, documents, and workspace | CLOSED | G4 closed | Information architecture and local workspace policy are enforced |
+| G6 | Replace the wiki synchronization contract | CLOSED | G5 closed | Wiki proves exact current game SHA, modern content, promotion, and preview evidence |
+| G7 | Certify and deploy the converged program | ELIGIBLE/OPEN | G6 closed | Live game/wiki provenance and post-deploy evidence match |
 | G8 | Operate the prevention loop | LOCKED | G7 closed | Never permanently closes; produces recurring evidence |
 
 No prior ad-hoc work automatically closes a goal. Every goal needs a new
@@ -1125,23 +1134,29 @@ or deletion is part of G5.
       resolved.
 - [x] G5 closure record is approved after PR #41, the exact-main Validate,
       verified cleanup receipt, clean/equal canonical refs, and final strict
-      parent-layout evidence. G6 is eligible/open.
+      parent-layout evidence. G6 was eligible/open at that boundary and is
+      closed by the later G6 closure record.
 
 ---
 
 ## 10. G6 — Replace the wiki synchronization contract
 
-**Status:** Eligible/open after G5 closure. G6 implementation, validation, and
-release gates remain required; no production or `tear-wiki` Worker deployment
-is authorized by this status change.
+**Status:** CLOSED after the exact game-reference dispatch, protected wiki
+promotion, post-merge validation, and non-production preview evidence recorded
+in `docs/checkpoints/program-normalization/G6_CLOSURE.md`. Production and the
+`tear-wiki` production Worker remain frozen; G7 is eligible/open and has its
+own independent release gates.
 
 **Goal:** Make the wiki consume a stable, typed, versioned representation of
 the modern game at an exact verified commit.
 
-The game repo's `tear-wiki/Weapons-and-Abilities.md` is a G6-owned handoff
-exception. G6 may adopt, relocate, or supersede it only as part of the exact
-SHA game-reference manifest transaction, preserving its handoff/history
-semantics and recording the resulting path and hash in the G6 receipt.
+The game repo's `tear-wiki/Weapons-and-Abilities.md` remains a G6-owned,
+comparison/handoff-only exception. It was not moved or rewritten: its exact
+path, 3,935-byte length, and SHA-256
+`62ab2687f2202538ef2afa90e999c893b4f81b51e9fcd34bad5c7ad65fd4106d` are
+recorded in the G6 closure receipt. The modern wiki derives exclusively from
+the typed game-reference manifest; this historical handoff file is not a
+consumer or release authority.
 
 ### Game-owned manifest
 
@@ -1218,8 +1233,12 @@ semantics and recording the resulting path and hash in the G6 receipt.
       workflow is main-only and read-only by GitHub permission; the production
       workflow reuses the helper but has not been invoked. See
       `docs/checkpoints/program-normalization/G6_REFERENCE_DISPATCH.md`.
-- [ ] Add an explicit release/consumer promotion gate for the exported
-      manifest after the remaining G6 consumer contract is complete.
+- [x] Complete the explicit release/consumer promotion gate for the exported
+      manifest: dispatch the exact validated game SHA, verify the public
+      artifact digest, promote only the manifest/receipt/terminology triplet,
+      validate the resulting wiki PR, merge it to protected `main`, and verify
+      the exact post-merge wiki ref. Evidence is recorded in
+      `docs/checkpoints/program-normalization/G6_CLOSURE.md`.
 
 The slice-1 through slice-6 evidence and public-tuning boundary are
 recorded in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.md`,
@@ -1229,7 +1248,10 @@ recorded in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.m
 `docs/checkpoints/program-normalization/G6_BOSS_REFERENCE.md`,
 `docs/checkpoints/program-normalization/G6_PUBLIC_TUNING_REFERENCE.md`, and
 `docs/checkpoints/program-normalization/G6_REFERENCE_ARTIFACT_PUBLICATION.md`,
-and `docs/checkpoints/program-normalization/G6_REFERENCE_DISPATCH.md`.
+and `docs/checkpoints/program-normalization/G6_REFERENCE_DISPATCH.md`. The
+aggregate operational closure and promotion evidence superseding their
+pre-merge status wording is recorded in
+`docs/checkpoints/program-normalization/G6_CLOSURE.md`.
 
 ### Wiki consumer
 
@@ -1256,30 +1278,50 @@ and `docs/checkpoints/program-normalization/G6_REFERENCE_DISPATCH.md`.
       never silently fall back to it when a requested exact SHA fails.
 
 These consumer items are implementation and protected-main validation facts on
-the wiki. They do not claim that the new game sender has been executed, that a
-new wiki commit has resulted from that sender, or that the non-production
-preview/close conditions have passed.
+the wiki. The former pre-promotion boundary is now resolved by the exact
+dispatch, promotion, post-merge validation, and preview evidence in
+`G6_CLOSURE.md`; production deployment remains outside G6 and is still frozen.
 
 ### Checkpoint G6-A — midpoint pause
 
-- [ ] Local wiki builds against the exact current game `main` SHA.
-- [ ] A nonexistent SHA, wrong repository, stale schema, malformed manifest,
-      duplicate weapon ID, and legacy active roster all fail closed.
-- [ ] Generated diff contains only expected reference data/content.
-- [ ] No `tear-wiki` production Worker deployment has occurred yet.
+- [x] The wiki build and generated provenance resolve the exact validated game
+      `main` SHA `71df06260b9ee2b41f729048dce3f910130ea234`.
+- [x] A nonexistent SHA, wrong repository, stale schema, malformed manifest,
+      duplicate weapon ID, and retired active roster all fail closed; retired
+      IDs remain distinct from governed historical migration references.
+- [x] The synchronization PR changes only the expected reference triplet:
+      `src/data/game-reference.v1.json`, its receipt, and
+      `src/data/wiki-terminology.json`.
+- [x] No `tear-wiki` production Worker deployment occurred; only the isolated
+      non-production preview was used for G6 evidence.
 
 ### Close conditions
 
-- [ ] One manual repository dispatch for the exact merged game SHA succeeds.
-- [ ] The resulting wiki commit records that same SHA.
-- [ ] Wiki tests/build pass from a clean clone.
-- [ ] A non-production `tear-wiki` Worker preview shows permanent terminology
+- [x] One manual repository dispatch for the exact merged game SHA succeeds:
+      game run `32803707546` and wiki receiver run `32803721699`.
+- [x] The resulting wiki synchronization PR records that same SHA in its
+      exact-triplet update; PR #20 merged to wiki `main` at `ecec8c9`.
+- [x] Wiki tests/build pass from a clean protected checkout; automatic PR
+      `Validate` run `32803748601` passed after its required approval, and
+      post-merge run `32803865687` passed on wiki `main`. Separate exact-head
+      dispatch run `32803747300` also passed but was not the required PR check.
+- [x] A non-production `tear-wiki` Worker preview shows permanent terminology
       and the canonical Final Five.
-- [ ] G6 closure record is approved; only then may G7 open.
+- [x] G6 closure record is approved by this protected docs-only closure PR;
+      G7 is now eligible/open. The existing preview is evidence for game SHA
+      `71df062`; any later game-main SHA requires a fresh exact synchronization
+      cycle before G7 release evidence can use it.
 
 ---
 
 ## 11. G7 — Certify and deploy the converged program
+
+**Status:** ELIGIBLE/OPEN after G6 closure. Production remains frozen. The G6
+preview and promoted manifest are bound to game `main` SHA `71df062`; a merge
+of the docs-only G6 closure PR will create a newer game SHA and therefore
+requires a fresh exact-main Validate, artifact publication, wiki dispatch,
+promotion, post-merge validation, and preview observation before G7 can treat
+that newer SHA as release evidence.
 
 **Goal:** Produce one auditable release chain from canonical branches to public
 surfaces.
@@ -1422,7 +1464,11 @@ Create one record per goal under the future canonical checkpoint location.
 - [x] G5 closed — repositories, docs, and local workspace are organized; the
       protected merge, exact-main `Validate`, cleanup receipt, and strict layout
       evidence are recorded in the G5 closure checkpoint.
-- [ ] G6 closed — wiki synchronizes from the modern typed manifest.
+- [x] G6 closed — the exact validated game manifest synchronized through the
+      protected wiki consumer, the resulting triplet PR merged to wiki `main`,
+      exact-main validation passed, and the non-production preview exposed the
+      canonical Final Five and permanent terminology. The evidence is recorded
+      in `docs/checkpoints/program-normalization/G6_CLOSURE.md`.
 - [ ] G7 closed — exact canonical commits are deployed and verified.
 - [ ] G8 active — prevention evidence is recurring.
 
