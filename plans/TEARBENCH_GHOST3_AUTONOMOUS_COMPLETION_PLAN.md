@@ -7,7 +7,7 @@
 - **Closure condition:** C21–C40 checkpoint exit gates pass with completion-grade evidence or explicit authorized dispositions; foundation gates alone never close the program.
 - **Branch policy:** Start each checkpoint slice from protected canonical `main` in a short-lived `codex/*` branch; historical branch names identify provenance only and are not live development targets.
 
-**Progress state:** The committed current-game alignment first pass has passed corrective checkpoints TB-R0 through TB-R5, including source-bound real live-to-detached proofs for all five current weapons and truthful cross-repository boundaries. TB-R6 independent review and the final clean-source gate remain active; C28/C29 passed their named gates; C30/C31 remain active; C32 passed its named gate; C33-C40 remain open, partial, or uncertified.
+**Progress state:** Current-game alignment corrective checkpoints TB-R0 through TB-R6 are complete on the owner-authored feature branch, including independent review, source-bound real live-to-detached proofs for all five current weapons, truthful cross-repository boundaries, and the full clean-source gate. C28/C29 passed their named gates; C30/C31 remain active; C32 passed its named gate; C33-C40 remain open, partial, or uncertified.
 **Created:** 2026-07-23
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`

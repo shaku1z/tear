@@ -5,7 +5,7 @@
 - **Baseline:** protected game `main` at `a8a476c6171d913581c01bb0e4432f53cf44f9e4`, audited 2026-08-25. Re-resolve current `origin/main` before every implementation slice; this historical SHA is not a future target.
 - **Scope:** the Tear game repository, its typed game runtime, TearBench, replay/headless execution, game-owned player surfaces, evidence routing, documentation, and existing required checks.
 - **Success condition:** TearBench executes and observes the current game truthfully, and every relevant future game change updates or invalidates its corresponding TearBench evidence in the same reviewed change.
-- **Post-review status:** The original checklist was marked complete prematurely. Corrective checkpoints `TB-R0` through `TB-R5` have passed their focused proofs; `TB-R6` remains the acceptance authority until independent review and the final clean-source repository gate pass.
+- **Post-review status:** Corrective checkpoints `TB-R0` through `TB-R6` are complete on the owner-authored game feature branch. Independent review, source-bound five-weapon live-versus-detached parity, and the full clean-source `pnpm check` have passed. Protected integration, music re-vendoring, wiki publication, deployment, and C40 release certification remain separate unperformed actions.
 - **Non-goals:** a second simulator, engine migration, another repository, external deployment, a new test framework, speculative abstractions, bulk historical rewrites, or long-running tests during ordinary development.
 
 ## 1. Read this before touching code
@@ -455,7 +455,7 @@ release boundaries.
 
 - [x] Complete every `TB-R0` through `TB-R5` checkbox with its corresponding focused proof.
 - [x] Run relevant scenario/content contracts, selector negative tests, wave/event tests, current five-weapon parity, terminology/documentation checks, and source-identity validation.
-- [ ] Run the final canonical `pnpm check` from the final intended clean owner-authored feature commit before asserting repository-wide readiness.
+- [x] Run the final canonical `pnpm check` from the final intended clean owner-authored feature commit before asserting repository-wide readiness.
 - [x] Perform an independent adversarial review of the exact final diff and resolve every acceptance-blocking issue.
 - [x] Preserve the existing canonical checkout, dirty auxiliary worktrees, unrelated user files, music repository, wiki repository, and locked legacy oracle.
 - [x] Report protected PR/merge, publication, deployment, music re-vendoring, wiki update, and C40 release certification as not performed unless separately authorized.
