@@ -367,12 +367,15 @@ The alignment program is complete only when every item is true:
 - [x] Relevant production changes cannot pass protected PR validation with missing or stale TearBench coverage.
 - [x] Current requirements, handoff, dashboard, and certification language describe what is actually implemented.
 - [x] Existing save/replay migration, historical evidence, locked legacy oracle, and production/test-isolation boundaries remain intact.
-- [ ] `pnpm check` passes from the final clean intended worktree/commit before any release-readiness claim.
+- [x] `pnpm check` passes from the final clean intended worktree/commit before any release-readiness claim.
 - [x] No merge, deploy, publication, cross-repository change, ruleset change, or live-service mutation occurs without its own explicit authorization.
 
-The final clean-worktree `pnpm check` remains intentionally unchecked until an
-authorized clean intended commit/worktree exists. A dirty engineering build,
-local focused browser success, or protected-baseline SHA cannot replace that gate.
+The full clean-source `pnpm check` has passed on the owner-authored feature
+branch, including source-bound builds, production/test isolation, all current
+weapons, soundtrack and game-reference provenance, real browser journeys, and
+performance evidence. The final checkpoint commit must repeat that exact gate
+from its own clean source. Protected integration, deployment, publication, and
+C40 release certification remain unperformed and require separate authorization.
 
 ## 18. Agent handoff template
 

@@ -134,9 +134,11 @@ and are not certification evidence. Replay Hub availability and diff-selected
 normal-player journeys, source-attributed evidence selection, generated capability
 reports, and focused same-PR drift guards are wired. Source-void snapshots fail
 closed before detached hydration; a capsule containing unsupported void receipts
-cannot be presented as a verified or seekable production replay. The remaining
-release-readiness boundary is a clean intended commit, protected integration, and
-the full `pnpm check`; no C40 release certificate or full release claim exists.
+cannot be presented as a verified or seekable production replay. The full
+`pnpm check` has passed on a clean owner-authored feature commit, including exact
+source attribution, current-game browser journeys, and performance evidence.
+Protected integration, deployment, publication, and C40 release certification
+remain unperformed; no C40 release certificate or protected release claim exists.
 
 Named status:
 
@@ -798,7 +800,7 @@ All of the following were run from this worktree through C27A slice 36:
 - TearBench changed-file CI passed 15 files / 83 tests plus its Graveyard rerun.
 - `src/app/live-game-runtime.ts` measures 698 physical lines including its final line boundary.
 - The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.
-- Full `pnpm check` has not been run for a release claim.
+- Full `pnpm check` passed on the clean owner-authored feature branch; protected integration and C40 release certification remain unperformed.
 - The existing bundle warning above 500 kB is nonfatal; no bundle-performance release claim exists.
 
 ## 12. Durable progress documents
