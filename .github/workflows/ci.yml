@@ -36,7 +36,12 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
           else
-            git diff --name-only "${{ github.sha }}^" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+            before="${{ github.event.before }}"
+            if [[ -n "$before" && "$before" != "0000000000000000000000000000000000000000" ]]; then
+              git diff --name-only "$before" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+            else
+              git show --format= --name-only "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+            fi
           fi
           gameplay_required=true
           if [[ "${{ github.event_name }}" == "pull_request" ]] && node --input-type=module -e 'import { readFileSync } from "node:fs"; const files = readFileSync("artifacts/tearbench/changed-files.txt", "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT)\.md$)/u.test(file)) ? 0 : 1)'; then

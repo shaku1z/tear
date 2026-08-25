@@ -1,4 +1,10 @@
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from "./contracts";
+import {
+  TEAR_CONTRACT_FORMAT,
+  TEAR_CONTRACT_VERSION,
+  type TearScenarioBackendV1,
+  type TearCanonicalScenarioV1,
+  type TearScenarioSubjectV1,
+} from "./contracts";
 import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import { TearScenarioRegistry } from "./scenario-registry";
 import scenarioCatalog from "./canonical-scenarios.json";
@@ -7,7 +13,7 @@ type CanonicalCatalogEntry = (typeof scenarioCatalog)[number];
 
 const base = (
   entry: CanonicalCatalogEntry,
-): TearScenarioV1 => {
+): TearCanonicalScenarioV1 => {
   const mode = RUN_MODE_REGISTRY.assert(entry.start.mode);
   const difficulty = DIFFICULTY_REGISTRY.assert(entry.start.difficulty);
   const weapon = WEAPON_REGISTRY.assert(entry.start.weapon);
@@ -18,12 +24,21 @@ const base = (
   if (entry.subject.kind === "boss" && entry.subject.id !== boss) {
     throw new RangeError(`canonical boss scenario ${entry.id} starts with the wrong boss`);
   }
+  if (boss !== undefined && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {
+    throw new RangeError(`canonical boss scenario ${entry.id} requires its matching authoritative boss subject`);
+  }
   if (boss !== undefined && (mode !== "bossonly" || entry.backends.includes("headless"))) {
     throw new RangeError(`canonical boss scenario ${entry.id} requires the live bossonly backend`);
   }
   if (entry.backends.length === 0 || entry.backends.some((backend) => backend !== "live" && backend !== "headless")) {
     throw new RangeError(`canonical scenario ${entry.id} has no supported execution backend`);
   }
+  const subject: TearScenarioSubjectV1 = entry.subject.kind === "weapon"
+    ? Object.freeze({ kind: "weapon", id: WEAPON_REGISTRY.assert(entry.subject.id) })
+    : entry.subject.kind === "boss"
+      ? Object.freeze({ kind: "boss", id: BOSS_REGISTRY.assert(entry.subject.id) })
+      : Object.freeze({ kind: "gameplay", id: entry.subject.id });
+  const backends = Object.freeze([...entry.backends]) as readonly [TearScenarioBackendV1, ...TearScenarioBackendV1[]];
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT,
     kind: "scenario",
@@ -33,6 +48,8 @@ const base = (
     description: entry.description,
     stateClass: "recorded-canonical",
     executionClass: "engineering",
+    subject,
+    backends,
     seed: "1001",
     start: Object.freeze({ mode, difficulty, weapon, ...(boss === undefined ? {} : { boss }) }),
     maxTicks: entry.maxTicks,

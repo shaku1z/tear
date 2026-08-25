@@ -1,10 +1,12 @@
 import { stableVerificationHash } from "../replay/hash";
+import type { TearCausalEventV1 } from "./contracts";
 
 export interface TearHeadlessTransition<TObservation> {
   readonly observation: TObservation;
   readonly terminated: boolean;
   readonly truncated: boolean;
   readonly metrics?: Readonly<Record<string, number>>;
+  readonly events?: readonly TearCausalEventV1[];
   readonly artifact?: unknown;
 }
 

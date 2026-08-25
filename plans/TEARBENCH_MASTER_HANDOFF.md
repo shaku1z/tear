@@ -1,11 +1,11 @@
 # TearBench / Scenario Console / Game Agent / Ghost 3.0 Master Continuation Handoff
 
 **Branch:** short-lived `codex/*` branch from protected canonical `main` (historical source boundary: `codex/ghost3-autonomous-completion-plan`)
-**State:** Current-game alignment is active; C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
+**State:** The committed current-game alignment first pass has passed corrective checkpoints TB-R0 through TB-R5; independent review and the final clean-source gate remain active under TB-R6. C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
 **Purpose:** Enable a succeeding agent to continue the complete TearBench program through C40 without losing requirements, repeating architectural mistakes, or overstating evidence.
 **Current alignment authority:** [`docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md`](../docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md)
 **Last reconciled protected baseline:** `a8a476c6171d913581c01bb0e4432f53cf44f9e4` on 2026-08-25. Re-resolve current protected `main` before every new slice.
-**Release identity boundary:** The SHA above identifies the locally inspected protected source baseline, not this uncommitted alignment slice or a newly verified deployment. Development builds and selected evidence record their actual source SHA, dirty/clean state, source fingerprint, and artifact identity. Public deployment identity is unverified unless a current protected release receipt proves it; C40 release certification remains incomplete.
+**Release identity boundary:** The SHA above identifies the locally inspected protected source baseline, not the separately committed alignment feature head, the in-progress owner-authored corrective checkpoint, or a newly verified deployment. Development builds and selected evidence record their actual source SHA, dirty/clean state, source fingerprint, and artifact identity. Public deployment identity is unverified unless a current protected release receipt proves it; C40 release certification remains incomplete.
 
 ## Authority metadata
 
@@ -135,10 +135,16 @@ normal-player journeys, source-attributed evidence selection, generated capabili
 reports, and focused same-PR drift guards are wired. Source-void snapshots fail
 closed before detached hydration; a capsule containing unsupported void receipts
 cannot be presented as a verified or seekable production replay. The full
-`pnpm check` has passed on a clean owner-authored feature commit, including exact
-source attribution, current-game browser journeys, and performance evidence.
-Protected integration, deployment, publication, and C40 release certification
-remain unperformed; no C40 release certificate or protected release claim exists.
+`pnpm check` passed on the prior clean owner-authored feature commit; the
+corrective checkpoint now additionally requires mandatory source-bound live to
+fresh-detached proof for Sword, Hammer, Greatsword, Chainblade, and Riftlock.
+Its exact final clean owner-authored commit must pass `pnpm check` again before
+acceptance. Wiki synchronization follows authorized protected game-main
+integration. Adaptive Soundtrack remains intentionally pinned to approved
+music release `7662fc95769d2ed022593c10f308ec10f054edfc`, not the newest music
+HEAD. Protected integration, music re-vendoring, wiki edits, deployment,
+publication, and C40 release certification remain unperformed; no C40 release
+certificate or protected release claim exists.
 
 Named status:
 

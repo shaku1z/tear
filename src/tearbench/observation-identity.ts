@@ -1,6 +1,35 @@
 import type { GameAction } from "../input/game-action";
+import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { TearSimulationEnemyView } from "../simulation/runtime-world-port";
 import { ENTITY_KIND_REGISTRY, STAGE_IDS, type TearEntityKindId, type TearStageId } from "./registries";
+
+/** Associates actors with the current production wave using actual native lifecycle facts. */
+export function createSourceWaveOwnershipTracker() {
+  let activeWave: number | undefined;
+  const actorIds = new Set<string>();
+  return Object.freeze({
+    consume(event: TearGameplayEvent): void {
+      if (event.kind === "run" && event.transition === "started") {
+        activeWave = event.wave;
+        actorIds.clear();
+      } else if (event.kind === "wave" && (event.event === "start" || event.event === "boss")) {
+        if (activeWave !== event.wave) actorIds.clear();
+        activeWave = event.wave;
+      } else if (event.kind === "spawn" && activeWave !== undefined) {
+        actorIds.add(event.actorId);
+      } else if (event.kind === "death") {
+        actorIds.delete(event.actorId);
+      }
+    },
+    actors(wave: number): ReadonlySet<string> | undefined {
+      return activeWave === wave ? actorIds : undefined;
+    },
+    invalidate(): void {
+      activeWave = undefined;
+      actorIds.clear();
+    },
+  });
+}
 
 /** One source-owned stage identity shared by live and detached observations. */
 export function canonicalObservationStage(index: number): TearStageId {

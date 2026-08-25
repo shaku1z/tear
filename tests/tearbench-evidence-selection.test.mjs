@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -68,10 +68,37 @@ test("production weapon authority covers every actual current weapon mechanic", 
     assert.ok(selection.scenarios.some((id) => id.startsWith(`${weapon}-`)), weapon);
   }
   assert.deepEqual(selection.buildTargets, ["test-standalone"]);
+  assert.equal(selection.currentWeaponParity.required, true);
+  assert.deepEqual(selection.currentWeaponParity.weapons, ["sword", "hammer", "greatsword", "chainblade", "riftlock"]);
+  assert.equal(selection.currentWeaponParity.scenarios.length, selection.currentWeaponParity.weapons.length);
+});
+
+test("current weapon parity rejects a unit-only downgrade or unsupported detached backend", () => {
+  const unitOnly = mutatedCatalog("unit-only-weapon-parity", (entries) => {
+    entries.find((entry) => entry.subject?.id === "riftlock").evidence.command =
+      "pnpm exec vitest run tests/unit/current-weapon-scenario-mechanics.test.ts";
+  });
+  const downgraded = rejected(["src/gameplay/weapon-selection.ts"], { catalog: unitOnly });
+  assert.notEqual(downgraded.status, 0);
+  assert.match(`${downgraded.stderr}\n${downgraded.stdout}`, /requires a source-bound live-to-detached browser proof/u);
+
+  const liveOnly = mutatedCatalog("live-only-weapon-parity", (entries) => {
+    entries.find((entry) => entry.subject?.id === "hammer").backends = ["live"];
+  });
+  const unsupported = rejected(["src/gameplay/weapon-selection.ts"], { catalog: liveOnly });
+  assert.notEqual(unsupported.status, 0);
+  assert.match(`${unsupported.stderr}\n${unsupported.stdout}`, /requires both live and headless backends/u);
+});
+
+test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {
+  const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
+  assert.match(scripts["test:browser:current-weapon-parity"], /tearbench parity current-weapons/u);
+  assert.match(scripts["check:functional"], /pnpm test:browser:current-weapon-parity/u);
 });
 
 test("boss, stage, progression, event, and player owners receive current mapped evidence", () => {
   for (const file of ["src/gameplay/stages.ts", "src/gameplay/run/boss-definitions.ts",
+    "src/gameplay/upgrades.ts",
     "src/gameplay/run/mode-catalog.ts", "src/gameplay/run/difficulty-catalog.ts",
     "src/gameplay/run/live-content-runtime.ts", "src/gameplay/run/live-enemy-spawn.ts",
     "src/gameplay/scoring/coin-awards.ts"]) {
@@ -80,6 +107,7 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   const event = select(["src/gameplay/runtime/gameplay-events.ts"]);
   assert.ok(event.routes.includes("current-event-runtime"));
   assert.ok(event.scenarios.includes("source-void-low-hp-rescue-seek"));
+  assert.ok(event.authorityCommands.includes("pnpm exec vitest run tests/unit/gameplay-causal-events.test.ts"));
   for (const file of ["src/app/replay-hub.ts", "src/agents/run-monitor.ts",
     "src/app/live-ghost-lab-home.ts", "src/presentation/screens/ghost-lab.ts"]) {
     const surface = select([file]);
@@ -88,11 +116,53 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   }
 });
 
+test("current production authority and player-surface contracts cannot silently lose coverage", () => {
+  const selection = select(["src/gameplay/upgrades.ts"]);
+  assert.ok(selection.authorityCommands.includes("pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts"));
+
+  const routes = JSON.parse(readFileSync(routesPath, "utf8"));
+  const surfaces = routes.find((route) => route.id === "current-player-surfaces");
+  assert.ok(surfaces);
+  for (const path of surfaces.prefixes) assert.equal(existsSync(resolve(root, path)), true, path);
+  assert.deepEqual(surfaces.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
+});
+
+test("current Adaptive Soundtrack vendor changes select the existing audio lifecycle route", () => {
+  const selection = select(["public/vendor/tear-music/adaptive-soundtrack.provenance.json"]);
+  assert.ok(selection.routes.includes("audio"));
+});
+
 test("unclassified shared runtime conservatively retains current weapon coverage", () => {
   const selection = select(["src/simulation/new-runtime-boundary.ts"]);
   assert.deepEqual(selection.routes, ["shared-runtime"]);
   assert.ok(selection.scenarios.includes("sword-reversal-threadcut-catch-seek"));
   assert.ok(selection.scenarios.includes("riftlock-loose-cannon-catch-seek"));
+});
+
+test("mixed mapped and unmapped changes retain conservative shared-runtime evidence", () => {
+  const selection = select(["src/gameplay/weapon-selection.ts", "src/unmapped/new-runtime-boundary.ts"]);
+  assert.ok(selection.routes.includes("current-game-authority"));
+  assert.ok(selection.routes.includes("shared-runtime"));
+  assert.ok(selection.scenarios.includes("sword-reversal-threadcut-catch-seek"));
+  assert.ok(selection.scenarios.includes("riftlock-loose-cannon-catch-seek"));
+});
+
+test("documentation plus an unmapped change cannot masquerade as documentation-only", () => {
+  const selection = select(["docs/example.md", "src/unmapped/new-runtime-boundary.ts"]);
+  assert.ok(selection.routes.includes("documentation-only"));
+  assert.ok(selection.routes.includes("shared-runtime"));
+  assert.ok(selection.scenarios.length > 0);
+  assert.ok(selection.buildTargets.includes("test-standalone"));
+});
+
+test("protected and scheduled TearBench workflows inspect complete intended commit ranges", () => {
+  const pullRequestWorkflow = readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8");
+  const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
+  assert.match(pullRequestWorkflow, /github\.event\.before/u);
+  assert.doesNotMatch(pullRequestWorkflow, /github\.sha\s*\}\}"\^/u);
+  assert.doesNotMatch(scheduledWorkflow, /HEAD\^\s+HEAD/u);
+  assert.match(scheduledWorkflow, /git rev-list --max-parents=0 HEAD/u);
+  assert.ok((scheduledWorkflow.match(/fetch-depth: 0/gu) ?? []).length >= 2);
 });
 
 test("missing active weapon evidence fails closed", () => {
@@ -140,7 +210,12 @@ test("wrong subject, retired content, missing backend, and impossible boss start
       /boot-start-run has no executable evidence backend/u],
     ["wrong-boss", (entries) => {
       entries.find((entry) => entry.id === "source-void-low-hp-rescue-seek").start.boss = "warden";
-    }, /boss subject requires live-only bossonly evidence/u],
+    }, /boss start requires its matching authoritative boss subject/u],
+    ["disguised-boss", (entries) => {
+      const boss = entries.find((entry) => entry.id === "source-void-low-hp-rescue-seek");
+      boss.subject = { kind: "gameplay", id: "boss-disguise" };
+      boss.backends = ["live", "headless"];
+    }, /boss start requires its matching authoritative boss subject/u],
   ];
   for (const [name, mutate, expected] of mutations) {
     const result = rejected(["src/gameplay/weapon-selection.ts"], { catalog: mutatedCatalog(name, mutate) });
@@ -215,9 +290,9 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   const previousArgv = process.argv, previousLog = console.log;
   process.argv = [process.execPath, script, "identity-test-import"];
   console.log = () => {};
-  let validateServedBuildIdentity;
+  let validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
   try {
-    ({ validateServedBuildIdentity } = await import(pathToFileURL(script).href));
+    ({ validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));
   } finally {
     console.log = previousLog;
     process.argv = previousArgv;
@@ -228,4 +303,16 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   assert.equal(validateServedBuildIdentity(build, source), build);
   assert.throws(() => validateServedBuildIdentity({ ...build, sha: "d".repeat(40) }, source), /revision/u);
   assert.throws(() => validateServedBuildIdentity({ ...build, sourceFingerprint: "e".repeat(64) }, source), /fingerprint/u);
+
+  const selection = { source, currentWeaponParity: { required: true,
+    weapons: ["sword"], scenarios: ["sword-reversal-threadcut-catch-seek"] } };
+  const receipt = { kind: "node", status: "passed", source };
+  const execution = { id: selection.currentWeaponParity.scenarios[0], status: "passed", build, receipts: [receipt] };
+  assert.equal(verifyCurrentWeaponParityExecution(selection, { status: "passed", executions: [execution] })
+    .currentWeaponParity.status, "passed");
+  assert.throws(() => verifyCurrentWeaponParityExecution(selection, { status: "passed", executions: [] }),
+    /parity evidence is missing or failed/u);
+  assert.throws(() => verifyCurrentWeaponParityExecution(selection, { status: "passed",
+    executions: [{ ...execution, receipts: [{ ...receipt, source: { ...source, fingerprint: "e".repeat(64) } }] }] }),
+  /stale source identity/u);
 });

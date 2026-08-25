@@ -36,6 +36,20 @@ export type TearGameplayEvent =
   | Readonly<{ kind: "world"; tick: number; event: "void-rescue"; x: number; y: number; lane: "lower" | "upper" | null; hp: number }>
   | Readonly<{ kind: "effect"; tick: number; effect: string; x: number; y: number }>;
 
+/** Exhaustive runtime-owned event families; additions fail the typed coverage contract. */
+export const GAMEPLAY_EVENT_KIND_IDS = Object.freeze(Object.keys({
+  run: true,
+  stage: true,
+  wave: true,
+  spawn: true,
+  death: true,
+  loadout: true,
+  weapon: true,
+  projectile: true,
+  world: true,
+  effect: true,
+} satisfies Readonly<Record<TearGameplayEvent["kind"], true>>) as TearGameplayEvent["kind"][]);
+
 export type UntickedTearGameplayEvent =
   TearGameplayEvent extends infer Event
     ? Event extends TearGameplayEvent ? Omit<Event, "tick"> : never

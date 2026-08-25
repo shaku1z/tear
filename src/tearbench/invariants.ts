@@ -71,7 +71,10 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
   },
   "wave.valid-completion": (observation) => {
     const diagnostics = observation.diagnostics;
-    return diagnostics?.waveComplete === true && (diagnostics.livingWaveEnemies ?? 0) > 0
+    if (diagnostics?.waveOwnership === "unavailable" || diagnostics?.livingWaveEnemies === undefined) {
+      throw new Error("wave completion requires source-owned current-wave actor evidence");
+    }
+    return diagnostics.waveComplete === true && diagnostics.livingWaveEnemies > 0
       ? failure("wave.valid-completion", observation, "wave is complete while wave-owned enemies remain")
       : null;
   },

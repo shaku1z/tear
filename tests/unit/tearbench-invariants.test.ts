@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TEAR_CONTRACT_FORMAT, type TearObservationV1 } from "../../src/tearbench/contracts";
 import { runInvariantChecks } from "../../src/tearbench/invariants";
+import { createSourceWaveOwnershipTracker } from "../../src/tearbench/observation-identity";
 
 function observation(patch: Partial<TearObservationV1> = {}): TearObservationV1 {
   return {
@@ -58,5 +59,32 @@ describe("TearBench current-game invariants", () => {
       ["entity.valid-owner"])).toHaveLength(1);
     expect(runInvariantChecks({ ...current, entities: [{ ...actor, vx: Number.NaN }] },
       ["runtime.finite-state"])).toHaveLength(1);
+  });
+
+  it("tracks wave-owned actors from source events without counting unrelated living entities", () => {
+    const ownership = createSourceWaveOwnershipTracker();
+    ownership.consume({ kind: "wave", tick: 0, wave: 1, event: "start" });
+    ownership.consume({ kind: "spawn", tick: 0, actorId: "enemy:old", actorKind: "charger", x: 1, y: 2 });
+    expect([...ownership.actors(1) ?? []]).toEqual(["enemy:old"]);
+
+    ownership.consume({ kind: "wave", tick: 4, wave: 2, event: "start" });
+    ownership.consume({ kind: "spawn", tick: 4, actorId: "enemy:current", actorKind: "charger", x: 3, y: 4 });
+    expect([...ownership.actors(2) ?? []]).toEqual(["enemy:current"]);
+    expect(ownership.actors(1)).toBeUndefined();
+
+    const current = observation();
+    expect(runInvariantChecks({ ...current, diagnostics: { ...current.diagnostics,
+      waveOwnership: "source-events", waveComplete: true, livingWaveEnemies: 0 } }, ["wave.valid-completion"]))
+      .toEqual([]);
+    const { livingWaveEnemies, ...unknownWaveDiagnostics } = current.diagnostics ?? {};
+    expect(livingWaveEnemies).toBe(1);
+    expect(() => runInvariantChecks({ ...current, diagnostics: { ...unknownWaveDiagnostics,
+      waveOwnership: "unavailable" } }, ["wave.valid-completion"]))
+      .toThrow(/source-owned current-wave actor evidence/u);
+
+    ownership.consume({ kind: "death", tick: 5, actorId: "enemy:current", cause: "blade" });
+    expect([...ownership.actors(2) ?? []]).toEqual([]);
+    ownership.invalidate();
+    expect(ownership.actors(2)).toBeUndefined();
   });
 });

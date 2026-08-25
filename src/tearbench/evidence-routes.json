@@ -48,7 +48,7 @@
   },
   {
     "id": "audio",
-    "prefixes": ["src/audio/", "public/vendor/tear-score/"],
+    "prefixes": ["src/audio/", "public/vendor/tear-score/", "public/vendor/tear-music/"],
     "scenarios": ["boot-start-run"],
     "graveyardCases": ["audio-lifecycle-history"],
     "journeyCheckpoint": "audio-repeated-run",
@@ -81,14 +81,16 @@
     "scenarios": ["source-void-low-hp-rescue-seek"],
     "scenarioSubjects": ["active-weapons"],
     "graveyardCases": [], "journeyCheckpoint": "current-game-event-runtime", "baseComparison": "main-base",
-    "interactionMatrices": ["browser"], "buildTargets": ["test-standalone"]
+    "interactionMatrices": ["browser"], "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/gameplay-causal-events.test.ts"]
   },
   {
     "id": "current-game-authority",
-    "prefixes": ["src/gameplay/weapon-selection.ts", "src/gameplay/stages.ts", "src/gameplay/run/boss-definitions.ts", "src/gameplay/run/difficulty-catalog.ts", "src/gameplay/run/mode-catalog.ts", "src/gameplay/run/content-director.ts", "src/gameplay/run/live-content-runtime.ts", "src/gameplay/run/live-enemy-spawn.ts", "src/gameplay/scoring/coin-awards.ts", "src/gameplay/scoring/live-economy-runtime.ts"],
+    "prefixes": ["src/gameplay/weapon-selection.ts", "src/gameplay/stages.ts", "src/gameplay/upgrades.ts", "src/gameplay/run/boss-definitions.ts", "src/gameplay/run/difficulty-catalog.ts", "src/gameplay/run/mode-catalog.ts", "src/gameplay/run/content-director.ts", "src/gameplay/run/live-content-runtime.ts", "src/gameplay/run/live-enemy-spawn.ts", "src/gameplay/scoring/coin-awards.ts", "src/gameplay/scoring/live-economy-runtime.ts"],
     "scenarios": ["movement-jump", "dash-one-way-platform", "source-void-low-hp-rescue-seek", "wave-clear-to-draft", "draft-selection-to-gameplay"],
     "scenarioSubjects": ["active-weapons"], "graveyardCases": [], "journeyCheckpoint": "current-game-alignment",
-    "baseComparison": "main-base", "interactionMatrices": ["browser", "input", "platform"], "buildTargets": ["test-standalone"]
+    "baseComparison": "main-base", "interactionMatrices": ["browser", "input", "platform"], "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts"]
   },
   {
     "id": "current-player-surfaces",

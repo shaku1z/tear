@@ -3,6 +3,8 @@ import { DIFFICULTY_IDS as GAME_DIFFICULTY_IDS, type DifficultyId } from "../gam
 import { MODE_IDS as GAME_MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
 import { ENEMY_KIND_IDS as GAME_ENEMY_KIND_IDS } from "../gameplay/run/content-director";
 import { STAGE_IDS as GAME_STAGE_IDS, type StageId } from "../gameplay/stages";
+import { CANONICAL_UPGRADE_IDS as GAME_UPGRADE_IDS } from "../gameplay/upgrades";
+import { GAMEPLAY_EVENT_KIND_IDS as GAME_EVENT_KIND_IDS } from "../gameplay/runtime/gameplay-events";
 import { WEAPON_IDS as GAME_WEAPON_IDS, type WeaponId } from "../gameplay/weapon-selection";
 
 const STABLE_ID_PATTERN = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -62,6 +64,10 @@ export const EVENT_IDS = Object.freeze([
 export const EVENT_REGISTRY = createStableRegistry("event", EVENT_IDS);
 export type TearEventId = typeof EVENT_IDS[number];
 
+/** Native event families remain source-owned; historical causal IDs are a separate ontology. */
+export const NATIVE_GAMEPLAY_EVENT_KIND_IDS = GAME_EVENT_KIND_IDS;
+export const NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY = createStableRegistry("native gameplay event", NATIVE_GAMEPLAY_EVENT_KIND_IDS);
+
 export const ENTITY_KIND_IDS = Object.freeze([
   "player", "blade", "projectile", "platform", "hazard",
   ...GAME_ENEMY_KIND_IDS,
@@ -93,6 +99,11 @@ export type TearDifficultyId = DifficultyId;
 export const STAGE_IDS = GAME_STAGE_IDS;
 export const STAGE_REGISTRY = createStableRegistry("stage", STAGE_IDS);
 export type TearStageId = StageId;
+
+/** Upgrade identity is owned by the same canonical catalog used by production drafts. */
+export const UPGRADE_IDS = GAME_UPGRADE_IDS;
+export const UPGRADE_REGISTRY = createStableRegistry("upgrade", UPGRADE_IDS);
+export type TearUpgradeId = typeof UPGRADE_IDS[number];
 
 export const CODEC_IDS = Object.freeze([
   "tear.player.v1", "tear.blade.v1", "tear.run.v1", "tear.world.v1", "tear.enemy.v1",

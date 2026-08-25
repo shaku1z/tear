@@ -2,6 +2,7 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import type {
   TearDifficultyId,
+  TearBossId,
   TearEntityKindId,
   TearEventId,
   TearInvariantId,
@@ -149,6 +150,7 @@ export interface TearObservationV1 {
     worldBounds?: Readonly<{ minX: number; maxX: number; minY: number; maxY: number }>;
     waveComplete?: boolean;
     livingWaveEnemies?: number;
+    waveOwnership?: "source-events" | "unavailable";
     boss?: Readonly<{ id: string; phase: string; validPhases: readonly string[] }>;
     ui?: Readonly<{ focusedId?: string; focusableIds: readonly string[] }>;
     paused?: boolean;
@@ -176,6 +178,14 @@ export interface TearCausalEventV1 {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
+export type TearScenarioBackendV1 = "live" | "headless";
+
+export type TearScenarioSubjectV1 = Readonly<
+  | { kind: "gameplay"; id: string }
+  | { kind: "weapon"; id: TearWeaponId }
+  | { kind: "boss"; id: TearBossId }
+>;
+
 export interface TearScenarioV1 {
   readonly format: typeof TEAR_CONTRACT_FORMAT;
   readonly kind: "scenario";
@@ -185,6 +195,10 @@ export interface TearScenarioV1 {
   readonly description: string;
   readonly stateClass: TearStateClass;
   readonly executionClass: TearExecutionClass;
+  /** Optional for existing V1 recordings; required on current canonical scenarios. */
+  readonly subject?: TearScenarioSubjectV1;
+  /** Optional for existing V1 recordings; declared current backends must be enforced. */
+  readonly backends?: readonly TearScenarioBackendV1[];
   readonly seed: string;
   readonly start: Readonly<{
     mode: TearRunModeId;
@@ -198,6 +212,12 @@ export interface TearScenarioV1 {
   readonly maxTicks: number;
   readonly assertions: readonly TearInvariantId[];
   readonly tags: readonly string[];
+}
+
+/** Current catalog scenarios retain authority that historical V1 recordings never declared. */
+export interface TearCanonicalScenarioV1 extends TearScenarioV1 {
+  readonly subject: TearScenarioSubjectV1;
+  readonly backends: readonly [TearScenarioBackendV1, ...TearScenarioBackendV1[]];
 }
 
 export interface TearSnapshotV1 {

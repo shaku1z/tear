@@ -14,7 +14,7 @@ import {
 import type { ProductionReplayWorld } from "./production-world-factory";
 import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
-import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearObservationV1, type TearScenarioV1, type TearSnapshotV1 } from "./contracts";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearCausalEventV1, type TearObservationV1, type TearScenarioV1, type TearSnapshotV1 } from "./contracts";
 import { RUN_RANDOM_STREAM_NAMES } from "../simulation/run-random";
 import {
   TearHeadlessEnvironmentPool,
@@ -26,6 +26,7 @@ import {
 import { validateTearContract } from "./validation";
 import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalObservationStage } from "./observation-identity";
 import { projectLiveProjectiles } from "./live-observation-projectiles";
+import { createGameplayCausalEvent } from "./gameplay-causal-events";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -34,6 +35,7 @@ type ProductionHeadlessCore = Readonly<{
   bootstrap: ProductionReplayBootstrap;
   scenario: TearScenarioV1;
   routeAction: (action: GameAction) => boolean;
+  nativeEvents: TearGameplayEvent[];
   sourceTracks?: ProductionHeadlessSourceTrackState;
 }>;
 
@@ -118,6 +120,9 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
 }
 
 function requireNaturalScenario(value: TearScenarioV1): TearScenarioV1 {
+  if (value.backends !== undefined && !value.backends.includes("headless")) {
+    throw new RangeError(`scenario ${value.id} does not support headless execution`);
+  }
   if (value.stateClass !== "recorded-canonical") {
     throw new RangeError("production headless runs require recorded-canonical natural openings");
   }
@@ -282,6 +287,7 @@ export function createProductionHeadlessEnvironment(
   let core: ProductionHeadlessCore | null = null;
   let nextCommandId = 0;
   let actionTrace: CommandEnvelope<GameAction>[] = [];
+  let deliveredCausalEventCount = 0;
 
   const requireCore = (): ProductionHeadlessCore => {
     if (core === null) throw new Error("production headless environment must be reset before stepping");
@@ -326,24 +332,26 @@ export function createProductionHeadlessEnvironment(
     input?: AuthoritativeInputSnapshot,
     bootstrap?: ProductionReplayBootstrap,
   ): ProductionHeadlessCore => {
+    const nativeEvents: TearGameplayEvent[] = [];
     const sourceTracks: ProductionHeadlessSourceTrackState | undefined = options.captureSourceTracks === true
-      ? { nativeEvents: [], rewardComponents: [], intents: [] }
+      ? { nativeEvents, rewardComponents: [], intents: [] }
       : undefined;
-    const gameplayEvents = sourceTracks === undefined ? undefined : new TearGameplayEventBus(() => snapshot?.tick ?? 0);
-    gameplayEvents?.subscribe((event) => { sourceTracks?.nativeEvents.push(event); });
+    const gameplayEvents = new TearGameplayEventBus(() => snapshot?.tick ?? 0);
+    gameplayEvents.subscribe((event) => { nativeEvents.push(event); });
     const composed = createProductionGhostReplayComposition({
       seed: snapshot?.seed ?? scenario.seed,
       mode: scenario.start.mode,
       weaponId: scenario.start.weapon,
       difficulty: scenario.start.difficulty,
       ...(snapshot === undefined || input === undefined ? {} : { inputSnapshots: new Map([[snapshot.tick, input]]) }),
-      ...(gameplayEvents === undefined ? {} : { gameplayEvents }),
+      gameplayEvents,
       ...(sourceTracks === undefined ? {} : { recordWaveIntent: (entry) => { sourceTracks.intents.push(entry); } }),
     }).create(snapshot);
-    gameplayEvents?.setTickSource(() => composed.simulation.scheduler.tick);
+    gameplayEvents.setTickSource(() => composed.simulation.scheduler.tick);
     const core = Object.freeze({ replay: composed.replay, simulation: composed.combat, waveReward: composed.waveReward,
       bootstrap: bootstrap ?? composed.bootstrap,
-      scenario, routeAction: composed.routeAction, ...(sourceTracks === undefined ? {} : { sourceTracks }) });
+      scenario, routeAction: composed.routeAction, nativeEvents,
+      ...(sourceTracks === undefined ? {} : { sourceTracks }) });
     if (sourceTracks !== undefined) {
       sourceTracks.rewardComponents.push(Object.freeze({ tick: composed.simulation.scheduler.tick,
         value: structuredClone(composed.waveReward.reward.snapshot()) }));
@@ -357,6 +365,7 @@ export function createProductionHeadlessEnvironment(
       core = compose(scenario);
       nextCommandId = 0;
       actionTrace = [];
+      deliveredCausalEventCount = 0;
       return observation(core);
     },
     policyObservation: () => policyObservation(requireCore()),
@@ -379,8 +388,15 @@ export function createProductionHeadlessEnvironment(
       const lifecycle = current.replay.world.lifecycle.snapshot();
       const terminated = lifecycle.phase === "terminated";
       const truncated = result.tick >= current.scenario.maxTicks;
+      const causalEvents: TearCausalEventV1[] = current.nativeEvents.slice(deliveredCausalEventCount)
+        .map((event, offset) => {
+          const sequence = deliveredCausalEventCount + offset;
+          return createGameplayCausalEvent(event, sequence, `headless:${String(event.tick)}:${String(sequence)}`);
+        });
+      deliveredCausalEventCount = current.nativeEvents.length;
       return Object.freeze({
         observation: result.state,
+        events: Object.freeze(causalEvents),
         terminated,
         truncated,
         metrics: Object.freeze({
@@ -424,6 +440,7 @@ export function createProductionHeadlessEnvironment(
       core = restored;
       nextCommandId = checkpoint.checkpoint.nextCommandId;
       actionTrace = [...checkpoint.actions];
+      deliveredCausalEventCount = 0;
       return restoredObservation;
     },
     restoreStateForgeEvaluation(value: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState {
@@ -437,6 +454,7 @@ export function createProductionHeadlessEnvironment(
       core = restored;
       nextCommandId = evaluation.source.checkpoint.nextCommandId;
       actionTrace = [...evaluation.source.actions];
+      deliveredCausalEventCount = 0;
       return restoredObservation;
     },
     sourceTracks(): ProductionHeadlessSourceTracks {

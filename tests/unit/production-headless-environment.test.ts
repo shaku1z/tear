@@ -74,6 +74,23 @@ describe("C30 production headless environment", () => {
     expect(advanced.availableActions).toContain("weapon");
   });
 
+  it("delivers ordered causal engine events from ordinary headless transitions", () => {
+    const execute = () => {
+      const environment = createProductionHeadlessEnvironment();
+      environment.reset(scenario);
+      const first = environment.step([]).events ?? [];
+      const second = environment.step([]).events ?? [];
+      environment.dispose();
+      return [...first, ...second];
+    };
+    const events = execute();
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.source === "engine")).toBe(true);
+    expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
+    expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
+    expect(execute()).toEqual(events);
+  });
+
   it("runs a DOM-free episode through the same production replay composition", () => {
     const environment = createProductionHeadlessEnvironment();
     let final = environment.reset(scenario);

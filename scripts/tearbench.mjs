@@ -106,6 +106,9 @@ function validateScenarioMetadata(scenario) {
     || typeof subject.id !== "string" || subject.id.trim() === "") {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
+  if (scenario.start?.boss !== undefined && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
+    throw new TypeError(`scenario ${scenario.id} boss start requires its matching authoritative boss subject`);
+  }
   if (subject.kind === "weapon") {
     const peers = [scenario.weapon, scenario.source?.weapon, scenario.source?.id, scenario.start?.weapon,
       scenario.start?.subject?.weapon, scenario.start?.subject?.id].filter((value) => typeof value === "string");
@@ -244,14 +247,48 @@ async function changedFiles() {
   return inline.split(",").map((entry) => entry.trim()).filter(Boolean);
 }
 
+function currentWeaponParityPlan(routes, scenarioIds) {
+  const required = routes.some((route) => (route.scenarioSubjects ?? []).includes("active-weapons"));
+  if (!required) return Object.freeze({ required: false, weapons: Object.freeze([]), scenarios: Object.freeze([]) });
+  const weapons = activeWeaponIds();
+  const scenarios = weapons.map((weapon) => {
+    const matches = catalog.filter((scenario) => scenario.subject?.kind === "weapon" && scenario.subject.id === weapon);
+    if (matches.length !== 1) throw new RangeError(`active weapon ${weapon} requires exactly one current parity scenario`);
+    const scenario = matches[0];
+    if (!scenarioIds.includes(scenario.id)) throw new RangeError(`active weapon ${weapon} parity scenario was not selected`);
+    if (!Array.isArray(scenario.backends) || !scenario.backends.includes("live") || !scenario.backends.includes("headless")) {
+      throw new RangeError(`active weapon ${weapon} requires both live and headless backends`);
+    }
+    const browser = parseApprovedEvidenceCommand(evidenceCommandForScenario(scenario).command)
+      .find((entry) => entry.kind === "node");
+    const source = browser === undefined ? "" : readFileSync(browser.file, "utf8");
+    const browserPath = browser === undefined ? "" : relative(root, browser.file).replaceAll("\\", "/");
+    const expectedProof = new RegExp(`^tests/browser-c40-${weapon}-[A-Za-z0-9._-]+-ghost-seek\\.js$`, "u");
+    if (browser === undefined || !expectedProof.test(browserPath) || !source.includes(".seek(")
+      || !source.includes('entry.value.kind === "authoritative-hash"')
+      || !/assert\.equal\(\s*seeks\[0\]\.semanticHash\s*,\s*receipt\.value\.stateHash\s*,/u.test(source)) {
+      throw new TypeError(`active weapon ${weapon} requires a source-bound live-to-detached browser proof`);
+    }
+    return scenario.id;
+  });
+  return Object.freeze({ required: true, weapons: Object.freeze(weapons), scenarios: Object.freeze(scenarios) });
+}
+
 function evidenceForDiff(files) {
   const normalized = files.map((file) => file.replaceAll("\\", "/"));
   const matched = evidenceRoutes.filter((route) =>
     normalized.some((file) => route.prefixes.some((prefix) => file.startsWith(prefix))));
-  const selected = matched.length > 0 ? matched : evidenceRoutes.filter((route) => route.id === "shared-runtime");
+  const unmatched = normalized.filter((file) =>
+    !evidenceRoutes.some((route) => route.prefixes.some((prefix) => file.startsWith(prefix))));
+  const fallback = evidenceRoutes.find((route) => route.id === "shared-runtime");
+  const selected = [...matched];
+  if ((selected.length === 0 || unmatched.length > 0) && fallback !== undefined && !selected.includes(fallback)) {
+    selected.push(fallback);
+  }
   if (selected.length === 0) throw new TypeError("TearBench evidence selection has no applicable route");
   const collect = (field) => [...new Set(selected.flatMap((route) => route[field] ?? []))].sort();
   const scenarios = [...new Set(selected.flatMap((route) => routeScenarioIds(route)))].sort();
+  const currentWeaponParity = currentWeaponParityPlan(selected, scenarios);
   return {
     format: "tearbench-evidence-selection",
     schemaVersion: 1,
@@ -260,6 +297,7 @@ function evidenceForDiff(files) {
     changedFiles: normalized,
     routes: selected.map((route) => route.id).sort(),
     scenarios,
+    currentWeaponParity,
     evidenceCommands: scenarios.map((id) => ({ id, ...evidenceCommandForScenario(scenarioById(id)) })),
     graveyardCases: collect("graveyardCases"),
     journeyCheckpoints: [...new Set(selected.map((route) => route.journeyCheckpoint))].sort(),
@@ -356,6 +394,55 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
   const status = executions.every((entry) => entry.status === "passed") ? "passed" : "failed";
   const generatedArtifact = writeCurrentCapabilityReport(executionScope, state, executions);
   return { status, executions, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
+}
+
+export function verifyCurrentWeaponParityExecution(selection, evidence) {
+  if (selection.currentWeaponParity.required !== true) return evidence;
+  for (const [index, id] of selection.currentWeaponParity.scenarios.entries()) {
+    const weapon = selection.currentWeaponParity.weapons[index];
+    const execution = evidence.executions.find((entry) => entry.id === id);
+    const expectedCommand = selection.evidenceCommands?.find((entry) => entry.id === id)?.command;
+    const browser = execution?.receipts?.find((receipt) => receipt.kind === "node" && receipt.status === "passed");
+    if (execution?.status !== "passed" || browser === undefined || execution.build === undefined) {
+      throw new Error(`required current ${weapon} live-to-detached parity evidence is missing or failed`);
+    }
+    if (expectedCommand !== undefined && execution.command !== expectedCommand) {
+      throw new Error(`required current ${weapon} live-to-detached parity evidence has the wrong browser proof`);
+    }
+    validateServedBuildIdentity(execution.build, selection.source);
+    if (browser.source?.fingerprint !== selection.source.fingerprint
+      || browser.source?.revision !== selection.source.revision) {
+      throw new Error(`required current ${weapon} live-to-detached parity evidence has stale source identity`);
+    }
+    if (browser.build !== undefined) validateServedBuildIdentity(browser.build, selection.source);
+  }
+  return { ...evidence, currentWeaponParity: { status: "passed",
+    weapons: [...selection.currentWeaponParity.weapons], scenarios: [...selection.currentWeaponParity.scenarios] } };
+}
+
+function executeCurrentWeaponParity() {
+  const selected = evidenceForDiff(["src/gameplay/weapon-selection.ts"]);
+  const scenarios = [...selected.currentWeaponParity.scenarios];
+  const scope = { ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
+    buildTargets: ["test-standalone"] };
+  const selection = { ...selected, scenarios, evidenceCommands: scenarios.map((id) =>
+    ({ id, ...evidenceCommandForScenario(scenarioById(id)) })), journeyCommands: [], authorityCommands: [], scope };
+  const existingPath = resolve(root, "artifacts", "tearbench", "generated", "current-capability.json");
+  if (existsSync(existingPath)) {
+    try {
+      const existing = JSON.parse(readFileSync(existingPath, "utf8"));
+      if (existing.format === "tearbench-current-capability" && existing.status === "passed"
+        && existing.source?.revision === selection.source.revision
+        && existing.source?.fingerprint === selection.source.fingerprint) {
+        return { ...selection, evidenceExecution: { ...verifyCurrentWeaponParityExecution(selection, existing),
+          reusedExactSourceEvidence: true } };
+      }
+    } catch {
+      // Missing, incomplete, stale, or mismatched evidence is replaced by fresh real browser proof.
+    }
+  }
+  return { ...selection, evidenceExecution: verifyCurrentWeaponParityExecution(selection,
+    executeSelectedEvidence(scenarios, [], ["test-standalone"], [], scope)) };
 }
 
 async function writeSelection(selection) {
@@ -960,11 +1047,16 @@ try {
     await recordEvidenceReceipt();
   } else if (command === "evidence" && process.argv[3] === "partial-manifest") {
     await composePartialEvidenceManifest();
+  } else if (command === "parity" && process.argv[3] === "current-weapons") {
+    const result = executeCurrentWeaponParity();
+    if (result.evidenceExecution.status !== "passed") process.exitCode = 1;
+    await writeSelection(result);
   } else if (command === "select") {
     const selection = evidenceForDiff(await changedFiles());
     const result = process.argv.includes("--execute-evidence")
-      ? { ...selection, evidenceExecution: executeSelectedEvidence(selection.scenarios,
-        selection.journeyCommands, selection.buildTargets, selection.authorityCommands, selection.scope) } : selection;
+      ? { ...selection, evidenceExecution: verifyCurrentWeaponParityExecution(selection,
+        executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
+          selection.buildTargets, selection.authorityCommands, selection.scope)) } : selection;
     if (result.evidenceExecution?.status === "failed") process.exitCode = 1;
     await writeSelection(result);
   } else if (command === "ci") {
@@ -986,8 +1078,9 @@ try {
     if (evidence.stdout) process.stdout.write(evidence.stdout);
     if (evidence.stderr) process.stderr.write(evidence.stderr);
     const evidenceExecution = docsOnly ? docsEvidence
-      : evidence.status === 0 ? executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
-        selection.buildTargets, selection.authorityCommands, selection.scope)
+      : evidence.status === 0 ? verifyCurrentWeaponParityExecution(selection,
+        executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
+          selection.buildTargets, selection.authorityCommands, selection.scope))
       : { status: "skipped", reason: "selected unit evidence failed", executions: [] };
     await writeFile(artifactPath, `${JSON.stringify({ ...selection, evidenceExecution }, null, 2)}\n`, "utf8");
     const graveyardReport = !docsOnly && evidence.status === 0 && evidenceExecution.status === "passed"

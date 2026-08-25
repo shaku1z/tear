@@ -5,6 +5,7 @@
 - **Baseline:** protected game `main` at `a8a476c6171d913581c01bb0e4432f53cf44f9e4`, audited 2026-08-25. Re-resolve current `origin/main` before every implementation slice; this historical SHA is not a future target.
 - **Scope:** the Tear game repository, its typed game runtime, TearBench, replay/headless execution, game-owned player surfaces, evidence routing, documentation, and existing required checks.
 - **Success condition:** TearBench executes and observes the current game truthfully, and every relevant future game change updates or invalidates its corresponding TearBench evidence in the same reviewed change.
+- **Post-review status:** The original checklist was marked complete prematurely. Corrective checkpoints `TB-R0` through `TB-R5` have passed their focused proofs; `TB-R6` remains the acceptance authority until independent review and the final clean-source repository gate pass.
 - **Non-goals:** a second simulator, engine migration, another repository, external deployment, a new test framework, speculative abstractions, bulk historical rewrites, or long-running tests during ordinary development.
 
 ## 1. Read this before touching code
@@ -27,6 +28,12 @@
 - Existing C21-C40 numbering remains authoritative for the larger product program. `TB-S0` through `TB-S12` below are alignment prerequisites and do not close or renumber those checkpoints.
 - Never rename TearBench. Keep hash-bound schemas, replay/save readers, intentional internal compatibility IDs, and genuine in-game narrative text intact.
 - Do not edit the game-reference export preflight merely to accommodate a dirty checkout; perform implementation in a clean isolated worktree and respect its existing publication boundary.
+
+### Cross-repository synchronization boundaries
+
+- The Tear Wiki consumes an authorized game-reference export from protected, merged game `main`. An unmerged feature-worktree reference is not publishable; wiki edits, publication, and protected integration each require their own explicit authorization.
+- The game consumes a reviewed, hash-verified Adaptive Soundtrack release pinned to music commit `7662fc95769d2ed022593c10f308ec10f054edfc`. As checked on 2026-08-25, the local music repository is at `a03c9b9310b3d98d6a46999064dda6d97ee7c831`, five commits newer. This is approved pinned-release provenance, not automatic latest-music-head synchronization.
+- Advancing the soundtrack pin requires a separately authorized music release and explicit game re-vendoring with its provenance and audio gates. Current `public/vendor/tear-music/` changes select soundtrack evidence; historical soundtrack-vendor paths remain intentional compatibility, not current product naming.
 
 ### Current product vocabulary
 
@@ -376,8 +383,86 @@ weapons, soundtrack and game-reference provenance, real browser journeys, and
 performance evidence. The final checkpoint commit must repeat that exact gate
 from its own clean source. Protected integration, deployment, publication, and
 C40 release certification remain unperformed and require separate authorization.
+The original checked items above describe the first implementation pass; the
+post-review checkpoints below supersede any completion claim contradicted by
+their unchecked work.
 
-## 18. Agent handoff template
+## 18. Post-review corrective checkpoints and anti-drift checklist
+
+The original alignment is not complete while any item below is unchecked. Keep
+all changes inside the existing game worktree, reuse production definitions,
+and preserve separately governed music, wiki, merge, publication, and C40
+release boundaries.
+
+### TB-R0 - Reopen the truthful baseline
+
+- [x] Create one explicit persistent completion goal with independently verifiable corrective checkpoints.
+- [x] Confirm the current owner-authored feature head, protected baseline, clean feature worktree, and pre-existing user-owned changes in other worktrees.
+- [x] Record that the original 118 checked items do not override the post-review defects or complete the broader C21-C40 program.
+- [x] Keep this checklist and both authoritative handoff headers synchronized with actual corrective progress.
+
+**Exit:** The next owner can identify the precise remaining defect, allowed write scope, current source identity, and non-goals without mistaking the first pass for acceptance.
+
+### TB-R1 - Preserve runtime scenario authority and source-derived coverage
+
+- [x] Preserve typed scenario subject and supported backend authority through the actual runtime contract without breaking existing versioned replay/save readers.
+- [x] Prove canonical scenario materialization cannot drop, mismatch, or silently widen its declared subject and supported backend.
+- [x] Derive upgrade, boss, stage, relevant event, and player-surface synchronization from existing production owners; avoid a parallel handwritten game catalog.
+- [x] Add focused negative fixtures proving newly introduced production identities fail until their TearBench mapping/evidence exists.
+
+**Exit:** Every covered production content family is source-owned, and downstream execution can verify the same authority validated by scenario authoring.
+
+### TB-R2 - Make observations, invariants, and headless events truthful
+
+- [x] Count only wave-owned living enemies in the wave-completion diagnostic.
+- [x] Add positive and negative wave-ownership proofs that distinguish unrelated living entities from actual wave participants.
+- [x] Deliver ordered source-owned causal gameplay facts from ordinary headless execution when its scenario claims causal evidence; explicitly refuse unsupported delivery.
+- [x] Preserve live-session native event delivery, provenance, deterministic ordering, and existing replay/headless consumers.
+
+**Exit:** Wave invariants operate on real ownership, and live/headless causal claims are backed by the event stream actually delivered to the caller.
+
+### TB-R3 - Require current five-weapon live-versus-detached parity
+
+- [x] Produce one short, meaningful, deterministic live-versus-detached mechanic proof for each current production weapon.
+- [x] Bind parity evidence to the actual scenario subject, supported backend, current source/build identity, and exercised gameplay transition.
+- [x] Make the relevant focused/CI parity gate fail closed when required current evidence is missing, stale, ignored, or mismatched.
+- [x] Keep unsupported Source void descent/scroll explicitly live-only; do not misrepresent unit fixtures or legacy traces as current parity.
+- [x] Keep routine proofs bounded; do not require a long historical 13-scenario matrix for every unrelated change.
+
+**Exit:** Sword, Hammer, Greatsword, Chainblade, and Riftlock each have an actual current cross-backend proof that the relevant clean-checkout gate cannot silently skip.
+
+### TB-R4 - Close permanent synchronization escape paths
+
+- [x] Route every unmatched gameplay/runtime change conservatively even when the same diff also contains a recognized route.
+- [x] Add a regression proving a mixed recognized/unrecognized diff cannot silently omit the unknown change.
+- [x] Preserve documentation-only checks without forcing gameplay builds for a genuinely documentation-only diff.
+- [x] Make nightly and weekly evidence selection include the complete intended protected change range rather than only `HEAD^..HEAD`.
+- [x] Prove stale or missing production-content, scenario, source identity, and required parity coverage fails the relevant focused gate.
+
+**Exit:** Relevant current-game changes fail their existing protected validation path until TearBench mappings, behavior, and source-bound evidence are updated together.
+
+### TB-R5 - Reconcile handoffs, terminology, and cross-repository truth
+
+- [x] Remove stale assertions that the committed feature slice is uncommitted or that the first-pass checklist alone establishes completion.
+- [x] Record corrective checkpoint progress, intentionally unsupported mechanics, partial player surfaces, and unresolved C21-C40 milestones accurately.
+- [x] Describe game-to-wiki synchronization as protected and merge-dependent; do not edit the wiki or publish an unmerged game reference.
+- [x] Describe soundtrack provenance as an approved pinned release, not automatic latest-music-head synchronization; preserve intentional historical compatibility identities.
+- [x] Keep terminology, documentation, requirement, and seven-plan governance checks passing without rewriting immutable history.
+
+**Exit:** Current-facing documents state what is implemented, what is proven, which repositories actually changed, and which external actions remain unauthorized.
+
+### TB-R6 - Final evidence and acceptance
+
+- [x] Complete every `TB-R0` through `TB-R5` checkbox with its corresponding focused proof.
+- [x] Run relevant scenario/content contracts, selector negative tests, wave/event tests, current five-weapon parity, terminology/documentation checks, and source-identity validation.
+- [ ] Run the final canonical `pnpm check` from the final intended clean owner-authored feature commit before asserting repository-wide readiness.
+- [x] Perform an independent adversarial review of the exact final diff and resolve every acceptance-blocking issue.
+- [x] Preserve the existing canonical checkout, dirty auxiliary worktrees, unrelated user files, music repository, wiki repository, and locked legacy oracle.
+- [x] Report protected PR/merge, publication, deployment, music re-vendoring, wiki update, and C40 release certification as not performed unless separately authorized.
+
+**Exit:** No corrective item remains unchecked, every required proof is current and honest, and the persistent goal closes only after actual acceptance.
+
+## 19. Agent handoff template
 
 Keep each handoff brief, concrete, and reproducible:
 

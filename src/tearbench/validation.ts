@@ -252,6 +252,34 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
   }
   if (!boundedArray(value.assertions) || value.assertions.some((entry) => typeof entry !== "string" || !INVARIANT_REGISTRY.has(entry))) issue(issues, "assertions", "contains an unregistered invariant");
   if (!boundedArray(value.tags) || value.tags.some((entry) => !stringValue(entry))) issue(issues, "tags", "must be a bounded identifier array");
+  if (value.backends !== undefined) {
+    if (!boundedArray(value.backends) || value.backends.length === 0
+      || value.backends.some((backend) => backend !== "live" && backend !== "headless")
+      || new Set(value.backends).size !== value.backends.length) {
+      issue(issues, "backends", "must contain unique supported live/headless backends");
+    }
+  }
+  if (value.subject !== undefined) {
+    const subject = value.subject;
+    if (!isRecord(subject) || !["gameplay", "weapon", "boss"].includes(String(subject.kind))
+      || !stringValue(subject.id)) {
+      issue(issues, "subject", "must declare a recognized current scenario subject");
+    } else if (isRecord(start) && start.boss !== undefined
+      && (subject.kind !== "boss" || subject.id !== start.boss)) {
+      issue(issues, "subject", "a current boss start requires its matching authoritative boss subject");
+    } else if (subject.kind === "weapon") {
+      if (!WEAPON_REGISTRY.has(subject.id) || !isRecord(start) || start.weapon !== subject.id) {
+        issue(issues, "subject", "weapon must be current and match the scenario start");
+      }
+    } else if (subject.kind === "boss") {
+      if (!BOSS_REGISTRY.has(subject.id) || !isRecord(start) || start.boss !== subject.id) {
+        issue(issues, "subject", "boss must be current and match the scenario start");
+      }
+      if (Array.isArray(value.backends) && value.backends.includes("headless")) {
+        issue(issues, "backends", "current boss scenarios require the supported live backend");
+      }
+    }
+  }
   return issues.length === 0 ? value as unknown as TearScenarioV1 : undefined;
 }
 

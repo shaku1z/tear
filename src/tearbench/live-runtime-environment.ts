@@ -8,7 +8,12 @@ import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshot
   TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import { DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
-import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalObservationStage } from "./observation-identity";
+import {
+  canonicalObservationActions,
+  canonicalObservationEnemyKind,
+  canonicalObservationStage,
+  createSourceWaveOwnershipTracker,
+} from "./observation-identity";
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
@@ -40,6 +45,7 @@ export function projectLiveTearObservation(
   tick: number,
   accessClass: Exclude<TearRuntimeAccessClass, "C">,
   lastProgressTick?: number,
+  waveActorIds?: ReadonlySet<string>,
 ): TearObservationV1 {
   const run = context.state.run();
   const player = context.state.player();
@@ -100,7 +106,10 @@ export function projectLiveTearObservation(
       diagnostics: Object.freeze({
         worldBounds: Object.freeze({ minX: 0, maxX: context.width, minY: 0, maxY: context.height }),
         waveComplete: lifecycle.phase === "wave-cleared" || lifecycle.phase === "reward-pending",
-        livingWaveEnemies: livingEnemies.length,
+        ...(waveActorIds === undefined
+          ? { waveOwnership: "unavailable" as const }
+          : { waveOwnership: "source-events" as const,
+            livingWaveEnemies: livingEnemies.filter((enemy) => waveActorIds.has(context.actorId(enemy))).length }),
         ...(boss === undefined ? {} : {
           boss: Object.freeze({
             id: boss.bossId ?? boss.kind,
@@ -172,9 +181,11 @@ export function createLiveTearRuntimeEnvironment(
   let startingRun = false;
   const eventLog: TearCausalEventV1[] = [];
   const nativeEventLog: TearGameplayEvent[] = [];
+  const waveOwnership = createSourceWaveOwnershipTracker();
   context.subscribeEngineEvent((event) => {
     if (scenario === null) return;
     if (startingRun && event.kind === "run" && event.transition === "abandoned") return;
+    waveOwnership.consume(event);
     nativeEventLog.push(event);
     eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`));
   });
@@ -194,7 +205,8 @@ export function createLiveTearRuntimeEnvironment(
       lastProgressSignature = signature;
       lastProgressTick = tick;
     }
-    return projectLiveTearObservation(context, tick, accessClass, lastProgressTick);
+    return projectLiveTearObservation(context, tick, accessClass, lastProgressTick,
+      run === null ? undefined : waveOwnership.actors(run.wave));
   };
 
   const observe = (): TearObservationV1 => {
@@ -207,6 +219,7 @@ export function createLiveTearRuntimeEnvironment(
     resets, fixedTicks, acceptedActions, emittedEvents: eventLog.length, screenshots: screenshotCount,
   });
   const snapshots = createLiveRuntimeSnapshotController(context, accessClass, (snapshot, result) => {
+    waveOwnership.invalidate();
     lastCallerEnvelopeId = 0;
     context.resetSemanticInput();
     context.drainConsumedActions();
@@ -224,6 +237,9 @@ export function createLiveTearRuntimeEnvironment(
       if (!validation.ok || validation.value.kind !== "scenario") {
         throw new TypeError(`invalid Tear scenario: ${validation.ok ? "wrong contract kind"
           : validation.issues.map((issue) => `${issue.path} ${issue.message}`).join("; ")}`);
+      }
+      if (nextScenario.backends !== undefined && !nextScenario.backends.includes("live")) {
+        throw new RangeError(`scenario ${nextScenario.id} does not support live execution`);
       }
       if (nextScenario.start.mode === "sandbox") throw new RangeError("sandbox is not a live run mode");
       if (nextScenario.stateClass !== "recorded-canonical") {
@@ -257,6 +273,7 @@ export function createLiveTearRuntimeEnvironment(
       deliveredEventCount = 0;
       lastProgressTick = 0;
       lastProgressSignature = "";
+      waveOwnership.invalidate();
       startingRun = true;
       try { context.startRun(nextScenario.start.mode, nextScenario.start.difficulty); }
       finally { startingRun = false; }
