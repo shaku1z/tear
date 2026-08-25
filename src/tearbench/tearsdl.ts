@@ -95,7 +95,11 @@ export function parseTearSdl(source: string): TearSdlDocumentV1 {
   if (typeof parsed.id !== "string" || typeof parsed.seed !== "string" || !isRecord(parsed.start)) {
     throw new TypeError("TearSDL requires id, seed, and start");
   }
+  if (parsed.extends !== undefined && typeof parsed.extends !== "string") {
+    throw new TypeError("TearSDL extends must be a string");
+  }
   for (const field of ["mode", "difficulty", "weapon"] as const) {
+    if (parsed.start[field] === undefined && parsed.extends !== undefined) continue;
     if (typeof parsed.start[field] !== "string") throw new TypeError(`TearSDL start.${field} must be a string`);
   }
   for (const field of ["stage", "boss", "bossPhase"] as const) {

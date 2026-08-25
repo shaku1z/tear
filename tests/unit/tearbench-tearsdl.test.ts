@@ -71,6 +71,25 @@ describe("TearSDL and checkpoint forking", () => {
     expect(resolved.plausibility).toMatchObject({ plausible: false, provisional: true });
   });
 
+  it("inherits missing start fields without accepting malformed root or child fields", () => {
+    const child = parseTearSdl(JSON.stringify({
+      ...base,
+      id: "partial-child",
+      extends: base.id,
+      start: { wave: 7 },
+    }));
+    expect(resolveTearSdl(child, new Map([[base.id, base]])).scenario.start).toMatchObject({
+      mode: base.start.mode,
+      difficulty: base.start.difficulty,
+      weapon: base.start.weapon,
+      wave: 7,
+    });
+    expect(() => parseTearSdl(JSON.stringify({ ...base, start: { wave: 7 } }))).toThrow(/start\.mode must be a string/u);
+    expect(() => parseTearSdl(JSON.stringify({ ...base, extends: base.id, start: { mode: 4 } })))
+      .toThrow(/start\.mode must be a string/u);
+    expect(() => parseTearSdl(JSON.stringify({ ...base, extends: 4 }))).toThrow(/extends must be a string/u);
+  });
+
   it("rejects inheritance cycles and constructor-selecting input", () => {
     const cyclic = { ...base, extends: "base-combat" };
     expect(() => resolveTearSdl(cyclic, new Map([[base.id, cyclic]]))).toThrow(/cycle/u);
