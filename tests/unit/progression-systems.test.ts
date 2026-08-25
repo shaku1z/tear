@@ -54,6 +54,38 @@ describe("meta progression", () => {
     system.META.apply(context);
     expect(context.player.hazardDmgMult).toBeCloseTo(0.94 ** 2);
   });
+
+  it("supplies the world configuration when Head Start delegates a run upgrade", () => {
+    const values = new Map([["tear_meta", JSON.stringify({
+      lifetimeEarned: 10_000, lifetimeSpent: 0, buy: { headstart: 1 },
+    })]]);
+    const config = {
+      blade: { damageScale: 1, maxDamage: 100, aimRadius: 1, length: 1, maxReach: 1,
+        throw: { damage: 1, damageFromSpeed: 1 } },
+      player: { moveSpeed: 1, dmgTakenMult: 1 }, dash: { cooldown: 1 },
+    };
+    const system = createMetaProgression({
+      store: { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } },
+      config, cloud: { loggedIn: () => false, push: () => Promise.resolve() }, random: { next: () => 0 },
+      upgrades: [{ unique: false }],
+      applyUpgrade: (_upgrade, context) => {
+        const enriched = context as ProgressionApplyContext & { readonly config: typeof config };
+        enriched.config.blade.damageScale *= 2;
+      },
+    });
+    system.META.load();
+    const context = {
+      player: {
+        maxHp: 100, hp: 100, maxShield: 0, shield: 0, maxDashCharges: 1, dashCharges: 1,
+        shopRevives: 0, dashMomentumMult: 1, airborneDmgMult: 1, hazardDmgMult: 1, secondBreathDuration: 0,
+      },
+      blade: { throwCooldownMult: 1, recallWindow: 0 },
+      mods: { waveHeal: 0, reservePick: false, draftRerolls: 0, expandedDraft: false },
+    };
+
+    expect(() => { system.META.apply(context); }).not.toThrow();
+    expect(config.blade.damageScale).toBe(2);
+  });
 });
 
 describe("achievements", () => {

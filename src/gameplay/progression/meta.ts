@@ -187,7 +187,11 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
     { id: "recovery", name: "Conditioning", desc: "-6% dash cooldown per level.", baseCost: 375, maxLevel: 6, cat: "tempo", glyph: "↯",
       now: (level) => `−${String(Math.round((1 - 0.94 ** level) * 100))}% dash cd`, apply: (level) => { config.dash.cooldown *= 0.94 ** level; } },
     { id: "headstart", name: "Head Start", desc: "Begin each run with a random upgrade.", baseCost: 3000, maxLevel: 1, cat: "fortune", glyph: "✦",
-      now: () => "1 free upgrade", apply: (_level, context) => { const pool = dependencies.upgrades.filter((upgrade) => !upgrade.unique); const upgrade = pool[Math.floor(random.next() * pool.length)]; if (upgrade) dependencies.applyUpgrade(upgrade, context); } },
+      now: () => "1 free upgrade", apply: (_level, context) => {
+        const pool = dependencies.upgrades.filter((upgrade) => !upgrade.unique);
+        const upgrade = pool[Math.floor(random.next() * pool.length)];
+        if (upgrade) dependencies.applyUpgrade(upgrade, { ...context, config });
+      } },
     { id: "greed", name: "Coin Magnet", desc: "+8% score-derived coins per level.", baseCost: 650, maxLevel: 5, cat: "fortune", glyph: "◆",
       now: (level) => `+${String(8 * level)}% score coins`, apply: () => { return; } },
     { id: "reach", name: "Long Arm", desc: "+ blade reach & length per level.", baseCost: 425, maxLevel: 5, cat: "blade", glyph: "↔",
