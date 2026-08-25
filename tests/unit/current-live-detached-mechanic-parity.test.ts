@@ -6,7 +6,9 @@ import { replayProductionC27ATrace, type ProductionC27ATrace } from "../../src/t
 import { validateTearContract } from "../../src/tearbench";
 
 const SELECTED_SCENARIO_ID = "c27a.live-parity-trace";
-const defaultArtifact = resolve("artifacts/tearbench/c27a", `${SELECTED_SCENARIO_ID}.json`);
+const focusedArtifact = resolve("artifacts/tearbench/c27a-focused", `${SELECTED_SCENARIO_ID}.json`);
+const matrixArtifact = resolve("artifacts/tearbench/c27a", `${SELECTED_SCENARIO_ID}.json`);
+const defaultArtifact = existsSync(focusedArtifact) ? focusedArtifact : matrixArtifact;
 const requestedArtifact = process.env.TEAR_C27A_PARITY_ARTIFACT;
 const artifactPath = resolve(requestedArtifact ?? defaultArtifact);
 const parityRequired = requestedArtifact !== undefined || process.env.TEAR_C27A_PARITY_REQUIRED === "1";
