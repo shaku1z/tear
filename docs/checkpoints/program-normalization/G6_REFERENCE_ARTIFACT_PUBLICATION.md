@@ -1,8 +1,9 @@
 # G6 Reference Artifact Publication — Slice 7
 
-Status: game-side exact manifest transport is implemented on
-`codex/g6-reference-artifact-publication`; wiki consumption, snapshot
-promotion, dispatch, and deployment remain open and locked.
+Status: game-side exact manifest publication is complete, and the digest-pinned
+wiki sender is implemented on `codex/g6-reference-dispatch`; protected merge,
+cross-repository dispatch, snapshot promotion, and deployment remain separately
+gated. See `G6_REFERENCE_DISPATCH.md` for the sender candidate boundary.
 
 This checkpoint records only the retrievable artifact boundary for the modern
 typed game. It does not promote a manifest to the wiki, change `tear-wiki`, or
@@ -55,8 +56,8 @@ authorize a Cloudflare action.
 - The publisher contains no Wrangler, Cloudflare, wiki dispatch, snapshot
   promotion, or deployment operation. The artifact is evidence transport only.
 - No wiki consumer fetch, generated-file commit, release promotion, or
-  production deployment is claimed by this slice. G6 remains open until the
-  later consumer and exact-SHA promotion gates succeed.
+  production deployment is claimed by the publication slice. The separate
+  sender candidate is also non-executing until its protected PR is integrated.
 
 ## Evidence
 
