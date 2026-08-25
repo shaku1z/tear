@@ -208,7 +208,7 @@ describe("TearBench current-game catalog authority", () => {
     }
     const unknown = { ...entry, start: { ...entry.start, retiredStartField: true } } as unknown as typeof entry;
     expect(() => { materializeCanonicalScenario(unknown); }).toThrow(/unsupported start metadata/u);
-    const unknownSubject = { ...entry, subject: { kind: "gameplay", id: "invented-gameplay" } } as typeof entry;
+    const unknownSubject = { ...entry, subject: { kind: "gameplay", id: "invented-gameplay" } };
     expect(() => { materializeCanonicalScenario(unknownSubject); }).toThrow(/unknown gameplay scenario subject/u);
     const unsupported = scenarioCatalog.find((candidate) => candidate.subject.id === "parry");
     if (unsupported === undefined) throw new Error("current live-only parry scenario is unavailable");
