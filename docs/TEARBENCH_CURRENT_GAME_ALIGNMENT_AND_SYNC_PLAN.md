@@ -5,7 +5,7 @@
 - **Baseline:** protected game `main` at `a8a476c6171d913581c01bb0e4432f53cf44f9e4`, audited 2026-08-25. Re-resolve current `origin/main` before every implementation slice; this historical SHA is not a future target.
 - **Scope:** the Tear game repository, its typed game runtime, TearBench, replay/headless execution, game-owned player surfaces, evidence routing, documentation, and existing required checks.
 - **Success condition:** TearBench executes and observes the current game truthfully, and every relevant future game change updates or invalidates its corresponding TearBench evidence in the same reviewed change.
-- **Post-review status:** Corrective implementation for `TB-F0` through `TB-F6` is complete and awaiting the final clean-commit gate and repeated adversarial acceptance in `TB-F7`. The fixes make selector regressions mandatory, derive executable boss/stage coverage from production, execute every declared generic backend honestly, distinguish live-to-Ghost from ordinary-headless-to-Ghost evidence, retain native causal/wave facts, and scan the renamed Run Monitor owner. Protected integration, music re-vendoring, wiki publication, deployment, and C40 release certification remain separate unperformed actions.
+- **Post-review status:** `TB-F0` through `TB-F7` are accepted. The corrective implementation, permanent negative regressions, production-owned scenario/backend/event/wave proofs, exact-clean-commit canonical gate, and repeated independent adversarial review agree with this checklist. The fixes make selector regressions mandatory, derive executable boss/stage coverage from production, execute every declared generic backend honestly, distinguish live-to-Ghost from ordinary-headless-to-Ghost evidence, retain native causal/wave facts, and scan the renamed Run Monitor owner. This closes the current-game alignment correction only: protected integration, music re-vendoring, wiki publication, deployment, C25/C27/C30/C31/C33-C40 work, and C40 release certification remain separate unperformed actions.
 - **Non-goals:** a second simulator, engine migration, another repository, external deployment, a new test framework, speculative abstractions, bulk historical rewrites, or long-running tests during ordinary development.
 
 ## 1. Read this before touching code
@@ -549,12 +549,14 @@ post-review with no in-scope acceptance-blocking findings.
 
 ### TB-F7 - Repeat adversarial post-review until the fixed point is clean
 
-- [ ] Run every relevant permanent negative regression and focused production-owned scenario/backend/event/wave proof.
-- [ ] Run a fresh independent post-review against all original and corrective checklist claims, current code, final artifacts, mandatory CI, terminology owners, and protected cross-repository boundaries.
-- [ ] If that review finds an in-scope acceptance blocker, reopen its exact checkbox or add a narrowly scoped corrective checkbox, implement the fix, and repeat the same review before claiming completion.
-- [ ] Commit only clean owner-authored game changes and run `pnpm check` against the exact final intended clean commit, including mandatory selector and current-game parity evidence.
-- [ ] Recheck the clean final artifact/source identity, every checklist item, and final independent review; complete the persistent goal only when no in-scope acceptance blocker remains.
-- [ ] Explicitly report that protected merge, deployment, publication, music re-vendoring, wiki edits, and C40 certification were not performed unless separately authorized.
+- [x] Run every relevant permanent negative regression and focused production-owned scenario/backend/event/wave proof.
+- [x] Run a fresh independent post-review against all original and corrective checklist claims, current code, final artifacts, mandatory CI, terminology owners, and protected cross-repository boundaries.
+- [x] If that review finds an in-scope acceptance blocker, reopen its exact checkbox or add a narrowly scoped corrective checkbox, implement the fix, and repeat the same review before claiming completion.
+- [x] Commit only clean owner-authored game changes and run `pnpm check` against the exact final intended clean commit, including mandatory selector and current-game parity evidence.
+- [x] Recheck the clean final artifact/source identity, every checklist item, and final independent review; complete the persistent goal only when no in-scope acceptance blocker remains.
+- [x] Explicitly report that protected merge, deployment, publication, music re-vendoring, wiki edits, and C40 certification were not performed unless separately authorized.
+
+**Acceptance record (2026-08-25):** The canonical gate passed on clean owner-authored implementation commit `59af354cf134da9dcef1a7afa605fabb4647cc7e`, including mandatory selection, terminology, current generic gameplay, production-derived boss/stage, five-weapon live/headless-to-Ghost, native event/wave, build, browser, and performance evidence. The documentation-only acceptance commit must also pass the same canonical gate at its exact clean identity; any failure invalidates these checked boxes and reopens the owning item. Independent Luna High reviews found no remaining in-scope blocker after the last implementation corrections. Five direct live-to-ordinary-headless weapon traces, broader C21-C40 completion, protected integration, publication, deployment, and C40 certification are not claimed.
 
 **Exit:** The final implementation, mandatory evidence, documentation, protected boundaries, and repeated independent post-review agree. No optimistic checked box, manually run optional test, stale artifact, or partial product claim can close the goal.
 
