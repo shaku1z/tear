@@ -31,6 +31,21 @@ function scenarioById(id) {
 
 const weaponSource = await readFile(resolve(root, "src", "gameplay", "weapon-selection.ts"), "utf8");
 const weaponDefinitionSource = await readFile(resolve(root, "src", "gameplay", "weapons.ts"), "utf8");
+const stageSource = await readFile(resolve(root, "src", "gameplay", "stages.ts"), "utf8");
+const bossDefinitionSource = await readFile(resolve(root, "src", "gameplay", "run", "boss-definitions.ts"), "utf8");
+const tearbenchRegistrySource = await readFile(resolve(root, "src", "tearbench", "registries.ts"), "utf8");
+
+function currentGameplayScenarioSubjects(name) {
+  const match = tearbenchRegistrySource.match(new RegExp(
+    `export const ${name}\\s*=\\s*Object\\.freeze\\(\\[([\\s\\S]*?)\\]\\s*as const\\)`, "u",
+  ));
+  if (match === null) throw new TypeError(`could not read the current ${name} scenario capability authority`);
+  const ids = [...match[1].matchAll(/"([a-z][a-z0-9-]*)"/gu)].map((entry) => entry[1]);
+  if (ids.length === 0 || new Set(ids).size !== ids.length) {
+    throw new TypeError(`invalid current ${name} scenario capability authority`);
+  }
+  return ids;
+}
 
 function activeWeaponIds() {
   const match = weaponSource.match(/export const WEAPON_IDS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const\)/u);
@@ -55,6 +70,39 @@ function currentWeaponThrowIdentities() {
     if (!identities.has(weapon)) throw new TypeError(`production weapon ${weapon} has no source-owned throw identity`);
   }
   return identities;
+}
+
+function currentStageBossPairs() {
+  const stageIdsSource = stageSource.match(/export const STAGE_IDS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const\)/u);
+  if (stageIdsSource === null) throw new TypeError("could not read the production stage catalog for evidence coverage");
+  const stageIds = [...stageIdsSource[1].matchAll(/"([a-z][a-z0-9-]*)"/gu)].map((entry) => entry[1]);
+  const pairs = [...stageSource.matchAll(
+    /^\s{4}id:\s*"([a-z][a-z0-9-]*)",[\s\S]*?^\s{4}boss:\s*"([a-z][a-z0-9-]*)"/gmu,
+  )].map((entry) => Object.freeze({ stage: entry[1], boss: entry[2] }));
+  const bossIds = [...bossDefinitionSource.matchAll(/Object\.freeze\(\{\s*id:\s*"([a-z][a-z0-9-]*)"/gu)]
+    .map((entry) => entry[1]);
+  if (stageIds.length === 0 || pairs.length !== stageIds.length || bossIds.length !== pairs.length
+    || pairs.some((pair, index) => pair.stage !== stageIds[index])
+    || new Set(stageIds).size !== stageIds.length || new Set(bossIds).size !== bossIds.length
+    || pairs.some((pair) => !bossIds.includes(pair.boss))) {
+    throw new RangeError("production stage/boss ownership has missing, retired, duplicated, or mismatched definitions");
+  }
+  return Object.freeze(pairs);
+}
+
+function sharedBossProofIds(source) {
+  if (!source.includes("require(\"../src/tearbench/canonical-scenarios.json\")")
+    || !source.includes("entry.subject.kind === \"boss\"") || !source.includes(".startBoss(")
+    || !source.includes("for (const bossId of BOSSES)") || !source.includes(".bossStage(id)")
+    || !source.includes(".engineEventProjection()")) {
+    throw new TypeError("shared production boss proof has no inspectable source-derived encounter and biome evidence");
+  }
+  const ids = catalog.filter((entry) => entry.subject?.kind === "boss").map((entry) => entry.subject.id);
+  const production = currentStageBossPairs().map((pair) => pair.boss);
+  if (ids.length !== production.length || ids.some((id, index) => id !== production[index])) {
+    throw new RangeError("shared production boss proof does not exactly cover the current authored boss catalog");
+  }
+  return ids;
 }
 
 function safeRepoFile(path, pattern, label) {
@@ -96,6 +144,11 @@ function parseApprovedEvidenceCommand(command) {
 }
 
 function validateScenarioMetadata(scenario) {
+  const surgicalFields = ["stage", "wave", "bossPhase"].filter((field) =>
+    scenario.start !== null && typeof scenario.start === "object" && Object.hasOwn(scenario.start, field));
+  if (surgicalFields.length > 0) {
+    throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
+  }
   if (Object.hasOwn(scenario, "backends") && (!Array.isArray(scenario.backends) || scenario.backends.length === 0
     || scenario.backends.some((backend) => !["live", "headless"].includes(backend)))) {
     throw new TypeError(`scenario ${scenario.id} has invalid evidence backends`);
@@ -109,7 +162,15 @@ function validateScenarioMetadata(scenario) {
   if (scenario.start?.boss !== undefined && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
     throw new TypeError(`scenario ${scenario.id} boss start requires its matching authoritative boss subject`);
   }
-  if (subject.kind === "weapon") {
+  if (subject.kind === "gameplay") {
+    if (!currentGameplayScenarioSubjects("GAMEPLAY_SCENARIO_SUBJECT_IDS").includes(subject.id)) {
+      throw new RangeError(`scenario ${scenario.id} has an unknown current gameplay subject: ${subject.id}`);
+    }
+    if (scenario.backends?.includes("headless")
+      && !currentGameplayScenarioSubjects("HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS").includes(subject.id)) {
+      throw new RangeError(`scenario ${scenario.id} has no source-owned ordinary-headless subject transition`);
+    }
+  } else if (subject.kind === "weapon") {
     const peers = [scenario.weapon, scenario.source?.weapon, scenario.source?.id, scenario.start?.weapon,
       scenario.start?.subject?.weapon, scenario.start?.subject?.id].filter((value) => typeof value === "string");
     if (peers.some((value) => value !== subject.id)) {
@@ -132,7 +193,23 @@ function validateScenarioMetadata(scenario) {
   if (typeof command !== "string") return;
   const proof = parseApprovedEvidenceCommand(command).find((entry) => entry.kind === "node");
   if (proof === undefined) return;
-  const starts = [...readFileSync(proof.file, "utf8").matchAll(
+  const source = readFileSync(proof.file, "utf8");
+  if (subject.kind === "gameplay"
+    && relative(root, proof.file).replaceAll("\\", "/") === "tests/browser-current-gameplay-scenarios.js") {
+    if (!source.includes("require(\"../src/tearbench/canonical-scenarios.json\")")
+      || !source.includes("entry.subject.kind === \"gameplay\"")
+      || !source.includes("environment.reset(scenario)") || !source.includes(`case "${subject.id}":`)) {
+      throw new RangeError(`scenario ${scenario.id} shared browser evidence does not exercise its ${subject.id} subject`);
+    }
+    return;
+  }
+  if (subject.kind === "boss" && relative(root, proof.file).replaceAll("\\", "/") === "tests/browser-boss-parity.js") {
+    if (!sharedBossProofIds(source).includes(subject.id)) {
+      throw new RangeError(`scenario ${scenario.id} shared boss evidence does not execute ${subject.id}`);
+    }
+    return;
+  }
+  const starts = [...source.matchAll(
     /start:\s*Object\.freeze\(\{\s*mode:\s*"([^"]+)",\s*difficulty:\s*"([^"]+)",\s*weapon:\s*"([^"]+)"/gu,
   )];
   if (starts.length === 0) throw new TypeError(`scenario ${scenario.id} browser evidence has no inspectable start`);
@@ -186,12 +263,34 @@ function routeScenarioIds(route) {
   const ids = new Set(route.scenarios);
   for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
   for (const subject of route.scenarioSubjects ?? []) {
-    if (subject !== "active-weapons") throw new TypeError(`unknown TearBench route scenario subject: ${String(subject)}`);
-    for (const weapon of activeWeaponIds()) {
-      const matches = catalog.filter((scenario) => (Array.isArray(scenario.tags) && scenario.tags.includes(weapon))
-        || (scenario.subject?.kind === "weapon" && scenario.subject.id === weapon));
-      if (matches.length === 0) throw new RangeError(`no TearBench scenario covers active weapon: ${weapon}`);
-      for (const scenario of matches) { validateScenarioSubject(scenario); validateActiveWeaponSubject(scenario, weapon); ids.add(scenario.id); }
+    if (subject === "active-weapons") {
+      for (const weapon of activeWeaponIds()) {
+        const matches = catalog.filter((scenario) => (Array.isArray(scenario.tags) && scenario.tags.includes(weapon))
+          || (scenario.subject?.kind === "weapon" && scenario.subject.id === weapon));
+        if (matches.length === 0) throw new RangeError(`no TearBench scenario covers active weapon: ${weapon}`);
+        for (const scenario of matches) { validateScenarioSubject(scenario); validateActiveWeaponSubject(scenario, weapon); ids.add(scenario.id); }
+      }
+    } else if (subject === "current-stage-bosses") {
+      const pairs = currentStageBossPairs();
+      const encounters = catalog.filter((scenario) => scenario.subject?.kind === "boss");
+      for (const scenario of encounters) {
+        if (!pairs.some((pair) => pair.boss === scenario.subject.id)) {
+          throw new RangeError(`scenario ${scenario.id} references a retired or unknown production boss`);
+        }
+      }
+      for (const { stage, boss } of pairs) {
+        const matches = encounters.filter((scenario) => scenario.subject.id === boss);
+        if (matches.length !== 1) throw new RangeError(`production stage ${stage} requires exactly one ${boss} boss scenario`);
+        const scenario = matches[0];
+        if (!Array.isArray(scenario.tags) || !scenario.tags.includes(stage)) {
+          throw new RangeError(`production stage ${stage} is not mapped to its authored ${boss} boss scenario`);
+        }
+        validateScenarioSubject(scenario);
+        evidenceCommandForScenario(scenario);
+        ids.add(scenario.id);
+      }
+    } else {
+      throw new TypeError(`unknown TearBench route scenario subject: ${String(subject)}`);
     }
   }
   for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
@@ -250,6 +349,14 @@ async function changedFiles() {
 function currentWeaponParityPlan(routes, scenarioIds) {
   const required = routes.some((route) => (route.scenarioSubjects ?? []).includes("active-weapons"));
   if (!required) return Object.freeze({ required: false, weapons: Object.freeze([]), scenarios: Object.freeze([]) });
+  const headlessProof = safeRepoFile("tests/unit/current-headless-weapon-parity.test.ts",
+    /^tests\/unit\/current-headless-weapon-parity\.test\.ts$/u, "current production-headless weapon proof");
+  const headlessSource = readFileSync(headlessProof, "utf8");
+  if (!headlessSource.includes("it.each(WEAPON_IDS)") || !headlessSource.includes("createProductionHeadlessEnvironment")
+    || !headlessSource.includes("environment.step(actions)") || !headlessSource.includes("blade.thrown")
+    || !headlessSource.includes("projectile.spawned")) {
+    throw new TypeError("active weapons require source-derived ordinary-headless mechanic and native-event evidence");
+  }
   const weapons = activeWeaponIds();
   const scenarios = weapons.map((weapon) => {
     const matches = catalog.filter((scenario) => scenario.subject?.kind === "weapon" && scenario.subject.id === weapon);
@@ -289,6 +396,13 @@ function evidenceForDiff(files) {
   const collect = (field) => [...new Set(selected.flatMap((route) => route[field] ?? []))].sort();
   const scenarios = [...new Set(selected.flatMap((route) => routeScenarioIds(route)))].sort();
   const currentWeaponParity = currentWeaponParityPlan(selected, scenarios);
+  const authorityCommands = collect("authorityCommands");
+  if (currentWeaponParity.required) {
+    const command = "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts";
+    parseApprovedEvidenceCommand(command);
+    if (!authorityCommands.includes(command)) authorityCommands.push(command);
+    authorityCommands.sort();
+  }
   return {
     format: "tearbench-evidence-selection",
     schemaVersion: 1,
@@ -305,7 +419,7 @@ function evidenceForDiff(files) {
     interactionMatrices: collect("interactionMatrices"),
     buildTargets: collect("buildTargets"),
     journeyCommands: collect("journeyCommands"),
-    authorityCommands: collect("authorityCommands"),
+    authorityCommands,
     scope: Object.freeze({
       kind: "diff", changedFiles: Object.freeze([...normalized]),
       routes: Object.freeze(selected.map((route) => route.id).sort()),
@@ -367,12 +481,19 @@ function writeCurrentCapabilityReport(scope, state, executions) {
 }
 
 function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets = [], authorityCommands = [], scope = {}) {
-  const state = { testStandaloneBuilt: false, source: readSourceIdentity() }, executions = [];
+  const state = { testStandaloneBuilt: false, source: readSourceIdentity() }, executions = [], completedCommands = new Map();
   const executionScope = { scenarios: [...scenarios], journeyCommands: [...journeyCommands], buildTargets: [...buildTargets], ...scope };
-  const runOne = (id, command) => {
+  const runOne = (id, command, backend = "catalog-command") => {
+    const completed = completedCommands.get(command);
+    if (completed !== undefined) {
+      executions.push({ ...completed, id, backend, reusedExecutionId: completed.id });
+      return true;
+    }
     const execution = executeApprovedEvidence(command, state);
-    executions.push({ id, backend: "catalog-command", command, status: execution.status, receipts: execution.receipts,
-      source: state.source, ...(state.build === undefined ? {} : { build: state.build }) });
+    const result = { id, backend, command, status: execution.status, receipts: execution.receipts,
+      source: state.source, ...(state.build === undefined ? {} : { build: state.build }) };
+    executions.push(result);
+    if (execution.status === "passed") completedCommands.set(command, result);
     return execution.status === "passed";
   };
   if (buildTargets.includes("test-standalone") && !runOne("build-target:test-standalone", "pnpm build:test:standalone")) {
@@ -380,10 +501,7 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
   }
   for (const id of scenarios) {
     const evidence = evidenceCommandForScenario(scenarioById(id));
-    const execution = executeApprovedEvidence(evidence.command, state);
-    executions.push({ id, backend: evidence.backend, command: evidence.command, status: execution.status, receipts: execution.receipts,
-      source: state.source, ...(state.build === undefined ? {} : { build: state.build }) });
-    if (execution.status !== "passed") break;
+    if (!runOne(id, evidence.command, evidence.backend)) break;
   }
   if (executions.every((entry) => entry.status === "passed")) {
     for (const command of journeyCommands) if (!runOne(`journey:${command}`, command)) break;

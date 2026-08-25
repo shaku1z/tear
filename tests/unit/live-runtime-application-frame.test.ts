@@ -33,6 +33,8 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
   const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const audioDispatchReceipts: AudioDispatchReceipt[] = [];
   const gameplayListeners: ((event: TearGameplayEvent) => void)[] = [];
+  const enemies: { id: string; kind: "charger"; dead: boolean; isBoss: boolean; x: number; y: number;
+    vx: number; vy: number; hp: number; maxHp: number; contactDmg: number }[] = [];
   const run = {
     mode: "campaign", diff: "normal", weaponId: "sword", stage: 0,
     wave: 1, score: 0, spawnQueue: [], runSeed: 1,
@@ -52,11 +54,11 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
       run: () => run,
       player: () => player,
       blade: () => blade,
-      enemies: () => [],
+      enemies: () => enemies,
       projectiles: () => [],
     },
     platforms: () => [],
-    actorId: () => "enemy:1",
+    actorId: (enemy: { id?: string }) => enemy.id ?? "enemy:1",
     stage: () => ({ name: "The Grounds", index: 0 }),
     lifecycle: () => ({ phase: "wave-active" }),
     choiceIds: () => [],
@@ -118,7 +120,8 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     finaleOutwardCalls: () => finaleOutwardCalls,
     audioDispatchReceipts: () => audioDispatchReceipts,
   } as unknown as LiveTearRuntimeEnvironmentContext;
-  return { context, calls, finaleOutwardCalls, audioDispatchReceipts };
+  return { context, calls, finaleOutwardCalls, audioDispatchReceipts, run, enemies,
+    publish: (event: TearGameplayEvent) => { for (const listener of gameplayListeners) listener(event); } };
 }
 
 describe("Class-A live application-frame surface", () => {
@@ -152,6 +155,33 @@ describe("Class-A live application-frame surface", () => {
     ]);
     session.step();
     expect(session.result().events).toHaveLength(2);
+  });
+
+  it("counts only source-owned current-wave actors while unrelated living actors remain visible", () => {
+    const fixture = contextFixture({ nativeOpeningEvents: true });
+    const actor = (id: string, x: number) => ({ id, kind: "charger" as const, dead: false, isBoss: false,
+      x, y: 700, vx: 0, vy: 0, hp: 100, maxHp: 100, contactDmg: 10 });
+    const old = actor("enemy:old", 300), current = actor("enemy:current", 500);
+    fixture.enemies.push(old, current);
+    const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
+    environment.reset(SCENARIO);
+    fixture.publish({ kind: "spawn", tick: 0, actorId: old.id, actorKind: old.kind, x: old.x, y: old.y });
+    fixture.run.wave = 2;
+    fixture.publish({ kind: "wave", tick: 1, wave: 2, event: "start" });
+    fixture.publish({ kind: "spawn", tick: 1, actorId: current.id, actorKind: current.kind, x: current.x, y: current.y });
+
+    const observation = environment.observe();
+    expect(observation.entities.map((entry) => entry.id)).toEqual([old.id, current.id]);
+    expect(observation.diagnostics).toMatchObject({ waveOwnership: "source-events", livingWaveEnemies: 1 });
+    const claimedComplete = { ...observation, diagnostics: { ...observation.diagnostics, waveComplete: true } };
+    expect(runInvariantChecks(claimedComplete, ["wave.valid-completion"])).toHaveLength(1);
+    fixture.publish({ kind: "death", tick: 2, actorId: current.id, cause: "combat" });
+    current.dead = true;
+    const cleared = environment.observe();
+    expect(cleared.entities.map((entry) => entry.id)).toEqual([old.id]);
+    expect(cleared.diagnostics).toMatchObject({ waveOwnership: "source-events", livingWaveEnemies: 0 });
+    expect(runInvariantChecks({ ...cleared, diagnostics: { ...cleared.diagnostics, waveComplete: true } },
+      ["wave.valid-completion"])).toEqual([]);
   });
 
   it("excludes previous-run abandonment from a newly reset session while preserving its native opening facts", () => {

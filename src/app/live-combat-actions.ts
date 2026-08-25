@@ -150,17 +150,25 @@ export function createLiveCombatActions<
     startVoidDescent: f.startVoidDescent,
     spawnBossAdds(boss) {
       const adds: Enemy[] = [];
+      const owner = boss as typeof boss & { bossId?: string; presentationId?: string };
+      const bossId = owner.bossId ?? owner.presentationId ?? owner.kind;
+      if (bossId === undefined) throw new Error("boss support requires an authoritative parent boss identity");
       for (let offset = -1; offset <= 1; offset += 2) {
         const add = f.createCharger(d.clamp(boss.x + offset * 130, 60, context.width - 60), d.CONFIG.world.groundY - 22);
         add.behavior = "bull"; add.hp *= 2.2; add.maxHp = add.hp; add.hpDisplay = add.hp;
         add.speedMult *= 1.35; add.contactDmg *= 1.3; add.canClimb = true; add.climber = true; add.climbApt = 0.85; add.spawnT = 0.35;
+        f.recordBossSupportSpawn(add, bossId);
         enemies().push(add); adds.push(add);
       }
       return adds;
     },
     spawnBossClone(boss) {
+      const owner = boss as typeof boss & { bossId?: string; presentationId?: string };
+      const bossId = owner.bossId ?? owner.presentationId ?? owner.kind;
+      if (bossId === undefined) throw new Error("boss clone requires an authoritative parent boss identity");
       const clone = f.createReflection(d.clamp(boss.x - boss.facing * 220, 100, context.width - 100), d.CONFIG.world.groundY - 300);
-      clone.spawnT = 0.3; enemies().push(clone); f.addFloater(boss.x, boss.y - 70, "SPLIT", true, clone.color);
+      clone.spawnT = 0.3; f.recordBossSupportSpawn(clone, bossId);
+      enemies().push(clone); f.addFloater(boss.x, boss.y - 70, "SPLIT", true, clone.color);
     },
     removeBossClone: (clone) => { d.FX.ghost(clone.x, clone.y, clone.hw, clone.hh); },
     dramaticBeat() { f.addShake(d.CONFIG.juice.shakeBig); f.addFlash(d.CONFIG.juice.flashParry); },
@@ -186,7 +194,8 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     const runtime = context.combatRuntime();
     const source = shot.sourceEnemy ?? shot.owner;
     d.GAMEPLAY_EVENTS.emit({ kind: "projectile", event, projectileId: runtime.id(shot, "projectile"),
-      x: shot.x, y: shot.y, vx: shot.vx, vy: shot.vy, owner: shot.deflected ? "player" : "enemy",
+      x: shot.x, y: shot.y, vx: shot.vx, vy: shot.vy,
+      owner: shot.deflected || Reflect.get(shot, "playerOwned") === true ? "player" : "enemy",
       ...(source && typeof source === "object" ? { sourceEnemyId: runtime.id(source, "enemy") } : {}),
       ...(target ? { targetEnemyId: runtime.id(target, "enemy") } : {}),
       ...(shot.deflected ? { perfect: !!Reflect.get(shot, "perfect") } : {}),

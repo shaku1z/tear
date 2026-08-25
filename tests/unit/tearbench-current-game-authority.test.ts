@@ -12,7 +12,7 @@ import { getWeapon } from "../../src/gameplay/weapons";
 import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalObservationStage } from
   "../../src/tearbench/observation-identity";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
-import { CANONICAL_ENGINEERING_SCENARIOS } from "../../src/tearbench/canonical-scenarios";
+import { CANONICAL_ENGINEERING_SCENARIOS, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
 import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
 import { PRODUCTION_UPGRADE_BY_ID } from "../../src/tearbench/progression-synthesis-policy";
 import { validateTearContract } from "../../src/tearbench/validation";
@@ -54,18 +54,21 @@ function assertProductionOwnerCoverage(label: string, source: readonly string[],
   }
 }
 
+function assertCurrentScenarioMetadata(scenario: TearScenarioV1, entry: CurrentCatalogEntry): void {
+  if (scenario.subject?.kind !== entry.subject.kind || scenario.subject.id !== entry.subject.id) {
+    throw new RangeError(`current canonical scenario ${entry.id} lost its authoritative subject`);
+  }
+  if (!Array.isArray(scenario.backends) || scenario.backends.length !== entry.backends.length
+    || scenario.backends.some((backend, index) => backend !== entry.backends[index])) {
+    throw new RangeError(`current canonical scenario ${entry.id} lost its authoritative backends`);
+  }
+}
+
 function materializeCurrentScenario(entry: CurrentCatalogEntry): TearScenarioV1 {
-  return Object.freeze({
-    format: "tear-contract", kind: "scenario", schemaVersion: 1,
-    id: entry.id, version: 1, description: entry.description,
-    stateClass: "recorded-canonical", executionClass: "engineering",
-    seed: `current-catalog-${entry.id}`,
-    start: Object.freeze({ mode: entry.start.mode, difficulty: entry.start.difficulty,
-      weapon: entry.start.weapon, ...(entry.start.boss === undefined ? {} : { boss: entry.start.boss }) }) as TearScenarioV1["start"],
-    maxTicks: entry.maxTicks,
-    assertions: Object.freeze(["runtime.finite-state"] as const),
-    tags: Object.freeze([...entry.tags]),
-  });
+  const scenario = CANONICAL_ENGINEERING_SCENARIOS.find((candidate) => candidate.id === entry.id);
+  if (scenario === undefined) throw new RangeError(`missing source-owned canonical scenario: ${entry.id}`);
+  assertCurrentScenarioMetadata(scenario, entry);
+  return scenario;
 }
 
 describe("TearBench current-game catalog authority", () => {
@@ -115,6 +118,23 @@ describe("TearBench current-game catalog authority", () => {
       NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY.ids); }).toThrow(/missing future-event/u);
   });
 
+  it("maps every authored production stage to exactly one executable live boss scenario", () => {
+    const encounters = currentCatalog.filter((entry) => entry.subject.kind === "boss");
+    assertProductionOwnerCoverage("boss scenario", BOSS_IDS, encounters.map((entry) => entry.subject.id));
+    for (const stage of STAGES) {
+      const matching = encounters.filter((entry) => entry.subject.id === stage.boss && entry.tags.includes(stage.id));
+      expect(matching, `${stage.id} must own exactly one executable ${stage.boss} encounter`).toHaveLength(1);
+      expect(matching[0]?.start, stage.id).toMatchObject({ mode: "bossonly", boss: stage.boss });
+      expect(matching[0]?.backends, stage.id).toEqual(["live"]);
+    }
+
+    expect(() => { assertProductionOwnerCoverage("boss scenario", BOSS_IDS,
+      encounters.filter((entry) => entry.subject.id !== "warden").map((entry) => entry.subject.id)); })
+      .toThrow(/missing warden/u);
+    expect(encounters.filter((entry) => entry.subject.id === "warden" && entry.tags.includes("undercroft")))
+      .toHaveLength(0);
+  });
+
   it("validates every canonical entry against its current source-owned subject and backend", () => {
     expect(CANONICAL_ENGINEERING_SCENARIOS.map((scenario) => scenario.id))
       .toEqual(currentCatalog.map((entry) => entry.id));
@@ -122,6 +142,8 @@ describe("TearBench current-game catalog authority", () => {
       const materialized = CANONICAL_ENGINEERING_SCENARIOS.find((scenario) => scenario.id === entry.id);
       expect(materialized?.subject, entry.id).toEqual(entry.subject);
       expect(materialized?.backends, entry.id).toEqual(entry.backends);
+      expect(materializeCurrentScenario(entry).subject, entry.id).toEqual(entry.subject);
+      expect(materializeCurrentScenario(entry).backends, entry.id).toEqual(entry.backends);
       expect(validateTearContract(materializeCurrentScenario(entry)).ok, entry.id).toBe(true);
       expect(entry.tags, entry.id).toContain(entry.subject.id);
       expect(RUN_MODE_REGISTRY.has(entry.start.mode), entry.id).toBe(true);
@@ -154,12 +176,44 @@ describe("TearBench current-game catalog authority", () => {
     expect(validateTearContract({ ...sword, subject: { kind: "boss", id: "retired-boss" } }).ok).toBe(false);
     expect(validateTearContract({ ...sword, backends: [] }).ok).toBe(false);
     expect(validateTearContract({ ...sword, backends: ["headless", "retired-backend"] }).ok).toBe(false);
+    const movement = CANONICAL_ENGINEERING_SCENARIOS.find((scenario) => scenario.subject.id === "movement");
+    const parry = CANONICAL_ENGINEERING_SCENARIOS.find((scenario) => scenario.subject.id === "parry");
+    if (movement === undefined || parry === undefined) throw new Error("current generic gameplay authority is incomplete");
+    expect(validateTearContract({ ...movement, subject: { kind: "gameplay", id: "invented-gameplay" } }).ok).toBe(false);
+    expect(validateTearContract({ ...parry, backends: ["live", "headless"] }).ok).toBe(false);
+    const swordEntry = currentCatalog.find((entry) => entry.id === sword.id);
+    if (swordEntry === undefined) throw new Error("the source-owned Sword catalog entry is missing");
+    const { subject: droppedSubject, ...withoutSubject } = sword;
+    const { backends: droppedBackends, ...withoutBackends } = sword;
+    expect(droppedSubject.id).toBe("sword");
+    expect(droppedBackends).toContain("headless");
+    expect(() => { assertCurrentScenarioMetadata(withoutSubject, swordEntry); })
+      .toThrow(/lost its authoritative subject/u);
+    expect(() => { assertCurrentScenarioMetadata(withoutBackends, swordEntry); })
+      .toThrow(/lost its authoritative backends/u);
     expect(validateTearContract({ ...sourceBoss, subject: { kind: "gameplay", id: "boss-disguise" },
       backends: ["live", "headless"] }).ok).toBe(false);
 
     const environment = createProductionHeadlessEnvironment();
     expect(() => environment.reset({ ...sword, backends: ["live"] })).toThrow(/does not support headless/u);
     environment.dispose();
+  });
+
+  it("rejects exact start metadata instead of silently materializing a different natural scenario", () => {
+    const entry = scenarioCatalog.find((candidate) => candidate.id === "movement-jump");
+    if (entry === undefined) throw new Error("the current movement scenario is unavailable");
+    for (const [field, value] of [["stage", "grounds"], ["wave", 3], ["bossPhase", "2"]] as const) {
+      const surgical = { ...entry, start: { ...entry.start, [field]: value } } as typeof entry;
+      expect(() => { materializeCanonicalScenario(surgical); }, field).toThrow(/exact .* state; use State Forge/u);
+    }
+    const unknown = { ...entry, start: { ...entry.start, retiredStartField: true } } as unknown as typeof entry;
+    expect(() => { materializeCanonicalScenario(unknown); }).toThrow(/unsupported start metadata/u);
+    const unknownSubject = { ...entry, subject: { kind: "gameplay", id: "invented-gameplay" } } as typeof entry;
+    expect(() => { materializeCanonicalScenario(unknownSubject); }).toThrow(/unknown gameplay scenario subject/u);
+    const unsupported = scenarioCatalog.find((candidate) => candidate.subject.id === "parry");
+    if (unsupported === undefined) throw new Error("current live-only parry scenario is unavailable");
+    expect(() => { materializeCanonicalScenario({ ...unsupported, backends: ["live", "headless"] }); })
+      .toThrow(/no supported headless subject transition/u);
   });
 
   it("really resets and advances every declared current headless scenario", () => {
@@ -184,7 +238,7 @@ describe("TearBench current-game catalog authority", () => {
     const source = currentCatalog.find((entry) => entry.subject.kind === "boss" && entry.subject.id === "source");
     if (source === undefined) throw new Error("the current Source scenario is missing");
     const environment = createProductionHeadlessEnvironment();
-    expect(() => environment.reset(materializeCurrentScenario(source))).toThrow(/natural opening/u);
+    expect(() => environment.reset(materializeCurrentScenario(source))).toThrow(/does not support headless/u);
     environment.dispose();
   });
 

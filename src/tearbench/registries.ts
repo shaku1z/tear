@@ -36,6 +36,17 @@ export function createStableRegistry<const TIds extends readonly string[]>(
   });
 }
 
+/** Canonical scenario capabilities are owned here, not inferred from catalog prose. */
+export const GAMEPLAY_SCENARIO_SUBJECT_IDS = Object.freeze([
+  "boot", "movement", "dash", "blade", "parry", "wave", "draft",
+] as const);
+export const GAMEPLAY_SCENARIO_SUBJECT_REGISTRY = createStableRegistry(
+  "gameplay scenario subject", GAMEPLAY_SCENARIO_SUBJECT_IDS,
+);
+export const HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS = Object.freeze([
+  "boot", "movement", "dash",
+] as const);
+
 export const EVENT_IDS = Object.freeze([
   "run.started", "run.paused", "run.resumed", "run.completed", "run.defeated", "run.abandoned", "run.continued",
   "stage.entered", "stage.exited", "wave.started", "wave.spawn-completed", "wave.cleared",

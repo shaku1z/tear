@@ -5,7 +5,7 @@
 - **Baseline:** protected game `main` at `a8a476c6171d913581c01bb0e4432f53cf44f9e4`, audited 2026-08-25. Re-resolve current `origin/main` before every implementation slice; this historical SHA is not a future target.
 - **Scope:** the Tear game repository, its typed game runtime, TearBench, replay/headless execution, game-owned player surfaces, evidence routing, documentation, and existing required checks.
 - **Success condition:** TearBench executes and observes the current game truthfully, and every relevant future game change updates or invalidates its corresponding TearBench evidence in the same reviewed change.
-- **Post-review status:** Corrective checkpoints `TB-R0` through `TB-R6` are complete on the owner-authored game feature branch. Independent review, source-bound five-weapon live-versus-detached parity, and the full clean-source `pnpm check` have passed. Protected integration, music re-vendoring, wiki publication, deployment, and C40 release certification remain separate unperformed actions.
+- **Post-review status:** Corrective implementation for `TB-F0` through `TB-F6` is complete and awaiting the final clean-commit gate and repeated adversarial acceptance in `TB-F7`. The fixes make selector regressions mandatory, derive executable boss/stage coverage from production, execute every declared generic backend honestly, distinguish live-to-Ghost from ordinary-headless-to-Ghost evidence, retain native causal/wave facts, and scan the renamed Run Monitor owner. Protected integration, music re-vendoring, wiki publication, deployment, and C40 release certification remain separate unperformed actions.
 - **Non-goals:** a second simulator, engine migration, another repository, external deployment, a new test framework, speculative abstractions, bulk historical rewrites, or long-running tests during ordinary development.
 
 ## 1. Read this before touching code
@@ -421,15 +421,15 @@ release boundaries.
 
 **Exit:** Wave invariants operate on real ownership, and live/headless causal claims are backed by the event stream actually delivered to the caller.
 
-### TB-R3 - Require current five-weapon live-versus-detached parity
+### TB-R3 - Require current five-weapon live-to-Ghost and headless-to-Ghost parity
 
-- [x] Produce one short, meaningful, deterministic live-versus-detached mechanic proof for each current production weapon.
+- [x] Produce one short, meaningful, deterministic live-to-fresh-Ghost mechanic proof and one independent ordinary-headless-to-fresh-Ghost mechanic proof for each current production weapon.
 - [x] Bind parity evidence to the actual scenario subject, supported backend, current source/build identity, and exercised gameplay transition.
 - [x] Make the relevant focused/CI parity gate fail closed when required current evidence is missing, stale, ignored, or mismatched.
 - [x] Keep unsupported Source void descent/scroll explicitly live-only; do not misrepresent unit fixtures or legacy traces as current parity.
 - [x] Keep routine proofs bounded; do not require a long historical 13-scenario matrix for every unrelated change.
 
-**Exit:** Sword, Hammer, Greatsword, Chainblade, and Riftlock each have an actual current cross-backend proof that the relevant clean-checkout gate cannot silently skip.
+**Exit:** Sword, Hammer, Greatsword, Chainblade, and Riftlock each have current live-to-Ghost and independent ordinary-headless-to-Ghost proofs that the relevant clean-checkout gate cannot silently skip. Direct same-trace live-to-detached authoritative-state and native-event comparison is additionally demonstrated for Sword; five direct live-to-ordinary-headless comparisons are not claimed.
 
 ### TB-R4 - Close permanent synchronization escape paths
 
@@ -462,7 +462,103 @@ release boundaries.
 
 **Exit:** No corrective item remains unchecked, every required proof is current and honest, and the persistent goal closes only after actual acceptance.
 
-## 19. Agent handoff template
+## 19. Final post-review closure checkpoints and no-drift acceptance loop
+
+Earlier checked items are historical progress, not permission to assert acceptance.
+The second post-review disproved several broad claims after a previously passing
+clean-source gate. Keep this section authoritative until every defect below has a
+production-owned fix, a permanent mandatory regression, and a fresh independent
+post-review with no in-scope acceptance-blocking findings.
+
+### TB-F0 - Reopen truthful scope and acceptance
+
+- [x] Create one persistent completion goal that remains active until the final corrective review is clean.
+- [x] Reuse the existing clean owner-authored game feature branch and preserve canonical `main`, the user-owned untracked file, dirty auxiliary worktrees, music, wiki, and the locked oracle.
+- [x] Record the actual second-review defects here and reopen both authoritative handoff headers before implementation.
+- [x] Distinguish this alignment goal from separately authorized protected integration, soundtrack re-vendoring, wiki publication, deployment, and the broader unfinished C21-C40 product program.
+
+**Exit:** No agent can interpret the earlier all-checked document, a broad green test count, or generated Ghost evidence as final acceptance of the reopened defects.
+
+### TB-F1 - Make anti-drift and terminology regressions mandatory
+
+- [x] Add the existing focused selector regression suite to the actual canonical protected validation path; do not rely on manual invocation or accidental Vitest discovery.
+- [x] Prove the mandatory gate runs missing/stale evidence, wrong subject/backend, mixed mapped/unmapped changes, documentation-only, and complete-change-range negative cases.
+- [x] Include every actual current player-facing Run Monitor vocabulary owner in the terminology scan.
+- [x] Preserve intentional historical monitoring-panel compatibility through its existing narrowly governed owner/retirement contract; do not normalize immutable or compatibility-only identifiers.
+- [x] Add a small permanent regression that fails if the relevant vocabulary owner or required selector gate silently disappears.
+
+**Exit:** Breaking the selector or introducing unsupported current-facing copy fails the normal protected game gate rather than only an optional local command.
+
+### TB-F2 - Enforce source-derived executable stage and boss coverage
+
+- [x] Derive all current authored stage/boss pairs directly from existing production definitions; do not maintain a second handwritten game catalog.
+- [x] Provide an honest executable scenario or production-owned parameterized encounter proof for every current stage/boss pair, including Warden, Colossus, Aldric, Echo, and Source.
+- [x] Require newly added, renamed, or removed production stages and bosses to update their TearBench scenario/evidence mapping in the same change.
+- [x] Preserve Source void's explicitly live-only boundary and any other genuinely unsupported detached capability.
+- [x] Prove a missing production boss/stage mapping or wrong scenario subject fails the focused selector and canonical validation.
+- [x] Observe both Aldric's actual source-owned boss adds and Echo's actual source-owned reflection through the live transition and independent native event projection.
+- [x] Execute a shared affected browser/encounter proof once when multiple mapped cases use the same command; avoid repeated long full-boss runs.
+
+**Exit:** Source-owner equality alone is insufficient: each current authored encounter has an enforced real proof, and an unmapped future encounter fails closed.
+
+### TB-F3 - Make every claimed scenario/backend proof meaningful
+
+- [x] Preserve typed scenario subject and backend metadata in every real catalog materializer and authority test.
+- [x] Exercise every backend actually declared for a canonical scenario, or narrow its declaration to the implementation that exists.
+- [x] Replace catalog-wide scenario-ignoring fixture success as gameplay evidence with source-owned subject-specific transitions; retain fixtures only for isolated runner behavior.
+- [x] Make unsupported exact-stage, surgical-state, boss, or execution-class requests fail closed through the existing production boundaries.
+- [x] Add a negative regression for dropped scenario metadata and a scenario that resets but cannot exercise its claimed subject.
+- [x] Reject unknown generic gameplay subject identifiers through canonical materialization, contract validation, and mandatory selector evidence.
+- [x] Drive campaign movement through its actual unblocked source-owned input path, and prove wave completion from a real production lifecycle transition plus native `wave.cleared` event.
+- [x] Prove the ordinary-headless `blade-valid-cut` subject with real target damage or defeat, not merely a throw, or narrow its advertised backend.
+
+**Exit:** A scenario's declared subject, supported backend, and meaningful result refer to the same production execution rather than to a repeated fixture hash.
+
+### TB-F4 - Prove ordinary headless and Ghost replay weapon parity
+
+- [x] Preserve the five existing exact-source live-to-fresh-Ghost-replay browser mechanic proofs as real replay evidence.
+- [x] Add one bounded production-headless mechanic proof for each current weapon using source-owned composition and semantic input, not only a reset/movement smoke test.
+- [x] Compare the relevant authoritative state transition and available native causal events across the execution classes actually claimed.
+- [x] Refuse or accurately narrow unsupported mechanics instead of equating Ghost replay with the separate public headless adapter.
+- [x] Make the canonical source-derived weapon guard fail if any current weapon lacks its headless mechanic, Ghost proof, subject, or supported backend evidence.
+- [x] Distinguish five independent live-to-Ghost and headless-to-Ghost comparisons from the one direct live-to-detached Sword state/event comparison; do not claim five direct live-to-headless traces.
+
+**Exit:** Every current weapon has distinct, honest evidence for live gameplay, detached Ghost replay, and the ordinary headless adapter where those capabilities are declared.
+
+### TB-F5 - Preserve complete supported causal and wave evidence
+
+- [x] Assert actual `run.started` and `enemy.spawned` facts, native provenance, deterministic order, and no duplicate delivery from an ordinary headless run.
+- [x] Preserve supported headless transition events in its normal episode/result contract without breaking historical or generic consumers.
+- [x] Emit truthful source-owned spawn facts for supported boss adds/clones or explicitly classify the unsupported causal boundary.
+- [x] Compare detached causal events with live facts for at least one real representative gameplay mechanic; do not treat equal state hashes alone as event parity.
+- [x] Add a real live-runtime wave-ownership integration proof containing both current-wave and unrelated living actors.
+- [x] Keep ownership diagnostics explicitly scoped or fail closed when an execution class cannot observe them.
+
+**Exit:** Supported session evidence retains the real ordered gameplay facts it claims, and wave ownership is demonstrated through the integrated production observation path.
+
+### TB-F6 - Reconcile documentation, schedules, and repository boundaries
+
+- [x] Keep this checklist and both authoritative handoff headers synchronized with the actual corrective implementation state.
+- [x] Describe Ghost replay, ordinary headless, player-visible features, unsupported Source behavior, and synthetic progression fields at their exact demonstrated evidence levels.
+- [x] Keep relevant focused selector, documentation, terminology, requirements, architecture, and current-weapon checks passing.
+- [x] Preserve complete protected PR/push change ranges, documentation-only behavior, and bounded scheduled coverage without introducing a second watcher or speculative history service.
+- [x] State that the wiki follows protected merged game `main` and the soundtrack consumes an approved pinned release; do not claim newest-head cross-repository synchronization.
+- [x] Keep C25/C27/C30/C31/C33-C40 status and absent C40 certificate honest; alignment completion does not complete the broader product.
+
+**Exit:** Program instructions tell the next agent exactly what is implemented, proven, limited, protected, and deliberately not performed.
+
+### TB-F7 - Repeat adversarial post-review until the fixed point is clean
+
+- [ ] Run every relevant permanent negative regression and focused production-owned scenario/backend/event/wave proof.
+- [ ] Run a fresh independent post-review against all original and corrective checklist claims, current code, final artifacts, mandatory CI, terminology owners, and protected cross-repository boundaries.
+- [ ] If that review finds an in-scope acceptance blocker, reopen its exact checkbox or add a narrowly scoped corrective checkbox, implement the fix, and repeat the same review before claiming completion.
+- [ ] Commit only clean owner-authored game changes and run `pnpm check` against the exact final intended clean commit, including mandatory selector and current-game parity evidence.
+- [ ] Recheck the clean final artifact/source identity, every checklist item, and final independent review; complete the persistent goal only when no in-scope acceptance blocker remains.
+- [ ] Explicitly report that protected merge, deployment, publication, music re-vendoring, wiki edits, and C40 certification were not performed unless separately authorized.
+
+**Exit:** The final implementation, mandatory evidence, documentation, protected boundaries, and repeated independent post-review agree. No optimistic checked box, manually run optional test, stale artifact, or partial product claim can close the goal.
+
+## 20. Agent handoff template
 
 Keep each handoff brief, concrete, and reproducible:
 

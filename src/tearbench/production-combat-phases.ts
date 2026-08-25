@@ -114,6 +114,7 @@ export function createProductionCombatPhases(
   let weaponRuntime: ReturnType<typeof createLiveWeaponRuntime<LiveWeaponEnemy>> | null = null;
   let detachedRiftTriggerHeld = false;
   let detachedRiftlockInitialized = false;
+  const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
   const refuseSourceVoid = (): never => {
     throw new Error("production detached Source void descent/scroll is unsupported; use the live backend");
   };
@@ -121,6 +122,50 @@ export function createProductionCombatPhases(
     weaponRuntime?.dealArea(x, y, radius, damage, { playerOwned }) ?? 0;
   const nativeTracking = () => options.gameplayEvents !== undefined
     && tracksAchievements(world.state.run());
+  const emitWeaponFact = (event: "throw-launch" | "throw-resolved" | "catch", throwId?: number,
+    damage?: number): void => {
+    const activeBlade = blade() as { x: number; y: number; throwId: number };
+    const activePlayer = player() as { x: number; y: number };
+    const activeRun = world.state.run() as { weaponId: string };
+    options.gameplayEvents?.emit({ kind: "weapon", event, weaponId: activeRun.weaponId,
+      throwId: throwId ?? activeBlade.throwId,
+      x: event === "catch" ? activePlayer.x : activeBlade.x,
+      y: event === "catch" ? activePlayer.y : activeBlade.y,
+      ...(damage === undefined ? {} : { damage }) });
+  };
+  const emitBossSupportSpawn = (enemy: Record<string, unknown>, parent: {
+    bossId?: string; presentationId?: string; kind?: string;
+  }): void => {
+    if (options.gameplayEvents === undefined) return;
+    if (actorId === null) throw new Error("boss support spawn requires an installed production actor identity runtime");
+    const bossId = parent.bossId ?? parent.presentationId ?? parent.kind;
+    if (typeof bossId !== "string" || typeof enemy.kind !== "string") {
+      throw new Error("boss support spawn requires its authoritative actor kind and parent boss identity");
+    }
+    options.gameplayEvents.emit({ kind: "spawn", actorId: actorId(enemy), actorKind: enemy.kind,
+      x: Number(enemy.x), y: Number(enemy.y), variantName: typeof enemy.variantName === "string" ? enemy.variantName : "", bossId });
+  };
+  const emitProjectileFact = (event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired",
+    projectile: { x: number; y: number; vx: number; vy: number; deflected?: boolean; playerOwned?: boolean;
+      sourceEnemy?: unknown; owner?: unknown; perfect?: unknown }, target?: object): void => {
+    if (options.gameplayEvents === undefined) return;
+    if (combat === null) throw new Error("projectile fact requires an installed production combat runtime");
+    if (event === "spawned") {
+      if (seenProjectiles.has(projectile)) return;
+      seenProjectiles.add(projectile);
+    }
+    if (event === "expired") {
+      if (terminalProjectiles.has(projectile)) return;
+      terminalProjectiles.add(projectile);
+    }
+    const source = projectile.sourceEnemy ?? projectile.owner;
+    options.gameplayEvents.emit({ kind: "projectile", event, projectileId: combat.id(projectile, "projectile"),
+      x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy,
+      owner: projectile.playerOwned === true || projectile.deflected === true ? "player" : "enemy",
+      ...(source && typeof source === "object" ? { sourceEnemyId: combat.id(source, "enemy") } : {}),
+      ...(target === undefined ? {} : { targetEnemyId: combat.id(target, "enemy") }),
+      ...(projectile.deflected === true ? { perfect: !!projectile.perfect } : {}) });
+  };
   const entityHooks = {
     actors: () => world.state.enemies(), projectiles: () => world.state.projectiles(),
     player: () => world.state.player(),
@@ -263,7 +308,8 @@ export function createProductionCombatPhases(
     styleHit: () => { style.addStyle("hit"); },
     onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
     fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
-    fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
+    fireWeaponCatch: () => { outward.push("fireWeaponCatch"); emitWeaponFact("catch"); },
+    fireThrowLaunch: (throwId: number) => { outward.push("fireThrowLaunch"); emitWeaponFact("throw-launch", throwId); },
     logThrowLaunch: note("logThrowLaunch"),
     weaponWorldImpact: () => {
       const result = invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onWorldImpact", {
@@ -272,7 +318,15 @@ export function createProductionCombatPhases(
       });
       return result && typeof result === "object" ? result as Readonly<{ mechanic?: string }> : null;
     },
-    lobExplode, emitThrowResolve: note("emitThrowResolve"),
+    lobExplode: () => {
+      const activeBlade = blade() as { x: number; y: number };
+      lobExplode(activeBlade.x, activeBlade.y);
+    }, emitThrowResolve: () => {
+      outward.push("emitThrowResolve");
+      const activeBlade = blade() as { throwDmg: number };
+      emitWeaponFact("throw-resolved", undefined, activeBlade.throwDmg);
+      weaponRuntime.emitThrowResolve(null, activeBlade.throwDmg);
+    },
     nearestEnemy: () => {
       const position = blade() as { x: number; y: number };
       return weaponRuntime.nearestEnemy(position.x, position.y);
@@ -307,7 +361,8 @@ export function createProductionCombatPhases(
       return false;
     },
     spawnBossAdds: (boss: never) => {
-      const source = boss as { x: number; y: number; hw?: number; facing?: number };
+      const source = boss as { x: number; y: number; hw?: number; facing?: number;
+        bossId?: string; presentationId?: string; kind?: string };
       const adds: never[] = [];
       for (const offset of [-1, 1]) {
         const add = world.entities.createEnemy("charger", clamp(source.x + offset * 130, 60, config.view.w - 60), config.world.groundY - 22,
@@ -315,15 +370,18 @@ export function createProductionCombatPhases(
         add.behavior = "bull"; add.hp = Number(add.hp) * 2.2; add.maxHp = add.hp; add.hpDisplay = add.hp;
         add.speedMult = Number(add.speedMult) * 1.35; add.contactDmg = Number(add.contactDmg) * 1.3;
         add.canClimb = true; add.climber = true; add.climbApt = 0.85; add.spawnT = 0.35;
+        emitBossSupportSpawn(add, source);
         adds.push(add as never);
       }
       world.state.setEnemies([...world.state.enemies(), ...adds]); return adds;
     },
     spawnBossClone: (boss: never) => {
-      const source = boss as { x: number; y: number; facing?: number };
+      const source = boss as { x: number; y: number; facing?: number;
+        bossId?: string; presentationId?: string; kind?: string };
       const clone = world.entities.createEnemy("reflection", clamp(source.x - (source.facing ?? 1) * 220, 100, config.view.w - 100), config.world.groundY - 300,
         world.state.run() as never) as never as Record<string, unknown>;
-      clone.spawnT = 0.3; world.state.setEnemies([...world.state.enemies(), clone as never]); outward.push("bossClone");
+      clone.spawnT = 0.3; emitBossSupportSpawn(clone, source);
+      world.state.setEnemies([...world.state.enemies(), clone as never]); outward.push("bossClone");
     },
     removeBossClone: (clone: never) => { const value = clone as { x: number; y: number }; effects.ring(value.x, value.y, 12, config.colors.perfect); },
     dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
@@ -365,7 +423,11 @@ export function createProductionCombatPhases(
     },
     runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
     logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
-    emitThrowResolve: note("emitThrowResolve"),
+    emitThrowResolve: (enemy: LiveWeaponEnemy | null, damage: number) => {
+      outward.push("emitThrowResolve");
+      emitWeaponFact("throw-resolved", undefined, damage);
+      weaponRuntime.emitThrowResolve(enemy, damage);
+    },
     onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
     addFloater: note("addFloater"), effects: collisionEffects,
     sound: (cue: string) => { outward.push(`sound:${cue}`); }, flare: note("flare"),
@@ -388,8 +450,19 @@ export function createProductionCombatPhases(
     triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
     makeHitEvent: note("makeHitEvent"), makeSwingEvent: note("makeSwingEvent"), makeSlamEvent: note("makeSlamEvent"),
     makeReturnEvent: note("makeReturnEvent"), makePerfectParryEvent: note("makePerfectParryEvent"),
-    observeProjectile: note("projectile:spawned"), projectileDeflected: note("projectile:deflected"),
-    projectileHit: note("projectile:hit"), projectileExpired: note("projectile:expired"),
+    observeProjectile: (projectile: Parameters<typeof emitProjectileFact>[1]) => {
+      outward.push("projectile:spawned"); emitProjectileFact("spawned", projectile);
+    },
+    projectileDeflected: (projectile: Parameters<typeof emitProjectileFact>[1]) => {
+      outward.push("projectile:deflected"); emitProjectileFact("deflected", projectile);
+      emitProjectileFact("owner-changed", projectile);
+    },
+    projectileHit: (projectile: Parameters<typeof emitProjectileFact>[1], enemy: object) => {
+      outward.push("projectile:hit"); emitProjectileFact("hit", projectile, enemy);
+    },
+    projectileExpired: (projectile: Parameters<typeof emitProjectileFact>[1]) => {
+      outward.push("projectile:expired"); emitProjectileFact("expired", projectile);
+    },
     profileAdd: () => undefined, profileMax: () => undefined, dailyBump: () => undefined,
     achievementsEnabled: nativeTracking, achievement: note("achievement"), checkAchievements: () => undefined,
     tutorialMark: () => undefined,

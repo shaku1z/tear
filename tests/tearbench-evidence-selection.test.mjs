@@ -71,6 +71,8 @@ test("production weapon authority covers every actual current weapon mechanic", 
   assert.equal(selection.currentWeaponParity.required, true);
   assert.deepEqual(selection.currentWeaponParity.weapons, ["sword", "hammer", "greatsword", "chainblade", "riftlock"]);
   assert.equal(selection.currentWeaponParity.scenarios.length, selection.currentWeaponParity.weapons.length);
+  assert.ok(selection.authorityCommands.includes(
+    "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts"));
 });
 
 test("current weapon parity rejects a unit-only downgrade or unsupported detached backend", () => {
@@ -90,10 +92,32 @@ test("current weapon parity rejects a unit-only downgrade or unsupported detache
   assert.match(`${unsupported.stderr}\n${unsupported.stdout}`, /requires both live and headless backends/u);
 });
 
+test("canonical selection rejects exact start metadata instead of silently dropping it", () => {
+  for (const [field, value] of [["stage", "grounds"], ["wave", 4], ["bossPhase", "2"]]) {
+    const surgical = mutatedCatalog(`surgical-${field}`, (entries) => {
+      entries.find((entry) => entry.id === "movement-jump").start[field] = value;
+    });
+    const result = rejected(["src/gameplay/stages.ts"], { catalog: surgical });
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stderr}\n${result.stdout}`, /exact .* state; use State Forge/u);
+  }
+});
+
 test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {
   const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
   assert.match(scripts["test:browser:current-weapon-parity"], /tearbench parity current-weapons/u);
+  assert.equal(scripts["test:headless:current-weapon-parity"],
+    "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts");
+  assert.match(scripts["check:functional"], /pnpm test:headless:current-weapon-parity/u);
+  assert.equal(scripts["test:headless:current-gameplay-scenarios"],
+    "pnpm exec vitest run tests/unit/current-headless-gameplay-scenarios.test.ts");
+  assert.match(scripts["check:functional"], /pnpm test:headless:current-gameplay-scenarios/u);
+  assert.equal(scripts["test:browser:current-gameplay-scenarios"], "node tests/browser-current-gameplay-scenarios.js");
+  assert.match(scripts["check:functional"], /pnpm test:browser:current-gameplay-scenarios/u);
   assert.match(scripts["check:functional"], /pnpm test:browser:current-weapon-parity/u);
+  assert.equal(scripts["test:tearbench-selection"], "node --test tests/tearbench-evidence-selection.test.mjs");
+  assert.match(scripts["check:workspace"], /pnpm test:tearbench-selection/u);
+  assert.match(scripts["check:functional"], /pnpm check:workspace/u);
 });
 
 test("boss, stage, progression, event, and player owners receive current mapped evidence", () => {
@@ -113,6 +137,42 @@ test("boss, stage, progression, event, and player owners receive current mapped 
     const surface = select([file]);
     assert.ok(surface.routes.includes("current-player-surfaces"));
     assert.deepEqual(surface.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
+  }
+});
+
+test("production stages select their exact authored live boss encounters", () => {
+  const selection = select(["src/gameplay/stages.ts"]);
+  for (const id of ["warden-grounds-live-encounter", "colossus-undercroft-live-encounter",
+    "aldric-crimson-fields-live-encounter", "echo-voidspire-live-encounter", "source-void-low-hp-rescue-seek"]) {
+    assert.ok(selection.scenarios.includes(id), id);
+  }
+  const shared = selection.evidenceCommands.filter((entry) => entry.command ===
+    "pnpm build:test:standalone && node tests/browser-boss-parity.js");
+  assert.equal(shared.length, 4);
+});
+
+test("missing, duplicate, retired, or mismatched production stage/boss evidence fails closed", () => {
+  const mutations = [
+    ["missing-warden-encounter", (entries) => {
+      entries.splice(entries.findIndex((entry) => entry.id === "warden-grounds-live-encounter"), 1);
+    }, /stage grounds requires exactly one warden boss scenario/u],
+    ["duplicate-warden-encounter", (entries) => {
+      const original = entries.find((entry) => entry.id === "warden-grounds-live-encounter");
+      entries.push({ ...original, id: "warden-grounds-duplicate-live-encounter" });
+    }, /stage grounds requires exactly one warden boss scenario/u],
+    ["missing-grounds-stage", (entries) => {
+      const scenario = entries.find((entry) => entry.id === "warden-grounds-live-encounter");
+      scenario.tags = scenario.tags.filter((tag) => tag !== "grounds");
+    }, /stage grounds is not mapped to its authored warden boss scenario/u],
+    ["retired-boss-encounter", (entries) => {
+      entries.push({ ...entries.find((entry) => entry.id === "warden-grounds-live-encounter"),
+        id: "retired-boss-live-encounter", subject: { kind: "boss", id: "retired-boss" } });
+    }, /references a retired or unknown production boss/u],
+  ];
+  for (const [name, mutate, expected] of mutations) {
+    const result = rejected(["src/gameplay/stages.ts"], { catalog: mutatedCatalog(name, mutate) });
+    assert.notEqual(result.status, 0, name);
+    assert.match(`${result.stderr}\n${result.stdout}`, expected);
   }
 });
 
@@ -200,13 +260,22 @@ test("wrong subject, retired content, missing backend, and impossible boss start
       /malformed evidence subject/u],
     ["empty-subject", (entries) => { entries.find((entry) => entry.id === "boot-start-run").subject.id = ""; },
       /malformed evidence subject/u],
+    ["unknown-gameplay-subject", (entries) => {
+      entries.find((entry) => entry.id === "boot-start-run").subject.id = "invented-gameplay";
+    }, /unknown current gameplay subject/u],
+    ["unsupported-headless-gameplay-subject", (entries) => {
+      entries.find((entry) => entry.subject.id === "parry").backends.push("headless");
+    }, /no source-owned ordinary-headless subject transition/u],
     ["wrong-subject", (entries) => {
       entries.find((entry) => entry.id === "hammer-meteor-terrain-catch-seek").tags.push("sword");
     }, /wrong weapon subject: expected sword/u],
     ["retired-weapon", (entries) => {
       entries.find((entry) => entry.id === "sword-reversal-threadcut-catch-seek").tags.push("spear");
     }, /references retired weapon: spear/u],
-    ["missing-backend", (entries) => { entries.find((entry) => entry.id === "boot-start-run").testFiles = []; },
+    ["missing-backend", (entries) => {
+      const scenario = entries.find((entry) => entry.id === "boot-start-run");
+      scenario.testFiles = []; delete scenario.evidence;
+    },
       /boot-start-run has no executable evidence backend/u],
     ["wrong-boss", (entries) => {
       entries.find((entry) => entry.id === "source-void-low-hp-rescue-seek").start.boss = "warden";
@@ -257,6 +326,12 @@ test("selected player journeys are actually dispatched through safe evidence exe
   assert.equal(selection.evidenceExecution.status, "passed");
   assert.ok(selection.evidenceExecution.executions.some((entry) =>
     entry.id === "journey:node --check tests/browser-ghost-lab-home.js"));
+  const executions = selection.evidenceExecution.executions.filter((entry) =>
+    entry.command === "node --check tests/browser-ghost-lab-home.js");
+  assert.equal(executions.length, 3);
+  assert.equal(executions[0].reusedExecutionId, undefined);
+  assert.ok(executions.slice(1).every((entry) => entry.reusedExecutionId === executions[0].id));
+  assert.ok(executions.every((entry) => entry.receipts.some((receipt) => receipt.status === "passed")));
 });
 
 test("selection records timestamp, exact source identity, and explicit diff scope", () => {

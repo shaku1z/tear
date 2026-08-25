@@ -10,6 +10,7 @@ import {
   createProductionHeadlessEpisodePool,
   BoundedArtifactSampler,
   createOneFrameBoundaryLaunchMatrix,
+  TearHeadlessRunner,
   type ProductionHeadlessTerminalArtifact,
   forgeExitLaunchSnapshot,
   type TearScenarioV1,
@@ -78,17 +79,35 @@ describe("C30 production headless environment", () => {
     const execute = () => {
       const environment = createProductionHeadlessEnvironment();
       environment.reset(scenario);
-      const first = environment.step([]).events ?? [];
-      const second = environment.step([]).events ?? [];
+      const events = [] as NonNullable<ReturnType<typeof environment.step>["events"]>[number][];
+      for (let tick = 0; tick < 120 && !events.some((event) => event.type === "enemy.spawned"); tick += 1) {
+        events.push(...environment.step([]).events ?? []);
+      }
       environment.dispose();
-      return [...first, ...second];
+      return events;
     };
     const events = execute();
     expect(events.length).toBeGreaterThan(0);
+    expect(events.map((event) => event.type)).toEqual(expect.arrayContaining(["run.started", "enemy.spawned"]));
     expect(events.every((event) => event.source === "engine")).toBe(true);
     expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
     expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
     expect(execute()).toEqual(events);
+  });
+
+  it("retains source-owned transition facts on ordinary completed headless episodes", () => {
+    const runner = new TearHeadlessRunner(createProductionHeadlessEnvironment());
+    const episode = runner.run({ id: "current-headless-event-custody", scenario, maxTicks: 120 },
+      { decide: () => Object.freeze([Object.freeze([])]) });
+    runner.dispose();
+    const events = episode.events;
+    expect(events).toBeDefined();
+    if (events === undefined) throw new Error("production headless episodes must retain their native causal facts");
+    expect(events.map((event) => event.type)).toEqual(expect.arrayContaining(["run.started", "enemy.spawned"]));
+    expect(events.every((event) => event.source === "engine")).toBe(true);
+    expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
+    expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
+    expect(Object.isFrozen(events)).toBe(true);
   });
 
   it("runs a DOM-free episode through the same production replay composition", () => {

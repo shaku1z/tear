@@ -18,6 +18,9 @@ describe("live actor observation projection", () => {
     expect(projectLiveBladeMechanics(riftlock, "B")).toEqual({ chambers: 3, chamberCooldown: 0.75 });
     expect(projectLiveBladeMechanics(riftlock, "C")).toEqual({});
     expect(projectLiveBladeMechanics({ riftChambers: Number.NaN }, "A")).toEqual({});
+    expect(projectLiveBladeMechanics({ wheelSpin: 8, reversals: [{ target: {} }] }, "A"))
+      .toEqual({ wheelSpin: 8, reversalCount: 1 });
+    expect(projectLiveBladeMechanics({ wheelSpin: Number.NaN, reversals: "invalid" }, "B")).toEqual({});
   });
 
   it("projects finite avoidance geometry and timing only for A/B", () => {
@@ -35,6 +38,8 @@ describe("live actor observation projection", () => {
     });
     expect(projectLivePlayerMechanics({ hw: 16 }, "C")).toEqual({});
     expect(projectLiveActorMechanics({ contactDmg: 18 }, "C")).toEqual({});
+    expect(projectLiveActorMechanics({ stun: 0.85, boundT: 0.5 }, "B")).toEqual({ stun: 0.85, bound: 0.5 });
+    expect(projectLiveActorMechanics({ stun: -1, boundT: Number.NaN }, "A")).toEqual({});
   });
 
   it("projects projectile counterplay without leaking it to Class C", () => {

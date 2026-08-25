@@ -62,7 +62,7 @@ class FixtureRuntime implements TearScenarioRuntime {
 describe("TearBench engineering runner", () => {
   it("registers the canonical engineering scenarios", () => {
     const registry = createCanonicalScenarioRegistry();
-    expect(registry.list()).toHaveLength(13);
+    expect(registry.list()).toHaveLength(CANONICAL_ENGINEERING_SCENARIOS.length);
     expect(registry.get("projectile-parry-basic").tags).toContain("parry");
     expect(registry.get("source-void-low-hp-rescue-seek").tags).toEqual(expect.arrayContaining(["source", "void", "hazard", "rescue", "seek"]));
     expect(registry.get("chainblade-hook-sling-catch-seek").tags).toEqual(expect.arrayContaining(["chainblade", "hook", "sling", "catch", "seek"]));
@@ -90,7 +90,7 @@ describe("TearBench engineering runner", () => {
   });
 
   it("resets every headless-compatible canonical scenario through the source-owned backend", () => {
-    for (const scenario of CANONICAL_ENGINEERING_SCENARIOS.filter((entry) => entry.start.boss === undefined)) {
+    for (const scenario of CANONICAL_ENGINEERING_SCENARIOS.filter((entry) => entry.backends.includes("headless"))) {
       const environment = createProductionHeadlessEnvironment();
       environment.reset(scenario);
       expect(environment.policyObservation().run, scenario.id).toMatchObject({
@@ -100,12 +100,11 @@ describe("TearBench engineering runner", () => {
     }
   });
 
-  it("repeats every canonical scenario with an identical semantic result", () => {
-    for (const scenario of CANONICAL_ENGINEERING_SCENARIOS) {
-      const hashes = Array.from({ length: 2 }, () => new TearBenchRunner(new FixtureRuntime()).run(scenario).semanticHash);
-      expect(new Set(hashes), scenario.id).toHaveLength(1);
-      expect(new TearBenchRunner(new FixtureRuntime()).run(scenario).status).toBe("passed");
-    }
+  it("repeats the isolated runner fixture without presenting it as gameplay-mechanic evidence", () => {
+    const scenario = createCanonicalScenarioRegistry().get("movement-jump");
+    const hashes = Array.from({ length: 2 }, () => new TearBenchRunner(new FixtureRuntime()).run(scenario).semanticHash);
+    expect(new Set(hashes)).toHaveLength(1);
+    expect(new TearBenchRunner(new FixtureRuntime()).run(scenario).status).toBe("passed");
   });
 
   it("captures the first deterministic invariant failure", () => {

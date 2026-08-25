@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { CONFIG } from "../../src/config/game-config";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { BatonSegment } from "../../src/gameplay/combat/held-blade-collision-contracts";
 import { createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
@@ -107,6 +108,34 @@ describe("production TearBench combat parity", () => {
     const beforeClone = replay.world.state.enemies().length;
     phases.opening.spawnBossClone(boss);
     expect(replay.world.state.enemies()).toHaveLength(beforeClone + 1);
+  });
+
+  it("publishes distinct source-owned spawn facts for each real boss add and clone", () => {
+    const replay = createProductionReplayWorld({ seed: "parity-boss-support-events", enemies: [
+      { id: "warden", x: 800, y: CONFIG.world.groundY - 60 },
+    ] });
+    const events: TearGameplayEvent[] = [];
+    const gameplayEvents = new TearGameplayEventBus(() => 12);
+    gameplayEvents.subscribe((event) => { events.push(event); });
+    const core = createProductionCombatSimulation(replay, { gameplayEvents, snapshot: (tick) => ({ tick }) });
+    const boss = replay.world.state.enemies()[0];
+    if (boss === undefined) throw new Error("the source-owned Warden encounter is unavailable");
+    const adds = core.opening.spawnBossAdds(boss);
+    core.opening.spawnBossClone(boss);
+    const clone = replay.world.state.enemies().at(-1);
+    if (clone === undefined) throw new Error("the source-owned boss clone was not created");
+
+    expect(events).toHaveLength(3);
+    expect(events.map((event) => event.kind === "spawn" ? event.actorKind : event.kind))
+      .toEqual(["charger", "charger", "reflection"]);
+    const ids = events.map((event) => {
+      if (event.kind !== "spawn") throw new Error("boss support emitted an unexpected gameplay event");
+      expect(event.bossId).toBe("warden");
+      expect(event.tick).toBe(12);
+      return event.actorId;
+    });
+    expect(new Set(ids).size).toBe(3);
+    expect(ids).toEqual([...adds, clone].map((enemy) => core.combatEntityRuntime.id(enemy as object, "enemy")));
   });
 
   it("explicitly refuses Source void descent instead of silently claiming detached parity", () => {

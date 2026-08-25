@@ -80,6 +80,8 @@ export interface TearObservedActorV1 {
   readonly contactDamage?: number;
   readonly chargeMult?: number;
   readonly auraDmg?: number;
+  readonly stun?: number;
+  readonly bound?: number;
   readonly contactEnabled?: boolean;
   readonly radius?: number;
   readonly damage?: number;
@@ -137,7 +139,7 @@ export interface TearObservationV1 {
   readonly blade: Readonly<{
     handX: number; handY: number; tipX: number; tipY: number;
     vx: number; vy: number; tipSpeed: number; state: string;
-    chambers?: number; chamberCooldown?: number;
+    chambers?: number; chamberCooldown?: number; wheelSpin?: number; reversalCount?: number;
   }>;
   readonly entities: readonly TearObservedActorV1[];
   /** Structured world geometry available to Class A and Class B observers; never a Class C affordance. */

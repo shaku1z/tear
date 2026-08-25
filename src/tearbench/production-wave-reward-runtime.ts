@@ -253,6 +253,12 @@ export function createProductionWaveRewardRuntime(
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
     run().wave = 0;
     world.lifecycle.start(`run-${run().runSeed.toString(36)}`);
+    const session = world.lifecycle.snapshot();
+    if (session.sessionId === null) throw new Error("production wave runtime started without an authoritative session identity");
+    const active = run();
+    options.gameplayEvents?.emit({ kind: "run", transition: "started", runId: session.sessionId,
+      mode: active.mode, difficulty: active.diff, weaponId: active.weaponId,
+      wave: active.wave, score: active.score, runTimeSeconds: active.runTime });
     waves.startNextWave();
   };
   return Object.freeze({

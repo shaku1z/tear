@@ -99,6 +99,33 @@ test("terminology checker accepts only the existing exact compatibility path", (
   });
 });
 
+test("Run Monitor vocabulary owners are scanned with only their exact historical panel exception", () => {
+  const registry = baseRegistry();
+  assert.ok(registry.userFacingCopyScan.pathPatterns.includes("src/agents/panel-surface.ts"));
+  assert.ok(registry.userFacingCopyScan.pathPatterns.includes("src/app/live-player-watch-controller.ts"));
+
+  withFixture((root) => {
+    writeRegistry(root, registry);
+    writeFixture(root, "src/agents/panel-surface.ts",
+      'export const labels = "Watch Agent Watch Agent Watch Agent";\n');
+    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
+    const findings = result.findings.filter((finding) => finding.alias === "Watch Agent");
+    assert.equal(result.ok, true);
+    assert.equal(findings.length, 3);
+    assert.ok(findings.every((finding) => finding.classification === "mutable-compatibility"
+      && finding.allowlistId === "compat-run-monitor-panel-surface"));
+  });
+
+  withFixture((root) => {
+    writeRegistry(root, registry);
+    writeFixture(root, "src/app/live-player-watch-controller.ts", 'export const label = "Watch Agent";\n');
+    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
+    assert.equal(result.ok, false);
+    assert.ok(result.findings.some((finding) => finding.alias === "Watch Agent"
+      && finding.classification === "unallowlisted"));
+  });
+});
+
 test("terminology checker scans active evidence JSON without misclassifying preserved notes", () => {
   withFixture((root) => {
     const registry = baseRegistry();

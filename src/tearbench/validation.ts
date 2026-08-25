@@ -21,6 +21,8 @@ import {
   DIFFICULTY_REGISTRY,
   ENTITY_KIND_REGISTRY,
   EVENT_REGISTRY,
+  GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
+  HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS,
   INVARIANT_REGISTRY,
   RUN_MODE_REGISTRY,
   STAGE_REGISTRY,
@@ -166,7 +168,7 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
   else {
     for (const key of ["handX", "handY", "tipX", "tipY", "vx", "vy", "tipSpeed"]) if (!finite(blade[key])) issue(issues, `blade.${key}`, "must be finite");
     if (!stringValue(blade.state)) issue(issues, "blade.state", "must be a bounded string");
-    for (const key of ["chambers", "chamberCooldown"]) {
+    for (const key of ["chambers", "chamberCooldown", "wheelSpin", "reversalCount"]) {
       if (blade[key] !== undefined && !finite(blade[key])) issue(issues, `blade.${key}`, "must be finite when present");
     }
   }
@@ -179,7 +181,7 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
     if (entry.behaviorMode !== undefined && !stringValue(entry.behaviorMode)) {
       issue(issues, `entities[${String(index)}].behaviorMode`, "must be a bounded string");
     }
-    for (const key of ["halfWidth", "halfHeight", "contactReach", "contactDamage", "chargeMult", "auraDmg", "radius", "damage"]) {
+    for (const key of ["halfWidth", "halfHeight", "contactReach", "contactDamage", "chargeMult", "auraDmg", "stun", "bound", "radius", "damage"]) {
       if (entry[key] !== undefined && (!finite(entry[key]) || entry[key] < 0)) issue(issues, `entities[${String(index)}].${key}`, "must be finite and nonnegative when present");
     }
     if (entry.contactEnabled !== undefined && typeof entry.contactEnabled !== "boolean") issue(issues, `entities[${String(index)}].contactEnabled`, "must be boolean when present");
@@ -277,6 +279,13 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
       }
       if (Array.isArray(value.backends) && value.backends.includes("headless")) {
         issue(issues, "backends", "current boss scenarios require the supported live backend");
+      }
+    } else if (subject.kind === "gameplay") {
+      if (!GAMEPLAY_SCENARIO_SUBJECT_REGISTRY.has(subject.id)) {
+        issue(issues, "subject", "gameplay subject is not registered in the current scenario authority");
+      } else if (Array.isArray(value.backends) && value.backends.includes("headless")
+        && !HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS.some((supported) => supported === subject.id)) {
+        issue(issues, "backends", "gameplay subject has no supported ordinary-headless transition");
       }
     }
   }

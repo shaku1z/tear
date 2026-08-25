@@ -426,11 +426,13 @@
       "src/presentation/**/*.tsx",
       "src/app/**/*screen*.ts",
       "src/app/live-*-home.ts",
+      "src/app/live-player-watch-controller.ts",
       "src/app/live-interface-composition.ts",
       "src/app/live-screen-*.ts",
       "src/app/settings-controller.ts",
       "src/audio/signal/*.ts",
       "src/audio/music/*.ts",
+      "src/agents/panel-surface.ts",
       "src/agents/live-watch-agent-*.ts",
       "src/ghost/player-experiences.ts",
       "src/tearbench/browser/*.ts",
@@ -1459,6 +1461,25 @@
         "expiry": {
           "checkpoint": "G4-F-GAME-AGENT",
           "condition": "Remove old labels after Game Agent and Run Monitor UI boundaries are explicit."
+        }
+      },
+      {
+        "id": "compat-run-monitor-panel-surface",
+        "pathPattern": "src/agents/panel-surface.ts",
+        "termIds": [
+          "game-agent",
+          "run-monitor"
+        ],
+        "owner": "Game Agent/Run Monitor integration owner",
+        "reason": "The disposable panel preserves separately routed historical Watch Agent labels while the canonical Run Monitor panel owns current player-facing labels.",
+        "testEvidence": [
+          "tests/unit/watch-build-choice.test.ts",
+          "tests/browser-game-agent-run-monitor.js",
+          "tests/terminology-checkers.test.mjs"
+        ],
+        "expiry": {
+          "checkpoint": "G4-F-GAME-AGENT",
+          "condition": "Remove historical panel labels only after its Game Agent/Run Monitor compatibility route and production-isolation evidence are retired by their owners."
         }
       },
       {

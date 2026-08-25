@@ -7,7 +7,10 @@
     "backends": ["live", "headless"],
     "tags": ["boot", "journey"],
     "maxTicks": 240,
-    "testFiles": ["tests/unit/run-lifecycle.test.ts", "tests/unit/app-state-machine.test.ts"]
+    "testFiles": ["tests/unit/run-lifecycle.test.ts", "tests/unit/app-state-machine.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof resets each canonical gameplay scenario and requires its real source-owned subject transition.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "movement-jump",
@@ -17,7 +20,10 @@
     "backends": ["live", "headless"],
     "tags": ["movement", "jump"],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/player-locomotion.test.ts"]
+    "testFiles": ["tests/unit/player-locomotion.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof exercises this scenario's source-owned semantic jump and movement.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "dash-one-way-platform",
@@ -27,47 +33,130 @@
     "backends": ["live", "headless"],
     "tags": ["movement", "dash", "platform"],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/player-locomotion.test.ts"]
+    "testFiles": ["tests/unit/player-locomotion.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof exercises this scenario's real semantic dash and source-owned dash timer.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "blade-valid-cut",
     "description": "Generate a blade contact above the valid cut threshold.",
     "subject": { "kind": "gameplay", "id": "blade" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
+    "backends": ["live"],
     "tags": ["blade", "damage"],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/gameplay-definitions.test.ts", "tests/unit/blade-parry-runtime.test.ts"]
+    "testFiles": ["tests/unit/gameplay-definitions.test.ts", "tests/unit/blade-parry-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof resolves real blade damage through the source-owned live collision graph.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "projectile-parry-basic",
     "description": "Deflect a standard projectile without invalid player health.",
     "subject": { "kind": "gameplay", "id": "parry" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
+    "backends": ["live"],
     "tags": ["projectile", "parry"],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/blade-parry-runtime.test.ts"]
+    "testFiles": ["tests/unit/blade-parry-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof deflects one real source-owned hostile projectile; natural headless projectile injection is unavailable.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "wave-clear-to-draft",
     "description": "Clear a wave and enter the draft state.",
     "subject": { "kind": "gameplay", "id": "wave" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
+    "backends": ["live"],
     "tags": ["wave", "draft"],
     "maxTicks": 360,
-    "testFiles": ["tests/unit/live-wave-controller.test.ts", "tests/unit/run-wave-clear-planner.test.ts"]
+    "testFiles": ["tests/unit/live-wave-controller.test.ts", "tests/unit/run-wave-clear-planner.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof clears the scenario's current source-owned wave lifecycle and enters its real draft.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "draft-selection-to-gameplay",
     "description": "Select one legal draft choice and resume gameplay.",
     "subject": { "kind": "gameplay", "id": "draft" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
+    "backends": ["live"],
     "tags": ["draft", "journey"],
     "maxTicks": 240,
-    "testFiles": ["tests/unit/reward-selection.test.ts", "tests/unit/reward-transition-adapter.test.ts"]
+    "testFiles": ["tests/unit/reward-selection.test.ts", "tests/unit/reward-transition-adapter.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof consumes an actual source-owned draft choice and returns this scenario's run to playing.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
+    "id": "warden-grounds-live-encounter",
+    "description": "Launch the production Warden encounter in its authored Grounds biome and prove its live combat simulation advances.",
+    "subject": { "kind": "boss", "id": "warden" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "warden" },
+    "backends": ["live"],
+    "tags": ["warden", "grounds", "boss", "stage", "encounter"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
+      "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
+      "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
+    "id": "colossus-undercroft-live-encounter",
+    "description": "Launch the production Colossus encounter in its authored Undercroft biome and prove its live combat simulation advances.",
+    "subject": { "kind": "boss", "id": "colossus" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "colossus" },
+    "backends": ["live"],
+    "tags": ["colossus", "undercroft", "boss", "stage", "encounter"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
+      "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
+      "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
+    "id": "aldric-crimson-fields-live-encounter",
+    "description": "Launch the production Aldric encounter in its authored Crimson Fields biome and prove its live combat simulation advances.",
+    "subject": { "kind": "boss", "id": "aldric" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "aldric" },
+    "backends": ["live"],
+    "tags": ["aldric", "crimson-fields", "boss", "stage", "encounter"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
+      "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
+      "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
+    "id": "echo-voidspire-live-encounter",
+    "description": "Launch the production Echo encounter in its authored Voidspire biome and prove its live combat simulation advances.",
+    "subject": { "kind": "boss", "id": "echo" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "echo" },
+    "backends": ["live"],
+    "tags": ["echo", "voidspire", "boss", "stage", "encounter"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
+      "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
+      "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
   },
   {
     "id": "source-void-low-hp-rescue-seek",
@@ -75,7 +164,7 @@
     "subject": { "kind": "boss", "id": "source" },
     "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "source" },
     "backends": ["live"],
-    "tags": ["source", "boss", "void", "hazard", "rescue", "one-hit", "ghost", "seek", "c40"],
+    "tags": ["source", "tear", "boss", "void", "hazard", "rescue", "one-hit", "ghost", "seek", "c40"],
     "maxTicks": 1200,
     "testFiles": ["tests/unit/c40-source-void-evidence-registry.test.ts"],
     "evidence": {

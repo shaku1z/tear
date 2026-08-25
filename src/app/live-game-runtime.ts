@@ -358,16 +358,16 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
         logWeaponEvent, weaponWorldImpact: () => { const effect = weaponHook("onWorldImpact",
           { config: CONFIG, blade: liveBlade(), player: livePlayer(), platforms: stageRuntime.platforms, x: liveBlade().x, y: liveBlade().y });
           return isWeaponEffect(effect) ? effect : null; },
-        startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) &&
-          !CINEMA.active && startBossTransformation(enemy, request),
+        startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) && !CINEMA.active && startBossTransformation(enemy, request),
         achievementsEnabled: achTracks,
         setBossBanner: (text, color) => { hostState.setBossBeat({ text, color, t: 1.15, dur: 1.15 }); },
         // Raw device edge in every live run (recording is passive; the authoritative
         // input only replays sealed envelopes during verification).
         consumeThrow: () => liveInputAdapter.consumeThrow(() => Input.consumeThrow()),
         weaponSegmentContact: weaponCapsuleIntersectsSegment,
-        createCharger: (x, y) => worldEntities.createEnemy("charger", x, y, liveRun()),
-        createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, liveRun()),
+        createCharger: (x, y) => worldEntities.createEnemy("charger", x, y, liveRun()), createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, liveRun()),
+        recordBossSupportSpawn: (enemy, bossId) => { const variant: unknown = Reflect.get(enemy, "variantName"); GAMEPLAY_EVENTS.emit({ kind: "spawn",
+          actorId: combatRuntime.id(enemy, "enemy"), actorKind: enemy.kind, x: enemy.x, y: enemy.y, variantName: typeof variant === "string" ? variant : "", bossId }); },
         enemyDefeated: (enemy) => {
           if (isGameEnemy(enemy) && isEnemySample(enemy)) {
             GAMEPLAY_EVENTS.emit({ kind: "death", actorId: combatRuntime.id(enemy, "enemy"), cause: "combat" });

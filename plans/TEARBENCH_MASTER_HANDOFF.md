@@ -1,7 +1,7 @@
 # TearBench / Scenario Console / Game Agent / Ghost 3.0 Master Continuation Handoff
 
 **Branch:** short-lived `codex/*` branch from protected canonical `main` (historical source boundary: `codex/ghost3-autonomous-completion-plan`)
-**State:** Current-game alignment corrective checkpoints TB-R0 through TB-R6 are complete on the owner-authored feature branch, including independent review, mandatory source-bound five-weapon live-to-detached parity, and a clean full repository gate. C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
+**State:** Corrective current-game alignment implementation is complete through TB-F6; TB-F7 final clean-commit evidence and repeated adversarial acceptance remain. The selector, terminology, source-derived encounters, declared generic backends, five live-to-Ghost and headless-to-Ghost weapon proofs, native causal events, and wave ownership now have mandatory focused coverage. C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
 **Purpose:** Enable a succeeding agent to continue the complete TearBench program through C40 without losing requirements, repeating architectural mistakes, or overstating evidence.
 **Current alignment authority:** [`docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md`](../docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md)
 **Last reconciled protected baseline:** `a8a476c6171d913581c01bb0e4432f53cf44f9e4` on 2026-08-25. Re-resolve current protected `main` before every new slice.
@@ -124,10 +124,14 @@ These figures do not mean newer work has no value. They mean most original atomi
 **Current-game alignment prerequisite:** complete `TB-S0` through `TB-S12` in
 the linked alignment plan before interpreting historical scenario metadata,
 detached runtime claims, generated capability totals, or foundation checks as
-evidence of current-game completeness. `TB-S0` through `TB-S12` have focused
-source-owned implementation: all five current weapons have real detached
-mechanic proofs; authored hazards, support auras, boss zones, arena-platform
-fracture, boss adds/clones, and Aldric phases are covered. Source void descent
+evidence of current-game completeness. `TB-S0` through `TB-S12` retain initial
+source-owned implementation and first-pass evidence for current weapons,
+authored hazards, support auras, boss zones, arena-platform fracture, boss
+adds/clones, and Aldric phases. Acceptance of their actual stage/boss,
+ordinary-headless-to-Ghost, live-to-Ghost, causal-event, and declared-backend
+coverage now passes focused TB-F2 through TB-F6 evidence; TB-F7 clean-commit
+acceptance remains open. Five direct live-to-ordinary-headless traces are not claimed.
+Source void descent
 and scrolling are explicitly live-only rather than claimed as detached parity;
 synthetic health, kill, score, style, and elapsed-time estimates are identified
 and are not certification evidence. Replay Hub availability and diff-selected
@@ -135,10 +139,12 @@ normal-player journeys, source-attributed evidence selection, generated capabili
 reports, and focused same-PR drift guards are wired. Source-void snapshots fail
 closed before detached hydration; a capsule containing unsupported void receipts
 cannot be presented as a verified or seekable production replay. The full
-`pnpm check` passed on the clean owner-authored corrective feature commit,
-including mandatory source-bound live to fresh-detached proof for Sword,
-Hammer, Greatsword, Chainblade, and Riftlock. Every subsequent checkpoint commit
-must repeat the canonical clean-source gate before acceptance. Wiki
+`pnpm check` passed on an earlier clean owner-authored feature commit,
+including source-bound live-to-fresh-Ghost proof for Sword, Hammer,
+Greatsword, Chainblade, and Riftlock; that historical gate does not establish
+the reopened ordinary-headless or causal acceptance claims. Every subsequent
+checkpoint commit must repeat the canonical clean-source gate before
+acceptance. Wiki
 synchronization follows authorized protected game-main
 integration. Adaptive Soundtrack remains intentionally pinned to approved
 music release `7662fc95769d2ed022593c10f308ec10f054edfc`, not the newest music

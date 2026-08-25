@@ -5,15 +5,25 @@ import {
   type TearCanonicalScenarioV1,
   type TearScenarioSubjectV1,
 } from "./contracts";
-import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
+import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
+  HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import { TearScenarioRegistry } from "./scenario-registry";
 import scenarioCatalog from "./canonical-scenarios.json";
 
 type CanonicalCatalogEntry = (typeof scenarioCatalog)[number];
 
-const base = (
+export function materializeCanonicalScenario(
   entry: CanonicalCatalogEntry,
-): TearCanonicalScenarioV1 => {
+): TearCanonicalScenarioV1 {
+  const surgicalFields = ["stage", "wave", "bossPhase"].filter((field) => Object.hasOwn(entry.start, field));
+  if (surgicalFields.length > 0) {
+    throw new RangeError(`canonical scenario ${entry.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
+  }
+  const unknownFields = Object.keys(entry.start).filter((field) =>
+    !["mode", "difficulty", "weapon", "boss"].includes(field));
+  if (unknownFields.length > 0) {
+    throw new RangeError(`canonical scenario ${entry.id} has unsupported start metadata: ${unknownFields.join(", ")}`);
+  }
   const mode = RUN_MODE_REGISTRY.assert(entry.start.mode);
   const difficulty = DIFFICULTY_REGISTRY.assert(entry.start.difficulty);
   const weapon = WEAPON_REGISTRY.assert(entry.start.weapon);
@@ -23,6 +33,13 @@ const base = (
   }
   if (entry.subject.kind === "boss" && entry.subject.id !== boss) {
     throw new RangeError(`canonical boss scenario ${entry.id} starts with the wrong boss`);
+  }
+  if (entry.subject.kind === "gameplay") {
+    const subject = GAMEPLAY_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
+    if (entry.backends.includes("headless")
+      && !HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS.some((supported) => supported === subject)) {
+      throw new RangeError(`canonical gameplay scenario ${entry.id} has no supported headless subject transition`);
+    }
   }
   if (boss !== undefined && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {
     throw new RangeError(`canonical boss scenario ${entry.id} requires its matching authoritative boss subject`);
@@ -37,7 +54,7 @@ const base = (
     ? Object.freeze({ kind: "weapon", id: WEAPON_REGISTRY.assert(entry.subject.id) })
     : entry.subject.kind === "boss"
       ? Object.freeze({ kind: "boss", id: BOSS_REGISTRY.assert(entry.subject.id) })
-      : Object.freeze({ kind: "gameplay", id: entry.subject.id });
+      : Object.freeze({ kind: "gameplay", id: GAMEPLAY_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) });
   const backends = Object.freeze([...entry.backends]) as readonly [TearScenarioBackendV1, ...TearScenarioBackendV1[]];
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT,
@@ -60,10 +77,10 @@ const base = (
     ] as const),
     tags: Object.freeze(entry.tags),
   });
-};
+}
 
 export const CANONICAL_ENGINEERING_SCENARIOS = Object.freeze([
-  ...scenarioCatalog.map((entry) => base(entry)),
+  ...scenarioCatalog.map((entry) => materializeCanonicalScenario(entry)),
 ] as const);
 
 export function createCanonicalScenarioRegistry(): TearScenarioRegistry {
