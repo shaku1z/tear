@@ -174,7 +174,9 @@ test("sender, manual proof workflow, and production reuse expose only the intend
 
   assert.match(productionWorkflow, /GITHUB_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/u);
   assert.match(productionWorkflow, /VALIDATION_RUN_ID:\s*\$\{\{\s*steps\.validation\.outputs\.run_id\s*\}\}/u);
-  assert.match(productionWorkflow, /pnpm dispatch:wiki-reference -- --validation-run-id "\$VALIDATION_RUN_ID" --expected-sha "\$GAME_COMMIT"/u);
+  assert.match(productionWorkflow, /run: node scripts\/dispatch-wiki-reference\.mjs --validation-run-id "\$VALIDATION_RUN_ID" --expected-sha "\$GAME_COMMIT"/u);
+  assert.doesNotMatch(productionWorkflow, /pnpm dispatch:wiki-reference\s+--\s+--/u);
+  assert.doesNotMatch(productionWorkflow, /node scripts\/dispatch-wiki-reference\.mjs\s+--\s+--/u);
   assert.doesNotMatch(productionWorkflow, /curl[^\n]*dispatch|client_payload[^\n]*game_commit/iu);
   const productionPermissions = productionWorkflow.slice(productionWorkflow.indexOf("permissions:"), productionWorkflow.indexOf("concurrency:"));
   assert.match(productionPermissions, /actions:\s*read/u);

@@ -135,4 +135,4 @@ jobs:
           GAME_COMMIT: ${{ steps.validation.outputs.sha }}
           VALIDATION_RUN_ID: ${{ steps.validation.outputs.run_id }}
         shell: bash
-        run: pnpm dispatch:wiki-reference -- --validation-run-id "$VALIDATION_RUN_ID" --expected-sha "$GAME_COMMIT"
+        run: node scripts/dispatch-wiki-reference.mjs --validation-run-id "$VALIDATION_RUN_ID" --expected-sha "$GAME_COMMIT"
