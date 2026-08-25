@@ -22,6 +22,7 @@ await verifyReleaseArtifact({
   expectedRepository: process.env.GITHUB_REPOSITORY || RELEASE_REPOSITORY,
   expectedSha: revision.stdout.trim().toLowerCase(),
   expectedTarget: "standalone",
+  sourceDirectory: projectRoot,
 });
 
 const result = spawnSync(process.execPath, [wranglerCli, "deploy", "--dry-run"], {

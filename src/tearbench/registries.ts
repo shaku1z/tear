@@ -1,3 +1,10 @@
+import { BOSS_DEFINITIONS, type BossDefinitionId } from "../gameplay/run/boss-definitions";
+import { DIFFICULTY_IDS as GAME_DIFFICULTY_IDS, type DifficultyId } from "../gameplay/run/difficulty-catalog";
+import { MODE_IDS as GAME_MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
+import { ENEMY_KIND_IDS as GAME_ENEMY_KIND_IDS } from "../gameplay/run/content-director";
+import { STAGE_IDS as GAME_STAGE_IDS, type StageId } from "../gameplay/stages";
+import { WEAPON_IDS as GAME_WEAPON_IDS, type WeaponId } from "../gameplay/weapon-selection";
+
 const STABLE_ID_PATTERN = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
 
 export interface StableRegistry<TId extends string> {
@@ -57,30 +64,35 @@ export type TearEventId = typeof EVENT_IDS[number];
 
 export const ENTITY_KIND_IDS = Object.freeze([
   "player", "blade", "projectile", "platform", "hazard",
-  "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+  ...GAME_ENEMY_KIND_IDS,
   "reflection", "void-wisp",
-  "warden", "colossus", "aldric", "echo", "source",
+  ...BOSS_DEFINITIONS.map((definition) => definition.id),
 ] as const);
 export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);
 export type TearEntityKindId = typeof ENTITY_KIND_IDS[number];
 
-export const WEAPON_IDS = Object.freeze(["sword", "hammer", "greatsword", "chainblade", "riftlock"] as const);
+/** TearBench consumes the production weapon roster; retired migrations stay at the gameplay boundary. */
+export const WEAPON_IDS = GAME_WEAPON_IDS;
 export const WEAPON_REGISTRY = createStableRegistry("weapon", WEAPON_IDS);
-export type TearWeaponId = typeof WEAPON_IDS[number];
+export type TearWeaponId = WeaponId;
 
-export const BOSS_IDS = Object.freeze(["warden", "colossus", "aldric", "echo", "source"] as const);
+/** Boss definitions are the production boss identity authority. */
+export const BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(BOSS_DEFINITIONS.map((definition) => definition.id));
 export const BOSS_REGISTRY = createStableRegistry("boss", BOSS_IDS);
-export type TearBossId = typeof BOSS_IDS[number];
+export type TearBossId = BossDefinitionId;
 
-export const RUN_MODE_IDS = Object.freeze([
-  "campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox",
-] as const);
+export const RUN_MODE_IDS = GAME_MODE_IDS;
 export const RUN_MODE_REGISTRY = createStableRegistry("run mode", RUN_MODE_IDS);
-export type TearRunModeId = typeof RUN_MODE_IDS[number];
+export type TearRunModeId = ModeDefinition["id"];
 
-export const DIFFICULTY_IDS = Object.freeze(["easy", "normal", "hard", "extreme", "onehit"] as const);
+export const DIFFICULTY_IDS = GAME_DIFFICULTY_IDS;
 export const DIFFICULTY_REGISTRY = createStableRegistry("difficulty", DIFFICULTY_IDS);
-export type TearDifficultyId = typeof DIFFICULTY_IDS[number];
+export type TearDifficultyId = DifficultyId;
+
+/** TearBench stages are the production stage-selection roster. */
+export const STAGE_IDS = GAME_STAGE_IDS;
+export const STAGE_REGISTRY = createStableRegistry("stage", STAGE_IDS);
+export type TearStageId = StageId;
 
 export const CODEC_IDS = Object.freeze([
   "tear.player.v1", "tear.blade.v1", "tear.run.v1", "tear.world.v1", "tear.enemy.v1",

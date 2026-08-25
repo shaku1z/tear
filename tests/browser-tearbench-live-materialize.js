@@ -35,26 +35,6 @@ function sha256(value) {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
-function hashDirectory(directory) {
-  const files = [];
-  const visit = (current) => {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const resolved = path.join(current, entry.name);
-      if (entry.isDirectory()) visit(resolved);
-      else if (entry.isFile()) files.push(resolved);
-    }
-  };
-  visit(directory);
-  const hash = createHash("sha256");
-  for (const file of files.sort()) {
-    hash.update(path.relative(directory, file).replaceAll("\\", "/"));
-    hash.update("\0");
-    hash.update(fs.readFileSync(file));
-    hash.update("\0");
-  }
-  return `sha256:${hash.digest("hex")}`;
-}
-
 function gitRevision() {
   try {
     return execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
@@ -250,7 +230,7 @@ const runtimeScenario = {
   stateClass: "recorded-canonical",
   executionClass: headlessTerminal?.scenario.executionClass ?? "engineering",
   seed,
-  start: headlessTerminal?.scenario.start ?? { mode: "endless", difficulty: "normal", weapon: "sword" },
+  start: headlessTerminal?.scenario.start ?? catalogEntry.start,
   maxTicks,
   assertions: [
     "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
@@ -331,18 +311,29 @@ if (headlessTerminal !== undefined) {
 
 const buildDirectory = path.join(root, "dist", "test-standalone");
 assert.ok(fs.existsSync(path.join(buildDirectory, "index.html")), "dist/test-standalone is required; run pnpm build:test:standalone first");
+const servedBuildInfo = JSON.parse(fs.readFileSync(path.join(buildDirectory, "build-info.json"), "utf8"));
+assert.equal(servedBuildInfo.format, "tear-build-info", "materialization requires attributed build-info metadata");
+assert.equal(servedBuildInfo.target, "standalone", "materialization only accepts the standalone test target");
+assert.equal(typeof servedBuildInfo.mode, "string", "materialization requires the served build mode");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const revision = gitRevision();
+const revision = servedBuildInfo.sourceRevision ?? gitRevision();
 const build = {
   version: packageJson.version,
   revision,
-  target: "test-standalone-live-runtime",
+  sha: servedBuildInfo.sha,
+  target: servedBuildInfo.target,
+  mode: servedBuildInfo.mode,
+  runtimeTarget: "test-standalone-live-runtime",
   rulesetVersion: "tear-live-runtime-v1",
-  contentHash: hashDirectory(buildDirectory),
+  artifactHash: servedBuildInfo.artifactHash,
+  sourceRevision: servedBuildInfo.sourceRevision,
+  sourceState: servedBuildInfo.sourceState,
+  sourceFingerprint: servedBuildInfo.sourceFingerprint,
+  contentHash: `sha256:${servedBuildInfo.artifactHash}`,
   // The scenario, action trace, fixed-tick horizon, and State Forge state are
   // replay coordinates. They must be allowed to shrink during C26
   // minimization without pretending the compiled build/configuration changed.
-  configHash: sha256(canonicalJson({ target: "test-standalone-live-runtime", presentation })),
+  configHash: sha256(canonicalJson({ target: servedBuildInfo.target, mode: servedBuildInfo.mode, presentation })),
 };
 const actionTrace = {
   format: "tearbench-semantic-action-trace",

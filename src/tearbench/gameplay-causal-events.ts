@@ -9,6 +9,25 @@ interface MappedGameplayEvent {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
+const NATIVE_WAVE_EVENTS = Object.freeze({ start: "wave.started", clear: "wave.cleared", cleared: "wave.cleared",
+  "spawn-completed": "wave.spawn-completed", boss: "boss.intro-started" }) satisfies Readonly<Record<string, TearEventId>>;
+const NATIVE_EFFECT_EVENTS = Object.freeze({ stolenBlade: "blade.stolen", revive: "player.revived", bossKill: "boss.defeated",
+  parry: "combat.perfect-parry", "perfect-parry": "combat.perfect-parry", deflect: "combat.deflect",
+  "blade-throw": "blade.thrown", "blade-recall": "blade.recalled", "blade-catch": "blade.caught",
+  "dash-start": "player.dash-started", superslam: "blade.power-slam", slam: "blade.slam",
+  updraft: "blade.launch", pickup: "draft.selected", tierup: "tier.selected" }) satisfies Readonly<Record<string, TearEventId>>;
+const NATIVE_CAUSAL_EVENTS: ReadonlySet<TearEventId> = new Set([
+  "run.started", "run.paused", "run.resumed", "run.completed", "run.defeated", "run.abandoned", "stage.entered",
+  "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "blade.thrown", "blade.caught",
+  "blade.throw-resolved", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit",
+  "projectile.expired", "world.void-rescue", ...Object.values(NATIVE_WAVE_EVENTS), ...Object.values(NATIVE_EFFECT_EVENTS),
+]);
+
+/** Keep historical IDs readable without advertising unsupported native gameplay facts. */
+export function nativeCausalEventAvailability(id: TearEventId): "native" | "compatibility-only" {
+  return NATIVE_CAUSAL_EVENTS.has(id) ? "native" : "compatibility-only";
+}
+
 export interface TearSemanticEngineEventV1 {
   readonly tick: number;
   readonly sequence: number;
@@ -41,12 +60,12 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       type: "stage.entered", phase: "wave-draft-and-state-transitions",
       payload: Object.freeze({ stage: event.stage }),
     };
-    case "wave": return {
-      type: event.event === "start" ? "wave.started"
-        : event.event === "cleared" || event.event === "clear" ? "wave.cleared" : "wave.spawn-completed",
-      phase: "wave-draft-and-state-transitions",
-      payload: Object.freeze({ wave: event.wave, marker: event.event }),
-    };
+    case "wave": {
+      const type = (NATIVE_WAVE_EVENTS as Readonly<Record<string, TearEventId>>)[event.event];
+      if (type === undefined) throw new RangeError(`unrecognized native wave marker: ${event.event}`);
+      return { type, phase: "wave-draft-and-state-transitions",
+        payload: Object.freeze({ wave: event.wave, marker: event.event }) };
+    }
     case "spawn": return {
       type: "enemy.spawned", phase: "wave-draft-and-state-transitions", actorId: event.actorId,
       payload: Object.freeze({
@@ -92,14 +111,12 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       type: "world.void-rescue", phase: "post-simulation-commit",
       payload: Object.freeze({ x: event.x, y: event.y, lane: event.lane, hp: event.hp }),
     };
-    case "effect": return {
-      type: event.effect === "stolenBlade" ? "blade.stolen" : event.effect === "revive" ? "player.revived"
-        : event.effect === "bossKill" ? "boss.defeated" : event.effect.includes("parry") ? "combat.perfect-parry"
-          : event.effect.includes("throw") ? "blade.thrown" : /recall|catch/u.test(event.effect) ? "blade.recalled"
-            : event.effect.includes("dash") ? "player.dash-started" : "system.checkpoint",
-      phase: "post-simulation-commit",
-      payload: Object.freeze({ effect: event.effect, x: event.x, y: event.y }),
-    };
+    case "effect": {
+      const type = (NATIVE_EFFECT_EVENTS as Readonly<Record<string, TearEventId>>)[event.effect];
+      if (type === undefined) throw new RangeError(`unrecognized native gameplay effect: ${event.effect}`);
+      return { type, phase: "post-simulation-commit",
+        payload: Object.freeze({ effect: event.effect, x: event.x, y: event.y }) };
+    }
   }
 }
 

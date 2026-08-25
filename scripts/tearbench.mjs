@@ -1,13 +1,20 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readSourceIdentitySync } from "./release-artifact.mjs";
 import { createReleaseCertificate, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const catalogPath = resolve(root, "src", "tearbench", "canonical-scenarios.json");
-const evidenceRoutesPath = resolve(root, "src", "tearbench", "evidence-routes.json");
+function option(name, fallback) {
+  const index = process.argv.indexOf(name);
+  return index < 0 ? fallback : process.argv[index + 1];
+}
+
+const catalogPath = resolve(option("--catalog", resolve(root, "src", "tearbench", "canonical-scenarios.json")));
+const evidenceRoutesPath = resolve(option("--routes", resolve(root, "src", "tearbench", "evidence-routes.json")));
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
 
@@ -16,15 +23,181 @@ function fail(message) {
   process.exitCode = 1;
 }
 
-function option(name, fallback) {
-  const index = process.argv.indexOf(name);
-  return index < 0 ? fallback : process.argv[index + 1];
-}
-
 function scenarioById(id) {
   const scenario = catalog.find((entry) => entry.id === id);
   if (!scenario) throw new RangeError(`unknown TearBench scenario: ${id}`);
   return scenario;
+}
+
+const weaponSource = await readFile(resolve(root, "src", "gameplay", "weapon-selection.ts"), "utf8");
+const weaponDefinitionSource = await readFile(resolve(root, "src", "gameplay", "weapons.ts"), "utf8");
+
+function activeWeaponIds() {
+  const match = weaponSource.match(/export const WEAPON_IDS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const\)/u);
+  if (!match) throw new TypeError("could not read the production weapon catalog for evidence coverage");
+  const ids = [...match[1].matchAll(/"([a-z][a-z0-9-]*)"/gu)].map((entry) => entry[1]);
+  if (ids.length === 0) throw new TypeError("production weapon catalog is empty for evidence coverage");
+  return ids;
+}
+
+function retiredWeaponIds() {
+  const match = weaponSource.match(/export const WEAPON_SELECTION_MIGRATION\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\s*as const/u);
+  if (!match) throw new TypeError("could not read the production weapon migration catalog for evidence validation");
+  return [...match[1].matchAll(/^\s*([a-z][a-z0-9-]*)\s*:/gmu)].map((entry) => entry[1]);
+}
+
+function currentWeaponThrowIdentities() {
+  const matches = [...weaponDefinitionSource.matchAll(
+    /^\s{4}id:\s*"([a-z][a-z0-9-]*)",[\s\S]*?^\s{4}throwIdentity:\s*"([^"]+)"/gmu,
+  )];
+  const identities = new Map(matches.map((match) => [match[1], match[2]]));
+  for (const weapon of activeWeaponIds()) {
+    if (!identities.has(weapon)) throw new TypeError(`production weapon ${weapon} has no source-owned throw identity`);
+  }
+  return identities;
+}
+
+function safeRepoFile(path, pattern, label) {
+  if (typeof path !== "string" || !pattern.test(path) || path.includes("..")) {
+    throw new TypeError(`unsafe ${label} path in TearBench evidence command: ${String(path)}`);
+  }
+  const absolute = resolve(root, path);
+  if (relative(root, absolute).replaceAll("\\", "/") !== path || !existsSync(absolute) || !statSync(absolute).isFile()) {
+    throw new RangeError(`TearBench evidence ${label} does not name an existing repository file: ${path}`);
+  }
+  return absolute;
+}
+
+function parseApprovedEvidenceCommand(command) {
+  if (typeof command !== "string" || command.trim() === "") throw new TypeError("TearBench evidence command is empty");
+  const parts = command.split("&&").map((part) => part.trim());
+  if (parts.some((part) => part === "" || /[;&|<>`$()"']/u.test(part))) {
+    throw new TypeError(`unsupported TearBench evidence command: ${command}`);
+  }
+  return parts.map((part) => {
+    const tokens = part.split(/\s+/u);
+    if (part === "pnpm build:test:standalone") return { kind: "build" };
+    if (part === "node scripts/check-docs.mjs") {
+      return { kind: "docs-check", file: safeRepoFile("scripts/check-docs.mjs", /^scripts\/check-docs\.mjs$/u, "docs authority checker") };
+    }
+    if (tokens[0] === "pnpm" && tokens[1] === "exec" && tokens[2] === "vitest" && tokens[3] === "run" && tokens.length > 4) {
+      return { kind: "vitest", files: tokens.slice(4).map((file) =>
+        safeRepoFile(file, /^tests\/[A-Za-z0-9._/-]+\.ts$/u, "unit test")) };
+    }
+    if (tokens[0] === "node" && tokens.length === 2) {
+      return { kind: "node", file: safeRepoFile(tokens[1], /^tests\/browser-[A-Za-z0-9._-]+\.js$/u, "browser proof") };
+    }
+    if (tokens[0] === "node" && tokens[1] === "--check" && tokens.length === 3
+      && tokens[2] === "tests/browser-ghost-lab-home.js") {
+      return { kind: "node-check", file: safeRepoFile(tokens[2], /^tests\/browser-[A-Za-z0-9._-]+\.js$/u, "check fixture") };
+    }
+    throw new TypeError(`unsupported TearBench evidence command: ${command}`);
+  });
+}
+
+function validateScenarioMetadata(scenario) {
+  if (Object.hasOwn(scenario, "backends") && (!Array.isArray(scenario.backends) || scenario.backends.length === 0
+    || scenario.backends.some((backend) => !["live", "headless"].includes(backend)))) {
+    throw new TypeError(`scenario ${scenario.id} has invalid evidence backends`);
+  }
+  const subject = scenario.subject;
+  if (subject === undefined) return;
+  if (subject === null || typeof subject !== "object" || !["gameplay", "weapon", "boss"].includes(subject.kind)
+    || typeof subject.id !== "string" || subject.id.trim() === "") {
+    throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
+  }
+  if (subject.kind === "weapon") {
+    const peers = [scenario.weapon, scenario.source?.weapon, scenario.source?.id, scenario.start?.weapon,
+      scenario.start?.subject?.weapon, scenario.start?.subject?.id].filter((value) => typeof value === "string");
+    if (peers.some((value) => value !== subject.id)) {
+      throw new RangeError(`scenario ${scenario.id} has wrong weapon subject: expected ${subject.id}`);
+    }
+    const identity = currentWeaponThrowIdentities().get(subject.id);
+    if (identity === undefined) throw new RangeError(`scenario ${scenario.id} has no current production weapon identity`);
+    const normalizedIdentity = identity.toLowerCase().replace(/[^a-z0-9]/gu, "");
+    const declaredIdentity = `${scenario.id} ${(scenario.tags ?? []).join(" ")}`.toLowerCase().replace(/[^a-z0-9]/gu, "");
+    if (!declaredIdentity.includes(normalizedIdentity)) {
+      throw new RangeError(`scenario ${scenario.id} omits current ${subject.id} throw identity: ${identity}`);
+    }
+  } else if (subject.kind === "boss") {
+    if (scenario.start?.mode !== "bossonly" || scenario.start?.boss !== subject.id
+      || !Array.isArray(scenario.backends) || scenario.backends.length !== 1 || scenario.backends[0] !== "live") {
+      throw new TypeError(`scenario ${scenario.id} boss subject requires live-only bossonly evidence`);
+    }
+  }
+  const command = scenario.evidence?.command;
+  if (typeof command !== "string") return;
+  const proof = parseApprovedEvidenceCommand(command).find((entry) => entry.kind === "node");
+  if (proof === undefined) return;
+  const starts = [...readFileSync(proof.file, "utf8").matchAll(
+    /start:\s*Object\.freeze\(\{\s*mode:\s*"([^"]+)",\s*difficulty:\s*"([^"]+)",\s*weapon:\s*"([^"]+)"/gu,
+  )];
+  if (starts.length === 0) throw new TypeError(`scenario ${scenario.id} browser evidence has no inspectable start`);
+  for (const [, mode, difficulty, weapon] of starts) {
+    if (mode !== scenario.start?.mode || difficulty !== scenario.start?.difficulty || weapon !== scenario.start?.weapon) {
+      throw new RangeError(`scenario ${scenario.id} browser evidence start disagrees with its catalog start`);
+    }
+  }
+}
+
+function evidenceCommandForScenario(scenario) {
+  const command = scenario.evidence?.command;
+  if (typeof command === "string" && command.trim() !== "") {
+    parseApprovedEvidenceCommand(command);
+    return { backend: "catalog-command", command };
+  }
+  if (Array.isArray(scenario.testFiles) && scenario.testFiles.length > 0
+    && scenario.testFiles.every((file) => typeof file === "string" && file.trim() !== "")) {
+    const derivedCommand = `pnpm exec vitest run ${scenario.testFiles.join(" ")}`;
+    parseApprovedEvidenceCommand(derivedCommand);
+    return { backend: "catalog-test-files", command: derivedCommand };
+  }
+  throw new RangeError(`scenario ${scenario.id} has no executable evidence backend`);
+}
+
+function validateScenarioSubject(scenario) {
+  validateScenarioMetadata(scenario);
+  const retired = new Set(retiredWeaponIds());
+  const declared = [scenario.weapon, scenario.subject?.kind === "weapon" ? scenario.subject.id : undefined]
+    .filter((weapon) => typeof weapon === "string");
+  const retiredSubject = (scenario.tags ?? []).find((tag) => retired.has(tag)) ?? declared.find((weapon) => retired.has(weapon));
+  if (retiredSubject) throw new RangeError(`scenario ${scenario.id} references retired weapon: ${retiredSubject}`);
+}
+
+function validateActiveWeaponSubject(scenario, weapon) {
+  const declared = [scenario.weapon, scenario.subject?.kind === "weapon" ? scenario.subject.id : undefined]
+    .find((value) => typeof value === "string");
+  if (declared !== undefined && declared !== weapon) {
+    throw new RangeError(`scenario ${scenario.id} has wrong weapon subject: expected ${weapon}, found ${declared}`);
+  }
+  if (declared === undefined && !scenario.id.startsWith(`${weapon}-`)) {
+    throw new RangeError(`scenario ${scenario.id} has wrong weapon subject: expected ${weapon}`);
+  }
+}
+
+function routeScenarioIds(route) {
+  if (typeof route.id !== "string" || !Array.isArray(route.prefixes) || !Array.isArray(route.scenarios)) {
+    throw new TypeError(`malformed TearBench evidence route: ${String(route.id)}`);
+  }
+  for (const command of [...(route.journeyCommands ?? []), ...(route.authorityCommands ?? [])]) parseApprovedEvidenceCommand(command);
+  const ids = new Set(route.scenarios);
+  for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
+  for (const subject of route.scenarioSubjects ?? []) {
+    if (subject !== "active-weapons") throw new TypeError(`unknown TearBench route scenario subject: ${String(subject)}`);
+    for (const weapon of activeWeaponIds()) {
+      const matches = catalog.filter((scenario) => (Array.isArray(scenario.tags) && scenario.tags.includes(weapon))
+        || (scenario.subject?.kind === "weapon" && scenario.subject.id === weapon));
+      if (matches.length === 0) throw new RangeError(`no TearBench scenario covers active weapon: ${weapon}`);
+      for (const scenario of matches) { validateScenarioSubject(scenario); validateActiveWeaponSubject(scenario, weapon); ids.add(scenario.id); }
+    }
+  }
+  for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
+  return [...ids];
+}
+
+for (const route of evidenceRoutes) routeScenarioIds(route);
+if (!evidenceRoutes.some((route) => route.id === "shared-runtime")) {
+  throw new TypeError("TearBench evidence routes must include a shared-runtime fallback");
 }
 
 function buildTestStandalone() {
@@ -76,19 +249,113 @@ function evidenceForDiff(files) {
   const matched = evidenceRoutes.filter((route) =>
     normalized.some((file) => route.prefixes.some((prefix) => file.startsWith(prefix))));
   const selected = matched.length > 0 ? matched : evidenceRoutes.filter((route) => route.id === "shared-runtime");
-  const collect = (field) => [...new Set(selected.flatMap((route) => route[field]))].sort();
+  if (selected.length === 0) throw new TypeError("TearBench evidence selection has no applicable route");
+  const collect = (field) => [...new Set(selected.flatMap((route) => route[field] ?? []))].sort();
+  const scenarios = [...new Set(selected.flatMap((route) => routeScenarioIds(route)))].sort();
   return {
     format: "tearbench-evidence-selection",
     schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    source: readSourceIdentity(),
     changedFiles: normalized,
     routes: selected.map((route) => route.id).sort(),
-    scenarios: collect("scenarios"),
+    scenarios,
+    evidenceCommands: scenarios.map((id) => ({ id, ...evidenceCommandForScenario(scenarioById(id)) })),
     graveyardCases: collect("graveyardCases"),
     journeyCheckpoints: [...new Set(selected.map((route) => route.journeyCheckpoint))].sort(),
     baseComparisons: [...new Set(selected.map((route) => route.baseComparison))].sort(),
     interactionMatrices: collect("interactionMatrices"),
+    buildTargets: collect("buildTargets"),
+    journeyCommands: collect("journeyCommands"),
+    authorityCommands: collect("authorityCommands"),
+    scope: Object.freeze({
+      kind: "diff", changedFiles: Object.freeze([...normalized]),
+      routes: Object.freeze(selected.map((route) => route.id).sort()),
+      scenarios: Object.freeze([...scenarios]),
+      journeyCheckpoints: Object.freeze([...new Set(selected.map((route) => route.journeyCheckpoint))].sort()),
+      buildTargets: Object.freeze(collect("buildTargets")),
+    }),
     unrelatedUnitTestsAreGameplayEvidence: false,
   };
+}
+
+function executeApprovedEvidence(command, state) {
+  const steps = parseApprovedEvidenceCommand(command), receipts = [];
+  for (const step of steps) {
+    const before = readSourceIdentity();
+    if (state.source === undefined) state.source = before;
+    else if (state.source.fingerprint !== before.fingerprint || state.source.revision !== before.revision) {
+      throw new Error("selected evidence source changed before execution");
+    }
+    let result;
+    if (step.kind === "build") {
+      if (state.testStandaloneBuilt) { receipts.push({ kind: step.kind, status: "skipped", reason: "deduplicated test-standalone build" }); continue; }
+      result = spawnSync(process.execPath, [resolve(root, "scripts", "build-target.mjs"), "test-standalone"], { cwd: root, encoding: "utf8" });
+      if (result.status === 0) state.testStandaloneBuilt = true;
+    } else if (step.kind === "vitest") {
+      result = spawnSync(process.execPath, [resolve(root, "node_modules", "vitest", "vitest.mjs"), "run", ...step.files], { cwd: root, encoding: "utf8" });
+    } else if (step.kind === "docs-check") {
+      result = spawnSync(process.execPath, [step.file], { cwd: root, encoding: "utf8" });
+    } else {
+      result = spawnSync(process.execPath, step.kind === "node-check" ? ["--check", step.file] : [step.file], { cwd: root, encoding: "utf8" });
+    }
+    const after = readSourceIdentity();
+    if (after.fingerprint !== before.fingerprint || after.revision !== before.revision) {
+      throw new Error(`selected evidence command changed source identity (${step.kind})`);
+    }
+    if (step.kind === "build" && result.status === 0) state.build = validateServedBuildIdentity(readServedBuildInfo(), after);
+    const receipt = { kind: step.kind, status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1,
+      stdout: result.stdout ?? "", stderr: result.stderr ?? "", source: after, ...(state.build === undefined ? {} : { build: state.build }) };
+    receipts.push(receipt);
+    if (receipt.status !== "passed") break;
+  }
+  return { status: receipts.length === steps.length && receipts.every((entry) => entry.status === "passed" || entry.status === "skipped")
+    ? "passed" : "failed", receipts };
+}
+
+function writeCurrentCapabilityReport(scope, state, executions) {
+  if (scope.scenarios.length === 0 && scope.buildTargets.length === 0 && scope.journeyCommands.length === 0) return undefined;
+  const report = {
+    format: "tearbench-current-capability", schemaVersion: 1, generatedAt: new Date().toISOString(),
+    executionClass: "engineering", source: state.source ?? readSourceIdentity(),
+    ...(state.build === undefined ? {} : { build: state.build }),
+    scope: Object.freeze({ ...scope, scenarios: [...scope.scenarios], journeyCommands: [...scope.journeyCommands], buildTargets: [...scope.buildTargets] }),
+    status: executions.every((entry) => entry.status === "passed") ? "passed" : "failed", executions,
+  };
+  const path = resolve(root, "artifacts", "tearbench", "generated", "current-capability.json");
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  return workspaceRelativePath(path);
+}
+
+function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets = [], authorityCommands = [], scope = {}) {
+  const state = { testStandaloneBuilt: false, source: readSourceIdentity() }, executions = [];
+  const executionScope = { scenarios: [...scenarios], journeyCommands: [...journeyCommands], buildTargets: [...buildTargets], ...scope };
+  const runOne = (id, command) => {
+    const execution = executeApprovedEvidence(command, state);
+    executions.push({ id, backend: "catalog-command", command, status: execution.status, receipts: execution.receipts,
+      source: state.source, ...(state.build === undefined ? {} : { build: state.build }) });
+    return execution.status === "passed";
+  };
+  if (buildTargets.includes("test-standalone") && !runOne("build-target:test-standalone", "pnpm build:test:standalone")) {
+    return { status: "failed", executions };
+  }
+  for (const id of scenarios) {
+    const evidence = evidenceCommandForScenario(scenarioById(id));
+    const execution = executeApprovedEvidence(evidence.command, state);
+    executions.push({ id, backend: evidence.backend, command: evidence.command, status: execution.status, receipts: execution.receipts,
+      source: state.source, ...(state.build === undefined ? {} : { build: state.build }) });
+    if (execution.status !== "passed") break;
+  }
+  if (executions.every((entry) => entry.status === "passed")) {
+    for (const command of journeyCommands) if (!runOne(`journey:${command}`, command)) break;
+  }
+  if (executions.every((entry) => entry.status === "passed")) {
+    for (const command of authorityCommands) if (!runOne(`authority:${command}`, command)) break;
+  }
+  const status = executions.every((entry) => entry.status === "passed") ? "passed" : "failed";
+  const generatedArtifact = writeCurrentCapabilityReport(executionScope, state, executions);
+  return { status, executions, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
 }
 
 async function writeSelection(selection) {
@@ -106,12 +373,45 @@ function canonicalJson(value) {
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
 }
 
+/** Share the same tracked/untracked source digest used by actual standalone builds. */
+export function readSourceIdentity() {
+  const source = readSourceIdentitySync(root);
+  const status = spawnSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], { cwd: root, encoding: "utf8" });
+  if (status.status !== 0) throw new Error(`git status failed: ${status.stderr || status.stdout}`);
+  return Object.freeze({ ...source, worktreeFingerprint: createHash("sha256").update(status.stdout).digest("hex") });
+}
+
+function readServedBuildInfo() {
+  const path = resolve(root, "dist", "test-standalone", "build-info.json");
+  if (!existsSync(path)) throw new Error("selected evidence requires dist/test-standalone/build-info.json");
+  const value = JSON.parse(readFileSync(path, "utf8"));
+  if (value?.format !== "tear-build-info" || value?.schemaVersion !== 1
+    || typeof value.sha !== "string" || typeof value.target !== "string"
+    || typeof value.sourceRevision !== "string" || typeof value.sourceState !== "string"
+    || typeof value.sourceFingerprint !== "string" || typeof value.artifactHash !== "string") {
+    throw new TypeError("served test build has incomplete build-info identity");
+  }
+  return Object.freeze({ sha: value.sha, target: value.target, mode: value.mode,
+    sourceRevision: value.sourceRevision, sourceState: value.sourceState,
+    sourceFingerprint: value.sourceFingerprint, artifactHash: value.artifactHash,
+    artifactFiles: value.artifactFiles });
+}
+
+export function validateServedBuildIdentity(build, source = readSourceIdentity()) {
+  if (build.target !== "standalone") throw new Error(`selected evidence build target is ${String(build.target)}, expected standalone`);
+  if (build.sha !== source.revision || build.sourceRevision !== source.revision) {
+    throw new Error("selected evidence build revision does not match the executed source");
+  }
+  if (build.sourceState !== source.state || build.sourceFingerprint !== source.fingerprint) {
+    throw new Error("selected evidence build source fingerprint/state does not match the executed source");
+  }
+  return build;
+}
+
 function gitCleanHead() {
-  const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
-  const status = spawnSync("git", ["status", "--porcelain=v1", "-z"], { cwd: root, encoding: "utf8" });
-  if (head.status !== 0 || status.status !== 0) throw new Error(`could not inspect clean HEAD: ${head.stderr || status.stderr}`);
-  if (status.stdout !== "") throw new TypeError("evidence recording requires a clean tracked worktree at HEAD");
-  return { commit: head.stdout.trim(), worktreeFingerprint: createHash("sha256").update(status.stdout).digest("hex") };
+  const source = readSourceIdentity();
+  if (source.state !== "clean") throw new TypeError("clean-only certification requires a clean tracked worktree at HEAD");
+  return { commit: source.revision, source, worktreeFingerprint: source.worktreeFingerprint };
 }
 
 function receiptPathFor(id) {
@@ -132,21 +432,26 @@ async function recordEvidenceReceipt() {
     : process.argv.slice(process.argv.indexOf("--subject") + 2);
   if (commandParts.length === 0) throw new TypeError(usage);
   const command = commandParts.join(" ");
-  const before = gitCleanHead();
+  const before = readSourceIdentity();
   const result = spawnSync(command, { cwd: root, encoding: "utf8", shell: true });
-  const after = gitCleanHead();
-  if (after.commit !== before.commit || after.worktreeFingerprint !== before.worktreeFingerprint) throw new Error("evidence command changed the tracked worktree");
+  const after = readSourceIdentity();
+  if (after.revision !== before.revision || after.state !== before.state || after.fingerprint !== before.fingerprint) throw new Error("evidence command changed the executed source");
+  const scope = Object.freeze({ kind: "receipt", id, subject: subjectPath, command });
   let subject;
   try {
     const contents = await readFile(resolve(root, subjectPath));
     subject = { path: subjectPath, sha256: createHash("sha256").update(contents).digest("hex"), size: (await stat(resolve(root, subjectPath))).size };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(), ...before, status: "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: `${result.stderr ?? ""}\nsubject unavailable: ${detail}` };
+    const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
+      commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
+      status: "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: `${result.stderr ?? ""}\nsubject unavailable: ${detail}` };
     const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
     console.log(`FAIL ${id}`); console.log(`receipt: ${path}`); process.exitCode = 1; return;
   }
-  const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(), ...before, status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", subject };
+  const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
+    commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
+    status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", subject };
   const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
   console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${path}`);
   if (receipt.status !== "passed") process.exitCode = 1;
@@ -164,11 +469,16 @@ async function composePartialEvidenceManifest() {
     const contents = await readFile(resolve(root, receiptPath), "utf8");
     const receipt = JSON.parse(contents);
     if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
-    evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit, worktreeFingerprint: receipt.worktreeFingerprint, artifactPath: receipt.subject?.path, artifactSha256: receipt.subject?.sha256, artifactSize: receipt.subject?.size, receiptPath, receiptSha256: createHash("sha256").update(contents).digest("hex") });
+    evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit,
+      worktreeFingerprint: receipt.worktreeFingerprint, source: receipt.source, scope: receipt.scope,
+      artifactPath: receipt.subject?.path, artifactSha256: receipt.subject?.sha256, artifactSize: receipt.subject?.size,
+      receiptPath, receiptSha256: createHash("sha256").update(contents).digest("hex") });
   }
   const ids = evidence.map((entry) => entry.id);
   if (new Set(ids).size !== ids.length) throw new TypeError("partial manifest receipts must have unique IDs");
-  const manifest = { format: "tearbench-release-evidence-manifest", schemaVersion: 1, ...binding, evidence, coverage: { arbitraryStates: [], journeys: [], matrices: [] }, preservation: {} };
+  const manifest = { format: "tearbench-release-evidence-manifest", schemaVersion: 1, generatedAt: new Date().toISOString(),
+    ...binding, scope: { kind: "partial-manifest", evidenceIds: ids }, evidence,
+    coverage: { arbitraryStates: [], journeys: [], matrices: [] }, preservation: {} };
   const path = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "partial-release-evidence.json")));
   await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   console.log(`PARTIAL ${evidence.length} receipt(s)`); console.log(`artifact: ${path}`);
@@ -626,9 +936,20 @@ try {
       scenarioId: "hard-endless-wave-99-hammer",
       request: { mode: "endless", difficulty: "hard", weapon: "hammer", wave: 99, seed: "990099" },
       generatedBy: "createWave99HammerPackage",
-      includes: ["legal-ledger", "opportunity-counts", "configuration-trace", "validation-report", "visible-episode", "snapshot", "replay", "metrics"],
+      artifacts: Object.fromEntries([
+        ["legal-ledger", "The forge does not materialize a legal-ledger artifact."],
+        ["opportunity-counts", "The forge does not materialize opportunity-counts."],
+        ["configuration-trace", "The forge does not materialize a configuration trace."],
+        ["validation-report", "Test output is captured, but no report file is created."],
+        ["visible-episode", "The forge does not launch a visible episode."],
+        ["snapshot", "The forge does not materialize a snapshot."],
+        ["replay", "The forge does not materialize a replay."],
+        ["metrics", "The forge does not materialize metrics."],
+      ].map(([id, reason]) => [id, { status: "unavailable", reason }])),
       status: passed ? "passed" : "failed",
-      evidence: { status: evidence.status, stdout: evidence.stdout, stderr: evidence.stderr },
+      evidence: { status: evidence.status,
+        command: "pnpm exec vitest run tests/unit/tearbench-tearsdl.test.ts tests/unit/tearbench-progression-ledger.test.ts",
+        stdout: evidence.stdout, stderr: evidence.stderr },
     };
     await mkdir(dirname(artifactPath), { recursive: true });
     await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
@@ -640,10 +961,16 @@ try {
   } else if (command === "evidence" && process.argv[3] === "partial-manifest") {
     await composePartialEvidenceManifest();
   } else if (command === "select") {
-    await writeSelection(evidenceForDiff(await changedFiles()));
+    const selection = evidenceForDiff(await changedFiles());
+    const result = process.argv.includes("--execute-evidence")
+      ? { ...selection, evidenceExecution: executeSelectedEvidence(selection.scenarios,
+        selection.journeyCommands, selection.buildTargets, selection.authorityCommands, selection.scope) } : selection;
+    if (result.evidenceExecution?.status === "failed") process.exitCode = 1;
+    await writeSelection(result);
   } else if (command === "ci") {
     const selection = evidenceForDiff(await changedFiles());
     const artifactPath = await writeSelection(selection);
+    const docsOnly = selection.routes.length === 1 && selection.routes[0] === "documentation-only";
     const scenarioFiles = selection.scenarios.flatMap((id) => scenarioById(id).testFiles);
     const files = [...new Set([
       "tests/unit/tearbench-runner.test.ts",
@@ -654,17 +981,23 @@ try {
       "tests/unit/tearbench-release-certification.test.ts",
       ...scenarioFiles,
     ])];
-    const evidence = runFiles(files);
+    const docsEvidence = docsOnly ? executeSelectedEvidence([], [], [], selection.authorityCommands, selection.scope) : undefined;
+    const evidence = docsOnly ? { status: docsEvidence.status === "passed" ? 0 : 1, stdout: "", stderr: "" } : runFiles(files);
     if (evidence.stdout) process.stdout.write(evidence.stdout);
     if (evidence.stderr) process.stderr.write(evidence.stderr);
-    const graveyardReport = evidence.status === 0
+    const evidenceExecution = docsOnly ? docsEvidence
+      : evidence.status === 0 ? executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
+        selection.buildTargets, selection.authorityCommands, selection.scope)
+      : { status: "skipped", reason: "selected unit evidence failed", executions: [] };
+    await writeFile(artifactPath, `${JSON.stringify({ ...selection, evidenceExecution }, null, 2)}\n`, "utf8");
+    const graveyardReport = !docsOnly && evidence.status === 0 && evidenceExecution.status === "passed"
       ? await executeSelectedGraveyardCases(selection.graveyardCases, {
         registryPath: option("--registry", resolve(root, "artifacts", "tearbench", "graveyard-registry.json")),
         artifactPath: resolve(root, "artifacts", "tearbench", "graveyard-rerun.json"),
       })
       : undefined;
     console.log(`selection: ${artifactPath}`);
-    if (evidence.status !== 0 || graveyardReport?.status === "failed") process.exitCode = 1;
+    if (evidence.status !== 0 || evidenceExecution.status === "failed" || graveyardReport?.status === "failed") process.exitCode = 1;
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {

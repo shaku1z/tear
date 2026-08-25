@@ -28,6 +28,8 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
   "runtime.finite-state": (observation) => finite([
     observation.player.x, observation.player.y, observation.player.vx, observation.player.vy,
     observation.blade.handX, observation.blade.handY, observation.blade.tipX, observation.blade.tipY,
+    ...observation.entities.flatMap((entity) => [entity.x, entity.y, entity.vx, entity.vy,
+      ...(entity.hpRatio === undefined ? [] : [entity.hpRatio]), ...(entity.damage === undefined ? [] : [entity.damage])]),
   ]) ? null : failure("runtime.finite-state", observation, "authoritative state contains a non-finite number", "fatal"),
   "player.finite-transform": (observation) => finite([
     observation.player.x, observation.player.y, observation.player.vx, observation.player.vy,
@@ -102,7 +104,6 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
     previous === undefined || observation.tick > previous.tick
       ? null
       : failure("replay.monotonic-time", observation, `tick ${String(observation.tick)} did not advance`, "fatal"),
-  "test.production-isolation": () => null,
 });
 
 export function runInvariantChecks(
@@ -113,8 +114,15 @@ export function runInvariantChecks(
 ): readonly TearInvariantFailure[] {
   const failures: TearInvariantFailure[] = [];
   for (const id of ids) {
+    if (["world.legal-bounds", "wave.valid-completion", "boss.valid-phase", "ui.valid-focus",
+      "runtime.pause-freezes-simulation", "runtime.no-softlock"].includes(id)
+      && observation.diagnostics === undefined) {
+      throw new Error(`requested invariant ${id} requires privileged diagnostic observation`);
+    }
     const check = checks[id];
-    if (check === undefined) continue;
+    if (check === undefined) {
+      throw new Error(`requested invariant ${id} has no applicable implementation or required comparison inputs`);
+    }
     const result = check(observation, previous);
     if (result !== null) failures.push(result);
   }

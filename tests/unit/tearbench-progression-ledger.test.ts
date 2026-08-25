@@ -3,6 +3,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { UPGRADES } from "../../src/gameplay/upgrades";
+import { calculateCoinAward } from "../../src/gameplay/scoring/coin-awards";
+import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
+import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { stableVerificationHash } from "../../src/replay/hash";
 import {
   buildCanonicalProgressionLedger,
@@ -33,6 +36,38 @@ function selections(result: ReturnType<typeof synthesizeProgression>) {
 }
 
 describe("production progression ledger", () => {
+  it("derives wave currency from production coin awards across the active weapon roster", () => {
+    for (const weapon of WEAPON_IDS) {
+      const request = {
+        ...baseRequest, mode: "campaign", difficulty: "normal", weapon, targetWave: 1, economy: { score: 0 },
+      } satisfies TearProgressionRequest;
+      const canonical = buildCanonicalProgressionLedger(request);
+      const synthesized = synthesizeProgression({ ...request, selections: [] });
+      expect(synthesized.statistics.estimatedFields).toEqual(["hp", "maxHp", "elapsedTicks", "score", "style", "kills"]);
+      expect(synthesized.statistics.estimatedFields).not.toContain("currency");
+      for (const events of [canonical.events, synthesized.ledger.events]) {
+        const reward = events.find((event) => event.type === "reward.granted");
+        expect(reward?.type === "reward.granted" ? reward.currency : undefined).toBe(10);
+      }
+    }
+  });
+
+  it("uses current difficulty and economy modifiers for synthesized rewards", () => {
+    const difficulty = DIFFICULTY_CATALOG.find((candidate) => candidate.id === "hard");
+    expect(difficulty).toBeDefined();
+    if (difficulty === undefined) return;
+    const economy = { score: 1_000, coinMagnetLevel: 2, fortuneLevel: 3 } as const;
+    const ledger = buildCanonicalProgressionLedger({ ...baseRequest, difficulty: "hard", targetWave: 10, economy });
+    const reward = ledger.events.find((event) => event.type === "reward.granted" && event.wave === 10);
+    const expected = calculateCoinAward({
+      score: economy.score, wave: 10, difficultyId: "hard",
+      baseDifficultyMultiplier: difficulty.modifiers.coinReward, remoteMultiplier: 1,
+      coinMagnetLevel: economy.coinMagnetLevel, fortuneLevel: economy.fortuneLevel,
+    });
+    expect(reward?.type === "reward.granted" ? reward.currency : undefined).toBe(expected.earned);
+    expect(reward?.type === "reward.granted" ? reward.currency : undefined).toBe(201);
+  });
+
   it("reconstructs repeated stacks, production tiers, progression, and configuration order", () => {
     const synthesized = synthesizeProgression(baseRequest);
     const reconstructed = reconstructProgression(synthesized.ledger);

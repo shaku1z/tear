@@ -12,11 +12,11 @@
   "proofs": [
     {
       "weapon": "sword",
-      "actionFamily": "seam-crosscut",
-      "scenarioId": "sword-seam-crosscut-catch-seek",
-      "routeId": "sword-seam-crosscut-replay",
+      "actionFamily": "reversal-threadcut",
+      "scenarioId": "sword-reversal-threadcut-catch-seek",
+      "routeId": "sword-reversal-threadcut-replay",
       "command": "pnpm build:test:standalone && node tests/browser-c40-sword-crosscut-ghost-seek.js",
-      "receiptLabels": ["prethrow", "Seam", "retraced Crosscut", "postcatch"]
+      "receiptLabels": ["prethrow", "Threadcut", "postcatch"]
     },
     {
       "weapon": "hammer",
@@ -36,11 +36,11 @@
     },
     {
       "weapon": "chainblade",
-      "actionFamily": "bind-yank",
-      "scenarioId": "chainblade-bind-yank-catch-seek",
-      "routeId": "chainblade-bind-yank-replay",
+      "actionFamily": "hook-sling",
+      "scenarioId": "chainblade-hook-sling-catch-seek",
+      "routeId": "chainblade-hook-sling-replay",
       "command": "pnpm build:test:standalone && node tests/browser-c40-chainblade-bind-yank-ghost-seek.js",
-      "receiptLabels": ["prethrow", "Bind", "Yank", "postcatch"]
+      "receiptLabels": ["prethrow", "Hook & Sling", "postcatch"]
     },
     {
       "weapon": "riftlock",

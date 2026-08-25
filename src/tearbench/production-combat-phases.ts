@@ -1,5 +1,7 @@
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
-import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../gameplay/combat/combat-entity-runtime";
+import { CombatEntityRuntime, type CombatEntityRuntimeHooks, type LiveCombatEntity } from "../gameplay/combat/combat-entity-runtime";
+import { createLiveWeaponRuntime, type LiveWeaponEnemy } from "../gameplay/combat/live-weapon-runtime";
+import { bindLiveHammerMeteor } from "../gameplay/combat/live-hammer-meteor";
 import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../gameplay/combat/live-collision-phase";
 import type { LiveKillHost } from "../gameplay/combat/live-kill-runtime";
 import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../gameplay/combat/live-opening-phase";
@@ -9,7 +11,10 @@ import { stepCinematicPlayer } from "../gameplay/campaign/cinematic-player-runti
 import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
 import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
+import { BossArenaRules, type ArenaActor, type ArenaPlatform } from "../gameplay/training/arena-rules";
+import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime-bridge";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
+import type { BladeWeaponEvent } from "../gameplay/entities/blade-contracts";
 import { STAGES, stageAt } from "../gameplay/stages";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import type { ProductionReplayWorld } from "./production-world-factory";
@@ -56,6 +61,22 @@ export function createProductionCombatPhases(
   const note = (name: string) => () => { outward.push(name); };
   const player = () => world.state.player() as never;
   const blade = () => world.state.blade() as never;
+  const bossArena = createBossArenaRuntimeBridge<ArenaActor>({
+    rules: new BossArenaRules(config.bossArena, config.colors),
+    viewportWidth: config.view.w, viewportHeight: config.view.h, groundY: config.world.groundY,
+    reformWarn: config.bossArena.reformWarn,
+    ring: (x, y, radius, color) => { effects.ring(x, y, radius, color); },
+    burst: (x, y, dx, dy, count, color) => { effects.burst(x, y, dx, dy, count, color); },
+    bossEvent: (owner, event, color, quiet) => {
+      replay.factories.enemyTypes.BOSSFX.event(owner as never, event, { color, quiet });
+      outward.push(`bossArena:${event}`);
+    },
+    run: () => world.state.run(),
+    platforms: () => stage.platforms as ArenaPlatform[],
+    player: () => player(),
+    enemies: () => world.state.enemies(),
+    lowGraphics: () => false,
+  });
   const style = createLiveStyleAchievementRuntime({
     run: () => world.state.run() as never,
     player: () => player(),
@@ -90,6 +111,14 @@ export function createProductionCombatPhases(
     enemy.dead = true; outward.push("onKill");
   };
   let actorId: ((enemy: object & { id?: string }) => string) | null = null;
+  let weaponRuntime: ReturnType<typeof createLiveWeaponRuntime<LiveWeaponEnemy>> | null = null;
+  let detachedRiftTriggerHeld = false;
+  let detachedRiftlockInitialized = false;
+  const refuseSourceVoid = (): never => {
+    throw new Error("production detached Source void descent/scroll is unsupported; use the live backend");
+  };
+  const dealArea = (x: number, y: number, radius: number, damage: number, playerOwned = true): number =>
+    weaponRuntime?.dealArea(x, y, radius, damage, { playerOwned }) ?? 0;
   const nativeTracking = () => options.gameplayEvents !== undefined
     && tracksAchievements(world.state.run());
   const entityHooks = {
@@ -110,9 +139,65 @@ export function createProductionCombatPhases(
     maxStat: note("maxStat"), checkAchievements: () => { style.check(); },
     noteFirstDamage: note("noteFirstDamage"), reflectedHit: note("reflectedHit"), bossHit: note("bossHit"),
     onKill: (enemy: { dead?: boolean }, cause: string) => { resolveKill(enemy, cause); },
-    areaDamage: () => 0,
+    areaDamage: (x: number, y: number, radius: number, damage: number, playerOwned: boolean) =>
+      dealArea(x, y, radius, damage, playerOwned),
+    weaponProjectileHit: (projectile: LiveCombatEntity, target: LiveCombatEntity,
+      hit: Parameters<NonNullable<CombatEntityRuntimeHooks["weaponProjectileHit"]>>[2]) => {
+      const enemy = target as unknown as LiveWeaponEnemy;
+      const first = enemy.firstPlayerDamageAt == null;
+      let damage = hit.damage;
+      if (hit.secondary && Number((world.state.run() as never as { mods?: { secondPass?: number } }).mods?.secondPass)) {
+        damage *= (world.state.run() as never as { mods: { secondPass: number } }).mods.secondPass;
+      }
+      enemy.hit(damage, hit.dx, hit.dy, { playerOwned: true });
+      weaponRuntime?.noteFirstDamage(enemy, first);
+      projectile.dead = true;
+      if (enemy.dead) resolveKill(enemy, "skill");
+    },
   } as unknown as CombatEntityRuntimeHooks;
   let combat = options.deferCombatRuntime === true ? null : new CombatEntityRuntime(entityHooks);
+
+  const addFloater = (x: number, y: number, text: string, big = false, color = config.colors.perfect): void => {
+    world.state.setFloaters([...world.state.floaters(), { x, y, text, life: 0.8, big, col: color }]);
+  };
+  weaponRuntime = createLiveWeaponRuntime<LiveWeaponEnemy>({
+    run: () => world.state.run(),
+    player: () => player(),
+    blade: () => blade(),
+    enemies: () => world.state.enemies(),
+    time: () => replay.clock.sim,
+    overrun: () => config.overrun, stormbank: () => config.stormbank,
+    score: () => ({ perKill: config.run.scorePerKill, multiplier: config.run.scoreMult }),
+    colors: () => config.colors, juice: () => config.juice,
+    shakeScale: () => 1, motionScale: () => 1, flashScale: () => 1,
+    parrySlowmo: () => config.juice.parrySlowmo, bigShake: () => config.juice.shakeBig || 20,
+    clamp, distance: (x, y) => len(x, y), buzz: () => undefined, rumble: () => undefined,
+    setShake: (value) => { transient.impact.shake = value; }, shake: () => transient.impact.shake,
+    setZoom: (value) => { transient.feel.zoom = value; }, zoom: () => transient.feel.zoom,
+    setFlash: (value) => { transient.feel.flash = value; }, flash: () => transient.feel.flash,
+    setSlowmo: (value) => { transient.impact.slowMotion = value; },
+    setHitStop: (value) => { transient.impact.hitStop = value; }, smallHitStop: () => config.hitStop.small,
+    addFloater, explode: (x, y, color, scale) => { effects.explode(x, y, color, scale); },
+    ring: (x, y, radius, color) => { effects.ring(x, y, radius, color); },
+    ribbon: (x1, y1, x2, y2, color) => { effects.ribbon(x1, y1, x2, y2, color); },
+    burst: (x, y, dx, dy, count, color) => { effects.burst(x, y, dx, dy, count, color); },
+    death: (x, y, shards, color) => { effects.explode(x, y, color, Math.max(0.5, shards / 12)); },
+    deathShards: () => config.juice.deathShards,
+    parrySound: () => undefined, recallSound: () => undefined,
+    onKill: (enemy, cause) => { resolveKill(enemy, cause); },
+  });
+  const lobExplode = bindLiveHammerMeteor({
+    blade: () => blade(), enemies: () => world.state.enemies(),
+    tuning: () => config.weapons.hammer, maximumThrowSpeed: () => config.blade.throw.maxSpeed,
+    redirect: () => !!(world.state.run() as never as { mods: { redirect?: boolean } }).mods.redirect,
+    slamColor: () => config.colors.slam, bigShake: () => config.juice.shakeBig, bigZoom: () => config.juice.zoomBig,
+    distance: (x, y) => len(x, y), clamp,
+    explode: (x, y, color, scale) => { effects.explode(x, y, color, scale); },
+    ribbon: (x1, y1, x2, y2, color) => { effects.ribbon(x1, y1, x2, y2, color); },
+    shake: (value) => { transient.impact.shake = Math.max(transient.impact.shake, value); },
+    zoom: (value) => { transient.feel.zoom = Math.max(transient.feel.zoom, 1 + value); },
+    boom: () => { outward.push("sound:boom"); }, areaDamage: dealArea,
+  });
 
   const opening = {
     config,
@@ -134,11 +219,43 @@ export function createProductionCombatPhases(
         onFinaleLanded: () => { options.finale?.markLanded(); },
         onFinaleBladeCut: (segment) => { options.finale?.tryBladeCut(segment); }, onLanding: () => undefined });
     }, flushClosingInput: note("flushClosingInput"),
-    updateWeaponAbilities: () => undefined, updateWorldHazards: () => undefined,
-    syncVoidSupport: () => undefined, activateThrowSecondary: note("activateThrowSecondary"),
+    updateWeaponAbilities: (dt: number) => {
+      const activeBlade = blade() as { weapon?: { id?: string } | null; lmbOverride?: boolean;
+        _fireRazorRound?: (activePlayer: object) => boolean; resetRiftlock?: () => void };
+      if (activeBlade.weapon?.id === "riftlock" && !detachedRiftlockInitialized) {
+        activeBlade.resetRiftlock?.(); detachedRiftlockInitialized = true;
+      }
+      const held = activeBlade.lmbOverride === true;
+      if (activeBlade.weapon?.id === "riftlock" && held && !detachedRiftTriggerHeld) activeBlade._fireRazorRound?.(player());
+      detachedRiftTriggerHeld = held;
+      weaponRuntime.updateAbilities(dt);
+    },
+    flushWeaponActions: (events: readonly BladeWeaponEvent[]) => {
+      for (const event of events) {
+        const shot = world.entities.createProjectile(event.x, event.y, event.vx, event.vy) as never as Record<string, unknown>;
+        shot.family = "weaponProjectile"; shot.playerOwned = true; shot.weaponId = "riftlock";
+        shot.attackId = event.attackId; shot.throwId = event.throwId; shot.remote = event.remote;
+        shot.secondary = event.secondary; shot.kind = "razor"; shot.r = config.weapons.riftlock.razorRadius;
+        shot.life = config.weapons.riftlock.razorLife; shot.dmg = event.damage;
+        shot.tint = config.colors.perfect; shot.unparryable = true; shot.counterplay = "weapon";
+        world.state.setProjectiles([...world.state.projectiles(), shot as never]);
+        effects.burst(event.x, event.y, event.vx, event.vy, 5, config.colors.perfect);
+        outward.push(`weapon:${event.type}`);
+      }
+    },
+    updateWorldHazards: (dt: number) => {
+      if (combat === null) throw new Error("production combat runtime has not been composed");
+      combat.updateWorldHazards(dt, { groundY: config.world.groundY, sludgeSlow: config.exotic.sludgeSlow,
+        geoWallW: config.exotic.geoWallW, geoWallH: config.exotic.geoWallH, geoWallLife: config.exotic.geoWallLife,
+        sludgeColor: config.colors.sludge });
+    },
+    syncVoidSupport: refuseSourceVoid, activateThrowSecondary: note("activateThrowSecondary"),
     linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); },
     distance: (ax: number, ay: number, bx: number, by: number) => len(ax - bx, ay - by),
-    areaDamage: note("areaDamage"), ring: note("ring"), burst: note("burst"), floater: note("floater"),
+    areaDamage: (x: number, y: number, radius: number, damage: number) => { dealArea(x, y, radius, damage); },
+    ring: (x: number, y: number, radius: number, color: string) => { effects.ring(x, y, radius, color); },
+    burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => { effects.burst(x, y, dx, dy, count, color); },
+    floater: addFloater,
     shake: note("shake"), sound: (name: string) => { outward.push(`sound:${name}`); },
     ghost: note("ghost"), ember: note("ember"), smoke: note("smoke"), drip: note("drip"),
     overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
@@ -147,9 +264,19 @@ export function createProductionCombatPhases(
     onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
     fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
     fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
-    logThrowLaunch: note("logThrowLaunch"), weaponWorldImpact: () => null,
-    lobExplode: note("lobExplode"), emitThrowResolve: note("emitThrowResolve"),
-    nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
+    logThrowLaunch: note("logThrowLaunch"),
+    weaponWorldImpact: () => {
+      const result = invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onWorldImpact", {
+        config, blade: blade(), player: player(), platforms: platforms(), x: (blade() as { x: number }).x,
+        y: (blade() as { y: number }).y,
+      });
+      return result && typeof result === "object" ? result as Readonly<{ mechanic?: string }> : null;
+    },
+    lobExplode, emitThrowResolve: note("emitThrowResolve"),
+    nearestEnemy: () => {
+      const position = blade() as { x: number; y: number };
+      return weaponRuntime.nearestEnemy(position.x, position.y);
+    },
     updateFeedback: (dt: number) => {
       const mirror = replay.factories.mirrorTypes.Mirror as unknown as
         Parameters<typeof updateMirrorCombat>[0] & { fxq?: unknown[] };
@@ -159,11 +286,46 @@ export function createProductionCombatPhases(
       if (drained.length > 0) outward.push(`bossFx:${String(drained.length)}`);
     },
     consumeThrow: () => input.consumeThrow(() => false),
-    updateWave: (dt: number) => { options.updateWave?.(dt); }, startTransformation: () => false, updateSupports: () => undefined,
-    armorBypass: note("armorBypass"), resolveBossZones: () => undefined,
-    updateBossArenaPlatforms: () => undefined, updateVoidScroll: () => undefined,
-    unlockWitness: note("unlockWitness"), startVoidDescent: () => false,
-    spawnBossAdds: () => [], spawnBossClone: () => undefined, removeBossClone: () => undefined,
+    updateWave: (dt: number) => { options.updateWave?.(dt); }, startTransformation: () => false,
+    updateSupports: (dt: number) => {
+      if (combat === null) throw new Error("production combat runtime has not been composed");
+      combat.updateSupports(dt, config.support, config.colors.anchor);
+    },
+    armorBypass: note("armorBypass"), resolveBossZones: () => {
+      if (combat === null) throw new Error("production combat runtime has not been composed");
+      combat.resolveBossZones({ groundY: config.world.groundY, defaultWidth: config.warden.zoneW,
+        defaultDamage: config.warden.zoneTick, defaultTickCooldown: config.warden.zoneTickCd });
+    },
+    updateBossArenaPlatforms: (dt: number) => { bossArena.updateLive(dt); },
+    updateVoidScroll: () => {
+      const run = world.state.run() as { voidScroll?: unknown } | null;
+      if (run?.voidScroll !== undefined && run.voidScroll !== null) refuseSourceVoid();
+    },
+    unlockWitness: note("unlockWitness"), startVoidDescent: (boss: never) => {
+      const owner = boss as { bossId?: string; presentationId?: string };
+      if (owner.bossId === "source" || owner.presentationId === "source") refuseSourceVoid();
+      return false;
+    },
+    spawnBossAdds: (boss: never) => {
+      const source = boss as { x: number; y: number; hw?: number; facing?: number };
+      const adds: never[] = [];
+      for (const offset of [-1, 1]) {
+        const add = world.entities.createEnemy("charger", clamp(source.x + offset * 130, 60, config.view.w - 60), config.world.groundY - 22,
+          world.state.run() as never) as never as Record<string, unknown>;
+        add.behavior = "bull"; add.hp = Number(add.hp) * 2.2; add.maxHp = add.hp; add.hpDisplay = add.hp;
+        add.speedMult = Number(add.speedMult) * 1.35; add.contactDmg = Number(add.contactDmg) * 1.3;
+        add.canClimb = true; add.climber = true; add.climbApt = 0.85; add.spawnT = 0.35;
+        adds.push(add as never);
+      }
+      world.state.setEnemies([...world.state.enemies(), ...adds]); return adds;
+    },
+    spawnBossClone: (boss: never) => {
+      const source = boss as { x: number; y: number; facing?: number };
+      const clone = world.entities.createEnemy("reflection", clamp(source.x - (source.facing ?? 1) * 220, 100, config.view.w - 100), config.world.groundY - 300,
+        world.state.run() as never) as never as Record<string, unknown>;
+      clone.spawnT = 0.3; world.state.setEnemies([...world.state.enemies(), clone as never]); outward.push("bossClone");
+    },
+    removeBossClone: (clone: never) => { const value = clone as { x: number; y: number }; effects.ring(value.x, value.y, 12, config.colors.perfect); },
     dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
     updateEffects: (dt: number) => { effects.update(dt); },
     random: cosmeticRandom,
@@ -213,14 +375,21 @@ export function createProductionCombatPhases(
       segCircle(x1, y1, x2, y2, x, y, radius),
     segmentPointDistance: (x1: number, y1: number, x2: number, y2: number, x: number, y: number) =>
       segPointDist(x1, y1, x2, y2, x, y),
-    weaponSegmentContact: () => false,
+    weaponSegmentContact: (cap: Parameters<typeof replay.factories.enemyTypes.weaponCapsuleIntersectsSegment>[0],
+      x1: number, y1: number, x2: number, y2: number) =>
+      replay.factories.enemyTypes.weaponCapsuleIntersectsSegment(cap, x1, y1, x2, y2),
     distance: (x: number, y: number) => len(x, y), clamp, lerp,
-    nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    areaDamage: () => 0, lobExplode: note("lobExplode"),
+    nearestEnemy: () => {
+      const position = blade() as { x: number; y: number };
+      return weaponRuntime.nearestEnemy(position.x, position.y);
+    },
+    areaDamage: (x: number, y: number, radius: number, damage: number) => dealArea(x, y, radius, damage), lobExplode,
     splitProjectile: (projectile: never) => { style.splitProjectile(projectile); },
     triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
     makeHitEvent: note("makeHitEvent"), makeSwingEvent: note("makeSwingEvent"), makeSlamEvent: note("makeSlamEvent"),
     makeReturnEvent: note("makeReturnEvent"), makePerfectParryEvent: note("makePerfectParryEvent"),
+    observeProjectile: note("projectile:spawned"), projectileDeflected: note("projectile:deflected"),
+    projectileHit: note("projectile:hit"), projectileExpired: note("projectile:expired"),
     profileAdd: () => undefined, profileMax: () => undefined, dailyBump: () => undefined,
     achievementsEnabled: nativeTracking, achievement: note("achievement"), checkAchievements: () => undefined,
     tutorialMark: () => undefined,

@@ -12,7 +12,7 @@ import { stageAt } from "../gameplay/stages";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
-import { captureLiveStateForgeSnapshot } from "./live-runtime-snapshots";
+import { captureLiveStateForgeSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
 import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
@@ -29,6 +29,8 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  /** Optional immutable identity supplied by the build/composition boundary. */
+  readonly buildIdentity?: Omit<TearBuildIdentityV1, "configHash">;
   readonly inputSnapshots?: ReadonlyMap<number, AuthoritativeInputSnapshot>;
   /** Optional portable fact sink for a host that compares source replay output. */
   readonly gameplayEvents?: TearGameplayEventPort;
@@ -153,6 +155,7 @@ export function captureProductionReplayCheckpoint(
   simulation: ReturnType<typeof createProductionCombatSimulation<CanonicalGameplayState>>,
   waveReward: ProductionWaveRewardRuntime,
   id: string,
+  buildIdentity?: Omit<TearBuildIdentityV1, "configHash">,
 ): ProductionReplayCheckpointCapture {
   const runtime = productionRuntimeState(replay);
   const stateForge = createLiveStateForgeAdapter({
@@ -193,8 +196,10 @@ export function captureProductionReplayCheckpoint(
     id, tick, stateClass: "recorded-canonical", seed: String(replay.world.state.run()?.runSeed ?? "unknown"),
     stateForge, world: stateForge.capture(), rng: replay.world.context.services.random.snapshot(),
     registry: createDefaultStateCodecRegistry(),
-    observationClass: "structured-state", producer: "production-headless-checkpoint", target: "headless",
-    contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+    observationClass: "structured-state", producer: "production-headless-checkpoint",
+    target: buildIdentity?.target ?? "headless",
+    contentHash: buildIdentity?.contentHash ?? stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+    ...(buildIdentity === undefined ? {} : { buildIdentity }),
     // A required contract hash that explicitly denotes absence of a pixel capture;
     // it is not rendered-output evidence.
     visualHash: stableVerificationHash("not-captured"),
@@ -250,6 +255,14 @@ function hydrateProductionReplayWorld(replay: ProductionReplayWorld, snapshot: T
   return staged;
 }
 
+const DETACHED_SOURCE_VOID_UNSUPPORTED =
+  "production detached Source void descent/scroll is unsupported; use the live backend";
+
+function assertDetachedSourceVoidSupported(run: unknown): void {
+  if (typeof run !== "object" || run === null) return;
+  if ((run as { voidScroll?: unknown }).voidScroll != null) throw new Error(DETACHED_SOURCE_VOID_UNSUPPORTED);
+}
+
 /**
  * Rebuilds a V3 keyframe through the same source-owned world and combat graph
  * used by the C29 replay path. It owns no Vault access and never mutates the
@@ -264,15 +277,22 @@ export function createProductionGhostReplayComposition(
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
         ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }) });
+      const runtimeBuild = injectedBuildIdentity("production-headless", stableVerificationHash(ENTITY_KIND_REGISTRY.ids));
+      const inheritedBuild = snapshot?.provenance.build;
+      const suppliedBuild = inheritedBuild === undefined ? (options.buildIdentity ?? runtimeBuild) : undefined;
       const bootstrap = Object.freeze({
-        build: Object.freeze({
-          version: "0.1.0", revision: "working-tree", target: "production-headless",
-          rulesetVersion: "live", contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+        build: inheritedBuild ?? Object.freeze({
+          version: suppliedBuild?.version ?? "0.1.0",
+          revision: suppliedBuild?.revision ?? "unbound",
+          target: suppliedBuild?.target ?? "production-headless",
+          rulesetVersion: suppliedBuild?.rulesetVersion ?? "live",
+          contentHash: suppliedBuild?.contentHash ?? stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
           configHash: stableVerificationHash(replay.configuration.value),
         }),
         rng: replay.world.context.services.random.snapshot(),
       } satisfies ProductionReplayBootstrap);
       const staged = snapshot === undefined ? undefined : hydrateProductionReplayWorld(replay, snapshot);
+      if (staged !== undefined) assertDetachedSourceVoidSupported(staged.run);
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let outcome: ProductionRunOutcomeRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {

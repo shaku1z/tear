@@ -17,6 +17,22 @@ async function withJourney(options, run) {
   const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
   const root = path.resolve(__dirname, "..", "dist", buildDirectory);
   assert.ok(fs.existsSync(path.join(root, "index.html")), `dist/${buildDirectory} is missing; run pnpm build:test:standalone first`);
+  const { calculateArtifactHash, readSourceIdentity } = await import("../scripts/release-artifact.mjs");
+  const buildInfoPath = path.join(root, "build-info.json");
+  assert.ok(fs.existsSync(buildInfoPath), `dist/${buildDirectory}/build-info.json is missing; build attribution is required`);
+  const buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, "utf8"));
+  const expectedTarget = buildDirectory.includes("crazygames") ? "crazygames" : "standalone";
+  assert.equal(buildInfo.format, "tear-build-info", "served build-info format is unsupported");
+  assert.equal(buildInfo.target, expectedTarget, "served build target does not match the journey target");
+  assert.equal(typeof buildInfo.mode, "string", "served build-info mode is required");
+  const artifact = await calculateArtifactHash(root);
+  assert.equal(buildInfo.artifactHash, artifact.hash, "served build artifact hash is stale");
+  assert.equal(buildInfo.artifactFiles, artifact.files, "served build artifact file count is stale");
+  const source = await readSourceIdentity(path.resolve(__dirname, ".."));
+  assert.equal(buildInfo.sha, source.revision, "served build SHA does not match the current source revision");
+  assert.equal(buildInfo.sourceRevision, source.revision, "served build source revision is stale");
+  assert.equal(buildInfo.sourceState, source.state, "served build source state is stale");
+  assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
   const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
   const baseUrl = `http://127.0.0.1:${String(port)}`;
   const server = http.createServer((request, response) => {
@@ -28,7 +44,9 @@ async function withJourney(options, run) {
     }
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
     const file = path.resolve(root, relative);
-    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { response.writeHead(404).end(); return; }
+    const containedPath = path.relative(root, file);
+    if (containedPath.startsWith("..") || path.isAbsolute(containedPath)
+      || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { response.writeHead(404).end(); return; }
     response.setHeader("Content-Type", contentType(file));
     fs.createReadStream(file).pipe(response);
   });
@@ -79,7 +97,10 @@ async function withJourney(options, run) {
     // HTTP origin before the application opens it. Ordinary journeys retain
     // their existing eager boot behavior.
     if (!options.deferBoot) await boot();
-    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait });
+    const served = await page.request.get(`${baseUrl}/build-info.json`);
+    assert.ok(served.ok(), "served build-info.json is unavailable");
+    assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
+    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait, buildInfo });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser) await browser.close();

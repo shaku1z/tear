@@ -47,6 +47,11 @@ export function createAldricType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.verticalTarget = null; this.verticalTargetX = x; this.verticalTargetY = y;
       this.verticalStartX = x; this.verticalStartY = y; this.verticalMaxT = 0; this.verticalHitSpent = false;
     }
+    get phase() {
+      const f = this.hp / this.maxHp, marks = bossPhaseMarks("aldric");
+      return this.faked || this.mode === "downed" || this.mode === "frenzy" || f <= marks[1]
+        ? 3 : (f > marks[0] ? 1 : 2);
+    }
     override damageTakenMult() { return this.mode === "frenzy" ? CONFIG.aldric.frenzyDmgTaken : (this.mode === "downed" ? CONFIG.aldric.downedDmgTaken : 1); }
     _buriedWeaponOrigin() { return { x: this.x + this.facing * 88, y: CONFIG.world.groundY - 44 }; }
     weaponGeometry(angle?: number | null, prevAngle?: number | null, origin?: Point | null) {

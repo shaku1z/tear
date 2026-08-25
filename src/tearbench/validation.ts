@@ -1,5 +1,6 @@
 import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { normalizeGameAction } from "../input/game-action";
+import { bossDefinition } from "../gameplay/run/boss-definitions";
 import type {
   GhostRangeV1,
   TearBuildIdentityV1,
@@ -16,11 +17,13 @@ import type {
 } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import {
+  BOSS_REGISTRY,
   DIFFICULTY_REGISTRY,
   ENTITY_KIND_REGISTRY,
   EVENT_REGISTRY,
   INVARIANT_REGISTRY,
   RUN_MODE_REGISTRY,
+  STAGE_REGISTRY,
   WEAPON_REGISTRY,
   WITHIN_TICK_PHASES,
 } from "./registries";
@@ -221,6 +224,30 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
     if (typeof start.mode !== "string" || !RUN_MODE_REGISTRY.has(start.mode)) issue(issues, "start.mode", "is not registered");
     if (typeof start.difficulty !== "string" || !DIFFICULTY_REGISTRY.has(start.difficulty)) issue(issues, "start.difficulty", "is not registered");
     if (typeof start.weapon !== "string" || !WEAPON_REGISTRY.has(start.weapon)) issue(issues, "start.weapon", "is not registered");
+    if (start.stage !== undefined && (typeof start.stage !== "string" || !STAGE_REGISTRY.has(start.stage))) {
+      issue(issues, "start.stage", "is not a registered current-game stage");
+    }
+    if (start.boss !== undefined && (typeof start.boss !== "string" || !BOSS_REGISTRY.has(start.boss))) {
+      issue(issues, "start.boss", "is not a registered current-game boss");
+    }
+    if (start.boss !== undefined && typeof start.mode === "string") {
+      if (["tutorial", "playground", "sandbox"].includes(start.mode)) {
+        issue(issues, "start.boss", "is incompatible with the selected run mode");
+      } else if (value.stateClass === "recorded-canonical" && start.mode !== "bossonly") {
+        issue(issues, "start.boss", "natural boss selection requires bossonly mode");
+      }
+    }
+    if (start.bossPhase !== undefined) {
+      if (typeof start.boss !== "string" || !BOSS_REGISTRY.has(start.boss)) {
+        issue(issues, "start.bossPhase", "requires a registered boss");
+      } else {
+        const phaseCount = bossDefinition(start.boss).phaseMarks.length + 1;
+        if (typeof start.bossPhase !== "string" || !/^[1-9][0-9]*$/u.test(start.bossPhase)
+          || Number(start.bossPhase) < 1 || Number(start.bossPhase) > phaseCount) {
+          issue(issues, "start.bossPhase", "is not a valid production boss phase ordinal");
+        }
+      }
+    }
     if (start.wave !== undefined && !safeInteger(start.wave, 1)) issue(issues, "start.wave", "must be a positive integer");
   }
   if (!boundedArray(value.assertions) || value.assertions.some((entry) => typeof entry !== "string" || !INVARIANT_REGISTRY.has(entry))) issue(issues, "assertions", "contains an unregistered invariant");

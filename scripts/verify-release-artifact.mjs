@@ -13,5 +13,6 @@ const result = await verifyReleaseArtifact({
   expectedRepository,
   expectedSha,
   expectedTarget: target,
+  sourceDirectory: projectRoot,
 });
 console.log(`PASS release artifact: ${result.metadata.sha} ${result.artifact.hash}`);

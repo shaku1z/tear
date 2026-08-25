@@ -71,6 +71,21 @@ test("terminology checker rejects a new unallowlisted deprecated label", () => {
   });
 });
 
+test("terminology checker reports every unallowlisted repeated occurrence", () => {
+  withFixture((root) => {
+    const registry = baseRegistry();
+    writeRegistry(root, registry);
+    writeFixture(root, "src/presentation/screens/new-screen.ts", 'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n');
+    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
+    const findings = result.findings.filter((finding) => finding.alias === "Ghost Lab");
+    assert.equal(result.ok, false);
+    assert.equal(findings.length, 3);
+    assert.equal(result.errors.length, 3);
+    assert.deepEqual(findings.map((finding) => finding.line), [1, 1, 2]);
+    assert.ok(findings.every((finding) => finding.classification === "unallowlisted"));
+  });
+});
+
 test("terminology checker accepts only the existing exact compatibility path", () => {
   withFixture((root) => {
     const registry = baseRegistry();
@@ -81,6 +96,41 @@ test("terminology checker accepts only the existing exact compatibility path", (
 
     assert.equal(result.ok, true);
     assert.ok(result.findings.some((finding) => finding.allowlistId === "compat-menu-setup-surfaces"));
+  });
+});
+
+test("terminology checker scans active evidence JSON without misclassifying preserved notes", () => {
+  withFixture((root) => {
+    const registry = baseRegistry();
+    writeRegistry(root, registry);
+    writeFixture(root, "docs/tearbench-ghost3-evidence-catalog.json",
+      '{"notes":"Foundry and Ghost Lab are retained source-era evidence labels."}\n');
+    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
+    const findings = result.findings.filter((finding) => finding.relativePath === "docs/tearbench-ghost3-evidence-catalog.json");
+    assert.equal(result.ok, true);
+    assert.deepEqual(findings.map((finding) => finding.alias).sort(), ["Foundry", "Ghost Lab"]);
+    assert.ok(findings.every((finding) => finding.classification === "mutable-compatibility"
+      && finding.allowlistId === "compat-current-generated-evidence-catalog"));
+  });
+});
+
+test("terminology checker classifies every repeated compatibility and historical occurrence", () => {
+  for (const [relativePath, classification, allowlistId] of [
+    ["src/presentation/screens/menu-setup.ts", "mutable-compatibility", "compat-menu-setup-surfaces"],
+    ["docs/TEARBENCH_GHOST3_TERMINOLOGY.md", "immutable-history", "history-ghost3-top-level-docs"],
+  ]) withFixture((root) => {
+    const registry = baseRegistry();
+    writeRegistry(root, registry);
+    const content = relativePath.endsWith(".ts")
+      ? 'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n'
+      : "Ghost Lab Ghost Lab\nGhost Lab\n";
+    writeFixture(root, relativePath, content);
+    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
+    const findings = result.findings.filter((finding) => finding.alias === "Ghost Lab");
+    assert.equal(result.ok, true);
+    assert.deepEqual(findings.map((finding) => finding.line), [1, 1, 2]);
+    assert.ok(findings.every((finding) => finding.classification === classification));
+    assert.ok(findings.every((finding) => finding.allowlistId === allowlistId));
   });
 });
 
@@ -144,5 +194,25 @@ test("active-roster checker rejects retired IDs in new current public copy", () 
 
     assert.equal(result.ok, false);
     assert.match(result.errors.join("\n"), /new-screen\.ts.*spear/iu);
+  });
+});
+
+test("active-roster checker reports every repeated retired ID at its actual source line", () => {
+  withFixture((root) => {
+    const registry = baseRegistry();
+    writeRegistry(root, registry);
+    writeFixture(root, "src/gameplay/weapon-selection.ts", weaponSource);
+    writeFixture(root, "public/repeated.json", '{\n  "old": "spear",\n  "alsoOld": "spear ringblade"\n}\n');
+
+    const result = runActiveRosterCheck({ root, registryPath: "registry.json" });
+    const findings = result.findings.filter((finding) => finding.relativePath.endsWith("repeated.json"));
+
+    assert.equal(result.ok, false);
+    assert.deepEqual(findings.map(({ retiredId, line }) => ({ retiredId, line })), [
+      { retiredId: "spear", line: 2 },
+      { retiredId: "spear", line: 3 },
+      { retiredId: "ringblade", line: 3 },
+    ]);
+    assert.equal(result.errors.filter((error) => error.includes("repeated.json")).length, 3);
   });
 });

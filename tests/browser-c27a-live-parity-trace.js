@@ -97,6 +97,31 @@ const scenarios = [
   }),
 ];
 
+// Preserve the full matrix by default while permitting one bounded local
+// source-owned mechanic capture without invoking endurance scenarios.
+const SHORT_SCENARIO_ID = "c27a.live-parity-trace";
+const MAX_FOCUSED_TICKS = 180;
+const MIN_FOCUSED_TICKS = 40;
+
+function scenariosForExecution() {
+  const requestedId = process.env.TEAR_C27A_SCENARIO_ID;
+  const requestedMaxTicks = process.env.TEAR_C27A_MAX_TICKS;
+  if (requestedId === undefined && requestedMaxTicks === undefined) return scenarios;
+  if (requestedId !== SHORT_SCENARIO_ID) {
+    throw new Error(`focused C27A capture requires TEAR_C27A_SCENARIO_ID=${SHORT_SCENARIO_ID}`);
+  }
+  if (requestedMaxTicks === undefined || !/^\d+$/u.test(requestedMaxTicks)) {
+    throw new Error("focused C27A capture requires a numeric TEAR_C27A_MAX_TICKS");
+  }
+  const maxTicks = Number(requestedMaxTicks);
+  if (!Number.isSafeInteger(maxTicks) || maxTicks < MIN_FOCUSED_TICKS || maxTicks > MAX_FOCUSED_TICKS) {
+    throw new Error(`TEAR_C27A_MAX_TICKS must be an integer from ${String(MIN_FOCUSED_TICKS)} to ${String(MAX_FOCUSED_TICKS)}`);
+  }
+  const selected = scenarios.find((scenario) => scenario.id === SHORT_SCENARIO_ID);
+  if (selected === undefined) throw new Error(`missing source-owned C27A scenario ${SHORT_SCENARIO_ID}`);
+  return [{ ...selected, maxTicks }];
+}
+
 function action(tick, id, command) {
   return { kind: "command", tick, id, command };
 }
@@ -124,7 +149,7 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const written = [];
 
-  for (const scenario of scenarios) {
+  for (const scenario of scenariosForExecution()) {
     const schedule = Object.fromEntries(Array.from({ length: scenario.maxTicks }, (_, index) => {
       const tick = index + 1;
       return [tick, scenario.idle === true ? [] : actionsAt(tick)];
@@ -336,7 +361,8 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
       engineEventProjection: {
         format: "tear-semantic-engine-events", schemaVersion: 1,
         boundary: { kind: "post-origin-snapshot", originTick: first.origin.tick },
-        events: first.engineEvents,
+        events: first.engineEvents.filter((event) => event.tick > first.origin.tick)
+          .map((event, sequence) => ({ ...event, sequence })),
       },
       terminated: first.terminated,
       checkpoints: first.checkpoints,

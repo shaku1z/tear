@@ -2,75 +2,102 @@
   {
     "id": "boot-start-run",
     "description": "Boot the application and enter the first run state.",
+    "subject": { "kind": "gameplay", "id": "boot" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
     "tags": ["boot", "journey"],
-    "maxTicks": 1440,
+    "maxTicks": 240,
     "testFiles": ["tests/unit/run-lifecycle.test.ts", "tests/unit/app-state-machine.test.ts"]
   },
   {
     "id": "movement-jump",
     "description": "Move and complete a grounded jump without invalid state.",
+    "subject": { "kind": "gameplay", "id": "movement" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
     "tags": ["movement", "jump"],
-    "maxTicks": 720,
+    "maxTicks": 120,
     "testFiles": ["tests/unit/player-locomotion.test.ts"]
   },
   {
     "id": "dash-one-way-platform",
     "description": "Dash and resolve a one-way platform contact.",
+    "subject": { "kind": "gameplay", "id": "dash" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
     "tags": ["movement", "dash", "platform"],
-    "maxTicks": 720,
+    "maxTicks": 120,
     "testFiles": ["tests/unit/player-locomotion.test.ts"]
   },
   {
     "id": "blade-valid-cut",
     "description": "Generate a blade contact above the valid cut threshold.",
+    "subject": { "kind": "gameplay", "id": "blade" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
     "tags": ["blade", "damage"],
-    "maxTicks": 720,
+    "maxTicks": 120,
     "testFiles": ["tests/unit/gameplay-definitions.test.ts", "tests/unit/blade-parry-runtime.test.ts"]
   },
   {
     "id": "projectile-parry-basic",
     "description": "Deflect a standard projectile without invalid player health.",
+    "subject": { "kind": "gameplay", "id": "parry" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
     "tags": ["projectile", "parry"],
-    "maxTicks": 720,
+    "maxTicks": 120,
     "testFiles": ["tests/unit/blade-parry-runtime.test.ts"]
   },
   {
     "id": "wave-clear-to-draft",
     "description": "Clear a wave and enter the draft state.",
+    "subject": { "kind": "gameplay", "id": "wave" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
     "tags": ["wave", "draft"],
-    "maxTicks": 1440,
+    "maxTicks": 360,
     "testFiles": ["tests/unit/live-wave-controller.test.ts", "tests/unit/run-wave-clear-planner.test.ts"]
   },
   {
     "id": "draft-selection-to-gameplay",
     "description": "Select one legal draft choice and resume gameplay.",
+    "subject": { "kind": "gameplay", "id": "draft" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
     "tags": ["draft", "journey"],
-    "maxTicks": 1440,
+    "maxTicks": 240,
     "testFiles": ["tests/unit/reward-selection.test.ts", "tests/unit/reward-transition-adapter.test.ts"]
   },
   {
     "id": "source-void-low-hp-rescue-seek",
-    "description": "At one HP, trigger the real Source void-fall rescue through semantic movement, seal it, and verify fresh pre/post-rescue Ghost V3 production seeks.",
+    "description": "At one HP, trigger the real live Source void-fall rescue through semantic movement, retain its native evidence, verify a supported pre-rescue replay receipt, and explicitly refuse unsupported detached post-rescue void replay and mixed-capsule seeking.",
+    "subject": { "kind": "boss", "id": "source" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "source" },
+    "backends": ["live"],
     "tags": ["source", "boss", "void", "hazard", "rescue", "one-hit", "ghost", "seek", "c40"],
     "maxTicks": 1200,
     "testFiles": ["tests/unit/c40-source-void-evidence-registry.test.ts"],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js",
-      "artifact": "An ephemeral sealed and verified Ghost V3 capsule, including 60-tick canonical keyframes, a one-HP semantic void-fall rescue, its native world.void-rescue fact, and three fresh production-world seek receipts both before and after rescue.",
+      "artifact": "An ephemeral sealed Ghost V3 capsule, including 60-tick canonical keyframes, a one-HP semantic void-fall rescue, its native world.void-rescue fact, a supported pre-rescue detached replay receipt, and explicit refusal of unsupported detached post-rescue void replay and mixed-capsule seeking.",
       "artifactRetention": "The browser proof verifies the capsule and receipts in its isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
       "certification": "non-certifying"
     }
   },
   {
-    "id": "chainblade-bind-yank-catch-seek",
-    "description": "Forge one normal Chainblade/charger encounter, prove the real Bind to Yank to catch lifecycle, seal it, and verify fresh production seeks at the retained lifecycle receipts.",
-    "tags": ["chainblade", "throw", "bind", "yank", "catch", "ghost", "seek", "c40"],
+    "id": "chainblade-hook-sling-catch-seek",
+    "description": "Forge one current Chainblade/charger encounter, prove its production Hook & Sling, recall, and catch lifecycle, seal it, and verify fresh production seeks at supported retained receipts.",
+    "subject": { "kind": "weapon", "id": "chainblade" },
+    "start": { "mode": "endless", "difficulty": "normal", "weapon": "chainblade" },
+    "backends": ["live", "headless"],
+    "tags": ["chainblade", "throw", "hook", "sling", "recall", "catch", "ghost", "seek", "c40"],
     "maxTicks": 720,
     "testFiles": ["tests/unit/c40-chainblade-evidence-registry.test.ts"],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-chainblade-bind-yank-ghost-seek.js",
-      "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, generic native weapon transport facts, and three fresh C29 production-world seek receipts at each retained prethrow, Bind, Yank, and postcatch state.",
+      "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, production Hook & Sling state and native weapon transport facts, and fresh production-world seek receipts only at actually retained supported checkpoints.",
       "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
       "certification": "non-certifying"
@@ -79,6 +106,9 @@
   {
     "id": "hammer-meteor-terrain-catch-seek",
     "description": "Forge one normal Hammer state, throw down onto authored terrain, prove the real Meteor resolve and catch lifecycle, seal it, and verify fresh production seeks at each retained receipt.",
+    "subject": { "kind": "weapon", "id": "hammer" },
+    "start": { "mode": "endless", "difficulty": "normal", "weapon": "hammer" },
+    "backends": ["live", "headless"],
     "tags": ["hammer", "throw", "meteor", "terrain", "catch", "ghost", "seek", "c40"],
     "maxTicks": 720,
     "testFiles": ["tests/unit/c40-hammer-evidence-registry.test.ts"],
@@ -93,6 +123,9 @@
   {
     "id": "greatsword-wheelcut-catch-seek",
     "description": "Forge one normal Greatsword encounter, prove the live spinning Wheel Cut route into a controlled recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
+    "subject": { "kind": "weapon", "id": "greatsword" },
+    "start": { "mode": "endless", "difficulty": "normal", "weapon": "greatsword" },
+    "backends": ["live", "headless"],
     "tags": ["greatsword", "throw", "wheelcut", "catch", "ghost", "seek", "c40"],
     "maxTicks": 720,
     "testFiles": ["tests/unit/c40-greatsword-evidence-registry.test.ts"],
@@ -105,14 +138,17 @@
     }
   },
   {
-    "id": "sword-seam-crosscut-catch-seek",
-    "description": "Forge one normal Sword/charger encounter, prove the real outgoing Seam to retraced Crosscut to catch lifecycle, seal it, and verify fresh production seeks at the retained lifecycle receipts.",
-    "tags": ["sword", "throw", "seam", "crosscut", "catch", "ghost", "seek", "c40"],
+    "id": "sword-reversal-threadcut-catch-seek",
+    "description": "Forge one current Sword/charger encounter, prove its production Threadcut throw/recall and catch lifecycle, retain native weapon evidence, and verify fresh production seeks at supported retained checkpoints; Reversal has its separate source-owned contact proof.",
+    "subject": { "kind": "weapon", "id": "sword" },
+    "start": { "mode": "endless", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
+    "tags": ["sword", "reversal", "threadcut", "throw", "recall", "catch", "ghost", "seek", "c40"],
     "maxTicks": 720,
     "testFiles": ["tests/unit/c40-sword-evidence-registry.test.ts"],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-sword-crosscut-ghost-seek.js",
-      "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, generic native weapon transport facts, and three fresh C29 production-world seek receipts at each retained prethrow, Seam, retraced Crosscut, and postcatch state.",
+      "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, actual current Sword Threadcut transport facts, and fresh production-world seek receipts only at genuinely retained supported checkpoints.",
       "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
       "certification": "non-certifying"
@@ -121,6 +157,9 @@
   {
     "id": "riftlock-loose-cannon-catch-seek",
     "description": "Forge one normal Riftlock/charger encounter, prove Loose Cannon capture into a Backblast recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
+    "subject": { "kind": "weapon", "id": "riftlock" },
+    "start": { "mode": "endless", "difficulty": "normal", "weapon": "riftlock" },
+    "backends": ["live", "headless"],
     "tags": ["riftlock", "throw", "capture", "backblast", "catch", "ghost", "seek", "c40"],
     "maxTicks": 720,
     "testFiles": ["tests/unit/c40-riftlock-evidence-registry.test.ts"],

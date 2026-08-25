@@ -21,7 +21,7 @@ function escapeRegExp(value) {
 }
 
 function aliasPattern(alias) {
-  return new RegExp(`(^|[^A-Za-z0-9])${escapeRegExp(alias)}(?=$|[^A-Za-z0-9])`, "iu");
+  return new RegExp(`(^|[^A-Za-z0-9])${escapeRegExp(alias)}(?=$|[^A-Za-z0-9])`, "giu");
 }
 
 function getExtension(relativePath) {
@@ -80,20 +80,20 @@ export function scanRetiredRosterCopy(root, registry) {
     const text = fs.readFileSync(absolutePath, "utf8");
     for (const segment of segmentsForFile(relativePath, text)) {
       for (const retiredId of roster.retiredIds) {
-        const match = aliasPattern(retiredId).exec(segment.text);
-        if (!match) continue;
-        const offset = segment.offset + (match.index ?? 0);
-        const allowance = allowedRosterOccurrence(relativePath, retiredId, roster);
-        const finding = {
-          relativePath,
-          line: lineNumber(text, offset),
-          retiredId,
-          classification: allowance?.classification ?? "unallowlisted",
-          allowlistId: allowance?.allowlistId ?? null,
-        };
-        findings.push(finding);
-        if (!allowance) {
-          errors.push(`${relativePath}:${finding.line} contains retired active-roster ID "${retiredId}" outside an exact migration/history allowance`);
+        for (const match of segment.text.matchAll(aliasPattern(retiredId))) {
+          const offset = segment.offset + (match.index ?? 0) + match[1].length;
+          const allowance = allowedRosterOccurrence(relativePath, retiredId, roster);
+          const finding = {
+            relativePath,
+            line: lineNumber(text, offset),
+            retiredId,
+            classification: allowance?.classification ?? "unallowlisted",
+            allowlistId: allowance?.allowlistId ?? null,
+          };
+          findings.push(finding);
+          if (!allowance) {
+            errors.push(`${relativePath}:${finding.line} contains retired active-roster ID "${retiredId}" outside an exact migration/history allowance`);
+          }
         }
       }
     }

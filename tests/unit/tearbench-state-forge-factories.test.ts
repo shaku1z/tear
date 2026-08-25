@@ -51,9 +51,9 @@ describe("State Forge validity and exact factories", () => {
     expect(wave.start.wave).toBe(99);
     expect(wave.state?.enemyComposition).toHaveLength(2);
 
-    const boss = forgeBossFrameState(wave, "warden", "enraged", "mortar", 37);
+    const boss = forgeBossFrameState(wave, "warden", "2", "mortar", 37);
     expect(boss).toMatchObject({
-      start: { boss: "warden", bossPhase: "enraged" },
+      start: { boss: "warden", bossPhase: "2" },
       state: { boss: { attack: "mortar", frame: 37 } },
     });
 

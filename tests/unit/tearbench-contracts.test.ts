@@ -46,6 +46,27 @@ describe("TearBench shared contracts", () => {
     expect(validateTearContract({ ...scenario(), tags: Array.from({ length: 100_001 }, () => "tag") }).ok).toBe(false);
   });
 
+  it("rejects stale stages, unknown bosses, impossible phases, and incompatible boss starts", () => {
+    const start = scenario().start;
+    for (const invalid of [
+      { ...start, stage: "retired-stage" },
+      { ...start, stage: 42 },
+      { ...start, boss: "retired-boss" },
+      { ...start, bossPhase: "1" },
+      { ...start, boss: "warden", bossPhase: "0.65" },
+      { ...start, boss: "warden", bossPhase: "01" },
+      { ...start, boss: "warden", bossPhase: "4" },
+      { ...start, mode: "tutorial", boss: "warden" },
+    ]) expect(validateTearContract({ ...scenario(), start: invalid }).ok).toBe(false);
+
+    expect(validateTearContract({
+      ...scenario(), start: { ...start, boss: "warden", bossPhase: "1" },
+    }).ok).toBe(true);
+    expect(validateTearContract({
+      ...scenario(), stateClass: "recorded-canonical", start: { ...start, boss: "warden" },
+    }).ok).toBe(false);
+  });
+
   it("validates event registry identity and causal timing fields", () => {
     const event: TearCausalEventV1 = {
       format: TEAR_CONTRACT_FORMAT, kind: "event", schemaVersion: 1,

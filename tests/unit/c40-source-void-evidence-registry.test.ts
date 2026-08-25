@@ -19,7 +19,7 @@ describe("C40 Source one-HP void rescue seek evidence registry", () => {
         certification: "non-certifying",
       },
     });
-    expect(String((scenario?.evidence as Record<string, unknown>).artifact)).toMatch(/one-HP semantic void-fall rescue.*world\.void-rescue.*before and after rescue/iu);
+    expect(String((scenario?.evidence as Record<string, unknown>).artifact)).toMatch(/one-HP semantic void-fall rescue.*world\.void-rescue.*pre-rescue.*refusal.*unsupported.*post-rescue/iu);
     expect(String((scenario?.evidence as Record<string, unknown>).artifactRetention)).toMatch(/does not retain a checked-in release artifact/iu);
   });
 

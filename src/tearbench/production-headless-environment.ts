@@ -24,7 +24,8 @@ import {
   type TearHeadlessTransition,
 } from "./headless";
 import { validateTearContract } from "./validation";
-import { ENTITY_KIND_REGISTRY } from "./registries";
+import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalObservationStage } from "./observation-identity";
+import { projectLiveProjectiles } from "./live-observation-projectiles";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -294,9 +295,12 @@ export function createProductionHeadlessEnvironment(
     );
   const policyObservation = (value: ProductionHeadlessCore): TearObservationV1 => {
     const run = value.replay.world.state.run() as unknown as { mode: TearObservationV1["run"]["mode"]; diff: TearObservationV1["run"]["difficulty"]; weaponId: TearObservationV1["run"]["weapon"]; wave: number; score: number } | null;
-    const player = value.replay.world.state.player() as unknown as { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; facing?: number; onGround?: boolean; dashCharges?: number } | undefined;
+    const sourcePlayer = value.replay.world.state.player();
+    const player = sourcePlayer as unknown as { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; facing?: number; onGround?: boolean; dashCharges?: number } | undefined;
     const blade = value.replay.world.state.blade() as unknown as { x: number; y: number; tipX: number; tipY: number; vx: number; vy: number; tipSpeed: number; state: string } | undefined;
-    if (run === null || player === undefined || blade === undefined) throw new Error("production policy observation requires an active source world");
+    if (run === null || player === undefined || sourcePlayer === undefined || blade === undefined) {
+      throw new Error("production policy observation requires an active source world");
+    }
     const tick = value.simulation.simulationRuntime.scheduler.tick;
     return Object.freeze({ format: TEAR_CONTRACT_FORMAT, kind: "observation", schemaVersion: TEAR_CONTRACT_VERSION, tick,
       observationClass: "structured-state", player: Object.freeze({ x: player.x, y: player.y, vx: player.vx, vy: player.vy,
@@ -304,12 +308,16 @@ export function createProductionHeadlessEnvironment(
         grounded: player.onGround ?? false, dashCharges: player.dashCharges ?? 0 }),
       blade: Object.freeze({ handX: blade.x, handY: blade.y, tipX: blade.tipX, tipY: blade.tipY, vx: blade.vx, vy: blade.vy,
         tipSpeed: blade.tipSpeed, state: blade.state }),
-      entities: Object.freeze(value.replay.world.state.enemies().filter((enemy: { dead?: boolean }) => !enemy.dead).map((enemy, index) => {
-        const value = enemy as unknown as { _gid?: number; kind?: string; x: number; y: number; vx: number; vy: number; hp: number; maxHp?: number; state?: string };
-        return Object.freeze({ id: `production:${String(value._gid ?? index + 1)}`, kind: ENTITY_KIND_REGISTRY.assert(value.kind ?? ""), x: value.x, y: value.y,
+      entities: Object.freeze([...value.replay.world.state.enemies().filter((enemy: { dead?: boolean }) => !enemy.dead).map((enemy, index) => {
+        const value = enemy as unknown as { _gid?: number; kind?: string; bossId?: string; supportType?: string;
+          isVoidWisp?: boolean; x: number; y: number; vx: number; vy: number; hp: number; maxHp?: number; state?: string };
+        return Object.freeze({ id: `production:${String(value._gid ?? index + 1)}`,
+          kind: canonicalObservationEnemyKind({ ...value, kind: value.kind ?? "" }), x: value.x, y: value.y,
           vx: value.vx, vy: value.vy, hpRatio: value.maxHp === undefined || value.maxHp <= 0 ? 1 : value.hp / value.maxHp, state: value.state ?? "active" });
-      })), run: Object.freeze({ mode: run.mode, difficulty: run.diff, weapon: run.weaponId, stage: `stage-${String(value.replay.stage.index)}`,
-        wave: run.wave, score: run.score, elapsedTicks: tick }), availableActions: Object.freeze(["move", "aim", "weapon", "jump", "dash"] as const),
+      }), ...projectLiveProjectiles(value.replay.world.state.projectiles(), sourcePlayer, "B")]),
+      run: Object.freeze({ mode: run.mode, difficulty: run.diff, weapon: run.weaponId,
+        stage: canonicalObservationStage(value.replay.stage.index), wave: run.wave, score: run.score, elapsedTicks: tick }),
+      availableActions: canonicalObservationActions("playing", run.mode, false),
     });
   };
   const compose = (
