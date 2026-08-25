@@ -80,16 +80,26 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           break;
         }
         case "wave": {
+          const ownedOpening = initial.diagnostics.waveOwnership === "source-events"
+            && initial.diagnostics.livingWaveEnemies > 0
+            && initial.entities.length >= initial.diagnostics.livingWaveEnemies;
           window.__PANTHEON_TEST.prepareNaturalWaveClearScenario();
           let cleared = false;
-          for (let tick = 0; tick < scenario.maxTicks && !proved; tick += 1) {
+          let rewardReady = false;
+          for (let tick = 0; tick < scenario.maxTicks && !rewardReady; tick += 1) {
             const transition = step();
             cleared ||= transition.events.some((event) => event.type === "wave.cleared"
               && event.source === "engine" && event.payload.wave === initial.run.wave);
-            proved = cleared && transition.observation.run.mode === scenario.start.mode
+            rewardReady = cleared && transition.observation.run.mode === scenario.start.mode
               && transition.observation.diagnostics.waveComplete
               && transition.observation.availableActions.includes("draft-choice");
           }
+          window.__PANTHEON_TEST.addUnownedWaveObserverActor();
+          const withUnrelatedActor = environment.observe();
+          proved = ownedOpening && rewardReady
+            && withUnrelatedActor.entities.length === 1
+            && withUnrelatedActor.diagnostics.waveOwnership === "source-events"
+            && withUnrelatedActor.diagnostics.livingWaveEnemies === 0;
           break;
         }
         case "draft": {

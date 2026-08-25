@@ -1,7 +1,7 @@
 # TearBench / Scenario Console / Game Agent / Ghost 3.0 Master Continuation Handoff
 
 **Branch:** short-lived `codex/*` branch from protected canonical `main` (historical source boundary: `codex/ghost3-autonomous-completion-plan`)
-**State:** The corrective current-game alignment program `TB-F0` through `TB-F7` is accepted after exact-clean-commit canonical gates and repeated independent adversarial review. The selector, terminology, source-derived encounters, declared generic backends, five live-to-Ghost and headless-to-Ghost weapon proofs, native causal events, and wave ownership have mandatory focused coverage. This does not claim protected integration or broader product completion: C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
+**State:** Current-game alignment acceptance is reopened at TB-R3/TB-F5/TB-F7 after final review found a skippable/unbound direct Sword trace and fixture-only live wave-ownership distinction. Corrective production-bound proofs and a new exact-clean-commit gate/review are pending. This does not claim protected integration or broader product completion: C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
 **Purpose:** Enable a succeeding agent to continue the complete TearBench program through C40 without losing requirements, repeating architectural mistakes, or overstating evidence.
 **Current alignment authority:** [`docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md`](../docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md)
 **Last reconciled protected baseline:** `a8a476c6171d913581c01bb0e4432f53cf44f9e4` on 2026-08-25. Re-resolve current protected `main` before every new slice.
@@ -129,8 +129,9 @@ source-owned implementation and first-pass evidence for current weapons,
 authored hazards, support auras, boss zones, arena-platform fracture, boss
 adds/clones, and Aldric phases. Acceptance of their actual stage/boss,
 ordinary-headless-to-Ghost, live-to-Ghost, causal-event, and declared-backend
-coverage passes focused TB-F2 through TB-F6 evidence and TB-F7 exact-clean-
-commit/repeated-review acceptance. Five direct live-to-ordinary-headless traces are not claimed.
+coverage passes focused TB-F2 through TB-F4/TB-F6 evidence; the exact direct
+Sword and real-live wave-ownership portions of TB-R3/TB-F5 plus TB-F7 acceptance
+are reopened. Five direct live-to-ordinary-headless traces are not claimed.
 Source void descent
 and scrolling are explicitly live-only rather than claimed as detached parity;
 synthetic health, kill, score, style, and elapsed-time estimates are identified

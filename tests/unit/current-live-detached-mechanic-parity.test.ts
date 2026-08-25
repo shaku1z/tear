@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { replayProductionC27ATrace, type ProductionC27ATrace } from "../../src/tearbench/production-c27a-matrix";
 import { validateTearContract } from "../../src/tearbench";
+import { readSourceIdentitySync } from "../../scripts/release-artifact.mjs";
 
 const SELECTED_SCENARIO_ID = "c27a.live-parity-trace";
 const focusedArtifact = resolve("artifacts/tearbench/c27a-focused", `${SELECTED_SCENARIO_ID}.json`);
@@ -12,6 +13,11 @@ const defaultArtifact = existsSync(focusedArtifact) ? focusedArtifact : matrixAr
 const requestedArtifact = process.env.TEAR_C27A_PARITY_ARTIFACT;
 const artifactPath = resolve(requestedArtifact ?? defaultArtifact);
 const parityRequired = requestedArtifact !== undefined || process.env.TEAR_C27A_PARITY_REQUIRED === "1";
+
+interface TraceIdentity {
+  readonly sourceIdentity?: Readonly<{ revision?: unknown; state?: unknown; fingerprint?: unknown }>;
+  readonly buildIdentity?: Readonly<{ sha?: unknown; target?: unknown; artifactHash?: unknown }>;
+}
 
 interface MechanicalState {
   readonly player: Readonly<{ x: number; y: number }> | null;
@@ -26,14 +32,26 @@ function readTrace(): ProductionC27ATrace {
   const origin = validateTearContract(raw.origin);
   if (!scenario.ok || scenario.value.kind !== "scenario") throw new TypeError("C27A parity scenario is invalid");
   if (!origin.ok || origin.value.kind !== "snapshot") throw new TypeError("C27A parity origin is invalid");
+  const identity = value as TraceIdentity;
+  const current = readSourceIdentitySync(resolve("."));
+  if (identity.sourceIdentity?.revision !== current.revision
+    || identity.sourceIdentity.state !== "clean"
+    || identity.sourceIdentity.fingerprint !== current.fingerprint) {
+    throw new Error("C27A parity artifact source identity is stale or not clean");
+  }
+  if (identity.buildIdentity?.sha !== current.revision
+    || identity.buildIdentity.target !== "standalone"
+    || typeof identity.buildIdentity.artifactHash !== "string"
+    || identity.buildIdentity.artifactHash.length !== 64) {
+    throw new Error("C27A parity artifact build identity is stale or invalid");
+  }
   return { ...(value as Omit<ProductionC27ATrace, "scenario" | "origin">), scenario: scenario.value, origin: origin.value };
 }
 
-describe("current live/detached mechanic parity", () => {
+describe.skipIf(!parityRequired)("current live/detached mechanic parity", () => {
   it("matches the selected live trace through the production detached composition", () => {
     if (!existsSync(artifactPath)) {
-      if (parityRequired) throw new Error(`required C27A parity artifact is missing: ${artifactPath}`);
-      return;
+      throw new Error(`required C27A parity artifact is missing: ${artifactPath}`);
     }
     const trace = readTrace();
     expect(trace.scenario.id).toBe(SELECTED_SCENARIO_ID);

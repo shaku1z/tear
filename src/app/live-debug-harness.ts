@@ -88,6 +88,18 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       run.spawnQueue.length = 0;
       context.state.setEnemies([]);
     },
+    /** Adds a real live actor without a wave-spawn fact so ownership projection can prove it stays unrelated. */
+    addUnownedWaveObserverActor() {
+      if (context.lifecycle.phase !== "wave-cleared" && context.lifecycle.phase !== "reward-pending") {
+        throw new Error(`Unowned wave observer requires a cleared live wave, received ${context.lifecycle.phase}`);
+      }
+      const actor = context.entities.createEnemy("charger", context.width - 180,
+        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, runOf(context.state));
+      Object.assign(actor, { vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 30, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "idle", atkT: 0, atkCd: 30, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0 });
+      context.state.setEnemies([...context.state.enemies(), actor]);
+    },
     prepareBossSupportScenario(id: "aldric" | "echo") {
       if (context.cinema.active) context.cinema.cancel("tearbench-current-boss-support");
       const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === id);

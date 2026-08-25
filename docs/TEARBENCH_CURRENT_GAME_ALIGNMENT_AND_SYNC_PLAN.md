@@ -5,7 +5,7 @@
 - **Baseline:** protected game `main` at `a8a476c6171d913581c01bb0e4432f53cf44f9e4`, audited 2026-08-25. Re-resolve current `origin/main` before every implementation slice; this historical SHA is not a future target.
 - **Scope:** the Tear game repository, its typed game runtime, TearBench, replay/headless execution, game-owned player surfaces, evidence routing, documentation, and existing required checks.
 - **Success condition:** TearBench executes and observes the current game truthfully, and every relevant future game change updates or invalidates its corresponding TearBench evidence in the same reviewed change.
-- **Post-review status:** `TB-F0` through `TB-F7` are accepted. The corrective implementation, permanent negative regressions, production-owned scenario/backend/event/wave proofs, exact-clean-commit canonical gate, and repeated independent adversarial review agree with this checklist. The fixes make selector regressions mandatory, derive executable boss/stage coverage from production, execute every declared generic backend honestly, distinguish live-to-Ghost from ordinary-headless-to-Ghost evidence, retain native causal/wave facts, and scan the renamed Run Monitor owner. This closes the current-game alignment correction only: protected integration, music re-vendoring, wiki publication, deployment, C25/C27/C30/C31/C33-C40 work, and C40 release certification remain separate unperformed actions.
+- **Post-review status:** Final acceptance is reopened at `TB-R3`, `TB-F5`, and `TB-F7`. The first exact-clean implementation gate passed, but the repeated review found that the direct Sword live-to-detached artifact could skip or lack current identity binding and that the claimed real-live wave-ownership distinction was fixture-only. Those exact claims remain incomplete until their new mandatory production-bound proofs, final clean gate, and repeated independent review pass. Protected integration, music re-vendoring, wiki publication, deployment, C25/C27/C30/C31/C33-C40 work, and C40 release certification remain separate unperformed actions.
 - **Non-goals:** a second simulator, engine migration, another repository, external deployment, a new test framework, speculative abstractions, bulk historical rewrites, or long-running tests during ordinary development.
 
 ## 1. Read this before touching code
@@ -424,8 +424,8 @@ release boundaries.
 ### TB-R3 - Require current five-weapon live-to-Ghost and headless-to-Ghost parity
 
 - [x] Produce one short, meaningful, deterministic live-to-fresh-Ghost mechanic proof and one independent ordinary-headless-to-fresh-Ghost mechanic proof for each current production weapon.
-- [x] Bind parity evidence to the actual scenario subject, supported backend, current source/build identity, and exercised gameplay transition.
-- [x] Make the relevant focused/CI parity gate fail closed when required current evidence is missing, stale, ignored, or mismatched.
+- [ ] Bind the direct Sword live-to-detached evidence to the actual scenario subject, supported backend, current source/build identity, and exercised gameplay transition.
+- [ ] Make the relevant focused/CI direct-parity gate fail closed when required current evidence is missing, stale, ignored, or mismatched.
 - [x] Keep unsupported Source void descent/scroll explicitly live-only; do not misrepresent unit fixtures or legacy traces as current parity.
 - [x] Keep routine proofs bounded; do not require a long historical 13-scenario matrix for every unrelated change.
 
@@ -531,7 +531,7 @@ post-review with no in-scope acceptance-blocking findings.
 - [x] Preserve supported headless transition events in its normal episode/result contract without breaking historical or generic consumers.
 - [x] Emit truthful source-owned spawn facts for supported boss adds/clones or explicitly classify the unsupported causal boundary.
 - [x] Compare detached causal events with live facts for at least one real representative gameplay mechanic; do not treat equal state hashes alone as event parity.
-- [x] Add a real live-runtime wave-ownership integration proof containing both current-wave and unrelated living actors.
+- [ ] Add a real live-runtime wave-ownership integration proof containing both current-wave and unrelated living actors.
 - [x] Keep ownership diagnostics explicitly scoped or fail closed when an execution class cannot observe them.
 
 **Exit:** Supported session evidence retains the real ordered gameplay facts it claims, and wave ownership is demonstrated through the integrated production observation path.
@@ -551,12 +551,12 @@ post-review with no in-scope acceptance-blocking findings.
 
 - [x] Run every relevant permanent negative regression and focused production-owned scenario/backend/event/wave proof.
 - [x] Run a fresh independent post-review against all original and corrective checklist claims, current code, final artifacts, mandatory CI, terminology owners, and protected cross-repository boundaries.
-- [x] If that review finds an in-scope acceptance blocker, reopen its exact checkbox or add a narrowly scoped corrective checkbox, implement the fix, and repeat the same review before claiming completion.
-- [x] Commit only clean owner-authored game changes and run `pnpm check` against the exact final intended clean commit, including mandatory selector and current-game parity evidence.
-- [x] Recheck the clean final artifact/source identity, every checklist item, and final independent review; complete the persistent goal only when no in-scope acceptance blocker remains.
+- [ ] If that review finds an in-scope acceptance blocker, reopen its exact checkbox or add a narrowly scoped corrective checkbox, implement the fix, and repeat the same review before claiming completion.
+- [ ] Commit only clean owner-authored game changes and run `pnpm check` against the exact final intended clean commit, including mandatory selector and current-game parity evidence.
+- [ ] Recheck the clean final artifact/source identity, every checklist item, and final independent review; complete the persistent goal only when no in-scope acceptance blocker remains.
 - [x] Explicitly report that protected merge, deployment, publication, music re-vendoring, wiki edits, and C40 certification were not performed unless separately authorized.
 
-**Acceptance record (2026-08-25):** The canonical gate passed on clean owner-authored implementation commit `59af354cf134da9dcef1a7afa605fabb4647cc7e`, including mandatory selection, terminology, current generic gameplay, production-derived boss/stage, five-weapon live/headless-to-Ghost, native event/wave, build, browser, and performance evidence. The documentation-only acceptance commit must also pass the same canonical gate at its exact clean identity; any failure invalidates these checked boxes and reopens the owning item. Independent Luna High reviews found no remaining in-scope blocker after the last implementation corrections. Five direct live-to-ordinary-headless weapon traces, broader C21-C40 completion, protected integration, publication, deployment, and C40 certification are not claimed.
+**Reopened review record (2026-08-25):** The canonical gate passed on clean owner-authored implementation commit `59af354cf134da9dcef1a7afa605fabb4647cc7e`. Review of the later acceptance commit correctly rejected closure because its source-bound artifacts still named the earlier commit, then found the two deeper R3/F5 defects recorded above. Final acceptance requires fresh production-bound evidence and the entire canonical gate on the exact final clean commit. Five direct live-to-ordinary-headless weapon traces, broader C21-C40 completion, protected integration, publication, deployment, and C40 certification are not claimed.
 
 **Exit:** The final implementation, mandatory evidence, documentation, protected boundaries, and repeated independent post-review agree. No optimistic checked box, manually run optional test, stale artifact, or partial product claim can close the goal.
 

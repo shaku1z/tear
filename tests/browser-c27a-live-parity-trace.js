@@ -148,7 +148,7 @@ function artifactPath(scenario) {
   return path.join(ARTIFACT_DIR, `${scenario.id}.json`);
 }
 
-withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => {
+withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15000 });
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const written = [];
@@ -370,7 +370,18 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
       },
       terminated: first.terminated,
       checkpoints: first.checkpoints,
-      rng: first.rng, capturedAt: new Date().toISOString(),
+      rng: first.rng,
+      sourceIdentity: {
+        revision: buildInfo.sourceRevision,
+        state: buildInfo.sourceState,
+        fingerprint: buildInfo.sourceFingerprint,
+      },
+      buildIdentity: {
+        sha: buildInfo.sha,
+        target: buildInfo.target,
+        artifactHash: buildInfo.artifactHash,
+      },
+      capturedAt: new Date().toISOString(),
     }, null, 2)}
 `);
     written.push({ id: scenario.id, ticks: first.hashes.length, terminated: first.terminated,
