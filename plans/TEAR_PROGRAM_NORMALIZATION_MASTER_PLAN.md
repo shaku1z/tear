@@ -39,10 +39,11 @@ canonical `Validate` run `32634453401` is green. The earlier observed
 authority.
 
 **Wiki repository state:** protected/default `main` is clean at
-`33a7f86f8f12ce7c98d1805d169142c832afdcf1` (`33a7f86`). Post-merge
-`Validate` run `32626685362` is green. G6 is now eligible/open, but sync
-remains disabled/fail-closed pending G6 implementation and its gates; the
-`tear-wiki` Worker remains frozen.
+`723532d531040c576e182fc31c2acde16f723be4` (`723532d`). Post-merge
+`Validate` run `32800870477` is green. The modern consumer and protected
+receiver are integrated; the game sender is under the separate
+`codex/g6-reference-dispatch` candidate. No cross-repository dispatch or
+Worker deployment is claimed here; the `tear-wiki` Worker remains frozen.
 
 **Production state:** Frozen. G5 closure claims no deployment, Cloudflare,
 DNS, Access, Tunnel, or published-artifact mutation; G7 remains locked.
@@ -1210,6 +1211,13 @@ semantics and recording the resulting path and hash in the G6 receipt.
       `tear-release-targets-<GITHUB_SHA>` artifact remains immediately after
       the functional gate and is independent of this publication block. See
       `docs/checkpoints/program-normalization/G6_REFERENCE_ARTIFACT_PUBLICATION.md`.
+- [x] Add the digest-pinned game-side sender that independently revalidates the
+      exact protected Validate run, selects the one source-named artifact,
+      verifies the approved storage redirect and archive digest/size, and sends
+      only the exact four-field `tear-game-deployed` payload. The manual proof
+      workflow is main-only and read-only by GitHub permission; the production
+      workflow reuses the helper but has not been invoked. See
+      `docs/checkpoints/program-normalization/G6_REFERENCE_DISPATCH.md`.
 - [ ] Add an explicit release/consumer promotion gate for the exported
       manifest after the remaining G6 consumer contract is complete.
 
@@ -1220,31 +1228,37 @@ recorded in `docs/checkpoints/program-normalization/G6_GAME_REFERENCE_CONTRACT.m
 `docs/checkpoints/program-normalization/G6_ENEMY_REFERENCE.md`, plus
 `docs/checkpoints/program-normalization/G6_BOSS_REFERENCE.md`,
 `docs/checkpoints/program-normalization/G6_PUBLIC_TUNING_REFERENCE.md`, and
-`docs/checkpoints/program-normalization/G6_REFERENCE_ARTIFACT_PUBLICATION.md`.
+`docs/checkpoints/program-normalization/G6_REFERENCE_ARTIFACT_PUBLICATION.md`,
+and `docs/checkpoints/program-normalization/G6_REFERENCE_DISPATCH.md`.
 
 ### Wiki consumer
 
-- [ ] Fetch only the manifest for the exact validated game SHA in the dispatch
+- [x] Fetch only the manifest for the exact validated game SHA in the dispatch
       payload.
-- [ ] In local mode, accept only a clean canonical game `main`; reject dirty,
+- [x] In local mode, accept only a clean canonical game `main`; reject dirty,
       feature, copied, or ambiguous worktrees.
-- [ ] Validate schema, source repository, full SHA, uniqueness, required
+- [x] Validate schema, source repository, full SHA, uniqueness, required
       collections, and terminology version before changing generated files.
-- [ ] Replace `src/scripts/game-engine.js` consumers with the validated data
+- [x] Replace `src/scripts/game-engine.js` consumers with the validated data
       layer. Do not import arbitrary game TypeScript into Astro.
-- [ ] Add current Final Five pages/components and prove Greatsword, Chainblade,
+- [x] Add current Final Five pages/components and prove Greatsword, Chainblade,
       and Riftlock are present while Spear/Ringblade are absent from the active
       roster.
-- [ ] Remove the duplicate sync invocation from either the workflow or build
+- [x] Remove the duplicate sync invocation from either the workflow or build
       script so one run has one synchronization attempt.
-- [ ] Keep the hourly schedule only as a recovery mechanism after it passes;
+- [x] Keep the hourly schedule only as a recovery mechanism after it passes;
       reduce frequency if a less noisy freshness check is sufficient.
-- [ ] Update wiki rules and synchronization documentation from `js/**` to the
+- [x] Update wiki rules and synchronization documentation from `js/**` to the
       manifest contract.
-- [ ] Commit generated snapshots only after synchronization, verification, and
+- [x] Commit generated snapshots only after synchronization, verification, and
       Astro build succeed.
-- [ ] Retain the previous verified snapshot as explicit rollback material, but
+- [x] Retain the previous verified snapshot as explicit rollback material, but
       never silently fall back to it when a requested exact SHA fails.
+
+These consumer items are implementation and protected-main validation facts on
+the wiki. They do not claim that the new game sender has been executed, that a
+new wiki commit has resulted from that sender, or that the non-production
+preview/close conditions have passed.
 
 ### Checkpoint G6-A — midpoint pause
 
@@ -1405,9 +1419,9 @@ Create one record per goal under the future canonical checkpoint location.
       observation of this record.
 - [x] G4 closed — permanent terminology reached protected game `main` at
       `b3c2066`, with exact-head post-merge `Validate` run `32630369249` green.
-- [ ] G5 closed — repositories, docs, and local workspace are organized; the
-      closure candidate is recorded, pending protected merge and post-merge
-      exact-main `Validate`.
+- [x] G5 closed — repositories, docs, and local workspace are organized; the
+      protected merge, exact-main `Validate`, cleanup receipt, and strict layout
+      evidence are recorded in the G5 closure checkpoint.
 - [ ] G6 closed — wiki synchronizes from the modern typed manifest.
 - [ ] G7 closed — exact canonical commits are deployed and verified.
 - [ ] G8 active — prevention evidence is recurring.
