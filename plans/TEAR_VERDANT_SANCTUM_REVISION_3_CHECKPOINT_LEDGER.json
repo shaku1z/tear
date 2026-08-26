@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C3",
-  "currentSubgoal": "VS3-C3-S1",
+  "currentCheckpoint": "VS3-C4",
+  "currentSubgoal": "VS3-C4-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -12,14 +12,15 @@
   "completedCheckpoints": [
     "VS3-C0",
     "VS3-C1",
-    "VS3-C2"
+    "VS3-C2",
+    "VS3-C3"
   ],
-  "lastGreenCheckpoint": "VS3-C2",
+  "lastGreenCheckpoint": "VS3-C3",
   "lastEvidence": [
-    "VS3-C2 environment runtime contract is green at 5d608edf920c58dfc7b57681a7112b09aeadda65; per-world ownership, deterministic IDs, lifecycle resets, fixed-step ordering, detached execution, documentation, and TearBench selection gates pass while runtime/reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets."
+    "VS3-C3 environment codec and tooling contract is green at 814d143; codec v2 migration, validation, portable semantic projection, transactional replay restore, live/detached observation equality, invariants, source-bound standalone build, browser State Forge journeys, and TearBench selection gates pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C3-S1: evolve the environment codec and canonical hash contracts.",
+  "nextAction": "Execute VS3-C4-S1: define source-owned environment field and combat-object kind catalogs.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -448,52 +449,52 @@
         {
           "id": "VS3-C3-S1",
           "description": "Evolve tear.hazard.v1 to codec version 2 with fields, combatObjects, and routes.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S2",
           "description": "Add a pure version-1-to-version-2 migration that preserves slowZones and walls and adds empty collections.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S3",
           "description": "Extend live payload validation for finite state, approved kinds, geometry, timers, and collection caps.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S4",
           "description": "Extend identity/reference graph indexing for environment object IDs and singular/plural owner/target references.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S5",
           "description": "Capture environment state in canonical and TearBench environment hash projections.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S6",
           "description": "Add optional structured environment observation without giving Class C/pixel-only observers privileged state.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S7",
           "description": "Add meaningful environment invariants with positive and negative fixtures.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S8",
           "description": "Extend State Forge compilation/hydration and transactional restore for approved environment factories.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S9",
           "description": "Prove serialization, failed restore rollback, live/detached semantic equality where supported, and render-rate independence.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C3-S10",
           "description": "Bind all evidence to exact source/build identity.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -540,13 +541,33 @@
         "Source-bound browser artifact",
         "Updated handoff"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "7860cd425f77f1b7ba5e8b58c98992e0f18f8d3c",
+      "completionIdentity": "814d143",
+      "commandsRun": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/tearbench-state-codecs.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts tests/unit/detached-world-hydrator.test.ts tests/unit/environment-state-codec.test.ts tests/unit/production-replay-composition.test.ts",
+        "pnpm test:tearbench-selection",
+        "pnpm check:docs",
+        "pnpm check:terminology",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:state-forge"
+      ],
+      "evidence": [
+        "tear.hazard.v1 reports codec version 2 and deterministically migrates v1 slow-zone/wall payloads into empty bounded environment collections.",
+        "Malformed, future, duplicate-ID, orphan-reference, invalid-factory, invalid-geometry, and post-rebase collision payloads fail before target writes.",
+        "Host world identity remains runtime ownership metadata while allocator-generated environment IDs and internal references rebase into portable semantic hashes and structured observations.",
+        "Production replay restoration validates codec versions, payloads, identity graphs, stage compatibility, and rebased environment candidates before mutation; negative evidence preserves the target world.",
+        "Structured environment observation is available only to supported Class A/B paths, with meaningful positive and negative invariants and no Class C privileged-state leak.",
+        "Exact focused suite passed 27/27, TearBench selection passed 24/24, standalone build fingerprint 9cbef4187e4c1f43b6197d660b5630707929c5b6b713512fcfac7040984a9712 was source-bound, and all State Forge browser journeys passed."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "C3 is engineering-only. Concrete Verdant gameplay, pixel certification, publication, deployment, C40 certification, and protected integration remain prohibited.",
+        "No generic environment scenario subjects or synthetic C4 native events were added prematurely. Next authorized checkpoint is VS3-C4."
+      ]
     },
     {
       "id": "VS3-C4",

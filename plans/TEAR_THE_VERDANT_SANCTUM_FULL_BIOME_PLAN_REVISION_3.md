@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C0 green** |
-| Current checkpoint | `VS3-C1` |
+| Status | **Active implementation authority — VS3-C3 green** |
+| Current checkpoint | `VS3-C4` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -3560,7 +3560,7 @@ The authoritative step owns one environment `step(tick, seconds, gameplayStep)` 
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | TearBench / replay / State Forge integration owner |
 | Dependencies | VS3-C2 |
 | Release boundary | Engineering evidence only; no C40 claim |
@@ -3571,9 +3571,9 @@ Make canonical environment state serializable, restorable, observable, hashable,
 
 ## Entry conditions
 
-- [ ] VS3-C2 is green.
-- [ ] Environment state is stable and deterministic in production world ownership.
-- [ ] Current codec, hydrator, validation, identity graph, scenario, observation, and build-provenance contracts have been read.
+- [x] VS3-C2 is green.
+- [x] Environment state is stable and deterministic in production world ownership.
+- [x] Current codec, hydrator, validation, identity graph, scenario, observation, and build-provenance contracts have been read.
 
 ## Primary files and authorities
 
@@ -3592,16 +3592,16 @@ Make canonical environment state serializable, restorable, observable, hashable,
 
 ## Sub-goals
 
-- [ ] **VS3-C3-S1** — Evolve tear.hazard.v1 to codec version 2 with fields, combatObjects, and routes.
-- [ ] **VS3-C3-S2** — Add a pure version-1-to-version-2 migration that preserves slowZones and walls and adds empty collections.
-- [ ] **VS3-C3-S3** — Extend live payload validation for finite state, approved kinds, geometry, timers, and collection caps.
-- [ ] **VS3-C3-S4** — Extend identity/reference graph indexing for environment object IDs and singular/plural owner/target references.
-- [ ] **VS3-C3-S5** — Capture environment state in canonical and TearBench environment hash projections.
-- [ ] **VS3-C3-S6** — Add optional structured environment observation without giving Class C/pixel-only observers privileged state.
-- [ ] **VS3-C3-S7** — Add meaningful environment invariants with positive and negative fixtures.
-- [ ] **VS3-C3-S8** — Extend State Forge compilation/hydration and transactional restore for approved environment factories.
-- [ ] **VS3-C3-S9** — Prove serialization, failed restore rollback, live/detached semantic equality where supported, and render-rate independence.
-- [ ] **VS3-C3-S10** — Bind all evidence to exact source/build identity.
+- [x] **VS3-C3-S1** — Evolve tear.hazard.v1 to codec version 2 with fields, combatObjects, and routes.
+- [x] **VS3-C3-S2** — Add a pure version-1-to-version-2 migration that preserves slowZones and walls and adds empty collections.
+- [x] **VS3-C3-S3** — Extend live payload validation for finite state, approved kinds, geometry, timers, and collection caps.
+- [x] **VS3-C3-S4** — Extend identity/reference graph indexing for environment object IDs and singular/plural owner/target references.
+- [x] **VS3-C3-S5** — Capture environment state in canonical and TearBench environment hash projections.
+- [x] **VS3-C3-S6** — Add optional structured environment observation without giving Class C/pixel-only observers privileged state.
+- [x] **VS3-C3-S7** — Add meaningful environment invariants with positive and negative fixtures.
+- [x] **VS3-C3-S8** — Extend State Forge compilation/hydration and transactional restore for approved environment factories.
+- [x] **VS3-C3-S9** — Prove serialization, failed restore rollback, live/detached semantic equality where supported, and render-rate independence.
+- [x] **VS3-C3-S10** — Bind all evidence to exact source/build identity.
 
 ## Agent implementation procedure
 
@@ -3614,11 +3614,11 @@ Make canonical environment state serializable, restorable, observable, hashable,
 
 ## TearBench same-change response
 
-- [ ] Add generic environment-field and combat-object scenario capability subjects only if required by the current contract.
-- [ ] Add environment-runtime evidence route with actual executable authority commands.
-- [ ] Add native/causal event mapping placeholders only after production events exist in VS3-C4; do not synthesize facts here.
-- [ ] Keep complex boss behavior unsupported until later checkpoints.
-- [ ] Explicitly state that this foundation is engineering evidence and not C40 certification.
+- [x] Add generic environment-field and combat-object scenario capability subjects only if required by the current contract; no new subjects were required in C3.
+- [x] Add environment-runtime evidence route with actual executable authority commands.
+- [x] Add native/causal event mapping placeholders only after production events exist in VS3-C4; none were synthesized in C3.
+- [x] Keep complex boss behavior unsupported until later checkpoints.
+- [x] Explicitly state that this foundation is engineering evidence and not C40 certification.
 
 ## Minimum focused proof
 
@@ -3631,12 +3631,12 @@ Make canonical environment state serializable, restorable, observable, hashable,
 
 ## Exit conditions
 
-- [ ] Old codec payloads migrate deterministically.
-- [ ] Malformed, future, duplicate-ID, and orphan-reference payloads fail before writes.
-- [ ] Environment state round-trips with exact/semantic hashes.
-- [ ] Live and supported detached observations agree.
-- [ ] Failed restore leaves the original world unchanged.
-- [ ] No privileged state leaks into unsupported observation classes.
+- [x] Old codec payloads migrate deterministically.
+- [x] Malformed, future, duplicate-ID, and orphan-reference payloads fail before writes.
+- [x] Environment state round-trips with exact/semantic hashes.
+- [x] Live and supported detached observations agree.
+- [x] Failed restore leaves the original world unchanged.
+- [x] No privileged state leaks into unsupported observation classes.
 
 ## Stop and escalate conditions
 
@@ -3656,6 +3656,19 @@ Make canonical environment state serializable, restorable, observable, hashable,
 ## Required handoff sentence
 
 > `VS3-C3 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+
+## Checkpoint record
+
+- Source baseline: `7860cd425f77f1b7ba5e8b58c98992e0f18f8d3c`
+- Implementation identity: `814d143`
+- Worktree/branch: `C:\Users\realm\Desktop\game\worktrees\Tear-verdant-sanctum-r3` / `codex/verdant-sanctum-r3`
+- Production contract: hazard codec v2, portable environment semantic projection, validated transactional State Forge/replay restore, capability-honest structured observations, and environment invariants.
+- TearBench response: source-routed executable C3 authority without premature scenario subjects or synthetic C4 events.
+- Evidence: typecheck, lint, architecture, five-file focused suite (27/27), TearBench selection (24/24), standalone build fingerprint `9cbef4187e4c1f43b6197d660b5630707929c5b6b713512fcfac7040984a9712`, and all State Forge browser journeys green.
+- Known limitations: engineering evidence only; no concrete Verdant behavior, pixel certification, publication, deployment, or C40 claim.
+- Exit decision: GREEN.
+
+> `VS3-C3 is GREEN at 814d143. The next authorized action is VS3-C4-S1, defining source-owned environment field and combat-object kind catalogs. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
