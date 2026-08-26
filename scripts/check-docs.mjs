@@ -20,13 +20,14 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/CONTROLLER_QA.md",
   "plans/FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md",
   "plans/PARITY_RESTORATION_PLAN.md",
+  "plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md",
   "plans/TEARBENCH_C40_EXECUTION_GUIDE.md",
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
   "plans/TEARBENCH_MASTER_HANDOFF.md",
   "plans/active/ECONOMY_REWORK_PLAN.md",
 ]);
 
-// Compatibility export for callers that need the canonical seven-plan list.
+// Compatibility export for callers that need the canonical active-plan list.
 // The checker derives the active set from plans/README.md and compares it to
 // this allowlist; it does not use this list as the source of active rows.
 export const ACTIVE_PLAN_METADATA_PATHS = CANONICAL_ACTIVE_PLAN_PATHS;
@@ -404,7 +405,7 @@ export function checkPlansAuthorityIndex(root) {
   const actual = new Set(activeRows.map((row) => row.relativePath));
   const canonical = new Set(CANONICAL_ACTIVE_PLAN_PATHS);
   if (activeRows.length !== CANONICAL_ACTIVE_PLAN_PATHS.length || actual.size !== activeRows.length) {
-    errors.push(`${PLANS_INDEX_PATH} active plan set must contain exactly the canonical seven plans; update the canonical allowlist intentionally when it changes`);
+    errors.push(`${PLANS_INDEX_PATH} active plan set must contain exactly the canonical active plans; update the canonical allowlist intentionally when it changes`);
   }
   for (const relativePath of CANONICAL_ACTIVE_PLAN_PATHS) {
     if (!actual.has(relativePath)) errors.push(`${PLANS_INDEX_PATH} must list canonical active plan ${relativePath}`);

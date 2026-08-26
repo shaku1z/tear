@@ -1,0 +1,2994 @@
+{
+  "format": "tear-verdant-sanctum-revision-3-checkpoint-ledger",
+  "schemaVersion": 1,
+  "revision": "3.0",
+  "status": "active",
+  "currentCheckpoint": "VS3-C1",
+  "currentSubgoal": "VS3-C1-S1",
+  "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
+  "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
+  "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
+  "tearbenchCertification": "No C40 certification claim. Verdant evidence is engineering/non-certifying unless a separately named certification gate passes.",
+  "completedCheckpoints": [
+    "VS3-C0"
+  ],
+  "lastGreenCheckpoint": "VS3-C0",
+  "lastEvidence": [
+    "VS3-C0 documentation authority, terminology, and requirements gates green at origin/main@91706363b80fb56a18df4d973b424bbce94a279e plus the registration diff."
+  ],
+  "blockers": [],
+  "nextAction": "Execute VS3-C1-S1: lock canonical Verdant, Rootbound, Rootbinder, and environment-object IDs through production-owned catalogs.",
+  "checkpoints": [
+    {
+      "id": "VS3-C0",
+      "title": "Truthful baseline, worktree safety, and plan authority",
+      "owner": "Release governance / documentation authority owner",
+      "dependencies": [],
+      "releaseBoundary": "Documentation and planning only; no gameplay implementation",
+      "objective": "Establish a current, reproducible starting point and register Revision 3 without breaking the governed plan set.",
+      "entryConditions": [
+        "Current protected origin/main can be resolved.",
+        "All existing worktrees and user-owned changes can be inspected without mutation.",
+        "The candidate plan and machine ledger are available and internally consistent."
+      ],
+      "primaryFiles": [
+        "plans/README.md",
+        "docs/README.md",
+        "scripts/check-docs.mjs",
+        "tests/docs-authority-checker.test.mjs",
+        "docs/ARCHITECTURE.md",
+        "docs/FEATURE_INVENTORY.md",
+        "config/terminology-registry.json",
+        "TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md",
+        "TEAR_VERDANT_SANCTUM_REVISION_3_CHECKPOINT_LEDGER.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C0-S1",
+          "description": "Resolve protected main, worktree HEADs, branches, cleanliness, and current build identities.",
+          "status": "green"
+        },
+        {
+          "id": "VS3-C0-S2",
+          "description": "Reconcile material source drift since the audited 91706363 baseline.",
+          "status": "green"
+        },
+        {
+          "id": "VS3-C0-S3",
+          "description": "Choose the exact authorized repository path and classification for Revision 3.",
+          "status": "green"
+        },
+        {
+          "id": "VS3-C0-S4",
+          "description": "Add owner, status, closure condition, and role to the plan authority index in one transaction.",
+          "status": "green"
+        },
+        {
+          "id": "VS3-C0-S5",
+          "description": "Update documentation checker allowlists/tests/links only as required by the chosen placement.",
+          "status": "green"
+        },
+        {
+          "id": "VS3-C0-S6",
+          "description": "Record the atomic Verdant/Pale publication boundary and C40 non-certifying boundary.",
+          "status": "green"
+        },
+        {
+          "id": "VS3-C0-S7",
+          "description": "Initialize the checkpoint ledger and current handoff block with the exact current source identity.",
+          "status": "green"
+        },
+        {
+          "id": "VS3-C0-S8",
+          "description": "Preserve Revision 2 and the audit as historical/supporting sources without presenting them as code authority.",
+          "status": "green"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Confirm documentation-only diff selection remains documentation-only.",
+        "Do not create gameplay scenarios or browser builds for a text-only registration slice.",
+        "Confirm no TearBench program status or C21-C40 status is changed by registering the plan.",
+        "Ensure current terminology uses TearBench, Scenario Console, Replay Hub, Game Agent, Run Monitor, Training Archive, Training Operations, and TEAR Music / Adaptive Soundtrack."
+      ],
+      "minimumProof": [
+        "pnpm check:docs",
+        "pnpm test:docs",
+        "pnpm check:terminology",
+        "pnpm test:terminology",
+        "pnpm requirements:check"
+      ],
+      "exitConditions": [
+        "Revision 3 is registered or explicitly retained as a candidate under a truthful governance disposition.",
+        "The plan index and checker agree.",
+        "The ledger and handoff block identify VS3-C1 as next.",
+        "No gameplay/build/release claim is made."
+      ],
+      "stopConditions": [
+        "Current plan governance cannot accept another active plan without an owner decision.",
+        "Unrelated documentation authority tests are red on protected main.",
+        "The selected location would overwrite an existing authority or user file."
+      ],
+      "requiredOutputs": [
+        "Baseline/worktree record",
+        "Registered plan metadata or explicit candidate disposition",
+        "GREEN documentation-gate transcript",
+        "Updated handoff and ledger"
+      ],
+      "status": "green",
+      "sourceBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
+      "completionIdentity": "codex/verdant-sanctum-r3 C0 registration working tree derived from origin/main@91706363b80fb56a18df4d973b424bbce94a279e",
+      "commandsRun": [
+        "git fetch origin main --prune",
+        "git worktree list --porcelain",
+        "pnpm check:docs",
+        "pnpm test:docs",
+        "pnpm check:terminology",
+        "pnpm test:terminology",
+        "pnpm requirements:check"
+      ],
+      "evidence": [
+        "Fresh origin/main exactly matched the audited baseline.",
+        "The canonical main checkout and its unrelated untracked scripts/game-reference-contract-data.mjs remained untouched.",
+        "Plan authority index and canonical active-plan allowlist agree on eight active plans.",
+        "All five required C0 focused proofs passed on 2026-08-26."
+      ],
+      "blockers": [],
+      "notes": [
+        "Revision 2 and the current-architecture audit remain historical/supporting sources only.",
+        "Verdant/Pale joint publication remains prohibited and TearBench C40 status is unchanged."
+      ]
+    },
+    {
+      "id": "VS3-C1",
+      "title": "Canonical expansion identities and source-owned contracts",
+      "owner": "Gameplay content / reference owner",
+      "dependencies": [
+        "VS3-C0"
+      ],
+      "releaseBoundary": "Feature branch only; no protected-main promotion",
+      "objective": "Define how Verdant identities enter production catalogs, public references, events, and TearBench without duplicate registries.",
+      "entryConditions": [
+        "VS3-C0 is green.",
+        "Current stage, boss, enemy, game-reference, event, and TearBench registry contracts have been read.",
+        "The feature branch is isolated and publication remains prohibited."
+      ],
+      "primaryFiles": [
+        "src/gameplay/stages.ts",
+        "src/gameplay/run/boss-definitions.ts",
+        "src/gameplay/run/content-director.ts",
+        "src/game-reference/stage-mode-reference.ts",
+        "src/game-reference/boss-reference.ts",
+        "src/game-reference/enemy-reference.ts",
+        "src/gameplay/runtime/gameplay-events.ts",
+        "src/tearbench/registries.ts",
+        "src/tearbench/evidence-routes.json",
+        "scripts/check-active-roster.mjs",
+        "scripts/check-game-reference.mjs"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C1-S1",
+          "description": "Lock stable IDs verdant-sanctum, rootbound, rootbinder, bloom-well, root-link, graft-anchor, and regrowth-link.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C1-S2",
+          "description": "Decide the exact production authority for environment object kind IDs.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C1-S3",
+          "description": "Extend StageId, BossId, and EnemyKind only through current source-owned catalogs.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C1-S4",
+          "description": "Define public-safe stage/boss/enemy projection changes and schema-version consequences before editing the exported artifact contract.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C1-S5",
+          "description": "Define stable stage native-event identity while retaining any required numeric-index compatibility.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C1-S6",
+          "description": "Define stage-to-boss home mapping for Rootbound.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C1-S7",
+          "description": "Add negative source-to-coverage tests showing an unmapped production identity fails.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C1-S8",
+          "description": "Record that pale-traverse, white-hart, and rimehound remain reserved design identities until Pale implementation, not active production entries.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Production registries remain the sole identity source.",
+        "TearBench imports the extended production IDs automatically.",
+        "Current-game authority test fails if Verdant, Rootbound, Rootbinder, or an environment kind lacks an explicit coverage mapping.",
+        "No canonical scenario claims Rootbound before a valid factory/encounter exists.",
+        "No game-reference artifact is published from this feature branch."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm check:active-roster",
+        "pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts",
+        "pnpm check:game-reference"
+      ],
+      "exitConditions": [
+        "All new identities have exactly one production owner.",
+        "Typed consumers compile.",
+        "Missing-coverage negative fixtures fail for the intended reason.",
+        "Public/internal metadata boundaries are documented.",
+        "No stale five-entry assumption silently passes the focused contracts."
+      ],
+      "stopConditions": [
+        "Adding an identity requires an unplanned public schema migration.",
+        "Current content owners conflict or would require a parallel registry.",
+        "Pale identities would become active without Pale implementation."
+      ],
+      "requiredOutputs": [
+        "Identity decision ledger",
+        "Source-derived coverage test",
+        "Game-reference schema decision",
+        "Updated feature inventory entry marked foundation-only",
+        "Checkpoint handoff"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C2",
+      "title": "Per-world canonical environment state and fixed-step ownership",
+      "owner": "Runtime architecture / simulation owner",
+      "dependencies": [
+        "VS3-C1"
+      ],
+      "releaseBoundary": "Internal foundation; no player-facing content",
+      "objective": "Create one deterministic world-owned environment state used by live and supported detached compositions.",
+      "entryConditions": [
+        "VS3-C1 is green.",
+        "The current TearWorldState, composition, transient state, simulation runtime, reset paths, and configuration ownership are understood.",
+        "No Bloom/Rootbinder/Rootbound behavior has been implemented ad hoc."
+      ],
+      "primaryFiles": [
+        "src/gameplay/runtime/tear-world-context.ts",
+        "src/gameplay/runtime/tear-world-composition.ts",
+        "src/gameplay/runtime/tear-world-bootstrap.ts",
+        "src/gameplay/runtime/tear-simulation-runtime.ts",
+        "src/gameplay/runtime/authoritative-step.ts",
+        "src/simulation/runtime-world-port.ts",
+        "src/app/game-runtime-state.ts",
+        "src/app/game-runtime-dependencies.ts",
+        "src/gameplay/environment/environment-contracts.ts",
+        "src/gameplay/environment/environment-state.ts",
+        "src/gameplay/environment/environment-runtime.ts"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C2-S1",
+          "description": "Add a data-only environment runtime contract for fields, combat objects, and routes.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C2-S2",
+          "description": "Add one stable per-world environment-state owner to production world composition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C2-S3",
+          "description": "Expose narrow read/write collection methods without leaking app, browser, renderer, replay, or persistence types inward.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C2-S4",
+          "description": "Define deterministic object IDs through the current world identity allocator or one compatible source-owned extension.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C2-S5",
+          "description": "Define the fixed-step environment pre-step, active-field, collision-resolution, and post-commit ownership order.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C2-S6",
+          "description": "Define reset/clear reasons and wire new-run, retry, stage transition, boss terminal, defeat, abandon, restore, and disposal paths.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C2-S7",
+          "description": "Expose a simulation-world view sufficient for supported detached execution without presentation fields.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C2-S8",
+          "description": "Prove two concurrent worlds own isolated environment collections and configuration.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "No new TearBench codec is added in this checkpoint; capture work belongs to VS3-C3.",
+        "Add current-game change routing for the new environment runtime path so the selector cannot return empty evidence.",
+        "Add a focused runtime parity harness hook but do not claim live/headless parity before VS3-C3.",
+        "Record environment state as unsupported in observers until the observation contract exists rather than emitting placeholders."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts"
+      ],
+      "exitConditions": [
+        "Each world owns exactly one environment state.",
+        "All lifecycle resets are deterministic and bounded.",
+        "Concurrent worlds do not share mutable environment arrays or IDs.",
+        "No outward dependency enters gameplay/runtime.",
+        "The feature remains invisible to players."
+      ],
+      "stopConditions": [
+        "Environment ownership would duplicate an existing current owner.",
+        "Adding the collection requires broad unrelated world extraction beyond the checkpoint.",
+        "Identity generation cannot remain deterministic across live and detached worlds."
+      ],
+      "requiredOutputs": [
+        "Environment contracts and state owner",
+        "Fixed-step ordering note",
+        "Reset matrix tests",
+        "Architecture gate transcript",
+        "Updated ledger/handoff"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C3",
+      "title": "Environment codec, canonical hash, State Forge, replay, and TearBench observation",
+      "owner": "TearBench / replay / State Forge integration owner",
+      "dependencies": [
+        "VS3-C2"
+      ],
+      "releaseBoundary": "Engineering evidence only; no C40 claim",
+      "objective": "Make canonical environment state serializable, restorable, observable, hashable, and capability-honest.",
+      "entryConditions": [
+        "VS3-C2 is green.",
+        "Environment state is stable and deterministic in production world ownership.",
+        "Current codec, hydrator, validation, identity graph, scenario, observation, and build-provenance contracts have been read."
+      ],
+      "primaryFiles": [
+        "src/tearbench/registries.ts",
+        "src/tearbench/contracts.ts",
+        "src/tearbench/state-codecs.ts",
+        "src/tearbench/live-codec-validation.ts",
+        "src/tearbench/detached-world-hydrator.ts",
+        "src/tearbench/state-forge-live-compiler.ts",
+        "src/tearbench/live-runtime-environment.ts",
+        "src/tearbench/production-headless-environment.ts",
+        "src/tearbench/invariants.ts",
+        "src/gameplay/runtime/canonical-state.ts",
+        "src/replay/**",
+        "tests/unit/tearbench-state-codecs.test.ts"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C3-S1",
+          "description": "Evolve tear.hazard.v1 to codec version 2 with fields, combatObjects, and routes.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S2",
+          "description": "Add a pure version-1-to-version-2 migration that preserves slowZones and walls and adds empty collections.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S3",
+          "description": "Extend live payload validation for finite state, approved kinds, geometry, timers, and collection caps.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S4",
+          "description": "Extend identity/reference graph indexing for environment object IDs and singular/plural owner/target references.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S5",
+          "description": "Capture environment state in canonical and TearBench environment hash projections.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S6",
+          "description": "Add optional structured environment observation without giving Class C/pixel-only observers privileged state.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S7",
+          "description": "Add meaningful environment invariants with positive and negative fixtures.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S8",
+          "description": "Extend State Forge compilation/hydration and transactional restore for approved environment factories.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S9",
+          "description": "Prove serialization, failed restore rollback, live/detached semantic equality where supported, and render-rate independence.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C3-S10",
+          "description": "Bind all evidence to exact source/build identity.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add generic environment-field and combat-object scenario capability subjects only if required by the current contract.",
+        "Add environment-runtime evidence route with actual executable authority commands.",
+        "Add native/causal event mapping placeholders only after production events exist in VS3-C4; do not synthesize facts here.",
+        "Keep complex boss behavior unsupported until later checkpoints.",
+        "Explicitly state that this foundation is engineering evidence and not C40 certification."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/tearbench-state-codecs.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts tests/unit/detached-world-hydrator.test.ts tests/unit/environment-state-codec.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:state-forge"
+      ],
+      "exitConditions": [
+        "Old codec payloads migrate deterministically.",
+        "Malformed, future, duplicate-ID, and orphan-reference payloads fail before writes.",
+        "Environment state round-trips with exact/semantic hashes.",
+        "Live and supported detached observations agree.",
+        "Failed restore leaves the original world unchanged.",
+        "No privileged state leaks into unsupported observation classes."
+      ],
+      "stopConditions": [
+        "The codec change would break an existing supported snapshot without a lawful migration.",
+        "Environment identity cannot be represented without a broader contract-version decision.",
+        "Browser evidence cannot bind to the actual built source."
+      ],
+      "requiredOutputs": [
+        "Hazard codec v2 and migration",
+        "Environment hash projection",
+        "State Forge factory support",
+        "Invariant positive/negative evidence",
+        "Source-bound browser artifact",
+        "Updated handoff"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C4",
+      "title": "Shared field/combat-object kernel and native environment facts",
+      "owner": "Gameplay environment / combat integration owner",
+      "dependencies": [
+        "VS3-C3"
+      ],
+      "releaseBoundary": "Foundation usable by Verdant and Pale; no stage content yet",
+      "objective": "Implement reusable deterministic field and combat-object behavior, capabilities, events, proc policy, and cleanup.",
+      "entryConditions": [
+        "VS3-C3 is green.",
+        "Environment state is captured/restored and observable.",
+        "Current collision, damage, attack ID, projectile ownership, event bus, and progression hooks are understood."
+      ],
+      "primaryFiles": [
+        "src/gameplay/environment/environment-definitions.ts",
+        "src/gameplay/environment/field-runtime.ts",
+        "src/gameplay/environment/combat-object-runtime.ts",
+        "src/gameplay/environment/environment-events.ts",
+        "src/gameplay/combat/**",
+        "src/gameplay/runtime/gameplay-events.ts",
+        "src/gameplay/runtime/gameplay-event-publishers.ts",
+        "src/tearbench/gameplay-causal-events.ts",
+        "src/tearbench/registries.ts",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C4-S1",
+          "description": "Define source-owned environment field and combat-object kind catalogs.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S2",
+          "description": "Define bounded field lifecycle and geometry queries.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S3",
+          "description": "Define combat-object integrity, attack-ID dedupe, damage capabilities, destruction, and cleanup.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S4",
+          "description": "Define proc policy so relationship/boss objects do not masquerade as ordinary enemies.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S5",
+          "description": "Define generic counterplay tags cut, break, and projectile-cut.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S6",
+          "description": "Publish one native environment gameplay event family at authoritative transitions.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S7",
+          "description": "Add exhaustive TearBench causal mapping and stable within-tick phase ownership.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S8",
+          "description": "Define presentation snapshots/facts without importing Canvas or audio.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S9",
+          "description": "Prove object caps, finite state, owner/target cleanup, and two-world isolation.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C4-S10",
+          "description": "Leave route-object implementation data-capable but behavior-minimal for later Pale reuse.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add current native event kind through production-owned GAMEPLAY_EVENT_KIND_IDS.",
+        "Add negative mapper coverage proving an unmapped new environment event fails.",
+        "Add environment invariants and evidence-route commands to actual tests.",
+        "Create a minimal State Forge environment field and combat object scenario using generic test definitions, not Verdant content.",
+        "Prove standard session event delivery order and supported live/detached equality."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/environment-field-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/gameplay-causal-events.test.ts tests/unit/tearbench-current-game-authority.test.ts",
+        "pnpm test:browser:current-gameplay-scenarios"
+      ],
+      "exitConditions": [
+        "One shared kernel supports beneficial fields and damageable relationship objects.",
+        "Objects cannot grant unapproved kills/rewards/procs.",
+        "Native facts are ordered and source-owned.",
+        "TearBench mapping is exhaustive.",
+        "All state remains bounded, deterministic, and portable where claimed."
+      ],
+      "stopConditions": [
+        "Combat-object integration requires weapon-specific branches inside the environment kernel.",
+        "Native event ordering differs between live and supported detached execution.",
+        "Existing progression hooks cannot distinguish non-enemy combat objects safely."
+      ],
+      "requiredOutputs": [
+        "Shared field/combat-object kernel",
+        "Proc-policy contract",
+        "Native event and mapper coverage",
+        "Generic State Forge scenarios",
+        "Foundation checkpoint record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C5",
+      "title": "Bloom Wells V1",
+      "owner": "Biome gameplay / movement owner",
+      "dependencies": [
+        "VS3-C4"
+      ],
+      "releaseBoundary": "Engineering feature; no campaign insertion",
+      "objective": "Implement the locked Bloom Well state machine as the first real consumer of the shared field kernel.",
+      "entryConditions": [
+        "VS3-C4 is green.",
+        "The field kernel, native events, codec, State Forge, and environment observations are production-ready.",
+        "Current player movement, enemy mass/anchor, and presentation ports are understood."
+      ],
+      "primaryFiles": [
+        "src/gameplay/environment/bloom-well.ts",
+        "src/gameplay/environment/environment-definitions.ts",
+        "src/gameplay/entities/player.ts",
+        "src/gameplay/entities/enemy-contracts.ts",
+        "src/gameplay/runtime/tear-simulation-runtime.ts",
+        "src/presentation/environment/**",
+        "src/audio/effects-contracts.ts",
+        "src/tearbench/canonical-scenarios.json",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C5-S1",
+          "description": "Author Bloom Well field definition, stable states, timings, geometry, and force policy.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S2",
+          "description": "Apply field force to the player through the current movement/simulation path while preserving horizontal control.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S3",
+          "description": "Apply mass-aware lift to eligible ordinary enemies and preserve anchor/heavy resistance.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S4",
+          "description": "Keep bosses, flyers, and all Final Five weapon transport routes outside V1 lift scope.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S5",
+          "description": "Implement authored warning, active, cooldown, and cleanup facts.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S6",
+          "description": "Create bounded stage-owned and boss-owned configuration variants through one class/definition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S7",
+          "description": "Add high-contrast, reduced-motion, low-graphics, and audio-independent presentation.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S8",
+          "description": "Prove stage exit, boss death, retry, and restore cleanup.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C5-S9",
+          "description": "Prove render-rate independence and no movement softlock.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add surgical State Forge scenario verdant-bloom-well-cycle without requiring Verdant stage insertion.",
+        "Add environment hash and observation assertions at each state.",
+        "Add positive/negative invariants for legal transition, finite force, and bounded population.",
+        "Add actual evidence-route command and source-bound artifact when browser presentation is tested.",
+        "Explicitly assert no weapon transport state changes when a thrown weapon crosses the field."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm exec vitest run tests/unit/bloom-well-runtime.test.ts tests/unit/player-locomotion.test.ts tests/unit/environment-state-codec.test.ts tests/unit/verdant-final-five-conformance.test.ts",
+        "pnpm build:test:standalone",
+        "node tests/browser-current-gameplay-scenarios.js"
+      ],
+      "exitConditions": [
+        "Bloom warning/active/cooldown behavior is deterministic.",
+        "Player retains agency.",
+        "Enemy mass/anchor semantics remain coherent.",
+        "Weapon transport is unchanged.",
+        "All cleanup paths are green.",
+        "Presentation remains readable across required accessibility modes."
+      ],
+      "stopConditions": [
+        "Implementing lift requires a global player/enemy physics fork.",
+        "Weapon routes change despite the V1 exclusion.",
+        "Heavy/anchor behavior cannot be expressed through current capabilities without breaking existing enemies."
+      ],
+      "requiredOutputs": [
+        "Bloom Well definition and runtime",
+        "State Forge Bloom scenario",
+        "Movement/mass evidence",
+        "Accessibility presentation proof",
+        "Updated feature inventory and handoff"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C6",
+      "title": "Rootbinder and Shared Root Network",
+      "owner": "Enemy / relationship-combat owner",
+      "dependencies": [
+        "VS3-C4"
+      ],
+      "releaseBoundary": "Engineering enemy feature; no campaign insertion",
+      "objective": "Implement Rootbinder as a distinct controller/support family using canonical combat links and bounded formation physics.",
+      "entryConditions": [
+        "VS3-C4 is green.",
+        "Combat-object proc policy and relationship references are production-ready.",
+        "Current Anchor, Mender, enemy movement, mass, knockback, death, variants, and factory contracts are understood."
+      ],
+      "primaryFiles": [
+        "src/gameplay/entities/enemy-contracts.ts",
+        "src/gameplay/entities/enemies.ts",
+        "src/gameplay/entities/enemy-types/rootbinder.ts",
+        "src/gameplay/run/content-director.ts",
+        "src/gameplay/runtime/tear-world-entity-construction.ts",
+        "src/presentation/enemies/**",
+        "src/gameplay/environment/combat-object-runtime.ts",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C6-S1",
+          "description": "Add rootbinder to the production EnemyKind authority and approved entity factory catalog.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S2",
+          "description": "Implement reposition, plant-windup, planted, link-warning, linked, broken, and recover states.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S3",
+          "description": "Implement one warned Elastic Leash to the player with bounded restoring force and full player controls.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S4",
+          "description": "Implement Shared Root Network for two or three legal ordinary enemies.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S5",
+          "description": "Redistribute bounded knockback/launch through the network without large DR, regen, death prevention, or permanent immovability.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S6",
+          "description": "Implement target selection, line validity, network capacity, and support-stack safeguards.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S7",
+          "description": "Implement root-link creation, damage, sever, cleanup, and native events through the shared combat-object kernel.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S8",
+          "description": "Add deterministic factory, death, stage-transition, and restore cleanup.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S9",
+          "description": "Add presentation silhouette, source node, warning, active segment, and sever feedback.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C6-S10",
+          "description": "Parameterize tuning through world-owned configuration.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add State Forge scenario verdant-root-network-sever.",
+        "Add support identity and environment-object observation assertions.",
+        "Add positive and negative no-orphan-link tests.",
+        "Add source-derived EnemyKind coverage guard and actual evidence route.",
+        "Prove normal session event order: enemy spawn before link creation; link sever before cleanup.",
+        "Explicitly refuse unsupported headless relationship behavior until parity exists; complete it before the checkpoint can claim headless support."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/rootbinder-network.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/live-enemy-spawn.test.ts tests/unit/production-headless-environment.test.ts tests/unit/tearbench-current-game-authority.test.ts",
+        "pnpm build:test:standalone",
+        "node tests/browser-current-gameplay-scenarios.js"
+      ],
+      "exitConditions": [
+        "Rootbinder is behaviorally distinct from Anchor.",
+        "Player leash is fair and severable.",
+        "Network physics are bounded and deterministic.",
+        "No support stack removes all player agency.",
+        "Link reward/proc leakage is absent.",
+        "Factories, restore, and cleanup are truthful in every claimed host."
+      ],
+      "stopConditions": [
+        "The proposed behavior duplicates Anchor after implementation.",
+        "Network forces create recursive or non-finite movement.",
+        "Root links cannot preserve stable owner/target references across State Forge restore.",
+        "Player leash requires disabling existing movement actions."
+      ],
+      "requiredOutputs": [
+        "Rootbinder production enemy",
+        "Shared Root Network contract",
+        "State Forge sever scenario",
+        "Factory/observation/event evidence",
+        "Support-stack decision record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C7",
+      "title": "Stage-aware variant resolver and Verdant-native variants",
+      "owner": "Enemy content / deterministic selection owner",
+      "dependencies": [
+        "VS3-C1",
+        "VS3-C6"
+      ],
+      "releaseBoundary": "Engineering content; no campaign insertion",
+      "objective": "Extend current family variants with stage and local-wave context, then add four Verdant-native variants.",
+      "entryConditions": [
+        "VS3-C1 and VS3-C6 are green.",
+        "Current variant and spawn-selection paths are characterized.",
+        "Mode-specific discovery behavior is decided."
+      ],
+      "primaryFiles": [
+        "src/gameplay/variants.ts",
+        "src/gameplay/run/live-enemy-spawn.ts",
+        "src/gameplay/run/wave-planner.ts",
+        "src/gameplay/entities/enemy-types/**",
+        "src/game-reference/enemy-reference.ts",
+        "src/tearbench/registries.ts",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C7-S1",
+          "description": "Introduce a typed VariantSelectionContext with stageId, localWave, global wave, mode, and injected random source.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S2",
+          "description": "Preserve existing variant behavior for current stages and non-campaign modes.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S3",
+          "description": "Implement strict campaign stage gating.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S4",
+          "description": "Implement authored Endless/Gauntlet discovery gating.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S5",
+          "description": "Implement explicit Playground/Enemy Test selection without contaminating normal rolls.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S6",
+          "description": "Add Briar Stalker, Seedcaster, Canopy Diver, and Bark Sentinel definitions and behavior.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S7",
+          "description": "Ensure selected variant ID is captured/restored rather than rerolled.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S8",
+          "description": "Project only public-safe variant metadata through current enemy reference contracts.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C7-S9",
+          "description": "Add deterministic positive/negative selection fixtures for every mode.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add source-derived variant coverage mapping without duplicating production lists.",
+        "Add State Forge restored-variant scenario or unit proof as appropriate.",
+        "Add negative fixture: Verdant variant cannot naturally appear in Grounds campaign.",
+        "Add negative fixture: high global wave alone does not bypass Endless discovery.",
+        "Route current variant files to the smallest real gameplay evidence."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm exec vitest run tests/unit/enemy-variants.test.ts tests/unit/verdant-variant-selection.test.ts tests/unit/live-enemy-spawn.test.ts tests/unit/tearbench-current-game-authority.test.ts",
+        "pnpm check:game-reference"
+      ],
+      "exitConditions": [
+        "Existing stages retain characterized behavior.",
+        "Verdant variants appear only through legal context.",
+        "RNG is injected and deterministic.",
+        "Restore does not reroll identity.",
+        "No second variant catalog exists."
+      ],
+      "stopConditions": [
+        "Adding stage context changes existing selection unintentionally.",
+        "Endless discovery semantics require an unresolved product decision.",
+        "Variant behavior needs a new family class rather than a truthful variant."
+      ],
+      "requiredOutputs": [
+        "Context-aware resolver",
+        "Four Verdant variants",
+        "Mode-gating tests",
+        "Reference/TearBench mapping update",
+        "Regression comparison record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C8",
+      "title": "Verdant stage, chapter, pool, layout, and engineering-only campaign insertion",
+      "owner": "Stage / campaign content owner",
+      "dependencies": [
+        "VS3-C5",
+        "VS3-C6",
+        "VS3-C7"
+      ],
+      "releaseBoundary": "Feature/integration branch only; explicitly non-publishable six-stage state",
+      "objective": "Add the authored Verdant stage to current typed catalogs and campaign flow for engineering validation.",
+      "entryConditions": [
+        "Bloom Wells, Rootbinder, and variants are green.",
+        "Stage/boss/enemy IDs and public projection decisions are green.",
+        "The branch is clearly marked non-publishable until Pale exists."
+      ],
+      "primaryFiles": [
+        "src/gameplay/stages.ts",
+        "src/gameplay/run/wave-planner.ts",
+        "src/gameplay/run/live-wave-controller.ts",
+        "src/gameplay/campaign/**",
+        "src/game-reference/stage-mode-reference.ts",
+        "src/presentation/cinematics.ts",
+        "src/gameplay/runtime/cinematic-director.ts",
+        "src/tearbench/canonical-scenarios.json",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C8-S1",
+          "description": "Add verdant-sanctum StageDefinition with locked chapter, palette, pool, and layout.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S2",
+          "description": "Add typed stage environment and presentation registry entries.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S3",
+          "description": "Add the bloom chapter-transition identity through the existing cinematic director.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S4",
+          "description": "Ensure chapter IV starts, advances, skips, restores, and hands off the prior boss outro correctly.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S5",
+          "description": "Load stage-owned environment state through central stage activation and clear it on exit.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S6",
+          "description": "Use localWave explicitly for pool unlocks.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S7",
+          "description": "Provide a safe temporary engineering music fallback without publishing final music identity.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S8",
+          "description": "Update exact stage-count contracts/tests for the branch while labeling it a six-stage intermediate.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S9",
+          "description": "Prove Stage Forge exact launch and natural campaign progression into wave 31.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C8-S10",
+          "description": "Prevent wiki/reference publication and public deployment from the intermediate branch.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Production stage registry automatically expands TearBench stage authority.",
+        "Add a Verdant stage engineering scenario through State Forge; do not put exact stage metadata in natural canonical scenarios.",
+        "Update current-game authority mapping for Verdant.",
+        "Add stage entered/exited stable-ID event proof.",
+        "Add selected browser proof for chapter and normal Verdant wave start.",
+        "Bind browser evidence to the exact test build and label it non-certifying."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm check:game-reference",
+        "pnpm exec vitest run tests/unit/stage-runtime-state.test.ts tests/unit/chapter-cinematic-binding.test.ts tests/unit/live-wave-controller.test.ts tests/unit/verdant-stage-catalog.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:current-gameplay-scenarios",
+        "pnpm test:browser:c29-active-campaign-cinematic"
+      ],
+      "exitConditions": [
+        "Verdant stage data is typed and source-owned.",
+        "Chapter flow and environment activation are deterministic.",
+        "Local-wave unlock behavior is correct.",
+        "Engineering browser path reaches Verdant.",
+        "Intermediate campaign is clearly non-publishable and cannot dispatch the wiki artifact."
+      ],
+      "stopConditions": [
+        "Adding Verdant forces an unreviewed public artifact publication.",
+        "Chapter numbering cannot remain coherent without Pale in current branch policy.",
+        "Current deployment workflows cannot distinguish the non-publishable branch safely."
+      ],
+      "requiredOutputs": [
+        "Verdant StageDefinition",
+        "Chapter transition and restore evidence",
+        "Stage activation/cleanup proof",
+        "Engineering-only six-stage disposition",
+        "Updated handoff"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C9",
+      "title": "Verdant backdrop, rootstone material, environment presentation, and responsive craft",
+      "owner": "Presentation / accessibility owner",
+      "dependencies": [
+        "VS3-C5",
+        "VS3-C8"
+      ],
+      "releaseBoundary": "Player-visible engineering build; no protected promotion",
+      "objective": "Implement the locked Verdant visual identity through current stable presentation contracts without affecting simulation.",
+      "entryConditions": [
+        "VS3-C8 is green.",
+        "Gameplay geometry and environment facts are stable.",
+        "Current backdrop, platform, cinematic, accessibility, overscan, and responsive contracts have been read."
+      ],
+      "primaryFiles": [
+        "src/presentation/backdrop.ts",
+        "src/presentation/backdrop-biomes.ts",
+        "src/presentation/platform-materials/**",
+        "src/presentation/environment/**",
+        "src/presentation/renderers/**",
+        "src/presentation/cinematics.ts",
+        "docs/VISUAL_DESIGN_DIRECTION.md",
+        "tests/browser-responsive-matrix.js"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C9-S1",
+          "description": "Dispatch Verdant art through stable stage/presentation identity rather than display name.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S2",
+          "description": "Implement sky, far tree/city, middle flooded ruins, near framing roots, and sparse motes.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S3",
+          "description": "Implement restrained lower-field water/reflection without expensive full mirror simulation.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S4",
+          "description": "Implement verdant-rootstone for normal and living-arena platform states.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S5",
+          "description": "Implement Bloom, link, Graft, Regrowth, and boss warning presentation from immutable snapshots/facts.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S6",
+          "description": "Implement reduced-motion, high-contrast, flash-scale, and low-graphics variants.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S7",
+          "description": "Bound particles, gradients, cached assets, and transient lights.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S8",
+          "description": "Prove world bleed/overscan without moving the safe gameplay composition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C9-S9",
+          "description": "Capture craft review at required viewports while keeping permanent tests geometry/behavior based.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Presentation paths route through presentation evidence, not simulation scenarios alone.",
+        "Add actual browser journey/screenshot evidence with build identity.",
+        "Add no-browser-error and no-privileged-state-leak assertions.",
+        "Keep environment canonical hash identical with graphics/high-contrast/reduced-motion changes.",
+        "Update evidence routes for stable presentation paths."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm exec vitest run tests/unit/backdrop-biomes.test.ts tests/unit/platform-materials.test.ts tests/unit/verdant-presentation.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:responsive",
+        "pnpm test:browser:features"
+      ],
+      "exitConditions": [
+        "Verdant is visually distinct and readable.",
+        "Gameplay hashes are unchanged by presentation settings.",
+        "All required viewports paint through true viewport bounds.",
+        "Warnings remain readable in high contrast/low graphics/reduced motion.",
+        "No unbounded allocation or DOM layout is introduced."
+      ],
+      "stopConditions": [
+        "Presentation requires simulation-owned renderer state.",
+        "Backdrop identity cannot be made stable without changing public display names.",
+        "Reflection or particle work breaches current performance architecture before optimization evidence."
+      ],
+      "requiredOutputs": [
+        "Verdant backdrop and material",
+        "Accessibility variants",
+        "Responsive browser evidence",
+        "Craft review notes",
+        "Presentation performance counters"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C10",
+      "title": "Rootbound boss foundation, factory, home stage, placement, arena, and presentation baseline",
+      "owner": "Boss gameplay / encounter owner",
+      "dependencies": [
+        "VS3-C8",
+        "VS3-C9"
+      ],
+      "releaseBoundary": "Boss Test engineering exposure; no full phase completion claim",
+      "objective": "Create a lawful production Rootbound encounter that can spawn, introduce, simulate, take damage, clean up, and be observed.",
+      "entryConditions": [
+        "Verdant stage and presentation foundations are green.",
+        "Current boss factories, definitions, placement, encounter start, arena lifecycle, terminal flow, and browser boss matrix are understood.",
+        "Graft/Regrowth behavior is not implemented prematurely."
+      ],
+      "primaryFiles": [
+        "src/gameplay/run/boss-definitions.ts",
+        "src/gameplay/run/content-director.ts",
+        "src/gameplay/run/boss-placement.ts",
+        "src/gameplay/run/boss-encounter.ts",
+        "src/gameplay/entities/enemies.ts",
+        "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/entities/enemy-types/boss-runtime.ts",
+        "src/gameplay/runtime/tear-world-entity-construction.ts",
+        "src/presentation/enemies/**",
+        "tests/browser-boss-parity.js"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C10-S1",
+          "description": "Add Rootbound identity, name, provisional phase marks, and source-owned stage mapping.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S2",
+          "description": "Add approved Rootbound factory construction through the existing enemy-type composition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S3",
+          "description": "Add one coherent placement path without a third registry.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S4",
+          "description": "Use the current boss encounter start and living arena lifecycle.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S5",
+          "description": "Implement base boss body, HP, collision, damage, phase ordinal, intro state, and idle/recovery loop.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S6",
+          "description": "Add boss presentation identity, silhouette, name, epithet, intro pose, and opening line.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S7",
+          "description": "Implement deterministic cleanup on death, reset, retry, exit, and failed restore.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S8",
+          "description": "Add Boss Test setup and result/retry path.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S9",
+          "description": "Add current boss observation of valid phase ordinals and home stage.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C10-S10",
+          "description": "Leave unavailable attacks explicit rather than filling phases with placeholder damage.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add natural canonical scenario rootbound-verdant-sanctum-live-encounter.",
+        "Extend the shared boss browser matrix to include Rootbound in its production home stage.",
+        "Add source-derived current-stage-boss completeness mapping.",
+        "Add State Forge factory/phase-1 baseline restore proof.",
+        "Keep scenario engineering-only and non-certifying.",
+        "Explicitly report detached boss capability as unsupported until later behavior exists."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/boss-definitions.test.ts tests/unit/current-boss-observation-authority.test.ts tests/unit/boss-encounter.test.ts tests/unit/rootbound-foundation.test.ts tests/unit/tearbench-current-game-authority.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:bosses"
+      ],
+      "exitConditions": [
+        "Rootbound launches through production Boss Test in Verdant.",
+        "Intro and base simulation advance.",
+        "Boss takes legal damage and dies/cleans correctly.",
+        "Phase observation is valid.",
+        "Factory and home-stage completeness guards pass.",
+        "No phase-specific placeholder is claimed complete."
+      ],
+      "stopConditions": [
+        "Rootbound requires a separate boss framework.",
+        "Boss placement/arena ownership cannot be reconciled with current shared contracts.",
+        "Boss Test launch would bypass production content composition."
+      ],
+      "requiredOutputs": [
+        "Rootbound base factory and definition",
+        "Boss Test encounter",
+        "Natural canonical scenario",
+        "Boss browser evidence",
+        "Foundation limitations record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C11",
+      "title": "Rootbound Phase I — Keeper of Spring",
+      "owner": "Boss combat owner",
+      "dependencies": [
+        "VS3-C10"
+      ],
+      "releaseBoundary": "Phase I engineering completion",
+      "objective": "Implement and prove the complete Phase I attack grammar, punish windows, environment ownership, and transition cleanup.",
+      "entryConditions": [
+        "VS3-C10 is green.",
+        "Base boss damage/intro/terminal behavior is stable.",
+        "Current projectile, hazard, parry/counterplay, movement, cinematic, and boss feedback contracts are understood."
+      ],
+      "primaryFiles": [
+        "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/environment/environment-definitions.ts",
+        "src/gameplay/entities/projectile.ts",
+        "src/gameplay/combat/**",
+        "src/gameplay/runtime/gameplay-events.ts",
+        "src/presentation/enemies/**",
+        "src/presentation/environment/**",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C11-S1",
+          "description": "Implement deterministic Phase I attack selection and recovery cadence.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S2",
+          "description": "Implement Vine Sweep with geometry-first windup, active window, hit ownership, and recovery.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S3",
+          "description": "Implement Seed Arc through current projectile lifecycle and explicit counterplay capability.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S4",
+          "description": "Implement Rootline through the shared environment/hazard owner with bounded warning/active/cleanup.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S5",
+          "description": "Implement Canopy Step through authored destinations and visible destination telegraph.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S6",
+          "description": "Implement phase-entry/exit state and remove invalid temporary objects before Phase II.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S7",
+          "description": "Add high-contrast, reduced-motion, low-graphics, and audio-independent attack telegraphs.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S8",
+          "description": "Validate attack cadence and damage under current difficulties.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C11-S9",
+          "description": "Prove no attack commits during boss intro/transformation protection.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Extend the Rootbound natural scenario to its first meaningful Phase I attack without making it too long.",
+        "Add surgical State Forge starts for each Phase I attack if required by unit/browser evidence.",
+        "Map boss attack native facts exhaustively.",
+        "Add legal-phase and no-orphan-environment invariants.",
+        "Add one live encounter comparison and explicit detached support/refusal status."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm exec vitest run tests/unit/rootbound-phase-one.test.ts tests/unit/projectile-runtime.test.ts tests/unit/environment-field-runtime.test.ts tests/unit/gameplay-causal-events.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:bosses"
+      ],
+      "exitConditions": [
+        "All four Phase I attacks are deterministic, readable, bounded, and punishable.",
+        "Attack facts and observations are truthful.",
+        "Phase II transition starts from a clean environment state.",
+        "All accessibility modes preserve counterplay.",
+        "No current weapon or projectile contract regresses."
+      ],
+      "stopConditions": [
+        "An attack requires presentation timing to decide damage.",
+        "Rootline duplicates an existing hazard owner instead of using it.",
+        "Attack selection produces an unbounded or unfair loop under current difficulty scaling."
+      ],
+      "requiredOutputs": [
+        "Phase I production behavior",
+        "Attack-specific unit evidence",
+        "Updated boss browser scenario",
+        "Accessibility attack review",
+        "Phase I checkpoint record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C12",
+      "title": "Rootbound Phase II — Graft Anchors and The Garden Remembers",
+      "owner": "Boss/environment combat owner",
+      "dependencies": [
+        "VS3-C11"
+      ],
+      "releaseBoundary": "Phase II engineering completion",
+      "objective": "Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage, and a lawful Phase III transition.",
+      "entryConditions": [
+        "VS3-C11 is green.",
+        "Combat-object kernel, Bloom runtime, State Forge object factories, and Rootbound phase state are stable.",
+        "Proc and reward policy is proven."
+      ],
+      "primaryFiles": [
+        "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/environment/graft-anchor.ts",
+        "src/gameplay/environment/bloom-well.ts",
+        "src/gameplay/environment/environment-definitions.ts",
+        "src/presentation/environment/**",
+        "src/presentation/enemies/**",
+        "src/tearbench/state-forge-live-compiler.ts",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C12-S1",
+          "description": "Implement Bastion, Mercy, and Haste Graft definitions with bounded effects.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S2",
+          "description": "Create Grafts through production environment factories and stable owner references.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S3",
+          "description": "Keep Rootbound directly damageable while Grafts exist.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S4",
+          "description": "Implement Graft warning, activation, integrity, destruction, effect removal, and phase cleanup.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S5",
+          "description": "Implement authored boss-owned Bloom patterns through the shared Well runtime.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S6",
+          "description": "Implement Memory Choir as bounded authoritative manifestations or a truthful existing add lifecycle.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S7",
+          "description": "Implement Root Cage through the environment/hazard owner with a guaranteed response route.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S8",
+          "description": "Prevent Root Cage and Rootbinder leash from creating a total movement lock.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S9",
+          "description": "Implement Phase II attack selection/cadence and Phase III transition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C12-S10",
+          "description": "Prove environment population caps and all reset/terminal cleanup.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add State Forge scenario rootbound-graft-anchor-destruction.",
+        "Observe Graft integrity/effect/state through structured environment observation.",
+        "Assert boss remains damageable and object rewards/procs remain disabled.",
+        "Add positive/negative bounded-population and valid-reference invariants.",
+        "Add native environment and boss attack event order.",
+        "Extend evidence routes so Graft/Rootbound changes execute the real scenario and boss browser matrix."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm exec vitest run tests/unit/rootbound-phase-two.test.ts tests/unit/graft-anchor.test.ts tests/unit/bloom-well-runtime.test.ts tests/unit/environment-state-codec.test.ts tests/unit/verdant-final-five-conformance.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:bosses",
+        "pnpm test:browser:state-forge"
+      ],
+      "exitConditions": [
+        "All Graft types are readable and bounded.",
+        "Rootbound never becomes fully invulnerable.",
+        "Boss-owned Wells reuse the shared field runtime.",
+        "Root Cage preserves agency.",
+        "Phase cleanup removes every invalid object.",
+        "State Forge scenario and environment hash are stable."
+      ],
+      "stopConditions": [
+        "Graft effects require hidden boss-global booleans outside canonical environment state.",
+        "Root Cage has no guaranteed legal response for one or more current movement states.",
+        "Object counts or presentation exceed bounded budgets before Phase III exists."
+      ],
+      "requiredOutputs": [
+        "Graft definitions/runtime",
+        "Phase II behavior",
+        "State Forge Graft scenario",
+        "Object/proc/invariant evidence",
+        "Phase II browser proof"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C13",
+      "title": "Rootbound Phase III — Regrowth, Last Spring, and terminal cleanup",
+      "owner": "Boss terminal / replay integration owner",
+      "dependencies": [
+        "VS3-C12"
+      ],
+      "releaseBoundary": "Complete Rootbound encounter engineering claim; still non-certifying",
+      "objective": "Implement the one-use Regrowth outcome matrix, Last Spring, living-arena escalation, defeat cleanup, and replay-safe terminal chronology.",
+      "entryConditions": [
+        "VS3-C12 is green.",
+        "Phase II object creation and cleanup are stable.",
+        "Current boss terminal, campaign outro, replay seek, State Forge fork, and outcome chronology contracts are understood."
+      ],
+      "primaryFiles": [
+        "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/environment/regrowth-link.ts",
+        "src/gameplay/environment/environment-runtime.ts",
+        "src/gameplay/run/live-outcome-controller.ts",
+        "src/gameplay/run/outcome-chronology-journal.ts",
+        "src/gameplay/campaign/**",
+        "src/tearbench/state-codecs.ts",
+        "src/tearbench/detached-world-runtime.ts",
+        "src/replay/**"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C13-S1",
+          "description": "Implement Regrowth channel state, one-use guard, required connections, progress, and resolution.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S2",
+          "description": "Implement full, partial, and no-interrupt outcomes with bounded healing.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S3",
+          "description": "Prevent phase reopening and repeat Regrowth.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S4",
+          "description": "Implement Last Spring as one authored final sequence using Bloom and arena state without a new route framework.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S5",
+          "description": "Integrate existing living-arena warning/broken/reforming lifecycle.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S6",
+          "description": "Implement boss death cleanup for all fields, links, Grafts, cages, routes, and arena ownership.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S7",
+          "description": "Preserve boss-defeated, terminal, reward, and chapter-outro event order.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S8",
+          "description": "Capture/restore active Regrowth and Last Spring states transactionally.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S9",
+          "description": "Prove retry, defeat, victory, abandon, replay seek, and State Forge fork behavior.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C13-S10",
+          "description": "Validate campaign and Boss Test terminal flows separately.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add State Forge scenario rootbound-regrowth-outcome-matrix with three forks.",
+        "Add State Forge/browser scenario rootbound-last-spring-terminal-cleanup.",
+        "Prove exact and semantic hashes before/after each supported fork.",
+        "Add no-orphan-object and terminal-order invariants with negative fixtures.",
+        "Add truthful detached capability support or explicit refusal for active boss AI replay.",
+        "Keep evidence engineering-only; do not describe it as broad boss or C40 certification."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm exec vitest run tests/unit/rootbound-phase-three.test.ts tests/unit/rootbound-regrowth.test.ts tests/unit/live-outcome-controller.test.ts tests/unit/outcome-chronology-journal.test.ts tests/unit/tearbench-state-codecs.test.ts tests/unit/detached-world-runtime.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:bosses",
+        "pnpm test:browser:state-forge",
+        "pnpm test:browser:current-live-detached-parity"
+      ],
+      "exitConditions": [
+        "Regrowth outcomes are correct and bounded.",
+        "Last Spring is readable and terminal-safe.",
+        "No phase reopens.",
+        "Every environment object cleans on boss terminal paths.",
+        "Campaign outro chronology is correct.",
+        "Capture/restore/fork evidence is hash-stable and capability-honest."
+      ],
+      "stopConditions": [
+        "Regrowth healing depends on render frames or asynchronous presentation.",
+        "Terminal cleanup can race with campaign outro or reward ownership.",
+        "Active phase restore requires unsupported hidden state that cannot be serialized lawfully."
+      ],
+      "requiredOutputs": [
+        "Complete Phase III encounter",
+        "Regrowth outcome matrix",
+        "Last Spring terminal scenario",
+        "Replay/State Forge evidence",
+        "Rootbound engineering-complete record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C14",
+      "title": "Final Five, universal abilities, status, and object conformance",
+      "owner": "Weapon/combat conformance owner",
+      "dependencies": [
+        "VS3-C6",
+        "VS3-C12",
+        "VS3-C13"
+      ],
+      "releaseBoundary": "Cross-cutting gameplay validation; no roster redesign",
+      "objective": "Prove every active weapon can answer every required Verdant combat object without breaking weapon routes or universal abilities.",
+      "entryConditions": [
+        "Root links, Grafts, Regrowth links, and complete Rootbound behavior are stable.",
+        "Current Final Five and ability conformance suites are green before Verdant additions.",
+        "Bloom Wells V1 still excludes weapon transport mutation."
+      ],
+      "primaryFiles": [
+        "src/gameplay/combat/**",
+        "src/gameplay/entities/blade.ts",
+        "src/gameplay/weapons.ts",
+        "src/gameplay/upgrades.ts",
+        "src/gameplay/environment/combat-object-runtime.ts",
+        "docs/FINAL_FIVE_WEAPON_ROSTER_IMPLEMENTATION.md",
+        "tests/unit/final-five-weapon-roster.test.ts",
+        "tests/unit/weapon-ability-conformance.test.ts"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C14-S1",
+          "description": "Define and test cut, break, and projectile-cut capability resolution.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S2",
+          "description": "Prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S3",
+          "description": "Prove Hammer Break and Meteor route/catch safety.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S4",
+          "description": "Prove Greatsword broad multi-segment dedupe and Wheel Cut safety.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S5",
+          "description": "Prove Chainblade head-only object damage and Hook & Sling stability.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S6",
+          "description": "Prove Riftlock bayonet/Razor Round severing without invalid Capture and with Backblast safety.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S7",
+          "description": "Prove attack-ID dedupe, no reward leakage, and no status attachment to default objects.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S8",
+          "description": "Prove universal ability behavior remains unchanged across every weapon.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S9",
+          "description": "Run existing narrow C40 weapon scenarios only when actual weapon runtime paths changed.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C14-S10",
+          "description": "Update current weapon documentation/evidence only where behavior truly changed.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add parameterized verdant-final-five-object-conformance suite from production WEAPON_IDS.",
+        "Add a source-derived guard that fails if a new weapon lacks Verdant object coverage.",
+        "Keep Verdant object proof separate from existing C40 transport certification records.",
+        "If any existing C40 scenario is invalidated, refresh its exact proof in the same reviewed change.",
+        "Record explicit no-change evidence for Bloom transport exclusion."
+      ],
+      "minimumProof": [
+        "pnpm test:weapons",
+        "pnpm exec vitest run tests/unit/weapon-ability-conformance.test.ts tests/unit/weapon-secondary-runtime.test.ts tests/unit/weapon-projectile-runtime.test.ts tests/unit/verdant-final-five-conformance.test.ts",
+        "pnpm test:headless:current-weapon-parity",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:current-weapon-parity"
+      ],
+      "exitConditions": [
+        "All five active weapons have a valid object answer.",
+        "No weapon route loses bounded catch/held recovery.",
+        "No per-weapon ability nerf exists.",
+        "No object grants accidental progression/procs.",
+        "Any affected C40 evidence is refreshed truthfully.",
+        "Retired weapon IDs remain absent."
+      ],
+      "stopConditions": [
+        "A weapon can only interact through a bespoke object implementation.",
+        "One weapon lacks a fair answer without changing the locked object design.",
+        "Current Final Five baseline is red before Verdant changes.",
+        "An existing C40 proof is invalidated but cannot be regenerated in the checkpoint."
+      ],
+      "requiredOutputs": [
+        "Final Five conformance matrix",
+        "Ability/status regression evidence",
+        "Affected C40 disposition",
+        "Updated implementation documentation",
+        "Checkpoint handoff"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C15",
+      "title": "Verdant wave composition and seven-stage balance curve",
+      "owner": "Run/balance/progression owner",
+      "dependencies": [
+        "VS3-C8",
+        "VS3-C14"
+      ],
+      "releaseBoundary": "Engineering balance; no final seven-stage claim before Pale",
+      "objective": "Implement source-owned stage curve/composition pressure and validate Verdant waves without compounding the five-stage linear model blindly.",
+      "entryConditions": [
+        "Verdant content and Final Five conformance are green.",
+        "Current campaign tuning, wave planner, spawn scheduler, difficulty catalog, draft/reward cadence, and economy functions are characterized.",
+        "Pale tuning remains provisional."
+      ],
+      "primaryFiles": [
+        "src/gameplay/run/wave-planner.ts",
+        "src/gameplay/run/live-wave-controller.ts",
+        "src/gameplay/run/spawn-scheduler.ts",
+        "src/gameplay/run/difficulty-catalog.ts",
+        "src/config/game-config.ts",
+        "src/gameplay/scoring/**",
+        "src/gameplay/progression/**",
+        "src/game-reference/public-tuning-reference.ts",
+        "src/tearbench/progression-ledger.ts"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C15-S1",
+          "description": "Introduce a source-owned campaign stage curve keyed by StageId or the smallest equivalent current authority.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S2",
+          "description": "Preserve the current in-stage ramp unless evidence supports a change.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S3",
+          "description": "Implement Verdant support/control composition budget and simultaneous Rootbinder safeguards.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S4",
+          "description": "Validate local waves 1–9 and Rootbound wave 10.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S5",
+          "description": "Validate max concurrent counts and environment object caps together.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S6",
+          "description": "Retest difficulty scaling and player damage under current difficulty definitions.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S7",
+          "description": "Retest coin, score, healing, draft, and upgrade acquisition through wave 40.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S8",
+          "description": "Prototype Pale/Voidspire/Tear curve slots without presenting them as final until Pale implementation.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S9",
+          "description": "Compare relocated Echo/Source projections without changing those bosses prematurely.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C15-S10",
+          "description": "Record tuning evidence and unresolved owner judgments separately from code correctness.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Use production progression/economy functions in TearBench synthesis.",
+        "Add exact Verdant wave State Forge scenarios for early, middle, and late composition.",
+        "Add wave-ownership observations that exclude links/Grafts/environment objects from living wave enemies.",
+        "Add negative support-budget fixture and no-softlock/wave-completion invariant.",
+        "Route balance source changes to wave/draft scenarios and one current browser journey.",
+        "Do not claim seven-stage balance completion before Pale and joint end-to-end evidence."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm exec vitest run tests/unit/run-wave-planner.test.ts tests/unit/live-wave-controller.test.ts tests/unit/run-wave-clear-planner.test.ts tests/unit/coin-awards.test.ts tests/unit/tearbench-progression-ledger.test.ts tests/unit/verdant-wave-composition.test.ts",
+        "pnpm build:test:standalone",
+        "node tests/browser-progression-journeys.js"
+      ],
+      "exitConditions": [
+        "Verdant wave pressure comes from composition and relationships.",
+        "Wave clear ignores non-enemy environment objects correctly.",
+        "Economy/draft/healing are production-rule consistent through wave 40.",
+        "Current difficulty behavior remains lawful.",
+        "Prototype curve is explicitly non-final until Pale integration."
+      ],
+      "stopConditions": [
+        "Balance implementation requires guessing Pale release tuning.",
+        "Current economy/progression behavior is already red on protected main.",
+        "Composition budget creates a second wave planner rather than extending the current owner."
+      ],
+      "requiredOutputs": [
+        "Stage curve implementation/prototype",
+        "Verdant composition budget",
+        "Wave/economy evidence",
+        "TearBench progression comparison",
+        "Balance decision backlog"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C16",
+      "title": "Modes, lifecycle, achievements, statistics, telemetry, and persistence",
+      "owner": "Progression/persistence/mode owner",
+      "dependencies": [
+        "VS3-C13",
+        "VS3-C15"
+      ],
+      "releaseBoundary": "Feature completeness across supported modes; no public profile migration yet",
+      "objective": "Make Verdant and Rootbound truthful across current modes, progression catalogs, statistics, replay identity, and reset paths.",
+      "entryConditions": [
+        "Complete Rootbound and Verdant wave flow are green.",
+        "Current mode catalog, achievements, profile envelope, replay envelope, cloud adapters, and terminal controllers are understood.",
+        "Joint publication remains blocked."
+      ],
+      "primaryFiles": [
+        "src/gameplay/run/mode-catalog.ts",
+        "src/gameplay/run/session.ts",
+        "src/gameplay/progression/achievement-catalog.ts",
+        "src/gameplay/progression/achievement-runtime.ts",
+        "src/gameplay/progression/achievements.ts",
+        "src/persistence/**",
+        "src/replay/**",
+        "src/app/**",
+        "src/presentation/screens/**",
+        "src/tearbench/progression-ledger.ts",
+        "src/tearbench/evidence-routes.json"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C16-S1",
+          "description": "Add Rootbound and Verdant behavior to Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test through current mode paths.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S2",
+          "description": "Prove Tutorial remains unaffected or update only an explicitly approved teaching surface.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S3",
+          "description": "Add Rootbound/Rootbinder/Bloom development controls through safe current test/State Forge boundaries.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S4",
+          "description": "Add stable achievement entries and runtime predicates for approved Verdant achievements.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S5",
+          "description": "Replace fixed-five copy/count assumptions with source-derived values where appropriate.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S6",
+          "description": "Add source-owned Verdant/Rootbound/link/Graft/Regrowth telemetry facts and statistic updates.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S7",
+          "description": "Define replay/ruleset identity implications and stable stage event compatibility.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S8",
+          "description": "Add versioned profile migration only when durable production data changes are ready for joint promotion.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S9",
+          "description": "Prove reset, retry, quit, defeat, victory, stage transition, and mode change cleanup.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C16-S10",
+          "description": "Keep intermediate six-stage profile/reference state non-publishable.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Add mode-specific TearBench scenarios or focused proofs only where current behavior differs.",
+        "Add player-facing route/journey evidence for Boss Test/Playground controls if exposed in normal/test builds.",
+        "Use source-derived achievement/mode/stage/boss catalogs in current-game authority guards.",
+        "Add replay parse/reject/round-trip tests for ruleset and stable stage identity.",
+        "Add environment-state reset assertions to normal run lifecycle scenarios.",
+        "Keep C40 and public-player claims explicitly unchanged."
+      ],
+      "minimumProof": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm exec vitest run tests/unit/mode-catalog.test.ts tests/unit/achievement-catalog.test.ts tests/unit/achievement-runtime.test.ts tests/unit/replay-envelope.test.ts tests/unit/profile-envelope.test.ts tests/unit/run-lifecycle.test.ts tests/unit/verdant-mode-lifecycle.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:features",
+        "pnpm test:browser:journeys",
+        "pnpm test:browser:state-forge"
+      ],
+      "exitConditions": [
+        "Every supported mode loads and cleans Verdant lawfully.",
+        "Rootbound participates in current boss/mode flows.",
+        "Achievements/stats are source-owned and no fixed-five player copy remains where seven-stage truth is intended.",
+        "Replay/profile compatibility is explicit and tested.",
+        "No intermediate production data is published."
+      ],
+      "stopConditions": [
+        "A durable schema migration would be published before Pale/joint promotion.",
+        "Current mode behavior requires a product decision not settled by the creative lock.",
+        "Player-facing debug controls cannot be isolated from production safely."
+      ],
+      "requiredOutputs": [
+        "Mode coverage matrix",
+        "Achievements/statistics implementation",
+        "Replay/profile compatibility decision",
+        "Reset lifecycle evidence",
+        "Player-facing journey evidence where applicable"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C17",
+      "title": "Verdant and Rootbound Adaptive Soundtrack integration",
+      "owner": "TEAR Music / audio integration owner",
+      "dependencies": [
+        "VS3-C8",
+        "VS3-C13"
+      ],
+      "releaseBoundary": "Separate tear-music release and game re-vendoring authorization required",
+      "objective": "Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtrack path with safe fallback.",
+      "entryConditions": [
+        "Verdant stage and complete Rootbound semantic events are stable.",
+        "Music owner has explicit authorization for tear-music work and later game re-vendoring.",
+        "Current game pinned Adaptive Soundtrack and fallback provenance are understood."
+      ],
+      "primaryFiles": [
+        "shaku1z/tear-music/music/**",
+        "shaku1z/tear-music/packages/**",
+        "shaku1z/tear-music/docs/**",
+        "src/audio/**",
+        "public/audio/music-routing.json",
+        "public/vendor/tear-music/**",
+        "public/vendor/tear-score/**",
+        "docs/TEAR_SCORE_INTEGRATION.md",
+        "scripts/verify-adaptive-soundtrack-provenance.mjs"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C17-S1",
+          "description": "Audition Static Bloom against the locked Verdant emotional and gameplay brief.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S2",
+          "description": "Choose Static Bloom, another existing work, or a new work through an owner-recorded decision.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S3",
+          "description": "Confirm rights, source evidence, game-use status, and release boundaries.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S4",
+          "description": "Produce/validate adaptive stems, cue, tier map, transitions, and boss escalation as required.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S5",
+          "description": "Run tear-music formatting, lint, type, test, rights, render, manifest, analysis, codec, and build gates.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S6",
+          "description": "Create a reviewed Adaptive Soundtrack release artifact.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S7",
+          "description": "Re-vendor the exact selected ESM/Tone pair and provenance into Tear.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S8",
+          "description": "Update stageId/scene/boss routing with compatibility for current routes.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S9",
+          "description": "Publish semantic context for stage, boss phase, Regrowth, victory, and defeat only where musically used.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C17-S10",
+          "description": "Prove canonical/fallback exclusivity, no second AudioContext, repeated-run cleanup, and nonfatal failure.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Audio changes select the current audio evidence route and actual browser audio journey.",
+        "Replay metadata records the exact backend/version/event-journal identity through current contracts.",
+        "No TearBench scenario owns the audio context or starts music from the frame loop.",
+        "Build identity and vendor hashes are recorded in evidence.",
+        "This checkpoint does not publish wiki or deploy the game."
+      ],
+      "minimumProof": [
+        "In tear-music: pnpm check",
+        "In Tear: pnpm check:adaptive-soundtrack",
+        "pnpm check:tear-score",
+        "pnpm exec vitest run tests/unit/audio-system.test.ts tests/unit/tear-score-adapter.test.ts tests/unit/adaptive-soundtrack.test.ts",
+        "pnpm build:standalone",
+        "pnpm test:browser:audio",
+        "pnpm test:pwa",
+        "pnpm test:browser:crazygames-iframe"
+      ],
+      "exitConditions": [
+        "Approved work and rights decision are recorded.",
+        "Vendored bytes match a reviewed release.",
+        "Verdant/Rootbound routing works in canonical and fallback paths.",
+        "One AudioContext and exclusive backend ownership remain true.",
+        "Repeated run/stage/boss lifecycle is leak-free."
+      ],
+      "stopConditions": [
+        "Rights/provenance are unresolved.",
+        "Static Bloom or another candidate lacks owner approval.",
+        "Tear-music release is not authorized.",
+        "Game re-vendoring would use an unreviewed repository head or rewritten emitted bytes."
+      ],
+      "requiredOutputs": [
+        "Music decision record",
+        "Reviewed tear-music release identity",
+        "Vendored provenance update",
+        "Routing/context implementation",
+        "Audio browser/lifecycle evidence"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C18",
+      "title": "Game-reference, wiki, terminology, and game-dev-tooling compatibility",
+      "owner": "Reference publication / cross-repository owner",
+      "dependencies": [
+        "VS3-C16",
+        "VS3-C17"
+      ],
+      "releaseBoundary": "No publication until protected joint seven-stage source exists",
+      "objective": "Complete all source/reference contracts and prepare—but do not prematurely execute—the protected cross-repository synchronization path.",
+      "entryConditions": [
+        "Verdant gameplay, progression, and music identities are stable.",
+        "Current game-reference export/publication/dispatch and wiki promotion contracts are understood.",
+        "Explicit authorization exists for any cross-repository change performed."
+      ],
+      "primaryFiles": [
+        "src/game-reference/**",
+        "scripts/check-game-reference.mjs",
+        "scripts/export-game-reference.mjs",
+        "scripts/publish-game-reference-artifact.mjs",
+        "scripts/dispatch-wiki-reference.mjs",
+        "config/terminology-registry.json",
+        "docs/FEATURE_INVENTORY.md",
+        "shaku1z/tear-wiki/**",
+        "shaku1z/game-dev-tooling/systems/wave-run/**",
+        "shaku1z/game-dev-tooling/integrations/tear-wave/**"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C18-S1",
+          "description": "Finalize public stage, boss, enemy, achievement, and tuning projection changes.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S2",
+          "description": "Version exact-key game-reference schema when compatibility requires it.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S3",
+          "description": "Update reference validators, deterministic export, publication receipt, and dispatch tests.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S4",
+          "description": "Update terminology for Verdant/Rootbound current-facing copy without rewriting historical evidence.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S5",
+          "description": "Prepare wiki source-driven reference consumption and bespoke Verdant narrative pages as separate changes.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S6",
+          "description": "Keep wiki promotion blocked until protected merged joint seven-stage game source dispatches an authorized artifact.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S7",
+          "description": "Audit game-dev-tooling wave-run/Tear adapter assumptions.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S8",
+          "description": "Update the adapter to seven-stage current truth or record an explicit deferred compatibility disposition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S9",
+          "description": "Update feature inventory and documentation authority with exact evidence.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C18-S10",
+          "description": "Prove no feature branch can masquerade as a protected publishable reference artifact.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Current-game authority derives all reference IDs from production.",
+        "Evidence selector routes game-reference and terminology changes to actual authority tests.",
+        "Add negative stale/unsupported schema and unprotected-publication cases.",
+        "No browser gameplay build is required for pure wiki prose; source reference changes retain their game gates.",
+        "No C40 status changes from wiki/reference publication."
+      ],
+      "minimumProof": [
+        "In Tear: pnpm check:game-reference",
+        "pnpm test:game-reference-artifact",
+        "pnpm check:terminology",
+        "pnpm test:terminology",
+        "pnpm check:docs",
+        "pnpm test:docs",
+        "In wiki when authorized: npm run check:snapshot",
+        "In game-dev-tooling when updated: its current package/contract checks for wave-run and tear-wave"
+      ],
+      "exitConditions": [
+        "Public reference schema is deterministic and validated.",
+        "Feature-branch publication is rejected.",
+        "Wiki plan separates protected reference promotion from authored narrative content.",
+        "game-dev-tooling has an explicit update/defer disposition.",
+        "Documentation and terminology are current and truthful."
+      ],
+      "stopConditions": [
+        "Cross-repository write authorization is absent.",
+        "Protected joint seven-stage game source does not exist yet for publication.",
+        "Game-reference schema migration scope exceeds the checkpoint without an owner decision.",
+        "game-dev-tooling compatibility cannot be updated without affecting unrelated active work."
+      ],
+      "requiredOutputs": [
+        "Final game-reference schema implementation",
+        "Publication/dispatch negative proof",
+        "Wiki update package or blocked plan",
+        "game-dev-tooling disposition",
+        "Documentation/terminology GREEN record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C19",
+      "title": "Verdant TearBench completion and permanent anti-drift enforcement",
+      "owner": "TearBench current-game integration owner",
+      "dependencies": [
+        "VS3-C14",
+        "VS3-C16",
+        "VS3-C18"
+      ],
+      "releaseBoundary": "Engineering completion only; C40 remains separate",
+      "objective": "Close every Verdant-specific evidence gap, make future drift fail the focused gate, and reconcile capability claims with what actually executes.",
+      "entryConditions": [
+        "All Verdant gameplay/content/reference checkpoints through VS3-C18 are green or have explicit authorized dispositions.",
+        "Current TearBench alignment remains green on the branch baseline.",
+        "Every existing Verdant scenario/evidence route can be executed from current source."
+      ],
+      "primaryFiles": [
+        "src/tearbench/canonical-scenarios.json",
+        "src/tearbench/canonical-scenarios.ts",
+        "src/tearbench/evidence-routes.json",
+        "src/tearbench/registries.ts",
+        "src/tearbench/invariants.ts",
+        "src/tearbench/gameplay-causal-events.ts",
+        "src/tearbench/state-codecs.ts",
+        "src/tearbench/live-runtime-environment.ts",
+        "src/tearbench/production-headless-environment.ts",
+        "src/tearbench/release-certification.ts",
+        "scripts/tearbench.mjs",
+        ".github/workflows/ci.yml",
+        "docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md",
+        "docs/FEATURE_INVENTORY.md"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C19-S1",
+          "description": "Reconcile source-derived coverage for Verdant stage, Rootbinder, Rootbound, variants, environment kinds, events, achievements, and music routing.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S2",
+          "description": "Finalize natural Rootbound scenario and all surgical State Forge Verdant scenarios.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S3",
+          "description": "Ensure every scenario launches its declared subject and backend and reaches a meaningful source-owned transition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S4",
+          "description": "Finalize environment observation and invariant positive/negative proofs.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S5",
+          "description": "Finalize native environment causal event order and normal-session delivery.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S6",
+          "description": "Finalize live/detached capability map; implement support or fail closed explicitly.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S7",
+          "description": "Finalize environment codec migration, restore, and exact/semantic hash evidence.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S8",
+          "description": "Add diff-aware evidence routes for environment runtime, Verdant stage, Rootbinder, variants, Rootbound, progression, presentation, audio, and references.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S9",
+          "description": "Add negative anti-drift fixtures for unmapped stage, boss, enemy, environment kind, event, and wrong-subject scenario.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S10",
+          "description": "Ensure selected evidence commands are executed and artifacts are source/build bound.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S11",
+          "description": "Update current-game alignment/handoff/evidence documentation only with actual implemented capability.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C19-S12",
+          "description": "Record every unresolved limitation without promoting engineering evidence to certification.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Run current-game authority completeness from production catalogs.",
+        "Run actual scenario evidence, not command metadata checks.",
+        "Run one same-seed repeat for every randomness-dependent scenario.",
+        "Run one live-versus-detached comparison per claimed portable environment behavior.",
+        "Run State Forge round-trip/fork proof for Bloom, network, Grafts, Regrowth, and Last Spring.",
+        "Run normal-player/browser journey for player-visible Verdant entry and Rootbound encounter.",
+        "Prove stale build and wrong artifact identity rejection.",
+        "Keep C40 release certification unchecked and explicitly out of scope."
+      ],
+      "minimumProof": [
+        "pnpm requirements:check",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm test:tearbench-selection",
+        "pnpm check:active-roster",
+        "pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts tests/unit/environment-state-codec.test.ts tests/unit/tearbench-runner.test.ts tests/unit/production-headless-environment.test.ts tests/unit/verdant-tearbench-coverage.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:current-gameplay-scenarios",
+        "pnpm test:browser:bosses",
+        "pnpm test:browser:state-forge",
+        "pnpm test:browser:current-live-detached-parity"
+      ],
+      "exitConditions": [
+        "Every new production identity has source-derived TearBench coverage.",
+        "Every selected scenario is real, subject-correct, backend-correct, and executable.",
+        "Environment hashes/events/invariants are truthful.",
+        "Unsupported capabilities refuse explicitly.",
+        "Diff-aware selection cannot silently omit Verdant changes.",
+        "Evidence binds to exact executed source/build.",
+        "Documentation does not overclaim C40 or release readiness."
+      ],
+      "stopConditions": [
+        "Any Verdant production identity remains unmapped.",
+        "Any selected evidence command is metadata-only or stale.",
+        "Live/headless observations disagree for a claimed capability.",
+        "An invariant cannot produce a meaningful negative.",
+        "Current TearBench alignment gate regresses and the owner cannot isolate the defect."
+      ],
+      "requiredOutputs": [
+        "Final Verdant scenario catalog",
+        "Final evidence routes and anti-drift tests",
+        "Environment causal/invariant evidence",
+        "Capability matrix",
+        "Updated TearBench/current-game documentation",
+        "Non-certifying completion statement"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C20",
+      "title": "Full accessibility, responsive, performance, platform, and packaging validation",
+      "owner": "QA / performance / platform owner",
+      "dependencies": [
+        "VS3-C9",
+        "VS3-C13",
+        "VS3-C17",
+        "VS3-C19"
+      ],
+      "releaseBoundary": "Release-candidate engineering gate; no deployment",
+      "objective": "Validate the complete Verdant feature across supported presentation, input, target, performance, lifecycle, and packaging contracts.",
+      "entryConditions": [
+        "Complete Verdant gameplay, presentation, audio, and TearBench engineering coverage is green.",
+        "Current build targets and browser tooling can bind exact source identity.",
+        "A controlled performance host is available for performance claims."
+      ],
+      "primaryFiles": [
+        "config/browser-performance-budgets.json",
+        "config/bundle-budgets.json",
+        "docs/PERFORMANCE_BUDGETS.md",
+        "tests/browser-responsive-matrix.js",
+        "tests/browser-performance.js",
+        "tests/browser-input-matrix.js",
+        "tests/platform-browser-smoke.js",
+        "tests/browser-crazygames-iframe.js",
+        "tests/pwa-offline.js",
+        "scripts/check-bundle-budget.mjs",
+        "scripts/check-reproducible-build.mjs",
+        "scripts/package-crazygames.mjs"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C20-S1",
+          "description": "Run high-contrast, reduced-motion, flash-scale, low-graphics, and audio-independent manual/automated review.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S2",
+          "description": "Run responsive/overscan matrix and confirm gameplay geometry is unchanged.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S3",
+          "description": "Run keyboard/mouse, controller, and touch input matrices through Verdant/Rootbound paths where relevant.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S4",
+          "description": "Add/execute a bounded Verdant performance workload with Bloom, Rootbinder network, Grafts, enemies, and combat activity.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S5",
+          "description": "Validate object/particle/effect population ceilings.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S6",
+          "description": "Validate repeated start/quit/retry/stage transitions for retained objects and heap growth.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S7",
+          "description": "Build standalone, PWA, CrazyGames, and test targets from exact source.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S8",
+          "description": "Validate offline/PWA asset behavior, CrazyGames iframe lifecycle, package contents, and no source/test leakage.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S9",
+          "description": "Validate bundle budgets and reproducibility.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C20-S10",
+          "description": "Record controlled-host performance results without changing thresholds to silence contention.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Browser evidence remains source/build bound through current build-info checks.",
+        "Performance route selects Verdant workload plus the repository’s existing representative workload.",
+        "No structured TearBench state is exposed to normal production clients.",
+        "Platform-specific failures are routed to adapters rather than gameplay branches.",
+        "No certification claim is made if controlled performance or a target gate was not run."
+      ],
+      "minimumProof": [
+        "pnpm build",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:responsive",
+        "pnpm test:browser:input",
+        "pnpm test:browser:audio",
+        "pnpm test:browser:platform",
+        "pnpm test:browser:crazygames-iframe",
+        "pnpm test:pwa",
+        "pnpm test:browser:performance",
+        "pnpm check:bundles",
+        "pnpm check:reproducible",
+        "pnpm package:crazygames:existing",
+        "pnpm check:test-isolation"
+      ],
+      "exitConditions": [
+        "Verdant remains readable and playable across supported view/input/accessibility profiles.",
+        "Performance stays inside current budgets on a controlled host.",
+        "Object/effect counts and repeated-run memory remain bounded.",
+        "All targets build/package from shared source.",
+        "No production-test isolation or artifact provenance regression exists."
+      ],
+      "stopConditions": [
+        "Performance host is uncontrolled or results are non-comparable.",
+        "A target build uses stale source identity.",
+        "Accessibility counterplay fails for any required mechanic.",
+        "A platform issue would require gameplay host-SDK branching.",
+        "Budget change is proposed solely because one run is red."
+      ],
+      "requiredOutputs": [
+        "Accessibility/responsive review bundle",
+        "Controlled performance report",
+        "Platform/build/package transcripts",
+        "Memory/object ceiling report",
+        "Exact artifact identities and limitations"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C21",
+      "title": "Verdant engineering freeze and Pale Traverse handoff",
+      "owner": "Verdant program / Pale integration owner",
+      "dependencies": [
+        "VS3-C20"
+      ],
+      "releaseBoundary": "Freeze only; protected promotion remains prohibited",
+      "objective": "Freeze Verdant as an internally complete, reviewable slice and transfer the shared foundation to Pale without drift or duplication.",
+      "entryConditions": [
+        "VS3-C20 is green or has explicit authorized limitations.",
+        "Verdant checkpoints C0-C20 are reconciled in plan and ledger.",
+        "No hidden feature-branch publication has occurred."
+      ],
+      "primaryFiles": [
+        "This Revision 3 plan",
+        "TEAR_VERDANT_SANCTUM_REVISION_3_CHECKPOINT_LEDGER.json",
+        "TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN.md",
+        "docs/FEATURE_INVENTORY.md",
+        "docs/ARCHITECTURE.md",
+        "src/gameplay/environment/**",
+        "src/tearbench/evidence-routes.json",
+        "plans/README.md"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C21-S1",
+          "description": "Run a complete checkpoint/ledger/doc reconciliation and resolve every status mismatch.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S2",
+          "description": "Record exact Verdant feature HEAD, build identities, tests, evidence, and known limitations.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S3",
+          "description": "Freeze creative and technical contracts that Pale must reuse: environment state, field kernel, route type, codec, observations, events, invariants, evidence routes, and platform bounds.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S4",
+          "description": "List every shared file Pale may extend and every Verdant file Pale must not fork.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S5",
+          "description": "Create the Pale Revision 3 delta requirements from its old plan without implementing Pale inside this checkpoint.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S6",
+          "description": "Record provisional seven-stage balance/music/reference decisions that remain blocked on Pale.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S7",
+          "description": "Prove the Verdant branch cannot be mistaken for publishable campaign main.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S8",
+          "description": "Prepare one owner-readable walkthrough of Bloom, Rootbinder, Rootbound, State Forge, and TearBench evidence.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C21-S9",
+          "description": "Mark VS3-C22 blocked on Pale completion and joint promotion authorization.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Run final Verdant source-to-TearBench completeness guard.",
+        "Record all scenarios, routes, hashes, build identities, and non-certifying limitations.",
+        "Preserve existing current-game alignment and C40 status exactly.",
+        "Add Pale future prefixes/subjects only when Pale production files exist; do not predeclare fake passing evidence.",
+        "Ensure the handoff names the first Pale checkpoint and required failing baseline."
+      ],
+      "minimumProof": [
+        "All focused C0-C20 exit gates as recorded",
+        "pnpm check:docs",
+        "pnpm test:docs",
+        "pnpm check:terminology",
+        "pnpm test:terminology",
+        "pnpm requirements:check",
+        "pnpm test:tearbench-selection",
+        "pnpm check:active-roster",
+        "Optional full pnpm check only when the owner requests a clean internal freeze gate"
+      ],
+      "exitConditions": [
+        "Verdant implementation and evidence are frozen at one exact identity.",
+        "Pale receives one reusable foundation and no duplicate runtime plan.",
+        "Every limitation and deferred cross-repository action is explicit.",
+        "VS3-C22 is the only remaining Verdant checkpoint and is blocked lawfully.",
+        "No public release or C40 claim is made."
+      ],
+      "stopConditions": [
+        "Any prior checkpoint status/evidence is irreconcilable.",
+        "Shared environment contracts remain unstable.",
+        "Pale would require a parallel field/route/codec system.",
+        "Feature branch publication safeguards are missing."
+      ],
+      "requiredOutputs": [
+        "Verdant freeze manifest",
+        "Exact checkpoint ledger",
+        "Pale shared-dependency handoff",
+        "Owner walkthrough",
+        "VS3-C22 blocked record"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    },
+    {
+      "id": "VS3-C22",
+      "title": "Joint Verdant + Pale seven-stage promotion and release-candidate gate",
+      "owner": "Campaign release / protected integration owner",
+      "dependencies": [
+        "VS3-C21",
+        "Pale Revision 3 completion"
+      ],
+      "releaseBoundary": "Requires explicit merge, publication, and later deployment authorization",
+      "objective": "Integrate both new stages atomically, reconcile the complete seventy-wave campaign, and produce a clean release-candidate decision without overclaiming certification.",
+      "entryConditions": [
+        "VS3-C21 is green.",
+        "Pale Revision 3 implementation and equivalent freeze gate are green.",
+        "Both branches derive from a reconcilable protected-main baseline.",
+        "Explicit authorization exists for protected integration and any reference/music/wiki transactions.",
+        "No unresolved rights, schema, balance, platform, or evidence blocker remains."
+      ],
+      "primaryFiles": [
+        "Complete Tear repository",
+        "Complete tear-music release provenance where changed",
+        "Complete game-reference publication path",
+        "Complete tear-wiki consumption path",
+        "Complete game-dev-tooling disposition",
+        "CI/release workflows",
+        "This plan and Pale Revision 3 plan"
+      ],
+      "subgoals": [
+        {
+          "id": "VS3-C22-S1",
+          "description": "Integrate Verdant and Pale into one seven-stage source tree without a protected six-stage intermediate.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S2",
+          "description": "Reconcile chapter numbers, stage order, boss order, mode behavior, campaign length, final-stage semantics, and all fixed counts.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S3",
+          "description": "Finalize authored seven-stage curve and retest Echo/Source at new depths.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S4",
+          "description": "Finalize achievements, speedrun threshold, economy, draft, healing, and profile/replay ruleset migrations.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S5",
+          "description": "Finalize Verdant/Pale music routing and vendored release provenance.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S6",
+          "description": "Run complete source-derived game-reference export, publication tests, and authorized dispatch.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S7",
+          "description": "Promote wiki reference only from the protected authorized artifact and merge bespoke pages separately.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S8",
+          "description": "Apply the chosen game-dev-tooling update/defer disposition.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S9",
+          "description": "Run all focused Verdant and Pale TearBench proofs plus conservative shared-runtime selection.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S10",
+          "description": "Run the full clean-source repository gate and release artifact verification.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S11",
+          "description": "Record an explicit GO / NO-GO / BLOCKED release-candidate decision.",
+          "status": "not-started"
+        },
+        {
+          "id": "VS3-C22-S12",
+          "description": "Perform no deployment unless separately and explicitly authorized.",
+          "status": "not-started"
+        }
+      ],
+      "agentProcedure": [
+        "Capture the current baseline and make the first sub-goal fail in the narrowest permanent proof.",
+        "Implement the listed sub-goals in order; keep each code change, test, TearBench response, and documentation update in one reviewable slice.",
+        "After each sub-goal, run its focused proof and directly adjacent contracts before continuing.",
+        "Run the checkpoint TearBench same-change response before claiming the production behavior is integrated.",
+        "Run the stated minimum focused proof from the intended source/worktree state.",
+        "Update Feature Inventory, this plan, the machine ledger, and the exact handoff payload before stopping."
+      ],
+      "tearbenchResponse": [
+        "Current production catalogs must determine complete seven-stage coverage.",
+        "Every new stage/boss/enemy/environment mechanic has current scenarios and actual evidence.",
+        "Verdant and Pale shared environment behavior uses one codec/event/observation/invariant system.",
+        "All selected artifacts bind to clean exact protected source.",
+        "Nightly/weekly/release matrices remain current.",
+        "C40 certification remains a separate named gate even after pnpm check; do not infer it from campaign integration."
+      ],
+      "minimumProof": [
+        "Focused Verdant and Pale checkpoint gates",
+        "pnpm check",
+        "pnpm test:game-reference-artifact",
+        "Authorized game-reference publish/dispatch commands when explicitly approved",
+        "Wiki npm run check:snapshot after authorized artifact consumption",
+        "Any separately named C40/release certificate command only when explicitly authorized"
+      ],
+      "exitConditions": [
+        "Protected source contains the complete seven-stage campaign atomically.",
+        "All current release, platform, performance, replay, reference, and TearBench gates are green from clean exact source.",
+        "Cross-repository artifacts have verified provenance.",
+        "Wiki consumes only the authorized protected artifact.",
+        "Release-candidate decision is truthful.",
+        "Deployment and C40 status are stated explicitly rather than inferred."
+      ],
+      "stopConditions": [
+        "Pale is incomplete.",
+        "Any stage/boss/enemy/environment identity lacks TearBench coverage.",
+        "Any replay/profile/reference migration is unresolved.",
+        "Any target or controlled performance gate is red or not run for a required claim.",
+        "Rights/provenance are unresolved.",
+        "Integration would expose a protected six-stage intermediate.",
+        "Explicit merge/publication authorization is absent."
+      ],
+      "requiredOutputs": [
+        "Atomic seven-stage integration commit",
+        "Full clean gate transcript",
+        "Release-candidate GO/NO-GO record",
+        "Authorized reference/wiki receipts",
+        "Final Verdant and Pale plan/ledger closure records",
+        "Explicit deployment and C40 disposition"
+      ],
+      "status": "not-started",
+      "sourceBaseline": null,
+      "completionIdentity": null,
+      "commandsRun": [],
+      "evidence": [],
+      "blockers": [],
+      "notes": []
+    }
+  ]
+}

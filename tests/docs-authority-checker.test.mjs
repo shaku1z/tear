@@ -134,7 +134,7 @@ test("an added active-plan row requires an intentional canonical-set update and 
     fs.writeFileSync(indexPath, indexText, "utf8");
     fs.writeFileSync(path.join(fixtureRoot, "plans", "active", "EXTRA_ACTIVE.md"), "# Extra active plan\n", "utf8");
     const index = checkPlansAuthorityIndex(fixtureRoot);
-    assert.match(index.errors.join("\n"), /extra active plan|canonical seven/u);
+    assert.match(index.errors.join("\n"), /extra active plan|canonical active plans/u);
     const metadata = checkActivePlanMetadata(fixtureRoot, index);
     assert.match(metadata.errors.join("\n"), /EXTRA_ACTIVE.*missing Owner metadata/u);
     const parsed = parsePlansAuthorityIndex(indexText);
