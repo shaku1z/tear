@@ -3051,7 +3051,7 @@ CURRENT CHECKPOINT: VS3-C3
 CURRENT SUB-GOAL: VS3-C3-S1
 BASELINE: origin/main@91706363b80fb56a18df4d973b424bbce94a279e
 LAST GREEN CHECKPOINT: VS3-C2
-LAST EVIDENCE: C2 environment runtime contract, per-world composition owner, deterministic IDs, fixed-step phase ordering, reset matrix, and concurrent-world isolation tests pass with typecheck, lint, and architecture gates; runtime campaign remains five stages
+LAST EVIDENCE: C2 environment runtime contract is green at 5d608edf920c58dfc7b57681a7112b09aeadda65; per-world ownership, deterministic IDs, lifecycle resets, fixed-step ordering, detached execution, docs, and TearBench selection gates pass; runtime campaign remains five stages
 BLOCKERS: none recorded
 NEXT ACTION: execute VS3-C3 environment codec, canonical hash, State Forge, replay, and TearBench observation
 PUBLICATION: prohibited until joint Verdant/Pale promotion
@@ -6149,7 +6149,7 @@ STATUS: ACTIVE — VS3-C2 GREEN
 CURRENT CHECKPOINT: VS3-C3
 CURRENT SUB-GOAL: VS3-C3-S1
 LAST GREEN CHECKPOINT: VS3-C2
-LAST EVIDENCE: C2 environment runtime contract, per-world composition owner, deterministic IDs, fixed-step phase ordering, reset matrix, and concurrent-world isolation tests pass with typecheck, lint, and architecture gates; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints
+LAST EVIDENCE: C2 environment runtime contract is green at 5d608edf920c58dfc7b57681a7112b09aeadda65; per-world ownership, deterministic IDs, lifecycle resets, fixed-step ordering, detached execution, docs, and TearBench selection gates pass; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later checkpoints
 NEXT ACTION: execute VS3-C3 environment codec, canonical hash, State Forge, replay, and TearBench observation
 PUBLICATION: prohibited
 WIKI DISPATCH: prohibited

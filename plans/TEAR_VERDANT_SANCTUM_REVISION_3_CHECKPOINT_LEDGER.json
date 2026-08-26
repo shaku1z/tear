@@ -16,7 +16,7 @@
   ],
   "lastGreenCheckpoint": "VS3-C2",
   "lastEvidence": [
-    "VS3-C2 environment runtime contract, per-world composition owner, deterministic IDs, fixed-step phase ordering, reset matrix, and concurrent-world isolation tests pass with typecheck, lint, and architecture gates; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints."
+    "VS3-C2 environment runtime contract is green at 5d608edf920c58dfc7b57681a7112b09aeadda65; per-world ownership, deterministic IDs, lifecycle resets, fixed-step ordering, detached execution, documentation, and TearBench selection gates pass while runtime/reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets."
   ],
   "blockers": [],
   "nextAction": "Execute VS3-C3-S1: evolve the environment codec and canonical hash contracts.",
@@ -393,12 +393,15 @@
       ],
       "status": "green",
       "sourceBaseline": "5a934e71bbcafca7af9a92c5f7e886cf3fe8bba0",
-      "completionIdentity": "working tree after VS3-C2 implementation",
+      "completionIdentity": "5d608edf920c58dfc7b57681a7112b09aeadda65",
       "commandsRun": [
         "pnpm typecheck",
         "pnpm lint",
         "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts tests/unit/detached-world-runtime.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts tests/unit/live-outcome-composition.test.ts"
+        "pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts tests/unit/detached-world-runtime.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts tests/unit/live-outcome-composition.test.ts",
+        "pnpm check:docs",
+        "pnpm test:docs",
+        "pnpm test:tearbench-selection"
       ],
       "evidence": [
         "Environment contracts and the state owner provide bounded fields, combat objects, and routes with data-only snapshots and narrow collection methods.",
