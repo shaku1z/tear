@@ -15,7 +15,7 @@
   ],
   "lastGreenCheckpoint": "VS3-C1",
   "lastEvidence": [
-    "VS3-C1 typed identity and TearBench authority gates are green; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints."
+    "VS3-C1 typed identity and TearBench authority gates are green; clean game-reference check passed at c90954bf1c01fdeb18cf091f8ea2d20015eef4e1; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints."
   ],
   "blockers": [],
   "nextAction": "Execute VS3-C2-S1: add the per-world canonical environment runtime contract.",
@@ -259,20 +259,22 @@
       ],
       "status": "green",
       "sourceBaseline": "12b81da011bbd54008f3d531584a69790e862429",
-      "completionIdentity": "codex/verdant-sanctum-r3 C1 working tree derived from origin/main@91706363b80fb56a18df4d973b424bbce94a279e",
+      "completionIdentity": "c90954bf1c01fdeb18cf091f8ea2d20015eef4e1",
       "commandsRun": [
         "pnpm typecheck",
         "pnpm check:active-roster",
         "pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts",
-        "pnpm exec vitest run tests/unit/game-reference.test.ts",
-        "pnpm check:game-reference (blocked by required clean-tree preflight; deferred to lead integration checkpoint)"
+        "pnpm exec vitest run tests/unit/boss-reference.test.ts tests/unit/enemy-reference.test.ts tests/unit/game-reference.test.ts tests/unit/tearbench-current-game-authority.test.ts tests/unit/boss-phase-conformance.test.ts tests/unit/enemy-behavior-matrix.test.ts",
+        "pnpm check:architecture",
+        "pnpm check:game-reference"
       ],
       "evidence": [
         "Production-derived stage, boss, enemy, environment-object, and event identity contracts compile and authority tests pass.",
         "Negative coverage fixtures reject future enemy, environment-object, stage, boss, upgrade, and event identities.",
         "Rootbound has no canonical scenario until its production factory exists; Pale identities remain design-only.",
         "Game-reference schema remains v2 and its published catalog surface stays unchanged until factory-ready implementation checkpoints; no artifact was published.",
-        "The runtime STAGES roster remains the original five-stage campaign; Verdant activation is deferred to VS3-C8."
+        "The runtime STAGES roster remains the original five-stage campaign; Verdant activation is deferred to VS3-C8.",
+        "Clean game-reference verification passed at c90954bf1c01fdeb18cf091f8ea2d20015eef4e1."
       ],
       "blockers": [],
       "notes": [

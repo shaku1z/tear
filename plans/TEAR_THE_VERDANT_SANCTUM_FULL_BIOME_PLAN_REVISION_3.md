@@ -3051,7 +3051,7 @@ CURRENT CHECKPOINT: VS3-C2
 CURRENT SUB-GOAL: VS3-C2-S1
 BASELINE: origin/main@91706363b80fb56a18df4d973b424bbce94a279e
 LAST GREEN CHECKPOINT: VS3-C1
-LAST EVIDENCE: pnpm typecheck; pnpm check:active-roster; 55 focused authority/reference/boss/enemy tests; runtime campaign remains five stages
+LAST EVIDENCE: pnpm typecheck; pnpm check:architecture; pnpm check:active-roster; 55 focused authority/reference/boss/enemy tests; clean pnpm check:game-reference at c90954bf1c01fdeb18cf091f8ea2d20015eef4e1; runtime campaign remains five stages
 BLOCKERS: none recorded
 NEXT ACTION: execute VS3-C2 per-world canonical environment state and fixed-step ownership
 PUBLICATION: prohibited until joint Verdant/Pale promotion
@@ -6146,7 +6146,7 @@ STATUS: ACTIVE — VS3-C1 GREEN
 CURRENT CHECKPOINT: VS3-C2
 CURRENT SUB-GOAL: VS3-C2-S1
 LAST GREEN CHECKPOINT: VS3-C1
-LAST EVIDENCE: C1 typed identity and TearBench authority gates green; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints
+LAST EVIDENCE: C1 typed identity and TearBench authority gates green; clean game-reference check passed at c90954bf1c01fdeb18cf091f8ea2d20015eef4e1; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints
 NEXT ACTION: execute VS3-C2 per-world canonical environment state and fixed-step ownership
 PUBLICATION: prohibited
 WIKI DISPATCH: prohibited

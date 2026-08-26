@@ -37,6 +37,7 @@ current paths and hashes until a separately authorized atomic migration.
 | --- | --- |
 | [ECONOMY_REWORK_PLAN.md](../plans/active/ECONOMY_REWORK_PLAN.md) | Active balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
 | [PHASE_F_MIRROR_PLAN.md](../plans/completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
+| [Verdant Sanctum Revision 3](../plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | Active Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; publication remains joint with Pale and separately authorized. |
 | [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |
 
 ## Root Markdown classification (remaining 3 root documents)
