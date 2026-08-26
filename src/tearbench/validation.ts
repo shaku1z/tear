@@ -28,6 +28,7 @@ import {
   STAGE_REGISTRY,
   WEAPON_REGISTRY,
   WITHIN_TICK_PHASES,
+  ENVIRONMENT_OBJECT_KIND_REGISTRY,
 } from "./registries";
 
 const MAX_COLLECTION = 100_000;
@@ -189,6 +190,7 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
     if (entry.counterplay !== undefined && !stringValue(entry.counterplay)) issue(issues, `entities[${String(index)}].counterplay`, "must be a bounded string");
   });
   if (value.navigation !== undefined) validateNavigation(value.navigation, issues);
+  if (value.environment !== undefined) validateEnvironmentObservation(value.environment, issues);
   const run = value.run;
   if (!isRecord(run)) issue(issues, "run", "must be an object");
   else {
@@ -199,6 +201,22 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
   }
   if (!boundedArray(value.availableActions) || value.availableActions.some((entry) => typeof entry !== "string")) issue(issues, "availableActions", "must be a bounded string array");
   return issues.length === 0 ? value as unknown as TearObservationV1 : undefined;
+}
+
+function validateEnvironmentObservation(value: unknown, issues: TearContractValidationIssue[]): void {
+  if (!isRecord(value)) { issue(issues, "environment", "must be an object"); return; }
+  for (const key of ["fields", "combatObjects", "routes"] as const) {
+    if (!boundedArray(value[key])) { issue(issues, `environment.${key}`, "must be a bounded array"); continue; }
+    value[key].forEach((entry, index) => {
+      const path = `environment.${key}[${String(index)}]`;
+      if (!isRecord(entry)) { issue(issues, path, "must be an object"); return; }
+      if (!stringValue(entry.id) || typeof entry.kind !== "string" || !ENVIRONMENT_OBJECT_KIND_REGISTRY.has(entry.kind)) issue(issues, `${path}.identity`, "requires a registered kind and ID");
+      if (!isRecord(entry.bounds) || !finite(entry.bounds.minX) || !finite(entry.bounds.maxX) || !finite(entry.bounds.minY) || !finite(entry.bounds.maxY)) issue(issues, `${path}.bounds`, "must contain finite bounds");
+      if (!stringValue(entry.state)) issue(issues, `${path}.state`, "must be a bounded state string");
+      if (key === "combatObjects" && (!finite(entry.integrityRatio) || entry.integrityRatio < 0 || entry.integrityRatio > 1)) issue(issues, `${path}.integrityRatio`, "must be from 0 to 1");
+      if (key === "routes" && (!boundedArray(entry.points) || entry.points.some((point) => !isRecord(point) || !finite(point.x) || !finite(point.y)))) issue(issues, `${path}.points`, "must contain finite points");
+    });
+  }
 }
 
 function parseEvent(value: Record<string, unknown>, issues: TearContractValidationIssue[]): TearCausalEventV1 | undefined {

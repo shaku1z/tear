@@ -3,6 +3,7 @@ import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
 import { validateLiveCodecPayload } from "./live-codec-validation";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
+import { validateEnvironmentCodecPayload, projectEnvironmentHash } from "./environment-codec";
 
 export type TearCodecValue =
   | null | boolean | number | string
@@ -84,8 +85,11 @@ function declaresIdentity(codecId: TearCodecId, key: string, ownerPath: string):
   const collectionActor = /^\$\[\d+\]$/u.test(ownerPath)
     && (codecId === "tear.enemy.v1" || codecId === "tear.boss.v1"
       || codecId === "tear.projectile.v1" || codecId === "tear.platform.v1");
+  const environmentObject = codecId === "tear.hazard.v1"
+    && /^\$(?:\.fields|\.combatObjects|\.routes)\[\d+\]$/u.test(ownerPath);
   return (key === "id" && (rootActor || collectionActor))
-    || (codecId === "tear.platform.v1" && key === "platformId" && collectionActor);
+    || (codecId === "tear.platform.v1" && key === "platformId" && collectionActor)
+    || (key === "id" && environmentObject);
 }
 
 function declaresReference(codecId: TearCodecId, key: string, ownerPath: string): boolean {
@@ -95,7 +99,8 @@ function declaresReference(codecId: TearCodecId, key: string, ownerPath: string)
   // Treating it as an entity reference makes valid long void runs impossible
   // to seal once the conveyor correctly retires the ingress platform.
   if (codecId === "tear.run.v1" && key === "platformId" && ownerPath === "$.voidScroll.ingress") return false;
-  return referenceKeys.has(key) && !declaresIdentity(codecId, key, ownerPath);
+  return (referenceKeys.has(key) || key === "sourceId" || key === "targetIds" || key === "linkedActorIds")
+    && !declaresIdentity(codecId, key, ownerPath);
 }
 
 function indexIdentitiesAndReferences(
@@ -114,8 +119,11 @@ function indexIdentitiesAndReferences(
   if (value === null || typeof value !== "object") return;
   for (const [key, entry] of Object.entries(value)) {
     if (declaresIdentity(codecId, key, path) && typeof entry === "string") world.entityIds.add(entry);
-    if (declaresReference(codecId, key, path) && typeof entry === "string") {
-      world.references.set(`${codecId}:${path}.${key}`, entry);
+    if (declaresReference(codecId, key, path)) {
+      if (typeof entry === "string") world.references.set(`${codecId}:${path}.${key}`, entry);
+      else if (Array.isArray(entry)) entry.forEach((item, index) => {
+        if (typeof item === "string") world.references.set(`${codecId}:${path}.${key}[${String(index)}]`, item);
+      });
     }
     indexIdentitiesAndReferences(world, codecId, entry, `${path}.${key}`);
   }
@@ -161,6 +169,7 @@ export function createDataOnlyCodec(id: TearCodecId): TearStateCodec {
 }
 
 export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
+  if (id === "tear.hazard.v1") return createEnvironmentStateCodec();
   const dataCodec = createDataOnlyCodec(id);
   return Object.freeze({
     ...dataCodec,
@@ -169,6 +178,57 @@ export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
       return dataIssues.length > 0
         ? dataIssues
         : Object.freeze(validateLiveCodecPayload(id, payload));
+    },
+  });
+}
+
+/** Codec v2 keeps the historical hazard ID for backwards compatibility while
+ * adding the world-owned environment collections. */
+function createEnvironmentStateCodec(): TearStateCodec {
+  const dataCodec = createDataOnlyCodec("tear.hazard.v1");
+  return Object.freeze({
+    ...dataCodec,
+    version: 2,
+    capture(world: TearCodecWorld) {
+      const payload = world.components.get("tear.hazard.v1");
+      if (payload === undefined || typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+        return Object.freeze({ slowZones: [], walls: [], fields: [], combatObjects: [], routes: [] });
+      }
+      const value = payload as Readonly<Record<string, unknown>>;
+      return Object.freeze({
+        ...structuredClone(value),
+        slowZones: Array.isArray(value.slowZones) ? structuredClone(value.slowZones) : [],
+        walls: Array.isArray(value.walls) ? structuredClone(value.walls) : [],
+        fields: Array.isArray(value.fields) ? structuredClone(value.fields) : [],
+        combatObjects: Array.isArray(value.combatObjects) ? structuredClone(value.combatObjects) : [],
+        routes: Array.isArray(value.routes) ? structuredClone(value.routes) : [],
+      });
+    },
+    migrate(payload: unknown, fromVersion: number): unknown {
+      if (fromVersion === 2) return payload;
+      if (fromVersion !== 1) throw new RangeError("tear.hazard.v1 cannot migrate schema version " + String(fromVersion));
+      if (payload === null || typeof payload !== "object" || Array.isArray(payload)) throw new TypeError("hazard v1 payload must be an object");
+      const value = payload as Record<string, unknown>;
+      return Object.freeze({ ...structuredClone(value), fields: [], combatObjects: [], routes: [] });
+    },
+    validate(payload: unknown) {
+      const dataIssues = dataCodec.validate(payload);
+      const environmentIssues = validateEnvironmentCodecPayload(payload);
+      return Object.freeze([...dataIssues, ...environmentIssues.map((entry) => ({
+        codecId: "tear.hazard.v1" as const, path: entry.path, message: entry.message,
+      }))]);
+    },
+    hashProjection(world: TearCodecWorld) {
+      const payload = world.components.get("tear.hazard.v1");
+      if (payload === undefined || typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+        return Object.freeze({ slowZones: [], walls: [], environment: projectEnvironmentHash(undefined) as TearCodecValue });
+      }
+      const value = payload as Readonly<Record<string, unknown>>;
+      return Object.freeze({
+        slowZones: structuredClone(value.slowZones ?? []) as TearCodecValue[],
+        walls: structuredClone(value.walls ?? []) as TearCodecValue[],
+        environment: projectEnvironmentHash(value) as TearCodecValue,
+      });
     },
   });
 }
@@ -205,8 +265,11 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
           message: `duplicate entity id ${entry}; first declared at ${previous.codecId}:${previous.path}`,
         });
       }
-      if (declaresReference(codecId, key, path) && typeof entry === "string") {
-        references.set(`${codecId}:${entryPath}`, entry);
+      if (declaresReference(codecId, key, path)) {
+        if (typeof entry === "string") references.set(`${codecId}:${entryPath}`, entry);
+        else if (Array.isArray(entry)) entry.forEach((item, index) => {
+          if (typeof item === "string") references.set(`${codecId}:${entryPath}[${String(index)}]`, item);
+        });
       }
       visit(codecId, entry, entryPath);
     }
@@ -216,7 +279,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
     if (value !== undefined) visit(codecId, value, "$");
   }
   for (const [source, target] of references) {
-    if (target === "player" || target === "blade" || identities.has(target)) continue;
+    if (target === "player" || target === "blade" || identities.has(target) || world.entityIds.has(target)) continue;
     const separator = source.indexOf(":");
     const codecId = source.slice(0, separator) as TearCodecId;
     issues.push({ codecId, path: source.slice(separator + 1), message: `reference target ${target} does not exist` });
@@ -347,7 +410,9 @@ export function diffCodecWorlds(
 ): readonly TearStateDiffEntry[] {
   return Object.freeze(registry.list().map((codec) => ({
     codecId: codec.id,
-    exactEqual: stableVerificationHash(left.components.get(codec.id)) === stableVerificationHash(right.components.get(codec.id)),
+    // Compare canonical captured payloads so a legacy v1 hazard component with
+    // omitted empty v2 collections is equal to its migrated representation.
+    exactEqual: stableVerificationHash(codec.capture(left)) === stableVerificationHash(codec.capture(right)),
     semanticEqual: stableVerificationHash(codec.hashProjection(left)) === stableVerificationHash(codec.hashProjection(right)),
   })));
 }

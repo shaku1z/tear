@@ -7,6 +7,7 @@ import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1, TearStateClass } from "./contracts";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 import type { TearScenarioTransition } from "./runner";
 import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
@@ -143,6 +144,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly height: number;
   readonly state: TearSimulationWorldView;
   readonly platforms: () => readonly LiveObservationPlatform[];
+  /** Optional structured environment source; never supplied to Class C. */
+  readonly environment?: () => EnvironmentRuntimeState;
   /** World-owned stage geometry used by the certified State Forge frontier. */
   readonly platformsForStage: (index: number) => readonly unknown[];
   readonly actorId: (enemy: TearSimulationEnemyView) => string;

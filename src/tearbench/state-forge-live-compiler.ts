@@ -1,6 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import type { TearSdlResolved } from "./tearsdl";
+import { validateEnvironmentCodecPayload } from "./environment-codec";
 
 type MutableRecord = Record<string, unknown>;
 
@@ -60,6 +61,24 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
   (snapshot.state as MutableRecord)["tear.enemy.v1"] = Object.freeze(payloads);
 }
 
+function patchEnvironment(snapshot: TearSnapshotV1, environment: unknown, expectedStageId?: string): void {
+  if (environment === undefined) return;
+  const value = record(environment, "environment forge payload");
+  const issues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...value });
+  const firstIssue = issues[0];
+  if (firstIssue !== undefined) throw new TypeError(`environment forge payload is invalid: ${firstIssue.path} ${firstIssue.message}`);
+  const hazard = record(snapshot.state["tear.hazard.v1"], "hazard codec");
+  if (expectedStageId !== undefined && value.stageId !== undefined && value.stageId !== expectedStageId) {
+    throw new RangeError("environment forge stage does not match the resolved scenario stage");
+  }
+  if (typeof hazard.worldId === "string" && typeof value.worldId === "string" && hazard.worldId !== value.worldId) {
+    throw new RangeError("environment forge world identity does not match the source snapshot");
+  }
+  hazard.fields = structuredClone(value.fields);
+  hazard.combatObjects = structuredClone(value.combatObjects);
+  hazard.routes = structuredClone(value.routes);
+}
+
 /** Compiles resolved TearSDL into a detached live-codec snapshot. */
 export function compileResolvedTearSdlSnapshot(
   source: TearSnapshotV1,
@@ -96,6 +115,7 @@ export function compileResolvedTearSdlSnapshot(
     patchRecord(record(bosses[0], "boss codec"), state.boss, "boss patch");
   }
   patchEnemyComposition(forged, state.enemyComposition);
+  patchEnvironment(forged, state.environment, resolved.document.start.stage);
   for (const [key, value] of Object.entries(state)) {
     if (key.startsWith("tear.") && key.endsWith(".v1")) {
       patchRecord(record(forged.state[key], `${key} codec`), value, `${key} patch`);

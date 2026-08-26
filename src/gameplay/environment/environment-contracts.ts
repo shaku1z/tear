@@ -61,6 +61,7 @@ export interface EnvironmentForcePolicy {
 
 export interface EnvironmentFieldState {
   readonly id: string;
+  readonly factoryId?: string;
   readonly kind: EnvironmentObjectKind;
   readonly geometry: EnvironmentGeometry;
   readonly state: EnvironmentObjectState;
@@ -71,10 +72,12 @@ export interface EnvironmentFieldState {
   readonly eligibility: EnvironmentEligibility;
   readonly force: EnvironmentForcePolicy | null;
   readonly cleanupReason: EnvironmentClearReason | null;
+  readonly patternId?: string;
 }
 
 export interface EnvironmentCombatObjectState {
   readonly id: string;
+  readonly factoryId?: string;
   readonly kind: EnvironmentObjectKind;
   readonly ownerId: string | null;
   readonly targetId: string | null;
@@ -87,10 +90,12 @@ export interface EnvironmentCombatObjectState {
   readonly state: EnvironmentObjectState;
   readonly stateTick: number;
   readonly cleanupReason: EnvironmentClearReason | null;
+  readonly patternId?: string;
 }
 
 export interface EnvironmentRouteState {
   readonly id: string;
+  readonly factoryId?: string;
   readonly kind: EnvironmentObjectKind;
   readonly points: readonly EnvironmentPoint[];
   readonly state: EnvironmentObjectState;
@@ -100,6 +105,7 @@ export interface EnvironmentRouteState {
 }
 
 export interface EnvironmentSnapshot {
+  readonly worldId?: string;
   readonly stageId: string;
   readonly fields: readonly EnvironmentFieldState[];
   readonly combatObjects: readonly EnvironmentCombatObjectState[];

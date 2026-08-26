@@ -8,9 +8,10 @@ import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
-import { stageAt } from "../gameplay/stages";
+import { CAMPAIGN_STAGE_IDS, stageAt } from "../gameplay/stages";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
+import type { TearCodecWorld } from "./state-codecs";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
 import { captureLiveStateForgeSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
@@ -22,7 +23,8 @@ import {
   type ProductionWaveRewardRuntime,
 } from "./production-wave-reward-runtime";
 import { ENTITY_KIND_REGISTRY } from "./registries";
-import { createDefaultStateCodecRegistry } from "./state-codecs";
+import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from "./state-codecs";
+import { rebaseEnvironmentSnapshot, validateEnvironmentCodecPayload } from "./environment-codec";
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly seed: string;
@@ -73,6 +75,7 @@ export function projectProductionReplayCanonicalState(
         x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
       };
     }),
+    replay.world.context.environment.snapshot(),
   );
 }
 
@@ -171,6 +174,8 @@ export function captureProductionReplayCheckpoint(
     replacePlatforms: (platforms) => { replay.stage.platforms = platforms; },
     slowZones: () => replay.world.state.slowZones(),
     walls: () => replay.world.state.temporaryWalls(),
+    environment: () => replay.world.context.environment,
+    restoreEnvironment: (snapshot) => { replay.world.context.environment.replace(snapshot); },
     screen: waveReward.screen,
     // C30 captures only an active non-draft screen; fresh source composition
     // therefore restores the canonical `playing` screen without a UI route.
@@ -210,19 +215,32 @@ export function captureProductionReplayCheckpoint(
     semanticHash: stableVerificationHash(state) });
 }
 
-/** Applies a saved State Forge world to a newly composed production replay world. */
-function hydrateProductionReplayWorld(replay: ProductionReplayWorld, snapshot: TearSnapshotV1) {
-  const codecWorld = {
-    components: new Map(Object.entries(snapshot.state)),
-    references: new Map<string, string>(),
-    entityIds: new Set<string>(),
-  } as never;
+/** Applies a saved State Forge world transactionally to a newly composed production replay world. */
+export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, snapshot: TearSnapshotV1) {
+  let decoded: TearCodecWorld | undefined;
+  const decodedResult = restoreSnapshotTransactionally(snapshot, createDefaultStateCodecRegistry(), {
+    createEmpty: () => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
+    validate: () => [],
+  }, { replace: (world) => { decoded = world; } });
+  if (!decodedResult.ok || decoded === undefined) {
+    const issue = decodedResult.ok ? "decoded world was not produced" : decodedResult.issues[0]?.message ?? "snapshot is invalid";
+    throw new TypeError(`production replay snapshot is invalid: ${issue}`);
+  }
   const staged = hydrateTearCodecWorld(
     { ...replay.world.entities, hydrateReward: () => null },
-    codecWorld,
+    decoded,
     { requireIdentity: (id: string) => id },
   );
   if (staged.tick !== snapshot.tick) throw new TypeError("recorded snapshot tick does not match its run component");
+  const destinationWorldId = replay.world.context.environment.worldId;
+  const rebasedEnvironment = rebaseEnvironmentSnapshot(staged.environment, destinationWorldId);
+  const environmentIssues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...rebasedEnvironment });
+  const firstEnvironmentIssue = environmentIssues[0];
+  if (firstEnvironmentIssue !== undefined) throw new TypeError(`production replay environment is invalid after rebase: ${firstEnvironmentIssue.path} ${firstEnvironmentIssue.message}`);
+  const expectedStage = CAMPAIGN_STAGE_IDS[staged.stageIndex];
+  if (rebasedEnvironment.stageId !== "unknown" && expectedStage !== undefined && rebasedEnvironment.stageId !== expectedStage) {
+    throw new RangeError("production replay environment stage does not match the restored world stage");
+  }
   replay.world.state.setRun(staged.run);
   replay.world.state.setPlayer(staged.player);
   replay.world.state.setBlade(staged.blade);
@@ -240,6 +258,10 @@ function hydrateProductionReplayWorld(replay: ProductionReplayWorld, snapshot: T
   blade.weapon = weapon; blade.model = weapon.model;
   replay.world.context.services.random.restore(staged.rng as never);
   replay.stage.index = staged.stageIndex;
+  const environmentStage = rebasedEnvironment.stageId === "unknown"
+    ? CAMPAIGN_STAGE_IDS[staged.stageIndex] ?? "unknown" : rebasedEnvironment.stageId;
+  replay.world.context.environment.setStage(environmentStage, "restore");
+  replay.world.context.environment.replace({ ...rebasedEnvironment, stageId: environmentStage });
   replay.stage.platforms = [...staged.platforms] as unknown[];
   restoreProductionReplayChapterBinding(replay, staged.runtime);
   const transient = replay.world.context.transient;
@@ -291,7 +313,7 @@ export function createProductionGhostReplayComposition(
         }),
         rng: replay.world.context.services.random.snapshot(),
       } satisfies ProductionReplayBootstrap);
-      const staged = snapshot === undefined ? undefined : hydrateProductionReplayWorld(replay, snapshot);
+      const staged = snapshot === undefined ? undefined : restoreProductionReplaySnapshot(replay, snapshot);
       if (staged !== undefined) assertDetachedSourceVoidSupported(staged.run);
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let outcome: ProductionRunOutcomeRuntime | null = null;

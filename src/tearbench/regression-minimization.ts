@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
+import { projectEnvironmentHash } from "./environment-codec";
 import type { TearBenchPresentationInputV1, TearBenchRunArtifactV1 } from "./artifact";
 import { investigateRegressionRuns, type TearRegressionInvestigation } from "./regression-intelligence";
 
@@ -230,7 +231,7 @@ function snapshotWith(
     exact: stableVerificationHash(state),
     semantic: stableVerificationHash(state),
     progression: stableVerificationHash(state["tear.run.v1"] ?? null),
-    environment: stableVerificationHash(state["tear.world.v1"] ?? null),
+    environment: stableVerificationHash(projectEnvironmentHash(state["tear.hazard.v1"] ?? null)),
   });
   return Object.freeze({ ...structuredClone(source), hashes, state: Object.freeze(structuredClone(state)), rng: Object.freeze(structuredClone(rng)) });
 }

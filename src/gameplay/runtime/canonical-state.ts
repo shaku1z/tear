@@ -1,4 +1,6 @@
 import type { AuthoritativeInputSnapshot } from "./authoritative-input";
+import type { EnvironmentSnapshot } from "../environment/environment-contracts";
+import { projectEnvironmentSemanticSnapshot } from "../../tearbench/environment-codec";
 
 export interface RuntimeRunState {
   readonly mode: string;
@@ -31,6 +33,8 @@ export interface CanonicalGameplayState {
   readonly enemies: readonly Readonly<{
     id: number; kind: string; bossId: string; x: number; y: number; vx: number; vy: number; hp: number; dead: boolean;
   }>[];
+  /** Optional world-owned environment projection; absent on legacy hosts. */
+  readonly environment?: EnvironmentSnapshot;
 }
 
 const fixed = (value: number): number => Math.round(value * 1_000);
@@ -43,6 +47,7 @@ export function projectCanonicalGameplayState(
   player: RuntimePlayerState | null,
   blade: RuntimeBladeState | null,
   enemies: readonly RuntimeEnemyState[],
+  environment?: EnvironmentSnapshot,
 ): CanonicalGameplayState {
   return Object.freeze({
     tick,
@@ -61,5 +66,6 @@ export function projectCanonicalGameplayState(
       x: fixed(enemy.x), y: fixed(enemy.y), vx: fixed(enemy.vx), vy: fixed(enemy.vy),
       hp: fixed(enemy.hp), dead: enemy.dead,
     })).sort((left, right) => left.id - right.id || left.kind.localeCompare(right.kind))),
+    ...(environment === undefined ? {} : { environment: projectEnvironmentSemanticSnapshot(environment) }),
   });
 }

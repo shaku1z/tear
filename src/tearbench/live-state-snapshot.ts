@@ -86,10 +86,11 @@ export interface TearPlatformStateV1 extends TearStateRecord {
 }
 
 export interface TearHazardStateV1 extends TearStateRecord {
-  readonly id: string;
-  readonly kind: string;
-  readonly x: number;
-  readonly y: number;
+  readonly slowZones: readonly TearCodecValue[];
+  readonly walls: readonly TearCodecValue[];
+  readonly fields?: TearCodecValue;
+  readonly combatObjects?: TearCodecValue;
+  readonly routes?: TearCodecValue;
 }
 
 export interface TearUiStateV1 extends TearStateRecord {

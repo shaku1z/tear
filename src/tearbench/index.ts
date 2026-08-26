@@ -1,6 +1,7 @@
 export * from "./canonical-scenarios";
 export * from "./artifact";
 export * from "./state-codecs";
+export * from "./environment-codec";
 export * from "./live-state-snapshot";
 export * from "./detached-world-hydrator";
 export * from "./detached-world-runtime";

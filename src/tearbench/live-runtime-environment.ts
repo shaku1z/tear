@@ -23,6 +23,7 @@ import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
 import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
+import { environmentSnapshotToObservation } from "./environment-codec";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
   TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
@@ -41,7 +42,7 @@ function numericSeed(seed: string): number {
  * callers cannot supply transition fixtures. */
 export function projectLiveTearObservation(
   context: Pick<LiveTearRuntimeEnvironmentContext, "state" | "stage" | "lifecycle" | "screen" |
-    "width" | "height" | "actorId" | "choiceIds" | "platforms" | "availableGameActions" | "focusedControlId">,
+    "width" | "height" | "actorId" | "choiceIds" | "platforms" | "availableGameActions" | "focusedControlId" | "environment">,
   tick: number,
   accessClass: Exclude<TearRuntimeAccessClass, "C">,
   lastProgressTick?: number,
@@ -96,6 +97,7 @@ export function projectLiveTearObservation(
       return source === undefined ? undefined : context.actorId(source);
     })]),
     navigation: projectLiveNavigationObservation(context.platforms(), stage),
+    ...(context.environment === undefined ? {} : { environment: environmentSnapshotToObservation(context.environment().snapshot()) }),
     run: Object.freeze({
       mode: RUN_MODE_REGISTRY.assert(run.mode),
       difficulty: DIFFICULTY_REGISTRY.assert(run.diff),
@@ -465,6 +467,7 @@ export function createLiveTearRuntimeEnvironment(
       const value = observe();
       return stableVerificationHash({
         tick: value.tick, player: value.player, blade: value.blade, entities: value.entities, run: value.run,
+        ...(value.environment === undefined ? {} : { environment: value.environment }),
       });
     },
     screenshot() {

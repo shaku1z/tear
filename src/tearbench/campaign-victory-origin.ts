@@ -4,6 +4,7 @@ import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinema
 import { stageAt } from "../gameplay/stages";
 import { UPGRADES } from "../gameplay/upgrades";
 import type { TearSnapshotV1 } from "./contracts";
+import { projectEnvironmentHash } from "./environment-codec";
 import {
   reconstructProgression,
   synthesizeProgression,
@@ -288,7 +289,7 @@ export function createCampaignWave49RewardFrontier(
     ...forged.hashes,
     exact: stableVerificationHash(forged.state),
     progression: certificate.ledger.progressionHash,
-    environment: stableVerificationHash(forged.state["tear.world.v1"]),
+    environment: stableVerificationHash(projectEnvironmentHash(forged.state["tear.hazard.v1"])),
   });
   return Object.freeze(forged);
 }

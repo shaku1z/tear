@@ -20,6 +20,7 @@ import type { CombatEntityIdentityState } from "../gameplay/combat/combat-entity
 import type { RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { TearCodecValue, TearCodecWorld } from "../tearbench/state-codecs";
+import type { EnvironmentRuntimeState, EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import type { TearLiveRestoreContext, TearLiveWorldAdapter } from "../tearbench/live-state-snapshot";
 import {
   applyTearCodecConfiguration,
@@ -70,6 +71,8 @@ export interface LiveStateForgeAdapterOptions {
   readonly replacePlatforms: (platforms: Platform[]) => void;
   readonly slowZones: () => GameSlowZone[];
   readonly walls: () => GameTemporaryWall[];
+  readonly environment: () => EnvironmentRuntimeState;
+  readonly restoreEnvironment: (snapshot: EnvironmentSnapshot) => void;
   readonly screen: () => string;
   readonly setScreen: (screen: string) => void;
   readonly focus: () => number;
@@ -194,6 +197,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   if (player === undefined || blade === undefined || run === null) throw new Error("State Forge capture requires a live run");
   const enemies = options.state.enemies();
   const projectiles = options.state.projectiles();
+  const environment = options.environment().snapshot();
   const identities = new Map<object, string>([[player, "player"], [blade, "blade"]]);
   for (const enemy of enemies) identities.set(enemy, options.actorId(enemy, "enemy"));
   for (const projectile of projectiles) identities.set(projectile, options.actorId(projectile, "projectile"));
@@ -230,8 +234,13 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     entity(projectile, identities.get(projectile) ?? "", { factoryId: "projectile" }))));
   components.set("tear.platform.v1", encode(options.platforms(), identities));
   components.set("tear.hazard.v1", Object.freeze({
+    ...(environment.worldId === undefined ? {} : { worldId: environment.worldId }),
+    stageId: environment.stageId,
     slowZones: encode(options.slowZones(), identities),
     walls: encode(options.walls(), identities),
+    fields: encode(environment.fields, identities),
+    combatObjects: encode(environment.combatObjects, identities),
+    routes: encode(environment.routes, identities),
   }));
   components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()) }));
   components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
@@ -296,6 +305,14 @@ export function createLiveStateForgeAdapter(
       if (!Number.isSafeInteger(candidate.tick) || candidate.tick < 0) issues.push("simulation tick is invalid");
       if (!Number.isSafeInteger(candidate.stageIndex) || candidate.stageIndex < 0 ||
         candidate.stageIndex >= options.dependencies.STAGES.length) issues.push("campaign stage index is invalid");
+      const stage = options.dependencies.STAGES[candidate.stageIndex];
+      if (candidate.environment.stageId !== "unknown" && stage !== undefined && candidate.environment.stageId !== stage.id) {
+        issues.push("environment snapshot stage does not match restored world stage");
+      }
+      const currentWorldId = options.environment().snapshot().worldId;
+      if (candidate.environment.worldId !== undefined && currentWorldId !== undefined && candidate.environment.worldId !== currentWorldId) {
+        issues.push("environment snapshot belongs to another world");
+      }
       if (candidate.enemies.some((enemy) => !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y))) {
         issues.push("enemy transform is not finite");
       }
@@ -322,6 +339,14 @@ export function createLiveStateForgeAdapter(
       options.state.setSlowZones(candidate.slowZones);
       options.state.setTemporaryWalls(candidate.walls);
       options.restoreStageIndex(candidate.stageIndex);
+      const restoredStage = options.dependencies.STAGES[candidate.stageIndex];
+      const currentWorldId = options.environment().snapshot().worldId;
+      const environment = {
+        ...candidate.environment,
+        ...(candidate.environment.stageId === "unknown" && restoredStage !== undefined ? { stageId: restoredStage.id } : {}),
+        ...(candidate.environment.worldId === undefined && currentWorldId !== undefined ? { worldId: currentWorldId } : {}),
+      };
+      options.restoreEnvironment(environment);
       options.replacePlatforms(candidate.platforms);
       options.worldServices.random.restore(candidate.rng);
       options.restoreGhost(candidate.ghost);

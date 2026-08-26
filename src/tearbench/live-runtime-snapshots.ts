@@ -101,7 +101,7 @@ export function captureLiveStateForgeSnapshot(input: LiveStateForgeSnapshotCaptu
         [codec.id, codec.hashProjection(world)]))),
       visual: input.visualHash,
       progression: stableVerificationHash(captured.state["tear.run.v1"]),
-      environment: stableVerificationHash(captured.state["tear.world.v1"]),
+      environment: stableVerificationHash(input.registry.get("tear.hazard.v1").hashProjection(world)),
     }),
     provenance: Object.freeze({
       actor: input.actor ?? "state-forge", producer: input.producer,

@@ -105,6 +105,18 @@
     "authorityCommands": ["pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts"]
   },
   {
+    "id": "verdant-c3-environment-codec",
+    "prefixes": ["src/tearbench/environment-codec.ts", "src/tearbench/state-codecs.ts", "src/tearbench/contracts.ts", "src/tearbench/invariants.ts", "src/tearbench/state-forge-factories.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-snapshots.ts", "src/tearbench/production-replay-composition.ts", "src/tearbench/campaign-victory-origin.ts", "src/tearbench/regression-minimization.ts", "src/gameplay/runtime/canonical-state.ts", "tests/unit/environment-state-codec.test.ts", "tests/unit/production-replay-composition.test.ts"],
+    "scenarios": [],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "verdant-c3-environment-codec-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["serialization", "restore", "observation"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/environment-state-codec.test.ts tests/unit/production-replay-composition.test.ts tests/unit/tearbench-state-codecs.test.ts tests/unit/tearbench-invariants.test.ts"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],

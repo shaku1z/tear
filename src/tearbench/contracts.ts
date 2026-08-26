@@ -10,6 +10,7 @@ import type {
   TearWeaponId,
   TearWithinTickPhase,
 } from "./registries";
+import type { EnvironmentObjectKind } from "../gameplay/environment/environment-contracts";
 
 export const TEAR_CONTRACT_FORMAT = "tear-contract";
 export const TEAR_CONTRACT_VERSION = 1;
@@ -124,6 +125,42 @@ export interface TearNavigationObservationV1 {
   readonly hazards: readonly TearObservedHazardV1[];
 }
 
+export interface TearObservedEnvironmentFieldV1 {
+  readonly id: string;
+  readonly kind: EnvironmentObjectKind;
+  readonly bounds: TearObservedBoundsV1;
+  readonly state: string;
+  readonly active: boolean;
+  readonly ownerId?: string;
+  readonly eligibility?: Readonly<{ player: boolean; enemies: boolean; bosses: boolean }>;
+}
+
+export interface TearObservedEnvironmentCombatObjectV1 {
+  readonly id: string;
+  readonly kind: EnvironmentObjectKind;
+  readonly ownerId?: string;
+  readonly targetId?: string;
+  readonly bounds: TearObservedBoundsV1;
+  readonly integrityRatio: number;
+  readonly state: string;
+  readonly counterplayTags: readonly string[];
+  readonly procEligible: boolean;
+}
+
+export interface TearObservedEnvironmentRouteV1 {
+  readonly id: string;
+  readonly kind: EnvironmentObjectKind;
+  readonly points: readonly Readonly<{ x: number; y: number }>[];
+  readonly state: string;
+  readonly ownerId?: string;
+}
+
+export interface TearEnvironmentObservationV1 {
+  readonly fields: readonly TearObservedEnvironmentFieldV1[];
+  readonly combatObjects: readonly TearObservedEnvironmentCombatObjectV1[];
+  readonly routes: readonly TearObservedEnvironmentRouteV1[];
+}
+
 export interface TearObservationV1 {
   readonly format: typeof TEAR_CONTRACT_FORMAT;
   readonly kind: "observation";
@@ -144,6 +181,8 @@ export interface TearObservationV1 {
   readonly entities: readonly TearObservedActorV1[];
   /** Structured world geometry available to Class A and Class B observers; never a Class C affordance. */
   readonly navigation?: TearNavigationObservationV1;
+  /** Additive gameplay environment facts; unavailable to Class-C pixel observers. */
+  readonly environment?: TearEnvironmentObservationV1;
   readonly run: Readonly<{
     mode: TearRunModeId; difficulty: TearDifficultyId; weapon: TearWeaponId;
     stage: string; wave: number; score: number; elapsedTicks: number;

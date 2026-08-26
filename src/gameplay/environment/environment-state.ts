@@ -71,7 +71,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   routes(): readonly EnvironmentRouteState[] { return this.#routes; }
 
   snapshot(): EnvironmentSnapshot {
-    return Object.freeze({ stageId: this.#stageId, fields: Object.freeze(this.#fields.map(copyField)),
+    return Object.freeze({ worldId: this.worldId, stageId: this.#stageId, fields: Object.freeze(this.#fields.map(copyField)),
       combatObjects: Object.freeze(this.#combatObjects.map(copyCombatObject)), routes: Object.freeze(this.#routes.map(copyRoute)) });
   }
 
@@ -82,6 +82,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
 
   replace(snapshot: EnvironmentSnapshot): void {
     if (snapshot.stageId !== this.#stageId) throw new RangeError("environment snapshot stage does not match this world");
+    if (snapshot.worldId !== undefined && snapshot.worldId !== this.worldId) throw new RangeError("environment snapshot world does not match this world");
     if (snapshot.fields.length > this.configuration.maxFields || snapshot.combatObjects.length > this.configuration.maxCombatObjects || snapshot.routes.length > this.configuration.maxRoutes) {
       throw new RangeError("environment snapshot exceeds population bounds");
     }

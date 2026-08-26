@@ -1,6 +1,37 @@
 import type { TearSdlDocumentV1 } from "./tearsdl";
+import type { EnvironmentCombatObjectState, EnvironmentFieldState, EnvironmentRouteState } from "../gameplay/environment/environment-contracts";
+import { createStableRegistry } from "./registries";
 
 type Patch = Readonly<Record<string, unknown>>;
+
+/** State Forge factories are generic capability fixtures, not a Verdant roster. */
+export const ENVIRONMENT_STATE_FORGE_FACTORY_IDS = Object.freeze([
+  "environment-field", "environment-combat-object", "environment-route",
+] as const);
+export const ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY = createStableRegistry(
+  "environment State Forge factory", ENVIRONMENT_STATE_FORGE_FACTORY_IDS,
+);
+
+export function forgeEnvironmentFieldState(
+  base: TearSdlDocumentV1,
+  field: Omit<EnvironmentFieldState, "id"> & { readonly id: string },
+): TearSdlDocumentV1 {
+  return patch(base, `${base.id}-${field.id}`, { environment: { fields: [{ factoryId: "environment-field", ...structuredClone(field) }], combatObjects: [], routes: [] } });
+}
+
+export function forgeEnvironmentCombatObjectState(
+  base: TearSdlDocumentV1,
+  object: Omit<EnvironmentCombatObjectState, "id"> & { readonly id: string },
+): TearSdlDocumentV1 {
+  return patch(base, `${base.id}-${object.id}`, { environment: { fields: [], combatObjects: [{ factoryId: "environment-combat-object", ...structuredClone(object) }], routes: [] } });
+}
+
+export function forgeEnvironmentRouteState(
+  base: TearSdlDocumentV1,
+  route: Omit<EnvironmentRouteState, "id"> & { readonly id: string },
+): TearSdlDocumentV1 {
+  return patch(base, `${base.id}-${route.id}`, { environment: { fields: [], combatObjects: [], routes: [{ factoryId: "environment-route", ...structuredClone(route) }] } });
+}
 
 function patch(base: TearSdlDocumentV1, id: string, state: Patch): TearSdlDocumentV1 {
   return Object.freeze({

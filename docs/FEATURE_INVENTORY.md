@@ -47,6 +47,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   public game-reference schema remains unchanged, and Rootbound/Rootbinder
   remain explicitly factory-unavailable until VS3-C10/VS3-C6. Pale identities
   remain reserved design-only.
+- [x] Verdant C3 environment evidence foundation (engineering-only) — the
+  existing `tear.hazard.v1` codec now reports v2, migrates legacy slow-zone /
+  wall payloads, validates bounded environment fields/combat objects/routes,
+  indexes owner/target references, and projects presentation-independent
+  environment hashes and structured observations. Generic State Forge factory
+  helpers, transactional replay restore, portable live/detached semantic
+  projections, and positive/negative invariant fixtures cover the contract.
+  This does not claim concrete Verdant gameplay, pixel parity, or C40.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
@@ -113,8 +121,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   deterministic IDs, fixed-step phase ownership, explicit reset reasons, and a
   detached-safe view. Production and detached lifecycle seams share the same
   environment port, and focused runtime tests prove concurrent
-  collection/configuration/ID isolation plus reset/phase ordering. Environment codecs, hashes, observations, and concrete
-  Bloom/Rootbinder/Rootbound behavior remain VS3-C3+ work.
+  collection/configuration/ID isolation plus reset/phase ordering. Environment
+  codecs, hashes, and observations are now covered by VS3-C3; concrete
+  Bloom/Rootbinder/Rootbound behavior remains VS3-C4+ work.
   Boss-intro and boss-beat state also flow directly from world state through
   live music, frame, State Forge, and presentation paths. This preserves the
   existing live path through focused and rebuilt campaign evidence, but leaves

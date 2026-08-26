@@ -540,7 +540,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
         hostState.enemies().map((enemy) => ({
           ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId,
           x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
-        }))),
+        })), environment.snapshot()),
     },
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
@@ -550,7 +550,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const captureGhostAuthoritativeReceipt = (tick: number): void => {
     if (ghostV3?.active !== true) return;
     const result = authoritativeStep.lastResult;
-    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map((enemy) => ({ ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead }))));
+    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map((enemy) => ({ ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead })), environment.snapshot()));
     ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot()));
   };
   GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick);
@@ -564,7 +564,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   const liveStateForge = createLiveStateForgeAdapter({
     dependencies, entities: worldEntities, worldServices: worldContext.services, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
-    platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(),
+    platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(), environment: () => environment, restoreEnvironment: (snapshot) => { environment.setStage(snapshot.stageId, "restore"); environment.replace(snapshot); },
     screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); if (screen === "playing" && ghostPracticeSession.active() !== null) return; setState(screen); }, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
     tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
     reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
@@ -655,7 +655,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     };
     installLiveTearRuntimeBridge({
       width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
-      resetEntityIdentities: () => { combatRuntime.restoreIdentityState({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] }); },
+      environment: () => environment, resetEntityIdentities: () => { combatRuntime.restoreIdentityState({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] }); },
       platforms: () => stageRuntime.platforms,
       platformsForStage: (index) => dependencies.stagePlatforms(index, CONFIG),
       stage: () => ({ ...stageRuntime.current, index: stageRuntime.index }), lifecycle: () => RUN_LIFECYCLE.snapshot(), bossIntroActive: () => hostState.bossIntro() !== null,

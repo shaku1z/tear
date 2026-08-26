@@ -143,6 +143,7 @@ export const INVARIANT_IDS = Object.freeze([
   "entity.valid-owner", "player.valid-health", "world.legal-bounds", "wave.valid-completion",
   "boss.valid-phase", "ui.valid-focus", "runtime.pause-freezes-simulation", "runtime.no-softlock",
   "replay.monotonic-time", "replay.branch-equivalence", "test.production-isolation",
+  "environment.finite-state", "environment.unique-id", "environment.valid-references", "environment.no-orphan-link", "environment.legal-transition", "environment.bounded",
 ] as const);
 export const INVARIANT_REGISTRY = createStableRegistry("invariant", INVARIANT_IDS);
 export type TearInvariantId = typeof INVARIANT_IDS[number];
