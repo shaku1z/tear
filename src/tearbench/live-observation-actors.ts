@@ -11,15 +11,19 @@ export function projectLiveBehaviorMode(
 }
 
 export function projectLiveBladeMechanics(
-  blade: Readonly<{ riftChambers?: unknown; riftChamberCooldown?: unknown }>,
+  blade: Readonly<{ riftChambers?: unknown; riftChamberCooldown?: unknown;
+    wheelSpin?: unknown; reversals?: unknown }>,
   accessClass: TearRuntimeAccessClass,
-): Readonly<{ chambers?: number; chamberCooldown?: number }> {
+): Readonly<{ chambers?: number; chamberCooldown?: number; wheelSpin?: number; reversalCount?: number }> {
   if (accessClass === "C") return Object.freeze({});
   return Object.freeze({
     ...(typeof blade.riftChambers === "number" && Number.isFinite(blade.riftChambers) ? { chambers: blade.riftChambers } : {}),
     ...(typeof blade.riftChamberCooldown === "number" && Number.isFinite(blade.riftChamberCooldown)
       ? { chamberCooldown: blade.riftChamberCooldown }
       : {}),
+    ...(typeof blade.wheelSpin === "number" && Number.isFinite(blade.wheelSpin)
+      ? { wheelSpin: blade.wheelSpin } : {}),
+    ...(Array.isArray(blade.reversals) ? { reversalCount: blade.reversals.length } : {}),
   });
 }
 
@@ -51,12 +55,12 @@ export function projectLivePlayerMechanics(
 export function projectLiveActorMechanics(
   actor: Readonly<{
     hw?: unknown; hh?: unknown; contactReach?: unknown; contactDmg?: unknown;
-    chargeMult?: unknown; auraDmg?: unknown; contactEnabled?: unknown;
+    chargeMult?: unknown; auraDmg?: unknown; contactEnabled?: unknown; stun?: unknown; boundT?: unknown;
   }>,
   accessClass: TearRuntimeAccessClass,
 ): Readonly<{
   halfWidth?: number; halfHeight?: number; contactReach?: number; contactDamage?: number;
-  chargeMult?: number; auraDmg?: number; contactEnabled?: boolean;
+  chargeMult?: number; auraDmg?: number; contactEnabled?: boolean; stun?: number; bound?: number;
 }> {
   if (accessClass === "C") return Object.freeze({});
   return Object.freeze({
@@ -66,6 +70,8 @@ export function projectLiveActorMechanics(
     ...(finiteNonnegative(actor.contactDmg) ? { contactDamage: actor.contactDmg } : {}),
     ...(finiteNonnegative(actor.chargeMult) ? { chargeMult: actor.chargeMult } : {}),
     ...(finiteNonnegative(actor.auraDmg) ? { auraDmg: actor.auraDmg } : {}),
+    ...(finiteNonnegative(actor.stun) ? { stun: actor.stun } : {}),
+    ...(finiteNonnegative(actor.boundT) ? { bound: actor.boundT } : {}),
     ...(typeof actor.contactEnabled === "boolean" ? { contactEnabled: actor.contactEnabled } : {}),
   });
 }

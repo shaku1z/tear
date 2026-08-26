@@ -1,7 +1,8 @@
 # TearBench and Ghost 3.0 Program Charter
 
-This document is the repository entry point for the TearBench, Tear State Forge,
-TearBot, and Ghost 3.0 program.
+This document is the repository entry point for the TearBench, Scenario Console,
+Game Agent, and Ghost 3.0 program. Historical State Forge, TearBot, and Ghost
+Lab names remain readable only where they identify preserved compatibility or source evidence.
 
 ## Authority
 
@@ -27,6 +28,18 @@ Atomic requirement truth and current evidence state live in:
 - `docs/tearbench-ghost3-requirements.json`
 - `docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`
 - `docs/tearbench-ghost3-evidence-catalog.json`
+
+The evidence catalog is an active, scanned requirements-generator input. Source-era
+labels are preserved only as evidence notes, not current player-facing terminology.
+
+The last locally reconciled protected source baseline is
+`a8a476c6171d913581c01bb0e4432f53cf44f9e4` (2026-08-25). This identifies protected
+source, not an independently reverified public deployment or an uncommitted
+development build. Current selected capability evidence is generated under
+`artifacts/tearbench/generated/current-capability.json` and carries its execution
+timestamp, changed scope, source SHA/dirty state/fingerprint, and, when applicable,
+the actual standalone artifact identity. A dirty development report is not a clean
+release certificate.
 
 The accepted runtime-boundary correction is recorded in
 [`TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md`](TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md).
@@ -56,13 +69,15 @@ end-to-end release certification is complete.
 
 - **TearBench** owns deterministic execution, scenarios, policies, invariants,
   comparison, minimization, evidence, and certification.
-- **Tear State Forge** owns state codecs, snapshots, restoration, legal history,
-  synthesis, validation, migration, time travel, and counterfactual forks.
-- **TearBot** owns scripted and learned policies, Academy, calibration, the
-  public Levels 1-9, Level Omega, and Agent Foundry.
+- **Scenario Console** owns the governed scenario/state-tooling boundary: state
+  codecs, snapshots, restoration, legal history, synthesis, validation,
+  migration, time travel, and counterfactual forks. State Forge remains a compatibility module.
+- **Game Agent** owns scripted and learned policies, Training Archive,
+  calibration, Levels 1-9, Level Omega, and Training Operations. Historical
+  TearBot/Academy/Foundry names remain only in compatibility and evidence records.
 - **Ghost 3.0** owns causal recording, replay truth, local Vault, Theater,
-  practice, comparison, Doctor, libraries, coaching, challenges, Studio,
-  publication, verification, and preservation.
+  practice, comparison, Doctor, libraries, coaching, challenges, Replay Editor,
+  publication, verification, and preservation. Replay Hub is the current local player surface.
 
 These products share contracts but not oversized mutable runtime objects.
 
@@ -96,3 +111,24 @@ its dependencies pass.
 
 Program status is tracked in
 [the requirement ledger](TEARBENCH_GHOST3_REQUIREMENT_LEDGER.md).
+
+## Current Checkpoint Status
+
+This overlay does not modify preserved source wording or hash-bound checkpoint reports.
+
+| Checkpoint | Status | Verified scope and evidence |
+|---|---|---|
+| C32 | Closed | Policy runtime and artifact-registry gate only; see [C32 evidence](checkpoints/C32_POLICY_RUNTIME_ARTIFACT_REGISTRY.md). |
+| C37 | Partial | Bounded Replay Hub and embedded Run Monitor; standalone Replay Editor, Coach, challenges, and trusted Game Agent Evidence remain unavailable; see [C37 evidence](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md). |
+| C40 | Incomplete | Existing verifier foundation is not an end-to-end clean-commit release certificate; see [C40 evidence](checkpoints/C40_RELEASE_EVIDENCE_MANIFEST.md). |
+
+Current detached C29/C30 evidence covers source-owned Sword, Hammer, Greatsword,
+Chainblade, and Riftlock mechanics; shared hazards, support auras, boss zones,
+authored arena fracture, and supported boss adds/clones. Source void descent and
+scrolling remain explicitly live-only. Progression currency and upgrade choices
+are production-derived; synthetic health, kills, score, style, and elapsed-time
+estimates are labeled and are not release evidence. This bounded scope is not
+full campaign parity, black-box certification, or C40 completion.
+
+Do not promote an engineering contract, generated catalog, or Class A/B result
+into player-facing completion or Class C certification without its named proof.

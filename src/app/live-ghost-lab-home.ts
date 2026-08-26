@@ -6,6 +6,8 @@ export class LiveGhostLabHomeController {
   readonly #watch: LivePlayerWatchController;
   constructor(watch: LivePlayerWatchController) { this.#watch = watch; }
   snapshot(): GhostLabScreenView {
+    const watch = this.#watch.snapshot();
+    const watchAvailable = watch.status === "ready" || watch.status === "running" || watch.status === "paused";
     return Object.freeze({
       id: "ghostlab",
       subtitle: "local replay routes and clearly bounded availability",
@@ -13,16 +15,22 @@ export class LiveGhostLabHomeController {
         Object.freeze({ id: "training-archive", label: "TRAINING ARCHIVE", detail: "Inspect local training custody and consent decisions." }),
         Object.freeze({ id: "training-operations", label: "TRAINING OPERATIONS", detail: "Read local recovery and schedule projections." }),
         Object.freeze({ id: "vault", label: "REPLAY VAULT", detail: "Open local capsules; Theater and Coach stay capsule-gated." }),
-        Object.freeze({ id: "botevidence", label: "GAME AGENT EVIDENCE", detail: "Read one exact retained Game Agent evaluation report when available." }),
-        Object.freeze({ id: "watch", label: "RUN MONITOR", detail: this.#watch.snapshot().detail }),
       ]),
       unavailable: Object.freeze([
-        Object.freeze({ label: "RUN MONITOR", detail: "Unavailable until a valid canonical V3 candidate is installed locally." }),
+        ...(watchAvailable ? [] : [Object.freeze({
+          label: "RUN MONITOR",
+          detail: watch.status === "checking"
+            ? "Checking the local canonical policy; Run Monitor controls remain disabled."
+            : watch.status === "stopped"
+              ? "Run Monitor is stopped; native play is restored and no monitor command is available here."
+              : "Unavailable until a valid canonical V3 policy is installed locally."
+        })]),
         Object.freeze({ label: "SCENARIO CONSOLE", detail: "Scenario controls remain test and engineering evidence only." }),
+        Object.freeze({ label: "GAME AGENT EVIDENCE", detail: "Unavailable until one exact retained Game Agent evaluation report is bound and verified locally." }),
         Object.freeze({ label: "GAME AGENT LADDER", detail: "No certified player ladder or placement is available; local evidence stays unassigned." }),
-        Object.freeze({ label: "REPLAY EDITOR", detail: "No normal-build forensic or branch-control surface is available." }),
+        Object.freeze({ label: "REPLAY EDITOR", detail: "The existing Replay Editor sub-editor remains inside replay playback; no standalone player route is available." }),
       ]),
-      watch: this.#watch.snapshot(),
+      watch,
     });
   }
 }

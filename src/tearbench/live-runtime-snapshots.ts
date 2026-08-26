@@ -7,9 +7,27 @@ import { ENTITY_KIND_REGISTRY } from "./registries";
 import { captureCodecState, createDefaultStateCodecRegistry, type TearStateCodecRegistry, type TearWorldFactory, type TearCodecWorld } from "./state-codecs";
 import type { TearLiveWorldAdapter } from "./live-state-snapshot";
 
+declare const __TEAR_BUILD_REVISION__: string | undefined;
+declare const __TEAR_BUILD_SOURCE_FINGERPRINT__: string | undefined;
+declare const __TEAR_BUILD_TARGET__: string | undefined;
+
 export interface LiveRuntimeSnapshotController {
   capture(id: string, stateClass?: TearStateClass): TearSnapshotV1;
   restore(snapshot: TearSnapshotV1): TearLiveRestoreResult;
+}
+
+export type TearStaticBuildIdentity = Omit<TearBuildIdentityV1, "configHash">;
+
+export function injectedBuildIdentity(fallbackTarget: string, fallbackContentHash: string): TearStaticBuildIdentity | undefined {
+  const revision = typeof __TEAR_BUILD_REVISION__ === "string" && __TEAR_BUILD_REVISION__ !== "" ? __TEAR_BUILD_REVISION__ : undefined;
+  if (revision === undefined) return undefined;
+  return Object.freeze({
+    version: "0.1.0", revision,
+    target: typeof __TEAR_BUILD_TARGET__ === "string" && __TEAR_BUILD_TARGET__ !== "" ? __TEAR_BUILD_TARGET__ : fallbackTarget,
+    rulesetVersion: "live",
+    contentHash: typeof __TEAR_BUILD_SOURCE_FINGERPRINT__ === "string" && __TEAR_BUILD_SOURCE_FINGERPRINT__ !== ""
+      ? __TEAR_BUILD_SOURCE_FINGERPRINT__ : fallbackContentHash,
+  });
 }
 
 export interface LiveStateForgeSnapshotCapture {
@@ -31,7 +49,9 @@ export interface LiveStateForgeSnapshotCapture {
    * configuration hash is deliberately derived from this individual keyframe:
    * upgrades can legally mutate configuration after the tick-zero bootstrap.
    */
-  readonly staticBuild?: Omit<TearBuildIdentityV1, "configHash">;
+  readonly staticBuild?: TearStaticBuildIdentity;
+  /** Optional source/build identity injected by the composition boundary. */
+  readonly buildIdentity?: TearStaticBuildIdentity;
   /** Optional integrity-protected bootstrap event that this keyframe extends. */
   readonly sourceId?: TearProvenanceV1["sourceId"];
   readonly actor?: TearProvenanceV1["actor"];
@@ -56,13 +76,20 @@ export function captureLiveStateForgeSnapshot(input: LiveStateForgeSnapshotCaptu
   const world = input.world ?? input.stateForge.capture();
   const captured = captureCodecState(world, input.registry);
   const configurationHash = stableVerificationHash(captured.state["tear.configuration.v1"]);
-  const build = input.staticBuild === undefined
+  const runtimeBuild = injectedBuildIdentity(input.target, input.contentHash);
+  const suppliedBuild = input.buildIdentity ?? input.staticBuild ?? runtimeBuild;
+  if (input.buildIdentity !== undefined && input.staticBuild !== undefined
+    && (["version", "revision", "target", "rulesetVersion", "contentHash"] as const)
+      .some((field) => input.buildIdentity?.[field] !== input.staticBuild?.[field])) {
+    throw new TypeError("snapshot build identity aliases disagree");
+  }
+  const build = suppliedBuild === undefined
     ? Object.freeze({
-      version: "0.1.0", revision: "working-tree", target: input.target, rulesetVersion: "live",
+      version: "0.1.0", revision: "unbound", target: input.target, rulesetVersion: "live",
       contentHash: input.contentHash, configHash: configurationHash,
     })
-    : Object.freeze({ ...input.staticBuild, configHash: configurationHash });
-  if (input.staticBuild !== undefined && (input.target !== build.target || input.contentHash !== build.contentHash)) {
+    : Object.freeze({ ...suppliedBuild, configHash: configurationHash });
+  if (suppliedBuild !== undefined && (input.target !== build.target || input.contentHash !== build.contentHash)) {
     throw new TypeError("snapshot target and content hash must agree with its supplied build fingerprint");
   }
   return Object.freeze({
@@ -102,11 +129,13 @@ export function createLiveRuntimeSnapshotController(
     capture(id: string, stateClass: TearStateClass = "recorded-canonical") {
       const tick = context.authoritative()?.tick ?? 0;
       const world = context.stateForge.capture();
+      const contentHash = stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
+      const runtimeBuild = injectedBuildIdentity("test-standalone", contentHash);
       return captureLiveStateForgeSnapshot({
         id, tick, stateClass, stateForge: context.stateForge, world, rng: context.random(), registry,
         seed: String(context.state.run()?.runSeed ?? "unknown"),
         observationClass: accessClass === "A" ? "privileged-diagnostic" : "structured-state",
-        producer: "live-tear-runtime", target: "test-standalone", contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
+        producer: "live-tear-runtime", target: runtimeBuild?.target ?? "test-standalone", contentHash: runtimeBuild?.contentHash ?? contentHash,
         visualHash: stableVerificationHash(context.screenshot()),
       });
     },

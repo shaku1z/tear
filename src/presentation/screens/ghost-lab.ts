@@ -1,7 +1,7 @@
 import type { BotEvidenceScreenView, GhostLabScreenView, GhostPublicationScreenView, GhostSupportScreenView, ScreenRenderContext } from "./contracts";
 import { backControl } from "./screen-primitives";
 import { REPLAY_HUB_ACTIONS } from "../../replay/surface-route";
-import { GAME_AGENT_ACTIONS, RUN_MONITOR_ACTIONS } from "../../agents/surface-route";
+import { RUN_MONITOR_ACTIONS } from "../../agents/surface-route";
 
 /** Presentation-only normal Ghost Lab home. No diagnostic/test-only state crosses this boundary. */
 export function createGhostLabRenderers(context: ScreenRenderContext) {
@@ -11,16 +11,13 @@ export function createGhostLabRenderers(context: ScreenRenderContext) {
       ui.header(canvas, "REPLAY HUB", view.subtitle, context.enterAmount, ui.t.color.accent);
       const left = 260, top = 178, cardWidth = 430;
       ui.sectionLabel(canvas, "AVAILABLE LOCALLY", left, top - 28, cardWidth);
-      view.routes.forEach((route, index) => {
+      // Embedded and availability-gated compatibility entries cannot become self-loop routes.
+      view.routes.filter((route) => route.id !== "watch" && route.id !== "botevidence").forEach((route, index) => {
         const y = top + index * 100;
         ui.card(canvas, left, y, cardWidth, 82);
         ui.text(canvas, route.label, left + 24, y + 33, ui.t.type.label, "left", ui.t.alpha.full);
         ui.wrappedText(canvas, route.detail, left + 24, y + 55, cardWidth - 44, 17, ui.t.type.caption, "left", ui.t.alpha.soft);
-        const action = route.id === "botevidence"
-          ? { type: GAME_AGENT_ACTIONS.open as "game-agent.open" }
-          : route.id === "watch"
-            ? { type: RUN_MONITOR_ACTIONS.open as "run-monitor.open" }
-            : { type: REPLAY_HUB_ACTIONS.open, destination: route.id };
+        const action = { type: REPLAY_HUB_ACTIONS.open, destination: route.id };
         context.enqueue({ x: left, y, w: cardWidth, h: 82, label: route.label, sub: route.detail, action });
       });
       const watch = view.watch;
@@ -29,10 +26,12 @@ export function createGhostLabRenderers(context: ScreenRenderContext) {
       // visibly and physically distinct from descriptive copy.
       ui.text(canvas, `STATUS / ${watch.status.toUpperCase()} / ${String(watch.decisions)} DECISIONS`, left + 20, 656, ui.t.type.caption, "left", ui.t.alpha.soft);
       ui.wrappedText(canvas, watch.detail, left + 20, 678, 390, 15, ui.t.type.micro, "left", ui.t.alpha.muted);
-      const command = watch.status === "ready" ? "start" : watch.status === "running" ? "pause" : watch.status === "paused" ? "resume" : "stop";
-      const label = command === "start" ? "START RUN MONITOR" : command === "pause" ? "PAUSE RUN MONITOR" : command === "resume" ? "RESUME RUN MONITOR" : "STOP RUN MONITOR";
-      context.enqueue({ x: left, y: 728, w: 200, h: 44, label, enabled: command !== "stop" || watch.status === "running" || watch.status === "paused", action: { type: RUN_MONITOR_ACTIONS.control, command } });
-      if (watch.status === "running" || watch.status === "paused") context.enqueue({ x: left + 214, y: 728, w: 200, h: 44, label: "STOP RUN MONITOR", action: { type: RUN_MONITOR_ACTIONS.control, command: "stop" } });
+      if (watch.status === "ready" || watch.status === "running" || watch.status === "paused") {
+        const command = watch.status === "ready" ? "start" : watch.status === "running" ? "pause" : "resume";
+        const label = command === "start" ? "START RUN MONITOR" : command === "pause" ? "PAUSE RUN MONITOR" : "RESUME RUN MONITOR";
+        context.enqueue({ x: left, y: 728, w: 200, h: 44, label, action: { type: RUN_MONITOR_ACTIONS.control, command } });
+        if (watch.status === "running" || watch.status === "paused") context.enqueue({ x: left + 214, y: 728, w: 200, h: 44, label: "STOP RUN MONITOR", action: { type: RUN_MONITOR_ACTIONS.control, command: "stop" } });
+      }
       const right = 760;
       ui.sectionLabel(canvas, "NOT YET PLAYER-SAFE", right, top - 28, 430, ui.t.color.muted);
       view.unavailable.forEach((entry, index) => {

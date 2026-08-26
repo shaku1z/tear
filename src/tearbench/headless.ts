@@ -1,10 +1,12 @@
 import { stableVerificationHash } from "../replay/hash";
+import type { TearCausalEventV1 } from "./contracts";
 
 export interface TearHeadlessTransition<TObservation> {
   readonly observation: TObservation;
   readonly terminated: boolean;
   readonly truncated: boolean;
   readonly metrics?: Readonly<Record<string, number>>;
+  readonly events?: readonly TearCausalEventV1[];
   readonly artifact?: unknown;
 }
 
@@ -22,6 +24,8 @@ export interface TearHeadlessEpisode<TScenario, TObservation> {
   readonly id: string;
   readonly scenario: TScenario;
   readonly observations: readonly TObservation[];
+  /** Native causal facts actually delivered by the environment, in source order. */
+  readonly events?: readonly TearCausalEventV1[];
   readonly outcome: "terminated" | "truncated" | "cancelled" | "timed-out";
   readonly ticks: number;
   readonly semanticHash: string;
@@ -65,6 +69,7 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
     const now = control.now ?? (() => performance.now());
     const startedAt = now();
     const observations: TObservation[] = [this.#environment.reset(options.scenario)];
+    const events: TearCausalEventV1[] = [];
     let outcome: TearHeadlessEpisode<TScenario, TObservation>["outcome"] = "truncated";
     let metrics: Readonly<Record<string, number>> = {};
     const stopOutcome = (): "cancelled" | "timed-out" | undefined => {
@@ -84,6 +89,7 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
         const transition = this.#environment.step(actions);
         steps += 1;
         observations.push(transition.observation);
+        events.push(...(transition.events ?? []));
         metrics = transition.metrics ?? metrics;
         control.onStep?.(steps);
         if (transition.artifact !== undefined) control.onArtifact?.(steps, transition.artifact);
@@ -99,6 +105,7 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
       id: options.id,
       scenario: options.scenario,
       observations: Object.freeze(observations),
+      events: Object.freeze(events),
       outcome,
       ticks,
       semanticHash: stableVerificationHash(observations.at(-1)),

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
   TEAR_CONTRACT_FORMAT,
@@ -8,19 +9,24 @@ import {
   createBranchDivergenceFailure,
   investigateRegressionRuns,
   createCanonicalScenarioRegistry,
+  createProductionHeadlessEnvironment,
   type TearObservationV1,
   type TearScenarioRuntime,
   type TearScenarioV1,
 } from "../../src/tearbench";
 
-function observation(tick: number, hp = 100): TearObservationV1 {
+function observation(tick: number, hp = 100, scenario?: TearScenarioV1): TearObservationV1 {
   return {
     format: TEAR_CONTRACT_FORMAT, kind: "observation", schemaVersion: 1, tick,
     observationClass: "structured-state",
     player: { x: 100 + tick, y: 600, vx: 120, vy: 0, hp, maxHp: 100, facing: 1, grounded: true, dashCharges: 1 },
     blade: { handX: 120, handY: 580, tipX: 180, tipY: 560, vx: 60, vy: -20, tipSpeed: 64, state: "held" },
     entities: [],
-    run: { mode: "campaign", difficulty: "normal", weapon: "sword", stage: "grounds", wave: 1, score: 0, elapsedTicks: tick },
+    run: {
+      mode: scenario?.start.mode ?? "campaign", difficulty: scenario?.start.difficulty ?? "normal",
+      weapon: scenario?.start.weapon ?? "sword", stage: scenario?.start.stage ?? "grounds",
+      wave: scenario?.start.wave ?? 1, score: 0, elapsedTicks: tick,
+    },
     availableActions: ["move", "jump", "dash", "aim", "weapon"],
   };
 }
@@ -28,19 +34,20 @@ function observation(tick: number, hp = 100): TearObservationV1 {
 class FixtureRuntime implements TearScenarioRuntime {
   #tick = 0;
   #failAt: number | undefined;
+  #scenario: TearScenarioV1 | undefined;
 
   constructor(failAt?: number) { this.#failAt = failAt; }
 
   reset(scenario: TearScenarioV1): TearObservationV1 {
-    void scenario;
+    this.#scenario = scenario;
     this.#tick = 0;
-    return observation(0);
+    return observation(0, 100, scenario);
   }
 
   step(actions: Parameters<TearScenarioRuntime["step"]>[0]) {
     this.#tick += 1;
     return {
-      observation: observation(this.#tick, this.#tick === this.#failAt ? Number.NaN : 100),
+      observation: observation(this.#tick, this.#tick === this.#failAt ? Number.NaN : 100, this.#scenario),
       events: [],
       actions,
       terminated: this.#tick === 5,
@@ -55,24 +62,49 @@ class FixtureRuntime implements TearScenarioRuntime {
 describe("TearBench engineering runner", () => {
   it("registers the canonical engineering scenarios", () => {
     const registry = createCanonicalScenarioRegistry();
-    expect(registry.list()).toHaveLength(13);
+    expect(registry.list()).toHaveLength(CANONICAL_ENGINEERING_SCENARIOS.length);
     expect(registry.get("projectile-parry-basic").tags).toContain("parry");
     expect(registry.get("source-void-low-hp-rescue-seek").tags).toEqual(expect.arrayContaining(["source", "void", "hazard", "rescue", "seek"]));
-    expect(registry.get("chainblade-bind-yank-catch-seek").tags).toEqual(expect.arrayContaining(["chainblade", "bind", "yank", "catch", "seek"]));
+    expect(registry.get("chainblade-hook-sling-catch-seek").tags).toEqual(expect.arrayContaining(["chainblade", "hook", "sling", "catch", "seek"]));
     expect(registry.get("hammer-meteor-terrain-catch-seek").tags).toEqual(expect.arrayContaining(["hammer", "meteor", "terrain", "catch", "seek"]));
     expect(registry.get("greatsword-wheelcut-catch-seek").tags).toEqual(expect.arrayContaining(["greatsword", "wheelcut", "catch", "seek"]));
     expect(registry.get("riftlock-loose-cannon-catch-seek").tags).toEqual(expect.arrayContaining(["riftlock", "capture", "backblast", "catch", "seek"]));
-    expect(registry.get("sword-seam-crosscut-catch-seek").tags).toEqual(expect.arrayContaining(["sword", "seam", "crosscut", "catch", "seek"]));
+    expect(registry.get("sword-reversal-threadcut-catch-seek").tags).toEqual(expect.arrayContaining(["sword", "reversal", "threadcut", "catch", "seek"]));
     const firstScenario = registry.get(CANONICAL_ENGINEERING_SCENARIOS[0]?.id ?? "");
     expect(() => { registry.register(firstScenario); }).toThrow(/version/u);
   });
 
-  it("repeats every canonical scenario with an identical semantic result", () => {
+  it("binds each current-game subject to its compatible natural opening", () => {
+    const registry = createCanonicalScenarioRegistry();
     for (const scenario of CANONICAL_ENGINEERING_SCENARIOS) {
-      const hashes = Array.from({ length: 100 }, () => new TearBenchRunner(new FixtureRuntime()).run(scenario).semanticHash);
-      expect(new Set(hashes), scenario.id).toHaveLength(1);
-      expect(new TearBenchRunner(new FixtureRuntime()).run(scenario).status).toBe("passed");
+      expect(scenario.stateClass, scenario.id).toBe("recorded-canonical");
+      expect(scenario.start.stage, scenario.id).toBeUndefined();
     }
+    for (const weapon of WEAPON_IDS) {
+      const scenario = CANONICAL_ENGINEERING_SCENARIOS.find((entry) => entry.id.startsWith(`${weapon}-`));
+      expect(scenario?.start.weapon, weapon).toBe(weapon);
+    }
+    expect(registry.get("source-void-low-hp-rescue-seek").start).toMatchObject({
+      mode: "bossonly", boss: "source", weapon: "sword",
+    });
+  });
+
+  it("resets every headless-compatible canonical scenario through the source-owned backend", () => {
+    for (const scenario of CANONICAL_ENGINEERING_SCENARIOS.filter((entry) => entry.backends.includes("headless"))) {
+      const environment = createProductionHeadlessEnvironment();
+      environment.reset(scenario);
+      expect(environment.policyObservation().run, scenario.id).toMatchObject({
+        mode: scenario.start.mode, difficulty: scenario.start.difficulty, weapon: scenario.start.weapon,
+      });
+      environment.dispose();
+    }
+  });
+
+  it("repeats the isolated runner fixture without presenting it as gameplay-mechanic evidence", () => {
+    const scenario = createCanonicalScenarioRegistry().get("movement-jump");
+    const hashes = Array.from({ length: 2 }, () => new TearBenchRunner(new FixtureRuntime()).run(scenario).semanticHash);
+    expect(new Set(hashes)).toHaveLength(1);
+    expect(new TearBenchRunner(new FixtureRuntime()).run(scenario).status).toBe("passed");
   });
 
   it("captures the first deterministic invariant failure", () => {

@@ -16,7 +16,7 @@ owning test/script references in one reviewable transaction.
 | Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) | [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
-| TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | Preserved generated registries and evidence catalogs |
+| TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | [Current-game alignment and permanent synchronization plan](TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md); preserved generated registries and evidence catalogs |
 
 `docs/checkpoints/` and `docs/checkpoints/program-normalization/` are
 append-only checkpoint/history locations. `docs/source/` is the preserved

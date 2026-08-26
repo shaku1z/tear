@@ -1,5 +1,7 @@
 import type { UpgradeDefinition } from "../gameplay/upgrades";
+import { DIFFICULTY_CATALOG } from "../gameplay/run/difficulty-catalog";
 import { describeWave } from "../gameplay/run/wave-rules";
+import { calculateCoinAward } from "../gameplay/scoring/coin-awards";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearDifficultyId, TearRunModeId, TearWeaponId } from "./registries";
 import {
@@ -66,6 +68,12 @@ export interface TearProgressionRequest {
   readonly targetWave: number;
   readonly configuredCampaignWaves?: number;
   readonly meta?: Readonly<Record<string, number>>;
+  readonly economy?: Readonly<{
+    readonly score?: number;
+    readonly remoteMultiplier?: number;
+    readonly coinMagnetLevel?: number;
+    readonly fortuneLevel?: number;
+  }>;
   readonly selections?: readonly TearBuildSelection[];
   readonly policy: TearBuildSynthesisPolicy;
 }
@@ -79,6 +87,8 @@ export interface TearSynthesizedProgression {
   readonly statistics: Readonly<{
     hp: number; maxHp: number; elapsedTicks: number; score: number; style: number;
     kills: number; currency: number; revives: number;
+    /** Currency/revives are ledger-owned; combat and timing are synthetic estimates, never release evidence. */
+    estimatedFields: readonly ("hp" | "maxHp" | "elapsedTicks" | "score" | "style" | "kills")[];
   }>;
   readonly configurationHash: string;
   readonly explanation?: string;
@@ -131,6 +141,25 @@ function freezeLedger(
   });
 }
 
+function economyInputs(request: TearProgressionRequest) {
+  const difficulty = DIFFICULTY_CATALOG.find((candidate) => candidate.id === request.difficulty);
+  if (difficulty === undefined) throw new RangeError(`unknown production difficulty ${request.difficulty}`);
+  const economy = request.economy ?? {};
+  const finite = (value: number | undefined, fallback: number, label: string): number => {
+    if (value === undefined) return fallback;
+    if (!Number.isFinite(value) || value < 0) throw new RangeError(`${label} must be a finite non-negative number`);
+    return value;
+  };
+  return Object.freeze({
+    difficultyId: difficulty.id,
+    baseDifficultyMultiplier: difficulty.modifiers.coinReward,
+    score: finite(economy.score, 0, "economy.score"),
+    remoteMultiplier: finite(economy.remoteMultiplier, 1, "economy.remoteMultiplier"),
+    coinMagnetLevel: finite(economy.coinMagnetLevel, 0, "economy.coinMagnetLevel"),
+    fortuneLevel: finite(economy.fortuneLevel, 0, "economy.fortuneLevel"),
+  });
+}
+
 /**
  * Enumerates the production wave scheduler's potential reward points. Actual
  * boss rewards are resolved by synthesis because production falls back to a
@@ -138,6 +167,7 @@ function freezeLedger(
  */
 export function buildCanonicalProgressionLedger(request: TearProgressionRequest): TearProgressionLedger {
   positiveWave(request.targetWave);
+  const economy = economyInputs(request);
   const builder = eventBuilder();
   setupEvents(request, builder);
   let previousStage = -1;
@@ -165,7 +195,7 @@ export function buildCanonicalProgressionLedger(request: TearProgressionRequest)
       builder.add({ type: "draft.earned", wave, slot: draftOpportunities });
       draftOpportunities += 1;
     }
-    builder.add({ type: "reward.granted", wave, currency: rewardCurrency(wave, boss) });
+    builder.add({ type: "reward.granted", wave, currency: rewardCurrency(wave, economy) });
   }
   builder.add({ type: "run.completed", wave: request.targetWave });
   return freezeLedger(builder.events, request.targetWave, draftOpportunities, tierOpportunities);
@@ -240,8 +270,12 @@ function buildSnapshot(build: ProgressionMutableBuild): Readonly<Record<string, 
   return Object.freeze(Object.fromEntries(entries));
 }
 
-function rewardCurrency(wave: number, boss: boolean): number {
-  return Math.max(1, Math.floor(wave / 2)) + (boss ? wave : 0);
+function rewardCurrency(wave: number, inputs: ReturnType<typeof economyInputs>): number {
+  return calculateCoinAward({
+    score: inputs.score, wave, difficultyId: inputs.difficultyId,
+    baseDifficultyMultiplier: inputs.baseDifficultyMultiplier, remoteMultiplier: inputs.remoteMultiplier,
+    coinMagnetLevel: inputs.coinMagnetLevel, fortuneLevel: inputs.fortuneLevel,
+  }).earned;
 }
 
 function requestedReachability(
@@ -313,12 +347,14 @@ function progressionStatistics(
     style,
     kills,
     currency,
-    revives: 0,
+    revives: ledger.events.filter((event) => event.type === "player.revived").length,
+    estimatedFields: Object.freeze(["hp", "maxHp", "elapsedTicks", "score", "style", "kills"] as const),
   });
 }
 
 export function synthesizeProgression(request: TearProgressionRequest): TearSynthesizedProgression {
   positiveWave(request.targetWave);
+  const economy = economyInputs(request);
   const desired = desiredBuild(request.selections ?? []);
   const builder = eventBuilder();
   setupEvents(request, builder);
@@ -376,7 +412,7 @@ export function synthesizeProgression(request: TearProgressionRequest): TearSynt
         occurrence, tier: build.tiers[choice.id] ?? 1,
       });
     }
-    builder.add({ type: "reward.granted", wave, currency: rewardCurrency(wave, boss) });
+    builder.add({ type: "reward.granted", wave, currency: rewardCurrency(wave, economy) });
   }
   builder.add({ type: "run.completed", wave: request.targetWave });
 

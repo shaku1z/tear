@@ -30,5 +30,5 @@ const result = spawnSync(process.execPath, [viteCli, "build", "--mode", mode, "-
 if (result.error !== undefined) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);
 
-const metadata = await writeReleaseArtifactMetadata({ directory: output, repository, sha, target });
+const metadata = await writeReleaseArtifactMetadata({ directory: output, repository, sha, target, mode, sourceDirectory: projectRoot });
 console.log(`PASS ${target} build attribution: ${metadata.sha} ${metadata.artifactHash}`);

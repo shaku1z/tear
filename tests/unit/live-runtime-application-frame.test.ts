@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { createLiveTearRuntimeEnvironment } from "../../src/tearbench/live-runtime-environment";
+import { runInvariantChecks } from "../../src/tearbench/invariants";
+import { TearBenchRunner } from "../../src/tearbench/runner";
+import type { TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import type { LiveTearRuntimeEnvironmentContext } from "../../src/tearbench/live-runtime-contracts";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
@@ -22,12 +25,16 @@ const SCENARIO = Object.freeze({
   tags: Object.freeze(["c27a", "cinematic"]),
 }) satisfies TearScenarioV1;
 
-function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) {
+function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOpeningEvents?: boolean;
+  nativePreviousRunAbandonment?: boolean }> = {}) {
   let tick = 0;
   let screen = "playing";
   const calls: string[] = [];
   const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const audioDispatchReceipts: AudioDispatchReceipt[] = [];
+  const gameplayListeners: ((event: TearGameplayEvent) => void)[] = [];
+  const enemies: { id: string; kind: "charger"; dead: boolean; isBoss: boolean; x: number; y: number;
+    vx: number; vy: number; hp: number; maxHp: number; contactDmg: number }[] = [];
   const run = {
     mode: "campaign", diff: "normal", weaponId: "sword", stage: 0,
     wave: 1, score: 0, spawnQueue: [], runSeed: 1,
@@ -47,12 +54,12 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
       run: () => run,
       player: () => player,
       blade: () => blade,
-      enemies: () => [],
+      enemies: () => enemies,
       projectiles: () => [],
     },
     platforms: () => [],
-    actorId: () => "enemy:1",
-    stage: () => ({ name: "ruins" }),
+    actorId: (enemy: { id?: string }) => enemy.id ?? "enemy:1",
+    stage: () => ({ name: "The Grounds", index: 0 }),
     lifecycle: () => ({ phase: "wave-active" }),
     choiceIds: () => [],
     progression: () => ({ wallet: 0, lifetimeEarned: 0, levels: {}, shop: [] }),
@@ -63,7 +70,19 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
     selectWeapon: () => undefined,
     selectBoss: () => undefined,
     setRunSeed: () => undefined,
-    startRun: () => undefined,
+    startRun: () => {
+      if (options.nativeOpeningEvents !== true) return;
+      if (options.nativePreviousRunAbandonment === true) {
+        const previous: TearGameplayEvent = { kind: "run", tick: 60, transition: "abandoned", runId: "previous-run",
+          mode: "campaign", difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 1 };
+        for (const listener of gameplayListeners) listener(previous);
+      }
+      for (const event of [
+        { kind: "run", tick: 0, transition: "started", runId: "native-run", mode: "campaign",
+          difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 0 },
+        { kind: "spawn", tick: 0, actorId: "enemy:1", actorKind: "charger", x: 30, y: 40 },
+      ] as const) for (const listener of gameplayListeners) listener(event);
+    },
     stopFrameLoop: () => undefined,
     startFrameLoop: () => undefined,
     setSemanticInputAuthority: () => undefined,
@@ -73,7 +92,7 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
     skipCinematic: () => { calls.push("skip"); },
     advanceStateForgeCinematicBeat: () => { calls.push("semantic-cinema"); return true; },
     resetSemanticInput: () => undefined,
-    advanceFixedTick: () => 1,
+    advanceFixedTick: () => { tick += 1; return 1; },
     advanceApplicationFrame: () => {
       calls.push("frame");
       tick += 2;
@@ -84,7 +103,10 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
     random: () => ({}),
     render: () => { calls.push("render"); },
     screenshot: () => "data:image/png;base64,",
-    subscribeEngineEvent: () => () => undefined,
+    subscribeEngineEvent: (listener: (event: TearGameplayEvent) => void) => {
+      gameplayListeners.push(listener);
+      return () => undefined;
+    },
     drainConsumedActions: () => [],
     emitPhysicalInput: () => undefined,
     setTimeEffectsForTest: () => undefined,
@@ -98,10 +120,87 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean }> = {}) 
     finaleOutwardCalls: () => finaleOutwardCalls,
     audioDispatchReceipts: () => audioDispatchReceipts,
   } as unknown as LiveTearRuntimeEnvironmentContext;
-  return { context, calls, finaleOutwardCalls, audioDispatchReceipts };
+  return { context, calls, finaleOutwardCalls, audioDispatchReceipts, run, enemies,
+    publish: (event: TearGameplayEvent) => { for (const listener of gameplayListeners) listener(event); } };
 }
 
 describe("Class-A live application-frame surface", () => {
+  it("tracks actual progress and exposes independent lifecycle completion and real focus", () => {
+    const fixture = contextFixture();
+    let phase = "wave-active";
+    const context = { ...fixture.context, lifecycle: () => ({ phase }),
+      choiceIds: () => ["choice:first", "choice:second"], focusedControlId: () => "choice:second" };
+    const environment = createLiveTearRuntimeEnvironment(context, "A");
+    const start = environment.reset(SCENARIO);
+    expect(start.diagnostics?.progressTick).toBe(0);
+    expect(start.diagnostics?.ui).toEqual({ focusableIds: ["choice:first", "choice:second"], focusedId: "choice:second" });
+    expect(start.diagnostics?.waveComplete).toBe(false);
+    expect(environment.step([]).observation.diagnostics?.progressTick).toBe(0);
+    const player = fixture.context.state.player();
+    if (player === undefined) throw new Error("fixture player is unavailable");
+    player.x += 5;
+    expect(environment.step([]).observation.diagnostics?.progressTick).toBe(2);
+    phase = "wave-cleared";
+    expect(environment.observe().diagnostics?.waveComplete).toBe(true);
+    const stalled = { ...environment.observe(), tick: 5000 };
+    expect(runInvariantChecks(stalled, ["runtime.no-softlock"])[0]?.id).toBe("runtime.no-softlock");
+  });
+
+  it("delivers native run and spawn events exactly once through an ordinary TearBench session", () => {
+    const environment = createLiveTearRuntimeEnvironment(contextFixture({ nativeOpeningEvents: true }).context, "A");
+    const session = new TearBenchRunner(environment).createSession(SCENARIO);
+    session.step();
+    expect(session.result().events.map((event) => [event.type, event.source])).toEqual([
+      ["run.started", "engine"], ["enemy.spawned", "engine"],
+    ]);
+    session.step();
+    expect(session.result().events).toHaveLength(2);
+  });
+
+  it("counts only source-owned current-wave actors while unrelated living actors remain visible", () => {
+    const fixture = contextFixture({ nativeOpeningEvents: true });
+    const actor = (id: string, x: number) => ({ id, kind: "charger" as const, dead: false, isBoss: false,
+      x, y: 700, vx: 0, vy: 0, hp: 100, maxHp: 100, contactDmg: 10 });
+    const old = actor("enemy:old", 300), current = actor("enemy:current", 500);
+    fixture.enemies.push(old, current);
+    const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
+    environment.reset(SCENARIO);
+    fixture.publish({ kind: "spawn", tick: 0, actorId: old.id, actorKind: old.kind, x: old.x, y: old.y });
+    fixture.run.wave = 2;
+    fixture.publish({ kind: "wave", tick: 1, wave: 2, event: "start" });
+    fixture.publish({ kind: "spawn", tick: 1, actorId: current.id, actorKind: current.kind, x: current.x, y: current.y });
+
+    const observation = environment.observe();
+    expect(observation.entities.map((entry) => entry.id)).toEqual([old.id, current.id]);
+    expect(observation.diagnostics).toMatchObject({ waveOwnership: "source-events", livingWaveEnemies: 1 });
+    const claimedComplete = { ...observation, diagnostics: { ...observation.diagnostics, waveComplete: true } };
+    expect(runInvariantChecks(claimedComplete, ["wave.valid-completion"])).toHaveLength(1);
+    fixture.publish({ kind: "death", tick: 2, actorId: current.id, cause: "combat" });
+    current.dead = true;
+    const cleared = environment.observe();
+    expect(cleared.entities.map((entry) => entry.id)).toEqual([old.id]);
+    expect(cleared.diagnostics).toMatchObject({ waveOwnership: "source-events", livingWaveEnemies: 0 });
+    expect(runInvariantChecks({ ...cleared, diagnostics: { ...cleared.diagnostics, waveComplete: true } },
+      ["wave.valid-completion"])).toEqual([]);
+  });
+
+  it("excludes previous-run abandonment from a newly reset session while preserving its native opening facts", () => {
+    const fixture = contextFixture({ nativeOpeningEvents: true, nativePreviousRunAbandonment: true });
+    const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
+    environment.reset(SCENARIO);
+    expect(environment.step([]).events.map((event) => event.type)).toEqual(["run.started", "enemy.spawned"]);
+    expect(environment.engineEventProjection().map((event) => event.type)).toEqual(["run.started", "enemy.spawned"]);
+  });
+
+  it("labels a bridge-created start as derived when the host emits no native fact", () => {
+    const environment = createLiveTearRuntimeEnvironment(contextFixture().context, "A");
+    environment.reset(SCENARIO);
+    const events = environment.step([]).events;
+    expect(events).toMatchObject([{ type: "run.started", source: "derived",
+      payload: { provenance: "runtime-bridge-synthetic" } }]);
+    expect(environment.step([]).events).toEqual([]);
+  });
+
   it("requests the cinematic skip before the real frame and accounts for its authoritative tick delta", () => {
     const fixture = contextFixture();
     const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
+import { GAMEPLAY_EVENT_KIND_IDS, TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { createTearSpawnFactPublisher, createTearTerminalRunFactPublisher, createTearWaveFactPublisher } from
   "../../src/gameplay/runtime/gameplay-event-publishers";
-import { createGameplayCausalEvent, projectGameplayEventForParity } from
+import { createGameplayCausalEvent, nativeCausalEventAvailability, projectGameplayEventForParity } from
   "../../src/tearbench/gameplay-causal-events";
 import { validateTearContract } from "../../src/tearbench/validation";
 
@@ -13,6 +13,13 @@ const run = {
 } as const;
 
 describe("native gameplay causal-event adapter", () => {
+  it("separates real native events from historical-only ontology claims", () => {
+    expect(nativeCausalEventAvailability("enemy.spawned")).toBe("native");
+    expect(nativeCausalEventAvailability("boss.intro-started")).toBe("native");
+    expect(nativeCausalEventAvailability("agent.objective-changed")).toBe("compatibility-only");
+    expect(nativeCausalEventAvailability("challenge.completed")).toBe("compatibility-only");
+  });
+
   it("maps every native gameplay fact through one valid versioned ontology", () => {
     const facts: readonly TearGameplayEvent[] = [
       run,
@@ -39,15 +46,16 @@ describe("native gameplay causal-event adapter", () => {
       { kind: "effect", tick: 7, effect: "stolenBlade", x: 1, y: 2 },
       { kind: "effect", tick: 7, effect: "revive", x: 1, y: 2 },
       { kind: "effect", tick: 7, effect: "bossKill", x: 1, y: 2 },
-      { kind: "effect", tick: 7, effect: "unclassified", x: 1, y: 2 },
+      { kind: "weapon", tick: 7, event: "throw-launch", weaponId: "hammer", throwId: 2, x: 1, y: 2 },
     ];
     const expected = [
-      "run.completed", "stage.entered", "wave.started", "wave.cleared", "wave.spawn-completed", "wave.spawn-completed",
+      "run.completed", "stage.entered", "wave.started", "wave.cleared", "wave.spawn-completed", "boss.intro-started",
       "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit", "projectile.expired", "world.void-rescue", "combat.perfect-parry",
       "blade.thrown", "blade.recalled", "player.dash-started", "blade.stolen", "player.revived",
-      "boss.defeated", "system.checkpoint",
+      "boss.defeated", "blade.thrown",
     ];
 
+    expect([...new Set(facts.map((fact) => fact.kind))].sort()).toEqual([...GAMEPLAY_EVENT_KIND_IDS].sort());
     const events = facts.map((fact, index) => createGameplayCausalEvent(fact, index, `test:${String(index)}`));
     expect(events.map((event) => event.type)).toEqual(expected);
     expect(events.every((event) => validateTearContract(event).ok)).toBe(true);
@@ -127,6 +135,10 @@ describe("native gameplay causal-event adapter", () => {
     expect(() => createGameplayCausalEvent(run, 0, " ")).toThrow(/ID/u);
     expect(() => createGameplayCausalEvent(run, 0, "x".repeat(257))).toThrow(/ID/u);
     expect(() => createGameplayCausalEvent({ ...run, tick: -1 }, 0, "bad-tick")).toThrow(/tick/u);
+    expect(() => createGameplayCausalEvent({ kind: "wave", tick: 1, wave: 1, event: "unknown" }, 0, "bad-wave"))
+      .toThrow(/unrecognized native wave marker/u);
+    expect(() => createGameplayCausalEvent({ kind: "effect", tick: 1, effect: "unclassified", x: 0, y: 0 }, 0, "bad-effect"))
+      .toThrow(/unrecognized native gameplay effect/u);
   });
 
   it("publishes exact spawn and wave facts through one shared authoritative clock", () => {

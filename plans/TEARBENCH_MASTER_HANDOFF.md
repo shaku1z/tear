@@ -1,8 +1,11 @@
-# TearBench / State Forge / TearBot / Ghost 3 Master Continuation Handoff
+# TearBench / Scenario Console / Game Agent / Ghost 3.0 Master Continuation Handoff
 
 **Branch:** short-lived `codex/*` branch from protected canonical `main` (historical source boundary: `codex/ghost3-autonomous-completion-plan`)
-**State:** Paused at a deliberate handoff boundary during C27/C27A
+**State:** Current-game alignment `TB-F0` through `TB-F7` is accepted after repeated review corrected the skippable/unbound direct Sword trace and fixture-only wave distinction. The direct trace is mandatory and exact-source/build-bound; the integrated live proof retains wave-before-run source ordering and distinguishes source-spawned wave actors from an unrelated production actor. Acceptance remains conditional on the exact documentation commit's canonical gate. This does not claim protected integration or broader product completion: C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
 **Purpose:** Enable a succeeding agent to continue the complete TearBench program through C40 without losing requirements, repeating architectural mistakes, or overstating evidence.
+**Current alignment authority:** [`docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md`](../docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md)
+**Last reconciled protected baseline:** `a8a476c6171d913581c01bb0e4432f53cf44f9e4` on 2026-08-25. Re-resolve current protected `main` before every new slice.
+**Release identity boundary:** The SHA above identifies the locally inspected protected source baseline, not the separately committed alignment feature head or a newly verified deployment. Development builds and selected evidence record their actual source SHA, dirty/clean state, source fingerprint, and artifact identity. Public deployment identity is unverified unless a current protected release receipt proves it; C40 release certification remains incomplete.
 
 ## Authority metadata
 
@@ -18,9 +21,9 @@ This is the program-wide continuation document. It does not replace the original
 The finished program is the integration of:
 
 - **TearBench:** deterministic execution, scenarios, policies, invariants, comparison, minimization, regression discovery, evidence, and certification.
-- **State Forge:** production codecs, snapshots, validated restoration, legal history, synthesis, migrations, time travel, and forks.
-- **TearBot:** scripted and learned policies, Academy data, Levels 1-9 and Omega, measured evaluation, human calibration, and autonomous Foundry training.
-- **Ghost 3:** causal recording/replay, Vault, Theater, practice and forks, comparison, Doctor, libraries, coaching, challenges, Studio, publication, verification, and preservation.
+- **Scenario Console:** production codecs, snapshots, validated restoration, legal history, synthesis, migrations, time travel, and forks; compatibility identifiers remain readable.
+- **Game Agent:** scripted and learned policies, Training Archive data, Levels 1-9 and Omega, measured evaluation, human calibration, Run Monitor integration, and governed Training Operations.
+- **Ghost 3.0 / Replay Hub / Replay Editor:** causal recording/replay, Vault, Theater, practice and forks, comparison, Doctor, libraries, coaching, challenges, editing, publication, verification, and preservation.
 
 Ghost 3 is additive. Preserve truthful Ghost 2 compatibility; do not silently replace or relabel Ghost 2.
 
@@ -43,7 +46,8 @@ Mandatory reading order:
 4. [`plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md) — current C21-C40 order, dependencies, deliverables, and gates.
 5. [`docs/TEARBENCH_GHOST3_PROGRAM.md`](../docs/TEARBENCH_GHOST3_PROGRAM.md) — authority hierarchy and interpretation.
 6. [`docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`](../docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md) and [`docs/tearbench-ghost3-evidence-catalog.json`](../docs/tearbench-ghost3-evidence-catalog.json) — conservative evidence state.
-7. The active checkpoint reports and architecture documents listed below.
+7. [`docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md`](../docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md) — current-game runtime truth, alignment prerequisites, focused evidence, and permanent same-PR anti-drift requirements.
+8. The active checkpoint reports and architecture documents listed below.
 
 C27A was added as a blocking architecture correction after the atomic registry
 was generated, so the registry currently has no entries labeled `C27A`. An
@@ -98,7 +102,7 @@ These figures do not mean newer work has no value. They mean most original atomi
 - Keep DOM/browser adapters at the app edge. Gameplay/runtime composition stays portable.
 - Test seams may observe/drive production behavior but must not become production authority.
 - Preserve lazy menu-time construction and startup semantics unless a checkpoint explicitly changes them.
-- Keep `src/app/live-game-runtime.ts` within the user-approved 700 physical-line ceiling. It is currently 685 lines.
+- Keep `src/app/live-game-runtime.ts` within the user-approved 700 physical-line ceiling; the source-architecture gate owns the current count.
 - Preserve honest execution classes:
   - **A:** privileged in-process deterministic execution.
   - **B:** production runtime through supported bridges.
@@ -112,10 +116,42 @@ These figures do not mean newer work has no value. They mean most original atomi
 |---|---:|---|---|
 | P7 — Truthful Baseline | C21-C22 | Truth audit and runtime bridge | Passed |
 | P8 — Real Autonomous QA | C23-C26 | State Forge, scripted agent, physical input, regression discovery | C23, C24, C26 passed named gates; C25 exit open |
-| P9 — Operational Ghost 3 | C27-C30 + C27A | Recorder, shared architecture, Vault/Doctor, Theater, scalable episodes | C27 and C29 active; C27A and C28 closed; C30 initial production headless evidence active |
-| P10 — Autonomous Learning | C31-C36 | Academy, policy runtime, imitation/RL, ladder, Foundry | Not complete |
-| P11 — Player/Cloud Product | C37-C39 | Coach/Studio UX, cloud/privacy, operations/preservation | Not complete |
-| P12 — Final Certification | C40 | Certified end-to-end release | Not started |
+| P9 — Operational Ghost 3.0 | C27-C30 + C27A | Recorder, shared architecture, Vault/Doctor, Theater, scalable episodes | C27 remains open; C27A, C28, and the narrow C29 gate are closed; C30 remains active and current-game detached parity is not yet certified |
+| P10 — Autonomous Learning | C31-C36 | Training Archive, policy runtime, imitation/RL, Game Agent ladder, Training Operations | C31 active; C32 closed against its named gate; C33-C35 active; C36 open |
+| P11 — Player/Cloud Product | C37-C39 | Coach/Replay Editor UX, cloud/privacy, operations/preservation | C37 player-visible slice exists; C38 has bounded partial slices; C39 has local-only support |
+| P12 — Final Certification | C40 | Certified end-to-end release | Verifier foundation exists; no release certificate or C40 completion |
+
+**Current-game alignment prerequisite:** complete `TB-S0` through `TB-S12` in
+the linked alignment plan before interpreting historical scenario metadata,
+detached runtime claims, generated capability totals, or foundation checks as
+evidence of current-game completeness. `TB-S0` through `TB-S12` retain initial
+source-owned implementation and first-pass evidence for current weapons,
+authored hazards, support auras, boss zones, arena-platform fracture, boss
+adds/clones, and Aldric phases. Acceptance of their actual stage/boss,
+ordinary-headless-to-Ghost, live-to-Ghost, causal-event, and declared-backend
+coverage passes focused TB-F2 through TB-F6 evidence; the corrected direct Sword
+and real-live wave-ownership proofs passed repeated review, and TB-F7 acceptance
+is bound to the exact clean canonical gate. Five direct live-to-ordinary-headless traces are not claimed.
+Source void descent
+and scrolling are explicitly live-only rather than claimed as detached parity;
+synthetic health, kill, score, style, and elapsed-time estimates are identified
+and are not certification evidence. Replay Hub availability and diff-selected
+normal-player journeys, source-attributed evidence selection, generated capability
+reports, and focused same-PR drift guards are wired. Source-void snapshots fail
+closed before detached hydration; a capsule containing unsupported void receipts
+cannot be presented as a verified or seekable production replay. The full
+`pnpm check` passed on an earlier clean owner-authored feature commit,
+including source-bound live-to-fresh-Ghost proof for Sword, Hammer,
+Greatsword, Chainblade, and Riftlock; that historical gate does not establish
+the reopened ordinary-headless or causal acceptance claims. Every subsequent
+checkpoint commit must repeat the canonical clean-source gate before
+acceptance. Wiki
+synchronization follows authorized protected game-main
+integration. Adaptive Soundtrack remains intentionally pinned to approved
+music release `7662fc95769d2ed022593c10f308ec10f054edfc`, not the newest music
+HEAD. Protected integration, music re-vendoring, wiki edits, deployment,
+publication, and C40 release certification remain unperformed; no C40 release
+certificate or protected release claim exists.
 
 Named status:
 
@@ -777,7 +813,7 @@ All of the following were run from this worktree through C27A slice 36:
 - TearBench changed-file CI passed 15 files / 83 tests plus its Graveyard rerun.
 - `src/app/live-game-runtime.ts` measures 698 physical lines including its final line boundary.
 - The production build, browser feature matrix, boss parity, navigation/progression/playground/terminal journeys, and the blade/mirror/combat parity fixtures passed after the composition-root change.
-- Full `pnpm check` has not been run for a release claim.
+- Full `pnpm check` passed on the clean owner-authored feature branch; protected integration and C40 release certification remain unperformed.
 - The existing bundle warning above 500 kB is nonfatal; no bundle-performance release claim exists.
 
 ## 12. Durable progress documents

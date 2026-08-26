@@ -1,7 +1,9 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
 
-const BOSSES = ["warden", "colossus", "aldric", "echo", "source"];
+const BOSSES = canonicalScenarios.filter((entry) => entry.subject.kind === "boss")
+  .map((entry) => entry.subject.id);
 
 function distance(a, b) {
   return Math.hypot(b.x - a.x, b.y - a.y);
@@ -9,6 +11,9 @@ function distance(a, b) {
 
 async function startReadyBoss(page, bossId) {
   await page.evaluate((id) => window.__PANTHEON_TEST.startBoss(id, "normal"), bossId);
+  const stage = await page.evaluate((id) => window.__PANTHEON_TEST.bossStage(id), bossId);
+  assert.equal(stage.currentId, stage.authoredId, `${bossId} must load its authored source-owned stage`);
+  assert.equal(stage.currentIndex, stage.authoredIndex, `${bossId} must load its authored source-owned biome index`);
   await page.waitForFunction((id) => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === id),
     bossId, { timeout: 10000 });
   await page.waitForFunction((id) => {
@@ -175,4 +180,55 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
   }
   damaged = await bossSnapshot(page, "warden");
   assert.ok(damaged.hp < fullHealth, `captured-pointer held blade must damage the live boss (${String(damaged.hp)} < ${String(fullHealth)})`);
+
+  // Observe an actual live boss clone through the normal Class-A session and
+  // its independent native projection, not merely through visible enemy count.
+  for (const bossId of ["aldric", "echo"]) {
+    const bossEntry = canonicalScenarios.find((entry) => entry.subject.kind === "boss" && entry.subject.id === bossId);
+    assert.ok(bossEntry, `the canonical production catalog must own the ${bossId} encounter`);
+    const support = await page.evaluate((entry) => {
+    const scenario = {
+      format: "tear-contract", kind: "scenario", schemaVersion: 1,
+      id: entry.id, version: 1, description: entry.description,
+      stateClass: "recorded-canonical", executionClass: "engineering",
+      subject: entry.subject, backends: entry.backends, seed: `current-${entry.subject.id}-live-support`,
+      start: entry.start, maxTicks: 720, assertions: ["runtime.finite-state"], tags: entry.tags,
+    };
+    const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
+    const opening = environment.reset(scenario);
+    for (let tick = 0; tick < 120
+      && !window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.bossId === entry.subject.id); tick += 1) {
+      environment.step([]);
+    }
+    window.__PANTHEON_TEST.prepareBossSupportScenario(entry.subject.id);
+    const expectedKind = entry.subject.id === "echo" ? "reflection" : "charger";
+    for (let tick = 0; tick < 30; tick += 1) {
+      const transition = environment.step([]);
+      const delivered = transition.events.filter((event) => event.type === "enemy.spawned"
+        && event.payload.bossId === entry.subject.id && event.payload.actorKind === expectedKind);
+      if (delivered.length > 0) {
+        const projected = environment.engineEventProjection().filter((event) =>
+          event.type === "enemy.spawned" && event.payload.bossId === entry.subject.id
+          && event.payload.actorKind === expectedKind);
+        return {
+          stage: opening.run.stage,
+          authoredStage: window.__PANTHEON_TEST.bossStage(entry.subject.id).authoredId,
+          delivered,
+          projected,
+        };
+      }
+    }
+      throw new Error(`bounded live ${entry.subject.id} encounter did not publish its source-owned support spawn`);
+    }, bossEntry);
+    assert.equal(support.stage, support.authoredStage);
+    const expectedCount = bossId === "echo" ? 1 : 2;
+    assert.equal(support.delivered.length, expectedCount, `${bossId} must deliver each actual boss support actor once`);
+    assert.equal(support.projected.length, expectedCount, `${bossId} must project each actual boss support actor once`);
+    assert.equal(new Set(support.delivered.map((event) => event.actorId)).size, expectedCount);
+    for (let index = 0; index < expectedCount; index += 1) {
+      assert.equal(support.delivered[index].source, "engine");
+      assert.equal(support.projected[index].actorId, support.delivered[index].actorId);
+      assert.deepEqual(support.projected[index].payload, support.delivered[index].payload);
+    }
+  }
 });

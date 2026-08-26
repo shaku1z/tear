@@ -6,6 +6,21 @@ import type { TearObservedActorV1 } from "./contracts";
 import { projectLiveProjectileMechanics } from "./live-observation-actors";
 import type { TearRuntimeAccessClass } from "./live-runtime-contracts";
 
+type TearLiveProjectileSource = TearSimulationProjectileView & Readonly<{
+  playerOwned?: unknown;
+  ownerId?: unknown;
+  sourceEnemyId?: unknown;
+}>;
+
+export type TearProjectileOwnerResolver = (projectile: TearLiveProjectileSource) => string | undefined;
+
+function projectileOwnerId(projectile: TearLiveProjectileSource,
+  resolveOwnerId: TearProjectileOwnerResolver | undefined): string | undefined {
+  if (projectile.playerOwned === true) return "player";
+  const ownerId = resolveOwnerId?.(projectile);
+  return typeof ownerId === "string" && ownerId.length > 0 ? ownerId : undefined;
+}
+
 function projectileThreat(projectile: TearSimulationProjectileView, player: TearSimulationPlayerView): number {
   const dx = player.x - projectile.x;
   const dy = player.y - projectile.y;
@@ -19,13 +34,15 @@ function projectileThreat(projectile: TearSimulationProjectileView, player: Tear
 }
 
 export function projectLiveProjectiles(
-  projectiles: readonly TearSimulationProjectileView[],
+  projectiles: readonly TearLiveProjectileSource[],
   player: TearSimulationPlayerView,
   accessClass: TearRuntimeAccessClass,
+  resolveOwnerId?: TearProjectileOwnerResolver,
 ): readonly TearObservedActorV1[] {
   return Object.freeze(projectiles.flatMap((projectile, index) => {
     if (projectile.dead || projectile.deflected || projectile.harmless) return [];
     const family = projectile.family ?? "ordinaryProjectile";
+    const ownerId = projectileOwnerId(projectile, resolveOwnerId);
     return [Object.freeze({
       id: `projectile:${String(index)}`,
       kind: "projectile" as const,
@@ -37,6 +54,7 @@ export function projectLiveProjectiles(
       state: `${family}:${projectile.counterplay ?? "deflect"}`,
       ...projectLiveProjectileMechanics(projectile, accessClass),
       threat: projectileThreat(projectile, player),
+      ...(ownerId === undefined ? {} : { ownerId }),
     })];
   }));
 }

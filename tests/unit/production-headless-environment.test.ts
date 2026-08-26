@@ -10,6 +10,7 @@ import {
   createProductionHeadlessEpisodePool,
   BoundedArtifactSampler,
   createOneFrameBoundaryLaunchMatrix,
+  TearHeadlessRunner,
   type ProductionHeadlessTerminalArtifact,
   forgeExitLaunchSnapshot,
   type TearScenarioV1,
@@ -39,7 +40,26 @@ function actionsAt(tick: number) {
   return Object.freeze([]);
 }
 
+function normalizeLegacyFixtureRevision(value: unknown): unknown {
+  const clone = structuredClone(value) as { bootstrap?: { build?: { revision?: string } } };
+  if (clone.bootstrap?.build?.revision === "working-tree") clone.bootstrap.build.revision = "unbound";
+  return clone;
+}
+
 describe("C30 production headless environment", () => {
+  it("uses an injected build identity for headless bootstrap and marks absent identity unbound", () => {
+    const injected = {
+      version: "0.1.0", revision: "c30-test-revision", target: "test-standalone",
+      rulesetVersion: "tear-rules-test", contentHash: "source-content-test",
+    };
+    const bound = createProductionGhostReplayComposition({ seed: scenario.seed, buildIdentity: injected }).create(undefined);
+    expect(bound.bootstrap.build).toMatchObject(injected);
+
+    const unbound = createProductionGhostReplayComposition({ seed: scenario.seed }).create(undefined);
+    expect(unbound.bootstrap.build.revision).toBe("unbound");
+    expect(unbound.bootstrap.build.revision).not.toBe("working-tree");
+  });
+
   it("projects structured agent observations from the same source-owned production world", () => {
     const environment = createProductionHeadlessEnvironment();
     environment.reset(scenario);
@@ -49,10 +69,45 @@ describe("C30 production headless environment", () => {
     environment.dispose();
 
     expect(opening).toMatchObject({ kind: "observation", observationClass: "structured-state", tick: 0,
-      run: { mode: scenario.start.mode, difficulty: scenario.start.difficulty, weapon: scenario.start.weapon } });
+      run: { mode: scenario.start.mode, difficulty: scenario.start.difficulty, weapon: scenario.start.weapon, stage: "grounds" } });
     expect(advanced.tick).toBe(1);
     expect(advanced.player.x).not.toBe(opening.player.x);
     expect(advanced.availableActions).toContain("weapon");
+  });
+
+  it("delivers ordered causal engine events from ordinary headless transitions", () => {
+    const execute = () => {
+      const environment = createProductionHeadlessEnvironment();
+      environment.reset(scenario);
+      const events = [] as NonNullable<ReturnType<typeof environment.step>["events"]>[number][];
+      for (let tick = 0; tick < 120 && !events.some((event) => event.type === "enemy.spawned"); tick += 1) {
+        events.push(...environment.step([]).events ?? []);
+      }
+      environment.dispose();
+      return events;
+    };
+    const events = execute();
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.map((event) => event.type)).toEqual(expect.arrayContaining(["run.started", "enemy.spawned"]));
+    expect(events.every((event) => event.source === "engine")).toBe(true);
+    expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
+    expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
+    expect(execute()).toEqual(events);
+  });
+
+  it("retains source-owned transition facts on ordinary completed headless episodes", () => {
+    const runner = new TearHeadlessRunner(createProductionHeadlessEnvironment());
+    const episode = runner.run({ id: "current-headless-event-custody", scenario, maxTicks: 120 },
+      { decide: () => Object.freeze([Object.freeze([])]) });
+    runner.dispose();
+    const events = episode.events;
+    expect(events).toBeDefined();
+    if (events === undefined) throw new Error("production headless episodes must retain their native causal facts");
+    expect(events.map((event) => event.type)).toEqual(expect.arrayContaining(["run.started", "enemy.spawned"]));
+    expect(events.every((event) => event.source === "engine")).toBe(true);
+    expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
+    expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
+    expect(Object.isFrozen(events)).toBe(true);
   });
 
   it("runs a DOM-free episode through the same production replay composition", () => {
@@ -272,7 +327,7 @@ describe("C30 production headless environment", () => {
     ]);
     expect(terminal?.terminal.semanticHash).toMatch(/^[a-f0-9]{16}$/u);
     const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-movement-jump.json"), "utf8"));
-    expect(fixture).toEqual(terminal);
+    expect(normalizeLegacyFixtureRevision(fixture)).toEqual(terminal);
   });
 
   it("produces a real natural one-hit failure through the shared source lifecycle", () => {
@@ -292,7 +347,7 @@ describe("C30 production headless environment", () => {
     environment.dispose();
 
     const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-onehit-failure.json"), "utf8"));
-    expect(terminal).toEqual(fixture);
+    expect(terminal).toEqual(normalizeLegacyFixtureRevision(fixture));
     expect(terminal?.terminal).toEqual({
       tick: 222, semanticHash: "ba084c59f720cab1", terminated: true, truncated: false,
     });

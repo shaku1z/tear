@@ -1,9 +1,12 @@
 import { stableVerificationHash } from "../replay/hash";
 import {
+  BOSS_REGISTRY,
   DIFFICULTY_REGISTRY,
   RUN_MODE_REGISTRY,
   WEAPON_REGISTRY,
 } from "./registries";
+import { bossDefinition } from "../gameplay/run/boss-definitions";
+import { STAGE_IDS } from "../gameplay/stages";
 import type { TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import { synthesizeProgression } from "./progression-ledger";
@@ -92,6 +95,18 @@ export function parseTearSdl(source: string): TearSdlDocumentV1 {
   if (typeof parsed.id !== "string" || typeof parsed.seed !== "string" || !isRecord(parsed.start)) {
     throw new TypeError("TearSDL requires id, seed, and start");
   }
+  if (parsed.extends !== undefined && typeof parsed.extends !== "string") {
+    throw new TypeError("TearSDL extends must be a string");
+  }
+  for (const field of ["mode", "difficulty", "weapon"] as const) {
+    if (parsed.start[field] === undefined && parsed.extends !== undefined) continue;
+    if (typeof parsed.start[field] !== "string") throw new TypeError(`TearSDL start.${field} must be a string`);
+  }
+  for (const field of ["stage", "boss", "bossPhase"] as const) {
+    if (parsed.start[field] !== undefined && typeof parsed.start[field] !== "string") {
+      throw new TypeError(`TearSDL start.${field} must be a string`);
+    }
+  }
   return structuredClone(parsed) as unknown as TearSdlDocumentV1;
 }
 
@@ -120,9 +135,33 @@ export function resolveTearSdl(
 ): TearSdlResolved {
   const flattened = flattenTearSdl(document, library);
   const issues: TearSdlIssue[] = [];
-  if (!RUN_MODE_REGISTRY.has(flattened.start.mode)) issues.push({ path: "start.mode", severity: "error", message: "unknown run mode" });
-  if (!DIFFICULTY_REGISTRY.has(flattened.start.difficulty)) issues.push({ path: "start.difficulty", severity: "error", message: "unknown difficulty" });
-  if (!WEAPON_REGISTRY.has(flattened.start.weapon)) issues.push({ path: "start.weapon", severity: "error", message: "unknown weapon" });
+  const start = flattened.start as Readonly<Record<string, unknown>>;
+  const modeValue = start.mode, difficultyValue = start.difficulty, weaponValue = start.weapon;
+  const stageValue = start.stage, bossValue = start.boss, bossPhaseValue = start.bossPhase;
+  if (typeof modeValue !== "string") issues.push({ path: "start.mode", severity: "error", message: "mode must be a string" });
+  else if (!RUN_MODE_REGISTRY.has(modeValue)) issues.push({ path: "start.mode", severity: "error", message: "unknown run mode" });
+  if (typeof difficultyValue !== "string") issues.push({ path: "start.difficulty", severity: "error", message: "difficulty must be a string" });
+  else if (!DIFFICULTY_REGISTRY.has(difficultyValue)) issues.push({ path: "start.difficulty", severity: "error", message: "unknown difficulty" });
+  if (typeof weaponValue !== "string") issues.push({ path: "start.weapon", severity: "error", message: "weapon must be a string" });
+  else if (!WEAPON_REGISTRY.has(weaponValue)) issues.push({ path: "start.weapon", severity: "error", message: "unknown weapon" });
+  if (stageValue !== undefined && (typeof stageValue !== "string" || !STAGE_IDS.includes(stageValue as typeof STAGE_IDS[number]))) {
+    issues.push({ path: "start.stage", severity: "error", message: "stage must be an authored stage ID" });
+  }
+  const validBoss = typeof bossValue === "string" && BOSS_REGISTRY.has(bossValue);
+  if (bossValue !== undefined && !validBoss) issues.push({ path: "start.boss", severity: "error", message: "boss must be an authored boss ID" });
+  if (validBoss && modeValue !== "bossonly") issues.push({ path: "start.mode", severity: "error", message: "boss selection requires bossonly mode" });
+  if (bossPhaseValue !== undefined && bossValue === undefined) {
+    issues.push({ path: "start.bossPhase", severity: "error", message: "boss phase requires a declared boss" });
+  } else if (bossPhaseValue !== undefined && typeof bossPhaseValue !== "string") {
+    issues.push({ path: "start.bossPhase", severity: "error", message: "boss phase must be a string" });
+  } else if (validBoss && typeof bossPhaseValue === "string") {
+    const maxOrdinal = bossDefinition(bossValue).phaseMarks.length + 1;
+    if (!/^[1-9][0-9]*$/u.test(bossPhaseValue)) {
+      issues.push({ path: "start.bossPhase", severity: "error", message: "boss phase must be a source-derived numeric ordinal" });
+    } else if (!Number.isSafeInteger(Number(bossPhaseValue)) || Number(bossPhaseValue) > maxOrdinal) {
+      issues.push({ path: "start.bossPhase", severity: "error", message: `numeric boss phase must be between 1 and ${String(maxOrdinal)}` });
+    }
+  }
   if (flattened.start.wave !== undefined && (!Number.isSafeInteger(flattened.start.wave) || flattened.start.wave < 1)) {
     issues.push({ path: "start.wave", severity: "error", message: "wave must be a positive integer" });
   }
@@ -130,9 +169,9 @@ export function resolveTearSdl(
   if (!structuralValid) {
     throw new TypeError(`invalid TearSDL: ${issues.map((issue) => `${issue.path}: ${issue.message}`).join("; ")}`);
   }
-  const mode = RUN_MODE_REGISTRY.assert(flattened.start.mode);
-  const difficulty = DIFFICULTY_REGISTRY.assert(flattened.start.difficulty);
-  const weapon = WEAPON_REGISTRY.assert(flattened.start.weapon);
+  const mode = RUN_MODE_REGISTRY.assert(modeValue as string);
+  const difficulty = DIFFICULTY_REGISTRY.assert(difficultyValue as string);
+  const weapon = WEAPON_REGISTRY.assert(weaponValue as string);
   const wave = flattened.start.wave ?? 1;
   const validity = evaluateTearStateValidity({
     stateClass: flattened.stateClass,
@@ -308,7 +347,7 @@ export function createExactBossBoundary(
   return Object.freeze({
     ...base,
     id: `${base.id}-${boss}-${phase}-${String(attackFrame)}`,
-    start: Object.freeze({ ...base.start, boss, bossPhase: phase }),
+    start: Object.freeze({ ...base.start, mode: "bossonly", boss, bossPhase: phase }),
     state: Object.freeze({ ...base.state, bossAttackFrame: attackFrame }),
   });
 }

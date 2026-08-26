@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { createUi } from "../../src/presentation/ui";
 import type {
   ScreenControl, ScreenRenderContext, ScreenUiPort,
 } from "../../src/presentation/screens";
 import { createLegacyScreenRenderers } from "../../src/presentation/screens";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
+import { LiveGhostLabHomeController } from "../../src/app/live-ghost-lab-home";
+import type { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
@@ -258,13 +260,29 @@ describe("legacy screen renderer registry", () => {
     ], watch: { status: "ready", detail: "canonical V3 locally available", decisions: 0 } });
     expect(controls.filter((control) => control.action.type === "replay.hub.open").map((control) => control.action))
       .toEqual([{ type: "replay.hub.open", destination: "academy" }, { type: "replay.hub.open", destination: "training-operations" }, { type: "replay.hub.open", destination: "vault" }]);
-    expect(controls.find((control) => control.action.type === "game-agent.open"))
-      .toMatchObject({ label: "GAME AGENT EVIDENCE", action: { type: "game-agent.open" } });
-    expect(controls.find((control) => control.action.type === "run-monitor.open"))
-      .toMatchObject({ label: "RUN MONITOR", action: { type: "run-monitor.open" } });
+    expect(controls.some((control) => control.action.type === "game-agent.open" || control.action.type === "run-monitor.open")).toBe(false);
     expect(controls.find((control) => control.action.type === "run-monitor.control"))
       .toMatchObject({ label: "START RUN MONITOR", action: { type: "run-monitor.control", command: "start" } });
     expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
+  });
+
+  it("keeps Run Monitor embedded and derives unavailable routes from one watch snapshot", () => {
+    const snapshot = vi.fn(() => ({ status: "ready" as const, detail: "canonical V3 locally available", decisions: 0 }));
+    const view = new LiveGhostLabHomeController({ snapshot } as unknown as LivePlayerWatchController).snapshot();
+    expect(snapshot).toHaveBeenCalledOnce();
+    expect(view.routes.map((route) => route.id)).not.toContain("watch");
+    expect(view.routes.map((route) => route.id)).not.toContain("botevidence");
+    expect(view.unavailable.map((entry) => entry.label)).not.toContain("RUN MONITOR");
+    expect(view.unavailable.map((entry) => entry.label)).toContain("GAME AGENT EVIDENCE");
+  });
+
+  it("keeps an unavailable Run Monitor out of available routes and hides its commands", () => {
+    const view = new LiveGhostLabHomeController({ snapshot: () => ({ status: "unavailable", detail: "no policy", decisions: 0 }) } as unknown as LivePlayerWatchController).snapshot();
+    expect(view.routes.map((route) => route.label)).not.toContain("RUN MONITOR");
+    expect(view.unavailable.filter((entry) => entry.label === "RUN MONITOR")).toHaveLength(1);
+    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.ghostlab(view);
+    expect(controls.some((control) => control.action.type === "run-monitor.control")).toBe(false);
   });
 
   it("renders Bot Evidence as a read-only unavailable or exact-report projection", () => {

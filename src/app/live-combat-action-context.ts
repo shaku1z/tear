@@ -81,6 +81,7 @@ export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
     weaponSegmentContact: Collision["weaponSegmentContact"];
     createCharger: (x: number, y: number) => Enemy;
     createReflection: (x: number, y: number) => Enemy;
+    recordBossSupportSpawn: (enemy: CombatEnemy, bossId: string) => void;
     enemyDefeated: Collision["enemyDefeated"]; ghostSample: Collision["ghostSample"];
     restorePlatforms: LiveKillHost["restorePlatforms"];
     playSound: (name: string, argument?: unknown) => void;

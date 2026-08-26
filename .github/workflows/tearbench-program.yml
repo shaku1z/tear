@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -41,11 +41,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Select and run HEAD diff evidence
+      - name: Select and run complete protected-history evidence
         shell: bash
         run: |
           mkdir -p artifacts/tearbench
-          git diff --name-only HEAD^ HEAD > artifacts/tearbench/changed-files.txt
+          root_commit="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          git diff --name-only "$root_commit" HEAD > artifacts/tearbench/changed-files.txt
           pnpm tearbench select --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-selection.json
           pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-ci-selection.json
       - run: pnpm requirements:check
@@ -66,7 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -80,7 +81,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts/tearbench
-          git diff --name-only HEAD^ HEAD > artifacts/tearbench/changed-files.txt
+          root_commit="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          git diff --name-only "$root_commit" HEAD > artifacts/tearbench/changed-files.txt
           pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/weekly-ci-selection.json
           pnpm check:weekly
       - uses: actions/upload-artifact@v4

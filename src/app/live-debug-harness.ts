@@ -69,8 +69,44 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
   if (!context.enabled) return;
   const d = context.dependencies;
   const clearCombat = (): void => { context.state.setEnemies([]); context.state.setProjectiles([]); };
+  const prepareCurrentGameplay = (): void => {
+    if (context.cinema.active) context.cinema.cancel("tearbench-current-gameplay");
+    const player = context.state.player();
+    if (player === undefined) throw new Error("Current gameplay scenario requires a live player");
+    Object.assign(player, { y: d.CONFIG.world.groundY - player.hh, vy: 0, onGround: true });
+  };
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
+    prepareCurrentGameplayScenario: prepareCurrentGameplay,
+    prepareNaturalWaveClearScenario() {
+      prepareCurrentGameplay();
+      const run = runOf(context.state);
+      if (context.lifecycle.phase === "wave-prepared") context.lifecycle.activateWave();
+      if (context.lifecycle.phase !== "wave-active") {
+        throw new Error(`Current wave-clear scenario requires an active wave, received ${context.lifecycle.phase}`);
+      }
+      run.spawnQueue.length = 0;
+      context.state.setEnemies([]);
+    },
+    /** Adds a real live actor without a wave-spawn fact so ownership projection can prove it stays unrelated. */
+    addUnownedWaveObserverActor() {
+      if (context.lifecycle.phase !== "wave-active") {
+        throw new Error(`Unowned wave observer requires an active live wave, received ${context.lifecycle.phase}`);
+      }
+      const actor = context.entities.createEnemy("charger", context.width - 180,
+        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, runOf(context.state));
+      Object.assign(actor, { vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 30, hitCd: 0, aliveT: 0,
+        behavior: "bull", atk: "idle", atkT: 0, atkCd: 30, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0 });
+      context.state.setEnemies([...context.state.enemies(), actor]);
+    },
+    prepareBossSupportScenario(id: "aldric" | "echo") {
+      if (context.cinema.active) context.cinema.cancel("tearbench-current-boss-support");
+      const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === id);
+      if (boss === undefined) throw new Error(`Current boss support requires its actual ${id} encounter`);
+      Object.assign(boss, { spawnT: 0, introT: 0,
+        ...(id === "echo" ? { _live: true, spawnClone: true } : { spawnAdds: true }) });
+    },
     /** Exact-tick parity fixture: author one Charger after the run exists, before its next step. */
     prepareEnemyParityScenario() {
       const player = context.state.player();
@@ -136,7 +172,8 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       const host = context.entities.createEnemy("echo", 1200, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, run) as
         unknown as GameEnemy & { _live: boolean };
       Object.assign(host, {
-        _live: true, vx: 0, vy: 0, onGround: true, spawnT: 0, introT: 0,
+        bossId: "echo", presentationId: "echo", _live: true,
+        vx: 0, vy: 0, onGround: true, spawnT: 0, introT: 0,
         stun: 0, hitCd: 0, aliveT: 0, variant: "", variantName: "", affixes: [], affixCount: 0,
       });
       context.state.setEnemies([host]);
@@ -169,9 +206,22 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     startBoss(boss: BossId, difficulty?: RunDifficulty) {
       context.selectBoss(boss); context.startRun("bossonly", difficulty ?? "normal");
     },
-    openDraft(options?: { expanded?: boolean; rerolls?: number; reserve?: boolean }) {
+    bossStage(boss: BossId) {
+      const authored = d.STAGES.find((stage) => stage.boss === boss);
+      if (authored === undefined) throw new Error(`No authored stage exists for boss ${boss}`);
+      const current = context.stage.current;
+      const currentId: unknown = typeof current === "object" && current !== null
+        ? Reflect.get(current, "id") : undefined;
+      return Object.freeze({
+        currentId: typeof currentId === "string" ? currentId : null,
+        currentIndex: context.stage.index,
+        authoredId: authored.id,
+        authoredIndex: d.STAGES.indexOf(authored),
+      });
+    },
+    openDraft(options?: { expanded?: boolean; rerolls?: number; reserve?: boolean; preserveRun?: boolean }) {
       const selected = { expanded: true, rerolls: 2, reserve: true, ...options };
-      context.startRun("endless", "normal");
+      if (selected.preserveRun !== true) context.startRun("endless", "normal");
       const run = runOf(context.state); run.wave = Math.max(1, run.wave); run.spawnQueue.length = 0; context.state.setEnemies([]);
       clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("draft");
       run.mods.expandedDraft = selected.expanded; run.mods.draftRerolls = Math.max(0, selected.rerolls | 0);

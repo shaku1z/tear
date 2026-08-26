@@ -25,7 +25,7 @@ import type {
 
 export type TearRuntimeAccessClass = "A" | "B" | "C";
 
-export interface TearRuntimeEnvironmentMetrics {
+export interface TearRuntimeEnvironmentMetrics extends Readonly<Record<string, number>> {
   readonly resets: number;
   readonly fixedTicks: number;
   readonly acceptedActions: number;
@@ -147,9 +147,11 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly platformsForStage: (index: number) => readonly unknown[];
   readonly actorId: (enemy: TearSimulationEnemyView) => string;
   readonly stage: () => Readonly<{ name: string; index: number }>;
-  readonly lifecycle: () => Readonly<{ phase: string; wave?: number | null; bossWave?: boolean; reward?: string | null }>;
+  readonly lifecycle: () => Readonly<{ phase: string; wave?: number | null; bossWave?: boolean; reward?: string | null; revision?: number }>;
   readonly bossIntroActive: () => boolean;
   readonly choiceIds: () => readonly string[];
+  /** Present only when the host can resolve focus to a real current choice. */
+  readonly focusedControlId?: () => string | undefined;
   readonly progression: () => Readonly<{
     wallet: number;
     lifetimeEarned: number;

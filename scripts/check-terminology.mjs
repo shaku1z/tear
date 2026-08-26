@@ -296,7 +296,7 @@ function lineNumber(text, offset) {
 
 function aliasPattern(alias) {
   const escaped = escapeRegExp(alias).replaceAll("\\ ", "\\s+");
-  return new RegExp(`(^|[^A-Za-z0-9])${escaped}(?=$|[^A-Za-z0-9])`, "iu");
+  return new RegExp(`(^|[^A-Za-z0-9])${escaped}(?=$|[^A-Za-z0-9])`, "giu");
 }
 
 function isCodeToken(segmentText, alias) {
@@ -331,21 +331,21 @@ export function scanDeprecatedUserFacingCopy(root, registry) {
     for (const segment of userFacingSegments(relativePath, text, scan)) {
       for (const { termId, alias, pathPatterns } of termAliases) {
         if (pathPatterns && !pathMatchesAny(relativePath, pathPatterns)) continue;
-        const match = aliasPattern(alias).exec(segment.text);
-        if (!match) continue;
         if (isCodeToken(segment.text, alias)) continue;
-        const offset = segment.offset + (match.index ?? 0);
         const allowance = allowedOccurrence(relativePath, termId, registry);
-        const finding = {
-          relativePath,
-          line: lineNumber(text, offset),
-          termId,
-          alias,
-          classification: allowance?.classification ?? "unallowlisted",
-          allowlistId: allowance?.allowlistId ?? null
-        };
-        findings.push(finding);
-        if (!allowance) errors.push(`${relativePath}:${finding.line} contains deprecated user-facing alias "${alias}" for ${termId} without an explicit compatibility/history allowlist`);
+        for (const match of segment.text.matchAll(aliasPattern(alias))) {
+          const aliasOffset = (match.index ?? 0) + (match[1]?.length ?? 0);
+          const finding = {
+            relativePath,
+            line: lineNumber(text, segment.offset + aliasOffset),
+            termId,
+            alias,
+            classification: allowance?.classification ?? "unallowlisted",
+            allowlistId: allowance?.allowlistId ?? null,
+          };
+          findings.push(finding);
+          if (!allowance) errors.push(`${relativePath}:${finding.line} contains deprecated user-facing alias "${alias}" for ${termId} without an explicit compatibility/history allowlist`);
+        }
       }
     }
   }

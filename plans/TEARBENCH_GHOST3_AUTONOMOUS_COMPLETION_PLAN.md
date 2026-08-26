@@ -1,4 +1,4 @@
-# TearBench, TearBot, State Forge, and Ghost 3.0 Autonomous Completion Plan
+# TearBench, Game Agent, Scenario Console, and Ghost 3.0 Autonomous Completion Plan
 
 ## Authority metadata
 
@@ -7,16 +7,19 @@
 - **Closure condition:** C21–C40 checkpoint exit gates pass with completion-grade evidence or explicit authorized dispositions; foundation gates alone never close the program.
 - **Branch policy:** Start each checkpoint slice from protected canonical `main` in a short-lived `codex/*` branch; historical branch names identify provenance only and are not live development targets.
 
-**Progress state:** In progress during C27/C27A
+**Progress state:** Current-game alignment `TB-F0` through `TB-F7` is accepted after repeated review corrected the skippable/unbound direct Sword trace and fixture-only wave distinction. The direct trace is mandatory and exact-source/build-bound; the integrated live proof retains wave-before-run source ordering and distinguishes source-spawned wave actors from an unrelated production actor. Acceptance remains conditional on the exact documentation commit's canonical gate. Existing selector/terminology, production-derived encounter/generic-backend, and five live/headless-to-Ghost proofs remain valid without claiming five direct live-to-ordinary-headless traces or broader product completion. C28/C29 passed their named gates; C30/C31 remain active; C32 passed its named gate; C33-C40 remain open, partial, or uncertified.
 **Created:** 2026-07-23
 **Source authority:** `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`, version 0.6, SHA-256 `007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE`
 **Supersedes for completion claims:** `plans/TEARBENCH_GHOST3_ACTION_PLAN.md`
 **Purpose:** Convert every remaining part of the original vision into executable work, with gates that require real integration and user-visible outcomes.
-**Current progress:** C21-C24 and C26 passed. C25's implementation foundation is
-verified, but its Class C exit gate remains open. C27 implementation is active;
-C27A is a blocking runtime-architecture correction before replay-world,
-headless, or learning completion claims. Forty executable slices now
-include shared world construction, exact 13-scenario state/native-event parity
+**Current-game alignment:** [`docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md`](../docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md) defines the blocking current-content, executable-scenario, runtime-parity, evidence-truth, and permanent synchronization prerequisites.
+**Current progress:** C21-C24 and C26 passed their named gates; C25's Class C
+exit remains open; C27 remains active; C27A and C28 are closed; C29 is closed
+only against its named semantic replay gate; C30/C31 are active; C32 is closed
+against its bounded policy-runtime gate; C33-C35 are active; C36 is open; C37
+has a player-visible partial slice; C38/C39 are bounded partial slices; and C40
+has a verifier foundation but no release certificate. Historical C27A evidence
+includes shared world construction, exact 13-scenario state/native-event parity
 (5,732 ticks / 33 native facts), portable combat/outcome/reward/finale paths, a
 natural wave/reward crossing, and a real Source victory from a certified
 reconstructed wave-49 frontier plus explicit one-hit State Forge child. Live
@@ -28,8 +31,13 @@ observable, and the captured terminal external-decision journal matches live to
 detached exactly. The real Source run still contains only logical-target mix
 changes and voice-cap cue rejections, not output. This remains deliberately
 narrower than randomized particle internals, pixels, durable profile/cloud/
-replay/analytics effects, audible audio, or device haptics. The work does not
-yet provide a portable full-world runtime or a naturally played 50-wave campaign.
+replay/analytics effects, audible audio, or device haptics. The initial slice
+also includes bounded current live-to-Ghost mechanic proofs for all five
+active weapons. Separate ordinary-headless-to-Ghost and independently replayed causal proofs,
+plus declared encounter/backend acceptance, remain valid; the direct Sword identity
+binding and integrated live wave-ownership correction passed their focused gates and
+repeated review. No detached parity for every encounter, portable full-world runtime,
+or naturally played 50-wave campaign is claimed.
 
 ### Execution record through C24
 

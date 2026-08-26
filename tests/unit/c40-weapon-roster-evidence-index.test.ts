@@ -28,10 +28,10 @@ describe("C40 weapon-roster engineering evidence index", () => {
       status: "engineering-non-certifying",
     });
     expect(index.proofs.map(({ weapon, actionFamily }) => `${weapon}:${actionFamily}`)).toEqual([
-      "sword:seam-crosscut",
+      "sword:reversal-threadcut",
       "hammer:meteor",
       "greatsword:wheelcut",
-      "chainblade:bind-yank",
+      "chainblade:hook-sling",
       "riftlock:loose-cannon",
     ]);
   });

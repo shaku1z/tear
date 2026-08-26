@@ -36,7 +36,13 @@ export interface LiveContentRuntimeApi<TEnemy extends LiveSpawnEnemy> {
 export function createLiveContentRuntime<TEnemy extends LiveSpawnEnemy>(
   options: LiveContentRuntimeOptions<TEnemy>,
 ): LiveContentRuntimeApi<TEnemy> {
-  const bossById = (id: string): TEnemy => options.createBoss(id);
+  const bossById = (id: string): TEnemy => {
+    const enemy = options.createBoss(id);
+    // Every authored boss construction path, including mini-bosses, carries
+    // the source-selected identity into observation and event projection.
+    enemy.bossId = id;
+    return enemy;
+  };
   const makeBoss = (): TEnemy => {
     const run = options.run();
     if (run === null) throw new Error("boss creation requires an active run");

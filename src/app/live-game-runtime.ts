@@ -358,16 +358,16 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
         logWeaponEvent, weaponWorldImpact: () => { const effect = weaponHook("onWorldImpact",
           { config: CONFIG, blade: liveBlade(), player: livePlayer(), platforms: stageRuntime.platforms, x: liveBlade().x, y: liveBlade().y });
           return isWeaponEffect(effect) ? effect : null; },
-        startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) &&
-          !CINEMA.active && startBossTransformation(enemy, request),
+        startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) && !CINEMA.active && startBossTransformation(enemy, request),
         achievementsEnabled: achTracks,
         setBossBanner: (text, color) => { hostState.setBossBeat({ text, color, t: 1.15, dur: 1.15 }); },
         // Raw device edge in every live run (recording is passive; the authoritative
         // input only replays sealed envelopes during verification).
         consumeThrow: () => liveInputAdapter.consumeThrow(() => Input.consumeThrow()),
         weaponSegmentContact: weaponCapsuleIntersectsSegment,
-        createCharger: (x, y) => worldEntities.createEnemy("charger", x, y, liveRun()),
-        createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, liveRun()),
+        createCharger: (x, y) => worldEntities.createEnemy("charger", x, y, liveRun()), createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, liveRun()),
+        recordBossSupportSpawn: (enemy, bossId) => { const variant: unknown = Reflect.get(enemy, "variantName"); GAMEPLAY_EVENTS.emit({ kind: "spawn",
+          actorId: combatRuntime.id(enemy, "enemy"), actorKind: enemy.kind, x: enemy.x, y: enemy.y, variantName: typeof variant === "string" ? variant : "", bossId }); },
         enemyDefeated: (enemy) => {
           if (isGameEnemy(enemy) && isEnemySample(enemy)) {
             GAMEPLAY_EVENTS.emit({ kind: "death", actorId: combatRuntime.id(enemy, "enemy"), cause: "combat" });
@@ -659,7 +659,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       platforms: () => stageRuntime.platforms,
       platformsForStage: (index) => dependencies.stagePlatforms(index, CONFIG),
       stage: () => ({ ...stageRuntime.current, index: stageRuntime.index }), lifecycle: () => RUN_LIFECYCLE.snapshot(), bossIntroActive: () => hostState.bossIntro() !== null,
-      choiceIds: () => liveRewardChoiceIds(actionRouting), progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => session.outcome(), screen: () => state,
+      choiceIds: () => liveRewardChoiceIds(actionRouting), focusedControlId: () => liveRewardChoiceIds(actionRouting)[interfaceInteraction.focus()], progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => session.outcome(), screen: () => state,
       setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { session.setSelectedBoss(bossId); },
       selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { session.setRunSeed(seed); }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },

@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
 
 function targetHtml(target: "standalone" | "crazygames"): Plugin {
   return {
@@ -94,6 +95,7 @@ function applicationChunk(id: string): string | undefined {
 export default defineConfig(({ mode }) => {
   const testBuild = mode === "test-standalone" || mode === "test-crazygames";
   const target = mode === "crazygames" || mode === "test-crazygames" ? "crazygames" : "standalone";
+  const source = readSourceIdentitySync(process.cwd());
   return {
     // CrazyGames unpacks uploads below a portal-owned path, so bundle assets
     // must be relative instead of rooted at the host origin.
@@ -133,6 +135,11 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       __TEAR_TEST_BUILD__: JSON.stringify(testBuild),
+      __TEAR_BUILD_REVISION__: JSON.stringify(source.revision),
+      __TEAR_BUILD_SOURCE_STATE__: JSON.stringify(source.state),
+      __TEAR_BUILD_SOURCE_FINGERPRINT__: JSON.stringify(source.fingerprint),
+      __TEAR_BUILD_MODE__: JSON.stringify(mode),
+      __TEAR_BUILD_TARGET__: JSON.stringify(target),
     },
     build: {
       outDir: testBuild ? `dist/test-${target}` : `dist/${target}`,

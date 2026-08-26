@@ -165,7 +165,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     gameplayEvents: GAMEPLAY_EVENTS,
     defaults: {
       rulesetVersion: "tear-rules-2026.07",
-      build: { version: "0.1.0", revision: import.meta.env.MODE, target },
+      build: { version: "0.1.0", revision: __TEAR_BUILD_REVISION__, target },
       ticksPerSecond: 120,
       weaponId: "sword",
       weaponSchemaVersion: "final-five-v1",

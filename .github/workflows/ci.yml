@@ -28,23 +28,43 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Prove release preflight rejects unsafe repository states
-        run: node --test tests/release-preflight.test.mjs
-      - name: Select and run diff-aware TearBench evidence
+      - name: Resolve focused validation scope
+        id: validation-scope
         shell: bash
         run: |
           mkdir -p artifacts/tearbench
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
           else
-            git diff --name-only "${{ github.sha }}^" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+            before="${{ github.event.before }}"
+            if [[ -n "$before" && "$before" != "0000000000000000000000000000000000000000" ]]; then
+              git diff --name-only "$before" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+            else
+              git show --format= --name-only "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
+            fi
           fi
-          pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
+          gameplay_required=true
+          if [[ "${{ github.event_name }}" == "pull_request" ]] && node --input-type=module -e 'import { readFileSync } from "node:fs"; const files = readFileSync("artifacts/tearbench/changed-files.txt", "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT)\.md$)/u.test(file)) ? 0 : 1)'; then
+            gameplay_required=false
+          fi
+          echo "gameplay_required=$gameplay_required" >> "$GITHUB_OUTPUT"
+      - run: pnpm exec playwright install --with-deps chromium
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
+      - name: Prove release preflight rejects unsafe repository states
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
+        run: node --test tests/release-preflight.test.mjs
+      - name: Select and run diff-aware TearBench evidence
+        run: pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
+      - name: Validate documentation-only authority and terminology
+        if: steps.validation-scope.outputs.gameplay_required == 'false'
+        run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm requirements:check
       - name: Check game-reference artifact publication contract
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
         run: pnpm test:game-reference-artifact
       - run: xvfb-run -a pnpm check:functional
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
       - uses: actions/upload-artifact@v4
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
         with:
           name: tear-release-targets-${{ github.sha }}
           path: |

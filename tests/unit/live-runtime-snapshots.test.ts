@@ -47,6 +47,24 @@ describe("live State Forge snapshot provenance", () => {
     expect(snapshot.provenance.sourceId).toBe("ghost-live-bootstrap-unit");
   });
 
+  it("marks snapshots explicitly unbound when no build identity is injected", () => {
+    const snapshot = captureLiveStateForgeSnapshot(input());
+
+    expect(snapshot.provenance.build.revision).toBe("unbound");
+    expect(snapshot.provenance.build.revision).not.toBe("working-tree");
+  });
+
+  it("accepts the composition buildIdentity alias and rejects disagreement", () => {
+    const buildIdentity: StaticBuild = {
+      version: "0.1.0", revision: "injected-revision", target: "test-standalone", rulesetVersion: "tear-rules-unit",
+      contentHash: "content-unit",
+    };
+    const snapshot = captureLiveStateForgeSnapshot({ ...input(), buildIdentity });
+    expect(snapshot.provenance.build).toMatchObject(buildIdentity);
+
+    expect(() => captureLiveStateForgeSnapshot({ ...input(buildIdentity), buildIdentity: { ...buildIdentity, revision: "other" } })).toThrow(/aliases disagree/u);
+  });
+
   it("keeps the bootstrap identity stable while upgrades change later keyframe configuration", () => {
     const staticBuild: StaticBuild = {
       version: "0.1.0", revision: "unit", target: "test-standalone", rulesetVersion: "tear-rules-unit",

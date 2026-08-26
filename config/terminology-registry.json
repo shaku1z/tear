@@ -426,11 +426,13 @@
       "src/presentation/**/*.tsx",
       "src/app/**/*screen*.ts",
       "src/app/live-*-home.ts",
+      "src/app/live-player-watch-controller.ts",
       "src/app/live-interface-composition.ts",
       "src/app/live-screen-*.ts",
       "src/app/settings-controller.ts",
       "src/audio/signal/*.ts",
       "src/audio/music/*.ts",
+      "src/agents/panel-surface.ts",
       "src/agents/live-watch-agent-*.ts",
       "src/ghost/player-experiences.ts",
       "src/tearbench/browser/*.ts",
@@ -438,6 +440,7 @@
       "public/**/*.html",
       "index.html",
       "docs/*.md",
+      "docs/tearbench-ghost3-evidence-catalog.json",
       "README.md"
     ],
     "sourceLiteralExtensions": [
@@ -1461,6 +1464,25 @@
         }
       },
       {
+        "id": "compat-run-monitor-panel-surface",
+        "pathPattern": "src/agents/panel-surface.ts",
+        "termIds": [
+          "game-agent",
+          "run-monitor"
+        ],
+        "owner": "Game Agent/Run Monitor integration owner",
+        "reason": "The disposable panel preserves separately routed historical Watch Agent labels while the canonical Run Monitor panel owns current player-facing labels.",
+        "testEvidence": [
+          "tests/unit/watch-build-choice.test.ts",
+          "tests/browser-game-agent-run-monitor.js",
+          "tests/terminology-checkers.test.mjs"
+        ],
+        "expiry": {
+          "checkpoint": "G4-F-GAME-AGENT",
+          "condition": "Remove historical panel labels only after its Game Agent/Run Monitor compatibility route and production-isolation evidence are retired by their owners."
+        }
+      },
+      {
         "id": "compat-game-agent-app",
         "pathPattern": "src/app/live-bot-evidence-controller.ts",
         "termIds": [
@@ -1757,6 +1779,15 @@
           "checkpoint": "G4-A",
           "condition": "Remove old labels when each current feature inventory entry is canonicalized with compatibility evidence."
         }
+      },
+      {
+        "id": "compat-current-generated-evidence-catalog",
+        "pathPattern": "docs/tearbench-ghost3-evidence-catalog.json",
+        "termIds": ["training-operations", "replay-editor", "replay-hub", "game-agent", "training-archive", "run-monitor"],
+        "owner": "TearBench evidence-catalog owner",
+        "reason": "The active evidence catalog retains source-era implementation labels inside hash-bound evidence notes; its exact path is scanned without treating those labels as current player copy.",
+        "testEvidence": ["scripts/tearbench-requirements.mjs", "tests/terminology-checkers.test.mjs", "docs/checkpoints/C21_NON_LOSSY_REQUIREMENTS_AUDIT.md"],
+        "expiry": { "checkpoint": "G4-A", "condition": "Canonicalize generated evidence notes only when source/evidence identity and hash-bound historical trace remain intact." }
       },
       {
         "id": "compat-current-docs-architecture",

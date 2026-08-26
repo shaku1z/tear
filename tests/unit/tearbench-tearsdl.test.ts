@@ -71,6 +71,25 @@ describe("TearSDL and checkpoint forking", () => {
     expect(resolved.plausibility).toMatchObject({ plausible: false, provisional: true });
   });
 
+  it("inherits missing start fields without accepting malformed root or child fields", () => {
+    const child = parseTearSdl(JSON.stringify({
+      ...base,
+      id: "partial-child",
+      extends: base.id,
+      start: { wave: 7 },
+    }));
+    expect(resolveTearSdl(child, new Map([[base.id, base]])).scenario.start).toMatchObject({
+      mode: base.start.mode,
+      difficulty: base.start.difficulty,
+      weapon: base.start.weapon,
+      wave: 7,
+    });
+    expect(() => parseTearSdl(JSON.stringify({ ...base, start: { wave: 7 } }))).toThrow(/start\.mode must be a string/u);
+    expect(() => parseTearSdl(JSON.stringify({ ...base, extends: base.id, start: { mode: 4 } })))
+      .toThrow(/start\.mode must be a string/u);
+    expect(() => parseTearSdl(JSON.stringify({ ...base, extends: 4 }))).toThrow(/extends must be a string/u);
+  });
+
   it("rejects inheritance cycles and constructor-selecting input", () => {
     const cyclic = { ...base, extends: "base-combat" };
     expect(() => resolveTearSdl(cyclic, new Map([[base.id, cyclic]]))).toThrow(/cycle/u);
@@ -78,11 +97,36 @@ describe("TearSDL and checkpoint forking", () => {
     expect(() => resolveTearSdl(parseTearSdl(hostile))).toThrow(/forbids property/u);
   });
 
+  it("rejects unknown or non-string authored stage and boss IDs", () => {
+    expect(() => parseTearSdl(JSON.stringify({ ...base, start: { ...base.start, stage: 1 } }))).toThrow(/start\.stage must be a string/u);
+    expect(() => resolveTearSdl({ ...base, start: { ...base.start, stage: 1 } as never })).toThrow(/start\.stage.*authored stage ID/u);
+    expect(() => resolveTearSdl({ ...base, start: { ...base.start, stage: "forgotten" } })).toThrow(/start\.stage.*authored stage ID/u);
+    expect(() => resolveTearSdl({ ...base, start: { ...base.start, mode: "bossonly", boss: "warden-2" } })).toThrow(/start\.boss.*authored boss ID/u);
+  });
+
+  it("requires a declared boss and accepts only source-derived numeric phase ordinals", () => {
+    expect(() => resolveTearSdl({ ...base, start: { ...base.start, bossPhase: "2" } })).toThrow(/boss phase requires a declared boss/u);
+    for (const bossPhase of ["1", "2", "3"]) {
+      expect(resolveTearSdl({ ...base, start: { ...base.start, mode: "bossonly", boss: "warden", bossPhase } }).scenario.start)
+        .toMatchObject({ mode: "bossonly", boss: "warden", bossPhase });
+    }
+    for (const bossPhase of ["enraged", ".65", "01"]) {
+      expect(() => resolveTearSdl({ ...base, start: { ...base.start, mode: "bossonly", boss: "warden", bossPhase } }))
+        .toThrow(/source-derived numeric ordinal/u);
+    }
+    expect(() => resolveTearSdl({ ...base, start: { ...base.start, mode: "bossonly", boss: "warden", bossPhase: "4" } }))
+      .toThrow(/between 1 and 3/u);
+  });
+
+  it("rejects a boss selected through a non-boss run mode", () => {
+    expect(() => resolveTearSdl({ ...base, start: { ...base.start, boss: "warden" } })).toThrow(/requires bossonly mode/u);
+  });
+
   it("creates threshold-minus, threshold, threshold-plus and exact boss boundaries", () => {
     const boundaries = createBoundaryTearSdl(base, "parrySpeed", 20, 0.01);
     expect(boundaries.map((entry) => entry.state?.parrySpeed)).toEqual([19.99, 20, 20.01]);
-    const boss = createExactBossBoundary(base, "warden", "enraged", 37);
-    expect(resolveTearSdl(boss).scenario.start).toMatchObject({ boss: "warden", bossPhase: "enraged" });
+    const boss = createExactBossBoundary(base, "warden", "2", 37);
+    expect(resolveTearSdl(boss).scenario.start).toMatchObject({ boss: "warden", bossPhase: "2" });
     expect(boss.state).toMatchObject({ bossAttackFrame: 37 });
   });
 

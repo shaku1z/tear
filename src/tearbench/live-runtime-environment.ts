@@ -3,13 +3,17 @@ import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import type { TearSimulationEnemyView } from "../simulation/runtime-world-port";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1,
   TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
-import { DIFFICULTY_REGISTRY, ENTITY_KIND_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY,
-  type TearEntityKindId } from "./registries";
+import { DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
+import {
+  canonicalObservationActions,
+  canonicalObservationEnemyKind,
+  canonicalObservationStage,
+  createSourceWaveOwnershipTracker,
+} from "./observation-identity";
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
@@ -24,17 +28,6 @@ import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
   TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
   TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 export type * from "./live-runtime-contracts";
-function availableActions(screen: string, runMode: string): readonly GameAction["type"][] {
-  if (screen === "playing") return Object.freeze([
-    "move", "aim", "weapon", "jump", "dash", ...(runMode === "playground" ? ["ability" as const] : []), "pause",
-  ]);
-  if (screen === "draft") return Object.freeze(["draft-choice"]);
-  if (screen === "reserve") return Object.freeze(["reserve-choice", "cancel"]);
-  if (screen === "tierup") return Object.freeze(["tier-up-choice"]);
-  if (screen === "paused") return Object.freeze(["confirm", "cancel", "pause"]);
-  return Object.freeze(["interact", "confirm", "cancel"]);
-}
-
 function numericSeed(seed: string): number {
   let hash = 0x811c9dc5;
   for (let index = 0; index < seed.length; index += 1) {
@@ -44,25 +37,15 @@ function numericSeed(seed: string): number {
   return (hash >>> 0) || 1;
 }
 
-function entityKind(enemy: TearSimulationEnemyView): TearEntityKindId {
-  let raw = enemy.kind;
-  if (typeof enemy.bossId === "string" && enemy.bossId.length > 0) raw = enemy.bossId;
-  else if (enemy.kind === "support" && "supportType" in enemy && typeof enemy.supportType === "string") {
-    raw = enemy.supportType;
-  } else if (enemy.kind === "reflection") raw = "reflection";
-  else if (enemy.kind === "wisp" && enemy.isVoidWisp === true) raw = "void-wisp";
-  const candidate = raw.toLowerCase();
-  if (!ENTITY_KIND_REGISTRY.has(candidate)) throw new RangeError(`unregistered live entity kind: ${candidate || "(empty)"}`);
-  return candidate;
-}
-
 /** Canonical live projection over the same host-owned actors consumed by gameplay;
  * callers cannot supply transition fixtures. */
 export function projectLiveTearObservation(
   context: Pick<LiveTearRuntimeEnvironmentContext, "state" | "stage" | "lifecycle" | "screen" |
-    "width" | "height" | "actorId" | "choiceIds" | "platforms">,
+    "width" | "height" | "actorId" | "choiceIds" | "platforms" | "availableGameActions" | "focusedControlId">,
   tick: number,
   accessClass: Exclude<TearRuntimeAccessClass, "C">,
+  lastProgressTick?: number,
+  waveActorIds?: ReadonlySet<string>,
 ): TearObservationV1 {
   const run = context.state.run();
   const player = context.state.player();
@@ -72,6 +55,9 @@ export function projectLiveTearObservation(
   }
   const livingEnemies = context.state.enemies().filter((enemy) => !enemy.dead);
   const boss = livingEnemies.find((enemy) => enemy.isBoss);
+  const stage = canonicalObservationStage(context.stage().index);
+  const lifecycle = context.lifecycle();
+  const focusedId = context.focusedControlId?.();
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT,
     kind: "observation",
@@ -94,43 +80,55 @@ export function projectLiveTearObservation(
         behaviorState = typeof enemy.behavior === "string" && enemy.behavior.length > 0 ? enemy.behavior : undefined,
         behaviorMode = projectLiveBehaviorMode(enemy, accessClass);
       return Object.freeze({
-        id: context.actorId(enemy), kind: entityKind(enemy), x: enemy.x, y: enemy.y,
+        id: context.actorId(enemy), kind: canonicalObservationEnemyKind(enemy), x: enemy.x, y: enemy.y,
         vx: enemy.vx, vy: enemy.vy, hpRatio: enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0,
         state: authoredState ?? attackState ?? behaviorState ?? "idle",
         ...(behaviorMode === undefined ? {} : { behaviorMode }),
         ...projectLiveActorMechanics(enemy, accessClass),
         threat: enemy.isBoss ? 1 : Math.min(1, Math.max(0, enemy.contactDmg / Math.max(1, player.maxHp))),
       });
-    }), ...projectLiveProjectiles(context.state.projectiles(), player, accessClass)]),
-    navigation: projectLiveNavigationObservation(context.platforms(), context.stage().name),
+    }), ...projectLiveProjectiles(context.state.projectiles(), player, accessClass, (projectile) => {
+      const candidate = projectile.sourceEnemyId ?? projectile.ownerId;
+      if (typeof candidate === "string" && livingEnemies.some((enemy) => context.actorId(enemy) === candidate)) return candidate;
+      const identity = projectile as { readonly sourceEnemy?: unknown; readonly owner?: unknown };
+      const owner = identity.sourceEnemy ?? identity.owner;
+      const source = livingEnemies.find((enemy) => enemy === owner);
+      return source === undefined ? undefined : context.actorId(source);
+    })]),
+    navigation: projectLiveNavigationObservation(context.platforms(), stage),
     run: Object.freeze({
       mode: RUN_MODE_REGISTRY.assert(run.mode),
       difficulty: DIFFICULTY_REGISTRY.assert(run.diff),
       weapon: WEAPON_REGISTRY.assert(run.weaponId),
-      stage: context.stage().name, wave: run.wave, score: run.score, elapsedTicks: tick,
+      stage, wave: run.wave, score: run.score, elapsedTicks: tick,
     }),
     ...(accessClass === "A" ? {
       diagnostics: Object.freeze({
         worldBounds: Object.freeze({ minX: 0, maxX: context.width, minY: 0, maxY: context.height }),
-        waveComplete: livingEnemies.length === 0 && run.spawnQueue.length === 0,
-        livingWaveEnemies: livingEnemies.length,
+        waveComplete: lifecycle.phase === "wave-cleared" || lifecycle.phase === "reward-pending",
+        ...(waveActorIds === undefined
+          ? { waveOwnership: "unavailable" as const }
+          : { waveOwnership: "source-events" as const,
+            livingWaveEnemies: livingEnemies.filter((enemy) => waveActorIds.has(context.actorId(enemy))).length }),
         ...(boss === undefined ? {} : {
           boss: Object.freeze({
             id: boss.bossId ?? boss.kind,
             phase: "phase" in boss && (typeof boss.phase === "string" || typeof boss.phase === "number")
               ? String(boss.phase)
               : ("state" in boss && typeof boss.state === "string" ? boss.state : "active"),
-            validPhases: Object.freeze(boss.phaseMarks.map((mark) => String(mark))),
+            validPhases: Object.freeze(Array.from({ length: boss.phaseMarks.length + 1 }, (_, index) => String(index + 1))),
           }),
         }),
         paused: context.screen() === "paused",
-        ui: Object.freeze({ focusableIds: Object.freeze([...context.choiceIds()]) }),
-        progressTick: tick,
-        softlockLimitTicks: 120 * 30,
-        lifecyclePhase: context.lifecycle().phase,
+        ui: Object.freeze({ focusableIds: Object.freeze([...context.choiceIds()]),
+          ...(focusedId === undefined ? {} : { focusedId }) }),
+        ...(lastProgressTick === undefined ? {} : { progressTick: lastProgressTick, softlockLimitTicks: 120 * 30 }),
+        lifecyclePhase: lifecycle.phase,
       }),
     } : {}),
-    availableActions: availableActions(context.screen(), run.mode),
+    availableActions: typeof context.availableGameActions === "function"
+      ? context.availableGameActions()
+      : canonicalObservationActions(context.screen(), run.mode, true),
   });
 }
 
@@ -177,28 +175,55 @@ export function createLiveTearRuntimeEnvironment(
   let finaleOutwardStart = 0;
   let audioDispatchStart = 0;
   let outcomeChronologyStart = 0;
+  let deliveredEventCount = 0;
+  let lastProgressTick = 0;
+  let lastProgressSignature = "";
+  let startingRun = false;
   const eventLog: TearCausalEventV1[] = [];
   const nativeEventLog: TearGameplayEvent[] = [];
+  const waveOwnership = createSourceWaveOwnershipTracker();
   context.subscribeEngineEvent((event) => {
     if (scenario === null) return;
+    if (startingRun && event.kind === "run" && event.transition === "abandoned") return;
+    waveOwnership.consume(event);
     nativeEventLog.push(event);
     eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`));
   });
 
+  const projectObservation = (tick: number): TearObservationV1 => {
+    const run = context.state.run();
+    const player = context.state.player();
+    const blade = context.state.blade();
+    const lifecycle = context.lifecycle();
+    const enemies = context.state.enemies().filter((enemy) => !enemy.dead);
+    const projectiles = context.state.projectiles().filter((projectile) => !projectile.dead);
+    const signature = [lifecycle.phase, lifecycle.revision, run?.wave, run?.score, run?.spawnQueue.length,
+      player?.x, player?.y, player?.hp, blade?.x, blade?.y, blade?.state,
+      ...enemies.flatMap((enemy) => [enemy.x, enemy.y, enemy.hp]),
+      ...projectiles.flatMap((projectile) => [projectile.x, projectile.y])].join("|");
+    if (signature !== lastProgressSignature) {
+      lastProgressSignature = signature;
+      lastProgressTick = tick;
+    }
+    return projectLiveTearObservation(context, tick, accessClass, lastProgressTick,
+      run === null ? undefined : waveOwnership.actors(run.wave));
+  };
+
   const observe = (): TearObservationV1 => {
     requireStructured(accessClass, "structured observation");
     if (observation === null) throw new Error("Tear runtime must be reset before observation");
-    observation = projectLiveTearObservation(context, context.authoritative()?.tick ?? observation.tick, accessClass);
+    observation = projectObservation(context.authoritative()?.tick ?? observation.tick);
     return observation;
   };
   const metrics = (): TearRuntimeEnvironmentMetrics => Object.freeze({
     resets, fixedTicks, acceptedActions, emittedEvents: eventLog.length, screenshots: screenshotCount,
   });
   const snapshots = createLiveRuntimeSnapshotController(context, accessClass, (snapshot, result) => {
+    waveOwnership.invalidate();
     lastCallerEnvelopeId = 0;
     context.resetSemanticInput();
     context.drainConsumedActions();
-    observation = projectLiveTearObservation(context, snapshot.tick, accessClass);
+    observation = projectObservation(snapshot.tick);
     eventLog.push(createEvent(sequence++, snapshot.tick, "system.checkpoint", {
       snapshotId: snapshot.id, operation: "restored", exactHash: result.exactHash,
     }, "developer"));
@@ -212,6 +237,9 @@ export function createLiveTearRuntimeEnvironment(
       if (!validation.ok || validation.value.kind !== "scenario") {
         throw new TypeError(`invalid Tear scenario: ${validation.ok ? "wrong contract kind"
           : validation.issues.map((issue) => `${issue.path} ${issue.message}`).join("; ")}`);
+      }
+      if (nextScenario.backends !== undefined && !nextScenario.backends.includes("live")) {
+        throw new RangeError(`scenario ${nextScenario.id} does not support live execution`);
       }
       if (nextScenario.start.mode === "sandbox") throw new RangeError("sandbox is not a live run mode");
       if (nextScenario.stateClass !== "recorded-canonical") {
@@ -233,8 +261,6 @@ export function createLiveTearRuntimeEnvironment(
       context.setSemanticInputAuthority(true);
       context.setRunSeed(numericSeed(nextScenario.seed));
       context.selectWeapon(nextScenario.start.weapon);
-      context.startRun(nextScenario.start.mode, nextScenario.start.difficulty);
-      context.resetSemanticInput();
       scenario = nextScenario;
       paused = false;
       terminated = false;
@@ -242,18 +268,29 @@ export function createLiveTearRuntimeEnvironment(
       fixedTicks = 0;
       acceptedActions = 0;
       lastCallerEnvelopeId = 0;
-      context.drainConsumedActions();
       eventLog.length = 0;
       nativeEventLog.length = 0;
+      deliveredEventCount = 0;
+      lastProgressTick = 0;
+      lastProgressSignature = "";
+      waveOwnership.invalidate();
+      startingRun = true;
+      try { context.startRun(nextScenario.start.mode, nextScenario.start.difficulty); }
+      finally { startingRun = false; }
+      context.resetSemanticInput();
+      context.drainConsumedActions();
       finaleIntentStart = context.finaleIntents().length;
       finaleOutwardStart = context.finaleOutwardCalls().length;
       audioDispatchStart = context.audioDispatchReceipts?.().length ?? 0;
       outcomeChronologyStart = context.outcomeChronology?.().length ?? 0;
       resets += 1;
-      observation = projectLiveTearObservation(context, 0, accessClass);
-      eventLog.push(createEvent(sequence++, 0, "run.started", {
-        scenarioId: nextScenario.id, seed: nextScenario.seed, runSeed: context.state.run()?.runSeed,
-      }, "engine"));
+      observation = projectObservation(0);
+      if (!eventLog.some((event) => event.type === "run.started")) {
+        eventLog.push(createEvent(sequence++, 0, "run.started", {
+          scenarioId: nextScenario.id, seed: nextScenario.seed, runSeed: context.state.run()?.runSeed,
+          provenance: "runtime-bridge-synthetic",
+        }, "derived"));
+      }
       context.render();
       return observation;
     },
@@ -292,14 +329,16 @@ export function createLiveTearRuntimeEnvironment(
         for (const action of routedActions) {
           if (!context.routeAction(action)) throw new Error(`live runtime could not consume ${action.type} in ${context.screen()}`);
         }
-        observation = projectLiveTearObservation(context, observation.tick, accessClass);
+        observation = projectObservation(observation.tick);
         const routedEvent = createEvent(sequence++, observation.tick, "ui.action-confirmed", {
           actions: routedActions.map((action) => action.type),
         }, "agent");
         eventLog.push(routedEvent);
+        const undeliveredEvents = Object.freeze(eventLog.slice(deliveredEventCount));
+        deliveredEventCount = eventLog.length;
         context.render();
         return Object.freeze({
-          observation, events: Object.freeze([routedEvent]), actions: Object.freeze(normalizedActions),
+          observation, events: undeliveredEvents, actions: Object.freeze(normalizedActions),
           terminated, truncated: false,
           info: Object.freeze({
             stateHash: this.stateHash(), canonicalStateHash: context.authoritative()?.stateHash ?? "",
@@ -316,7 +355,7 @@ export function createLiveTearRuntimeEnvironment(
       }
       fixedTicks += 1;
       const consumedActions = context.drainConsumedActions();
-      observation = projectLiveTearObservation(context, context.authoritative()?.tick ?? fixedTicks, accessClass);
+      observation = projectObservation(context.authoritative()?.tick ?? fixedTicks);
       const tickEvents: TearCausalEventV1[] = [];
       if (normalizedActions.length > 0) tickEvents.push(createEvent(sequence++, observation.tick, "system.checkpoint", {
         acceptedActions: normalizedActions.map((entry) => entry.command.type),
@@ -324,11 +363,13 @@ export function createLiveTearRuntimeEnvironment(
       if (observation.player.hp < prior.player.hp) tickEvents.push(createEvent(sequence++, observation.tick,
         "player.damaged", { amount: prior.player.hp - observation.player.hp }));
       eventLog.push(...tickEvents);
+      const undeliveredEvents = Object.freeze(eventLog.slice(deliveredEventCount));
+      deliveredEventCount = eventLog.length;
       context.render();
       const run = context.state.run();
       const runEnded = context.screen() === "gameover" || context.screen() === "win";
       return Object.freeze({
-        observation, events: Object.freeze(tickEvents),
+        observation, events: undeliveredEvents,
         actions: Object.freeze([...consumedActions, ...normalizedActions.filter((entry) =>
           routedActions.includes(entry.command))]),
         terminated: runEnded, truncated: observation.tick >= scenario.maxTicks,
@@ -364,7 +405,7 @@ export function createLiveTearRuntimeEnvironment(
       const steps = context.advanceRenderFrame(deltaSeconds);
       fixedTicks += steps;
       const consumedActions = context.drainConsumedActions();
-      observation = projectLiveTearObservation(context, context.authoritative()?.tick ?? fixedTicks, accessClass);
+      observation = projectObservation(context.authoritative()?.tick ?? fixedTicks);
       context.render();
       return Object.freeze({
         observation, events: Object.freeze([]), actions: Object.freeze(consumedActions),
@@ -389,7 +430,7 @@ export function createLiveTearRuntimeEnvironment(
       if (!terminated) {
         paused = true;
         context.setScreen("paused");
-        if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
+        if (observation !== null) observation = projectObservation(observation.tick);
       }
     },
     resume() {
@@ -397,7 +438,7 @@ export function createLiveTearRuntimeEnvironment(
       if (paused && !terminated) {
         paused = false;
         context.setScreen("playing");
-        if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
+        if (observation !== null) observation = projectObservation(observation.tick);
       }
     },
     terminate() {
@@ -405,7 +446,7 @@ export function createLiveTearRuntimeEnvironment(
       context.terminateRun();
       context.setSemanticInputAuthority(false);
       terminated = true;
-      if (observation !== null) observation = projectLiveTearObservation(context, observation.tick, accessClass);
+      if (observation !== null) observation = projectObservation(observation.tick);
       eventLog.push(createEvent(sequence++, observation?.tick ?? 0, "run.abandoned", {}));
     },
     metrics,
@@ -456,7 +497,7 @@ export function createLiveTearRuntimeEnvironment(
       }
       const fixedTickDelta = afterTick - beforeTick;
       fixedTicks += fixedTickDelta;
-      observation = projectLiveTearObservation(context, afterTick, accessClass);
+      observation = projectObservation(afterTick);
       terminated = context.screen() === "gameover" || context.screen() === "win";
       context.render();
       return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
@@ -473,7 +514,7 @@ export function createLiveTearRuntimeEnvironment(
       if (!Number.isSafeInteger(tick) || tick < observation.tick) {
         throw new Error("cinematic advancement produced an invalid authoritative tick");
       }
-      observation = projectLiveTearObservation(context, tick, accessClass);
+      observation = projectObservation(tick);
       context.render();
       return Object.freeze({ advanced, tick });
     },

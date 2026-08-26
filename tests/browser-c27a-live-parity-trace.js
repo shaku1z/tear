@@ -97,6 +97,31 @@ const scenarios = [
   }),
 ];
 
+// Preserve the full matrix by default while permitting one bounded local
+// source-owned mechanic capture without invoking endurance scenarios.
+const SHORT_SCENARIO_ID = "c27a.live-parity-trace";
+const MAX_FOCUSED_TICKS = 180;
+const MIN_FOCUSED_TICKS = 40;
+
+function scenariosForExecution() {
+  const requestedId = process.env.TEAR_C27A_SCENARIO_ID;
+  const requestedMaxTicks = process.env.TEAR_C27A_MAX_TICKS;
+  if (requestedId === undefined && requestedMaxTicks === undefined) return scenarios;
+  if (requestedId !== SHORT_SCENARIO_ID) {
+    throw new Error(`focused C27A capture requires TEAR_C27A_SCENARIO_ID=${SHORT_SCENARIO_ID}`);
+  }
+  if (requestedMaxTicks === undefined || !/^\d+$/u.test(requestedMaxTicks)) {
+    throw new Error("focused C27A capture requires a numeric TEAR_C27A_MAX_TICKS");
+  }
+  const maxTicks = Number(requestedMaxTicks);
+  if (!Number.isSafeInteger(maxTicks) || maxTicks < MIN_FOCUSED_TICKS || maxTicks > MAX_FOCUSED_TICKS) {
+    throw new Error(`TEAR_C27A_MAX_TICKS must be an integer from ${String(MIN_FOCUSED_TICKS)} to ${String(MAX_FOCUSED_TICKS)}`);
+  }
+  const selected = scenarios.find((scenario) => scenario.id === SHORT_SCENARIO_ID);
+  if (selected === undefined) throw new Error(`missing source-owned C27A scenario ${SHORT_SCENARIO_ID}`);
+  return [{ ...selected, maxTicks }];
+}
+
 function action(tick, id, command) {
   return { kind: "command", tick, id, command };
 }
@@ -104,8 +129,8 @@ function action(tick, id, command) {
 function actionsAt(tick) {
   if (tick === 2) return [action(tick, 1, { type: "aim", turn: 0, magnitude: 1000 })];
   if (tick === 4) return [action(tick, 2, { type: "move", x: 1000, y: 0 })];
-  if (tick === 12) return [action(tick, 3, { type: "weapon", intent: "primary", phase: "pressed" })];
-  if (tick === 40) return [action(tick, 4, { type: "weapon", intent: "primary", phase: "released" })];
+  if (tick === 12) return [action(tick, 3, { type: "weapon", intent: "throw", phase: "pressed" })];
+  if (tick === 24) return [action(tick, 4, { type: "weapon", intent: "recall", phase: "pressed" })];
   if (tick === 55) return [action(tick, 5, { type: "jump", phase: "pressed" })];
   if (tick === 56) return [action(tick, 6, { type: "jump", phase: "released" })];
   if (tick === 80) return [action(tick, 7, { type: "dash", x: 1000, y: 0 })];
@@ -113,18 +138,22 @@ function actionsAt(tick) {
   return [];
 }
 
-const ARTIFACT_DIR = path.join("artifacts", "tearbench", "c27a");
+// A bounded diagnostic is not a parity matrix; keep it away from the complete
+// matrix consumed by the existing detached-world regression gates.
+const focusedCapture = process.env.TEAR_C27A_SCENARIO_ID !== undefined ||
+  process.env.TEAR_C27A_MAX_TICKS !== undefined;
+const ARTIFACT_DIR = path.join("artifacts", "tearbench", focusedCapture ? "c27a-focused" : "c27a");
 
 function artifactPath(scenario) {
   return path.join(ARTIFACT_DIR, `${scenario.id}.json`);
 }
 
-withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => {
+withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15000 });
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const written = [];
 
-  for (const scenario of scenarios) {
+  for (const scenario of scenariosForExecution()) {
     const schedule = Object.fromEntries(Array.from({ length: scenario.maxTicks }, (_, index) => {
       const tick = index + 1;
       return [tick, scenario.idle === true ? [] : actionsAt(tick)];
@@ -336,11 +365,23 @@ withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page }) => 
       engineEventProjection: {
         format: "tear-semantic-engine-events", schemaVersion: 1,
         boundary: { kind: "post-origin-snapshot", originTick: first.origin.tick },
-        events: first.engineEvents,
+        events: first.engineEvents.filter((event) => event.tick > first.origin.tick)
+          .map((event, sequence) => ({ ...event, sequence })),
       },
       terminated: first.terminated,
       checkpoints: first.checkpoints,
-      rng: first.rng, capturedAt: new Date().toISOString(),
+      rng: first.rng,
+      sourceIdentity: {
+        revision: buildInfo.sourceRevision,
+        state: buildInfo.sourceState,
+        fingerprint: buildInfo.sourceFingerprint,
+      },
+      buildIdentity: {
+        sha: buildInfo.sha,
+        target: buildInfo.target,
+        artifactHash: buildInfo.artifactHash,
+      },
+      capturedAt: new Date().toISOString(),
     }, null, 2)}
 `);
     written.push({ id: scenario.id, ticks: first.hashes.length, terminated: first.terminated,
