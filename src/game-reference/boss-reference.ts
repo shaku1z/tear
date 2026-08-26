@@ -1,5 +1,5 @@
 import { BOSS_DEFINITIONS, type BossDefinition, type BossDefinitionId } from "../gameplay/run/boss-definitions";
-import { STAGES, STAGE_IDS, type StageDefinition, type StageId } from "../gameplay/stages";
+import { STAGES, type StageDefinition, type StageId } from "../gameplay/stages";
 
 export interface GameReferenceBossV1 {
   readonly id: BossDefinitionId;
@@ -14,7 +14,8 @@ export interface BossReferenceProjectionInput {
 }
 
 export const CANONICAL_BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(BOSS_DEFINITIONS.map((definition) => definition.id));
-export const EXPECTED_BOSS_COUNT = 5;
+export const EXPECTED_BOSS_COUNT = CANONICAL_BOSS_IDS.length;
+const ACTIVE_STAGE_IDS = Object.freeze(STAGES.map((stage) => stage.id));
 
 function record(value: unknown, path: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${path} must be an object`);
@@ -58,7 +59,7 @@ function isBossId(value: string): value is BossDefinitionId {
 }
 
 function isStageId(value: string): value is StageId {
-  return STAGE_IDS.some((id) => id === value);
+  return ACTIVE_STAGE_IDS.some((id) => id === value);
 }
 
 function phaseMarks(value: unknown, path: string): readonly [number, number] {
@@ -78,7 +79,7 @@ function canonicalStageForBoss(id: BossDefinitionId): StageId {
 function sourceStageBossMap(stages: readonly StageDefinition[], path: string): ReadonlyMap<BossDefinitionId, StageId> {
   if (!Array.isArray(stages)) throw new TypeError(`${path} must be an array`);
   const stageIds = stages.map((stage, index) => text(record(stage, `${path}[${String(index)}]`).id, `${path}[${String(index)}].id`));
-  assertCanonicalIdSet(stageIds, STAGE_IDS, `${path} IDs`);
+  assertCanonicalIdSet(stageIds, ACTIVE_STAGE_IDS, `${path} IDs`);
   const stagesById = new Map<StageId, Record<string, unknown>>();
   stages.forEach((stage, index) => {
     const source = record(stage, `${path}[${String(index)}]`);
@@ -87,7 +88,7 @@ function sourceStageBossMap(stages: readonly StageDefinition[], path: string): R
     stagesById.set(id, source);
   });
   const result = new Map<BossDefinitionId, StageId>();
-  for (const stageId of STAGE_IDS) {
+  for (const stageId of ACTIVE_STAGE_IDS) {
     const source = stagesById.get(stageId);
     const canonical = STAGES.find((candidate) => candidate.id === stageId);
     if (source === undefined || canonical === undefined) throw new TypeError(`${path} is missing canonical stage ${stageId}`);
@@ -97,7 +98,7 @@ function sourceStageBossMap(stages: readonly StageDefinition[], path: string): R
     if (result.has(boss)) throw new TypeError(`${path} must map each boss exactly once`);
     result.set(boss, stageId);
   }
-  if (result.size !== EXPECTED_BOSS_COUNT || CANONICAL_BOSS_IDS.some((id) => !result.has(id))) throw new TypeError(`${path} must form a five-way boss/stage bijection`);
+  if (result.size !== EXPECTED_BOSS_COUNT || CANONICAL_BOSS_IDS.some((id) => !result.has(id))) throw new TypeError(`${path} must form a ${String(EXPECTED_BOSS_COUNT)}-way boss/stage bijection`);
   return result;
 }
 
@@ -149,6 +150,6 @@ export function validateProjectedBosses(value: unknown, path: string): readonly 
     return Object.freeze({ id: expected.id, name: expected.name, stageId, phaseMarks: marks });
   }));
   const stageIds = bosses.map((boss) => boss.stageId);
-  assertCanonicalIdSet(stageIds, STAGE_IDS, `${path}.stageId`);
+  assertCanonicalIdSet(stageIds, ACTIVE_STAGE_IDS, `${path}.stageId`);
   return bosses;
 }

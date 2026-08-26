@@ -79,6 +79,8 @@ export function constructLiveEnemy<TEnemy extends LiveSpawnEnemy>(
       enemy = port.createAir(spec.type, port.sideSpawn(), spec.type === "flyer" ? 200 : 220); break;
     case "priest": case "herald": case "mender": case "anchor":
       enemy = port.createSupport(spec.type); break;
+    case "rootbinder":
+      throw new Error("rootbinder identity is not factory-ready before VS3-C6");
     case "boss":
       enemy = port.createBoss();
       if (enemy.isMirrorBoss) enemy._live = true;

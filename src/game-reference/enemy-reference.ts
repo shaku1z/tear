@@ -1,4 +1,4 @@
-import { ENEMY_KIND_IDS, type EnemyKind } from "../gameplay/run/content-director";
+import { ENEMY_KIND_IDS, type ActiveEnemyKind } from "../gameplay/run/content-director";
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
 import type { EnemyVariant } from "../gameplay/variants";
 
@@ -11,7 +11,7 @@ export interface GameReferenceEnemyVariantV1 {
 }
 
 export interface GameReferenceEnemyFamilyV1 {
-  readonly id: EnemyKind;
+  readonly id: ActiveEnemyKind;
   readonly variants: readonly GameReferenceEnemyVariantV1[];
 }
 
@@ -21,7 +21,7 @@ export interface GameReferenceEnemyAffixV1 {
 }
 
 export interface GameReferenceEnemyPresetV1 {
-  readonly familyId: EnemyKind;
+  readonly familyId: ActiveEnemyKind;
   readonly affixIds: readonly string[];
 }
 
@@ -32,7 +32,7 @@ export interface GameReferenceEnemiesV1 {
 }
 
 export interface EnemyReferenceFamilySource {
-  readonly id: EnemyKind;
+  readonly id: ActiveEnemyKind;
   readonly variants: readonly EnemyVariant[];
 }
 
@@ -48,7 +48,7 @@ export const CANONICAL_ENEMY_KIND_IDS = Object.freeze([
   "priest", "mender", "herald", "anchor", "wraith", "chimera",
 ] as const);
 
-export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze({
+export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<ActiveEnemyKind, readonly string[]>> = Object.freeze({
   charger: Object.freeze(["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist"]),
   ranged: Object.freeze(["sentinel", "rifleman", "marksman", "warlock", "chain"]),
   flyer: Object.freeze(["swooper", "divebomber", "highdiver"]),
@@ -67,7 +67,7 @@ export const CANONICAL_ENEMY_AFFIX_IDS = Object.freeze([
 ] as const);
 
 export interface EnemyPresetSignatureV1 {
-  readonly familyId: EnemyKind;
+  readonly familyId: ActiveEnemyKind;
   readonly affixIds: readonly string[];
 }
 
@@ -166,7 +166,7 @@ function validateSourceVariant(value: unknown, expectedId: string, path: string)
   return validateProjectedVariant({ id, name: source.name, weight: source.weight, minWave }, expectedId, path);
 }
 
-function projectFamily(sourceValue: unknown, expectedId: EnemyKind, path: string): GameReferenceEnemyFamilyV1 {
+function projectFamily(sourceValue: unknown, expectedId: ActiveEnemyKind, path: string): GameReferenceEnemyFamilyV1 {
   const source = record(sourceValue, path);
   exactKeys(source, path, ["id", "variants"]);
   const id = text(source.id, `${path}.id`);

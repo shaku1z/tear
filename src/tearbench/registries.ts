@@ -1,10 +1,11 @@
-import { BOSS_DEFINITIONS, type BossDefinitionId } from "../gameplay/run/boss-definitions";
+import { BOSS_IDENTITY_IDS, type BossDefinitionId } from "../gameplay/run/boss-definitions";
 import { DIFFICULTY_IDS as GAME_DIFFICULTY_IDS, type DifficultyId } from "../gameplay/run/difficulty-catalog";
 import { MODE_IDS as GAME_MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
-import { ENEMY_KIND_IDS as GAME_ENEMY_KIND_IDS } from "../gameplay/run/content-director";
+import { ENEMY_IDENTITY_IDS as GAME_ENEMY_IDENTITY_IDS } from "../gameplay/run/content-director";
 import { STAGE_IDS as GAME_STAGE_IDS, type StageId } from "../gameplay/stages";
 import { CANONICAL_UPGRADE_IDS as GAME_UPGRADE_IDS } from "../gameplay/upgrades";
 import { GAMEPLAY_EVENT_KIND_IDS as GAME_EVENT_KIND_IDS } from "../gameplay/runtime/gameplay-events";
+import { ENVIRONMENT_OBJECT_KIND_IDS as GAME_ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentObjectKind } from "../gameplay/environment/environment-contracts";
 import { WEAPON_IDS as GAME_WEAPON_IDS, type WeaponId } from "../gameplay/weapon-selection";
 
 const STABLE_ID_PATTERN = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -81,12 +82,25 @@ export const NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY = createStableRegistry("native 
 
 export const ENTITY_KIND_IDS = Object.freeze([
   "player", "blade", "projectile", "platform", "hazard",
-  ...GAME_ENEMY_KIND_IDS,
+  ...GAME_ENEMY_IDENTITY_IDS,
   "reflection", "void-wisp",
-  ...BOSS_DEFINITIONS.map((definition) => definition.id),
+  ...BOSS_IDENTITY_IDS,
 ] as const);
 export const ENTITY_KIND_REGISTRY = createStableRegistry("entity kind", ENTITY_KIND_IDS);
 export type TearEntityKindId = typeof ENTITY_KIND_IDS[number];
+
+/** Environment object kinds are owned by gameplay/environment, then projected here for TearBench. */
+export const ENVIRONMENT_OBJECT_KIND_IDS = GAME_ENVIRONMENT_OBJECT_KIND_IDS;
+export const ENVIRONMENT_OBJECT_KIND_REGISTRY = createStableRegistry("environment object kind", ENVIRONMENT_OBJECT_KIND_IDS);
+export type TearEnvironmentObjectKind = EnvironmentObjectKind;
+
+/** Explicit source-derived coverage used to fail closed when a new production identity is unmapped. */
+export const PRODUCTION_IDENTITY_COVERAGE = Object.freeze({
+  stages: GAME_STAGE_IDS,
+  bosses: BOSS_IDENTITY_IDS,
+  enemies: GAME_ENEMY_IDENTITY_IDS,
+  environmentObjectKinds: ENVIRONMENT_OBJECT_KIND_IDS,
+});
 
 /** TearBench consumes the production weapon roster; retired migrations stay at the gameplay boundary. */
 export const WEAPON_IDS = GAME_WEAPON_IDS;
@@ -94,7 +108,7 @@ export const WEAPON_REGISTRY = createStableRegistry("weapon", WEAPON_IDS);
 export type TearWeaponId = WeaponId;
 
 /** Boss definitions are the production boss identity authority. */
-export const BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(BOSS_DEFINITIONS.map((definition) => definition.id));
+export const BOSS_IDS: readonly BossDefinitionId[] = BOSS_IDENTITY_IDS;
 export const BOSS_REGISTRY = createStableRegistry("boss", BOSS_IDS);
 export type TearBossId = BossDefinitionId;
 

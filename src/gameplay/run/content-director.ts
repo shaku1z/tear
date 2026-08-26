@@ -1,5 +1,5 @@
 import type { RandomSource } from "../../domain/random";
-import { BOSS_DEFINITIONS, type BossDefinition } from "./boss-definitions";
+import { BOSS_DEFINITIONS, BOSS_IDENTITY_IDS, type BossDefinition } from "./boss-definitions";
 
 type BossRosterProjection<T extends readonly BossDefinition[]> = {
   readonly [K in keyof T]: T[K] extends BossDefinition
@@ -14,13 +14,16 @@ function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T):
 /** Compatibility roster view; identity and order are authored in BOSS_DEFINITIONS. */
 export const BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
 
-export type BossId = typeof BOSS_DEFINITIONS[number]["id"];
-export type MiniBossId = Exclude<BossId, "source">;
+export type BossId = typeof BOSS_IDENTITY_IDS[number];
+/** Rootbound is a campaign boss identity, not a mini-boss until its factory exists. */
+export type MiniBossId = Exclude<BossId, "source" | "rootbound">;
 export const ENEMY_KIND_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",
   "priest", "mender", "herald", "anchor", "wraith", "chimera",
 ] as const);
-export type EnemyKind = typeof ENEMY_KIND_IDS[number];
+export const ENEMY_IDENTITY_IDS = Object.freeze([...ENEMY_KIND_IDS, "rootbinder"] as const);
+export type ActiveEnemyKind = typeof ENEMY_KIND_IDS[number];
+export type EnemyKind = typeof ENEMY_IDENTITY_IDS[number];
 
 export interface CampaignPoolEntry {
   readonly kind: EnemyKind;

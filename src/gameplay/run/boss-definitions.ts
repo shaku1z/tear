@@ -1,5 +1,8 @@
-/** Pure authored boss identity and phase-threshold authority. */
-export type BossDefinitionId = "warden" | "colossus" | "aldric" | "echo" | "source";
+/** Pure authored boss identity authority; Rootbound remains factory-unavailable until VS3-C10. */
+export const BOSS_IDENTITY_IDS = Object.freeze([
+  "warden", "colossus", "aldric", "rootbound", "echo", "source",
+] as const);
+export type BossDefinitionId = typeof BOSS_IDENTITY_IDS[number];
 
 export interface BossDefinition {
   readonly id: BossDefinitionId;

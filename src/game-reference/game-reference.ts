@@ -6,7 +6,7 @@ import { CANONICAL_UPGRADE_IDS, type UpgradeCategory, type UpgradeDefinition } f
 import type { WeaponChannels, WeaponDefinition, WeaponRatings } from "../gameplay/weapons";
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
 import { MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
-import { STAGE_IDS, type StageDefinition } from "../gameplay/stages";
+import { CAMPAIGN_STAGE_IDS, STAGES, type StageDefinition } from "../gameplay/stages";
 import { CANONICAL_BOSS_IDS, EXPECTED_BOSS_COUNT, projectBossReference, validateProjectedBosses, type GameReferenceBossV1 } from "./boss-reference";
 import type { BossDefinition } from "../gameplay/run/boss-definitions";
 import { FINAL_FIVE_WEAPON_TUNING } from "../gameplay/weapon-tuning";
@@ -155,7 +155,7 @@ export interface GameReferenceProjectionInput {
 }
 const EXPECTED_UPGRADE_COUNT = 60;
 const EXPECTED_ACHIEVEMENT_COUNT = 98;
-const EXPECTED_STAGE_COUNT = 5;
+const EXPECTED_STAGE_COUNT = STAGES.length;
 const UPGRADE_CATEGORIES = Object.freeze(["offense", "throw", "parry", "mobility", "resilience", "utility"] as const);
 const ACHIEVEMENT_CATEGORIES = Object.freeze(["combat", "skill", "progress", "boss", "survival", "mastery"] as const);
 const ACHIEVEMENT_RARITIES = Object.freeze(["common", "uncommon", "rare", "epic", "legendary"] as const);
@@ -309,12 +309,12 @@ function assertBossStageConsistency(
   const stagesById = new Map(stages.map((stage) => [stage.id, stage] as const));
   const stageByBoss = new Map<string, string>();
   for (const stage of stages) {
-    if (stageByBoss.has(stage.boss)) throw new TypeError("gameReference stage boss references must form a five-way bijection");
+    if (stageByBoss.has(stage.boss)) throw new TypeError(`gameReference stage boss references must form a ${String(EXPECTED_BOSS_COUNT)}-way bijection`);
     stageByBoss.set(stage.boss, stage.id);
   }
   const bossByStage = new Map<string, string>();
   for (const boss of bosses) {
-    if (bossByStage.has(boss.stageId)) throw new TypeError("gameReference boss stage references must form a five-way bijection");
+    if (bossByStage.has(boss.stageId)) throw new TypeError(`gameReference boss stage references must form a ${String(EXPECTED_BOSS_COUNT)}-way bijection`);
     const stage = stagesById.get(boss.stageId);
     if (stage?.boss !== boss.id || stageByBoss.get(boss.id) !== boss.stageId) {
       throw new TypeError(`gameReference boss/stage reference mismatch for ${boss.id}`);
@@ -326,7 +326,7 @@ function assertBossStageConsistency(
     || bossByStage.size !== EXPECTED_BOSS_COUNT
     || CANONICAL_BOSS_IDS.some((id) => !stageByBoss.has(id) || !bosses.some((boss) => boss.id === id))
   ) {
-    throw new TypeError("gameReference boss/stage references must form a canonical five-way bijection");
+    throw new TypeError(`gameReference boss/stage references must form a canonical ${String(EXPECTED_BOSS_COUNT)}-way bijection`);
   }
 }
 
@@ -510,9 +510,9 @@ export function buildGameReferenceV1(input: GameReferenceProjectionInput): GameR
   });
   const bosses = projectBossReference({ bossDefinitions: input.bossDefinitions, stages: input.stages });
   const stageIds = input.stages.map((stage, index) => text(stage.id, `stage[${String(index)}].id`));
-  assertCanonicalSourceIds(stageIds, STAGE_IDS, "stages");
+  assertCanonicalSourceIds(stageIds, CAMPAIGN_STAGE_IDS, "stages");
   const stagesById = new Map(input.stages.map((stage) => [stage.id, stage] as const));
-  const stages = Object.freeze(STAGE_IDS.map((id, index) => {
+  const stages = Object.freeze(CAMPAIGN_STAGE_IDS.map((id, index) => {
     const stage = stagesById.get(id);
     if (stage === undefined) throw new TypeError(`missing canonical stage definition ${id}`);
     return projectStage(stage, `stage[${String(index)}]`);
@@ -589,7 +589,7 @@ export function assertValidGameReferenceV1(value: unknown): asserts value is Gam
   assertCanonicalOrderedIds(achievementsCollection.items.map((achievement) => achievement.id), CANONICAL_ACHIEVEMENT_IDS, "gameReference.collections.achievements.items");
   const stagesCollection = completeCollection(collections.stages, "gameReference.collections.stages", validateProjectedStage);
   assertUniqueCount(stagesCollection.items.map((stage) => stage.id), EXPECTED_STAGE_COUNT, "gameReference.collections.stages.items");
-  assertCanonicalOrderedIds(stagesCollection.items.map((stage) => stage.id), STAGE_IDS, "gameReference.collections.stages.items");
+  assertCanonicalOrderedIds(stagesCollection.items.map((stage) => stage.id), CAMPAIGN_STAGE_IDS, "gameReference.collections.stages.items");
   const modesCollection = completeCollection(collections.modes, "gameReference.collections.modes", validateProjectedMode);
   assertUniqueCount(modesCollection.items.map((mode) => mode.id), MODE_IDS.length, "gameReference.collections.modes.items");
   assertCanonicalOrderedIds(modesCollection.items.map((mode) => mode.id), MODE_IDS, "gameReference.collections.modes.items");

@@ -12,9 +12,19 @@ import type { BossId, EnemyKind } from "./run/content-director";
 
 /** Stable authored stage identifiers used by the game-reference projection. */
 export const STAGE_IDS = Object.freeze([
-  "grounds", "undercroft", "crimson-fields", "voidspire", "tear",
+  "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear",
 ] as const);
 export type StageId = typeof STAGE_IDS[number];
+
+/** Stable identity mapping; Verdant remains unavailable in runtime STAGES until VS3-C8. */
+export const STAGE_BOSS_HOME = Object.freeze({
+  grounds: "warden",
+  undercroft: "colossus",
+  "crimson-fields": "aldric",
+  "verdant-sanctum": "rootbound",
+  voidspire: "echo",
+  tear: "source",
+} as const satisfies Readonly<Record<StageId, BossId>>);
 
 export interface StagePlatformDefinition {
   readonly x: number;
@@ -186,6 +196,9 @@ const STAGES: readonly StageDefinition[] = [
     ],
   },
 ];
+
+/** Runtime campaign roster; Verdant joins this list only at VS3-C8. */
+export const CAMPAIGN_STAGE_IDS = Object.freeze(STAGES.map((stage) => stage.id));
 
 // build a fresh platforms array (floor + the stage's one-way platforms, cloned so
 // temporary Geomancer walls never pollute the source layout)

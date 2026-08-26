@@ -1,15 +1,19 @@
 /**
  * Native, presentation-independent gameplay facts emitted at authoritative
  * simulation boundaries. Replay formats consume these through outward
- * adapters; no replay version owns this contract.
+ * adapters; no replay version owns this contract. Stage facts retain the
+ * numeric index for existing replay consumers while optionally carrying the
+ * stable authored stage identity for new consumers.
  */
+import type { StageId } from "../stages";
+
 export type TearGameplayEvent =
   | Readonly<{
     kind: "run"; tick: number; transition: "started" | "paused" | "resumed" | "completed" | "defeated" | "abandoned";
     runId: string; mode: string; difficulty: string; weaponId: string; wave: number; score: number; runTimeSeconds: number;
     reason?: string;
   }>
-  | Readonly<{ kind: "stage"; tick: number; stage: number }>
+  | Readonly<{ kind: "stage"; tick: number; stage: number; stageId?: StageId; transition?: "entered" | "exited" }>
   | Readonly<{ kind: "wave"; tick: number; wave: number; event: string }>
   | Readonly<{
     kind: "spawn"; tick: number; actorId: string; actorKind: string; x: number; y: number;

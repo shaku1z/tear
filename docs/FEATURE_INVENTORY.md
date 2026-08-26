@@ -21,23 +21,32 @@ This is the migration checklist for the architectural redesign. A checked featur
   callbacks in the projection. `achievement-catalog.ts` is the immutable
   achievement metadata authority; runtime behavior joins onto it.
 - [x] Stage and mode reference catalogs — the fixed game-reference collections
-  now include the five stable authored stages and seven published `RunMode`
+  now include the five runtime-authored stages and seven published `RunMode`
   entries. Stage projections contain normalized pools/layout/narrative/theme
   data plus boss/enemy ID references, while mode projections contain authored
   order, presentation metadata, lifecycle classification, and explicit
   training/boss-only/sandbox flags. Runtime stage generation, mutable hazards,
   mode planners, and debug flags remain outside the handoff.
 - [x] Structural enemy reference catalog — the fixed game-reference collection
-  contains the exact eleven `ENEMY_KIND_IDS`, authored variant metadata (with
+  contains the exact eleven factory-ready `ENEMY_KIND_IDS`, authored variant metadata (with
   empty arrays where no variants exist), six affixes, and three preset
   family/affix signatures. Source order is fail-closed; runtime callbacks,
   behavior/stat mutations, base stats, eligibility, CONFIG, and presentation
   objects are excluded. `null` represents an absent `minWave` gate.
 - [x] Authored boss reference catalog — the fixed game-reference collection
-  contains the exact five boss identities in authored order, exact names,
-  five-way stage mapping, and two descending phase thresholds per boss. The
+  contains the exact five factory-ready boss definitions in authored order,
+  exact names, five-way stage mapping, and two descending phase thresholds per boss. The
   pure `boss-definitions.ts` authority and `boss-reference.ts` projection
   exclude constructors, runtime behavior, and tuning beyond those thresholds.
+- [x] Verdant identity foundation (engineering-only) — `stages.ts`,
+  `boss-definitions.ts`, `content-director.ts`, and
+  `environment-contracts.ts` own `verdant-sanctum`, `rootbound`, `rootbinder`,
+  and `bloom-well`/`root-link`/`graft-anchor`/`regrowth-link` exactly once.
+  TearBench projects those identities from production owners and has negative
+  unmapped-identity proofs. The runtime campaign remains five stages, the
+  public game-reference schema remains unchanged, and Rootbound/Rootbinder
+  remain explicitly factory-unavailable until VS3-C10/VS3-C6. Pale identities
+  remain reserved design-only.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

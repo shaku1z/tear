@@ -3046,14 +3046,14 @@ This block is updated after each accepted checkpoint.
 
 ```text
 PROGRAM: Verdant Sanctum Revision 3
-STATUS: ACTIVE — VS3-C0 GREEN
-CURRENT CHECKPOINT: VS3-C1
-CURRENT SUB-GOAL: VS3-C1-S1
+STATUS: ACTIVE — VS3-C1 GREEN
+CURRENT CHECKPOINT: VS3-C2
+CURRENT SUB-GOAL: VS3-C2-S1
 BASELINE: origin/main@91706363b80fb56a18df4d973b424bbce94a279e
-LAST GREEN CHECKPOINT: VS3-C0
-LAST EVIDENCE: pnpm check:docs; pnpm test:docs; pnpm check:terminology; pnpm test:terminology; pnpm requirements:check
+LAST GREEN CHECKPOINT: VS3-C1
+LAST EVIDENCE: pnpm typecheck; pnpm check:active-roster; 55 focused authority/reference/boss/enemy tests; runtime campaign remains five stages
 BLOCKERS: none recorded
-NEXT ACTION: define canonical Verdant, Rootbound, Rootbinder, and environment-object identities through production-owned catalogs
+NEXT ACTION: execute VS3-C2 per-world canonical environment state and fixed-step ownership
 PUBLICATION: prohibited until joint Verdant/Pale promotion
 C40: no certification claim
 ```
@@ -3365,7 +3365,7 @@ Establish a current, reproducible starting point and register Revision 3 without
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Gameplay content / reference owner |
 | Dependencies | VS3-C0 |
 | Release boundary | Feature branch only; no protected-main promotion |
@@ -3376,9 +3376,9 @@ Define how Verdant identities enter production catalogs, public references, even
 
 ## Entry conditions
 
-- [ ] VS3-C0 is green.
-- [ ] Current stage, boss, enemy, game-reference, event, and TearBench registry contracts have been read.
-- [ ] The feature branch is isolated and publication remains prohibited.
+- [x] VS3-C0 is green.
+- [x] Current stage, boss, enemy, game-reference, event, and TearBench registry contracts have been read.
+- [x] The feature branch is isolated and publication remains prohibited.
 
 ## Primary files and authorities
 
@@ -3389,6 +3389,7 @@ Define how Verdant identities enter production catalogs, public references, even
 - `src/game-reference/boss-reference.ts`
 - `src/game-reference/enemy-reference.ts`
 - `src/gameplay/runtime/gameplay-events.ts`
+- `src/gameplay/environment/environment-contracts.ts`
 - `src/tearbench/registries.ts`
 - `src/tearbench/evidence-routes.json`
 - `scripts/check-active-roster.mjs`
@@ -3396,14 +3397,14 @@ Define how Verdant identities enter production catalogs, public references, even
 
 ## Sub-goals
 
-- [ ] **VS3-C1-S1** — Lock stable IDs verdant-sanctum, rootbound, rootbinder, bloom-well, root-link, graft-anchor, and regrowth-link.
-- [ ] **VS3-C1-S2** — Decide the exact production authority for environment object kind IDs.
-- [ ] **VS3-C1-S3** — Extend StageId, BossId, and EnemyKind only through current source-owned catalogs.
-- [ ] **VS3-C1-S4** — Define public-safe stage/boss/enemy projection changes and schema-version consequences before editing the exported artifact contract.
-- [ ] **VS3-C1-S5** — Define stable stage native-event identity while retaining any required numeric-index compatibility.
-- [ ] **VS3-C1-S6** — Define stage-to-boss home mapping for Rootbound.
-- [ ] **VS3-C1-S7** — Add negative source-to-coverage tests showing an unmapped production identity fails.
-- [ ] **VS3-C1-S8** — Record that pale-traverse, white-hart, and rimehound remain reserved design identities until Pale implementation, not active production entries.
+- [x] **VS3-C1-S1** — Lock stable IDs verdant-sanctum, rootbound, rootbinder, bloom-well, root-link, graft-anchor, and regrowth-link.
+- [x] **VS3-C1-S2** — Decide the exact production authority for environment object kind IDs.
+- [x] **VS3-C1-S3** — Extend StageId, BossId, and EnemyKind only through current source-owned catalogs.
+- [x] **VS3-C1-S4** — Define public-safe stage/boss/enemy projection changes and schema-version consequences before editing the exported artifact contract.
+- [x] **VS3-C1-S5** — Define stable stage native-event identity while retaining any required numeric-index compatibility.
+- [x] **VS3-C1-S6** — Define stage-to-boss home mapping for Rootbound.
+- [x] **VS3-C1-S7** — Add negative source-to-coverage tests showing an unmapped production identity fails.
+- [x] **VS3-C1-S8** — Record that pale-traverse, white-hart, and rimehound remain reserved design identities until Pale implementation, not active production entries.
 
 ## Agent implementation procedure
 
@@ -3416,11 +3417,11 @@ Define how Verdant identities enter production catalogs, public references, even
 
 ## TearBench same-change response
 
-- [ ] Production registries remain the sole identity source.
-- [ ] TearBench imports the extended production IDs automatically.
-- [ ] Current-game authority test fails if Verdant, Rootbound, Rootbinder, or an environment kind lacks an explicit coverage mapping.
-- [ ] No canonical scenario claims Rootbound before a valid factory/encounter exists.
-- [ ] No game-reference artifact is published from this feature branch.
+- [x] Production registries remain the sole identity source.
+- [x] TearBench imports the extended production IDs automatically.
+- [x] Current-game authority test fails if Verdant, Rootbound, Rootbinder, or an environment kind lacks an explicit coverage mapping.
+- [x] No canonical scenario claims Rootbound before a valid factory/encounter exists.
+- [x] No game-reference artifact is published from this feature branch.
 
 ## Minimum focused proof
 
@@ -3431,11 +3432,11 @@ Define how Verdant identities enter production catalogs, public references, even
 
 ## Exit conditions
 
-- [ ] All new identities have exactly one production owner.
-- [ ] Typed consumers compile.
-- [ ] Missing-coverage negative fixtures fail for the intended reason.
-- [ ] Public/internal metadata boundaries are documented.
-- [ ] No stale five-entry assumption silently passes the focused contracts.
+- [x] All new identities have exactly one production owner.
+- [x] Typed consumers compile.
+- [x] Missing-coverage negative fixtures fail for the intended reason.
+- [x] Public/internal metadata boundaries are documented.
+- [x] No stale five-entry assumption silently passes the focused contracts.
 
 ## Stop and escalate conditions
 
@@ -6141,12 +6142,12 @@ Verdant can freeze before Pale. Verdant and Pale enter the public campaign toget
 # 34. Revision 3 starting position
 
 ```text
-STATUS: ACTIVE — VS3-C0 GREEN
-CURRENT CHECKPOINT: VS3-C1
-CURRENT SUB-GOAL: VS3-C1-S1
-LAST GREEN CHECKPOINT: VS3-C0
-LAST EVIDENCE: C0 documentation, terminology, and requirements gates green at origin/main@91706363b80fb56a18df4d973b424bbce94a279e plus the registration diff
-NEXT ACTION: execute VS3-C1 canonical expansion identities and source-owned contracts
+STATUS: ACTIVE — VS3-C1 GREEN
+CURRENT CHECKPOINT: VS3-C2
+CURRENT SUB-GOAL: VS3-C2-S1
+LAST GREEN CHECKPOINT: VS3-C1
+LAST EVIDENCE: C1 typed identity and TearBench authority gates green; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints
+NEXT ACTION: execute VS3-C2 per-world canonical environment state and fixed-step ownership
 PUBLICATION: prohibited
 WIKI DISPATCH: prohibited
 MUSIC RE-VENDORING: not authorized by this document alone

@@ -117,14 +117,14 @@ function validateProjectedStage(value: unknown, path: string): GameReferenceStag
   const id = text(source.id, `${path}.id`) as StageId;
   if (!STAGE_IDS.includes(id)) throw new TypeError(`${path}.id is not a canonical stage ID`);
   const boss = text(source.boss, `${path}.boss`) as BossId;
-  if (!BOSS_IDS.includes(boss)) throw new TypeError(`${path}.boss is not a canonical boss ID`);
+  if (!BOSS_IDS.some((id) => id === boss)) throw new TypeError(`${path}.boss is not a canonical boss ID`);
   const poolValue = source.pool;
   if (!Array.isArray(poolValue) || poolValue.length === 0) throw new TypeError(`${path}.pool must contain at least one enemy kind`);
   const pool = Object.freeze(poolValue.map((entry, index) => {
     const item = record(entry, `${path}.pool[${String(index)}]`);
     exactKeys(item, `${path}.pool[${String(index)}]`, ["kind", "weight", "unlockWave"]);
     const kind = text(item.kind, `${path}.pool[${String(index)}].kind`) as EnemyKind;
-    if (!ENEMY_KIND_IDS.includes(kind)) throw new TypeError(`${path}.pool[${String(index)}].kind is not a canonical enemy kind`);
+    if (!ENEMY_KIND_IDS.some((id) => id === kind)) throw new TypeError(`${path}.pool[${String(index)}].kind is not a canonical enemy kind`);
     return Object.freeze({ kind, weight: positive(item.weight, `${path}.pool[${String(index)}].weight`), unlockWave: safePositiveInteger(item.unlockWave, `${path}.pool[${String(index)}].unlockWave`) });
   }));
   if (new Set(pool.map((entry) => entry.kind)).size !== pool.length) throw new TypeError(`${path}.pool must not contain duplicate enemy kinds`);

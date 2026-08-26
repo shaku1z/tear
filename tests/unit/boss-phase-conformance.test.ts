@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import type { ArenaZone, EnemyPlatform, EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
-import { BOSS_ROSTER, pickMiniBoss, type BossId } from "../../src/gameplay/run/content-director";
+import { BOSS_ROSTER, pickMiniBoss } from "../../src/gameplay/run/content-director";
 import { bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
 import { STAGES } from "../../src/gameplay/stages";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
@@ -33,7 +33,9 @@ type BossActor = BehaviorActor & {
   siphon: unknown;
 };
 
-function createBoss(id: BossId): ReturnType<typeof createEnemyHarness> & { boss: BossActor } {
+type FactoryBossId = typeof BOSS_ROSTER[number]["id"];
+
+function createBoss(id: FactoryBossId): ReturnType<typeof createEnemyHarness> & { boss: BossActor } {
   const harness = createEnemyHarness([0.25, 0.75, 0.4]);
   const constructors = {
     warden: harness.types.Warden,
