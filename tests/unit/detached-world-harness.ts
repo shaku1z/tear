@@ -114,6 +114,7 @@ export function detachedRun(mode = "endless") {
 }
 
 export interface DetachedWorldOptions {
+  readonly worldId?: string;
   readonly seed: string;
   /** Factory ids and positions spawned through the production entity port. */
   readonly enemies?: readonly Readonly<{ id: string; x: number; y: number }>[];
@@ -167,6 +168,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     state, entities,
     services: createLiveWorldServices({ dependencies, configuration }),
     cinema: new CinematicTimeline.Director(config),
+    worldId: options.worldId ?? `detached:${options.seed}:${options.mode ?? "endless"}`,
   });
   // Combat, State Forge restoration, and all detached outward adapters mutate
   // the one record the portable world core owns.

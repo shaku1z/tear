@@ -19,17 +19,20 @@ const transient = Object.freeze({
 describe("live State Forge runtime bridge", () => {
   it("migrates absent banner/protection fields to canonical values during restore", () => {
     const restoreStageBanner = vi.fn(); const restoreCinemaProtection = vi.fn();
+    const clearEnvironmentRestore = vi.fn();
     const bridge = createLiveStateForgeRuntimeBridge({
       captureTransient: () => ({}), restoreTransient: vi.fn(), captureLifecycle: initialRunLifecycleSnapshot,
       restoreLifecycle: vi.fn(), captureChapterBinding: () => null, stageChapterBinding: () => null,
       installChapterBinding: () => undefined, captureCinemaProtection: () => ({ active: false, lastMode: null }),
       restoreCinemaProtection, captureStageBanner: () => ({ name: "", seconds: 0 }), restoreStageBanner,
+      clearEnvironmentRestore,
       cinema: { captureState: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
         validateState: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1, restoreState: vi.fn() },
     });
     bridge.restore({ lifecycle: initialRunLifecycleSnapshot(), cinema: INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 });
     expect(restoreStageBanner).toHaveBeenCalledWith("", 0);
     expect(restoreCinemaProtection).toHaveBeenCalledWith({ active: false, lastMode: null });
+    expect(clearEnvironmentRestore).toHaveBeenCalledOnce();
   });
 
   it("validates reconstructed chapter position and lifecycle before commit", () => {

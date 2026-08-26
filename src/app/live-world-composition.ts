@@ -10,6 +10,7 @@ import type { BossBeatState, BossIntroState, LiveGameHostState } from "./live-ga
 import { createLiveWorldServices, type LiveWorldContext } from "./live-world-context";
 import { createLiveWorldEntityFactory, type LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
+import { createEnvironmentRuntime, type EnvironmentRuntime } from "../gameplay/environment/environment-runtime";
 
 type WorldRun = GameRun & { voidDescent?: unknown };
 type PortableWorldState = TearWorldState<
@@ -54,6 +55,7 @@ export interface LiveWorldCompositionOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly session: LiveWorldSessionPort;
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
+  readonly worldId?: string;
   readonly mirrors?: LiveWorldMirrors;
 }
 
@@ -63,6 +65,8 @@ export interface LiveWorldComposition {
   readonly entities: LiveWorldEntityConstructionPort;
   readonly lifecycle: RunLifecycleController;
   readonly music: MusicDirector;
+  readonly environment: EnvironmentRuntime;
+  readonly dispose: () => void;
 }
 
 /** Builds the live host-shaped state around a session without constructing adapters. */
@@ -108,6 +112,8 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
   const state = createLiveWorldState(session, mirrors);
   const entities = createLiveWorldEntityFactory(options.dependencies);
   const music = new MusicDirector(options.dependencies.SFX);
+  const worldId = options.worldId ?? "live";
+  const environment = createEnvironmentRuntime({ stageId: "unknown", worldId });
   // The world owns the simulation timeline. The live factory adds drawing;
   // detached compositions may supply the gameplay-only implementation through
   // the same dependency surface.
@@ -118,6 +124,7 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
       dependencies: options.dependencies,
     configuration: options.configuration,
     }),
+    environment, worldId,
   });
-  return Object.freeze({ state, context: world.context, entities, lifecycle: world.lifecycle, music });
+  return Object.freeze({ state, context: world.context, entities, lifecycle: world.lifecycle, music, environment, dispose: world.dispose });
 }

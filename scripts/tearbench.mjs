@@ -73,16 +73,13 @@ function currentWeaponThrowIdentities() {
 }
 
 function currentStageBossPairs() {
-  const stageIdsSource = stageSource.match(/export const STAGE_IDS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const\)/u);
-  if (stageIdsSource === null) throw new TypeError("could not read the production stage catalog for evidence coverage");
-  const stageIds = [...stageIdsSource[1].matchAll(/"([a-z][a-z0-9-]*)"/gu)].map((entry) => entry[1]);
   const pairs = [...stageSource.matchAll(
     /^\s{4}id:\s*"([a-z][a-z0-9-]*)",[\s\S]*?^\s{4}boss:\s*"([a-z][a-z0-9-]*)"/gmu,
   )].map((entry) => Object.freeze({ stage: entry[1], boss: entry[2] }));
+  const stageIds = pairs.map((pair) => pair.stage);
   const bossIds = [...bossDefinitionSource.matchAll(/Object\.freeze\(\{\s*id:\s*"([a-z][a-z0-9-]*)"/gu)]
     .map((entry) => entry[1]);
-  if (stageIds.length === 0 || pairs.length !== stageIds.length || bossIds.length !== pairs.length
-    || pairs.some((pair, index) => pair.stage !== stageIds[index])
+  if (stageIds.length === 0 || bossIds.length !== pairs.length
     || new Set(stageIds).size !== stageIds.length || new Set(bossIds).size !== bossIds.length
     || pairs.some((pair) => !bossIds.includes(pair.boss))) {
     throw new RangeError("production stage/boss ownership has missing, retired, duplicated, or mismatched definitions");

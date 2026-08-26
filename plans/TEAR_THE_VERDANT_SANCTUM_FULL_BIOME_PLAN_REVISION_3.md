@@ -3046,14 +3046,14 @@ This block is updated after each accepted checkpoint.
 
 ```text
 PROGRAM: Verdant Sanctum Revision 3
-STATUS: ACTIVE — VS3-C1 GREEN
-CURRENT CHECKPOINT: VS3-C2
-CURRENT SUB-GOAL: VS3-C2-S1
+STATUS: ACTIVE — VS3-C2 GREEN
+CURRENT CHECKPOINT: VS3-C3
+CURRENT SUB-GOAL: VS3-C3-S1
 BASELINE: origin/main@91706363b80fb56a18df4d973b424bbce94a279e
-LAST GREEN CHECKPOINT: VS3-C1
-LAST EVIDENCE: pnpm typecheck; pnpm check:architecture; pnpm check:active-roster; 55 focused authority/reference/boss/enemy tests; clean pnpm check:game-reference at c90954bf1c01fdeb18cf091f8ea2d20015eef4e1; runtime campaign remains five stages
+LAST GREEN CHECKPOINT: VS3-C2
+LAST EVIDENCE: C2 environment runtime contract, per-world composition owner, deterministic IDs, fixed-step phase ordering, reset matrix, and concurrent-world isolation tests pass with typecheck, lint, and architecture gates; runtime campaign remains five stages
 BLOCKERS: none recorded
-NEXT ACTION: execute VS3-C2 per-world canonical environment state and fixed-step ownership
+NEXT ACTION: execute VS3-C3 environment codec, canonical hash, State Forge, replay, and TearBench observation
 PUBLICATION: prohibited until joint Verdant/Pale promotion
 C40: no certification claim
 ```
@@ -3462,7 +3462,7 @@ Define how Verdant identities enter production catalogs, public references, even
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Runtime architecture / simulation owner |
 | Dependencies | VS3-C1 |
 | Release boundary | Internal foundation; no player-facing content |
@@ -3490,17 +3490,20 @@ Create one deterministic world-owned environment state used by live and supporte
 - `src/gameplay/environment/environment-contracts.ts`
 - `src/gameplay/environment/environment-state.ts`
 - `src/gameplay/environment/environment-runtime.ts`
+- `src/tearbench/detached-world-runtime.ts` (supported detached fixed-step adapter only; no codec/observation changes)
 
 ## Sub-goals
 
-- [ ] **VS3-C2-S1** — Add a data-only environment runtime contract for fields, combat objects, and routes.
-- [ ] **VS3-C2-S2** — Add one stable per-world environment-state owner to production world composition.
-- [ ] **VS3-C2-S3** — Expose narrow read/write collection methods without leaking app, browser, renderer, replay, or persistence types inward.
-- [ ] **VS3-C2-S4** — Define deterministic object IDs through the current world identity allocator or one compatible source-owned extension.
-- [ ] **VS3-C2-S5** — Define the fixed-step environment pre-step, active-field, collision-resolution, and post-commit ownership order.
-- [ ] **VS3-C2-S6** — Define reset/clear reasons and wire new-run, retry, stage transition, boss terminal, defeat, abandon, restore, and disposal paths.
-- [ ] **VS3-C2-S7** — Expose a simulation-world view sufficient for supported detached execution without presentation fields.
-- [ ] **VS3-C2-S8** — Prove two concurrent worlds own isolated environment collections and configuration.
+- [x] **VS3-C2-S1** — Add a data-only environment runtime contract for fields, combat objects, and routes.
+- [x] **VS3-C2-S2** — Add one stable per-world environment-state owner to production world composition.
+- [x] **VS3-C2-S3** — Expose narrow read/write collection methods without leaking app, browser, renderer, replay, or persistence types inward.
+- [x] **VS3-C2-S4** — Define deterministic object IDs through the current world identity allocator or one compatible source-owned extension.
+- [x] **VS3-C2-S5** — Define the fixed-step environment pre-step, active-field, collision-resolution, and post-commit ownership order.
+- [x] **VS3-C2-S6** — Define reset/clear reasons and wire new-run, retry, stage transition, boss terminal, defeat, abandon, restore, and disposal paths.
+- [x] **VS3-C2-S7** — Expose a simulation-world view sufficient for supported detached execution without presentation fields.
+- [x] **VS3-C2-S8** — Prove two concurrent worlds own isolated environment collections and configuration.
+
+The authoritative step owns one environment `step(tick, seconds, gameplayStep)` call. That call encloses gameplay between pre-step and active-field phases, so callers cannot invoke an individual environment phase out of order or twice through the public port. Every production reset seam uses the same world environment: new-run/retry, stage transition, boss encounter replacement, terminal victory/defeat, abandon, State Forge restore, and disposal. Detached replacement uses the same port and clears with `restore` before accepting the next world.
 
 ## Agent implementation procedure
 
@@ -3513,25 +3516,25 @@ Create one deterministic world-owned environment state used by live and supporte
 
 ## TearBench same-change response
 
-- [ ] No new TearBench codec is added in this checkpoint; capture work belongs to VS3-C3.
-- [ ] Add current-game change routing for the new environment runtime path so the selector cannot return empty evidence.
-- [ ] Add a focused runtime parity harness hook but do not claim live/headless parity before VS3-C3.
-- [ ] Record environment state as unsupported in observers until the observation contract exists rather than emitting placeholders.
+- [x] No new TearBench codec is added in this checkpoint; capture work belongs to VS3-C3.
+- [x] Add current-game change routing for the new environment runtime path so the selector cannot return empty evidence.
+- [x] Add a focused runtime parity harness hook but do not claim live/headless parity before VS3-C3.
+- [x] Record environment state as unsupported in observers until the observation contract exists rather than emitting placeholders.
 
 ## Minimum focused proof
 
 - `pnpm typecheck`
 - `pnpm lint`
 - `pnpm check:architecture`
-- `pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts`
+- `pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts tests/unit/detached-world-runtime.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts tests/unit/live-outcome-composition.test.ts`
 
 ## Exit conditions
 
-- [ ] Each world owns exactly one environment state.
-- [ ] All lifecycle resets are deterministic and bounded.
-- [ ] Concurrent worlds do not share mutable environment arrays or IDs.
-- [ ] No outward dependency enters gameplay/runtime.
-- [ ] The feature remains invisible to players.
+- [x] Each world owns exactly one environment state.
+- [x] All lifecycle resets are deterministic and bounded.
+- [x] Concurrent worlds do not share mutable environment arrays or IDs.
+- [x] No outward dependency enters gameplay/runtime.
+- [x] The feature remains invisible to players.
 
 ## Stop and escalate conditions
 
@@ -6142,12 +6145,12 @@ Verdant can freeze before Pale. Verdant and Pale enter the public campaign toget
 # 34. Revision 3 starting position
 
 ```text
-STATUS: ACTIVE — VS3-C1 GREEN
-CURRENT CHECKPOINT: VS3-C2
-CURRENT SUB-GOAL: VS3-C2-S1
-LAST GREEN CHECKPOINT: VS3-C1
-LAST EVIDENCE: C1 typed identity and TearBench authority gates green; clean game-reference check passed at c90954bf1c01fdeb18cf091f8ea2d20015eef4e1; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints
-NEXT ACTION: execute VS3-C2 per-world canonical environment state and fixed-step ownership
+STATUS: ACTIVE — VS3-C2 GREEN
+CURRENT CHECKPOINT: VS3-C3
+CURRENT SUB-GOAL: VS3-C3-S1
+LAST GREEN CHECKPOINT: VS3-C2
+LAST EVIDENCE: C2 environment runtime contract, per-world composition owner, deterministic IDs, fixed-step phase ordering, reset matrix, and concurrent-world isolation tests pass with typecheck, lint, and architecture gates; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints
+NEXT ACTION: execute VS3-C3 environment codec, canonical hash, State Forge, replay, and TearBench observation
 PUBLICATION: prohibited
 WIKI DISPATCH: prohibited
 MUSIC RE-VENDORING: not authorized by this document alone

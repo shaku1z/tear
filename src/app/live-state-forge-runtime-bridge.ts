@@ -25,6 +25,8 @@ export interface LiveStateForgeRuntimeBridgeOptions {
   readonly restoreCinemaProtection: (value: Readonly<{ active: boolean; lastMode: string | null }>) => void;
   readonly captureStageBanner: () => Readonly<{ name: string; seconds: number }>;
   readonly restoreStageBanner: (name: string, seconds: number) => void;
+  /** Clears canonical environment records before a committed restore applies. */
+  readonly clearEnvironmentRestore?: () => void;
   readonly cinema: Pick<CinematicDirectorPort, "captureState" | "restoreState" | "validateState">;
 }
 
@@ -122,6 +124,7 @@ export function createLiveStateForgeRuntimeBridge(
     const transient = normalizeTransient(snapshot);
     const banner = stageBanner(snapshot.stageBanner);
     const protection = cinemaProtection(snapshot.cinemaProtection);
+    options.clearEnvironmentRestore?.();
     options.restoreTransient(transient);
     options.restoreStageBanner(banner.name, banner.seconds);
     options.restoreLifecycle(snapshot.lifecycle as RunLifecycleSnapshot);

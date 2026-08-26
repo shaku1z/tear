@@ -4,6 +4,8 @@ import { FixedStepScheduler, type FrameAdvance } from "../../simulation/fixed-st
 import { TearGameplayEventBus, type TearGameplayEventPort } from "./gameplay-events";
 import { AuthoritativeInputState } from "./authoritative-input";
 import { AuthoritativeStepController, type AuthoritativeStepResult } from "./authoritative-step";
+import type { EnvironmentClearReason } from "../environment/environment-contracts";
+import type { EnvironmentStepPort } from "../environment/environment-runtime";
 
 /**
  * Inward-facing action bridge. Browser, replay, and headless adapters can
@@ -21,6 +23,8 @@ export interface TearSimulationRuntimeOptions<State> {
   readonly events?: TearGameplayEventPort;
   readonly ticksPerSecond?: number;
   readonly maxCatchUpSteps?: number;
+  /** Optional world-owned environment phase owner. */
+  readonly environment?: EnvironmentStepPort;
 }
 
 export type TearSimulationActionsForTick = (tick: number) => readonly CommandEnvelope<GameAction>[];
@@ -58,8 +62,10 @@ export class TearSimulationRuntime<State> {
   readonly #input = new AuthoritativeInputState();
   readonly #events: TearGameplayEventPort;
   readonly #authoritativeStep: AuthoritativeStepController<State>;
+  readonly #environment: EnvironmentStepPort | undefined;
 
   constructor(options: TearSimulationRuntimeOptions<State>) {
+    this.#environment = options.environment;
     this.#scheduler = new FixedStepScheduler({
       ticksPerSecond: options.ticksPerSecond ?? 120,
       maxCatchUpSteps: options.maxCatchUpSteps ?? 12,
@@ -69,6 +75,7 @@ export class TearSimulationRuntime<State> {
       applyActions: (tick, actions) => { options.actionPort.apply(this.#input, tick, actions); },
       step: (seconds) => { options.step(seconds); },
       snapshot: (tick) => options.snapshot(tick, this.#input),
+      ...(options.environment === undefined ? {} : { environment: options.environment }),
     });
   }
 
@@ -122,9 +129,10 @@ export class TearSimulationRuntime<State> {
     return result;
   }
 
-  reset(tick = 0): void {
+  reset(tick = 0, environmentReason?: EnvironmentClearReason): void {
     this.#scheduler.reset(tick);
     this.#input.reset();
     this.#authoritativeStep.reset();
+    if (environmentReason !== undefined) this.#environment?.clear(environmentReason);
   }
 }

@@ -108,6 +108,13 @@ This is the migration checklist for the architectural redesign. A checked featur
   world state by State Forge and presentation. This preserves the existing live
   path through focused and rebuilt campaign evidence, but leaves the full
   production world app-bound.
+  VS3-C2 now adds one data-only, per-world environment owner for fields, combat
+  objects, and routes with bounded collections, caller-owned world-scoped
+  deterministic IDs, fixed-step phase ownership, explicit reset reasons, and a
+  detached-safe view. Production and detached lifecycle seams share the same
+  environment port, and focused runtime tests prove concurrent
+  collection/configuration/ID isolation plus reset/phase ordering. Environment codecs, hashes, observations, and concrete
+  Bloom/Rootbinder/Rootbound behavior remain VS3-C3+ work.
   Boss-intro and boss-beat state also flow directly from world state through
   live music, frame, State Forge, and presentation paths. This preserves the
   existing live path through focused and rebuilt campaign evidence, but leaves

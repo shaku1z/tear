@@ -3,22 +3,23 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C2",
-  "currentSubgoal": "VS3-C2-S1",
+  "currentCheckpoint": "VS3-C3",
+  "currentSubgoal": "VS3-C3-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
   "tearbenchCertification": "No C40 certification claim. Verdant evidence is engineering/non-certifying unless a separately named certification gate passes.",
   "completedCheckpoints": [
     "VS3-C0",
-    "VS3-C1"
+    "VS3-C1",
+    "VS3-C2"
   ],
-  "lastGreenCheckpoint": "VS3-C1",
+  "lastGreenCheckpoint": "VS3-C2",
   "lastEvidence": [
-    "VS3-C1 typed identity and TearBench authority gates are green; clean game-reference check passed at c90954bf1c01fdeb18cf091f8ea2d20015eef4e1; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints."
+    "VS3-C2 environment runtime contract, per-world composition owner, deterministic IDs, fixed-step phase ordering, reset matrix, and concurrent-world isolation tests pass with typecheck, lint, and architecture gates; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later implementation checkpoints."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C2-S1: add the per-world canonical environment runtime contract.",
+  "nextAction": "Execute VS3-C3-S1: evolve the environment codec and canonical hash contracts.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -313,42 +314,42 @@
         {
           "id": "VS3-C2-S1",
           "description": "Add a data-only environment runtime contract for fields, combat objects, and routes.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C2-S2",
           "description": "Add one stable per-world environment-state owner to production world composition.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C2-S3",
           "description": "Expose narrow read/write collection methods without leaking app, browser, renderer, replay, or persistence types inward.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C2-S4",
           "description": "Define deterministic object IDs through the current world identity allocator or one compatible source-owned extension.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C2-S5",
           "description": "Define the fixed-step environment pre-step, active-field, collision-resolution, and post-commit ownership order.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C2-S6",
           "description": "Define reset/clear reasons and wire new-run, retry, stage transition, boss terminal, defeat, abandon, restore, and disposal paths.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C2-S7",
           "description": "Expose a simulation-world view sufficient for supported detached execution without presentation fields.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C2-S8",
           "description": "Prove two concurrent worlds own isolated environment collections and configuration.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -369,7 +370,7 @@
         "pnpm typecheck",
         "pnpm lint",
         "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts"
+        "pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts tests/unit/detached-world-runtime.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts tests/unit/live-outcome-composition.test.ts"
       ],
       "exitConditions": [
         "Each world owns exactly one environment state.",
@@ -390,13 +391,27 @@
         "Architecture gate transcript",
         "Updated ledger/handoff"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "5a934e71bbcafca7af9a92c5f7e886cf3fe8bba0",
+      "completionIdentity": "working tree after VS3-C2 implementation",
+      "commandsRun": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts tests/unit/detached-world-runtime.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts tests/unit/live-outcome-composition.test.ts"
+      ],
+      "evidence": [
+        "Environment contracts and the state owner provide bounded fields, combat objects, and routes with data-only snapshots and narrow collection methods.",
+        "Live-shaped production composition owns exactly one environment runtime; detached compositions can supply the same fixed-step port and clear restore state before replacement.",
+        "Environment IDs are deterministic within a caller-owned world namespace with no process-global allocator, and focused tests prove concurrent collection/configuration/ID isolation.",
+        "The authoritative owner invokes one environment step that structurally encloses gameplay between pre-step and active-field phases, preventing standalone phase misuse; reset reasons cover all C2 lifecycle paths.",
+        "Environment state remains unsupported by TearBench observations until VS3-C3; no codec, hash, Bloom, Rootbinder, or Rootbound behavior was added."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "C2 is engineering-only and player-invisible; publication, deployment, C40 certification, and protected integration remain prohibited. Current-game observer support remains intentionally absent until C3.",
+        "Next authorized checkpoint is VS3-C3."
+      ]
     },
     {
       "id": "VS3-C3",

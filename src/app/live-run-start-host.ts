@@ -13,6 +13,7 @@ import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, migrateWeaponSelection } from "../gam
 import type { RandomSource } from "../domain/random";
 import type { TearWorldServices } from "../gameplay/runtime/tear-world-context";
 import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulation/run-random";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -62,6 +63,7 @@ interface RunStartHostContext {
   readonly installRun: (run: GameRun) => void;
   readonly world: MutableWorldState;
   readonly services: WorldServices;
+  readonly environment: EnvironmentRuntimeState;
   readonly resetAuthoritativeClocks: () => void;
   readonly resetCombatIdentity: () => void;
   readonly createRunSeed?: () => number;
@@ -120,6 +122,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     },
     initializeWorld: (_mode, difficulty) => {
       context.clearPracticeSession?.();
+      context.environment.clear("new-run");
       context.prepareWorld();
       context.resetCombatIdentity();
       context.lifecycle.reset();
@@ -232,6 +235,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
         if (first === undefined) throw new Error("Boss-only mode requires a boss roster");
         run.bossOrder = order; run.bossIdx = 0; run.bossesBeaten = 0; run.curBoss = first;
         context.loadStage(context.bossBiome(first));
+        context.environment.clear("boss-encounter-replacement");
       } else if (mode === "gauntlet") {
         run.bossOrder = context.shuffledRoster(); run.bossIdx = 0; run.bossesBeaten = 0;
       }

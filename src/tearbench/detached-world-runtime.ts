@@ -8,6 +8,7 @@ import {
   type TearSimulationAdvanceLifecycle,
   type TearSimulationExactAdvance,
 } from "../gameplay/runtime/tear-simulation-runtime";
+import type { EnvironmentStepPort } from "../gameplay/environment/environment-runtime";
 
 /** A hydrated codec world needs only its authoritative starting tick to run. */
 export interface TearHydratedWorld {
@@ -32,6 +33,8 @@ export interface TearHydratedWorldRuntimeOptions {
   readonly events?: TearGameplayEventPort;
   readonly ticksPerSecond?: number;
   readonly maxCatchUpSteps?: number;
+  /** Optional world-owned environment phase owner shared by detached steps. */
+  readonly environment?: EnvironmentStepPort;
 }
 
 function assertStartingTick(world: TearHydratedWorld): void {
@@ -72,6 +75,7 @@ export class TearHydratedWorldRuntime<World extends TearHydratedWorld, State> {
       ...(options.events === undefined ? {} : { events: options.events }),
       ...(options.ticksPerSecond === undefined ? {} : { ticksPerSecond: options.ticksPerSecond }),
       ...(options.maxCatchUpSteps === undefined ? {} : { maxCatchUpSteps: options.maxCatchUpSteps }),
+      ...(options.environment === undefined ? {} : { environment: options.environment }),
     });
     this.simulation.reset(world.tick);
   }
@@ -82,7 +86,7 @@ export class TearHydratedWorldRuntime<World extends TearHydratedWorld, State> {
   replace(world: World): void {
     assertStartingTick(world);
     this.#world = world;
-    this.simulation.reset(world.tick);
+    this.simulation.reset(world.tick, "restore");
   }
 
   advance(

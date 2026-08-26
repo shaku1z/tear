@@ -6,6 +6,7 @@ import { createLiveCombatHost, type LiveCombatHostFactoryOptions,
   type LiveCombatHostRuntimeApi } from "./live-combat-host-factory";
 import type { RuntimeFrameDriver } from "./runtime-frame-driver";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
+import type { EnvironmentStepPort } from "../gameplay/environment/environment-runtime";
 
 type CombatLifecycleOptions = Pick<LiveCombatRuntimeOptions,
   "advanceClock" | "captureProtection" | "applyProtection">;
@@ -13,6 +14,7 @@ type CombatLifecycleOptions = Pick<LiveCombatRuntimeOptions,
 export interface LiveCombatCompositionOptions<State> {
   readonly frameDriver: RuntimeFrameDriver;
   readonly gameplayEvents?: TearGameplayEventPort;
+  readonly environment?: EnvironmentStepPort;
   readonly adapters: LiveCombatAdapterContext;
   readonly lifecycle: CombatLifecycleOptions;
   readonly frame: LiveCombatFrameContext;
@@ -33,6 +35,7 @@ export function createLiveCombatComposition<State>(
   const host: LiveCombatHostRuntimeApi<State> = createLiveCombatHost<State>({
     frameDriver: options.frameDriver,
     ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
+    ...(options.environment === undefined ? {} : { environment: options.environment }),
     combatEntities: adapters.entities,
     kill: adapters.kill,
     createCombat: () => ({

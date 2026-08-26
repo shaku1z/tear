@@ -1,5 +1,5 @@
 import type { RandomSource } from "../../domain/random";
-import { BOSS_DEFINITIONS, BOSS_IDENTITY_IDS, type BossDefinition } from "./boss-definitions";
+import { BOSS_DEFINITIONS, type BOSS_IDENTITY_IDS, type BossDefinition } from "./boss-definitions";
 
 type BossRosterProjection<T extends readonly BossDefinition[]> = {
   readonly [K in keyof T]: T[K] extends BossDefinition

@@ -93,6 +93,18 @@
     "authorityCommands": ["pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts"]
   },
   {
+    "id": "current-environment-runtime",
+    "prefixes": ["src/gameplay/environment/environment-contracts.ts", "src/gameplay/environment/environment-state.ts", "src/gameplay/environment/environment-runtime.ts", "src/gameplay/runtime/tear-world-context.ts", "src/gameplay/runtime/tear-world-composition.ts", "src/gameplay/runtime/tear-simulation-runtime.ts", "src/gameplay/runtime/authoritative-step.ts", "src/simulation/runtime-world-port.ts", "tests/unit/environment-runtime.test.ts", "tests/unit/tear-world-context.test.ts", "tests/unit/tear-world-composition.test.ts"],
+    "scenarios": ["boot-start-run"],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "current-environment-runtime-foundation",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["frame-rate", "interruption"],
+    "buildTargets": [],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],

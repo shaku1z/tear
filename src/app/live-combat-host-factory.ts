@@ -3,6 +3,7 @@ import type { AuthoritativeInputState } from "../gameplay/runtime/authoritative-
 import type { AuthoritativeStepController } from "../gameplay/runtime/authoritative-step";
 import type { TearSimulationRuntime } from "../gameplay/runtime/tear-simulation-runtime";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
+import type { EnvironmentStepPort } from "../gameplay/environment/environment-runtime";
 import type { CombatEntityRuntime } from "../gameplay/combat/combat-entity-runtime";
 import type { LiveCombatRuntime } from "../gameplay/combat/live-combat-runtime";
 import type { LiveKillRuntime } from "../gameplay/combat/live-kill-runtime";
@@ -28,6 +29,7 @@ export interface LiveCombatHostRuntimeApi<State> {
 export interface LiveCombatHostFactoryOptions<State> {
   readonly frameDriver: RuntimeFrameDriver;
   readonly gameplayEvents?: TearGameplayEventPort;
+  readonly environment?: EnvironmentStepPort;
   readonly combatEntities: TearCombatSimulationOptions<State>["combatEntities"];
   readonly kill: TearCombatSimulationOptions<State>["kill"];
   readonly createCombat: TearCombatSimulationOptions<State>["createCombat"];
@@ -54,6 +56,7 @@ export function createLiveCombatHost<State>(options: LiveCombatHostFactoryOption
     combatEntities: options.combatEntities, kill: options.kill, createCombat: options.createCombat,
     authoritative: options.authoritative,
     ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
+    ...(options.environment === undefined ? {} : { environment: options.environment }),
   });
   const { simulationRuntime, simulation, authoritativeInput, authoritativeStep,
     combatEntityRuntime, combatRuntime, killRuntime } = core;

@@ -18,6 +18,7 @@ Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules mu
 - The application state controller owns screens and legal transitions.
 - The run lifecycle owns run, wave, boss, reward, and termination phases.
 - The fixed-step scheduler owns authoritative 120 Hz simulation ticks, matching the pre-redesign gameplay cadence. Rendering may interpolate but cannot advance game rules.
+- Each production world composition owns exactly one data-only environment runtime. Its bounded collections (fields, combat objects, and routes) use caller-owned world-scoped deterministic IDs. The authoritative fixed-step owner invokes one environment step that encloses gameplay in `pre-step -> active-fields -> collision-resolution -> post-commit`; production reset seams and detached replacement use the same lifecycle port, while presentation receives only a detached-safe view. Environment codecs, hashes, observations, and concrete field behavior remain later checkpoint work.
 - `RandomSource` and the simulation tick are the only gameplay randomness and time sources.
 - Input adapters normalize keyboard, pointer, touch, and controllers into semantic game actions.
 - Domain events fan completed facts out to presentation, audio, achievements, replay recording, and platform services.

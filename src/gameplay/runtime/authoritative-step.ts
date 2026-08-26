@@ -1,6 +1,7 @@
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { GameAction } from "../../input/game-action";
 import { stableVerificationHash } from "../../replay/hash";
+import type { EnvironmentStepPort } from "../environment/environment-runtime";
 
 export interface AuthoritativeStepResult<State> {
   readonly tick: number;
@@ -12,6 +13,7 @@ export interface AuthoritativeStepDependencies<State> {
   readonly applyActions: (tick: number, actions: readonly CommandEnvelope<GameAction>[]) => void;
   readonly step: (seconds: number) => void;
   readonly snapshot: (tick: number) => State;
+  readonly environment?: EnvironmentStepPort;
 }
 
 /** Owns the invariant action application -> simulation -> canonical verification state. */
@@ -26,7 +28,8 @@ export class AuthoritativeStepController<State> {
     if (!Number.isSafeInteger(tick) || tick <= this.#lastTick) throw new RangeError("authoritative ticks must increase exactly once");
     if (!(seconds > 0) || !Number.isFinite(seconds)) throw new RangeError("step duration must be finite and positive");
     this.#dependencies.applyActions(tick, actions);
-    this.#dependencies.step(seconds);
+    if (this.#dependencies.environment === undefined) this.#dependencies.step(seconds);
+    else this.#dependencies.environment.step(tick, seconds, () => { this.#dependencies.step(seconds); });
     const state = this.#dependencies.snapshot(tick);
     let cachedStateHash: string | undefined;
     const result = Object.freeze({

@@ -24,6 +24,7 @@ import { createParticleSystem } from "../presentation/particles";
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
 export interface ProductionReplayWorldOptions {
+  readonly worldId?: string;
   readonly seed: string;
   readonly enemies?: readonly Readonly<{ id: string; x: number; y: number }>[];
   readonly mode?: string;
@@ -142,6 +143,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const world = createTearWorldComposition({
     state, entities, services: createLiveWorldServices({ dependencies, configuration }),
     cinema: new CinematicTimeline.Director(config),
+    worldId: options.worldId ?? `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`,
   });
   world.context.services.random.resetRun(runSeed);
   const difficulty = options.difficulty ?? "normal";

@@ -20,6 +20,7 @@ import { createLiveVictoryProgressionExecutor } from "./live-victory-progression
 import { createLiveWaveComposition } from "./live-wave-composition";
 import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
 import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -50,6 +51,7 @@ export interface LiveRunOrchestrationOptions {
   readonly setProjectiles: (value: GameProjectile[]) => void;
   readonly selectedBoss: () => string;
   readonly worldServices: Pick<LiveWorldServices, "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback">;
+  readonly environment: EnvironmentRuntimeState;
   readonly applySettings: () => void;
   readonly prepareWorld: () => void;
   readonly resetTransientWorld: () => void;
@@ -92,6 +94,11 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   const addShake = (amount: number): void => { options.weapon.addShake(amount); };
   const addZoom = (amount: number): void => { options.weapon.addZoom(amount); };
   const dealArea: LiveRunOrchestrationOptions["weapon"]["dealArea"] = (...args) => options.weapon.dealArea(...args);
+  const setEnvironmentStage = (index: number, reason: "new-run" | "stage-transition"): void => {
+    const stageId = d.STAGES[index]?.id;
+    if (stageId === undefined) throw new RangeError(`environment stage index is invalid: ${String(index)}`);
+    options.environment.setStage(stageId, reason);
+  };
   const content = createLiveContentComposition({
     dependencies: d, entities: options.entities, state: options.state, worldServices: options.worldServices, stage, width: options.width, height: options.height,
     run: options.run, player: options.player, enemies: options.enemies, actorId: options.actorId,
@@ -110,10 +117,10 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     createPlayer: (x, y) => options.entities.createPlayer(x, y), createBlade: () => options.entities.createBlade(),
     installRun: (session) => { options.state.setRun(session); },
     world: { resetTransient: options.resetTransientWorld, finishReset: options.finishWorldReset },
-    resetAuthoritativeClocks: options.resetAuthoritativeClocks,
+    resetAuthoritativeClocks: options.resetAuthoritativeClocks, environment: options.environment,
     resetCombatIdentity: options.resetCombatIdentity,
     ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
-    loadStage: options.controllers.api.loadStage, stage, story, lifecycle: options.lifecycle,
+    loadStage: (index) => { options.controllers.api.loadStage(index); setEnvironmentStage(index, "new-run"); }, stage, story, lifecycle: options.lifecycle,
     install: (controller) => { options.controllers.installRunStart(controller); },
     setScreen: (screen, detail) => { options.setScreen(screen, detail); },
     selectedBoss: options.selectedBoss, shuffledRoster: content.shuffledRoster, bossBiome: content.bossBiome,
@@ -139,7 +146,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     stage, story, worldServices: options.worldServices, run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, spawn: content.spawn,
     loreBusy: campaignRuntime.loreBusy, achievementTracking: options.achievementTracking,
     achievementCheck: options.achievementCheck, achievementTracker: options.achievementTracker,
-    beginWipe: options.beginWipe, loadStage: options.controllers.api.loadStage,
+    beginWipe: options.beginWipe, loadStage: (index) => { options.controllers.api.loadStage(index); setEnvironmentStage(index, "stage-transition"); },
     beginCampaignChapter: campaignRuntime.beginChapter, setBannerSeconds: options.setBannerSeconds,
     startAdventureFinale: () => { campaignRuntime.startAdventureFinale(options.run().finalBossDeath); },
     winRun: () => { options.controllers.api.winRun(); }, openTier: options.openTier,
@@ -151,8 +158,9 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   );
   createLiveOutcomeComposition({
     dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
+    environment: options.environment,
     run: options.run, player: options.player, stageIndex: () => stage.index,
-    loadStage: (index) => { stage.load(index); }, authoritativeResult: options.authoritativeResult,
+    loadStage: (index) => { stage.load(index); setEnvironmentStage(index, "stage-transition"); }, authoritativeResult: options.authoritativeResult,
     setLastRecording: options.setLastRecording, setLastVaultId: options.setLastVaultId,
     setOutcome: options.setOutcome, selectedWeapon: () => options.state.selectedWeapon(),
     selectWeapon: (weapon) => { options.state.setSelectedWeapon(weapon); },

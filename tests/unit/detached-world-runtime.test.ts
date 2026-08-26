@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 
 import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
@@ -181,6 +182,20 @@ function createRuntime(world: FixtureWorld): Readonly<{
   return Object.freeze({ runtime, order, eventTicks });
 }
 
+function createRuntimeWithEnvironment(world: FixtureWorld): Readonly<{ runtime: TearHydratedWorldRuntime<FixtureWorld, FixtureSnapshot>; phases: string[]; environment: ReturnType<typeof createEnvironmentRuntime> }> {
+  const phases: string[] = [];
+  const environment = createEnvironmentRuntime({ stageId: "detached", worldId: "detached-test", hooks: {
+    preStep: () => { phases.push("pre-step"); }, activeFields: () => { phases.push("active-fields"); },
+    resolveCollisions: () => { phases.push("collision-resolution"); }, postCommit: () => { phases.push("post-commit"); },
+  } });
+  const runtime = new TearHydratedWorldRuntime(world, {
+    applyCanonicalInput: () => undefined,
+    step: () => phases.push("gameplay"),
+    snapshot: (_world, tick) => Object.freeze({ tick, x: 0, primaryTicks: 0, primaryHeld: false }),
+  }, { ticksPerSecond: 60, environment });
+  return Object.freeze({ runtime, phases, environment });
+}
+
 function runAtRenderRate(renderRate: number): Readonly<{
   state: FixtureSnapshot;
   stateHash: string;
@@ -244,5 +259,15 @@ describe("detached hydrated-world runtime", () => {
     expect(second.blade.primary).toBe(false);
     expect(first.player.x).toBe(firstX);
     expect(first.blade.primary).toBe(true);
+  });
+
+  it("invokes a supplied environment exactly once per detached fixed step", () => {
+    const detached = createRuntimeWithEnvironment(hydrateWorld());
+    detached.runtime.advanceOne([]);
+    expect(detached.phases).toEqual(["pre-step", "gameplay", "active-fields", "collision-resolution", "post-commit"]);
+    detached.runtime.replace(hydrateWorld(20));
+    expect(detached.runtime.simulation.scheduler.tick).toBe(20);
+    expect(detached.runtime.simulation.lastResult).toBeNull();
+    expect(detached.environment.lastClearReason).toBe("restore");
   });
 });

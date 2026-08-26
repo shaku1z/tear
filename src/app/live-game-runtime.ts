@@ -177,7 +177,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const abandonLiveRun = (reason: string, metadata: Readonly<Record<string, unknown>> = {}): void => {
     const lifecycle = RUN_LIFECYCLE.snapshot();
     if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
-    RUN_LIFECYCLE.terminate("quit");
+    environment.clear("abandon"); RUN_LIFECYCLE.terminate("quit");
     try {
       const run = liveRun();
       GAMEPLAY_EVENTS.emit({
@@ -200,9 +200,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   // One call builds this world: replaceable state, entity construction, run
   // lifecycle, services, and transient records. World state owns the active
   // player, blade, actors, and run while the session retains menu-time state.
-  const productionWorld = createLiveProductionWorld({ dependencies, configuration });
+  const productionWorld = createLiveProductionWorld({ dependencies, configuration, worldId: "live-production" });
   const { session, world } = productionWorld;
-  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector } = world;
+  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector, environment } = world; browserWindow.addEventListener("pagehide", (event) => { if (!event.persisted) world.dispose(); });
   // One world owns the transient records read by combat, State Forge, and diagnostics.
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening; const ghostPracticeSession = createLiveGhostPracticeSessionState();
   const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];
@@ -273,7 +273,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
     setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
     selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
-    prepareWorld: () => { if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
+    environment, prepareWorld: () => { if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
     resetTransientWorld: () => { impact.hitStop = 0; impact.shake = 0; },
     finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
       openingCarry.dashGhostTime = 0; openingCarry.throwCooldown = 0; },
@@ -527,7 +527,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     entityCounts: () => ({ enemies: hostState.enemies().length, projectiles: hostState.projectiles().length, effects: FX.list.length }),
   } satisfies CombatCompositionInput["coordinator"];
   const combatHost: CombatHost = createLiveCombatComposition({
-    frameDriver, gameplayEvents: GAMEPLAY_EVENTS, adapters: combatAdapterContext,
+    frameDriver, gameplayEvents: GAMEPLAY_EVENTS, environment, adapters: combatAdapterContext,
     lifecycle: {
       advanceClock: (dt) => { worldContext.services.clock.advance(dt); },
       captureProtection: () => { transient.assignProtection(story.protection()); },
@@ -560,7 +560,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     captureLifecycle: RUN_LIFECYCLE.snapshot.bind(RUN_LIFECYCLE), restoreLifecycle: RUN_LIFECYCLE.restore.bind(RUN_LIFECYCLE),
     captureChapterBinding: story.captureChapterBinding.bind(story), stageChapterBinding: campaignRuntime.stageChapterBinding, installChapterBinding: campaignRuntime.installChapterBinding,
     captureCinemaProtection: story.protection.bind(story), restoreCinemaProtection: story.applyProtection.bind(story),
-    captureStageBanner: () => ({ name: stageRuntime.name, seconds: stageRuntime.bannerSeconds }), restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime), cinema: CINEMA,
+    captureStageBanner: () => ({ name: stageRuntime.name, seconds: stageRuntime.bannerSeconds }), restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime), cinema: CINEMA, clearEnvironmentRestore: () => { environment.clear("restore"); },
   });
   const liveStateForge = createLiveStateForgeAdapter({
     dependencies, entities: worldEntities, worldServices: worldContext.services, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
