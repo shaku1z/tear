@@ -55,6 +55,19 @@ This is the migration checklist for the architectural redesign. A checked featur
   helpers, transactional replay restore, portable live/detached semantic
   projections, and positive/negative invariant fixtures cover the contract.
   This does not claim concrete Verdant gameplay, pixel parity, or C40.
+- [x] Verdant C4 shared environment kernel (engineering-only) — source-owned
+  field, damageable combat-object, and data-only route definitions now share
+  bounded deterministic lifecycle, geometry, integrity, attack-ID dedupe,
+  proc exclusion, cleanup, native environment facts, causal mapping, State
+  Forge scenarios, and live/detached parity evidence. No stage content or
+  release certification is implied.
+- [x] Verdant C5 Bloom Wells V1 (engineering-only) — one authored 120 Hz Bloom
+  definition owns warning, active lift, cooldown, stage/boss variants, bounded
+  force, actor-capability eligibility, boss-terminal cleanup, portable hash
+  metadata, and accessibility facts. A live State Forge/browser cycle and
+  supported detached replay proof cover lifecycle and cleanup; real production
+  Sword, Hammer, Greatsword, Chainblade, and Riftlock transport remains
+  unchanged. Verdant is not inserted into the campaign by this checkpoint.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

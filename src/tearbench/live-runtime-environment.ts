@@ -24,7 +24,9 @@ import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression,
 import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import { environmentSnapshotToObservation } from "./environment-codec";
-import { forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
+import { forgeBloomWellCycleState, forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
+import { createBloomWellState, isBloomWellState } from "../gameplay/environment/bloom-well";
+import { projectBloomWellPresentation, type BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
@@ -64,6 +66,28 @@ function genericEnvironmentForge(
   };
   const forged = kind === "field" ? forgeEnvironmentFieldState(base, field) : forgeEnvironmentCombatObjectState(base, combatObject);
   return launchResolvedLiveState(resolveTearSdl(forged), environment, snapshots, context);
+}
+
+function bloomWellEnvironmentForge(
+  environment: TearStructuredRuntimeEnvironment,
+  snapshots: ReturnType<typeof createLiveRuntimeSnapshotController>,
+  context: LiveTearRuntimeEnvironmentContext,
+): TearLiveRestoreResult {
+  const base: TearSdlDocumentV1 = {
+    format: "tearsdl", schemaVersion: 1, id: "verdant-bloom-well-cycle", stateClass: "surgical-valid",
+    seed: "verdant-bloom-well-cycle", start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+  };
+  const field = createBloomWellState({ id: "verdant-bloom-well", ownerId: "player", variant: "stage",
+    geometry: { x: 40, y: 40, radius: 32 }, patternId: "cycle" }, 0);
+  return launchResolvedLiveState(resolveTearSdl(forgeBloomWellCycleState(base, field)), environment, snapshots, context);
+}
+
+function bloomWellPresentation(
+  environment: TearStructuredRuntimeEnvironment,
+  options?: BloomWellPresentationOptions,
+) {
+  return Object.freeze(environment.environment().fields().filter(isBloomWellState)
+    .map((field) => projectBloomWellPresentation(field, options)));
 }
 
 /** Canonical live projection over the same host-owned actors consumed by gameplay;
@@ -503,6 +527,9 @@ export function createLiveTearRuntimeEnvironment(
       if (context.environment === undefined) throw new Error("structured environment is unavailable");
       return context.environment();
     },
+    bloomWellPresentation(options?: BloomWellPresentationOptions) {
+      return bloomWellPresentation(environment, options);
+    },
     screenshot() {
       screenshotCount += 1;
       context.render();
@@ -642,6 +669,7 @@ export function createLiveTearRuntimeEnvironment(
     forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) => launchResolvedLiveState(resolved, environment, snapshots, context),
     forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
     forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
+    forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
   });
   return Object.freeze({
     accessClass: "B" as const,
@@ -661,8 +689,10 @@ export function createLiveTearRuntimeEnvironment(
     events: () => environment.events(),
     stateHash: () => environment.stateHash(),
     environment: () => environment.environment(),
+    bloomWellPresentation: (options?: BloomWellPresentationOptions) => bloomWellPresentation(environment, options),
     forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
     forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
+    forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
     screenshot: () => environment.screenshot(),
   });
 }

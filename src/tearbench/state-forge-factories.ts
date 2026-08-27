@@ -2,6 +2,7 @@ import type { TearSdlDocumentV1 } from "./tearsdl";
 import type { EnvironmentCombatObjectState, EnvironmentFieldState, EnvironmentRouteState } from "../gameplay/environment/environment-contracts";
 import { createStableRegistry } from "./registries";
 import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "../gameplay/environment/environment-definitions";
+import type { BloomWellState } from "../gameplay/environment/bloom-well";
 
 type Patch = Readonly<Record<string, unknown>>;
 
@@ -19,6 +20,11 @@ export function forgeEnvironmentFieldState(
 ): TearSdlDocumentV1 {
   assertEnvironmentObjectCategory("field", field.kind);
   return patch(base, `${base.id}-${field.id}`, { environment: { fields: [{ factoryId: "environment-field", ...structuredClone(field) }], combatObjects: [], routes: [] } });
+}
+
+/** Surgical C5 journey: a Bloom Well is restored as a forged field, never inserted into a stage roster. */
+export function forgeBloomWellCycleState(base: TearSdlDocumentV1, field: BloomWellState): TearSdlDocumentV1 {
+  return forgeEnvironmentFieldState(base, field);
 }
 
 export function forgeEnvironmentCombatObjectState(

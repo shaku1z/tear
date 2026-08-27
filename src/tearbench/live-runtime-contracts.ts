@@ -8,6 +8,7 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1, TearStateClass } from "./contracts";
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
+import type { BloomWellPresentationFacts, BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
 import type { TearScenarioTransition } from "./runner";
 import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
@@ -75,6 +76,8 @@ export interface TearStructuredRuntimeEnvironment {
   stateHash(): string;
   /** Class-A/B structured access to the source-owned environment runtime; never exposed to Class C. */
   environment(): EnvironmentRuntimeState;
+  /** Browser-executed, renderer-neutral accessibility facts from the live environment state. */
+  bloomWellPresentation(options?: BloomWellPresentationOptions): readonly BloomWellPresentationFacts[];
   screenshot(): string;
 }
 
@@ -122,6 +125,7 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   forgeResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
   forgeEnvironmentField(): TearLiveRestoreResult;
   forgeEnvironmentCombatObject(): TearLiveRestoreResult;
+  forgeBloomWellCycle(): TearLiveRestoreResult;
 }
 
 export interface TearClassBRuntimeEnvironment extends Omit<TearStructuredRuntimeEnvironment, "accessClass" | "rng"> {

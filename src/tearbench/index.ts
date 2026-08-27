@@ -8,6 +8,8 @@ export * from "../gameplay/environment/combat-object-runtime";
 export * from "../gameplay/environment/environment-events";
 export * from "../gameplay/environment/presentation-snapshot";
 export * from "../gameplay/environment/environment-cleanup";
+export * from "../gameplay/environment/bloom-well";
+export * from "../presentation/environment/bloom-well-presentation";
 export * from "./live-state-snapshot";
 export * from "./detached-world-hydrator";
 export * from "./detached-world-runtime";

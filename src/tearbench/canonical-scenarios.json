@@ -185,6 +185,19 @@
       "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
+    "id": "verdant-bloom-well-cycle",
+    "description": "Restore one authored Bloom Well through State Forge and prove deterministic warning, active lift, cooldown, and dormant boundaries without stage insertion.",
+    "subject": { "kind": "environment-field", "id": "verdant-bloom-well" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
+    "tags": ["environment", "field", "bloom-well", "verdant-bloom-well", "movement", "c5"],
+    "maxTicks": 760,
+    "testFiles": ["tests/unit/bloom-well-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared current-game browser proof restores the Bloom Well through State Forge and records state/hash/observation boundaries; detached parity is covered by the production environment unit harness.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
     "id": "source-void-low-hp-rescue-seek",
     "description": "At one HP, trigger the real live Source void-fall rescue through semantic movement, retain its native evidence, verify a supported pre-rescue replay receipt, and explicitly refuse unsupported detached post-rescue void replay and mixed-capsule seeking.",
     "subject": { "kind": "boss", "id": "source" },

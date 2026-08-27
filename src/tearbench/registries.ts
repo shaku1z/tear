@@ -47,7 +47,7 @@ export const GAMEPLAY_SCENARIO_SUBJECT_REGISTRY = createStableRegistry(
 export const HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS = Object.freeze([
   "boot", "movement", "dash",
 ] as const);
-export const ENVIRONMENT_FIELD_SCENARIO_SUBJECT_IDS = Object.freeze(["generic-field"] as const);
+export const ENVIRONMENT_FIELD_SCENARIO_SUBJECT_IDS = Object.freeze(["generic-field", "verdant-bloom-well"] as const);
 export const ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_IDS = Object.freeze(["generic-combat-object"] as const);
 export const ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY = createStableRegistry("environment field scenario subject", ENVIRONMENT_FIELD_SCENARIO_SUBJECT_IDS);
 export const ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY = createStableRegistry("environment combat-object scenario subject", ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_IDS);

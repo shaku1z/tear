@@ -1,6 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import { ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
+import { isValidBloomWellForcePolicy } from "../gameplay/environment/bloom-well";
 import type { TearEnvironmentObservationV1 } from "./contracts";
 import { ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY } from "./state-forge-factories";
 
@@ -9,7 +10,7 @@ export interface EnvironmentCodecIssue {
   readonly message: string;
 }
 
-const STATES = new Set(["scheduled", "warning", "active", "cooldown", "destroyed", "expired"]);
+const STATES = new Set(["scheduled", "warning", "active", "cooldown", "dormant", "destroyed", "expired"]);
 const KINDS = new Set<string>(ENVIRONMENT_OBJECT_KIND_IDS);
 const MAX_FIELDS = 64;
 const MAX_COMBAT_OBJECTS = 128;
@@ -154,6 +155,7 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
         if (entry.schedule !== null && entry.schedule !== undefined && !record(entry.schedule)) issues.push(issue(`${path}.schedule`, "schedule must be null or an object"));
         if (record(entry.schedule)) for (const name of ["startTick", "endTick", "intervalTicks"] as const) { const scheduleValue = entry.schedule[name]; if (scheduleValue !== undefined && (typeof scheduleValue !== "number" || !Number.isSafeInteger(scheduleValue) || scheduleValue < 0)) issues.push(issue(`${path}.schedule.${name}`, `${name} must be a non-negative safe integer`)); }
         if (entry.force !== null && entry.force !== undefined && (!record(entry.force) || !finite(entry.force.x) || !finite(entry.force.y) || !finite(entry.force.magnitude) || entry.force.magnitude < 0)) issues.push(issue(`${path}.force`, "force must contain finite x, y, and non-negative magnitude"));
+        if (entry.kind === "bloom-well" && text(entry.bloomWellId) && !isValidBloomWellForcePolicy(entry.force)) issues.push(issue(`${path}.force`, "Bloom Well force must fit its bounded declared magnitude"));
       } else if (key === "combatObjects") {
         if (entry.targetId !== null && !text(entry.targetId)) issues.push(issue(`${path}.targetId`, "targetId must be null or a stable ID"));
         if (!finite(entry.integrity) || !finite(entry.maxIntegrity) || entry.maxIntegrity <= 0 || entry.integrity < 0 || entry.integrity > entry.maxIntegrity) issues.push(issue(`${path}.integrity`, "integrity must be finite and within maxIntegrity"));
@@ -194,7 +196,9 @@ export function projectEnvironmentHash(value: unknown): unknown {
     return entries.map((entry): unknown => {
     if (!record(entry)) return entry;
     const commonValue: Record<string, unknown> = { id: portableEnvironmentId(entry.id, remapping), kind: entry.kind, geometry: projectionGeometry(record(entry.geometry) ? entry.geometry : {}), state: entry.state, stateTick: entry.stateTick, ownerId: portableEnvironmentId(entry.ownerId ?? null, remapping), cleanupReason: entry.cleanupReason ?? null };
-    if (key === "fields") Object.assign(commonValue, { timer: finite(entry.timer) ? rounded(entry.timer) : entry.timer, eligibility: entry.eligibility ?? null, force: entry.force ?? null, schedule: entry.schedule ?? null, patternId: entry.patternId ?? null });
+    if (key === "fields") Object.assign(commonValue, { timer: finite(entry.timer) ? rounded(entry.timer) : entry.timer, eligibility: entry.eligibility ?? null, force: entry.force ?? null, schedule: entry.schedule ?? null, patternId: entry.patternId ?? null,
+      variant: entry.variant ?? null, bloomWellId: entry.bloomWellId ?? null, stageOwnerId: entry.stageOwnerId ?? null,
+      bossOwnerId: portableEnvironmentId(entry.bossOwnerId ?? null, remapping), startTick: entry.startTick ?? null, transitionTick: entry.transitionTick ?? null });
     if (key === "combatObjects") Object.assign(commonValue, { targetId: portableEnvironmentId(entry.targetId ?? null, remapping), ...(Array.isArray(entry.targetIds) ? { targetIds: entry.targetIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), ...(Array.isArray(entry.linkedActorIds) ? { linkedActorIds: entry.linkedActorIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), integrity: entry.integrity, maxIntegrity: entry.maxIntegrity, counterplayTags: entry.counterplayTags ?? [], procEligible: entry.procEligible, damageDedupeId: entry.damageDedupeId, patternId: entry.patternId ?? null });
     if (key === "routes") commonValue.points = Array.isArray(entry.points) ? entry.points.map((point) => ({ x: rounded(Number((point as Record<string, unknown>).x)), y: rounded(Number((point as Record<string, unknown>).y)) })) : [];
     return Object.freeze(commonValue);

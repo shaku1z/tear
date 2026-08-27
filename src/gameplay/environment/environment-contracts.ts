@@ -14,7 +14,7 @@ export type EnvironmentObjectKind = typeof ENVIRONMENT_OBJECT_KIND_IDS[number];
 /** Gameplay-only categories owned by the environment runtime. */
 export type EnvironmentObjectCategory = "field" | "combat-object" | "route";
 
-export type EnvironmentObjectState = "scheduled" | "warning" | "active" | "cooldown" | "destroyed" | "expired";
+export type EnvironmentObjectState = "scheduled" | "warning" | "active" | "cooldown" | "dormant" | "destroyed" | "expired";
 
 export type EnvironmentClearReason =
   | "new-run"

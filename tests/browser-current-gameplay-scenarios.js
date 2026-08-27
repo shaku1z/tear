@@ -149,6 +149,42 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           evidence = { fieldId, forgedState, finalState: finalField?.state, transitionEvents: transitions.flatMap((transition) => transition.events.map((event) => event.type)) };
           break;
         }
+        case "verdant-bloom-well": {
+          const forge = environment.forgeBloomWellCycle();
+          if (!forge.ok) throw new Error("Bloom Well must launch through State Forge restore");
+          const env = environment.environment();
+          const fieldId = "verdant-bloom-well";
+          const states = [];
+          const hashes = [];
+          // This journey has no weapon command; verify the field did not alter the
+          // weapon transport state machine or create a thrown route.
+          const bladeBefore = { state: initial.blade.state };
+          const capture = () => {
+            const snapshot = env.snapshot();
+            const field = snapshot.fields.find((entry) => entry.id === fieldId);
+            if (field === undefined) throw new Error("Bloom Well State Forge restore did not produce the authored field");
+            states.push(field.state); hashes.push(environment.stateHash());
+            return field;
+          };
+          capture();
+          for (let tick = 0; tick < 84; tick += 1) step();
+          capture();
+          for (let tick = 84; tick < 264; tick += 1) step();
+          capture();
+          for (let tick = 264; tick < 744; tick += 1) step();
+          const finalField = capture();
+          const finalObservation = environment.observe();
+          const presentation = environment.bloomWellPresentation({ highContrast: true, reducedMotion: true, lowGraphics: true, audioEnabled: false })[0];
+          const bladeAfter = { state: finalObservation.blade.state };
+          const uniqueHashes = new Set(hashes);
+          evidence = { states, hashes, forgedState: env.snapshot(), presentation, weaponTransportUnchanged: JSON.stringify(bladeBefore) === JSON.stringify(bladeAfter) };
+          proved = states.join(",") === "warning,active,cooldown,dormant"
+            && uniqueHashes.size === hashes.length && evidence.weaponTransportUnchanged
+            && presentation?.boundaryVisible === true && presentation.highContrast === true
+            && presentation.lowGraphics === true && presentation.motionScale === 0 && presentation.audioIndependent === true
+            && finalField.state === "dormant";
+          break;
+        }
         case "generic-combat-object": {
           const forge = environment.forgeEnvironmentCombatObject();
           if (!forge.ok) throw new Error("generic combat object must launch through State Forge restore");

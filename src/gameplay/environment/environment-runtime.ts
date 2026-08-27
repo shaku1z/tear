@@ -5,6 +5,7 @@ import { createEnvironmentCombatObjectRuntime, type EnvironmentCombatObjectRunti
 import { cleanupOrphanedEnvironmentReferences } from "./environment-cleanup";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
+import { applyBloomWellForce, advanceBloomWell, isBloomWellState, type BloomWellActor } from "./bloom-well";
 
 /** The only phases an environment may own inside one authoritative tick. */
 export type EnvironmentStepPhase = "pre-step" | "active-fields" | "collision-resolution" | "post-commit";
@@ -34,11 +35,12 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   readonly #hooks: EnvironmentStepHooks;
   #events: TearGameplayEventPort | undefined;
   #availableActorIds: (() => ReadonlySet<string>) | undefined;
+  #bloomWellActors: (() => readonly BloomWellActor[]) | undefined;
   readonly #combatKernels = new Map<string, EnvironmentCombatObjectRuntime>();
   #phaseLog: EnvironmentStepPhase[] = [];
 
-  constructor(stageId = "unknown", worldId: string, configuration?: Partial<EnvironmentRuntimeConfiguration>, hooks: EnvironmentStepHooks = {}, options: Readonly<{ events?: TearGameplayEventPort; availableActorIds?: () => ReadonlySet<string> }> = {}) {
-    super(stageId, worldId, configuration); this.#hooks = hooks; this.#events = options.events; this.#availableActorIds = options.availableActorIds;
+  constructor(stageId = "unknown", worldId: string, configuration?: Partial<EnvironmentRuntimeConfiguration>, hooks: EnvironmentStepHooks = {}, options: Readonly<{ events?: TearGameplayEventPort; availableActorIds?: () => ReadonlySet<string>; bloomWellActors?: () => readonly BloomWellActor[] }> = {}) {
+    super(stageId, worldId, configuration); this.#hooks = hooks; this.#events = options.events; this.#availableActorIds = options.availableActorIds; this.#bloomWellActors = options.bloomWellActors;
   }
 
   get phaseLog(): readonly EnvironmentStepPhase[] { return this.#phaseLog; }
@@ -57,6 +59,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   /** Executes the four environment-owned phases exactly once in canonical order. */
   setEventPort(events: TearGameplayEventPort | undefined): void { this.#events = events; }
   setAvailableActorIdsSource(source: (() => ReadonlySet<string>) | undefined): void { this.#availableActorIds = source; }
+  setBloomWellActorsSource(source: (() => readonly BloomWellActor[]) | undefined): void { this.#bloomWellActors = source; }
 
   damageCombatObject(id: string, amount: number, attackId: string, tick = 0) {
     const object = this.combatObjects().find((entry) => entry.id === id);
@@ -77,6 +80,12 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
 
   #advanceFields(tick: number, seconds: number): void {
     for (const field of this.fields()) {
+      if (isBloomWellState(field)) {
+        const result = advanceBloomWell(field, tick, this.#events);
+        if (result !== field) this.updateField(field.id, result);
+        if (result.state === "active") for (const actor of this.#bloomWellActors?.() ?? []) applyBloomWellForce(result, actor, seconds);
+        continue;
+      }
       const result = advanceEnvironmentField(field, tick, seconds, "natural-expiry", this.#events);
       if (result.field !== field) this.updateField(field.id, { ...result.field, stateTick: result.transition === undefined ? field.stateTick : tick });
     }
@@ -90,8 +99,8 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     if (this.#events !== undefined) {
       for (const [category, entries] of [["field", after.fields], ["combat-object", after.combatObjects], ["route", after.routes]] as const) {
         const prior = new Map((category === "field" ? before.fields : category === "combat-object" ? before.combatObjects : before.routes).map((entry) => [entry.id, entry]));
-        for (const entry of entries) if (entry.state === "expired" && prior.get(entry.id)?.state !== "expired") {
-          publishEnvironmentEvent(this.#events, { event: "object-cleaned", objectId: entry.id, category, objectKind: entry.kind, reason: "stage-transition" }, tick);
+        for (const entry of entries) if (entry.cleanupReason !== null && prior.get(entry.id)?.cleanupReason !== entry.cleanupReason) {
+          publishEnvironmentEvent(this.#events, { event: "object-cleaned", objectId: entry.id, category, objectKind: entry.kind, reason: entry.cleanupReason }, tick);
         }
       }
     }
@@ -121,6 +130,7 @@ export function createEnvironmentRuntime(options: Readonly<{
   readonly hooks?: EnvironmentStepHooks;
   readonly events?: TearGameplayEventPort;
   readonly availableActorIds?: () => ReadonlySet<string>;
+  readonly bloomWellActors?: () => readonly BloomWellActor[];
 }> = {}): EnvironmentRuntime {
   if (options.worldId === undefined) throw new TypeError("environment world identity is required");
   return new EnvironmentRuntime(options.stageId ?? "unknown", options.worldId, options.configuration, options.hooks, options);

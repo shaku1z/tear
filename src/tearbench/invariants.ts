@@ -145,8 +145,8 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
     const prior = new Map([...previous.environment.fields, ...previous.environment.combatObjects, ...previous.environment.routes].map((entry) => [entry.id, entry.state]));
     const allowed: Readonly<Record<string, readonly string[]>> = {
       scheduled: ["scheduled", "warning", "active", "destroyed", "expired"], warning: ["warning", "active", "cooldown", "destroyed", "expired"],
-      active: ["active", "cooldown", "destroyed", "expired"], cooldown: ["cooldown", "active", "destroyed", "expired"],
-      destroyed: ["destroyed"], expired: ["expired"],
+      active: ["active", "cooldown", "destroyed", "expired"], cooldown: ["cooldown", "active", "dormant", "destroyed", "expired"],
+      dormant: ["dormant", "warning"], destroyed: ["destroyed"], expired: ["expired"],
     };
     const current = [...observation.environment.fields, ...observation.environment.combatObjects, ...observation.environment.routes]
       .find((entry) => prior.has(entry.id) && !(allowed[prior.get(entry.id) ?? ""] ?? []).includes(entry.state));

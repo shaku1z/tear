@@ -9,6 +9,7 @@ import type {
   EnvironmentSnapshot,
 } from "./environment-contracts";
 import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "./environment-definitions";
+import { assertBloomWellForcePolicy } from "./bloom-well";
 
 const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
   maxFields: 64, maxCombatObjects: 128, maxRoutes: 64,
@@ -99,7 +100,10 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     assertUnique(snapshot.routes.map((item) => item.id), "route");
     const all = [...snapshot.fields, ...snapshot.combatObjects, ...snapshot.routes].map((item) => item.id);
     assertUnique(all, "object");
-    snapshot.fields.forEach((field) => { assertEnvironmentObjectCategory("field", field.kind); });
+    snapshot.fields.forEach((field) => {
+      assertEnvironmentObjectCategory("field", field.kind);
+      if (field.kind === "bloom-well" && "bloomWellId" in field) assertBloomWellForcePolicy(field.force);
+    });
     snapshot.combatObjects.forEach((object) => { assertEnvironmentCombatCapabilities(object.kind, object.counterplayTags, object.procEligible); });
     snapshot.routes.forEach((route) => { assertEnvironmentObjectCategory("route", route.kind); });
     this.#fields.splice(0, this.#fields.length, ...snapshot.fields.map(copyField));
@@ -131,6 +135,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   addField(value: Omit<EnvironmentFieldState, "id"> & { readonly id?: string }): string {
     if (this.#fields.length >= this.configuration.maxFields) throw new RangeError("environment field population bound exceeded");
     assertEnvironmentObjectCategory("field", value.kind);
+    if (value.kind === "bloom-well" && "bloomWellId" in value) assertBloomWellForcePolicy(value.force);
     const id = this.#claim(value.id, "field"); this.#fields.push(copyField({ ...value, id })); this.#revision += 1; return id;
   }
   addCombatObject(value: Omit<EnvironmentCombatObjectState, "id"> & { readonly id?: string }): string {

@@ -187,8 +187,12 @@ function validateScenarioMetadata(scenario) {
     }
   } else if (subject.kind === "environment-field" || subject.kind === "environment-combat-object") {
     const expected = subject.kind === "environment-field" ? "generic-field" : "generic-combat-object";
-    if (subject.id !== expected || !Array.isArray(scenario.backends) || scenario.backends.length !== 1 || scenario.backends[0] !== "live") {
-      throw new TypeError(`scenario ${scenario.id} environment subject requires live-only generic evidence`);
+    const isSupportedBloomWell = subject.kind === "environment-field" && subject.id === "verdant-bloom-well";
+    const supportedBackends = isSupportedBloomWell
+      ? Array.isArray(scenario.backends) && scenario.backends.length === 2 && scenario.backends.includes("live") && scenario.backends.includes("headless")
+      : Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live";
+    if ((subject.id !== expected && !isSupportedBloomWell) || !supportedBackends) {
+      throw new TypeError(`scenario ${scenario.id} environment subject requires a supported environment evidence backend`);
     }
   }
   const command = scenario.evidence?.command;
