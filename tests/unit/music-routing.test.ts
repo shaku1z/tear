@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { FALLBACK_MUSIC_ROUTING } from "../../src/audio/music/music-routing-loader";
-import { resolveMusicRoute } from "../../src/audio/music/music-routing-resolver";
+import {
+  ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS,
+  resolveMusicRoute,
+} from "../../src/audio/music/music-routing-resolver";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 
 describe("data-driven music routing", () => {
@@ -36,6 +39,17 @@ describe("data-driven music routing", () => {
     expect(resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
       biomeId: "Unknown", scene: "gameplay", bossId: null,
     })).toBe("fillet");
+  });
+
+  it("keeps Verdant playable on an explicit engineering fallback without publishing a final route", () => {
+    expect(ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS).toEqual({
+      "the-verdant-sanctum": "fillet",
+    });
+    expect(resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
+      biomeId: "The Verdant Sanctum", scene: "gameplay", bossId: null,
+    })).toBe("fillet");
+    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.biome === "the-verdant-sanctum")).toBe(false);
+    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.bossId === "rootbound")).toBe(false);
   });
 
   it("normalizes authored biome aliases on both sides of a route match", () => {
