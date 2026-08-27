@@ -16,6 +16,11 @@ export interface BossReferenceProjectionInput {
 export const CANONICAL_BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(BOSS_DEFINITIONS.map((definition) => definition.id));
 export const EXPECTED_BOSS_COUNT = CANONICAL_BOSS_IDS.length;
 const ACTIVE_STAGE_IDS = Object.freeze(STAGES.map((stage) => stage.id));
+const ACTIVE_BOSS_STAGE_IDS = Object.freeze(BOSS_DEFINITIONS.map((definition) => {
+  const stage = STAGES.find((candidate) => candidate.boss === definition.id);
+  if (stage === undefined) throw new Error(`missing canonical stage for boss ${definition.id}`);
+  return stage.id;
+}));
 
 function record(value: unknown, path: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${path} must be an object`);
@@ -93,8 +98,10 @@ function sourceStageBossMap(stages: readonly StageDefinition[], path: string): R
     const canonical = STAGES.find((candidate) => candidate.id === stageId);
     if (source === undefined || canonical === undefined) throw new TypeError(`${path} is missing canonical stage ${stageId}`);
     const boss = text(source.boss, `${path}.${stageId}.boss`);
-    if (!isBossId(boss)) throw new TypeError(`${path}.${stageId}.boss is not canonical`);
     if (boss !== canonical.boss) throw new TypeError(`${path}.${stageId}.boss does not match the canonical stage mapping`);
+    // An engineering stage may precede its boss factory/reference definition.
+    // Validate the stage join, but do not publish that reserved boss yet.
+    if (!isBossId(boss)) continue;
     if (result.has(boss)) throw new TypeError(`${path} must map each boss exactly once`);
     result.set(boss, stageId);
   }
@@ -150,6 +157,6 @@ export function validateProjectedBosses(value: unknown, path: string): readonly 
     return Object.freeze({ id: expected.id, name: expected.name, stageId, phaseMarks: marks });
   }));
   const stageIds = bosses.map((boss) => boss.stageId);
-  assertCanonicalIdSet(stageIds, ACTIVE_STAGE_IDS, `${path}.stageId`);
+  assertCanonicalIdSet(stageIds, ACTIVE_BOSS_STAGE_IDS, `${path}.stageId`);
   return bosses;
 }

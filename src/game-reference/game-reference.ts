@@ -309,7 +309,7 @@ function assertBossStageConsistency(
   const stagesById = new Map(stages.map((stage) => [stage.id, stage] as const));
   const stageByBoss = new Map<string, string>();
   for (const stage of stages) {
-    if (stageByBoss.has(stage.boss)) throw new TypeError(`gameReference stage boss references must form a ${String(EXPECTED_BOSS_COUNT)}-way bijection`);
+    if (stageByBoss.has(stage.boss)) throw new TypeError("gameReference boss/stage reference mismatch: campaign bosses must be unique");
     stageByBoss.set(stage.boss, stage.id);
   }
   const bossByStage = new Map<string, string>();
@@ -322,7 +322,7 @@ function assertBossStageConsistency(
     bossByStage.set(boss.stageId, boss.id);
   }
   if (
-    stageByBoss.size !== EXPECTED_BOSS_COUNT
+    stageByBoss.size !== EXPECTED_STAGE_COUNT
     || bossByStage.size !== EXPECTED_BOSS_COUNT
     || CANONICAL_BOSS_IDS.some((id) => !stageByBoss.has(id) || !bosses.some((boss) => boss.id === id))
   ) {

@@ -101,7 +101,7 @@ describe("game-reference.v1", () => {
     expect(result.collections.achievements.status).toBe("complete");
     expect(result.collections.achievements.items).toHaveLength(98);
     expect(result.collections.stages.status).toBe("complete");
-    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "voidspire", "tear"]);
+    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"]);
     expect(result.collections.modes.status).toBe("complete");
     expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
     expect(result.collections.enemies.status).toBe("complete");
@@ -153,7 +153,7 @@ describe("game-reference.v1", () => {
   it("projects only stable stage data and cross-reference IDs", () => {
     const result = reference();
     const stages = result.collections.stages.items;
-    expect(stages).toHaveLength(5);
+    expect(stages).toHaveLength(6);
     expect(stages[0]).toMatchObject({
       id: "grounds", name: "The Grounds", musicId: "grounds", boss: "warden",
       theme: { background: "#ffffff", platform: "#111111", accent: "#e23b3b", dark: false },
@@ -162,7 +162,11 @@ describe("game-reference.v1", () => {
     expect(stages[0]?.layout[0]).toEqual({ x: 230, y: 650, w: 280, h: 24, oneway: true });
     expect(stages[0]?.narrative.chapter.pages).toHaveLength(2);
     expect(stages[0]?.narrative.art).toEqual({ composition: "left", wash: "light" });
-    expect(stages[4]?.theme.dark).toBe(true);
+    expect(stages[3]).toMatchObject({
+      id: "verdant-sanctum", name: "The Verdant Sanctum", musicId: "verdant-sanctum", boss: "rootbound",
+      theme: { background: "#dff2d6", platform: "#234a36", accent: "#e4c95a", dark: false },
+    });
+    expect(stages[5]?.theme.dark).toBe(true);
     expect(Object.keys(stages[0] ?? {})).not.toContain("stagePlatforms");
     expect(Object.keys(stages[0] ?? {})).not.toContain("hazards");
     expect(Object.values(stages).every((stage) => stage.pool.every((entry) => entry.weight > 0 && entry.unlockWave > 0))).toBe(true);

@@ -14,7 +14,7 @@ import { pickNext, type StationState } from "./station";
 
 export type SlotId =
   | "shell" | "gameplay" | "boss" | "victory" | "defeat" | "replay"
-  | "the-grounds" | "the-undercroft" | "the-crimson-fields" | "the-voidspire" | "the-tear";
+  | "the-grounds" | "the-undercroft" | "the-crimson-fields" | "the-verdant-sanctum" | "the-voidspire" | "the-tear";
 
 export interface WeightedEntry {
   readonly workId: string;
@@ -44,6 +44,7 @@ const PARENT: Partial<Record<SlotId, SlotId>> = {
   "the-grounds": "gameplay",
   "the-undercroft": "gameplay",
   "the-crimson-fields": "gameplay",
+  "the-verdant-sanctum": "gameplay",
   "the-voidspire": "gameplay",
   "the-tear": "gameplay",
   boss: "gameplay",
@@ -137,7 +138,7 @@ export function prefersInstrumental(vocals: VocalPolicy, context: MusicContext):
 export function slotForBiome(biomeId: string): SlotId | null {
   const key = biomeId.trim().toLowerCase().replace(/\s+/gu, "-");
   const slots: readonly SlotId[] = [
-    "the-grounds", "the-undercroft", "the-crimson-fields", "the-voidspire", "the-tear",
+    "the-grounds", "the-undercroft", "the-crimson-fields", "the-verdant-sanctum", "the-voidspire", "the-tear",
   ];
   return slots.find((s) => s === key) ?? null;
 }

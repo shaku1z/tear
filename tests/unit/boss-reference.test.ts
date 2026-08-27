@@ -34,6 +34,7 @@ describe("authored boss reference", () => {
   it("projects the exact stage bijection and imported shape", () => {
     const result = projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES });
     expect(result).toEqual(expected);
+    expect(result.some((boss) => boss.id === "rootbound")).toBe(false);
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result[0])).toBe(true);
     expect(Object.isFrozen(result[0]?.phaseMarks)).toBe(true);

@@ -43,8 +43,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   `environment-contracts.ts` own `verdant-sanctum`, `rootbound`, `rootbinder`,
   and `bloom-well`/`root-link`/`graft-anchor`/`regrowth-link` exactly once.
   TearBench projects those identities from production owners and has negative
-  unmapped-identity proofs. The runtime campaign remains five stages, the
-  public game-reference schema remains unchanged, and Rootbound remains
+  unmapped-identity proofs. At C1 the runtime campaign remained five stages and
+  the public game-reference schema remained unchanged; the later C8 engineering
+  insertion supersedes only that roster-count statement. Rootbound remains
   explicitly factory-unavailable until VS3-C10. Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
@@ -89,7 +90,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   resolve through the canonical family and are preserved in spawn/replay
   facts. Reference projection, restore-safe spawn tests, and the dedicated
   C7 TearBench route cover the contract. Verdant remains absent from the
-  runtime campaign stage roster.
+  runtime campaign stage roster through C7.
+- [x] Verdant C8 six-stage campaign intermediate (engineering-only) — the
+  source-owned stage roster now inserts `verdant-sanctum` between Crimson and
+  Voidspire with chapter IV, typed environment/presentation entries, central
+  Bloom activation/cleanup, explicit local-wave pool unlocks, and a temporary
+  `fillet` music safety fallback outside the public routing manifest. Exact
+  branch contracts recognize six stages while the state remains explicitly
+  non-publishable pending Pale and the authorized seven-stage integration.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
