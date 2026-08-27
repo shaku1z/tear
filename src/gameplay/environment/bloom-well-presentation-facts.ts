@@ -22,7 +22,7 @@ export interface BloomWellPresentationFacts {
 
 /** Renderer/audio-neutral facts; accessibility settings never remove the gameplay boundary. */
 export function projectBloomWellPresentation(
-  state: BloomWellState,
+  state: Pick<BloomWellState, "id" | "state" | "geometry">,
   options: BloomWellPresentationOptions = {},
 ): BloomWellPresentationFacts {
   return Object.freeze({
