@@ -33,5 +33,6 @@ export const STAGE_ENVIRONMENT_DEFINITIONS = Object.freeze({
 } as const satisfies Readonly<Partial<Record<StageId, StageEnvironmentDefinition>>>);
 
 export function stageEnvironmentDefinition(stageId: StageId): StageEnvironmentDefinition | null {
-  return STAGE_ENVIRONMENT_DEFINITIONS[stageId as keyof typeof STAGE_ENVIRONMENT_DEFINITIONS] ?? null;
+  const definitions: Readonly<Partial<Record<StageId, StageEnvironmentDefinition>>> = STAGE_ENVIRONMENT_DEFINITIONS;
+  return definitions[stageId] ?? null;
 }

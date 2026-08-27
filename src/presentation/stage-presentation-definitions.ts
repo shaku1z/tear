@@ -22,5 +22,6 @@ export const STAGE_PRESENTATION_DEFINITIONS = Object.freeze({
 } as const satisfies Readonly<Partial<Record<StageId, StagePresentationDefinition>>>);
 
 export function stagePresentationDefinition(stageId: StageId): StagePresentationDefinition | null {
-  return STAGE_PRESENTATION_DEFINITIONS[stageId as keyof typeof STAGE_PRESENTATION_DEFINITIONS] ?? null;
+  const definitions: Readonly<Partial<Record<StageId, StagePresentationDefinition>>> = STAGE_PRESENTATION_DEFINITIONS;
+  return definitions[stageId] ?? null;
 }
