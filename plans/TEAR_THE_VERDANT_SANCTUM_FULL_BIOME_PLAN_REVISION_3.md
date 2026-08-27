@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C6 green** |
-| Current checkpoint | `VS3-C7` |
+| Status | **Active implementation authority — VS3-C7 green** |
+| Current checkpoint | `VS3-C8` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4008,7 +4008,7 @@ Implement Rootbinder as a distinct controller/support family using canonical com
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Enemy content / deterministic selection owner |
 | Dependencies | VS3-C1, VS3-C6 |
 | Release boundary | Engineering content; no campaign insertion |
@@ -4019,9 +4019,9 @@ Extend current family variants with stage and local-wave context, then add four 
 
 ## Entry conditions
 
-- [ ] VS3-C1 and VS3-C6 are green.
-- [ ] Current variant and spawn-selection paths are characterized.
-- [ ] Mode-specific discovery behavior is decided.
+- [x] VS3-C1 and VS3-C6 are green.
+- [x] Current variant and spawn-selection paths are characterized.
+- [x] Mode-specific discovery behavior is decided.
 
 ## Primary files and authorities
 
@@ -4035,15 +4035,15 @@ Extend current family variants with stage and local-wave context, then add four 
 
 ## Sub-goals
 
-- [ ] **VS3-C7-S1** — Introduce a typed VariantSelectionContext with stageId, localWave, global wave, mode, and injected random source.
-- [ ] **VS3-C7-S2** — Preserve existing variant behavior for current stages and non-campaign modes.
-- [ ] **VS3-C7-S3** — Implement strict campaign stage gating.
-- [ ] **VS3-C7-S4** — Implement authored Endless/Gauntlet discovery gating.
-- [ ] **VS3-C7-S5** — Implement explicit Playground/Enemy Test selection without contaminating normal rolls.
-- [ ] **VS3-C7-S6** — Add Briar Stalker, Seedcaster, Canopy Diver, and Bark Sentinel definitions and behavior.
-- [ ] **VS3-C7-S7** — Ensure selected variant ID is captured/restored rather than rerolled.
-- [ ] **VS3-C7-S8** — Project only public-safe variant metadata through current enemy reference contracts.
-- [ ] **VS3-C7-S9** — Add deterministic positive/negative selection fixtures for every mode.
+- [x] **VS3-C7-S1** — Introduce a typed VariantSelectionContext with stageId, localWave, global wave, mode, and injected random source.
+- [x] **VS3-C7-S2** — Preserve existing variant behavior for current stages and non-campaign modes.
+- [x] **VS3-C7-S3** — Implement strict campaign stage gating.
+- [x] **VS3-C7-S4** — Implement authored Endless/Gauntlet discovery gating.
+- [x] **VS3-C7-S5** — Implement explicit Playground/Enemy Test selection without contaminating normal rolls.
+- [x] **VS3-C7-S6** — Add Briar Stalker, Seedcaster, Canopy Diver, and Bark Sentinel definitions and behavior.
+- [x] **VS3-C7-S7** — Ensure selected variant ID is captured/restored rather than rerolled.
+- [x] **VS3-C7-S8** — Project only public-safe variant metadata through current enemy reference contracts.
+- [x] **VS3-C7-S9** — Add deterministic positive/negative selection fixtures for every mode.
 
 ## Agent implementation procedure
 
@@ -4056,11 +4056,11 @@ Extend current family variants with stage and local-wave context, then add four 
 
 ## TearBench same-change response
 
-- [ ] Add source-derived variant coverage mapping without duplicating production lists.
-- [ ] Add State Forge restored-variant scenario or unit proof as appropriate.
-- [ ] Add negative fixture: Verdant variant cannot naturally appear in Grounds campaign.
-- [ ] Add negative fixture: high global wave alone does not bypass Endless discovery.
-- [ ] Route current variant files to the smallest real gameplay evidence.
+- [x] Add source-derived variant coverage mapping without duplicating production lists.
+- [x] Add State Forge restored-variant scenario or unit proof as appropriate.
+- [x] Add negative fixture: Verdant variant cannot naturally appear in Grounds campaign.
+- [x] Add negative fixture: high global wave alone does not bypass Endless discovery.
+- [x] Route current variant files to the smallest real gameplay evidence.
 
 ## Minimum focused proof
 
@@ -4070,11 +4070,11 @@ Extend current family variants with stage and local-wave context, then add four 
 
 ## Exit conditions
 
-- [ ] Existing stages retain characterized behavior.
-- [ ] Verdant variants appear only through legal context.
-- [ ] RNG is injected and deterministic.
-- [ ] Restore does not reroll identity.
-- [ ] No second variant catalog exists.
+- [x] Existing stages retain characterized behavior.
+- [x] Verdant variants appear only through legal context.
+- [x] RNG is injected and deterministic.
+- [x] Restore does not reroll identity.
+- [x] No second variant catalog exists.
 
 ## Stop and escalate conditions
 
@@ -4090,9 +4090,22 @@ Extend current family variants with stage and local-wave context, then add four 
 - Reference/TearBench mapping update
 - Regression comparison record
 
+## Checkpoint record
+
+- Implementation identity: `573be962bf435a47a162acab909666b9fafa4854`
+- Source baseline: `5ab97115816d519b5e8473a0ba977d16ef83bf77`
+- Variant selection now owns typed stage, local-wave, global-wave, mode, discovery, explicit-training, and injected-random context while preserving the legacy global-wave contract for existing variants.
+- Briar Stalker, Seedcaster, Canopy Diver, and Bark Sentinel reuse their production enemy families with distinct, bounded, counterable behavior; Briar includes the required root-assisted reposition before its rising lunge.
+- Campaign, Endless/Gauntlet, Playground/Enemy Test, boss-only, tutorial, and implicit-sandbox gates are covered with positive and negative deterministic fixtures. Persisted discovery accepts the production-authored `The Verdant Sanctum` identity.
+- Variant IDs propagate through spawn events, observation, replay, and State Forge restoration without rerolling. Codec admission fails closed on cross-family IDs, conflicting aliases, and behavior mismatches, and hydration normalizes `variantId` to the runtime identity.
+- Public-safe game-reference metadata and source-derived TearBench route/scenario coverage were extended without creating a second variant catalog.
+- Exact and adjacent proof passed: 10 files, 69 tests. Typecheck, lint, architecture, exact-commit game-reference, TearBench selection (24/24), documentation, terminology, standalone/test builds, and current browser scenarios (12/12) passed. Final adversarial review was green.
+- Standalone source-bound fingerprint: `be9567eca053ff948645f9c34e21129b157441fbf6806ab876826f925acc915b`; test-standalone fingerprint: `f33b69685ba499d2009b0733c526564e130ce7b9d62d1bfe065c47b9ae675838`.
+- No campaign insertion or publication authority was added; C40 remains unchanged.
+
 ## Required handoff sentence
 
-> `VS3-C7 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+> `VS3-C7 is GREEN at 573be962bf435a47a162acab909666b9fafa4854. The next authorized action is VS3-C8-S1, adding the typed verdant-sanctum StageDefinition with its locked chapter, palette, pool, and layout. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
