@@ -17,6 +17,7 @@ import { stableVerificationHash } from "../../src/replay/hash";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import type { EnvironmentSnapshot } from "../../src/gameplay/environment/environment-contracts";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
+import { forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "../../src/tearbench/state-forge-factories";
 
 const hazard = {
   slowZones: [{ id: "slow-1", x: 10, y: 20 }],
@@ -135,6 +136,28 @@ describe("Verdant C3 environment codec contract", () => {
     expect(ENVIRONMENT_OBJECT_KIND_REGISTRY.has("not-production")).toBe(false);
   });
 
+  it("rejects wrong-category and ordinary-proc capabilities at every direct admission boundary", () => {
+    const runtime = createEnvironmentRuntime({ stageId: "grounds", worldId: "admission" });
+    const field = hazard.fields[0];
+    const combatObject = hazard.combatObjects[0];
+    const route = hazard.routes[0];
+    expect(() => runtime.addField({ ...field, kind: "root-link" } as never)).toThrow(/not approved for field/u);
+    expect(() => { runtime.addCombatObject({ ...combatObject, procEligible: true }); }).toThrow(/ordinary-proc/u);
+    expect(() => { runtime.addRoute({ ...route, kind: "bloom-well" }); }).toThrow(/not approved for route/u);
+    expect(() => { runtime.replace({ stageId: "grounds", fields: [{ ...field, kind: "root-link" }], combatObjects: [], routes: [] }); }).toThrow(/not approved for field/u);
+    expect(() => { runtime.replace({ stageId: "grounds", fields: [], combatObjects: [{ ...combatObject, procEligible: true }], routes: [] }); }).toThrow(/ordinary-proc/u);
+  });
+
+  it("rejects wrong-category, duplicate, unapproved, and proc-eligible codec and forge inputs", () => {
+    const codec = createDefaultStateCodecRegistry().get("tear.hazard.v1");
+    expect(codec.validate({ ...hazard, fields: [{ ...hazard.fields[0], kind: "root-link" }] }).some((entry) => entry.path.endsWith(".kind"))).toBe(true);
+    expect(codec.validate({ ...hazard, combatObjects: [{ ...hazard.combatObjects[0], procEligible: true }] }).some((entry) => entry.path.endsWith(".procEligible"))).toBe(true);
+    expect(codec.validate({ ...hazard, combatObjects: [{ ...hazard.combatObjects[0], counterplayTags: ["cut", "cut"] }] }).some((entry) => entry.path.endsWith(".counterplayTags"))).toBe(true);
+    const base = { format: "tearsdl" as const, schemaVersion: 1 as const, id: "admission", stateClass: "surgical-valid" as const, seed: "admission", start: { mode: "campaign", difficulty: "normal", weapon: "sword" } };
+    expect(() => forgeEnvironmentFieldState(base, { ...hazard.fields[0], kind: "root-link" } as never)).toThrow(/not approved for field/u);
+    expect(() => forgeEnvironmentCombatObjectState(base, { ...hazard.combatObjects[0], procEligible: true })).toThrow(/ordinary-proc/u);
+  });
+
   it("round-trips v2 serialization and leaves the active world untouched after a failed restore", () => {
     const registry = new TearStateCodecRegistry();
     registry.register(createLiveStateCodec("tear.hazard.v1"));
@@ -156,5 +179,9 @@ describe("Verdant C3 environment codec contract", () => {
     expect(failed.ok).toBe(false);
     expect(commits).toBe(1);
     expect(stableVerificationHash(active.components.get("tear.hazard.v1"))).toBe(stableVerificationHash(captured));
+    const procEligible = { ...snapshot, state: { "tear.hazard.v1": { ...(captured as Record<string, unknown>), combatObjects: [{ ...hazard.combatObjects[0], ownerId: null, procEligible: true }] } } };
+    const rejected = restoreSnapshotTransactionally(procEligible, registry, factory, { replace: () => { commits += 1; } });
+    expect(rejected.ok).toBe(false);
+    expect(commits).toBe(1);
   });
 });

@@ -8,8 +8,38 @@ import { createBossArena, type ArenaPlatform } from "../../src/gameplay/training
 import { captureProductionReplayCheckpoint, createProductionCombatSimulation,
   createProductionGhostReplayComposition, createProductionReplayWorld } from "../../src/tearbench";
 import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
+import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench";
 
 describe("production TearBench combat parity", () => {
+  it("proves non-empty environment parity through supported detached production composition", () => {
+    const create = (seed: string) => {
+      const replay = createProductionReplayWorld({ seed });
+      const events: TearGameplayEvent[] = [];
+      const gameplayEvents = new TearGameplayEventBus(() => 0);
+      gameplayEvents.subscribe((event) => { events.push(event); });
+      const core = createProductionCombatSimulation<{ tick: number }>(replay, { gameplayEvents, snapshot: (tick) => ({ tick }) });
+      const environment = replay.world.context.environment;
+      environment.setStage("grounds", "restore");
+      environment.addField({ id: "parity-field", kind: "bloom-well", geometry: { x: 10, y: 20, radius: 5 }, state: "scheduled", stateTick: 0, timer: 0, ownerId: null, schedule: { startTick: 1, endTick: 3 }, eligibility: { player: true, enemies: false, bosses: false }, force: null, cleanupReason: null });
+      environment.addCombatObject({ id: "parity-object", kind: "root-link", ownerId: null, targetId: "player", geometry: { x: 10, y: 20, w: 8, h: 8 }, integrity: 2, maxIntegrity: 2, counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "parity-object-hit", state: "active", stateTick: 0, cleanupReason: null });
+      environment.addRoute({ id: "orphan-route", kind: "regrowth-link", points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], state: "active", stateTick: 0, ownerId: "missing", cleanupReason: null });
+      core.simulationRuntime.reset(0);
+      environment.damageCombatObject("parity-object", 2, "parity-attack", 1);
+      for (let tick = 0; tick < 3; tick += 1) core.simulationRuntime.advanceOne([]);
+      return { environment, events };
+    };
+    const first = create("production-environment-parity");
+    const second = create("production-environment-parity");
+    expect(environmentHash(first.environment.snapshot())).toBe(environmentHash(second.environment.snapshot()));
+    expect(environmentSnapshotToObservation(first.environment.snapshot())).toEqual(environmentSnapshotToObservation(second.environment.snapshot()));
+    expect(first.environment.snapshot().fields[0]?.state).toBe("expired");
+    expect(first.environment.snapshot().combatObjects[0]?.state).toBe("destroyed");
+    expect(first.environment.snapshot().routes[0]?.state).toBe("expired");
+    expect(first.events.map((event) => event.kind === "environment" ? event.event : event.kind)).toEqual([
+      "combat-object-damaged", "combat-object-destroyed", "field-started", "object-cleaned", "field-resolved",
+    ]);
+    expect(first.events).toEqual(second.events);
+  });
   it("uses a real boss weapon capsule and source-owned area damage", () => {
     const replay = createProductionReplayWorld({ seed: "parity-sword", weaponId: "sword", enemies: [
       { id: "warden", x: 520, y: CONFIG.world.groundY - 60 },

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import type { EnvironmentFieldState } from "../../src/gameplay/environment/environment-contracts";
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
+import { environmentHash } from "../../src/tearbench/environment-codec";
 
 const field = (state: EnvironmentFieldState["state"] = "scheduled") => ({
   kind: "bloom-well" as const, geometry: { x: 10, y: 20, radius: 30 }, state,
@@ -15,7 +17,7 @@ describe("environment runtime", () => {
     const second = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "beta" });
     const fieldId = first.addField(field());
     const objectId = first.addCombatObject({ kind: "graft-anchor", ownerId: null, targetId: null,
-      geometry: { x: 1, y: 2 }, integrity: 10, maxIntegrity: 10, counterplayTags: ["cuttable"],
+      geometry: { x: 1, y: 2 }, integrity: 10, maxIntegrity: 10, counterplayTags: ["cut", "break"],
       procEligible: false, damageDedupeId: "alpha-damage-1", state: "active", stateTick: 0, cleanupReason: null });
     const routeId = first.addRoute({ kind: "regrowth-link", points: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
       state: "active", stateTick: 0, ownerId: null, cleanupReason: null });
@@ -63,6 +65,83 @@ describe("environment runtime", () => {
     });
     runtime.advanceOne([]);
     expect(order).toEqual(["input", "environment:pre-step", "gameplay", "environment:active-fields", "environment:collision-resolution", "environment:post-commit"]);
+  });
+
+  it("advances non-empty field/object state in the shared live and detached phase owner", () => {
+    const run = (worldId: string) => {
+      const events = new TearGameplayEventBus(() => 0);
+      const native: TearGameplayEvent[] = [];
+      events.subscribe((event) => native.push(event));
+      const environment = createEnvironmentRuntime({ stageId: "test", worldId, events });
+      const fieldId = environment.addField({ ...field(), schedule: { startTick: 1, endTick: 3 } });
+      const objectId = environment.addCombatObject({ kind: "root-link", ownerId: null, targetId: "player", geometry: { x: 1, y: 2 }, integrity: 1, maxIntegrity: 1,
+        counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "shared-hit-id", state: "active", stateTick: 0, cleanupReason: null });
+      const simulation = new TearSimulationRuntime({ environment, actionPort: { apply: () => undefined }, step: () => undefined, snapshot: () => environment.snapshot(), events });
+      simulation.advanceOne([]);
+      environment.damageCombatObject(objectId, 1, "shared-hit", 2);
+      simulation.advanceOne([]);
+      simulation.advanceOne([]);
+      return { environment, fieldId, native };
+    };
+    const live = run("live-world");
+    const detached = run("detached-world");
+    expect(live.environment.snapshot().fields.find((entry) => entry.id === live.fieldId)?.state).toBe("expired");
+    expect(live.environment.combatObjects()[0]?.state).toBe("destroyed");
+    expect(environmentHash(live.environment.snapshot())).toBe(environmentHash(detached.environment.snapshot()));
+    expect(live.native.map((event) => event.kind === "environment" ? event.event : event.kind)).toEqual([
+      "field-started", "combat-object-damaged", "combat-object-destroyed", "field-resolved",
+    ]);
+    expect(detached.native.map((event) => event.kind === "environment" ? event.event : event.kind)).toEqual(live.native.map((event) => event.kind === "environment" ? event.event : event.kind));
+  });
+
+  it("cleans orphan owners across fields, combat objects, and routes at post-commit", () => {
+    const runtime = createEnvironmentRuntime({ stageId: "test", worldId: "cleanup" });
+    runtime.addField({ ...field("active"), ownerId: "missing-owner" });
+    runtime.addCombatObject({ kind: "root-link", ownerId: "missing-owner", targetId: null, geometry: { x: 1, y: 2 }, integrity: 2, maxIntegrity: 2,
+      counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "cleanup-hit", state: "active", stateTick: 0, cleanupReason: null });
+    runtime.addRoute({ kind: "regrowth-link", points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], state: "active", stateTick: 0, ownerId: "missing-owner", cleanupReason: null });
+    runtime.step(1, 1 / 120, () => undefined, new Set(["player"]));
+    expect(runtime.fields()[0]?.cleanupReason).toBe("stage-transition");
+    expect(runtime.combatObjects()[0]?.cleanupReason).toBe("stage-transition");
+    expect(runtime.routes()[0]?.cleanupReason).toBe("stage-transition");
+  });
+
+  it("retains surviving attack-ID dedupe when an unrelated orphan is cleaned", () => {
+    const runtime = createEnvironmentRuntime({ stageId: "test", worldId: "dedupe-cleanup" });
+    const survivorId = runtime.addCombatObject({ kind: "root-link", ownerId: null, targetId: "player", geometry: { x: 1, y: 2 }, integrity: 3, maxIntegrity: 3,
+      counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "survivor-hit", state: "active", stateTick: 0, cleanupReason: null });
+    runtime.addField({ ...field("active"), ownerId: "missing-owner" });
+    expect(runtime.damageCombatObject(survivorId, 1, "attack-1", 1).accepted).toBe(true);
+    runtime.step(1, 1 / 120, () => undefined, new Set(["player"]));
+    expect(runtime.fields()[0]?.state).toBe("expired");
+    expect(runtime.damageCombatObject(survivorId, 1, "attack-1", 2)).toMatchObject({ accepted: false, duplicate: true, integrity: 2 });
+    runtime.updateCombatObject(survivorId, { integrity: 1 });
+    expect(runtime.damageCombatObject(survivorId, 1, "attack-1", 3).accepted).toBe(true);
+    runtime.removeCombatObject(survivorId);
+    expect(() => runtime.damageCombatObject(survivorId, 1, "attack-1", 4)).toThrow(/unknown/u);
+  });
+
+  it("keeps live and detached owner/target cleanup semantically equal", () => {
+    const run = (worldId: string) => {
+      const events = new TearGameplayEventBus(() => 0);
+      const native: TearGameplayEvent[] = [];
+      events.subscribe((event) => native.push(event));
+      const environment = createEnvironmentRuntime({ stageId: "test", worldId, events, availableActorIds: () => new Set(["player"]) });
+      environment.addField({ ...field("active"), ownerId: "missing" });
+      environment.addCombatObject({ kind: "root-link", ownerId: null, targetId: "missing", geometry: { x: 1, y: 2 }, integrity: 2, maxIntegrity: 2,
+        counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "orphan-hit", state: "active", stateTick: 0, cleanupReason: null });
+      environment.addRoute({ kind: "regrowth-link", points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], state: "active", stateTick: 0, ownerId: "missing", cleanupReason: null });
+      const simulation = new TearSimulationRuntime({ environment, actionPort: { apply: () => undefined }, step: () => undefined, snapshot: () => environment.snapshot(), events });
+      simulation.advanceOne([]);
+      return { environment, native };
+    };
+    const live = run("live-cleanup");
+    const detached = run("detached-cleanup");
+    expect(environmentHash(live.environment.snapshot())).toBe(environmentHash(detached.environment.snapshot()));
+    expect(live.environment.fields()[0]?.state).toBe("expired");
+    expect(live.environment.combatObjects()[0]?.state).toBe("expired");
+    expect(live.environment.routes()[0]?.state).toBe("expired");
+    expect(live.native.filter((event) => event.kind === "environment").map((event) => event.event)).toEqual(["object-cleaned", "object-cleaned", "object-cleaned"]);
   });
 
   it("rejects duplicate identities and population overflow before mutation", () => {

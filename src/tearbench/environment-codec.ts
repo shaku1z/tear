@@ -1,5 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
 import { ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
 import type { TearEnvironmentObservationV1 } from "./contracts";
 import { ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY } from "./state-forge-factories";
 
@@ -95,12 +96,15 @@ function geometry(value: unknown, path: string): EnvironmentCodecIssue[] {
   return issues;
 }
 
-function common(path: string, value: Readonly<Record<string, unknown>>, route = false): EnvironmentCodecIssue[] {
+function common(path: string, value: Readonly<Record<string, unknown>>, category: "field" | "combat-object" | "route"): EnvironmentCodecIssue[] {
   const issues: EnvironmentCodecIssue[] = [];
   if (!text(value.id)) issues.push(issue(`${path}.id`, "environment object requires a stable id"));
   if (!text(value.kind) || !KINDS.has(value.kind)) issues.push(issue(`${path}.kind`, "environment object kind is not approved"));
+  else if (isEnvironmentObjectKind(value.kind) && environmentObjectDefinition(value.kind).category !== category) {
+    issues.push(issue(`${path}.kind`, `environment kind is not approved for ${category} collection`));
+  }
   if (value.factoryId !== undefined && (!text(value.factoryId) || !ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY.has(value.factoryId))) issues.push(issue(`${path}.factoryId`, "environment factory is not approved"));
-  if (route) {
+  if (category === "route") {
     if (!Array.isArray(value.points)) issues.push(issue(`${path}.points`, "route requires points"));
     else value.points.forEach((point, index) => { if (!record(point) || !finite(point.x) || !finite(point.y)) issues.push(issue(`${path}.points[${String(index)}]`, "route point must contain finite x and y")); });
   } else if (!record(value.geometry)) issues.push(issue(`${path}.geometry`, "environment object requires geometry"));
@@ -140,7 +144,7 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
     values.forEach((entry, index) => {
       const path = `$.${key}[${String(index)}]`;
       if (!record(entry)) { issues.push(issue(path, "environment collection entry must be an object")); return; }
-      issues.push(...common(path, entry, key === "routes"));
+      issues.push(...common(path, entry, key === "routes" ? "route" : key === "fields" ? "field" : "combat-object"));
       const expectedFactory = key === "fields" ? "environment-field" : key === "combatObjects" ? "environment-combat-object" : "environment-route";
       if (entry.factoryId !== undefined && entry.factoryId !== expectedFactory) issues.push(issue(`${path}.factoryId`, `factoryId must be ${expectedFactory} for this collection`));
       if (key === "fields") {
@@ -154,8 +158,15 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
         if (entry.targetId !== null && !text(entry.targetId)) issues.push(issue(`${path}.targetId`, "targetId must be null or a stable ID"));
         if (!finite(entry.integrity) || !finite(entry.maxIntegrity) || entry.maxIntegrity <= 0 || entry.integrity < 0 || entry.integrity > entry.maxIntegrity) issues.push(issue(`${path}.integrity`, "integrity must be finite and within maxIntegrity"));
         if (!Array.isArray(entry.counterplayTags) || entry.counterplayTags.some((tag) => !text(tag))) issues.push(issue(`${path}.counterplayTags`, "counterplayTags must be a string array"));
+        else {
+          if (new Set(entry.counterplayTags).size !== entry.counterplayTags.length) issues.push(issue(`${path}.counterplayTags`, "counterplayTags must be unique"));
+          if (isEnvironmentObjectKind(entry.kind)) {
+            const allowed = new Set(environmentObjectDefinition(entry.kind).counterplayTags);
+            if (entry.counterplayTags.some((tag) => !allowed.has(tag as never))) issues.push(issue(`${path}.counterplayTags`, "counterplayTags are not source-approved for this kind"));
+          }
+        }
         if (!text(entry.damageDedupeId)) issues.push(issue(`${path}.damageDedupeId`, "damageDedupeId is required"));
-        if (typeof entry.procEligible !== "boolean") issues.push(issue(`${path}.procEligible`, "procEligible must be boolean"));
+        if (entry.procEligible !== false) issues.push(issue(`${path}.procEligible`, "environment combat objects cannot be ordinary-proc eligible"));
       } else {
         if (!Array.isArray(entry.points) || entry.points.length < 2 || entry.points.length > MAX_POINTS) issues.push(issue(`${path}.points`, "route points must be a bounded array with at least two points"));
         else entry.points.forEach((point, pointIndex) => { if (!record(point) || !finite(point.x) || !finite(point.y)) issues.push(issue(`${path}.points[${String(pointIndex)}]`, "route point must contain finite x and y")); });

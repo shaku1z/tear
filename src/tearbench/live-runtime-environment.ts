@@ -24,6 +24,9 @@ import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression,
 import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import { environmentSnapshotToObservation } from "./environment-codec";
+import { forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
+import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
+import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
   TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
@@ -36,6 +39,31 @@ function numericSeed(seed: string): number {
     hash = Math.imul(hash, 0x01000193);
   }
   return (hash >>> 0) || 1;
+}
+
+function genericEnvironmentForge(
+  kind: "field" | "combat-object",
+  environment: TearStructuredRuntimeEnvironment,
+  snapshots: ReturnType<typeof createLiveRuntimeSnapshotController>,
+  context: LiveTearRuntimeEnvironmentContext,
+): TearLiveRestoreResult {
+  const base: TearSdlDocumentV1 = {
+    format: "tearsdl", schemaVersion: 1, id: `generic-environment-${kind}`, stateClass: "surgical-valid",
+    seed: `generic-environment-${kind}`, start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+  };
+  const field = {
+    id: "generic-field-state", factoryId: "environment-field", kind: "bloom-well" as const,
+    geometry: { x: 40, y: 40, radius: 12 }, state: "scheduled" as const, stateTick: 0, timer: 0, ownerId: null,
+    schedule: { startTick: 1, endTick: 3 }, eligibility: { player: true, enemies: false, bosses: false }, force: null, cleanupReason: null,
+  };
+  const combatObject = {
+    id: "generic-combat-object-state", factoryId: "environment-combat-object", kind: "root-link" as const,
+    ownerId: null, targetId: "player", geometry: { x: 50, y: 50, w: 8, h: 8 }, integrity: 2, maxIntegrity: 2,
+    counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "generic-combat-object-state-hit",
+    state: "active" as const, stateTick: 0, cleanupReason: null,
+  };
+  const forged = kind === "field" ? forgeEnvironmentFieldState(base, field) : forgeEnvironmentCombatObjectState(base, combatObject);
+  return launchResolvedLiveState(resolveTearSdl(forged), environment, snapshots, context);
 }
 
 /** Canonical live projection over the same host-owned actors consumed by gameplay;
@@ -470,6 +498,11 @@ export function createLiveTearRuntimeEnvironment(
         ...(value.environment === undefined ? {} : { environment: value.environment }),
       });
     },
+    environment() {
+      requireStructured(accessClass, "structured environment");
+      if (context.environment === undefined) throw new Error("structured environment is unavailable");
+      return context.environment();
+    },
     screenshot() {
       screenshotCount += 1;
       context.render();
@@ -607,6 +640,8 @@ export function createLiveTearRuntimeEnvironment(
       }
     },
     forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) => launchResolvedLiveState(resolved, environment, snapshots, context),
+    forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
+    forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
   });
   return Object.freeze({
     accessClass: "B" as const,
@@ -625,6 +660,9 @@ export function createLiveTearRuntimeEnvironment(
     metrics: () => environment.metrics(),
     events: () => environment.events(),
     stateHash: () => environment.stateHash(),
+    environment: () => environment.environment(),
+    forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
+    forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
     screenshot: () => environment.screenshot(),
   });
 }

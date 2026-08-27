@@ -124,7 +124,6 @@ export function createLiveStateForgeRuntimeBridge(
     const transient = normalizeTransient(snapshot);
     const banner = stageBanner(snapshot.stageBanner);
     const protection = cinemaProtection(snapshot.cinemaProtection);
-    options.clearEnvironmentRestore?.();
     options.restoreTransient(transient);
     options.restoreStageBanner(banner.name, banner.seconds);
     options.restoreLifecycle(snapshot.lifecycle as RunLifecycleSnapshot);

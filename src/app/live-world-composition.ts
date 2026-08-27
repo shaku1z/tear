@@ -113,7 +113,7 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
   const entities = createLiveWorldEntityFactory(options.dependencies);
   const music = new MusicDirector(options.dependencies.SFX);
   const worldId = options.worldId ?? "live";
-  const environment = createEnvironmentRuntime({ stageId: "unknown", worldId });
+  const environment = createEnvironmentRuntime({ stageId: "unknown", worldId, events: options.dependencies.GAMEPLAY_EVENTS });
   // The world owns the simulation timeline. The live factory adds drawing;
   // detached compositions may supply the gameplay-only implementation through
   // the same dependency surface.

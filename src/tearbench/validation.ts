@@ -29,6 +29,8 @@ import {
   WEAPON_REGISTRY,
   WITHIN_TICK_PHASES,
   ENVIRONMENT_OBJECT_KIND_REGISTRY,
+  ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY,
+  ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY,
 } from "./registries";
 
 const MAX_COLLECTION = 100_000;
@@ -281,7 +283,7 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
   }
   if (value.subject !== undefined) {
     const subject = value.subject;
-    if (!isRecord(subject) || !["gameplay", "weapon", "boss"].includes(String(subject.kind))
+    if (!isRecord(subject) || !["gameplay", "weapon", "boss", "environment-field", "environment-combat-object"].includes(String(subject.kind))
       || !stringValue(subject.id)) {
       issue(issues, "subject", "must declare a recognized current scenario subject");
     } else if (isRecord(start) && start.boss !== undefined
@@ -305,6 +307,10 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
         && !HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS.some((supported) => supported === subject.id)) {
         issue(issues, "backends", "gameplay subject has no supported ordinary-headless transition");
       }
+    } else if (subject.kind === "environment-field") {
+      if (!ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.has(subject.id)) issue(issues, "subject", "environment field subject is not registered");
+    } else if (subject.kind === "environment-combat-object") {
+      if (!ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.has(subject.id)) issue(issues, "subject", "environment combat-object subject is not registered");
     }
   }
   return issues.length === 0 ? value as unknown as TearScenarioV1 : undefined;

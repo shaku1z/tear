@@ -2,7 +2,8 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
 
-const scenarios = canonicalScenarios.filter((entry) => entry.subject.kind === "gameplay");
+const scenarios = canonicalScenarios.filter((entry) =>
+  entry.subject.kind === "gameplay" || entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object");
 
 withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST);
@@ -131,6 +132,36 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           const transition = step({ type: "draft-choice", choiceId });
           proved = transition.actions[0]?.command.type === "draft-choice"
             && environment.observe().availableActions.includes("move");
+          break;
+        }
+        case "generic-field": {
+          const forge = environment.forgeEnvironmentField();
+          if (!forge.ok) throw new Error("generic field must launch through State Forge restore");
+          const env = environment.environment();
+          const forgedState = env.snapshot();
+          const fieldId = "generic-field-state";
+          const transitions = [];
+          for (let tick = 0; tick < 3; tick += 1) transitions.push(step());
+          const finalField = env.snapshot().fields.find((entry) => entry.id === fieldId);
+          proved = finalField?.state === "expired"
+            && transitions.some((transition) => transition.events.some((event) => event.type === "world.environment-field-started"))
+            && transitions.some((transition) => transition.events.some((event) => event.type === "world.environment-field-resolved"));
+          evidence = { fieldId, forgedState, finalState: finalField?.state, transitionEvents: transitions.flatMap((transition) => transition.events.map((event) => event.type)) };
+          break;
+        }
+        case "generic-combat-object": {
+          const forge = environment.forgeEnvironmentCombatObject();
+          if (!forge.ok) throw new Error("generic combat object must launch through State Forge restore");
+          const env = environment.environment();
+          const objectId = "generic-combat-object-state";
+          const before = env.snapshot().combatObjects.find((entry) => entry.id === objectId);
+          const damage = env.damageCombatObject(objectId, 2, "generic-browser-attack", environment.observe().tick + 1);
+          const transition = step();
+          const after = env.snapshot().combatObjects.find((entry) => entry.id === objectId);
+          proved = before?.integrity === 2 && damage.accepted && damage.destroyed && after?.state === "destroyed"
+            && transition.events.some((event) => event.type === "world.environment-combat-object-damaged")
+            && transition.events.some((event) => event.type === "world.environment-combat-object-destroyed");
+          evidence = { objectId, beforeIntegrity: before?.integrity, afterState: after?.state, transitionEvents: transition.events.map((event) => event.type) };
           break;
         }
         default: throw new Error(`no live scenario evidence exists for current gameplay subject ${source.subject.id}`);

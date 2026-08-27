@@ -20,6 +20,7 @@ export type EnvironmentClearReason =
   | "new-run"
   | "retry"
   | "stage-transition"
+  | "natural-expiry"
   | "boss-encounter-replacement"
   | "boss-terminal"
   | "defeat"

@@ -38,6 +38,12 @@ export type TearGameplayEvent =
   /** A source-owned world transition.  It is intentionally separate from
    * presentation effects so replay consumers can retain causal custody. */
   | Readonly<{ kind: "world"; tick: number; event: "void-rescue"; x: number; y: number; lane: "lower" | "upper" | null; hp: number }>
+  | Readonly<{
+    kind: "environment"; tick: number;
+    event: "field-started" | "field-resolved" | "combat-object-damaged" | "combat-object-destroyed" | "object-cleaned";
+    objectId: string; category: "field" | "combat-object" | "route"; objectKind: string;
+    integrity?: number; reason?: string;
+  }>
   | Readonly<{ kind: "effect"; tick: number; effect: string; x: number; y: number }>;
 
 /** Exhaustive runtime-owned event families; additions fail the typed coverage contract. */
@@ -51,6 +57,7 @@ export const GAMEPLAY_EVENT_KIND_IDS = Object.freeze(Object.keys({
   weapon: true,
   projectile: true,
   world: true,
+  environment: true,
   effect: true,
 } satisfies Readonly<Record<TearGameplayEvent["kind"], true>>) as TearGameplayEvent["kind"][]);
 

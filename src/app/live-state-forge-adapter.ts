@@ -72,6 +72,8 @@ export interface LiveStateForgeAdapterOptions {
   readonly slowZones: () => GameSlowZone[];
   readonly walls: () => GameTemporaryWall[];
   readonly environment: () => EnvironmentRuntimeState;
+  /** Clears canonical environment records immediately before replacement. */
+  readonly clearEnvironmentRestore?: () => void;
   readonly restoreEnvironment: (snapshot: EnvironmentSnapshot) => void;
   readonly screen: () => string;
   readonly setScreen: (screen: string) => void;
@@ -346,6 +348,7 @@ export function createLiveStateForgeAdapter(
         ...(candidate.environment.stageId === "unknown" && restoredStage !== undefined ? { stageId: restoredStage.id } : {}),
         ...(candidate.environment.worldId === undefined && currentWorldId !== undefined ? { worldId: currentWorldId } : {}),
       };
+      options.clearEnvironmentRestore?.();
       options.restoreEnvironment(environment);
       options.replacePlatforms(candidate.platforms);
       options.worldServices.random.restore(candidate.rng);

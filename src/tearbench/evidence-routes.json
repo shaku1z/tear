@@ -117,6 +117,18 @@
     "authorityCommands": ["pnpm exec vitest run tests/unit/environment-state-codec.test.ts tests/unit/production-replay-composition.test.ts tests/unit/tearbench-state-codecs.test.ts tests/unit/tearbench-invariants.test.ts"]
   },
   {
+    "id": "verdant-c4-environment-kernel",
+    "prefixes": ["src/gameplay/environment/", "src/gameplay/runtime/gameplay-events.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/registries.ts", "src/tearbench/state-forge-factories.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/canonical-scenarios.ts", "src/tearbench/validation.ts", "scripts/tearbench.mjs", "tests/browser-current-gameplay-scenarios.js", "tests/unit/environment-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts", "tests/unit/environment-combat-object-runtime.test.ts", "tests/unit/gameplay-causal-events.test.ts", "tests/unit/tearbench-current-game-authority.test.ts"],
+    "scenarios": ["generic-environment-field-transition", "generic-environment-combat-object-transition"],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "verdant-c4-environment-kernel-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["fixed-step", "combat", "events", "isolation"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/environment-field-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/gameplay-causal-events.test.ts tests/unit/tearbench-current-game-authority.test.ts"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],

@@ -73,6 +73,8 @@ export interface TearStructuredRuntimeEnvironment {
   metrics(): TearRuntimeEnvironmentMetrics;
   events(): readonly TearCausalEventV1[];
   stateHash(): string;
+  /** Class-A/B structured access to the source-owned environment runtime; never exposed to Class C. */
+  environment(): EnvironmentRuntimeState;
   screenshot(): string;
 }
 
@@ -118,6 +120,8 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   /** Resumes a certified wave-49 campaign frontier through the production wave controller. */
   forgeCampaignFinalWave(): TearLiveRestoreResult;
   forgeResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
+  forgeEnvironmentField(): TearLiveRestoreResult;
+  forgeEnvironmentCombatObject(): TearLiveRestoreResult;
 }
 
 export interface TearClassBRuntimeEnvironment extends Omit<TearStructuredRuntimeEnvironment, "accessClass" | "rng"> {

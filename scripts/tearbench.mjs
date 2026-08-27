@@ -152,7 +152,7 @@ function validateScenarioMetadata(scenario) {
   }
   const subject = scenario.subject;
   if (subject === undefined) return;
-  if (subject === null || typeof subject !== "object" || !["gameplay", "weapon", "boss"].includes(subject.kind)
+  if (subject === null || typeof subject !== "object" || !["gameplay", "weapon", "boss", "environment-field", "environment-combat-object"].includes(subject.kind)
     || typeof subject.id !== "string" || subject.id.trim() === "") {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
@@ -185,6 +185,11 @@ function validateScenarioMetadata(scenario) {
       || !Array.isArray(scenario.backends) || scenario.backends.length !== 1 || scenario.backends[0] !== "live") {
       throw new TypeError(`scenario ${scenario.id} boss subject requires live-only bossonly evidence`);
     }
+  } else if (subject.kind === "environment-field" || subject.kind === "environment-combat-object") {
+    const expected = subject.kind === "environment-field" ? "generic-field" : "generic-combat-object";
+    if (subject.id !== expected || !Array.isArray(scenario.backends) || scenario.backends.length !== 1 || scenario.backends[0] !== "live") {
+      throw new TypeError(`scenario ${scenario.id} environment subject requires live-only generic evidence`);
+    }
   }
   const command = scenario.evidence?.command;
   if (typeof command !== "string") return;
@@ -197,6 +202,15 @@ function validateScenarioMetadata(scenario) {
       || !source.includes("entry.subject.kind === \"gameplay\"")
       || !source.includes("environment.reset(scenario)") || !source.includes(`case "${subject.id}":`)) {
       throw new RangeError(`scenario ${scenario.id} shared browser evidence does not exercise its ${subject.id} subject`);
+    }
+    return;
+  }
+  if ((subject.kind === "environment-field" || subject.kind === "environment-combat-object")
+    && relative(root, proof.file).replaceAll("\\", "/") === "tests/browser-current-gameplay-scenarios.js") {
+    if (!source.includes("entry.subject.kind === \"environment-field\"")
+      || !source.includes("entry.subject.kind === \"environment-combat-object\"")
+      || !source.includes("environment.environment()")) {
+      throw new RangeError(`scenario ${scenario.id} shared browser evidence does not exercise its environment subject`);
     }
     return;
   }

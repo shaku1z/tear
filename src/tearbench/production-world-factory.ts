@@ -20,6 +20,7 @@ import type { RunDifficulty } from "../gameplay/run/session";
 import { stagePlatforms } from "../gameplay/stages";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
+import { createEnvironmentRuntime } from "../gameplay/environment/environment-runtime";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
@@ -140,10 +141,12 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   };
   const state = createLiveWorldState(session);
   const entities = createLiveWorldEntityFactory(dependencies);
+  const worldId = options.worldId ?? `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`;
+  const environment = createEnvironmentRuntime({ worldId });
   const world = createTearWorldComposition({
     state, entities, services: createLiveWorldServices({ dependencies, configuration }),
     cinema: new CinematicTimeline.Director(config),
-    worldId: options.worldId ?? `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`,
+    worldId, environment,
   });
   world.context.services.random.resetRun(runSeed);
   const difficulty = options.difficulty ?? "normal";

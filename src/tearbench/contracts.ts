@@ -225,6 +225,8 @@ export type TearScenarioSubjectV1 = Readonly<
   | { kind: "gameplay"; id: string }
   | { kind: "weapon"; id: TearWeaponId }
   | { kind: "boss"; id: TearBossId }
+  | { kind: "environment-field"; id: string }
+  | { kind: "environment-combat-object"; id: string }
 >;
 
 export interface TearScenarioV1 {

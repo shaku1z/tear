@@ -17,8 +17,10 @@ export function createProductionCombatSimulation<State>(
   options: ProductionCombatSimulationOptions<State>,
 ) {
   const phases = createProductionCombatPhases(replay, { ...options, deferCombatRuntime: true });
+  replay.world.context.environment.setEventPort(options.gameplayEvents);
   const core = createTearCombatSimulation<State>({
     ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
+    environment: replay.world.context.environment,
     combatEntities: phases.combatEntities,
     kill: phases.kill,
     createCombat: ({ combatEntities, resolveKill }) => {
@@ -37,5 +39,7 @@ export function createProductionCombatSimulation<State>(
       snapshot: (tick, input) => options.snapshot(tick, input),
     },
   });
+  replay.world.context.environment.setAvailableActorIdsSource(() => new Set(["player", "blade",
+    ...replay.world.state.enemies().map((enemy) => core.combatEntityRuntime.id(enemy, "enemy"))]));
   return Object.freeze({ ...core, outward: phases.outward, opening: phases.opening, collision: phases.collision });
 }

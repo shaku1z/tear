@@ -6,6 +6,7 @@ import { createTearSpawnFactPublisher, createTearTerminalRunFactPublisher, creat
 import { createGameplayCausalEvent, nativeCausalEventAvailability, projectGameplayEventForParity } from
   "../../src/tearbench/gameplay-causal-events";
 import { validateTearContract } from "../../src/tearbench/validation";
+import { publishEnvironmentEvent } from "../../src/gameplay/environment/environment-events";
 
 const run = {
   kind: "run", tick: 7, transition: "completed", runId: "run-a", mode: "campaign", difficulty: "hard",
@@ -39,6 +40,7 @@ describe("native gameplay causal-event adapter", () => {
       { kind: "projectile", tick: 7, event: "hit", projectileId: "projectile:8", x: 20, y: 20, vx: 500, vy: 0, owner: "player", sourceEnemyId: "enemy:4", targetEnemyId: "enemy:4", perfect: true },
       { kind: "projectile", tick: 7, event: "expired", projectileId: "projectile:8", x: 20, y: 20, vx: 500, vy: 0, owner: "player", sourceEnemyId: "enemy:4", perfect: true },
       { kind: "world", tick: 7, event: "void-rescue", x: 640, y: 420, lane: "lower", hp: 1 },
+      { kind: "environment", tick: 7, event: "field-started", objectId: "field:1", category: "field", objectKind: "bloom-well" },
       { kind: "effect", tick: 7, effect: "perfect-parry", x: 1, y: 2 },
       { kind: "effect", tick: 7, effect: "blade-throw", x: 1, y: 2 },
       { kind: "effect", tick: 7, effect: "blade-recall", x: 1, y: 2 },
@@ -50,7 +52,7 @@ describe("native gameplay causal-event adapter", () => {
     ];
     const expected = [
       "run.completed", "stage.entered", "wave.started", "wave.cleared", "wave.spawn-completed", "boss.intro-started",
-      "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit", "projectile.expired", "world.void-rescue", "combat.perfect-parry",
+      "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit", "projectile.expired", "world.void-rescue", "world.environment-field-started", "combat.perfect-parry",
       "blade.thrown", "blade.recalled", "player.dash-started", "blade.stolen", "player.revived",
       "boss.defeated", "blade.thrown",
     ];
@@ -139,6 +141,8 @@ describe("native gameplay causal-event adapter", () => {
       .toThrow(/unrecognized native wave marker/u);
     expect(() => createGameplayCausalEvent({ kind: "effect", tick: 1, effect: "unclassified", x: 0, y: 0 }, 0, "bad-effect"))
       .toThrow(/unrecognized native gameplay effect/u);
+    expect(() => createGameplayCausalEvent({ kind: "environment", tick: 1, event: "unclassified", objectId: "field:1", category: "field", objectKind: "bloom-well" } as never, 0, "bad-environment"))
+      .toThrow(/unrecognized native environment/u);
   });
 
   it("publishes exact spawn and wave facts through one shared authoritative clock", () => {
@@ -172,5 +176,17 @@ describe("native gameplay causal-event adapter", () => {
     ]);
     expect(facts[0]).toEqual({ kind: "run", tick: 903, transition: "defeated", runId: "run-1",
       mode: "endless", difficulty: "hard", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 7.525 });
+  });
+
+  it("publishes environment transitions in stable arrival order and maps every family", () => {
+    const facts: TearGameplayEvent[] = [];
+    const bus = new TearGameplayEventBus(() => 12);
+    bus.subscribe((event) => facts.push(event));
+    publishEnvironmentEvent(bus, { event: "field-started", objectId: "field:1", category: "field", objectKind: "bloom-well" });
+    publishEnvironmentEvent(bus, { event: "combat-object-damaged", objectId: "link:1", category: "combat-object", objectKind: "root-link", integrity: 2 });
+    publishEnvironmentEvent(bus, { event: "combat-object-destroyed", objectId: "link:1", category: "combat-object", objectKind: "root-link", integrity: 0 });
+    expect(facts.map((event) => projectGameplayEventForParity(event, facts.indexOf(event))).map((event) => [event.type, event.phase])).toEqual([
+      ["world.environment-field-started", "projectiles-and-hazards"], ["world.environment-combat-object-damaged", "collision-and-damage"], ["world.environment-combat-object-destroyed", "deaths-and-rewards"],
+    ]);
   });
 });

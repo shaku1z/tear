@@ -159,6 +159,32 @@
     }
   },
   {
+    "id": "generic-environment-field-transition",
+    "description": "Launch a generic environment field through the source-owned scheduled, active, and resolved lifecycle.",
+    "subject": { "kind": "environment-field", "id": "generic-field" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["environment", "field", "generic-field", "fixed-step", "c4"],
+    "maxTicks": 8,
+    "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved field, and observes its real fixed-step lifecycle transitions.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
+    "id": "generic-environment-combat-object-transition",
+    "description": "Launch a generic environment combat object through source-owned damage, dedupe, destruction, and cleanup transitions.",
+    "subject": { "kind": "environment-combat-object", "id": "generic-combat-object" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["environment", "combat-object", "generic-combat-object", "damage", "c4"],
+    "maxTicks": 8,
+    "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-combat-object-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved combat object, and observes source-owned damage/dedupe/destruction facts.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
     "id": "source-void-low-hp-rescue-seek",
     "description": "At one HP, trigger the real live Source void-fall rescue through semantic movement, retain its native evidence, verify a supported pre-rescue replay receipt, and explicitly refuse unsupported detached post-rescue void replay and mixed-capsule seeking.",
     "subject": { "kind": "boss", "id": "source" },

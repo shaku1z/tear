@@ -32,7 +32,7 @@ describe("live State Forge runtime bridge", () => {
     bridge.restore({ lifecycle: initialRunLifecycleSnapshot(), cinema: INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 });
     expect(restoreStageBanner).toHaveBeenCalledWith("", 0);
     expect(restoreCinemaProtection).toHaveBeenCalledWith({ active: false, lastMode: null });
-    expect(clearEnvironmentRestore).toHaveBeenCalledOnce();
+    expect(clearEnvironmentRestore).not.toHaveBeenCalled();
   });
 
   it("validates reconstructed chapter position and lifecycle before commit", () => {

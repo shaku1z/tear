@@ -6,7 +6,8 @@ import {
   type TearScenarioSubjectV1,
 } from "./contracts";
 import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
-  HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
+  HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS, RUN_MODE_REGISTRY, WEAPON_REGISTRY,
+  ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY, ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY } from "./registries";
 import { TearScenarioRegistry } from "./scenario-registry";
 import scenarioCatalog from "./canonical-scenarios.json";
 
@@ -41,6 +42,8 @@ export function materializeCanonicalScenario(
       throw new RangeError(`canonical gameplay scenario ${entry.id} has no supported headless subject transition`);
     }
   }
+  if (entry.subject.kind === "environment-field") ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
+  if (entry.subject.kind === "environment-combat-object") ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
   if (boss !== undefined && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {
     throw new RangeError(`canonical boss scenario ${entry.id} requires its matching authoritative boss subject`);
   }
@@ -54,7 +57,11 @@ export function materializeCanonicalScenario(
     ? Object.freeze({ kind: "weapon", id: WEAPON_REGISTRY.assert(entry.subject.id) })
     : entry.subject.kind === "boss"
       ? Object.freeze({ kind: "boss", id: BOSS_REGISTRY.assert(entry.subject.id) })
-      : Object.freeze({ kind: "gameplay", id: GAMEPLAY_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) });
+      : entry.subject.kind === "gameplay"
+        ? Object.freeze({ kind: "gameplay", id: GAMEPLAY_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) })
+        : entry.subject.kind === "environment-field"
+          ? Object.freeze({ kind: "environment-field", id: ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) })
+          : Object.freeze({ kind: "environment-combat-object", id: ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) });
   const backends = Object.freeze([...entry.backends]) as readonly [TearScenarioBackendV1, ...TearScenarioBackendV1[]];
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT,

@@ -1,6 +1,7 @@
 import type { TearSdlDocumentV1 } from "./tearsdl";
 import type { EnvironmentCombatObjectState, EnvironmentFieldState, EnvironmentRouteState } from "../gameplay/environment/environment-contracts";
 import { createStableRegistry } from "./registries";
+import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "../gameplay/environment/environment-definitions";
 
 type Patch = Readonly<Record<string, unknown>>;
 
@@ -16,6 +17,7 @@ export function forgeEnvironmentFieldState(
   base: TearSdlDocumentV1,
   field: Omit<EnvironmentFieldState, "id"> & { readonly id: string },
 ): TearSdlDocumentV1 {
+  assertEnvironmentObjectCategory("field", field.kind);
   return patch(base, `${base.id}-${field.id}`, { environment: { fields: [{ factoryId: "environment-field", ...structuredClone(field) }], combatObjects: [], routes: [] } });
 }
 
@@ -23,6 +25,7 @@ export function forgeEnvironmentCombatObjectState(
   base: TearSdlDocumentV1,
   object: Omit<EnvironmentCombatObjectState, "id"> & { readonly id: string },
 ): TearSdlDocumentV1 {
+  assertEnvironmentCombatCapabilities(object.kind, object.counterplayTags, object.procEligible);
   return patch(base, `${base.id}-${object.id}`, { environment: { fields: [], combatObjects: [{ factoryId: "environment-combat-object", ...structuredClone(object) }], routes: [] } });
 }
 
@@ -30,6 +33,7 @@ export function forgeEnvironmentRouteState(
   base: TearSdlDocumentV1,
   route: Omit<EnvironmentRouteState, "id"> & { readonly id: string },
 ): TearSdlDocumentV1 {
+  assertEnvironmentObjectCategory("route", route.kind);
   return patch(base, `${base.id}-${route.id}`, { environment: { fields: [], combatObjects: [], routes: [{ factoryId: "environment-route", ...structuredClone(route) }] } });
 }
 

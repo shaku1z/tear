@@ -8,6 +8,7 @@ import type {
   EnvironmentSimulationView,
   EnvironmentSnapshot,
 } from "./environment-contracts";
+import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "./environment-definitions";
 
 const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
   maxFields: 64, maxCombatObjects: 128, maxRoutes: 64,
@@ -40,6 +41,8 @@ function assertUnique(ids: readonly string[], category: string): void {
     seen.add(id);
   }
 }
+
+function isReadonlyArray(value: unknown): value is readonly unknown[] { return Array.isArray(value); }
 
 /** One isolated, data-only environment collection and deterministic ID allocator. */
 export class EnvironmentState implements EnvironmentRuntimeState {
@@ -83,6 +86,11 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   replace(snapshot: EnvironmentSnapshot): void {
     if (snapshot.stageId !== this.#stageId) throw new RangeError("environment snapshot stage does not match this world");
     if (snapshot.worldId !== undefined && snapshot.worldId !== this.worldId) throw new RangeError("environment snapshot world does not match this world");
+    if (!isReadonlyArray(snapshot.fields)
+      || !isReadonlyArray(snapshot.combatObjects)
+      || !isReadonlyArray(snapshot.routes)) {
+      throw new TypeError("environment snapshot collections must be arrays");
+    }
     if (snapshot.fields.length > this.configuration.maxFields || snapshot.combatObjects.length > this.configuration.maxCombatObjects || snapshot.routes.length > this.configuration.maxRoutes) {
       throw new RangeError("environment snapshot exceeds population bounds");
     }
@@ -91,6 +99,9 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     assertUnique(snapshot.routes.map((item) => item.id), "route");
     const all = [...snapshot.fields, ...snapshot.combatObjects, ...snapshot.routes].map((item) => item.id);
     assertUnique(all, "object");
+    snapshot.fields.forEach((field) => { assertEnvironmentObjectCategory("field", field.kind); });
+    snapshot.combatObjects.forEach((object) => { assertEnvironmentCombatCapabilities(object.kind, object.counterplayTags, object.procEligible); });
+    snapshot.routes.forEach((route) => { assertEnvironmentObjectCategory("route", route.kind); });
     this.#fields.splice(0, this.#fields.length, ...snapshot.fields.map(copyField));
     this.#combatObjects.splice(0, this.#combatObjects.length, ...snapshot.combatObjects.map(copyCombatObject));
     this.#routes.splice(0, this.#routes.length, ...snapshot.routes.map(copyRoute));
@@ -119,14 +130,17 @@ export class EnvironmentState implements EnvironmentRuntimeState {
 
   addField(value: Omit<EnvironmentFieldState, "id"> & { readonly id?: string }): string {
     if (this.#fields.length >= this.configuration.maxFields) throw new RangeError("environment field population bound exceeded");
+    assertEnvironmentObjectCategory("field", value.kind);
     const id = this.#claim(value.id, "field"); this.#fields.push(copyField({ ...value, id })); this.#revision += 1; return id;
   }
   addCombatObject(value: Omit<EnvironmentCombatObjectState, "id"> & { readonly id?: string }): string {
     if (this.#combatObjects.length >= this.configuration.maxCombatObjects) throw new RangeError("environment combat-object population bound exceeded");
+    assertEnvironmentCombatCapabilities(value.kind, value.counterplayTags, value.procEligible);
     const id = this.#claim(value.id, "combat-object"); this.#combatObjects.push(copyCombatObject({ ...value, id })); this.#revision += 1; return id;
   }
   addRoute(value: Omit<EnvironmentRouteState, "id"> & { readonly id?: string }): string {
     if (this.#routes.length >= this.configuration.maxRoutes) throw new RangeError("environment route population bound exceeded");
+    assertEnvironmentObjectCategory("route", value.kind);
     const id = this.#claim(value.id, "route"); this.#routes.push(copyRoute({ ...value, id })); this.#revision += 1; return id;
   }
 
