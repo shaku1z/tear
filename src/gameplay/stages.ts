@@ -177,7 +177,7 @@ const STAGES: readonly StageDefinition[] = [
     name: "The Voidspire", blurb: "Where the rules thin out.",
     musicId: "voidspire",
     boss: "echo",
-    chapter: { number: "IV", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
+    chapter: { number: "V", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
       pages: [
         { label: "THE VOIDSPIRE", text: "Here distance repeats itself and every motion leaves behind a version that believes it moved first." },
         { label: "THE REFLECTION", text: "Something in the Spire has practiced your shape for years. It remembers a journey you have only just begun." },
@@ -203,7 +203,7 @@ const STAGES: readonly StageDefinition[] = [
     musicId: "tear",
     dark: true,   // the void at the end of everything — HUD + player flip to light here
     boss: "source",
-    chapter: { number: "V", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
+    chapter: { number: "VI", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
       pages: [
         { label: "THE TEAR", text: "There is no fortress at the bottom of the world—only the wound every fortress was built to misunderstand." },
         { label: "THE SOURCE", text: "It has worn every guardian sent to close it. Now it waits to learn whether your blade is another memory or an ending." },

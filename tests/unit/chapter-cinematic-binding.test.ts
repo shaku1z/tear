@@ -46,6 +46,39 @@ describe("portable campaign chapter binding", () => {
       .every((beat) => beat.transition === "bloom")).toBe(true);
   });
 
+  it("preserves Aldric's outro across Verdant advance, skip, and restore", () => {
+    const crimson = STAGES.find((candidate) => candidate.id === "crimson-fields");
+    const verdant = STAGES.find((candidate) => candidate.id === "verdant-sanctum");
+    if (crimson === undefined || verdant === undefined) throw new Error("campaign stage fixtures are missing");
+    const dispatch = vi.fn(); const clear = vi.fn();
+    const verdantSpec = createCampaignChapterBindingSpec({
+      stageIndex: 3, priorOutro: crimson.chapter.bossOutro, brief: false, prologueShownBefore: true, timing,
+    });
+    const staged = stageCampaignChapterBinding(verdantSpec, verdant, {
+      dispatch, preparedWave: () => true, activationDeferred: () => true, clear,
+    });
+    expect(staged.flow.pages).toEqual([crimson.chapter.bossOutro, ...verdant.chapter.pages]);
+
+    const source = new CinematicTimeline.Director(CONFIG);
+    source.start(staged.binding.script, staged.binding.context);
+    source.advance();
+    expect(source.beat).toMatchObject({ id: "page-0", label: "PAINTED PORTRAIT", transition: "bloom" });
+    const captured = source.captureState();
+    const reconstructed = stageCampaignChapterBinding(
+      captureCampaignChapterBindingSpec(staged.spec, staged.flow), verdant,
+      { dispatch, preparedWave: () => true, activationDeferred: () => true, clear },
+    );
+    const restored = new CinematicTimeline.Director(CONFIG);
+    restored.restoreState(captured, reconstructed.binding);
+    restored.requestSkip();
+    expect(restored.beat).toMatchObject({ id: "reveal", number: "IV", name: "The Verdant Sanctum" });
+    restored.complete();
+    expect(dispatch).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ type: "activate-prepared-wave" }),
+    ]));
+    expect(clear).toHaveBeenCalledOnce();
+  });
+
   it("rebuilds the same script and silently restores an active director position", () => {
     const dispatch = vi.fn();
     const staged = stageCampaignChapterBinding(spec(), stage, {
