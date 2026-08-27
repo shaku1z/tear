@@ -155,7 +155,7 @@ const BIOME_ART: BiomeArtCatalog = {
       ctx.fillRect(vl, gy - 112, vr - vl, 112);
       const archStep = 230;
       const archStart = Math.floor((vl - farDrift - 120) / archStep) * archStep;
-      for (let index = 0; index < 10; index += 1) {
+      for (let index = 0; index < VERDANT_BACKDROP_LIMITS.sanctuaryArches; index += 1) {
         const x = archStart + index * archStep + farDrift;
         if (x > vr + archStep) break;
         const h = 118 + (index % 3) * 28;
@@ -179,7 +179,7 @@ const BIOME_ART: BiomeArtCatalog = {
 
       // Flooded cloisters and hanging gardens occupy the middle depth.
       ctx.save(); ctx.globalAlpha = 0.48; ctx.fillStyle = "#5f9475"; ctx.strokeStyle = "#47775f";
-      for (let index = 0; index < 6; index += 1) {
+      for (let index = 0; index < VERDANT_BACKDROP_LIMITS.floodedCloisters; index += 1) {
         const span = 270, x = vl + 70 + index * span + middleDrift;
         if (x > vr + span) break;
         const top = gy - 190 - (index % 2) * 46;

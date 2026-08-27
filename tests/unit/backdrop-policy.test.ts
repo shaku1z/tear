@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { STAGES } from "../../src/gameplay/stages";
-import { createBackdrop, type BackdropPolicy } from "../../src/presentation/backdrop";
+import { BACKDROP_RESOURCE_LIMITS, createBackdrop, type BackdropPolicy } from "../../src/presentation/backdrop";
 import { biomeArtForStage } from "../../src/presentation/backdrop-biomes";
 
 function canvas(): HTMLCanvasElement {
@@ -64,5 +64,17 @@ describe("Backdrop policy", () => {
     expect(biomeArtForStage(renamed)).toBe(biomeArtForStage(stage));
     expect(controller._get(renamed)).toBe(controller._get(stage));
     expect(Object.keys(controller._cache)).toEqual([stage.id]);
+  });
+
+  it("reports bounded stage caches, motes, and transient lights", () => {
+    const controller = createBackdrop(policy({ sim: 0 }, 1_600));
+    for (const stage of STAGES) controller._get(stage);
+    for (let index = 0; index < 40; index += 1) controller.flare(index, index, "#fff", 10, 1);
+
+    expect(controller.metrics()).toEqual({
+      cachedStages: STAGES.length,
+      cachedMotes: STAGES.length * BACKDROP_RESOURCE_LIMITS.motesPerStage,
+      transientLights: BACKDROP_RESOURCE_LIMITS.transientLights,
+    });
   });
 });

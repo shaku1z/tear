@@ -49,12 +49,19 @@ interface PlatformPort {
 interface LocalFlare { screen: false; x: number; y: number; col: string; r: number; life: number; end: number }
 interface ScreenBloom { screen: true; col: string; strength: number; life: number; end: number }
 type BackdropEffect = LocalFlare | ScreenBloom;
+export const BACKDROP_RESOURCE_LIMITS = Object.freeze({ motesPerStage: 40, transientLights: 16 });
+export interface BackdropPresentationMetrics {
+  readonly cachedStages: number;
+  readonly cachedMotes: number;
+  readonly transientLights: number;
+}
 export interface BackdropController {
   readonly W: number; readonly H: number; readonly PX: number; readonly PY: number;
   lowGraphics(): boolean;
   highContrast(): boolean;
   reducedMotion(): boolean;
   flashScale(): number;
+  metrics(): BackdropPresentationMetrics;
   _cache: Partial<Record<Stage["id"], BackdropCache>>; _fx: BackdropEffect[];
   fillFull(context: CanvasRenderingContext2D, view?: ViewRect): void; resetFx(): void;
   _rgb(hex?: string): [number, number, number]; _mix(a: string, b: string, amount: number): string;
@@ -120,6 +127,14 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
   highContrast() { return accessibility.highContrast; },
   reducedMotion() { return accessibility.reducedMotion; },
   flashScale() { return accessibility.flashScale; },
+  metrics() {
+    const caches = Object.values(this._cache);
+    return Object.freeze({
+      cachedStages: caches.length,
+      cachedMotes: caches.reduce((total, entry) => total + entry.parts.length, 0),
+      transientLights: this._fx.length,
+    });
+  },
   // World-camera draws may reveal more than fullscreen OVERSCAN when the camera
   // pulls out.  Callers pass that inverse-camera rectangle through `view`; screen-
   // space callers (post/Fx/replays) keep the original fullscreen bounds.
@@ -168,7 +183,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
 
     // ambient motes (generic dust; Phase 3 swaps per biome)
     const parts = [];
-    for (let i = 0; i < 40; i++) parts.push({ x: r() * this.W, y: r() * this.H, z: 0.3 + r() * 0.9, r: 0.6 + r() * 2.0, ph: r() * 6.28, sp: 5 + r() * 14 });
+    for (let i = 0; i < BACKDROP_RESOURCE_LIMITS.motesPerStage; i++) parts.push({ x: r() * this.W, y: r() * this.H, z: 0.3 + r() * 0.9, r: 0.6 + r() * 2.0, ph: r() * 6.28, sp: 5 + r() * 14 });
 
     const cache = { vign, dark, parts, accent: stage.accent, _vw: this.W, _vh: this.H };
     this._cache[stage.id] = cache;
@@ -483,10 +498,10 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
 
   // === reactive lighting: combat events bleed light into the backdrop ===
   // time-based so undrawn events (arcade modes / paused) simply expire, never pile up.
-  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: clock.sim + life, screen: false }); if (this._fx.length > 16) this._fx.shift(); },
+  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: clock.sim + life, screen: false }); if (this._fx.length > BACKDROP_RESOURCE_LIMITS.transientLights) this._fx.shift(); },
   // A bloom is screen chrome rather than world geometry, so it deliberately
   // keeps UI wall time while local flares freeze with hit-stop simulation time.
-  bloom(col, strength, life) { this._fx.push({ col, strength, life, end: performance.now() / 1000 + life, screen: true }); if (this._fx.length > 16) this._fx.shift(); },
+  bloom(col, strength, life) { this._fx.push({ col, strength, life, end: performance.now() / 1000 + life, screen: true }); if (this._fx.length > BACKDROP_RESOURCE_LIMITS.transientLights) this._fx.shift(); },
   drawFx(ctx, camera) {
     if (!this._fx.length) return;
     const simNow = clock.sim, uiNow = performance.now() / 1000;
