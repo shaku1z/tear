@@ -11,6 +11,8 @@ import { biomeArtForStage } from "./backdrop-biomes";
 import { clamp, lerp } from "../domain/geometry";
 import { VoidGen } from "../gameplay/voidgen";
 import type { VoidPlatform } from "../gameplay/voidgen";
+import { stagePresentationDefinition } from "./stage-presentation-definitions";
+import { drawVerdantRootstone } from "./platform-materials/verdant-rootstone";
 
 function truthyString(value: string | undefined, fallback: string): string {
   if (value) return value;
@@ -419,6 +421,27 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
 
   platform(ctx, p, stage, isFloor, view) {
     if (p.void) { this.voidPlatform(ctx, p, stage); return; }
+    const stageMaterial = stagePresentationDefinition(stage.id)?.platformMaterialId;
+    const material = p.arenaMaterial ?? p.material ?? stageMaterial;
+    if (material === "verdant-rootstone") {
+      let platform = p;
+      if (isFloor) {
+        const left = view ? Math.min(p.x - this.PX, view.left) : p.x - this.PX;
+        const right = view ? Math.max(p.x + p.w + this.PX, view.right) : p.x + p.w + this.PX;
+        const bottom = view ? Math.max(p.y + p.h + this.PY, view.bottom) : p.y + p.h + this.PY;
+        platform = { ...p, x: left, w: right - left, h: bottom - p.y };
+      }
+      const state = truthyString(p.arenaState, "stable");
+      drawVerdantRootstone(ctx, platform, {
+        timeSeconds: clock.sim,
+        lowGraphics: graphics.low,
+        highContrast: accessibility.highContrast,
+        stressRatio: clamp(p.stress ?? 0, 0, 1),
+        warningRatio: state === "warning" ? 1 - clamp((p.crackWarn ?? 0) / config.bossArena.crackWarn, 0, 1) : 0,
+        reformRatio: state === "reforming" ? 1 - clamp((p.respawnIn ?? 0) / truthyNumber(p.respawnWarn, config.bossArena.reformWarn), 0, 1) : 0,
+      });
+      return;
+    }
     if (p.arenaPlatId && !isFloor) { this.arenaPlatform(ctx, p); return; }
     const c = this._get(stage), plat = stage.plat;
     if (isFloor) {
