@@ -102,6 +102,7 @@ export interface CinematicBeat {
   color?: string;
   composition?: string;
   wash?: string;
+  transition?: string | undefined;
   label?: string;
   title?: string;
   text?: string;

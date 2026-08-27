@@ -10,6 +10,7 @@ import {
 import type { CampaignChapterTiming, CampaignStage } from
   "../../src/gameplay/campaign/chapter-controller";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
+import { STAGES } from "../../src/gameplay/stages";
 
 const timing: CampaignChapterTiming = Object.freeze({
   loreReveal: 0.1, chapterIn: 0.2, loreExit: 0.3, biomeRevealBrief: 0.4,
@@ -32,6 +33,19 @@ function spec() {
 }
 
 describe("portable campaign chapter binding", () => {
+  it("carries the supported Verdant bloom identity through the current director script", () => {
+    const verdant = STAGES.find((candidate) => candidate.id === "verdant-sanctum");
+    if (verdant === undefined) throw new Error("Verdant stage fixture is missing");
+    const staged = stageCampaignChapterBinding(createCampaignChapterBindingSpec({
+      stageIndex: 3, priorOutro: null, brief: false, prologueShownBefore: true, timing,
+    }), verdant, {
+      dispatch: vi.fn(), preparedWave: () => true, activationDeferred: () => true, clear: vi.fn(),
+    });
+
+    expect(staged.binding.script.beats.filter((beat) => beat.view === "page")
+      .every((beat) => beat.transition === "bloom")).toBe(true);
+  });
+
   it("rebuilds the same script and silently restores an active director position", () => {
     const dispatch = vi.fn();
     const staged = stageCampaignChapterBinding(spec(), stage, {

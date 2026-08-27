@@ -5,9 +5,11 @@ export const CAMPAIGN_INTRO = Object.freeze([
 ] as const);
 
 export interface ChapterPage { readonly label: string; readonly text: string }
+export const CHAPTER_TRANSITION_IDS = Object.freeze(["ash", "steel", "ember", "bloom", "mirror", "void"] as const);
+export type ChapterTransitionId = typeof CHAPTER_TRANSITION_IDS[number];
 export interface CampaignChapter {
   readonly number: string | number; readonly symbol: string; readonly title: string; readonly intro: string;
-  readonly transition?: string; readonly pages: readonly ChapterPage[];
+  readonly transition?: ChapterTransitionId; readonly pages: readonly ChapterPage[];
 }
 export interface CampaignStage {
   readonly name: string; readonly blurb: string; readonly accent: string; readonly dark?: boolean;
@@ -45,7 +47,7 @@ export interface ChapterBeat {
   readonly name?: string;
   readonly line?: string;
   readonly color?: string;
-  readonly transition?: string | undefined;
+  readonly transition?: ChapterTransitionId | undefined;
   readonly composition?: string;
   readonly wash?: string;
 }
@@ -90,6 +92,9 @@ export class CampaignChapterController {
   constructor(timing: CampaignChapterTiming) { this.timing = Object.freeze({ ...timing }); }
 
   begin(stageIndex: number, stage: CampaignStage, priorOutro: ChapterPage | null, brief: boolean): Readonly<{ flow: CampaignChapterFlow; sequence: CampaignChapterSequence; intents: readonly ChapterIntent[] }> {
+    if (stage.chapter.transition !== undefined && !CHAPTER_TRANSITION_IDS.includes(stage.chapter.transition)) {
+      throw new TypeError(`unsupported chapter transition: ${stage.chapter.transition as string}`);
+    }
     const pages: ChapterPage[] = [];
     if (stageIndex === 0 && !this.prologueShown) { this.prologueShown = true; pages.push(...CAMPAIGN_INTRO); }
     if (priorOutro) pages.push(priorOutro);

@@ -6,7 +6,7 @@ import { FinaleController } from "../../src/gameplay/campaign/finale-controller"
 const chapterTiming = { loreReveal: 0.5, chapterIn: 0.3, loreExit: 0.4, biomeRevealBrief: 0.5,
   biomeRevealFull: 1, readyBrief: 0.5, readyFull: 1, dialogueDuck: 0.4, biomeRevealDuck: 0.6 };
 const stage = { name: "The Yard", blurb: "Steel remembers.", accent: "red", dark: false,
-  chapter: { number: 1, symbol: "I", title: "WARDEN", intro: "Enter.", transition: "cut", pages: [{ label: "YARD", text: "A gate." }] } };
+  chapter: { number: 1, symbol: "I", title: "WARDEN", intro: "Enter.", transition: "ash" as const, pages: [{ label: "YARD", text: "A gate." }] } };
 
 describe("campaign chapter controller", () => {
   it("shows the three-page prologue once and preserves beat timing", () => {

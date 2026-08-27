@@ -8,6 +8,7 @@
 // readable; dramatic inversions (e.g. a true dark Voidspire) are a later polish pass.
 
 import type { CONFIG as GAME_CONFIG } from "../config/game-config";
+import type { ChapterTransitionId } from "./campaign/chapter-controller";
 import type { BossId, EnemyKind } from "./run/content-director";
 
 /** Stable authored stage identifiers used by the game-reference projection. */
@@ -44,7 +45,7 @@ export interface StageChapterDefinition {
   readonly title: string;
   readonly symbol: string;
   readonly intro: string;
-  readonly transition: string;
+  readonly transition: ChapterTransitionId;
   readonly pages: readonly StageChapterPage[];
   readonly bossOutro: Readonly<StageChapterPage>;
 }
