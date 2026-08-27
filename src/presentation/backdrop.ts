@@ -149,7 +149,10 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     const vg = v.createRadialGradient(lw / 2, lh * 0.46, lh * 0.32, lw / 2, lh * 0.5, lw * 0.72);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, dark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.20)");
     v.fillStyle = vg; v.fillRect(0, 0, lw, lh);
-    const identitySeed = [...stage.id].reduce((seed, character) => Math.imul(seed ^ character.charCodeAt(0), 16777619), 2166136261);
+    let identitySeed = 2166136261;
+    for (let index = 0; index < stage.id.length; index += 1) {
+      identitySeed = Math.imul(identitySeed ^ stage.id.charCodeAt(index), 16777619);
+    }
     const r = this._rng(identitySeed);
     v.globalAlpha = dark ? 0.05 : 0.035;
     for (let i = 0; i < 1500; i++) { const x = r() * lw, y = r() * lh, sz = r() * 1.4; v.fillStyle = r() > 0.5 ? "#fff" : "#000"; v.fillRect(x, y, sz, sz); }
