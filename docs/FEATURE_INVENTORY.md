@@ -96,8 +96,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   Voidspire with chapter IV, typed environment/presentation entries, central
   Bloom activation/cleanup, explicit local-wave pool unlocks, and a temporary
   `fillet` music safety fallback outside the public routing manifest. Exact
-  branch contracts recognize six stages while the state remains explicitly
-  non-publishable pending Pale and the authorized seven-stage integration.
+  branch contracts recognize six stages. State Forge provides a legal exact
+  wave-31 entry through central stage loading, and natural wave-30 progression
+  proves the ordered chapter handoff and baseline Verdant pool. Protected-main
+  publication, wiki dispatch, and deployment gates keep this feature branch
+  explicitly non-publishable pending Pale and authorized seven-stage integration.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

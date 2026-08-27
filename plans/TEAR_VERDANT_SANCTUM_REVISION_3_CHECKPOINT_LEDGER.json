@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C8",
-  "currentSubgoal": "VS3-C8-S1",
+  "currentCheckpoint": "VS3-C9",
+  "currentSubgoal": "VS3-C9-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -17,14 +17,15 @@
     "VS3-C4",
     "VS3-C5",
     "VS3-C6",
-    "VS3-C7"
+    "VS3-C7",
+    "VS3-C8"
   ],
-  "lastGreenCheckpoint": "VS3-C7",
+  "lastGreenCheckpoint": "VS3-C8",
   "lastEvidence": [
-    "VS3-C7 stage-aware variants are green at 573be962bf435a47a162acab909666b9fafa4854; typed selection context, legal mode/stage/discovery gates, four family-native behaviors, stable capture/restore identity, fail-closed codec aliases, public reference projection, source-derived TearBench evidence, and all checkpoint gates pass."
+    "VS3-C8 engineering-only six-stage insertion is green at fbfc070128c64a5ac74c0ca8645e875c902a71cb; typed stage/chapter/environment data, local-wave pools, central activation, exact State Forge and natural wave-31 entry, temporary non-public music fallback, protected publication boundaries, and all checkpoint gates pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C8-S1: add the verdant-sanctum StageDefinition with locked chapter, palette, pool, and layout.",
+  "nextAction": "Execute VS3-C9-S1: implement the source-owned rootstone material contract.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1196,52 +1197,52 @@
         {
           "id": "VS3-C8-S1",
           "description": "Add verdant-sanctum StageDefinition with locked chapter, palette, pool, and layout.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S2",
           "description": "Add typed stage environment and presentation registry entries.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S3",
           "description": "Add the bloom chapter-transition identity through the existing cinematic director.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S4",
           "description": "Ensure chapter IV starts, advances, skips, restores, and hands off the prior boss outro correctly.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S5",
           "description": "Load stage-owned environment state through central stage activation and clear it on exit.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S6",
           "description": "Use localWave explicitly for pool unlocks.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S7",
           "description": "Provide a safe temporary engineering music fallback without publishing final music identity.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S8",
           "description": "Update exact stage-count contracts/tests for the branch while labeling it a six-stage intermediate.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S9",
           "description": "Prove Stage Forge exact launch and natural campaign progression into wave 31.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C8-S10",
           "description": "Prevent wiki/reference publication and public deployment from the intermediate branch.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -1289,13 +1290,37 @@
         "Engineering-only six-stage disposition",
         "Updated handoff"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "03d5b1261e46c190005c09ab4f0ba2a874ab6537",
+      "completionIdentity": "fbfc070128c64a5ac74c0ca8645e875c902a71cb",
+      "commandsRun": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm check:game-reference",
+        "pnpm exec vitest run tests/unit/stage-runtime-state.test.ts tests/unit/chapter-cinematic-binding.test.ts tests/unit/live-wave-controller.test.ts tests/unit/verdant-stage-catalog.test.ts tests/unit/verdant-stage-state-forge.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:current-gameplay-scenarios",
+        "pnpm test:browser:c29-active-campaign-cinematic",
+        "pnpm test:game-reference-artifact",
+        "node --test tests/release-preflight.test.mjs",
+        "git diff --check"
+      ],
+      "evidence": [
+        "The source-owned six-stage engineering roster inserts Verdant at stage index 3 with chapter IV, locked palette/layout/pool, typed environment and presentation registries, and central Bloom Well activation/cleanup.",
+        "Chapter flow starts, advances, skips, restores, and hands off the prior Crimson boss outro deterministically through the production cinematic director.",
+        "Campaign pools use explicit localWave unlocks; wave 31 admits only baseline Verdant enemies and Rootbinder begins at wave 32.",
+        "An engineering-only non-publishable TearSDL scenario launches exact Verdant wave 31 through legal progression and central stage loading, while contradictory stage/wave pairs fail closed.",
+        "Natural campaign progression from wave 30 emits the ordered Verdant stage/chapter intents and defers wave activation until the chapter completes.",
+        "Temporary music resolves to the existing fillet cue outside the public routing manifest; no final Verdant or Rootbound music identity is published.",
+        "Protected-main-only reference publication, wiki dispatch, and deployment contracts reject the feature branch; 10 publication/wiki and 5 release-preflight tests passed.",
+        "Checkpoint minimum gates passed, including 17 focused tests, 29 exact-launch adjacent tests, the 12-scenario browser suite, and active campaign cinematic browser proof.",
+        "Test-standalone fingerprint 8d198a744185d1fb60dbdc04201b4e831b5bee5819045c99e46fd3973c626734."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "This remains an engineering-only six-stage intermediate. Verdant publication is prohibited, Pale is absent, Rootbound remains factory-unavailable until VS3-C10, and C40 is unchanged."
+      ]
     },
     {
       "id": "VS3-C9",

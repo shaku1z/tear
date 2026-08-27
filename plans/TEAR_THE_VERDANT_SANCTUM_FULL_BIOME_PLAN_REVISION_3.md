@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C7 green** |
-| Current checkpoint | `VS3-C8` |
+| Status | **Active implementation authority — VS3-C8 green** |
+| Current checkpoint | `VS3-C9` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4113,7 +4113,7 @@ Extend current family variants with stage and local-wave context, then add four 
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Stage / campaign content owner |
 | Dependencies | VS3-C5, VS3-C6, VS3-C7 |
 | Release boundary | Feature/integration branch only; explicitly non-publishable six-stage state |
@@ -4124,9 +4124,9 @@ Add the authored Verdant stage to current typed catalogs and campaign flow for e
 
 ## Entry conditions
 
-- [ ] Bloom Wells, Rootbinder, and variants are green.
-- [ ] Stage/boss/enemy IDs and public projection decisions are green.
-- [ ] The branch is clearly marked non-publishable until Pale exists.
+- [x] Bloom Wells, Rootbinder, and variants are green.
+- [x] Stage/boss/enemy IDs and public projection decisions are green.
+- [x] The branch is clearly marked non-publishable until Pale exists.
 
 ## Primary files and authorities
 
@@ -4142,16 +4142,16 @@ Add the authored Verdant stage to current typed catalogs and campaign flow for e
 
 ## Sub-goals
 
-- [ ] **VS3-C8-S1** — Add verdant-sanctum StageDefinition with locked chapter, palette, pool, and layout.
-- [ ] **VS3-C8-S2** — Add typed stage environment and presentation registry entries.
-- [ ] **VS3-C8-S3** — Add the bloom chapter-transition identity through the existing cinematic director.
-- [ ] **VS3-C8-S4** — Ensure chapter IV starts, advances, skips, restores, and hands off the prior boss outro correctly.
-- [ ] **VS3-C8-S5** — Load stage-owned environment state through central stage activation and clear it on exit.
-- [ ] **VS3-C8-S6** — Use localWave explicitly for pool unlocks.
-- [ ] **VS3-C8-S7** — Provide a safe temporary engineering music fallback without publishing final music identity.
-- [ ] **VS3-C8-S8** — Update exact stage-count contracts/tests for the branch while labeling it a six-stage intermediate.
-- [ ] **VS3-C8-S9** — Prove Stage Forge exact launch and natural campaign progression into wave 31.
-- [ ] **VS3-C8-S10** — Prevent wiki/reference publication and public deployment from the intermediate branch.
+- [x] **VS3-C8-S1** — Add verdant-sanctum StageDefinition with locked chapter, palette, pool, and layout.
+- [x] **VS3-C8-S2** — Add typed stage environment and presentation registry entries.
+- [x] **VS3-C8-S3** — Add the bloom chapter-transition identity through the existing cinematic director.
+- [x] **VS3-C8-S4** — Ensure chapter IV starts, advances, skips, restores, and hands off the prior boss outro correctly.
+- [x] **VS3-C8-S5** — Load stage-owned environment state through central stage activation and clear it on exit.
+- [x] **VS3-C8-S6** — Use localWave explicitly for pool unlocks.
+- [x] **VS3-C8-S7** — Provide a safe temporary engineering music fallback without publishing final music identity.
+- [x] **VS3-C8-S8** — Update exact stage-count contracts/tests for the branch while labeling it a six-stage intermediate.
+- [x] **VS3-C8-S9** — Prove Stage Forge exact launch and natural campaign progression into wave 31.
+- [x] **VS3-C8-S10** — Prevent wiki/reference publication and public deployment from the intermediate branch.
 
 ## Agent implementation procedure
 
@@ -4164,12 +4164,12 @@ Add the authored Verdant stage to current typed catalogs and campaign flow for e
 
 ## TearBench same-change response
 
-- [ ] Production stage registry automatically expands TearBench stage authority.
-- [ ] Add a Verdant stage engineering scenario through State Forge; do not put exact stage metadata in natural canonical scenarios.
-- [ ] Update current-game authority mapping for Verdant.
-- [ ] Add stage entered/exited stable-ID event proof.
-- [ ] Add selected browser proof for chapter and normal Verdant wave start.
-- [ ] Bind browser evidence to the exact test build and label it non-certifying.
+- [x] Production stage registry automatically expands TearBench stage authority.
+- [x] Add a Verdant stage engineering scenario through State Forge; do not put exact stage metadata in natural canonical scenarios.
+- [x] Update current-game authority mapping for Verdant.
+- [x] Add stage entered/exited stable-ID event proof.
+- [x] Add selected browser proof for chapter and normal Verdant wave start.
+- [x] Bind browser evidence to the exact test build and label it non-certifying.
 
 ## Minimum focused proof
 
@@ -4184,11 +4184,11 @@ Add the authored Verdant stage to current typed catalogs and campaign flow for e
 
 ## Exit conditions
 
-- [ ] Verdant stage data is typed and source-owned.
-- [ ] Chapter flow and environment activation are deterministic.
-- [ ] Local-wave unlock behavior is correct.
-- [ ] Engineering browser path reaches Verdant.
-- [ ] Intermediate campaign is clearly non-publishable and cannot dispatch the wiki artifact.
+- [x] Verdant stage data is typed and source-owned.
+- [x] Chapter flow and environment activation are deterministic.
+- [x] Local-wave unlock behavior is correct.
+- [x] Engineering browser path reaches Verdant.
+- [x] Intermediate campaign is clearly non-publishable and cannot dispatch the wiki artifact.
 
 ## Stop and escalate conditions
 
@@ -4204,9 +4204,22 @@ Add the authored Verdant stage to current typed catalogs and campaign flow for e
 - Engineering-only six-stage disposition
 - Updated handoff
 
+## Checkpoint record
+
+- Implementation identity: `fbfc070128c64a5ac74c0ca8645e875c902a71cb`.
+- Verdant is the source-owned fourth campaign stage at waves 31–40, with chapter IV, locked palette/layout/pool, typed environment and presentation registries, central Bloom Well activation and cleanup, and explicit local-wave unlock semantics.
+- The bloom cinematic starts, advances, skips, restores, and receives the prior Crimson boss outro through the production chapter director.
+- State Forge now has an engineering-only, non-publishable exact Verdant wave-31 document. Exact launch replays legal progression, loads stage index 3 through the production stage boundary before capture, restores stage identity, and rejects stage/wave contradictions.
+- Natural campaign proof enters Verdant from wave 30, emits the ordered stage/chapter intents, defers activation during chapter flow, and selects only the local-wave-1 Verdant pool.
+- The temporary `fillet` cue remains an engineering resolver fallback outside `public/audio/music-routing.json`; no final Verdant or Rootbound public soundtrack route is claimed.
+- The branch is an explicitly non-publishable six-stage intermediate. Reference publication, wiki dispatch, preview deployment, and production deployment remain protected-main-only; release preflight rejects this feature branch before any deployment command.
+- Minimum proof passed: typecheck, lint, architecture, clean exact-commit game-reference export, 17/17 focused checkpoint tests plus 29/29 exact-launch adjacent tests, test-standalone build, 12/12 current browser gameplay scenarios, and the active campaign cinematic browser proof. Publication/wiki tests passed 10/10 and release-preflight tests passed 5/5.
+- Test-standalone fingerprint: `8d198a744185d1fb60dbdc04201b4e831b5bee5819045c99e46fd3973c626734`.
+- Evidence is engineering-only and non-certifying; C40 remains unchanged.
+
 ## Required handoff sentence
 
-> `VS3-C8 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+> `VS3-C8 is GREEN at fbfc070128c64a5ac74c0ca8645e875c902a71cb. The next authorized action is VS3-C9-S1, implementing the source-owned rootstone material contract. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
