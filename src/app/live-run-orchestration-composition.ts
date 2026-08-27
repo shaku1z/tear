@@ -100,6 +100,10 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     if (stageId === undefined) throw new RangeError(`environment stage index is invalid: ${String(index)}`);
     activateStageEnvironment(options.environment, stageId, options.authoritativeResult()?.tick ?? 0, reason);
   };
+  const loadTransitionStage = (index: number): void => {
+    options.controllers.api.loadStage(index);
+    setEnvironmentStage(index, "stage-transition");
+  };
   const content = createLiveContentComposition({
     dependencies: d, entities: options.entities, state: options.state, worldServices: options.worldServices, stage, width: options.width, height: options.height,
     run: options.run, player: options.player, enemies: options.enemies, actorId: options.actorId,
@@ -147,7 +151,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     stage, story, worldServices: options.worldServices, run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, spawn: content.spawn,
     loreBusy: campaignRuntime.loreBusy, achievementTracking: options.achievementTracking,
     achievementCheck: options.achievementCheck, achievementTracker: options.achievementTracker,
-    beginWipe: options.beginWipe, loadStage: (index) => { options.controllers.api.loadStage(index); setEnvironmentStage(index, "stage-transition"); },
+    beginWipe: options.beginWipe, loadStage: loadTransitionStage,
     beginCampaignChapter: campaignRuntime.beginChapter, setBannerSeconds: options.setBannerSeconds,
     startAdventureFinale: () => { campaignRuntime.startAdventureFinale(options.run().finalBossDeath); },
     winRun: () => { options.controllers.api.winRun(); }, openTier: options.openTier,
@@ -180,5 +184,5 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
       ? {}
       : { observeOutcomeChronology: options.observeOutcomeChronology }),
   });
-  return Object.freeze({ ...content, lobExplode });
+  return Object.freeze({ ...content, lobExplode, loadTransitionStage });
 }

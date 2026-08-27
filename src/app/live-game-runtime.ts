@@ -265,7 +265,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     splitProjectile: spawnSplitShards, formatTime: fmtTime,
   } = styleAchievementRuntime;
   const { modeWaves, bossById, spawn: spawnOne,
-    updateBossArenaPlatforms, lobExplode } = createLiveRunOrchestration({
+    updateBossArenaPlatforms, lobExplode, loadTransitionStage } = createLiveRunOrchestration({
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
     campaign: campaignHost, training: trainingHost, weapon: weaponRuntime, music: musicDirector,
     width: W, height: H, canvas, testMode: TEST_MODE,
@@ -677,7 +677,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
       emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window: browserWindow, canvas, width: W, height: H }); },
       setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) impact.hitStop = effects.hitStop; if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion; if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale; },
-      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = hostState.enemies().filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => liveRun().mods, restoreProgressionRuntime: (runtime) => { const run = liveRun(); run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
+      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: loadTransitionStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = hostState.enemies().filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => liveRun().mods, restoreProgressionRuntime: (runtime) => { const run = liveRun(); run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
     }, browserWindow);
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {
