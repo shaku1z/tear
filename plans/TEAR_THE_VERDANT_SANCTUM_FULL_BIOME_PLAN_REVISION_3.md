@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C5 green** |
-| Current checkpoint | `VS3-C6` |
+| Status | **Active implementation authority — VS3-C6 green** |
+| Current checkpoint | `VS3-C7` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -3896,7 +3896,7 @@ Implement the locked Bloom Well state machine as the first real consumer of the 
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Enemy / relationship-combat owner |
 | Dependencies | VS3-C4 |
 | Release boundary | Engineering enemy feature; no campaign insertion |
@@ -3907,9 +3907,9 @@ Implement Rootbinder as a distinct controller/support family using canonical com
 
 ## Entry conditions
 
-- [ ] VS3-C4 is green.
-- [ ] Combat-object proc policy and relationship references are production-ready.
-- [ ] Current Anchor, Mender, enemy movement, mass, knockback, death, variants, and factory contracts are understood.
+- [x] VS3-C4 is green.
+- [x] Combat-object proc policy and relationship references are production-ready.
+- [x] Current Anchor, Mender, enemy movement, mass, knockback, death, variants, and factory contracts are understood.
 
 ## Primary files and authorities
 
@@ -3924,16 +3924,16 @@ Implement Rootbinder as a distinct controller/support family using canonical com
 
 ## Sub-goals
 
-- [ ] **VS3-C6-S1** — Add rootbinder to the production EnemyKind authority and approved entity factory catalog.
-- [ ] **VS3-C6-S2** — Implement reposition, plant-windup, planted, link-warning, linked, broken, and recover states.
-- [ ] **VS3-C6-S3** — Implement one warned Elastic Leash to the player with bounded restoring force and full player controls.
-- [ ] **VS3-C6-S4** — Implement Shared Root Network for two or three legal ordinary enemies.
-- [ ] **VS3-C6-S5** — Redistribute bounded knockback/launch through the network without large DR, regen, death prevention, or permanent immovability.
-- [ ] **VS3-C6-S6** — Implement target selection, line validity, network capacity, and support-stack safeguards.
-- [ ] **VS3-C6-S7** — Implement root-link creation, damage, sever, cleanup, and native events through the shared combat-object kernel.
-- [ ] **VS3-C6-S8** — Add deterministic factory, death, stage-transition, and restore cleanup.
-- [ ] **VS3-C6-S9** — Add presentation silhouette, source node, warning, active segment, and sever feedback.
-- [ ] **VS3-C6-S10** — Parameterize tuning through world-owned configuration.
+- [x] **VS3-C6-S1** — Add rootbinder to the production EnemyKind authority and approved entity factory catalog.
+- [x] **VS3-C6-S2** — Implement reposition, plant-windup, planted, link-warning, linked, broken, and recover states.
+- [x] **VS3-C6-S3** — Implement one warned Elastic Leash to the player with bounded restoring force and full player controls.
+- [x] **VS3-C6-S4** — Implement Shared Root Network for two or three legal ordinary enemies.
+- [x] **VS3-C6-S5** — Redistribute bounded knockback/launch through the network without large DR, regen, death prevention, or permanent immovability.
+- [x] **VS3-C6-S6** — Implement target selection, line validity, network capacity, and support-stack safeguards.
+- [x] **VS3-C6-S7** — Implement root-link creation, damage, sever, cleanup, and native events through the shared combat-object kernel.
+- [x] **VS3-C6-S8** — Add deterministic factory, death, stage-transition, and restore cleanup.
+- [x] **VS3-C6-S9** — Add presentation silhouette, source node, warning, active segment, and sever feedback.
+- [x] **VS3-C6-S10** — Parameterize tuning through world-owned configuration.
 
 ## Agent implementation procedure
 
@@ -3946,12 +3946,12 @@ Implement Rootbinder as a distinct controller/support family using canonical com
 
 ## TearBench same-change response
 
-- [ ] Add State Forge scenario verdant-root-network-sever.
-- [ ] Add support identity and environment-object observation assertions.
-- [ ] Add positive and negative no-orphan-link tests.
-- [ ] Add source-derived EnemyKind coverage guard and actual evidence route.
-- [ ] Prove normal session event order: enemy spawn before link creation; link sever before cleanup.
-- [ ] Explicitly refuse unsupported headless relationship behavior until parity exists; complete it before the checkpoint can claim headless support.
+- [x] Add State Forge scenario verdant-root-network-sever.
+- [x] Add support identity and environment-object observation assertions.
+- [x] Add positive and negative no-orphan-link tests.
+- [x] Add source-derived EnemyKind coverage guard and actual evidence route.
+- [x] Prove normal session event order: enemy spawn before link creation; link sever before cleanup.
+- [x] Explicitly refuse unsupported headless relationship behavior until parity exists; the detached headless host does not claim relationship simulation, while its explicit refusal and current authority are covered.
 
 ## Minimum focused proof
 
@@ -3964,12 +3964,12 @@ Implement Rootbinder as a distinct controller/support family using canonical com
 
 ## Exit conditions
 
-- [ ] Rootbinder is behaviorally distinct from Anchor.
-- [ ] Player leash is fair and severable.
-- [ ] Network physics are bounded and deterministic.
-- [ ] No support stack removes all player agency.
-- [ ] Link reward/proc leakage is absent.
-- [ ] Factories, restore, and cleanup are truthful in every claimed host.
+- [x] Rootbinder is behaviorally distinct from Anchor.
+- [x] Player leash is fair and severable.
+- [x] Network physics are bounded and deterministic.
+- [x] No support stack removes all player agency.
+- [x] Link reward/proc leakage is absent.
+- [x] Factories, restore, and cleanup are truthful in every claimed host.
 
 ## Stop and escalate conditions
 
@@ -3986,9 +3986,21 @@ Implement Rootbinder as a distinct controller/support family using canonical com
 - Factory/observation/event evidence
 - Support-stack decision record
 
+## Checkpoint record
+
+- Implementation identity: `23adf8ed7db01d4265846ae4083f379f7c741af1`
+- Source baseline: `9f640309f65be1104dac872288894568ba04a89d`
+- Rootbinder now uses a production factory and a seven-state controller, with a warned, time-scaled Elastic Leash that preserves jump and dash authority.
+- Shared Root Network owns generation-safe relationship identities, live geometry validation, two-to-three-target capacity, cumulatively bounded correction, sever/dedupe/proc exclusions, and deterministic death, transition, and restore cleanup.
+- The live presentation renders the owned source node, warning/active/sever states, while native event ordering proves spawn before link creation and sever before cleanup.
+- State Forge includes `verdant-root-network-sever`; detached headless evidence remains explicitly limited rather than claiming unsupported relationship simulation.
+- Exact checkpoint unit proof passed: 5 files, 45 tests. Adjacent proof passed: 10 files, 84 tests. Typecheck, lint, architecture, TearBench selection, documentation, terminology, standalone build, browser scenarios, and diff checks passed.
+- Standalone source-bound fingerprint: `9210870982600fa869fc2ce8877608f0c25a8ec39629f5247a2d9020455173d8`.
+- No campaign insertion or publication authority was added; C40 remains unchanged.
+
 ## Required handoff sentence
 
-> `VS3-C6 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+> `VS3-C6 is GREEN at 23adf8ed7db01d4265846ae4083f379f7c741af1. The next authorized action is VS3-C7-S1, introducing a typed VariantSelectionContext with stage, local-wave, global-wave, mode, and injected-random authority. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

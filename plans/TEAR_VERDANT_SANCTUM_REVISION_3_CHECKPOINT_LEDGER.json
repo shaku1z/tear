@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C6",
-  "currentSubgoal": "VS3-C6-S1",
+  "currentCheckpoint": "VS3-C7",
+  "currentSubgoal": "VS3-C7-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -15,14 +15,15 @@
     "VS3-C2",
     "VS3-C3",
     "VS3-C4",
-    "VS3-C5"
+    "VS3-C5",
+    "VS3-C6"
   ],
-  "lastGreenCheckpoint": "VS3-C5",
+  "lastGreenCheckpoint": "VS3-C6",
   "lastEvidence": [
-    "VS3-C5 Bloom Wells V1 is green at 97c05bc7161402c7c5bb1d024ec87749f9060a8e; deterministic lifecycle/force, actor exclusions, boss cleanup facts, hash metadata, live/detached State Forge evidence, accessibility projection, real Final Five transport conformance, and all checkpoint gates pass."
+    "VS3-C6 Rootbinder and Shared Root Network is green at 23adf8ed7db01d4265846ae4083f379f7c741af1; production factory/state machine, warned Elastic Leash, bounded two-to-three-ally networks, generation-safe restore/cleanup, native event ordering, live presentation, State Forge sever evidence, and all checkpoint gates pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C6-S1: register Rootbinder as a factory-ready enemy with explicit support/controller capability metadata.",
+  "nextAction": "Execute VS3-C7-S1: introduce a typed VariantSelectionContext with stageId, localWave, global wave, mode, and injected random source.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -893,55 +894,55 @@
         "src/tearbench/evidence-routes.json"
       ],
       "subgoals": [
-        {
-          "id": "VS3-C6-S1",
-          "description": "Add rootbinder to the production EnemyKind authority and approved entity factory catalog.",
-          "status": "not-started"
+      {
+        "id": "VS3-C6-S1",
+        "description": "Add rootbinder to the production EnemyKind authority and approved entity factory catalog.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S2",
-          "description": "Implement reposition, plant-windup, planted, link-warning, linked, broken, and recover states.",
-          "status": "not-started"
+        "id": "VS3-C6-S2",
+        "description": "Implement reposition, plant-windup, planted, link-warning, linked, broken, and recover states.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S3",
-          "description": "Implement one warned Elastic Leash to the player with bounded restoring force and full player controls.",
-          "status": "not-started"
+        "id": "VS3-C6-S3",
+        "description": "Implement one warned Elastic Leash to the player with bounded restoring force and full player controls.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S4",
-          "description": "Implement Shared Root Network for two or three legal ordinary enemies.",
-          "status": "not-started"
+        "id": "VS3-C6-S4",
+        "description": "Implement Shared Root Network for two or three legal ordinary enemies.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S5",
-          "description": "Redistribute bounded knockback/launch through the network without large DR, regen, death prevention, or permanent immovability.",
-          "status": "not-started"
+        "id": "VS3-C6-S5",
+        "description": "Redistribute bounded knockback/launch through the network without large DR, regen, death prevention, or permanent immovability.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S6",
-          "description": "Implement target selection, line validity, network capacity, and support-stack safeguards.",
-          "status": "not-started"
+        "id": "VS3-C6-S6",
+        "description": "Implement target selection, line validity, network capacity, and support-stack safeguards.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S7",
-          "description": "Implement root-link creation, damage, sever, cleanup, and native events through the shared combat-object kernel.",
-          "status": "not-started"
+        "id": "VS3-C6-S7",
+        "description": "Implement root-link creation, damage, sever, cleanup, and native events through the shared combat-object kernel.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S8",
-          "description": "Add deterministic factory, death, stage-transition, and restore cleanup.",
-          "status": "not-started"
+        "id": "VS3-C6-S8",
+        "description": "Add deterministic factory, death, stage-transition, and restore cleanup.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S9",
-          "description": "Add presentation silhouette, source node, warning, active segment, and sever feedback.",
-          "status": "not-started"
+        "id": "VS3-C6-S9",
+        "description": "Add presentation silhouette, source node, warning, active segment, and sever feedback.",
+        "status": "green"
         },
         {
-          "id": "VS3-C6-S10",
-          "description": "Parameterize tuning through world-owned configuration.",
-          "status": "not-started"
+        "id": "VS3-C6-S10",
+        "description": "Parameterize tuning through world-owned configuration.",
+        "status": "green"
         }
       ],
       "agentProcedure": [
@@ -989,13 +990,37 @@
         "Factory/observation/event evidence",
         "Support-stack decision record"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+    "status": "green",
+    "sourceBaseline": "9f640309f65be1104dac872288894568ba04a89d",
+    "completionIdentity": "23adf8ed7db01d4265846ae4083f379f7c741af1",
+    "commandsRun": [
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm check:architecture",
+      "pnpm exec vitest run tests/unit/rootbinder-network.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/live-enemy-spawn.test.ts tests/unit/production-headless-environment.test.ts tests/unit/tearbench-current-game-authority.test.ts",
+      "pnpm exec vitest run tests/unit/rootbinder-network.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/live-enemy-spawn.test.ts tests/unit/production-headless-environment.test.ts tests/unit/tearbench-current-game-authority.test.ts tests/unit/tear-world-entity-construction.test.ts tests/unit/state-forge.test.ts tests/unit/environment-presentation.test.ts tests/unit/content-director.test.ts tests/unit/game-reference-contract.test.ts",
+      "pnpm build:test:standalone",
+      "node tests/browser-current-gameplay-scenarios.js",
+      "pnpm check:tearbench-selection",
+      "pnpm check:docs",
+      "pnpm check:terminology",
+      "git diff --check"
+    ],
+    "evidence": [
+      "Rootbinder is registered in the production EnemyKind/factory authority and owns a deterministic seven-state controller.",
+      "Elastic Leash is warned, severable, time-scaled, and bounded without disabling player jump or dash.",
+      "Shared Root Network selects two or three legal ordinary allies, uses generation-safe relationship IDs, and applies cumulatively bounded time-scaled movement correction.",
+      "Combat-object ownership, damage, sever, dedupe, proc exclusion, death/stage cleanup, and restore rebinding are covered by focused tests.",
+      "Native event ordering proves enemy spawn before relationship creation and link sever before cleanup.",
+      "Live presentation renders the owned source node plus warning, active, and sever geometry; State Forge scenario verdant-root-network-sever is source-routed.",
+      "Detached headless evidence explicitly refuses unsupported relationship simulation rather than making a false parity claim.",
+      "Exact checkpoint proof passed 45/45 tests; adjacent proof passed 84/84 tests; typecheck, lint, architecture, selection, docs, terminology, standalone build, browser scenarios, and diff checks passed.",
+      "Standalone source-bound fingerprint is 9210870982600fa869fc2ce8877608f0c25a8ec39629f5247a2d9020455173d8."
+    ],
       "blockers": [],
-      "notes": []
+    "notes": [
+      "No campaign insertion or publication authority was added; C40 remains unchanged."
+    ]
     },
     {
       "id": "VS3-C7",
