@@ -70,10 +70,13 @@ export function pickEnemyKind(
   wave: number,
   random: RandomSource,
   campaignPool: readonly CampaignPoolEntry[] | null = null,
+  localWave?: number,
 ): EnemyKind {
   if (!Number.isSafeInteger(wave) || wave < 1) throw new RangeError("wave must be a positive integer");
   if (campaignPool !== null && campaignPool.length > 0) {
-    const localWave = (wave - 1) % 10 + 1;
+    if (typeof localWave !== "number" || !Number.isSafeInteger(localWave) || localWave < 1 || localWave > 10) {
+      throw new RangeError("campaign pool selection requires an explicit localWave from 1 through 10");
+    }
     const unlocked = campaignPool.filter((entry) => localWave >= entry.unlockWave);
     const candidates = unlocked.length > 0 ? unlocked : campaignPool;
     return weightedPick(candidates.map((entry) => [entry.kind, entry.weight] as const), random);

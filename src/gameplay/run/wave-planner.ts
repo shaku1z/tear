@@ -120,12 +120,12 @@ function regularWaveQueue(
   options: PlanNextWaveOptions,
 ): readonly WaveSpawnSpec[] {
   const tuning = options.tuning;
+  const localWave = (wave - 1) % 10 + 1;
   let count: number;
   let hpScale: number;
   let dmgScale = 1;
   if (state.mode === "campaign") {
     const stage = Math.floor((wave - 1) / 10);
-    const localWave = (wave - 1) % 10 + 1;
     count = tuning.firstWaveCount + Math.floor((localWave - 1) * tuning.countPerWave) + stage * tuning.stageCountStep;
     hpScale = (1 + stage * tuning.stageHpStep) * (1 + (localWave - 1) * tuning.inStageHp);
     dmgScale = (1 + stage * tuning.stageDmgStep) * (1 + (localWave - 1) * tuning.inStageDmg);
@@ -163,7 +163,9 @@ function regularWaveQueue(
       }
     }
     const contentWave = state.mode === "sandbox" ? 99 : wave;
-    const kind = pickEnemyKind(contentWave, options.random, campaignStage?.pool ?? null);
+    const kind = campaignStage === null
+      ? pickEnemyKind(contentWave, options.random)
+      : pickEnemyKind(contentWave, options.random, campaignStage.pool, localWave);
     queue.push({ type: kind, hpScale, dmgScale });
   }
   return queue;

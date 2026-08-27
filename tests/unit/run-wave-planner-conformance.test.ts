@@ -62,11 +62,14 @@ function options(overrides: Partial<PlanNextWaveOptions> = {}): PlanNextWaveOpti
 
 describe("wave planning conformance", () => {
   it("maps every campaign stage to its canonical boss and complete local pool", () => {
-    expect(STAGE_INPUT.map((stage) => stage.boss)).toEqual(BOSS_ROSTER.map((boss) => boss.id));
+    expect(STAGE_INPUT.map((stage) => stage.boss)).toEqual([
+      "warden", "colossus", "aldric", "rootbound", "echo", "source",
+    ]);
     expect(STAGE_INPUT.map((stage) => stage.pool.map((entry) => entry.kind))).toEqual([
       ["charger", "ranged", "bomber", "armored"],
       ["armored", "bomber", "charger", "ranged", "anchor"],
       ["charger", "flyer", "bomber", "herald", "chimera"],
+      ["flyer", "ranged", "charger", "rootbinder", "mender", "anchor", "armored", "chimera"],
       ["wraith", "flyer", "ranged", "priest", "chimera", "mender"],
       ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "herald", "anchor", "priest", "mender"],
     ]);
@@ -99,6 +102,23 @@ describe("wave planning conformance", () => {
     expect(stageTwo.intents.map((intent) => intent.type).slice(0, 4)).toEqual([
       "begin-wipe", "load-stage", "set-stage-banner", "begin-campaign-chapter",
     ]);
+  });
+
+  it("uses Verdant local wave rather than global wave for pool unlocks", () => {
+    const firstVerdant = planNextWave(options({
+      state: state({ mode: "campaign", wave: 30, currentStageIndex: 2 }),
+      random: new ConstantRandom(0.999),
+    }));
+    expect(firstVerdant.state).toMatchObject({ wave: 31, stage: 3 });
+    expect(new Set(firstVerdant.state.spawnQueue.map((spawn) => spawn.type)))
+      .toEqual(new Set(["charger"]));
+
+    const matureVerdant = planNextWave(options({
+      state: state({ mode: "campaign", wave: 35, currentStageIndex: 3 }),
+      random: new ConstantRandom(0.999),
+    }));
+    expect(matureVerdant.state).toMatchObject({ wave: 36, stage: 3 });
+    expect(matureVerdant.state.spawnQueue.some((spawn) => spawn.type === "chimera")).toBe(true);
   });
 
   it("defers campaign activation without overwriting live timers", () => {
@@ -163,8 +183,9 @@ describe("wave planning conformance", () => {
         state: state({ mode: "bossonly", wave: index, bossOrder: BOSS_ROSTER.map((entry) => entry.id), bossIdx: index }),
         bossOnly: true,
       }));
-      expect(planned.state).toMatchObject({ curBoss: boss.id, stage: index, currentStageIndex: index, isBossWave: true });
-      expect(planned.intents).toContainEqual({ type: "load-stage", stageIndex: index });
+      const homeIndex = STAGE_INPUT.findIndex((stage) => stage.boss === boss.id);
+      expect(planned.state).toMatchObject({ curBoss: boss.id, stage: homeIndex, currentStageIndex: homeIndex, isBossWave: true });
+      expect(planned.intents).toContainEqual({ type: "load-stage", stageIndex: homeIndex });
       expect(planned.intents.some((intent) => intent.type === "begin-wipe")).toBe(index > 0);
     }
   });
