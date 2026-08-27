@@ -4,14 +4,22 @@ import { STAGES } from "../../src/gameplay/stages";
 import { createBackdrop, type BackdropPolicy } from "../../src/presentation/backdrop";
 import { VERDANT_BACKDROP_LIMITS } from "../../src/presentation/backdrop-biomes";
 
-interface DrawCounts { readonly fills: number; readonly strokes: number; readonly arcs: number; readonly curves: number; readonly images: number }
+interface DrawCounts {
+  readonly fills: number; readonly strokes: number; readonly arcs: number; readonly curves: number; readonly images: number;
+  readonly fillRects: readonly (readonly number[])[];
+}
 
-function renderVerdant(low: boolean): DrawCounts {
+function renderVerdant(
+  low: boolean,
+  view = { left: -224, top: -126, right: 1_824, bottom: 1_026 },
+): DrawCounts {
   let fills = 0, strokes = 0, arcs = 0, curves = 0, images = 0;
+  const fillRects: number[][] = [];
   const gradient = { addColorStop: () => undefined };
   const context = new Proxy({}, {
     get: (_target, key) => {
-      if (key === "fill" || key === "fillRect") return () => { fills += 1; };
+      if (key === "fill") return () => { fills += 1; };
+      if (key === "fillRect") return (...args: number[]) => { fills += 1; fillRects.push(args); };
       if (key === "stroke") return () => { strokes += 1; };
       if (key === "arc") return () => { arcs += 1; };
       if (key === "bezierCurveTo") return () => { curves += 1; };
@@ -34,8 +42,8 @@ function renderVerdant(low: boolean): DrawCounts {
   };
   const stage = STAGES.find((candidate) => candidate.id === "verdant-sanctum");
   if (stage === undefined) throw new Error("Verdant stage is required");
-  createBackdrop(policy).draw(context, stage, 3, 800, { left: -224, top: -126, right: 1_824, bottom: 1_026 });
-  return { fills, strokes, arcs, curves, images };
+  createBackdrop(policy).draw(context, stage, 3, 800, view);
+  return { fills, strokes, arcs, curves, images, fillRects };
 }
 
 describe("Verdant backdrop", () => {
@@ -64,5 +72,19 @@ describe("Verdant backdrop", () => {
     );
     expect(full.images).toBe(0);
     expect(low.images).toBe(0);
+  });
+
+  it("paints true viewport bleed without mutating the authored safe composition", () => {
+    const stage = STAGES.find((candidate) => candidate.id === "verdant-sanctum");
+    if (stage === undefined) throw new Error("Verdant stage is required");
+    const layout = structuredClone(stage.layout);
+    for (const view of [
+      { left: -320, top: -70, right: 1_920, bottom: 970 },
+      { left: 0, top: -150, right: 1_600, bottom: 1_050 },
+    ]) {
+      const rendered = renderVerdant(false, view);
+      expect(rendered.fillRects).toContainEqual([view.left, view.top, view.right - view.left, view.bottom - view.top]);
+    }
+    expect(stage.layout).toEqual(layout);
   });
 });
