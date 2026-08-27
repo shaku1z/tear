@@ -134,6 +134,14 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
             && environment.observe().availableActions.includes("move");
           break;
         }
+        case "variant-selection": {
+          window.__PANTHEON_TEST.prepareVariantSelectionScenario("charger", "briar-stalker");
+          const selected = environment.observe();
+          const actor = selected.entities.find((entry) => entry.kind === "charger");
+          proved = actor?.variantId === "briar-stalker" && actor.variantName === "Briar Stalker";
+          evidence = { actor, selectionPath: "playground-explicit-spawn" };
+          break;
+        }
         case "generic-field": {
           const forge = environment.forgeEnvironmentField();
           if (!forge.ok) throw new Error("generic field must launch through State Forge restore");

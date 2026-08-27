@@ -86,7 +86,8 @@ function waveEvents(value: unknown): value is readonly VisualWaveEvent[] {
 }
 function spawnEvents(value: unknown): value is readonly VisualSpawnEvent[] {
   return Array.isArray(value) && value.every((entry: unknown) => isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0
-    && finiteNumber(entry.id) && typeof entry.k === "string" && finiteNumber(entry.x) && finiteNumber(entry.y));
+    && finiteNumber(entry.id) && typeof entry.k === "string" && finiteNumber(entry.x) && finiteNumber(entry.y)
+    && (entry.vid === undefined || (typeof entry.vid === "string" && entry.vid.length > 0 && entry.vid.length <= 80)));
 }
 function deathEvents(value: unknown): value is readonly VisualDeathEvent[] {
   return Array.isArray(value) && value.every((entry: unknown) =>

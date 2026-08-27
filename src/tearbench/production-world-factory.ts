@@ -31,6 +31,8 @@ export interface ProductionReplayWorldOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  /** Source-owned persisted discovery projection for detached Endless/Gauntlet runs. */
+  readonly discoveredVariantIds?: readonly string[];
 }
 
 /** Ground plus a one-way ledge, owned by each detached production world. */
@@ -151,7 +153,8 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   world.context.services.random.resetRun(runSeed);
   const difficulty = options.difficulty ?? "normal";
   const difficultyPlan = productionDifficultyPlan(difficulty);
-  const run = createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty);
+  const run = { ...createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty),
+    variantDiscovery: [...(options.discoveredVariantIds ?? [])] };
   world.state.setRun(run as never);
   configuration.resetToBase();
   config.player.dmgTakenMult *= difficultyPlan.playerDamageMultiplier;

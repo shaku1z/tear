@@ -14,6 +14,7 @@ import type { RandomSource } from "../domain/random";
 import type { TearWorldServices } from "../gameplay/runtime/tear-world-context";
 import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
+import { resolveDiscoveredVariantIds } from "../gameplay/variants";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -120,7 +121,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       try { replacement.sealActiveRecording(); }
       finally { Input.stopSemanticRecording(); }
     },
-    initializeWorld: (_mode, difficulty) => {
+    initializeWorld: (mode, difficulty) => {
       context.clearPracticeSession?.();
       context.environment.clear("new-run");
       context.prepareWorld();
@@ -151,8 +152,10 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       context.world.resetTransient();
       context.services.effects.resetWorld();
       context.services.clock.reset();
+      const biomeTracker = PROFILE.data.stats._biomes;
+      const discoveredBiomes = Object.keys((biomeTracker ?? {}) as Record<string, unknown>);
       return { weaponId, mods: newMods(), scaling: startingPlan.scaling,
-        achievementSnapshot: Object.keys(PROFILE.data.ach) };
+        achievementSnapshot: Object.keys(PROFILE.data.ach), variantDiscovery: [...resolveDiscoveredVariantIds(mode, discoveredBiomes)] };
     },
     resetAuthoritativeClocks: context.resetAuthoritativeClocks,
     finishWorldReset: () => {

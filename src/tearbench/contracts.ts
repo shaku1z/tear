@@ -68,6 +68,9 @@ export interface TearHashSetV1 {
 export interface TearObservedActorV1 {
   readonly id: string;
   readonly kind: TearEntityKindId;
+  /** Public-safe authored identity; executable variant callbacks never cross this boundary. */
+  readonly variantId?: string;
+  readonly variantName?: string;
   readonly x: number;
   readonly y: number;
   readonly vx: number;

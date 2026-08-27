@@ -124,6 +124,17 @@ export function isVerdantVariant(id: string): boolean {
 }
 
 /**
+ * Resolves the persisted profile discovery authority into a run-owned list.
+ * Endless/Gauntlet discovery is intentionally earned by having entered the
+ * authored Verdant biome; a large global wave never substitutes for it.
+ */
+export function resolveDiscoveredVariantIds(mode: RunMode, discoveredBiomes: readonly string[]): readonly string[] {
+  if (mode !== "endless" && mode !== "gauntlet") return [];
+  const seen = new Set(discoveredBiomes);
+  return seen.has("verdant-sanctum") || seen.has("Verdant Sanctum") ? VERDANT_VARIANT_IDS : [];
+}
+
+/**
  * Context-aware, fail-closed variant selection. Existing families continue to
  * use their historical wave gates; only the four Verdant identities require
  * the authored stage/mode/discovery conditions below.
@@ -145,7 +156,10 @@ export function selectVariant(kind: string, context: VariantSelectionContext): E
       }
       return false;
     }
-    const gateWave = context.mode === "campaign" ? context.localWave : context.globalWave;
+    // Legacy variants have always been gated by the run's global/content wave.
+    // Keep that contract in campaign too; only Verdant identities use the
+    // authored stage + local-wave gate above.
+    const gateWave = context.globalWave;
     return variant.minWave === undefined || gateWave >= variant.minWave;
   });
   return chooseWeighted(eligible, context.random);

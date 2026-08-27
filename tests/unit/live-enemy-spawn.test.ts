@@ -104,4 +104,17 @@ describe("live enemy spawn", () => {
     expect(() => completeEnemySpawn(target, { type: "charger", variantId: "seedcaster" }, base)).toThrow(/unknown variant/u);
     expect(installed).toHaveLength(0);
   });
+
+  it("passes persisted discovery authority through the production spawn context", () => {
+    const target = enemy();
+    const { base } = port({
+      run: () => ({ mode: "endless" as const, wave: 20, stageId: "grounds" as const,
+        variantDiscovery: ["briar-stalker"] }),
+      rollVariant: vi.fn(() => null),
+    });
+    completeEnemySpawn(target, { type: "charger" }, base);
+    expect(base.rollVariant).toHaveBeenCalledWith("charger", 4, expect.objectContaining({
+      discoveredVariantIds: ["briar-stalker"],
+    }));
+  });
 });

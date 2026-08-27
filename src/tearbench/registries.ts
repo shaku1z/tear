@@ -39,7 +39,7 @@ export function createStableRegistry<const TIds extends readonly string[]>(
 
 /** Canonical scenario capabilities are owned here, not inferred from catalog prose. */
 export const GAMEPLAY_SCENARIO_SUBJECT_IDS = Object.freeze([
-  "boot", "movement", "dash", "blade", "parry", "wave", "draft",
+  "boot", "movement", "dash", "blade", "parry", "wave", "draft", "variant-selection",
 ] as const);
 export const GAMEPLAY_SCENARIO_SUBJECT_REGISTRY = createStableRegistry(
   "gameplay scenario subject", GAMEPLAY_SCENARIO_SUBJECT_IDS,

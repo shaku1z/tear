@@ -247,6 +247,7 @@ describe("legacy world presentation renderers", () => {
     expect(callbackCalls).toEqual(["rear", "rear", "draw", "draw", "transform", "status"]);
     expect(formatEnemyLabel({ kind: "support", supportType: "priest", affixCount: 2 })).toBe("War Priest +2");
     expect(formatEnemyLabel({ kind: "armored", enraged: true })).toBe("Armored*");
+    expect(formatEnemyLabel({ kind: "armored", enraged: true, variantName: "Bark Sentinel" })).toBe("Bark Sentinel");
     expect(canvasCalls.some((call) => call.name === "fillText" && call.arguments[0] === "War Priest +2")).toBe(true);
     expect(canvasCalls.some((call) => call.name === "fillText" && call.arguments[0] === "+100")).toBe(true);
     expect(canvasCalls.filter((call) => call.name === "strokeRect").length).toBeGreaterThanOrEqual(3);

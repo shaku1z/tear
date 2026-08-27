@@ -20,6 +20,7 @@ export interface LiveDebugCompositionOptions {
   readonly stage: Parameters<typeof installLiveDebugHarness>[0]["stage"];
   readonly width: number;
   readonly height: number;
+  readonly spawnExplicitVariant?: Parameters<typeof installLiveDebugHarness>[0]["spawnExplicitVariant"];
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
   readonly selectBoss: (boss: BossId) => void;
   readonly setScreen: (screen: LegacyAppScreen, detail?: LegacyTransitionContext) => void;
@@ -54,6 +55,7 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
   installLiveDebugHarness({
     enabled: options.enabled, dependencies: d, entities: options.entities, state: options.state, lifecycle: options.lifecycle,
     cinema: options.cinema, stage: options.stage, width: options.width, height: options.height,
+    ...(options.spawnExplicitVariant === undefined ? {} : { spawnExplicitVariant: options.spawnExplicitVariant }),
     startRun: options.startRun, selectBoss: options.selectBoss, setScreen: options.setScreen, screen: options.screen,
     setContinueSeconds: options.setContinueSeconds, openDraft: options.openDraft, openTier: options.openTier,
     applyUpgrade: (upgrade) => { options.applyUpgrade(upgrade, { config: options.dependencies.CONFIG,

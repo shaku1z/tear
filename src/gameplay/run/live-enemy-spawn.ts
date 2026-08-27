@@ -50,6 +50,8 @@ export interface LiveSpawnRun {
   readonly stageId?: StageId;
   readonly localWave?: number;
   readonly discoveredVariantIds?: readonly string[];
+  /** Persisted run authority; the compatibility field above is for callers that already project it. */
+  readonly variantDiscovery?: readonly string[];
 }
 
 export interface LiveEnemySpawnPort<TEnemy extends LiveSpawnEnemy> {
@@ -129,13 +131,14 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
     else {
       const stageId = port.stageId?.() ?? run.stageId ?? "grounds";
       const globalWave = port.contentWave() || run.wave;
+      const discoveredVariantIds = run.discoveredVariantIds ?? run.variantDiscovery;
       const context: VariantSelectionContext = {
         stageId,
         localWave: run.localWave ?? ((run.wave - 1) % 10 + 1),
         globalWave,
         mode: run.mode,
         random: port.random,
-        ...(run.discoveredVariantIds === undefined ? {} : { discoveredVariantIds: run.discoveredVariantIds }),
+        ...(discoveredVariantIds === undefined ? {} : { discoveredVariantIds }),
       };
       const restoredVariant = spec.variantId === undefined ? null : findVariant(enemy.kind, spec.variantId);
       if (spec.variantId !== undefined && restoredVariant === null) {

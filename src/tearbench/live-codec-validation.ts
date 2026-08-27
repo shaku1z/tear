@@ -1,5 +1,6 @@
 import type { TearCodecId } from "./registries";
 import type { TearCodecIssue } from "./state-codecs";
+import { findVariant } from "../gameplay/variants";
 
 function issue(codecId: TearCodecId, path: string, message: string): TearCodecIssue {
   return Object.freeze({ codecId, path, message });
@@ -37,6 +38,14 @@ function entityArray(codecId: TearCodecId, payload: unknown): readonly TearCodec
     }
     if (typeof entry.factoryId !== "string" || entry.factoryId.length === 0) {
       issues.push(issue(codecId, `$[${String(index)}].factoryId`, "entity requires an approved factory id"));
+    }
+    const variantId = entry.variantId ?? entry.variant;
+    if (variantId !== undefined && variantId !== "") {
+      if (typeof variantId !== "string" || variantId.length > 80) {
+        issues.push(issue(codecId, `$[${String(index)}].variantId`, "variant identity must be a bounded string"));
+      } else if (typeof entry.factoryId === "string" && findVariant(entry.factoryId, variantId) === null) {
+        issues.push(issue(codecId, `$[${String(index)}].variantId`, "variant identity is not valid for the enemy factory family"));
+      }
     }
     issues.push(...finiteField(codecId, entry, "x"), ...finiteField(codecId, entry, "y"));
     return issues;

@@ -91,6 +91,19 @@
       "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
+    "id": "verdant-variant-selection",
+    "description": "Explicitly select a Verdant enemy variant through the Playground training spawn path.",
+    "subject": { "kind": "gameplay", "id": "variant-selection" },
+    "start": { "mode": "playground", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["variants", "training", "explicit-selection", "variant-selection"],
+    "maxTicks": 120,
+    "testFiles": ["tests/unit/verdant-variant-selection.test.ts", "tests/unit/live-enemy-spawn.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "The shared browser journey invokes the source-owned Playground explicit variant training spawn and observes the selected identity.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
     "id": "warden-grounds-live-encounter",
     "description": "Launch the production Warden encounter in its authored Grounds biome and prove its live combat simulation advances.",
     "subject": { "kind": "boss", "id": "warden" },

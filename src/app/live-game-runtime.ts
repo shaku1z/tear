@@ -683,6 +683,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {
     installLiveGameDebug({
       enabled: PANTHEON_DEBUG, dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA, stage: stageRuntime, width: W, height: H,
+      spawnExplicitVariant: (kind, variantId) => { spawnOne({ type: kind, variantId }); },
       startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: reviveCountdown.setSeconds,
       openDraft: openRewardDraft, openTier: openRewardTier, run: liveRun, player: livePlayer, blade: liveBlade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
       beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
@@ -695,5 +696,4 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     });
   });
   frameDriver.start(({ deltaSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds); });
-})();
-}
+})(); }

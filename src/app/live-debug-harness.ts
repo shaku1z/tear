@@ -18,6 +18,7 @@ export interface DebugLifecycle {
 }
 interface DebugCinema { active: boolean; beat: unknown; cancel(reason: string): void; requestSkip(): void; advance(): void }
 interface DebugStage { index: number; current: unknown; platforms: unknown[] }
+type ExplicitVariantKind = "charger" | "ranged" | "flyer" | "armored";
 
 export interface LiveDebugHarnessContext {
   readonly enabled: boolean;
@@ -29,6 +30,7 @@ export interface LiveDebugHarnessContext {
   readonly stage: DebugStage;
   readonly width: number;
   readonly height: number;
+  readonly spawnExplicitVariant?: (kind: ExplicitVariantKind, variantId: string) => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
   readonly selectBoss: (boss: BossId) => void;
   readonly setScreen: (screen: LegacyAppScreen, detail?: LegacyTransitionContext) => void;
@@ -78,6 +80,15 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
     prepareCurrentGameplayScenario: prepareCurrentGameplay,
+    prepareVariantSelectionScenario(kind: ExplicitVariantKind, variantId: string) {
+      const run = runOf(context.state);
+      if (run.mode !== "playground" && run.mode !== "sandbox") throw new Error("explicit variant selection is limited to Playground/Enemy Test");
+      if (context.spawnExplicitVariant === undefined) throw new Error("explicit variant training port is unavailable");
+      if (!(context.dependencies.VARIANTS[kind] ?? []).some((variant) => variant.id === variantId)) {
+        throw new RangeError(`unknown variant ${variantId} for ${kind}`);
+      }
+      clearCombat(); context.spawnExplicitVariant(kind, variantId);
+    },
     prepareNaturalWaveClearScenario() {
       prepareCurrentGameplay();
       const run = runOf(context.state);

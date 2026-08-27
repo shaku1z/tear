@@ -99,7 +99,8 @@ export function createLiveContentHost<TEnemy extends ContentHostEnemy>(
     run: () => {
       const active = run();
       return { mode: active.mode, wave: active.wave,
-        ...(active.curBoss === null || active.curBoss === undefined ? {} : { curBoss: active.curBoss }) };
+        ...(active.curBoss === null || active.curBoss === undefined ? {} : { curBoss: active.curBoss }),
+        ...(active.variantDiscovery === undefined ? {} : { variantDiscovery: active.variantDiscovery }) };
     },
     modes: context.modes,
     stages: context.stages,

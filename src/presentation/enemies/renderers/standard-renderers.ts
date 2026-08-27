@@ -6,9 +6,10 @@ export function installStandardEnemyRenderers(types: EnemyTypes, runtime: EnemyR
   const { CONFIG, THEME, clamp, CHIMERA_MOVE_COLOR } = runtime;
   Object.assign(types.Flyer.prototype, {
         draw(this: RenderInstance<"Flyer">, ctx: CanvasRenderingContext2D) {
-            // Dive Bomber's ground warning marker
-            if (this.behavior === "divebomb" && this.state === "warn" && this.diveX != null) {
-              const gy = CONFIG.world.groundY, k = 1 - clamp(this.warnT / 1.1, 0, 1);
+            // Dive Bomber and Canopy Diver ground warning markers. Canopy's
+            // warning is intentionally visible before its forceful dive.
+            if ((this.behavior === "divebomb" || this.behavior === "canopy-diver") && this.state === "warn" && this.diveX != null) {
+              const gy = CONFIG.world.groundY, k = 1 - clamp(this.warnT / (this.behavior === "canopy-diver" ? 0.75 : 1.1), 0, 1);
               ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 3;
               ctx.beginPath(); ctx.arc(this.diveX, gy - 4, 34 - 22 * k, 0, Math.PI * 2); ctx.stroke();
               ctx.beginPath(); ctx.moveTo(this.diveX, this.y + this.hh); ctx.setLineDash([4, 8]); ctx.lineTo(this.diveX, gy - 4); ctx.stroke();

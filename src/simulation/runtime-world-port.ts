@@ -49,6 +49,9 @@ export interface TearSimulationEnemyView {
   maxHp: number;
   dead: boolean;
   kind: string;
+  /** Optional authored variant identity exposed to structured observers. */
+  variant?: string;
+  variantName?: string;
   bossId?: string;
   isBoss?: boolean;
   isVoidWisp?: boolean;

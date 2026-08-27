@@ -114,7 +114,9 @@ export function createProductionWaveRewardRuntime(
     run: () => {
       const active = run();
       return { mode: active.mode, wave: active.wave,
-        ...(typeof (active as { curBoss?: unknown }).curBoss === "string" ? { curBoss: (active as { curBoss: string }).curBoss } : {}) };
+        ...(typeof (active as { curBoss?: unknown }).curBoss === "string" ? { curBoss: (active as { curBoss: string }).curBoss } : {}),
+        ...((active as { variantDiscovery?: readonly string[] }).variantDiscovery === undefined ? {}
+          : { variantDiscovery: (active as { variantDiscovery: readonly string[] }).variantDiscovery }) };
     },
     modes: () => config.modes,
     stages: STAGES,

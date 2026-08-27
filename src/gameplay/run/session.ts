@@ -19,6 +19,7 @@ export interface CreateRunSessionOptions<TMods> {
   readonly mods: TMods;
   readonly scaling: RunDifficultyScaling;
   readonly achievementSnapshot: readonly string[];
+  readonly variantDiscovery?: readonly string[];
 }
 
 export interface RunWeaponStats {
@@ -87,6 +88,8 @@ export interface RunSession<TMods> {
   chapterState: string;
   pendingBossOutro: unknown;
   _prologueShown: boolean;
+  /** Persisted source-owned Endless/Gauntlet discovery authority. */
+  variantDiscovery?: string[];
 }
 
 function finiteNonNegative(value: number, label: string): number {
@@ -148,6 +151,7 @@ export function createRunSession<TMods extends { weaponId?: string }>(
     chapterState: options.mode === "campaign" ? "LORE_ENTER" : "WAVE_LIVE",
     pendingBossOutro: null,
     _prologueShown: false,
+    variantDiscovery: [...(options.variantDiscovery ?? [])],
   };
 }
 import type { WaveSpawnSpec } from "./wave-planner";

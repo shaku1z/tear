@@ -135,6 +135,8 @@ export function projectLiveTearObservation(
         id: context.actorId(enemy), kind: canonicalObservationEnemyKind(enemy), x: enemy.x, y: enemy.y,
         vx: enemy.vx, vy: enemy.vy, hpRatio: enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0,
         state: authoredState ?? attackState ?? behaviorState ?? "idle",
+        ...(typeof enemy.variant === "string" && enemy.variant.length > 0 ? { variantId: enemy.variant } : {}),
+        ...(typeof enemy.variantName === "string" && enemy.variantName.length > 0 ? { variantName: enemy.variantName } : {}),
         ...(behaviorMode === undefined ? {} : { behaviorMode }),
         ...projectLiveActorMechanics(enemy, accessClass),
         threat: enemy.isBoss ? 1 : Math.min(1, Math.max(0, enemy.contactDmg / Math.max(1, player.maxHp))),

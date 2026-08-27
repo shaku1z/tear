@@ -28,6 +28,9 @@ export function createReplayPuppet<Puppet extends ReplayPuppetSource, Variant ex
     const variant = input.vid === undefined
       ? input.vn === undefined ? undefined : variants[puppet.kind]?.find((entry) => entry.name === input.vn)
       : variants[puppet.kind]?.find((entry) => (entry as Readonly<{ id?: string }>).id === input.vid);
+    // A recorded stable identity is authoritative. Never silently downgrade a
+    // corrupt or cross-family identity to the base puppet.
+    if (input.vid !== undefined && variant === undefined) return null;
     if (variant !== undefined) {
       try { applyVariant(puppet, variant); } catch { /* corrupt legacy variant data should not block playback */ }
     }
