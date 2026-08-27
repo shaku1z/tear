@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C3 green** |
-| Current checkpoint | `VS3-C4` |
+| Status | **Active implementation authority — VS3-C4 green** |
+| Current checkpoint | `VS3-C5` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -3676,7 +3676,7 @@ Make canonical environment state serializable, restorable, observable, hashable,
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Gameplay environment / combat integration owner |
 | Dependencies | VS3-C3 |
 | Release boundary | Foundation usable by Verdant and Pale; no stage content yet |
@@ -3687,9 +3687,9 @@ Implement reusable deterministic field and combat-object behavior, capabilities,
 
 ## Entry conditions
 
-- [ ] VS3-C3 is green.
-- [ ] Environment state is captured/restored and observable.
-- [ ] Current collision, damage, attack ID, projectile ownership, event bus, and progression hooks are understood.
+- [x] VS3-C3 is green.
+- [x] Environment state is captured/restored and observable.
+- [x] Current collision, damage, attack ID, projectile ownership, event bus, and progression hooks are understood.
 
 ## Primary files and authorities
 
@@ -3706,16 +3706,16 @@ Implement reusable deterministic field and combat-object behavior, capabilities,
 
 ## Sub-goals
 
-- [ ] **VS3-C4-S1** — Define source-owned environment field and combat-object kind catalogs.
-- [ ] **VS3-C4-S2** — Define bounded field lifecycle and geometry queries.
-- [ ] **VS3-C4-S3** — Define combat-object integrity, attack-ID dedupe, damage capabilities, destruction, and cleanup.
-- [ ] **VS3-C4-S4** — Define proc policy so relationship/boss objects do not masquerade as ordinary enemies.
-- [ ] **VS3-C4-S5** — Define generic counterplay tags cut, break, and projectile-cut.
-- [ ] **VS3-C4-S6** — Publish one native environment gameplay event family at authoritative transitions.
-- [ ] **VS3-C4-S7** — Add exhaustive TearBench causal mapping and stable within-tick phase ownership.
-- [ ] **VS3-C4-S8** — Define presentation snapshots/facts without importing Canvas or audio.
-- [ ] **VS3-C4-S9** — Prove object caps, finite state, owner/target cleanup, and two-world isolation.
-- [ ] **VS3-C4-S10** — Leave route-object implementation data-capable but behavior-minimal for later Pale reuse.
+- [x] **VS3-C4-S1** — Define source-owned environment field and combat-object kind catalogs.
+- [x] **VS3-C4-S2** — Define bounded field lifecycle and geometry queries.
+- [x] **VS3-C4-S3** — Define combat-object integrity, attack-ID dedupe, damage capabilities, destruction, and cleanup.
+- [x] **VS3-C4-S4** — Define proc policy so relationship/boss objects do not masquerade as ordinary enemies.
+- [x] **VS3-C4-S5** — Define generic counterplay tags cut, break, and projectile-cut.
+- [x] **VS3-C4-S6** — Publish one native environment gameplay event family at authoritative transitions.
+- [x] **VS3-C4-S7** — Add exhaustive TearBench causal mapping and stable within-tick phase ownership.
+- [x] **VS3-C4-S8** — Define presentation snapshots/facts without importing Canvas or audio.
+- [x] **VS3-C4-S9** — Prove object caps, finite state, owner/target cleanup, and two-world isolation.
+- [x] **VS3-C4-S10** — Leave route-object implementation data-capable but behavior-minimal for later Pale reuse.
 
 ## Agent implementation procedure
 
@@ -3728,11 +3728,11 @@ Implement reusable deterministic field and combat-object behavior, capabilities,
 
 ## TearBench same-change response
 
-- [ ] Add current native event kind through production-owned GAMEPLAY_EVENT_KIND_IDS.
-- [ ] Add negative mapper coverage proving an unmapped new environment event fails.
-- [ ] Add environment invariants and evidence-route commands to actual tests.
-- [ ] Create a minimal State Forge environment field and combat object scenario using generic test definitions, not Verdant content.
-- [ ] Prove standard session event delivery order and supported live/detached equality.
+- [x] Add current native event kind through production-owned GAMEPLAY_EVENT_KIND_IDS.
+- [x] Add negative mapper coverage proving an unmapped new environment event fails.
+- [x] Add environment invariants and evidence-route commands to actual tests.
+- [x] Create a minimal State Forge environment field and combat object scenario using generic test definitions, not Verdant content.
+- [x] Prove standard session event delivery order and supported live/detached equality.
 
 ## Minimum focused proof
 
@@ -3744,11 +3744,11 @@ Implement reusable deterministic field and combat-object behavior, capabilities,
 
 ## Exit conditions
 
-- [ ] One shared kernel supports beneficial fields and damageable relationship objects.
-- [ ] Objects cannot grant unapproved kills/rewards/procs.
-- [ ] Native facts are ordered and source-owned.
-- [ ] TearBench mapping is exhaustive.
-- [ ] All state remains bounded, deterministic, and portable where claimed.
+- [x] One shared kernel supports beneficial fields and damageable relationship objects.
+- [x] Objects cannot grant unapproved kills/rewards/procs.
+- [x] Native facts are ordered and source-owned.
+- [x] TearBench mapping is exhaustive.
+- [x] All state remains bounded, deterministic, and portable where claimed.
 
 ## Stop and escalate conditions
 
@@ -3767,6 +3767,18 @@ Implement reusable deterministic field and combat-object behavior, capabilities,
 ## Required handoff sentence
 
 > `VS3-C4 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+
+## Checkpoint record
+
+- Implementation identity: `65b75b2d5828054712565ad11456a877f1937f79` from source baseline `e8867052fb0813a4c2d554aa9f63a20d2a5894b8`.
+- Shared runtime: source-owned field, combat-object, and data-only route catalogs; bounded lifecycle/geometry; integrity, attack-ID dedupe, destruction, cleanup, proc exclusion, and source-approved counterplay capabilities.
+- Native facts: five authoritative environment transitions with exhaustive causal mapping and stable phase ownership.
+- Portability: admission and codec boundaries enforce category/capability policy; generic State Forge field/object journeys and the production detached composition prove non-empty semantic/event parity and owner/target cleanup.
+- Evidence: typecheck, full lint, architecture, exact C4 suite (33/33), adjacent production/environment suite (27/27), TearBench selection (24/24), documentation and terminology gates, standalone build, and nine current-game browser scenarios passed.
+- Standalone build fingerprint: `9d5c7f3930e353b657cda017d30874f518d87efe52bbe2e3c8fa00012ba3364b`.
+- Known limitations: this is an engineering-only reusable foundation; no Verdant stage content, campaign insertion, publication, deployment, or C40 certification is claimed.
+
+> `VS3-C4 is GREEN at 65b75b2d5828054712565ad11456a877f1937f79. The next authorized action is VS3-C5-S1, authoring the locked Bloom Well field definition, state machine, timings, geometry, and force policy. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

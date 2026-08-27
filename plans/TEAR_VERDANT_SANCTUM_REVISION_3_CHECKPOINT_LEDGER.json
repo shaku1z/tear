@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C4",
-  "currentSubgoal": "VS3-C4-S1",
+  "currentCheckpoint": "VS3-C5",
+  "currentSubgoal": "VS3-C5-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -13,14 +13,15 @@
     "VS3-C0",
     "VS3-C1",
     "VS3-C2",
-    "VS3-C3"
+    "VS3-C3",
+    "VS3-C4"
   ],
-  "lastGreenCheckpoint": "VS3-C3",
+  "lastGreenCheckpoint": "VS3-C4",
   "lastEvidence": [
-    "VS3-C3 environment codec and tooling contract is green at 814d143; codec v2 migration, validation, portable semantic projection, transactional replay restore, live/detached observation equality, invariants, source-bound standalone build, browser State Forge journeys, and TearBench selection gates pass."
+    "VS3-C4 shared field/combat-object kernel is green at 65b75b2d5828054712565ad11456a877f1937f79; exact C4 tests, production detached parity, typecheck, lint, architecture, TearBench selection, documentation/terminology, standalone build, and nine browser scenarios pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C4-S1: define source-owned environment field and combat-object kind catalogs.",
+  "nextAction": "Execute VS3-C5-S1: author the locked Bloom Well field definition, stable states, timings, geometry, and force policy.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -599,52 +600,52 @@
         {
           "id": "VS3-C4-S1",
           "description": "Define source-owned environment field and combat-object kind catalogs.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S2",
           "description": "Define bounded field lifecycle and geometry queries.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S3",
           "description": "Define combat-object integrity, attack-ID dedupe, damage capabilities, destruction, and cleanup.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S4",
           "description": "Define proc policy so relationship/boss objects do not masquerade as ordinary enemies.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S5",
           "description": "Define generic counterplay tags cut, break, and projectile-cut.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S6",
           "description": "Publish one native environment gameplay event family at authoritative transitions.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S7",
           "description": "Add exhaustive TearBench causal mapping and stable within-tick phase ownership.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S8",
           "description": "Define presentation snapshots/facts without importing Canvas or audio.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S9",
           "description": "Prove object caps, finite state, owner/target cleanup, and two-world isolation.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C4-S10",
           "description": "Leave route-object implementation data-capable but behavior-minimal for later Pale reuse.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -688,13 +689,37 @@
         "Generic State Forge scenarios",
         "Foundation checkpoint record"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "e8867052fb0813a4c2d554aa9f63a20d2a5894b8",
+      "completionIdentity": "65b75b2d5828054712565ad11456a877f1937f79",
+      "commandsRun": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/environment-field-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/gameplay-causal-events.test.ts tests/unit/tearbench-current-game-authority.test.ts",
+        "pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/environment-runtime.test.ts tests/unit/environment-codec.test.ts tests/unit/live-state-forge-runtime-bridge.test.ts",
+        "pnpm test:tearbench-selection",
+        "pnpm test:docs",
+        "pnpm test:terminology",
+        "pnpm check:docs",
+        "pnpm check:terminology",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:current-gameplay-scenarios"
+      ],
+      "evidence": [
+        "Exact C4 focused suite passed 33/33 tests across four files.",
+        "Adjacent environment, codec, State Forge, and production detached parity suite passed 27/27 tests across three files.",
+        "TearBench selection passed 24/24 tests; documentation and terminology gates passed.",
+        "Standalone test build passed with source fingerprint 9d5c7f3930e353b657cda017d30874f518d87efe52bbe2e3c8fa00012ba3364b.",
+        "Current live gameplay browser proof passed nine source-owned scenarios, including generic environment field and combat-object transitions."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Admission, replace, codec, and State Forge boundaries reject cross-category kinds, proc eligibility, duplicate tags, and non-source-approved counterplay tags.",
+        "The actual production detached composition proves non-empty field transition, combat event order, semantic equality, and owner/target cleanup.",
+        "Route objects remain intentionally data-capable and behavior-minimal for later Pale reuse.",
+        "Engineering foundation only: no Verdant stage content, publication, deployment, protected integration, or C40 certification was performed."
+      ]
     },
     {
       "id": "VS3-C5",
