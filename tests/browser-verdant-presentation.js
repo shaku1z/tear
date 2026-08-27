@@ -2,6 +2,18 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { decodePng } = require("./class-c-png");
+
+function paintedPixelRatio(png) {
+  const { rgba } = decodePng(png);
+  let sampled = 0;
+  let painted = 0;
+  for (let offset = 0; offset < rgba.length; offset += 4 * 97) {
+    sampled += 1;
+    if (Math.max(rgba[offset], rgba[offset + 1], rgba[offset + 2]) >= 64) painted += 1;
+  }
+  return painted / sampled;
+}
 
 const resolved = Object.freeze({
   document: Object.freeze({
@@ -56,6 +68,7 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
     ["hidpi-shape-1200x900", 1_200, 900],
     ["touch-landscape-896x414", 896, 414],
   ];
+  const screenshots = [];
   for (const [label, width, height] of viewports) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => {
@@ -64,13 +77,18 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
       environment.renderFrame(1 / 60);
       return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
-    await page.screenshot({ path: path.join(directory, `${label}.png`) });
+    const png = await page.screenshot({ path: path.join(directory, `${label}.png`) });
+    const decoded = decodePng(png);
+    const paintedRatio = paintedPixelRatio(png);
+    assert.deepEqual([decoded.width, decoded.height], [width, height], `${label}: screenshot dimensions`);
+    assert.ok(paintedRatio >= 0.6, `${label}: world presentation did not paint the viewport (${paintedRatio.toFixed(3)})`);
+    screenshots.push({ label, width, height, file: `${label}.png`, paintedPixelRatio: Number(paintedRatio.toFixed(4)) });
   }
   fs.writeFileSync(path.join(directory, "evidence.json"), `${JSON.stringify({
     format: "tear-verdant-c9-browser-evidence", schemaVersion: 1,
     engineeringOnly: true, certifying: false, build: buildInfo,
     stage: "verdant-sanctum", wave: 31, bloomWells: state.bloom.length,
-    screenshots: viewports.map(([label, width, height]) => ({ label, width, height, file: `${label}.png` })),
+    screenshots,
   }, null, 2)}\n`);
   console.log(`Verdant C9 presentation passed at ${buildInfo.sha}`);
 });
