@@ -120,6 +120,86 @@ const BIOME_ART: BiomeArtCatalog = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "255,140,70", dir: -1, glow: true, drift: 30, aMul: 1.1 }, view); },
   },
 
+  // Verdant Sanctum — a flooded sanctuary-city held beneath one ancient healing tree.
+  "verdant-sanctum": {
+    sky(B, ctx, stage, c, _t, gy, view) {
+      B.baseSky(ctx, stage, c, gy, 0.08, view);
+      const vl = view ? view.left : -B.PX, vt = view ? view.top : -B.PY;
+      const vr = view ? view.right : B.W + B.PX;
+      const jade = ctx.createLinearGradient(0, vt, 0, gy);
+      jade.addColorStop(0, "rgba(159,216,189,0.22)");
+      jade.addColorStop(0.68, "rgba(134,205,178,0.08)");
+      jade.addColorStop(1, "rgba(134,205,178,0)");
+      ctx.fillStyle = jade; ctx.fillRect(vl, vt, vr - vl, Math.max(0, gy - vt));
+      const openingX = B.W * 0.52, openingY = B.H * 0.10;
+      const opening = ctx.createRadialGradient(openingX, openingY, 18, openingX, openingY, B.W * 0.42);
+      opening.addColorStop(0, "rgba(255,244,184,0.34)");
+      opening.addColorStop(0.46, "rgba(228,201,90,0.10)");
+      opening.addColorStop(1, "rgba(228,201,90,0)");
+      ctx.fillStyle = opening; B.fillFull(ctx, view);
+    },
+    far(B, ctx, _stage, _c, _t, px, gy, view) {
+      const vl = view ? view.left : -B.PX, vr = view ? view.right : B.W + B.PX;
+      const farDrift = -px * 12, middleDrift = -px * 24;
+
+      // Far sanctuary terraces and arches remain low-frequency behind combat.
+      ctx.save(); ctx.globalAlpha = 0.34; ctx.fillStyle = "#9fd8bd";
+      ctx.fillRect(vl, gy - 112, vr - vl, 112);
+      const archStep = 230;
+      const archStart = Math.floor((vl - farDrift - 120) / archStep) * archStep;
+      for (let index = 0; index < 10; index += 1) {
+        const x = archStart + index * archStep + farDrift;
+        if (x > vr + archStep) break;
+        const h = 118 + (index % 3) * 28;
+        ctx.fillRect(x, gy - h, 24, h);
+        ctx.fillRect(x + 142, gy - h, 24, h);
+        ctx.beginPath(); ctx.arc(x + 83, gy - h, 71, Math.PI, 0); ctx.lineWidth = 22; ctx.strokeStyle = "#9fd8bd"; ctx.stroke();
+      }
+      ctx.restore();
+
+      // The ancient tree is a single calm landmark, with major roots embracing the city.
+      const trunkX = B.W * 0.54 + farDrift;
+      ctx.save(); ctx.globalAlpha = 0.48; ctx.fillStyle = "#3f765b";
+      ctx.beginPath();
+      ctx.moveTo(trunkX - 76, gy); ctx.bezierCurveTo(trunkX - 92, gy - 190, trunkX - 54, gy - 390, trunkX - 128, view ? view.top - 80 : -B.PY - 80);
+      ctx.lineTo(trunkX + 132, view ? view.top - 80 : -B.PY - 80);
+      ctx.bezierCurveTo(trunkX + 62, gy - 390, trunkX + 102, gy - 190, trunkX + 84, gy); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#6f9f72"; ctx.lineWidth = 34; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(trunkX - 42, gy - 250); ctx.bezierCurveTo(trunkX - 260, gy - 350, vl + 230, gy - 420, vl - 60, gy - 360);
+      ctx.moveTo(trunkX + 48, gy - 300); ctx.bezierCurveTo(trunkX + 270, gy - 390, vr - 210, gy - 430, vr + 70, gy - 350); ctx.stroke();
+      ctx.restore();
+
+      // Flooded cloisters and hanging gardens occupy the middle depth.
+      ctx.save(); ctx.globalAlpha = 0.48; ctx.fillStyle = "#5f9475"; ctx.strokeStyle = "#47775f";
+      for (let index = 0; index < 6; index += 1) {
+        const span = 270, x = vl + 70 + index * span + middleDrift;
+        if (x > vr + span) break;
+        const top = gy - 190 - (index % 2) * 46;
+        ctx.fillRect(x, top, 190, 18);
+        ctx.fillRect(x + 12, top, 18, gy - top);
+        ctx.fillRect(x + 154, top, 18, gy - top);
+        ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(x + 92, top + 80, 62, Math.PI, 0); ctx.stroke();
+        ctx.strokeStyle = "#7fa96a"; ctx.lineWidth = 5; ctx.beginPath();
+        ctx.moveTo(x + 18, top + 4); ctx.bezierCurveTo(x + 42, top + 54, x + 18, top + 98, x + 52, top + 138); ctx.stroke();
+        ctx.strokeStyle = "#47775f";
+      }
+      ctx.restore();
+
+      // Near roots frame the arena edges without crossing the central silhouette lane.
+      ctx.save(); ctx.globalAlpha = 0.72; ctx.strokeStyle = "#103b36"; ctx.lineCap = "round";
+      for (let index = 0; index < 3; index += 1) {
+        const inset = index * 42;
+        ctx.lineWidth = 34 - index * 7;
+        ctx.beginPath(); ctx.moveTo(vl - 28, gy - 24 - inset); ctx.bezierCurveTo(vl + 110, gy - 150 - inset, vl + 118, gy - 300, vl + 22, gy - 390 - inset); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(vr + 28, gy - 18 - inset); ctx.bezierCurveTo(vr - 108, gy - 145 - inset, vr - 112, gy - 292, vr - 18, gy - 388 - inset); ctx.stroke();
+      }
+      ctx.restore();
+    },
+    motes(B, ctx, _stage, c, t, px, view) {
+      B.motes(ctx, c, t, px, { rgb: "228,201,90", dir: -1, twinkle: true, drift: 8, aMul: 0.62, sizeMul: 0.72 }, view);
+    },
+  },
+
   // The Voidspire — surreal violet: aurora bands, floating broken geometry, drifting shards
   voidspire: {
     sky(B, ctx, stage, c, t, gy, view) {
