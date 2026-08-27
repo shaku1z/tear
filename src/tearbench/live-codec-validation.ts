@@ -27,6 +27,14 @@ function finiteField(
     ? [] : [issue(codecId, `$.${key}`, `${key} must be finite`)];
 }
 
+function canonicalVariantBehavior(factoryId: string, variantId: string): string | null {
+  const variant = findVariant(factoryId, variantId);
+  if (variant === null) return null;
+  const probe = { behavior: "", contactReach: 0, speedMult: 1, hp: 1, maxHp: 1 };
+  variant.apply(probe);
+  return probe.behavior;
+}
+
 function entityArray(codecId: TearCodecId, payload: unknown): readonly TearCodecIssue[] {
   const structural = requireArray(codecId, payload);
   if (structural.length > 0 || !Array.isArray(payload)) return structural;
@@ -39,12 +47,20 @@ function entityArray(codecId: TearCodecId, payload: unknown): readonly TearCodec
     if (typeof entry.factoryId !== "string" || entry.factoryId.length === 0) {
       issues.push(issue(codecId, `$[${String(index)}].factoryId`, "entity requires an approved factory id"));
     }
+    if (entry.variantId !== undefined && entry.variant !== undefined && entry.variantId !== entry.variant) {
+      issues.push(issue(codecId, `$[${String(index)}].variant`, "variant aliases must identify the same family variant"));
+    }
     const variantId = entry.variantId ?? entry.variant;
     if (variantId !== undefined && variantId !== "") {
       if (typeof variantId !== "string" || variantId.length > 80) {
         issues.push(issue(codecId, `$[${String(index)}].variantId`, "variant identity must be a bounded string"));
-      } else if (typeof entry.factoryId === "string" && findVariant(entry.factoryId, variantId) === null) {
-        issues.push(issue(codecId, `$[${String(index)}].variantId`, "variant identity is not valid for the enemy factory family"));
+      } else if (typeof entry.factoryId === "string") {
+        const behavior = canonicalVariantBehavior(entry.factoryId, variantId);
+        if (behavior === null) {
+          issues.push(issue(codecId, `$[${String(index)}].variantId`, "variant identity is not valid for the enemy factory family"));
+        } else if (entry.behavior !== behavior) {
+          issues.push(issue(codecId, `$[${String(index)}].behavior`, "variant behavior must match its canonical family identity"));
+        }
       }
     }
     issues.push(...finiteField(codecId, entry, "x"), ...finiteField(codecId, entry, "y"));

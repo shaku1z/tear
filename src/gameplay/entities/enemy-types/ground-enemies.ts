@@ -145,7 +145,10 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
         FX.burst(this.x, this.y, -dir, -1, 4, this.color);
         return;
       }
-      if (this.atk === "windup") {
+      if (this.atk === "reposition") {
+        this.vx = lerp(this.vx, -this.atkDir * this.speed * 1.45, clamp(10 * dt, 0, 1)); this.atkT -= dt;
+        if (this.atkT <= 0) { this.atk = "windup"; this.atkT = 0.34; this.atkMax = 0.34; }
+      } else if (this.atk === "windup") {
         this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
         if (this.atkT <= 0) { this.atk = "commit"; this.atkT = 0.3; this.vx = this.atkDir * E.chargeSpeed * 1.05; if (this.onGround) this.vy = -280; }
       } else if (this.atk === "commit") {
@@ -156,7 +159,9 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
       } else {
         this.vx = lerp(this.vx, dir * this.speed * 1.08, clamp(8 * dt, 0, 1));
         if (dist < 270 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 140) {
-          this.atk = "windup"; this.atkT = 0.34; this.atkMax = 0.34; this.atkDir = dir;
+          this.atk = "reposition"; this.atkT = 0.16; this.atkMax = 0.16; this.atkDir = dir;
+          this.vx = -dir * this.speed * 1.45; if (this.onGround) this.vy = -160;
+          FX.burst(this.x, this.y + this.hh, -dir, -0.2, 3, this.color);
         }
       }
     }

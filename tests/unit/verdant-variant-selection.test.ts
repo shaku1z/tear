@@ -47,6 +47,7 @@ describe("Verdant variant selection contract", () => {
     expect(resolveDiscoveredVariantIds("endless", [])).toEqual([]);
     expect(resolveDiscoveredVariantIds("endless", ["grounds"])).toEqual([]);
     expect(resolveDiscoveredVariantIds("endless", ["verdant-sanctum"])).toEqual(VERDANT_VARIANT_IDS);
+    expect(resolveDiscoveredVariantIds("gauntlet", ["The Verdant Sanctum"])).toEqual(VERDANT_VARIANT_IDS);
     expect(resolveDiscoveredVariantIds("campaign", ["verdant-sanctum"])).toEqual([]);
   });
 
@@ -76,9 +77,15 @@ describe("Verdant variant selection contract", () => {
     const briar = createStandardActor("charger", briarHarness.types);
     applyVariant(briar, findVariant("charger", "briar-stalker"));
     briarHarness.player.x = briar.x + 100;
-    briar.atk = "windup"; briar.atkT = 0.001; briar.onGround = true;
+    briar.onGround = true;
     updateActor(briar, 1, briarHarness.platforms, briarHarness.player, []);
     expect(briar.behavior).toBe("briar-stalker");
+    expect(briar.atk).toBe("reposition");
+    expect(briar.vx).toBeLessThan(0); // bounded root-assisted backstep creates spacing
+    expect(Math.abs(briar.vx)).toBeLessThanOrEqual(briar.speed * 1.45);
+    updateActor(briar, Math.ceil(0.16 * 120) + 1, briarHarness.platforms, briarHarness.player, []);
+    briar.atkT = 0.001; briar.onGround = true;
+    updateActor(briar, 1, briarHarness.platforms, briarHarness.player, []);
     expect(briar.vy).toBeLessThan(0); // rising terrace-crossing lunge
 
     const seedHarness = createEnemyHarness([0.1]);

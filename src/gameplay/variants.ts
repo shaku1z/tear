@@ -130,8 +130,11 @@ export function isVerdantVariant(id: string): boolean {
  */
 export function resolveDiscoveredVariantIds(mode: RunMode, discoveredBiomes: readonly string[]): readonly string[] {
   if (mode !== "endless" && mode !== "gauntlet") return [];
-  const seen = new Set(discoveredBiomes);
-  return seen.has("verdant-sanctum") || seen.has("Verdant Sanctum") ? VERDANT_VARIANT_IDS : [];
+  const seenVerdantSanctum = discoveredBiomes.some((biome) => {
+    const normalized = biome.trim().toLowerCase().replaceAll("-", " ");
+    return normalized === "verdant sanctum" || normalized === "the verdant sanctum";
+  });
+  return seenVerdantSanctum ? VERDANT_VARIANT_IDS : [];
 }
 
 /**

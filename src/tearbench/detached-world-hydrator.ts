@@ -115,6 +115,10 @@ export function applyTearCodecPayload(
   if (!record(value)) throw new TypeError("live instance payload must be an object");
   for (const [key, entry] of Object.entries(value)) {
     if (key === "id" || key === "factoryId" || key === "ownerId" || transientInputProjectionKeys.has(key)) continue;
+    if (key === "variantId") {
+      Reflect.set(target, "variant", decodeTearCodecValue(entry, identities));
+      continue;
+    }
     Reflect.set(target, key, decodeTearCodecValue(entry, identities));
   }
 }
