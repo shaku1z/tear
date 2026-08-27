@@ -21,6 +21,7 @@ import { createLiveWaveComposition } from "./live-wave-composition";
 import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
 import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
+import { activateStageEnvironment } from "../gameplay/environment/stage-environment-activation";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -97,7 +98,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   const setEnvironmentStage = (index: number, reason: "new-run" | "stage-transition"): void => {
     const stageId = d.STAGES[index]?.id;
     if (stageId === undefined) throw new RangeError(`environment stage index is invalid: ${String(index)}`);
-    options.environment.setStage(stageId, reason);
+    activateStageEnvironment(options.environment, stageId, options.authoritativeResult()?.tick ?? 0, reason);
   };
   const content = createLiveContentComposition({
     dependencies: d, entities: options.entities, state: options.state, worldServices: options.worldServices, stage, width: options.width, height: options.height,
