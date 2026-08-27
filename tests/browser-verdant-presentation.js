@@ -57,7 +57,12 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
   ];
   for (const [label, width, height] of viewports) {
     await page.setViewportSize({ width, height });
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.evaluate(() => {
+      const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
+      environment.renderFrame(1 / 60);
+      environment.renderFrame(1 / 60);
+      return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
     await page.screenshot({ path: path.join(directory, `${label}.png`) });
   }
   fs.writeFileSync(path.join(directory, "evidence.json"), `${JSON.stringify({
