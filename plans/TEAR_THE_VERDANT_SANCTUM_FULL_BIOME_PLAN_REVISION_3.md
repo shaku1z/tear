@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C4 green** |
-| Current checkpoint | `VS3-C5` |
+| Status | **Active implementation authority — VS3-C5 green** |
+| Current checkpoint | `VS3-C6` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -3786,7 +3786,7 @@ Implement reusable deterministic field and combat-object behavior, capabilities,
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Biome gameplay / movement owner |
 | Dependencies | VS3-C4 |
 | Release boundary | Engineering feature; no campaign insertion |
@@ -3797,9 +3797,9 @@ Implement the locked Bloom Well state machine as the first real consumer of the 
 
 ## Entry conditions
 
-- [ ] VS3-C4 is green.
-- [ ] The field kernel, native events, codec, State Forge, and environment observations are production-ready.
-- [ ] Current player movement, enemy mass/anchor, and presentation ports are understood.
+- [x] VS3-C4 is green.
+- [x] The field kernel, native events, codec, State Forge, and environment observations are production-ready.
+- [x] Current player movement, enemy mass/anchor, and presentation ports are understood.
 
 ## Primary files and authorities
 
@@ -3815,15 +3815,15 @@ Implement the locked Bloom Well state machine as the first real consumer of the 
 
 ## Sub-goals
 
-- [ ] **VS3-C5-S1** — Author Bloom Well field definition, stable states, timings, geometry, and force policy.
-- [ ] **VS3-C5-S2** — Apply field force to the player through the current movement/simulation path while preserving horizontal control.
-- [ ] **VS3-C5-S3** — Apply mass-aware lift to eligible ordinary enemies and preserve anchor/heavy resistance.
-- [ ] **VS3-C5-S4** — Keep bosses, flyers, and all Final Five weapon transport routes outside V1 lift scope.
-- [ ] **VS3-C5-S5** — Implement authored warning, active, cooldown, and cleanup facts.
-- [ ] **VS3-C5-S6** — Create bounded stage-owned and boss-owned configuration variants through one class/definition.
-- [ ] **VS3-C5-S7** — Add high-contrast, reduced-motion, low-graphics, and audio-independent presentation.
-- [ ] **VS3-C5-S8** — Prove stage exit, boss death, retry, and restore cleanup.
-- [ ] **VS3-C5-S9** — Prove render-rate independence and no movement softlock.
+- [x] **VS3-C5-S1** — Author Bloom Well field definition, stable states, timings, geometry, and force policy.
+- [x] **VS3-C5-S2** — Apply field force to the player through the current movement/simulation path while preserving horizontal control.
+- [x] **VS3-C5-S3** — Apply mass-aware lift to eligible ordinary enemies and preserve anchor/heavy resistance.
+- [x] **VS3-C5-S4** — Keep bosses, flyers, and all Final Five weapon transport routes outside V1 lift scope.
+- [x] **VS3-C5-S5** — Implement authored warning, active, cooldown, and cleanup facts.
+- [x] **VS3-C5-S6** — Create bounded stage-owned and boss-owned configuration variants through one class/definition.
+- [x] **VS3-C5-S7** — Add high-contrast, reduced-motion, low-graphics, and audio-independent presentation.
+- [x] **VS3-C5-S8** — Prove stage exit, boss death, retry, and restore cleanup.
+- [x] **VS3-C5-S9** — Prove render-rate independence and no movement softlock.
 
 ## Agent implementation procedure
 
@@ -3836,11 +3836,11 @@ Implement the locked Bloom Well state machine as the first real consumer of the 
 
 ## TearBench same-change response
 
-- [ ] Add surgical State Forge scenario verdant-bloom-well-cycle without requiring Verdant stage insertion.
-- [ ] Add environment hash and observation assertions at each state.
-- [ ] Add positive/negative invariants for legal transition, finite force, and bounded population.
-- [ ] Add actual evidence-route command and source-bound artifact when browser presentation is tested.
-- [ ] Explicitly assert no weapon transport state changes when a thrown weapon crosses the field.
+- [x] Add surgical State Forge scenario verdant-bloom-well-cycle without requiring Verdant stage insertion.
+- [x] Add environment hash and observation assertions at each state.
+- [x] Add positive/negative invariants for legal transition, finite force, and bounded population.
+- [x] Add actual evidence-route command and source-bound artifact when browser presentation is tested.
+- [x] Explicitly assert no weapon transport state changes when a thrown weapon crosses the field.
 
 ## Minimum focused proof
 
@@ -3852,12 +3852,12 @@ Implement the locked Bloom Well state machine as the first real consumer of the 
 
 ## Exit conditions
 
-- [ ] Bloom warning/active/cooldown behavior is deterministic.
-- [ ] Player retains agency.
-- [ ] Enemy mass/anchor semantics remain coherent.
-- [ ] Weapon transport is unchanged.
-- [ ] All cleanup paths are green.
-- [ ] Presentation remains readable across required accessibility modes.
+- [x] Bloom warning/active/cooldown behavior is deterministic.
+- [x] Player retains agency.
+- [x] Enemy mass/anchor semantics remain coherent.
+- [x] Weapon transport is unchanged.
+- [x] All cleanup paths are green.
+- [x] Presentation remains readable across required accessibility modes.
 
 ## Stop and escalate conditions
 
@@ -3876,6 +3876,19 @@ Implement the locked Bloom Well state machine as the first real consumer of the 
 ## Required handoff sentence
 
 > `VS3-C5 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+
+## Checkpoint record
+
+- Implementation identity: `97c05bc7161402c7c5bb1d024ec87749f9060a8e` from source baseline `358af2fa813ee5c94e3279601b63e509fc3936e7`.
+- Gameplay: one 120 Hz Bloom Well definition owns a 0.7 s warning, 1.5 s active lift, 4.0 s cooldown, deterministic state-entry/next-transition ticks, bounded force, stage/boss ownership, and native transition/cleanup facts.
+- Eligibility: player horizontal control is unchanged; light/medium/heavy response is capability/mass-aware; anchors, flyers, bosses, and Final Five weapon transport remain excluded.
+- Portability and evidence: the surgical State Forge scenario executes live and through a production detached replay snapshot; Bloom behavior metadata is hash-significant; malformed force restore fails atomically; boss-terminal cleanup is native-fact visible.
+- Presentation: browser-executed, renderer-neutral facts retain geometry in high-contrast, reduced-motion, low-graphics, and audio-disabled modes without changing simulation.
+- Evidence: typecheck, full lint, architecture, exact C5 suite (32/32), adjacent C4 regression suite (45/45), focused remediation suite (36/36), TearBench selection (24/24), documentation/terminology, standalone build, and ten current-game browser scenarios passed.
+- Standalone build fingerprint: `286a16d48abc486a71733ecc8c2b843c7f5066bc4ea39d8040a7742833424f7e`.
+- Known limitations: engineering feature only; Bloom Wells are not inserted into the Verdant stage or campaign, and no publication, deployment, or C40 certification is claimed.
+
+> `VS3-C5 is GREEN at 97c05bc7161402c7c5bb1d024ec87749f9060a8e. The next authorized action is VS3-C6-S1, registering Rootbinder as a factory-ready enemy with explicit support/controller capability metadata. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

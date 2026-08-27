@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C5",
-  "currentSubgoal": "VS3-C5-S1",
+  "currentCheckpoint": "VS3-C6",
+  "currentSubgoal": "VS3-C6-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -14,14 +14,15 @@
     "VS3-C1",
     "VS3-C2",
     "VS3-C3",
-    "VS3-C4"
+    "VS3-C4",
+    "VS3-C5"
   ],
-  "lastGreenCheckpoint": "VS3-C4",
+  "lastGreenCheckpoint": "VS3-C5",
   "lastEvidence": [
-    "VS3-C4 shared field/combat-object kernel is green at 65b75b2d5828054712565ad11456a877f1937f79; exact C4 tests, production detached parity, typecheck, lint, architecture, TearBench selection, documentation/terminology, standalone build, and nine browser scenarios pass."
+    "VS3-C5 Bloom Wells V1 is green at 97c05bc7161402c7c5bb1d024ec87749f9060a8e; deterministic lifecycle/force, actor exclusions, boss cleanup facts, hash metadata, live/detached State Forge evidence, accessibility projection, real Final Five transport conformance, and all checkpoint gates pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C5-S1: author the locked Bloom Well field definition, stable states, timings, geometry, and force policy.",
+  "nextAction": "Execute VS3-C6-S1: register Rootbinder as a factory-ready enemy with explicit support/controller capability metadata.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -750,47 +751,47 @@
         {
           "id": "VS3-C5-S1",
           "description": "Author Bloom Well field definition, stable states, timings, geometry, and force policy.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S2",
           "description": "Apply field force to the player through the current movement/simulation path while preserving horizontal control.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S3",
           "description": "Apply mass-aware lift to eligible ordinary enemies and preserve anchor/heavy resistance.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S4",
           "description": "Keep bosses, flyers, and all Final Five weapon transport routes outside V1 lift scope.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S5",
           "description": "Implement authored warning, active, cooldown, and cleanup facts.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S6",
           "description": "Create bounded stage-owned and boss-owned configuration variants through one class/definition.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S7",
           "description": "Add high-contrast, reduced-motion, low-graphics, and audio-independent presentation.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S8",
           "description": "Prove stage exit, boss death, retry, and restore cleanup.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C5-S9",
           "description": "Prove render-rate independence and no movement softlock.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -835,13 +836,37 @@
         "Accessibility presentation proof",
         "Updated feature inventory and handoff"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "358af2fa813ee5c94e3279601b63e509fc3936e7",
+      "completionIdentity": "97c05bc7161402c7c5bb1d024ec87749f9060a8e",
+      "commandsRun": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/bloom-well-runtime.test.ts tests/unit/player-locomotion.test.ts tests/unit/environment-state-codec.test.ts tests/unit/verdant-final-five-conformance.test.ts",
+        "pnpm exec vitest run tests/unit/environment-field-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/environment-runtime.test.ts tests/unit/gameplay-causal-events.test.ts tests/unit/production-combat-parity.test.ts",
+        "pnpm test:tearbench-selection",
+        "pnpm check:docs",
+        "pnpm check:terminology",
+        "pnpm build:test:standalone",
+        "node tests/browser-current-gameplay-scenarios.js"
+      ],
+      "evidence": [
+        "Exact C5 focused suite passed 32/32 tests across four files.",
+        "Adjacent C4 regression suite passed 45/45 tests across five files; focused remediation proof passed 36/36.",
+        "TearBench selection passed 24/24 tests; documentation, terminology, typecheck, full lint, and architecture gates passed.",
+        "Standalone test build passed with source fingerprint 286a16d48abc486a71733ecc8c2b843c7f5066bc4ea39d8040a7742833424f7e.",
+        "Current live gameplay browser proof passed ten source-owned scenarios, including browser-executed Bloom lifecycle and accessibility facts.",
+        "All five production Final Five blade transports crossed the authoritative active-field phase identically with and without a Bloom Well."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Bloom timings are fixed at 120 Hz: 84 warning, 180 active, and 480 cooldown ticks.",
+        "Codec and EnvironmentState admission reject malformed or over-cap Bloom force vectors before restore mutation.",
+        "Stage ownership is distinct from actor ownership; missing boss owners produce dormant boss-terminal cleanup and a native object-cleaned fact.",
+        "Bloom behavior metadata is included in the canonical environment hash; State Forge executes live and through a production detached replay snapshot.",
+        "Engineering feature only: no Verdant stage/campaign insertion, publication, deployment, protected integration, or C40 certification was performed."
+      ]
     },
     {
       "id": "VS3-C6",
