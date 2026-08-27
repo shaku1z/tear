@@ -6,6 +6,7 @@ export interface BloomWellPresentationOptions {
   readonly reducedMotion?: boolean;
   readonly lowGraphics?: boolean;
   readonly audioEnabled?: boolean;
+  readonly flashScale?: number;
 }
 
 export interface BloomWellPresentationFacts {
@@ -18,6 +19,7 @@ export interface BloomWellPresentationFacts {
   readonly motionScale: number;
   readonly audioIndependent: boolean;
   readonly audioEnabled: boolean;
+  readonly flashScale: number;
 }
 
 /** Renderer/audio-neutral facts; accessibility settings never remove the gameplay boundary. */
@@ -30,5 +32,6 @@ export function projectBloomWellPresentation(
     highContrast: options.highContrast === true, lowGraphics: options.lowGraphics === true,
     motionScale: options.reducedMotion === true ? 0 : 1,
     audioIndependent: true, audioEnabled: options.audioEnabled !== false,
+    flashScale: Math.max(0, Math.min(1, options.flashScale ?? 1)),
   });
 }

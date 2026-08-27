@@ -5,6 +5,7 @@ export interface VerdantEnvironmentPresentationOptions {
   readonly reducedMotion: boolean;
   readonly lowGraphics: boolean;
   readonly timeSeconds: number;
+  readonly flashScale: number;
 }
 
 /** Draws future-compatible Graft/Regrowth facts already admitted by the environment kernel. */
@@ -22,7 +23,7 @@ export function renderVerdantEnvironmentPresentation(
     const x = geometry.radius === undefined ? geometry.x + (geometry.w ?? radius * 2) / 2 : geometry.x;
     const y = geometry.radius === undefined ? geometry.y + (geometry.h ?? radius * 2) / 2 : geometry.y;
     const warning = anchor.state === "warning" || anchor.state === "scheduled";
-    const pulse = options.reducedMotion ? 1 : 0.78 + Math.sin(options.timeSeconds * 6) * 0.22;
+    const pulse = options.reducedMotion ? 1 : 1 - 0.22 * options.flashScale + Math.sin(options.timeSeconds * 6) * 0.22 * options.flashScale;
     canvas.globalAlpha = anchor.state === "destroyed" || anchor.state === "expired" ? 0.34 : pulse;
     canvas.fillStyle = options.highContrast ? "#4b00d1" : "#7fa96a";
     canvas.strokeStyle = options.highContrast ? "#ffffff" : "#e4c95a";

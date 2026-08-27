@@ -5,6 +5,8 @@ import type { EnvironmentPresentationSnapshot } from "../../src/gameplay/environ
 import { renderBloomWellPresentation } from "../../src/presentation/environment/bloom-well-presentation";
 import { renderVerdantEnvironmentPresentation } from "../../src/presentation/environment/verdant-environment-presentation";
 import { createBloomWellState } from "../../src/gameplay/environment/bloom-well";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import { environmentHash } from "../../src/tearbench/environment-codec";
 
 function recorder() {
   const calls: string[] = [];
@@ -21,7 +23,7 @@ describe("Verdant environment presentation", () => {
     const value = recorder();
     const well = createBloomWellState({ id: "well", ownerId: "verdant-sanctum", variant: "stage", geometry: { x: 100, y: 200, w: 120, h: 360 }, patternId: "left" });
     renderBloomWellPresentation(value.context, projectBloomWellPresentation(well, {
-      highContrast: true, reducedMotion: true, lowGraphics: true, audioEnabled: false,
+      highContrast: true, reducedMotion: true, lowGraphics: true, audioEnabled: false, flashScale: 0,
     }), 4);
     expect(value.calls).toContain("ellipse");
     expect(value.calls).toContain("stroke");
@@ -42,7 +44,7 @@ describe("Verdant environment presentation", () => {
       })]),
     });
     renderVerdantEnvironmentPresentation(value.context, snapshot, {
-      highContrast: true, reducedMotion: true, lowGraphics: true, timeSeconds: 3,
+      highContrast: true, reducedMotion: true, lowGraphics: true, timeSeconds: 3, flashScale: 0,
     });
     expect(value.calls).toContain("arc");
     expect(value.calls.filter((entry) => entry === "stroke")).toHaveLength(3);
@@ -54,7 +56,26 @@ describe("Verdant environment presentation", () => {
     const value = recorder();
     renderVerdantEnvironmentPresentation(value.context, {
       stageId: "grounds", fields: [], combatObjects: [], routes: [],
-    }, { highContrast: false, reducedMotion: false, lowGraphics: false, timeSeconds: 0 });
+    }, { highContrast: false, reducedMotion: false, lowGraphics: false, timeSeconds: 0, flashScale: 1 });
     expect(value.calls).toEqual([]);
+  });
+
+  it("keeps canonical environment identity unchanged across presentation modes", () => {
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "presentation-hash" });
+    environment.addField(createBloomWellState({
+      id: "well", ownerId: "verdant-sanctum", variant: "stage",
+      geometry: { x: 100, y: 200, w: 120, h: 360 }, patternId: "left",
+    }));
+    const before = environmentHash(environment.snapshot());
+    for (const options of [
+      { highContrast: false, reducedMotion: false, lowGraphics: false, audioEnabled: true, flashScale: 1 },
+      { highContrast: true, reducedMotion: true, lowGraphics: true, audioEnabled: false, flashScale: 0 },
+    ]) {
+      const value = recorder();
+      const field = environment.fields()[0];
+      if (field === undefined) throw new Error("Bloom field is required");
+      renderBloomWellPresentation(value.context, projectBloomWellPresentation(field, options), 4);
+      expect(environmentHash(environment.snapshot())).toBe(before);
+    }
   });
 });

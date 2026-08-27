@@ -15,6 +15,8 @@ export interface VerdantRootstoneRenderPolicy {
   readonly timeSeconds: number;
   readonly lowGraphics: boolean;
   readonly highContrast: boolean;
+  readonly reducedMotion: boolean;
+  readonly flashScale: number;
   readonly stressRatio: number;
   readonly warningRatio: number;
   readonly reformRatio: number;
@@ -104,7 +106,7 @@ export function drawVerdantRootstone(
     context.fillRect(platform.x, platform.y, platform.w, platform.h);
   }
   if (state === "warning") {
-    const pulse = 0.68 + 0.32 * Math.sin(policy.timeSeconds * 7);
+    const pulse = policy.reducedMotion ? 1 : 1 - (0.32 * policy.flashScale) + (0.32 * policy.flashScale) * Math.sin(policy.timeSeconds * 7);
     context.globalAlpha = (0.58 + warning * 0.34) * pulse;
     context.strokeStyle = policy.highContrast
       ? VERDANT_ROOTSTONE_COLORS.highContrastWarning

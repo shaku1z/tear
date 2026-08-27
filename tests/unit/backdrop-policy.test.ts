@@ -19,7 +19,7 @@ function policy(clock: { sim: number }, width: number, low = false): BackdropPol
       view: { w: width, h: 900 }, world: { groundY: 760 }, source: { voidCrumbleStand: 1 },
       bossArena: { standBeforeWarn: 1, crackWarn: 1, brokenDuration: 1, reformWarn: 1 },
     },
-    graphics: { low }, accessibility: { highContrast: false, flashScale: 1 },
+    graphics: { low }, accessibility: { highContrast: false, flashScale: 1, reducedMotion: false },
     overscan: { x: width / 100, y: 4 }, theme: { dark: false },
     createCanvas: canvas, performance: { now: () => 5_000 },
   };

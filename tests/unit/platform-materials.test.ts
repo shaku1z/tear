@@ -21,6 +21,8 @@ function render(state: string, policy: Partial<VerdantRootstoneRenderPolicy> = {
     timeSeconds: 1,
     lowGraphics: false,
     highContrast: false,
+    reducedMotion: false,
+    flashScale: 1,
     stressRatio: 0.8,
     warningRatio: 0.7,
     reformRatio: 0.6,
@@ -47,7 +49,7 @@ describe("verdant-rootstone platform material", () => {
   });
 
   it("keeps warning geometry in low graphics and strengthens high contrast", () => {
-    const calls = render("warning", { lowGraphics: true, highContrast: true });
+    const calls = render("warning", { lowGraphics: true, highContrast: true, reducedMotion: true, flashScale: 0 });
     expect(calls).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.highContrastWarning}`);
     expect(calls).toContain("stroke");
     expect(calls.filter((entry) => entry === "setLineDash")).toHaveLength(2);

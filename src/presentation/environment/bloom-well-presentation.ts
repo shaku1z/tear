@@ -18,7 +18,7 @@ export function renderBloomWellPresentation(
   const active = facts.state === "active";
   const cooldown = facts.state === "cooldown";
   if (!warning && !active && !cooldown) return;
-  const pulse = facts.motionScale === 0 ? 1 : 0.82 + Math.sin(timeSeconds * 5) * 0.18;
+  const pulse = facts.motionScale === 0 ? 1 : 1 - 0.18 * facts.flashScale + Math.sin(timeSeconds * 5) * 0.18 * facts.flashScale;
   canvas.save(); canvas.lineCap = "round";
   canvas.strokeStyle = facts.highContrast ? "#4b00d1" : "#e4c95a";
   canvas.lineWidth = facts.highContrast ? 5 : (warning ? 3 : 2);

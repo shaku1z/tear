@@ -52,6 +52,9 @@ type BackdropEffect = LocalFlare | ScreenBloom;
 export interface BackdropController {
   readonly W: number; readonly H: number; readonly PX: number; readonly PY: number;
   lowGraphics(): boolean;
+  highContrast(): boolean;
+  reducedMotion(): boolean;
+  flashScale(): number;
   _cache: Partial<Record<Stage["id"], BackdropCache>>; _fx: BackdropEffect[];
   fillFull(context: CanvasRenderingContext2D, view?: ViewRect): void; resetFx(): void;
   _rgb(hex?: string): [number, number, number]; _mix(a: string, b: string, amount: number): string;
@@ -87,7 +90,7 @@ export interface BackdropPolicy {
     }>;
   }>;
   readonly graphics: Readonly<{ low: boolean }>;
-  readonly accessibility: Readonly<{ highContrast: boolean; flashScale: number }>;
+  readonly accessibility: Readonly<{ highContrast: boolean; flashScale: number; reducedMotion: boolean }>;
   readonly overscan: Readonly<{ x: number; y: number }>;
   readonly theme: Readonly<{ dark: boolean }>;
   readonly createCanvas: () => HTMLCanvasElement;
@@ -114,6 +117,9 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
   get PX() { return overscan.x; },
   get PY() { return overscan.y; },
   lowGraphics() { return graphics.low; },
+  highContrast() { return accessibility.highContrast; },
+  reducedMotion() { return accessibility.reducedMotion; },
+  flashScale() { return accessibility.flashScale; },
   // World-camera draws may reveal more than fullscreen OVERSCAN when the camera
   // pulls out.  Callers pass that inverse-camera rectangle through `view`; screen-
   // space callers (post/Fx/replays) keep the original fullscreen bounds.
@@ -436,6 +442,8 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
         timeSeconds: clock.sim,
         lowGraphics: graphics.low,
         highContrast: accessibility.highContrast,
+        reducedMotion: accessibility.reducedMotion,
+        flashScale: accessibility.flashScale,
         stressRatio: clamp(p.stress ?? 0, 0, 1),
         warningRatio: state === "warning" ? 1 - clamp((p.crackWarn ?? 0) / config.bossArena.crackWarn, 0, 1) : 0,
         reformRatio: state === "reforming" ? 1 - clamp((p.respawnIn ?? 0) / truthyNumber(p.respawnWarn, config.bossArena.reformWarn), 0, 1) : 0,

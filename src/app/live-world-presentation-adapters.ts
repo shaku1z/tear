@@ -155,6 +155,7 @@ export function createLiveWorldPresentationAdapters(
       highContrast: d.A11Y.highContrast,
       reducedMotion: d.A11Y.reducedMotion,
       lowGraphics: d.GFX.low,
+      flashScale: d.A11Y.flashScale,
     };
     for (const field of snapshot.fields) {
       if (field.kind !== "bloom-well") continue;

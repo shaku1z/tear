@@ -226,7 +226,10 @@ const BIOME_ART: BiomeArtCatalog = {
       ctx.restore();
     },
     motes(B, ctx, _stage, c, t, px, view) {
-      B.motes(ctx, c, t, px, { rgb: "228,201,90", dir: -1, twinkle: true, drift: 8, aMul: 0.62, sizeMul: 0.72 }, view);
+      B.motes(ctx, c, B.reducedMotion() ? 0 : t, px, {
+        rgb: "228,201,90", dir: -1, twinkle: !B.reducedMotion(),
+        drift: B.reducedMotion() ? 0 : 8, aMul: 0.62, sizeMul: 0.72,
+      }, view);
     },
   },
 
