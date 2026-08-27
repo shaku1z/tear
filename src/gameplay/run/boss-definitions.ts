@@ -10,6 +10,17 @@ export interface BossDefinition {
   readonly phaseMarks: readonly [number, number];
 }
 
+/**
+ * Authored Rootbound metadata reserved for the C10 production factory slice.
+ * Keeping it outside BOSS_DEFINITIONS until construction exists prevents the
+ * factory-ready roster and public projections from advertising a false boss.
+ */
+export const ROOTBOUND_PROVISIONAL_DEFINITION = Object.freeze({
+  id: "rootbound",
+  name: "The Rootbound",
+  phaseMarks: Object.freeze([0.65, 0.28] as const),
+} as const satisfies BossDefinition);
+
 export const BOSS_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "warden", name: "The Warden", phaseMarks: Object.freeze([0.65, 0.30] as const) }),
   Object.freeze({ id: "colossus", name: "Iron Colossus", phaseMarks: Object.freeze([0.60, 0.25] as const) }),
