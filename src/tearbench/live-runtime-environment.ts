@@ -21,7 +21,7 @@ import { projectLiveProjectiles } from "./live-observation-projectiles"; import 
 import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
-import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from "./campaign-victory-origin";
+import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import { environmentSnapshotToObservation } from "./environment-codec";
 import { forgeBloomWellCycleState, forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
@@ -628,13 +628,13 @@ export function createLiveTearRuntimeEnvironment(
     },
     forgeCampaignFinalWave: () => {
       const certificate = createCampaignVictoryOrigin();
-      const original = snapshots.capture("campaign-wave-49-original");
+      const original = snapshots.capture("campaign-wave-59-original");
       const originalProgressionRuntime = context.captureProgressionRuntime();
       try {
         const replay = context.replayProgression(certificate.ledger);
-        context.loadStage(4);
-        const frontier = createCampaignWave49RewardFrontier(
-          snapshots.capture("campaign-wave-49-source", "reconstructed-reachable"), certificate,
+        context.loadStage(5);
+        const frontier = createCampaignWave59RewardFrontier(
+          snapshots.capture("campaign-wave-59-source", "reconstructed-reachable"), certificate,
           context.platformsForStage,
         );
         const progressionRuntime = context.captureProgressionRuntime();
@@ -656,7 +656,7 @@ export function createLiveTearRuntimeEnvironment(
         }));
         context.startNextWave();
         context.setScreen("playing");
-        const started = snapshots.capture("campaign-wave-50-start", "reconstructed-reachable");
+        const started = snapshots.capture("campaign-wave-60-start", "reconstructed-reachable");
         return Object.freeze({ ok: true as const, exactHash: started.hashes.exact, semanticHash: started.hashes.semantic });
       } catch (error) {
         const rollback = snapshots.restore(original);

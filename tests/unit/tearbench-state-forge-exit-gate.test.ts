@@ -13,10 +13,10 @@ import {
 function bossSnapshot(bosses: readonly Record<string, unknown>[]): TearSnapshotV1 {
   const state = {
     "tear.boss.v1": bosses,
-    "tear.run.v1": { mode: "campaign", wave: 50, stage: 4, _biomeIdx: 4,
+    "tear.run.v1": { mode: "campaign", wave: 60, stage: 5, _biomeIdx: 5,
       chapterState: "WAVE_LIVE", spawnQueue: [] },
     "tear.world.v1": { runtime: { lifecycle: {
-      phase: "wave-active", wave: 50, bossWave: true, reward: null,
+      phase: "wave-active", wave: 60, bossWave: true, reward: null,
     } } },
     "tear.cinematic.v1": { active: false },
     "tear.ui.v1": { screen: "playing" },
@@ -138,7 +138,7 @@ describe("C23 State Forge exit matrix", () => {
       },
       (state: Record<string, unknown>) => { (state["tear.run.v1"] as { spawnQueue: unknown[] }).spawnQueue = [{}]; },
       (state: Record<string, unknown>) => { (state["tear.cinematic.v1"] as { active: boolean }).active = true; },
-      (state: Record<string, unknown>) => { (state["tear.run.v1"] as { wave: number }).wave = 49; },
+      (state: Record<string, unknown>) => { (state["tear.run.v1"] as { wave: number }).wave = 59; },
     ];
     for (const corrupt of invalid) {
       const candidate = structuredClone(base);

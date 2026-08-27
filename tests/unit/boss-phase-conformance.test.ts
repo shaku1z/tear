@@ -67,7 +67,9 @@ describe("boss phase conformance", () => {
       expect(boss.presentationId, entry.id).toBe(entry.id);
     }
     const campaignOrder = STAGES.map((stage) => stage.boss);
-    expect(campaignOrder).toEqual(BOSS_ROSTER.map((boss) => boss.id));
+    expect(campaignOrder).toEqual(["warden", "colossus", "aldric", "rootbound", "echo", "source"]);
+    expect(campaignOrder.filter((id) => BOSS_ROSTER.some((boss) => boss.id === id)))
+      .toEqual(BOSS_ROSTER.map((boss) => boss.id));
     expect(campaignOrder.at(-1)).toBe("source");
     for (const draw of [0, 0.249, 0.5, 0.999]) expect(pickMiniBoss({ next: () => draw })).not.toBe("source");
   });

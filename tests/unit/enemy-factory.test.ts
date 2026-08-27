@@ -59,7 +59,7 @@ describe("enemy factory", () => {
     expect(Object.isFrozen(types)).toBe(true);
     expect(Object.keys(types).sort()).toEqual([
       "Aldric", "Armored", "BOSSFX", "Bomber", "Boss", "Charger", "Chimera",
-      "Colossus", "Echo", "Enemy", "Flyer", "Ranged", "Source", "Support",
+      "Colossus", "Echo", "Enemy", "Flyer", "Ranged", "Rootbinder", "Source", "Support",
       "VoidWisp", "Warden", "Wraith", "drawBossTransformationWorld",
       "weaponCapsuleIntersectsSegment",
     ].sort());

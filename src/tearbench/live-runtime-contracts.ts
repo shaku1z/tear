@@ -120,7 +120,7 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
   forgeExitLaunch(launch: StateForgeExitLaunch): TearLiveRestoreResult;
   forgeWave99Hammer(): TearLiveRestoreResult;
-  /** Resumes a certified wave-49 campaign frontier through the production wave controller. */
+  /** Resumes the six-stage branch's certified wave-59 frontier through the production wave controller. */
   forgeCampaignFinalWave(): TearLiveRestoreResult;
   forgeResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
   forgeEnvironmentField(): TearLiveRestoreResult;

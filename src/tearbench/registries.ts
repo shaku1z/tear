@@ -1,4 +1,4 @@
-import { BOSS_IDENTITY_IDS, type BossDefinitionId } from "../gameplay/run/boss-definitions";
+import { BOSS_DEFINITIONS, BOSS_IDENTITY_IDS, type BossDefinitionId } from "../gameplay/run/boss-definitions";
 import { DIFFICULTY_IDS as GAME_DIFFICULTY_IDS, type DifficultyId } from "../gameplay/run/difficulty-catalog";
 import { MODE_IDS as GAME_MODE_IDS, type ModeDefinition } from "../gameplay/run/mode-catalog";
 import { ENEMY_IDENTITY_IDS as GAME_ENEMY_IDENTITY_IDS } from "../gameplay/run/content-director";
@@ -115,6 +115,8 @@ export type TearWeaponId = WeaponId;
 /** Boss definitions are the production boss identity authority. */
 export const BOSS_IDS: readonly BossDefinitionId[] = BOSS_IDENTITY_IDS;
 export const BOSS_REGISTRY = createStableRegistry("boss", BOSS_IDS);
+/** Bosses with current production constructors; Rootbound joins this at C10. */
+export const BOSS_FACTORY_IDS: readonly BossDefinitionId[] = Object.freeze(BOSS_DEFINITIONS.map((boss) => boss.id));
 export type TearBossId = BossDefinitionId;
 
 export const RUN_MODE_IDS = GAME_MODE_IDS;

@@ -7,7 +7,7 @@ import { createEnemyTypes, type EnemyTypes } from "../../src/gameplay/entities/e
 import type { EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
 import type { EnemyBaseInstance } from "../../src/gameplay/entities/enemy-types/enemy-base";
 import { createProjectile } from "../../src/gameplay/entities/projectile";
-import type { ActiveEnemyKind } from "../../src/gameplay/run/content-director";
+import type { EnemyKind } from "../../src/gameplay/run/content-director";
 
 const FX = {
   burst() { return; },
@@ -64,7 +64,7 @@ export function createEnemyHarness(randomValues: readonly number[] = [0.5]) {
 
 type ActorFactory = (types: EnemyTypes) => BehaviorActor;
 
-export const STANDARD_ACTOR_FACTORIES: Readonly<Record<ActiveEnemyKind, ActorFactory>> = Object.freeze({
+export const STANDARD_ACTOR_FACTORIES: Readonly<Record<EnemyKind, ActorFactory>> = Object.freeze({
   charger: (types) => new types.Charger(360, CONFIG.world.groundY - CONFIG.enemy.h / 2) as BehaviorActor,
   ranged: (types) => new types.Ranged(360, CONFIG.world.groundY - CONFIG.ranged.h / 2) as BehaviorActor,
   flyer: (types) => new types.Flyer(360, 300) as BehaviorActor,
@@ -74,11 +74,12 @@ export const STANDARD_ACTOR_FACTORIES: Readonly<Record<ActiveEnemyKind, ActorFac
   mender: (types) => new types.Support(360, CONFIG.world.groundY - CONFIG.support.h / 2, "mender") as BehaviorActor,
   herald: (types) => new types.Support(360, CONFIG.world.groundY - CONFIG.support.h / 2, "herald") as BehaviorActor,
   anchor: (types) => new types.Support(360, CONFIG.world.groundY - CONFIG.support.h / 2, "anchor") as BehaviorActor,
+  rootbinder: (types) => new types.Rootbinder(360, CONFIG.world.groundY - CONFIG.rootbinder.h / 2, "test", "verdant-sanctum") as BehaviorActor,
   wraith: (types) => new types.Wraith(360, 300) as BehaviorActor,
   chimera: (types) => new types.Chimera(360, CONFIG.world.groundY - CONFIG.chimera.h / 2) as BehaviorActor,
 });
 
-export function createStandardActor(kind: ActiveEnemyKind, types: EnemyTypes): BehaviorActor {
+export function createStandardActor(kind: EnemyKind, types: EnemyTypes): BehaviorActor {
   return STANDARD_ACTOR_FACTORIES[kind](types);
 }
 

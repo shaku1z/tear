@@ -6,7 +6,7 @@ import type {
 } from "./progression-ledger";
 import { reconstructProgression, synthesizeProgression } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
-import { BOSS_IDS, type TearBossId } from "./registries";
+import { BOSS_FACTORY_IDS, type TearBossId } from "./registries";
 import {
   DECLARED_ONE_FRAME_BOUNDARIES,
   type TearOneFrameBoundaryDefinition,
@@ -170,7 +170,7 @@ export function createWave99HistoricalRunState(certificate: Wave99HammerExitCert
 }
 
 export function createBossPhaseLaunchMatrix(): readonly StateForgeBossPhaseLaunch[] {
-  return Object.freeze(BOSS_IDS.flatMap((boss) => TEAR_BOSS_PHASES.map((phase) => Object.freeze({
+  return Object.freeze(BOSS_FACTORY_IDS.flatMap((boss) => TEAR_BOSS_PHASES.map((phase) => Object.freeze({
     id: `boss-${boss}-phase-${String(phase)}`,
     kind: "boss-phase" as const,
     boss,
@@ -240,8 +240,8 @@ function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinis
     || !Array.isArray(run.spawnQueue) || run.spawnQueue.length !== 0) {
     throw new TypeError(`${launch.id} requires an active, unobstructed production boss frontier`);
   }
-  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 50 || run.stage !== 4
-    || run._biomeIdx !== 4 || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 50)) {
+  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 60 || run.stage !== 5
+    || run._biomeIdx !== 5 || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 60)) {
     throw new TypeError(`${launch.id} requires the final campaign Source frontier`);
   }
   if (typeof boss.hpDisplay !== "number" || !Number.isFinite(boss.hpDisplay)) {
