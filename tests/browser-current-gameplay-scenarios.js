@@ -200,6 +200,32 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           evidence = { objectId, beforeIntegrity: before?.integrity, afterState: after?.state, transitionEvents: transition.events.map((event) => event.type) };
           break;
         }
+        case "verdant-root-network": {
+          const forge = environment.forgeRootbinderNetwork();
+          if (!forge.ok) throw new Error("Rootbinder network must launch through State Forge restore");
+          const env = environment.environment();
+          const initialObjects = env.snapshot().combatObjects.filter((object) => object.kind === "root-link");
+          if (initialObjects.length !== 2 || initialObjects.some((object) => object.procEligible !== false)) {
+            throw new Error("Rootbinder State Forge restore did not produce two non-proc root links");
+          }
+          const first = initialObjects[0];
+          if (first === undefined) throw new Error("Rootbinder State Forge restore produced no link");
+          const damage = env.damageCombatObject(first.id, 2, "root-network-browser-cut", environment.observe().tick + 1);
+          step();
+          const runtime = env;
+          for (const object of runtime.snapshot().combatObjects) {
+            if (object.state === "active") runtime.cleanupCombatObject(object.id, "defeat", environment.observe().tick);
+          }
+          const final = runtime.snapshot().combatObjects;
+          const eventTypes = environment.events().map((event) => event.type).filter((type) => type.startsWith("world.environment-"));
+          const order = ["world.environment-combat-object-link-created", "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed", "world.environment-object-cleaned"];
+          const orderIndexes = order.map((type) => eventTypes.indexOf(type));
+          const ordered = orderIndexes[0] >= 0 && orderIndexes[1] > orderIndexes[0] && orderIndexes[2] > orderIndexes[1];
+          evidence = { forgedState: runtime.snapshot(), initialObjects, damage, final, eventTypes, detachedBackend: "unsupported" };
+          proved = damage.accepted && damage.destroyed && final.every((object) => object.state === "destroyed" || object.state === "expired")
+            && final.every((object) => object.procEligible === false) && ordered;
+          break;
+        }
         default: throw new Error(`no live scenario evidence exists for current gameplay subject ${source.subject.id}`);
       }
       const final = environment.observe();

@@ -1,5 +1,6 @@
 import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor, EnemyBaseInstance } from "./enemy-base";
+import { advanceRootbinder, createRootbinderState, type RootbinderState } from "../rootbinder-runtime";
 
 export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, clamp, len, lerp } = dependencies;
@@ -64,6 +65,37 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
       else if (dist > KEEP * 1.7) move = -away;
       this.vx = lerp(this.vx, move * this.speed, clamp(5 * dt, 0, 1));
       this.integrate(dt, platforms);
+    }
+  }
+
+  // Rootbinder is intentionally not a Support subtype: it has no aura, healing,
+  // Anchor damage reduction, or hard-root capability. Its authored controller is
+  // a deterministic state machine; EnvironmentRuntime owns its severable links.
+  class Rootbinder extends Enemy {
+    declare cfg: typeof CONFIG.rootbinder;
+    rootbinderState: RootbinderState;
+    private rootbinderTickRemainder = 0;
+
+    constructor(x: number, y: number, worldId = "live", stageId = "unknown") {
+      super(x, y, CONFIG.rootbinder);
+      this.kind = "rootbinder";
+      this.color = CONFIG.colors.rootbinder;
+      this.rootbinderState = createRootbinderState({ id: `rootbinder-${String(Math.floor(x))}-${String(Math.floor(y))}`, worldId, stageId, x, y }, CONFIG.rootbinder);
+      this.anchored = false;
+      this.tetherDR = 1;
+    }
+
+    update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort) {
+      this.tickTimers(dt);
+      const dx = player.x - this.x;
+      this.vx = lerp(this.vx, Math.sign(dx || 1) * this.speed, clamp(3 * dt, 0, 1));
+      this.integrate(dt, platforms);
+      this.rootbinderTickRemainder += Math.max(0, dt) * this.rootbinderState.tuning.ticksPerSecond;
+      const ticks = Math.floor(this.rootbinderTickRemainder);
+      if (ticks > 0) {
+        this.rootbinderTickRemainder -= ticks;
+        this.rootbinderState = advanceRootbinder(this.rootbinderState, ticks);
+      }
     }
   }
 
@@ -157,5 +189,5 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
     }
   }
 
-  return { Boss, Support, Wraith, Chimera };
+  return { Boss, Rootbinder, Support, Wraith, Chimera };
 }

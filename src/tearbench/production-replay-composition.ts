@@ -258,8 +258,9 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   blade.weapon = weapon; blade.model = weapon.model;
   replay.world.context.services.random.restore(staged.rng as never);
   replay.stage.index = staged.stageIndex;
-  const environmentStage = rebasedEnvironment.stageId === "unknown"
-    ? CAMPAIGN_STAGE_IDS[staged.stageIndex] ?? "unknown" : rebasedEnvironment.stageId;
+  // Preserve an explicitly unknown source stage in the semantic projection;
+  // inferred campaign stage would make a valid checkpoint restore hash drift.
+  const environmentStage = rebasedEnvironment.stageId;
   replay.world.context.environment.setStage(environmentStage, "restore");
   replay.world.context.environment.replace({ ...rebasedEnvironment, stageId: environmentStage });
   replay.stage.platforms = [...staged.platforms] as unknown[];

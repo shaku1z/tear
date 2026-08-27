@@ -198,6 +198,19 @@
       "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
+    "id": "verdant-root-network-sever",
+    "description": "Restore one Rootbinder and two ordinary allies through State Forge, prove source-owned root-link segments are severable and cleaned without proc or reward leakage.",
+    "subject": { "kind": "environment-combat-object", "id": "verdant-root-network" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["environment", "combat-object", "rootbinder", "root-network", "verdant-root-network", "sever", "c6"],
+    "maxTicks": 24,
+    "testFiles": ["tests/unit/rootbinder-network.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared Class-A browser proof restores Rootbinder relationship state through State Forge, observes non-proc root-link segments, severs one segment, and verifies cleanup of the remaining links.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
     "id": "source-void-low-hp-rescue-seek",
     "description": "At one HP, trigger the real live Source void-fall rescue through semantic movement, retain its native evidence, verify a supported pre-rescue replay receipt, and explicitly refuse unsupported detached post-rescue void replay and mixed-capsule seeking.",
     "subject": { "kind": "boss", "id": "source" },

@@ -188,10 +188,13 @@ function validateScenarioMetadata(scenario) {
   } else if (subject.kind === "environment-field" || subject.kind === "environment-combat-object") {
     const expected = subject.kind === "environment-field" ? "generic-field" : "generic-combat-object";
     const isSupportedBloomWell = subject.kind === "environment-field" && subject.id === "verdant-bloom-well";
+    const isSupportedRootNetwork = subject.kind === "environment-combat-object" && subject.id === "verdant-root-network";
     const supportedBackends = isSupportedBloomWell
       ? Array.isArray(scenario.backends) && scenario.backends.length === 2 && scenario.backends.includes("live") && scenario.backends.includes("headless")
+      : isSupportedRootNetwork
+        ? Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live"
       : Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live";
-    if ((subject.id !== expected && !isSupportedBloomWell) || !supportedBackends) {
+    if ((subject.id !== expected && !isSupportedBloomWell && !isSupportedRootNetwork) || !supportedBackends) {
       throw new TypeError(`scenario ${scenario.id} environment subject requires a supported environment evidence backend`);
     }
   }

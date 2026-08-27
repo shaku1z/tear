@@ -1,7 +1,7 @@
 import type { EnvironmentObjectCategory, EnvironmentObjectKind } from "./environment-contracts";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 
-export type EnvironmentEventName = "field-started" | "field-resolved" | "combat-object-damaged" | "combat-object-destroyed" | "object-cleaned";
+export type EnvironmentEventName = "field-started" | "field-resolved" | "combat-object-link-created" | "combat-object-damaged" | "combat-object-destroyed" | "object-cleaned";
 
 export interface EnvironmentEventInput {
   readonly event: EnvironmentEventName;
@@ -14,7 +14,7 @@ export interface EnvironmentEventInput {
 
 export const ENVIRONMENT_EVENT_PHASES: Readonly<Record<EnvironmentEventName, "projectiles-and-hazards" | "collision-and-damage" | "deaths-and-rewards" | "post-simulation-commit">> = Object.freeze({
   "field-started": "projectiles-and-hazards", "field-resolved": "deaths-and-rewards",
-  "combat-object-damaged": "collision-and-damage", "combat-object-destroyed": "deaths-and-rewards",
+  "combat-object-link-created": "collision-and-damage", "combat-object-damaged": "collision-and-damage", "combat-object-destroyed": "deaths-and-rewards",
   "object-cleaned": "post-simulation-commit",
 });
 

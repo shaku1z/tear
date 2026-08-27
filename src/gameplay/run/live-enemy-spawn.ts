@@ -61,7 +61,7 @@ export interface LiveEnemyConstructionPort<TEnemy extends LiveSpawnEnemy> {
   readonly sideSpawn: () => number;
   readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera") => TEnemy;
   readonly createAir: (kind: "flyer" | "wraith", x: number, y: number) => TEnemy;
-  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor") => TEnemy;
+  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor" | "rootbinder") => TEnemy;
   readonly createBoss: (bossId?: string) => TEnemy;
   readonly beginBossPresentation: (enemy: TEnemy) => void;
 }
@@ -80,7 +80,7 @@ export function constructLiveEnemy<TEnemy extends LiveSpawnEnemy>(
     case "priest": case "herald": case "mender": case "anchor":
       enemy = port.createSupport(spec.type); break;
     case "rootbinder":
-      throw new Error("rootbinder identity is not factory-ready before VS3-C6");
+      enemy = port.createSupport(spec.type); break;
     case "boss":
       enemy = port.createBoss();
       if (enemy.isMirrorBoss) enemy._live = true;

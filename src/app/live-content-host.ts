@@ -32,7 +32,7 @@ export interface LiveContentHostContext<TEnemy extends ContentHostEnemy> {
   readonly setPlatforms: (platforms: ArenaPlatform[]) => void;
   readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera") => TEnemy;
   readonly createAir: (kind: "flyer" | "wraith", x: number, y: number) => TEnemy;
-  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor") => TEnemy;
+  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor" | "rootbinder") => TEnemy;
   readonly createDefaultBoss: () => TEnemy;
   readonly createBoss: (id: string) => TEnemy;
   readonly applyPreset: (enemy: TEnemy, preset: EnemyPreset) => void;

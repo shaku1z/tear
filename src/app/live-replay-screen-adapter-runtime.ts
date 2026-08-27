@@ -11,7 +11,7 @@ import { buildReplayScreenSnapshot } from "../presentation/replay-snapshots";
 import { handleReplayTransport } from "./replay-transport-controller";
 
 type Dependencies = Pick<GameRuntimeDependencies, "APP" | "Armored" | "Backdrop" | "Bomber" | "Charger" | "Chimera" |
-  "CONFIG" | "FX" | "Flyer" | "GFX" | "GHOST" | "Input" | "Ranged" | "SAFE" | "STAGES" | "Support" | "THEME" |
+  "CONFIG" | "FX" | "Flyer" | "GFX" | "GHOST" | "Input" | "Ranged" | "Rootbinder" | "SAFE" | "STAGES" | "Support" | "THEME" |
   "UI" | "UPGRADES" | "VARIANTS" | "Wraith" | "applyVariant" | "stageAt" | "stagePlatforms">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Platform = ReturnType<GameRuntimeDependencies["stagePlatforms"]>[number];
@@ -61,7 +61,7 @@ export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServi
       return isVariantPuppet(candidate) ? candidate : new d.Charger(0, 0);
     }, charger: () => new d.Charger(0, 0), ranged: () => new d.Ranged(0, 0),
     flyer: () => new d.Flyer(0, 200), bomber: () => new d.Bomber(0, 0), armored: () => new d.Armored(0, 0),
-    support: (kind) => new d.Support(0, 0, supportKind(kind)), wraith: () => new d.Wraith(0, 220), chimera: () => new d.Chimera(0, 0),
+    support: (kind) => kind === "rootbinder" ? new d.Rootbinder(0, 0) : new d.Support(0, 0, supportKind(kind)), wraith: () => new d.Wraith(0, 220), chimera: () => new d.Chimera(0, 0),
   }, d.VARIANTS, d.applyVariant);
   const enter = (data: unknown, from: LegacyAppScreen = "menu"): boolean => {
     const playback = d.GHOST.begin(data); if (playback === null) return false;

@@ -25,6 +25,7 @@ import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from 
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import { environmentSnapshotToObservation } from "./environment-codec";
 import { forgeBloomWellCycleState, forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
+import { forgeRootbinderNetworkEnvironment } from "./rootbinder-network-forge";
 import { createBloomWellState, isBloomWellState } from "../gameplay/environment/bloom-well";
 import { projectBloomWellPresentation, type BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
@@ -42,7 +43,6 @@ function numericSeed(seed: string): number {
   }
   return (hash >>> 0) || 1;
 }
-
 function genericEnvironmentForge(
   kind: "field" | "combat-object",
   environment: TearStructuredRuntimeEnvironment,
@@ -67,7 +67,6 @@ function genericEnvironmentForge(
   const forged = kind === "field" ? forgeEnvironmentFieldState(base, field) : forgeEnvironmentCombatObjectState(base, combatObject);
   return launchResolvedLiveState(resolveTearSdl(forged), environment, snapshots, context);
 }
-
 function bloomWellEnvironmentForge(
   environment: TearStructuredRuntimeEnvironment,
   snapshots: ReturnType<typeof createLiveRuntimeSnapshotController>,
@@ -670,6 +669,7 @@ export function createLiveTearRuntimeEnvironment(
     forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
     forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
     forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
+    forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
   });
   return Object.freeze({
     accessClass: "B" as const,
@@ -693,6 +693,7 @@ export function createLiveTearRuntimeEnvironment(
     forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
     forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
     forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
+    forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
     screenshot: () => environment.screenshot(),
   });
 }

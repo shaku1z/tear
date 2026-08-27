@@ -19,7 +19,7 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const Enemy = createEnemyBase(dependencies, bossRuntime);
   const { Charger, Ranged } = createGroundEnemyTypes(dependencies, Enemy);
   const { Flyer, Bomber, Armored } = createAirEnemyTypes(dependencies, Enemy);
-  const { Boss, Support, Wraith, Chimera } = createSpecialEnemyTypes(dependencies, Enemy);
+  const { Boss, Rootbinder, Support, Wraith, Chimera } = createSpecialEnemyTypes(dependencies, Enemy);
   const { BOSSFX, weaponCapsuleIntersectsSegment } = bossRuntime;
   const Warden = createWardenType(dependencies, Enemy, bossRuntime);
   const Colossus = createColossusType(dependencies, Enemy, bossRuntime);
@@ -29,7 +29,7 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
 
   return Object.freeze({
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,
-    Flyer, Ranged, Source, Support, VoidWisp, Warden, Wraith,
+    Flyer, Ranged, Rootbinder, Source, Support, VoidWisp, Warden, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   });
 }

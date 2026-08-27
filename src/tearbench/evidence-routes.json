@@ -141,6 +141,18 @@
     "authorityCommands": ["pnpm exec vitest run tests/unit/bloom-well-runtime.test.ts tests/unit/environment-field-runtime.test.ts tests/unit/environment-runtime.test.ts"]
   },
   {
+    "id": "verdant-c6-rootbinder-network",
+    "prefixes": ["src/gameplay/entities/rootbinder-runtime.ts", "src/gameplay/entities/enemy-types/special-enemies.ts", "src/gameplay/environment/", "src/tearbench/state-forge-factories.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-contracts.ts", "src/tearbench/registries.ts", "src/tearbench/canonical-scenarios.json", "tests/browser-current-gameplay-scenarios.js", "tests/unit/rootbinder-runtime.test.ts", "tests/unit/rootbinder-network.test.ts"],
+    "scenarios": ["verdant-root-network-sever"],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "verdant-c6-rootbinder-network-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["fixed-step", "combat", "events", "restore", "isolation"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/rootbinder-network.test.ts tests/unit/rootbinder-runtime.test.ts tests/unit/environment-runtime.test.ts tests/unit/gameplay-causal-events.test.ts"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],

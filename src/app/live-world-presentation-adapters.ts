@@ -15,6 +15,9 @@ import { buildBossIntroSnapshot, buildPlaygroundHelpSnapshot, buildReticleSnapsh
 import { buildEnemyStatusSnapshot, buildEntityLayerSnapshot, buildFinaleWorldSnapshot,
   buildPantheonDebugSnapshot, buildSceneEffectsSnapshot, type VisualEnemySource } from "../presentation/world/runtime-snapshots";
 import { tutorialInputPrompt } from "../presentation/world/tutorial-input-prompts";
+import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import { projectRootbinderPresentation } from "../gameplay/environment/rootbinder-presentation-facts";
+import { renderRootbinderPresentation } from "../presentation/environment/rootbinder-presentation";
 
 type Dependencies = Pick<GameRuntimeDependencies,
   "A11Y" | "ACH" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "Input" | "PAD" |
@@ -40,6 +43,7 @@ export interface WorldPresentationState {
   readonly floaters: () => GameFloater[];
   readonly slowZones: () => GameSlowZone[];
   readonly temporaryWalls: () => GameTemporaryWall[];
+  readonly environment?: () => EnvironmentSnapshot;
   readonly screen: () => string;
   readonly zoom: () => number;
   readonly shake: () => number;
@@ -140,6 +144,23 @@ export function createLiveWorldPresentationAdapters(
       },
       drawStatus: drawEnemyStatus });
   };
+  const drawEnvironment = (): void => {
+    const snapshot = state.environment?.();
+    if (snapshot === undefined) return;
+    for (const enemy of state.enemies()) {
+      if (enemy.kind !== "rootbinder") continue;
+      const root = enemy as GameEnemy & { rootbinderOwnerId?: string; rootbinderState?: { x: number; y: number; state: Parameters<typeof projectRootbinderPresentation>[0]["state"] } };
+      const rootState = root.rootbinderState;
+      if (rootState === undefined || root.rootbinderOwnerId === undefined) continue;
+      const owned = snapshot.combatObjects.filter((object) => object.ownerId === root.rootbinderOwnerId);
+      const generationOf = (id: string): number => Number(/:(?:network|leash):g(\d+)/u.exec(id)?.[1] ?? 0);
+      const latestGeneration = owned.reduce((latest, object) => Math.max(latest, generationOf(object.id)), 0);
+      const visible = latestGeneration === 0 ? owned : owned.filter((object) => generationOf(object.id) === latestGeneration);
+      renderRootbinderPresentation(canvas, projectRootbinderPresentation(rootState, visible, {
+        highContrast: d.A11Y.highContrast, reducedMotion: d.A11Y.reducedMotion, lowGraphics: d.GFX.low, audioEnabled: true,
+      }));
+    }
+  };
 
   const renderWorld = (): WorldCamera => {
     const run = state.run();
@@ -163,7 +184,7 @@ export function createLiveWorldPresentationAdapters(
       drawFinale: drawFinaleWorld, tutorialActive: run.mode === "tutorial" && tutorial.active,
       drawTutorialGhost: () => { tutorial.drawGhost(); }, drawPlayer: () => { player?.draw(canvas); },
       drawBlade: () => { if (blade && player) blade.draw(canvas, player); },
-      drawEffects: () => { d.FX.draw(canvas); }, drawDebug: drawPantheonDebug });
+      drawEffects: () => { d.FX.draw(canvas); }, drawEnvironment, drawDebug: drawPantheonDebug });
   };
 
   const drawTutorialCard = (): void => {

@@ -30,7 +30,7 @@ describe("Tear world legacy entity construction", () => {
 
     expect(calls).toEqual([
       "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "warden", "colossus", "aldric", "echo", "source", "void-wisp", "reflection",
-      "priest", "herald", "mender", "anchor", "boss",
+      "priest", "herald", "mender", "anchor", "rootbinder", "boss",
     ]);
     expect(echo.mods).toEqual(restored.mods);
     expect(factory.createEnemy("charger", 9, 10, initial)).toMatchObject({ x: 9, y: 10 });

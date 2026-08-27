@@ -22,7 +22,7 @@ const NATIVE_CAUSAL_EVENTS: ReadonlySet<TearEventId> = new Set([
   "blade.throw-resolved", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit",
   "projectile.expired", "world.void-rescue", ...Object.values(NATIVE_WAVE_EVENTS), ...Object.values(NATIVE_EFFECT_EVENTS),
   "world.hazard-started", "world.hazard-resolved", "world.environment-field-started", "world.environment-field-resolved",
-  "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed", "world.environment-object-cleaned",
+  "world.environment-combat-object-link-created", "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed", "world.environment-object-cleaned",
 ]);
 
 /** Keep historical IDs readable without advertising unsupported native gameplay facts. */
@@ -114,16 +114,17 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       payload: Object.freeze({ x: event.x, y: event.y, lane: event.lane, hp: event.hp }),
     };
     case "environment": {
-      if (!["field-started", "field-resolved", "combat-object-damaged", "combat-object-destroyed", "object-cleaned"].includes(event.event)) {
+      if (!["field-started", "field-resolved", "combat-object-link-created", "combat-object-damaged", "combat-object-destroyed", "object-cleaned"].includes(event.event)) {
         throw new RangeError(`unrecognized native environment event: ${event.event}`);
       }
       const type = event.event === "field-started" ? "world.environment-field-started"
         : event.event === "field-resolved" ? "world.environment-field-resolved"
+          : event.event === "combat-object-link-created" ? "world.environment-combat-object-link-created"
           : event.event === "combat-object-damaged" ? "world.environment-combat-object-damaged"
             : event.event === "combat-object-destroyed" ? "world.environment-combat-object-destroyed" : "world.environment-object-cleaned";
       return {
       type,
-      phase: event.event === "combat-object-damaged" ? "collision-and-damage"
+      phase: event.event === "combat-object-damaged" || event.event === "combat-object-link-created" ? "collision-and-damage"
         : event.event === "field-started" ? "projectiles-and-hazards"
           : event.event === "object-cleaned" ? "post-simulation-commit" : "deaths-and-rewards",
       actorId: event.objectId,

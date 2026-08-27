@@ -7,7 +7,7 @@ import { makeCombatEnemy } from "./live-runtime-type-guards";
 export type LiveWorldEntityDependencies = Pick<GameRuntimeDependencies,
   "Player" | "Blade" | "Projectile" | "Charger" | "Ranged" | "Flyer" | "Bomber" | "Armored"
   | "Wraith" | "Chimera" | "Warden" | "Colossus" | "Aldric" | "MirrorHost" | "Source"
-  | "VoidWisp" | "ReflectionEnemy" | "Support" | "Boss"
+  | "VoidWisp" | "ReflectionEnemy" | "Support" | "Rootbinder" | "Boss"
 >;
 
 export type LiveWorldEntityConstructionPort = TearWorldEntityConstructionPort<
@@ -41,7 +41,10 @@ export function createLiveWorldEntityFactory(
       echo: (x, y, mods) => enemy(new dependencies.MirrorHost(x, y, mods)),
       source: (x, y) => enemy(new dependencies.Source(x, y)), voidWisp: (x, y) => enemy(new dependencies.VoidWisp(x, y)),
       reflection: (x, y) => enemy(new dependencies.ReflectionEnemy(x, y)),
-      support: (x, y, kind) => enemy(new dependencies.Support(x, y, kind)), boss: (x, y) => enemy(new dependencies.Boss(x, y)),
+      support: (x, y, kind) => kind === "rootbinder"
+        ? enemy(new dependencies.Rootbinder(x, y))
+        : enemy(new dependencies.Support(x, y, kind)),
+      boss: (x, y) => enemy(new dependencies.Boss(x, y)),
     },
     rebindEchoMods(actor, mods): void {
       // Codec hydration clones `_mods`; restore the Echo host's live run link

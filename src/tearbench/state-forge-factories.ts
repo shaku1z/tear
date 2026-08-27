@@ -35,6 +35,22 @@ export function forgeEnvironmentCombatObjectState(
   return patch(base, `${base.id}-${object.id}`, { environment: { fields: [], combatObjects: [{ factoryId: "environment-combat-object", ...structuredClone(object) }], routes: [] } });
 }
 
+/** C6 relationship fixture: State Forge restores one Rootbinder and two ordinary allies,
+ * then restores their source-owned severable root-link segments using stable actor IDs. */
+export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
+  const links = ["enemy:2", "enemy:3"].map((targetId, index) => ({
+    id: `root-network:${String(index + 1)}`, factoryId: "environment-combat-object", kind: "root-link" as const,
+    ownerId: "enemy:1", targetId, geometry: { x: 260, y: 600, points: [{ x: 260, y: 600 }, { x: 420 + index * 120, y: 600 }] },
+    integrity: 2, maxIntegrity: 2, counterplayTags: ["cut", "break"] as const, procEligible: false,
+    damageDedupeId: `root-network:${String(index + 1)}:damage`, state: "active" as const, stateTick: 0, cleanupReason: null,
+  }));
+  links.forEach((link) => { assertEnvironmentCombatCapabilities(link.kind, link.counterplayTags, link.procEligible); });
+  return patch(base, `${base.id}-root-network`, {
+    enemyComposition: [{ kind: "rootbinder", count: 1 }, { kind: "charger", count: 2 }],
+    environment: { fields: [], combatObjects: links, routes: [] },
+  });
+}
+
 export function forgeEnvironmentRouteState(
   base: TearSdlDocumentV1,
   route: Omit<EnvironmentRouteState, "id"> & { readonly id: string },

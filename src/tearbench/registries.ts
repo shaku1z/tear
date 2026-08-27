@@ -48,7 +48,7 @@ export const HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS = Object.freeze([
   "boot", "movement", "dash",
 ] as const);
 export const ENVIRONMENT_FIELD_SCENARIO_SUBJECT_IDS = Object.freeze(["generic-field", "verdant-bloom-well"] as const);
-export const ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_IDS = Object.freeze(["generic-combat-object"] as const);
+export const ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_IDS = Object.freeze(["generic-combat-object", "verdant-root-network"] as const);
 export const ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY = createStableRegistry("environment field scenario subject", ENVIRONMENT_FIELD_SCENARIO_SUBJECT_IDS);
 export const ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY = createStableRegistry("environment combat-object scenario subject", ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_IDS);
 
@@ -69,7 +69,7 @@ export const EVENT_IDS = Object.freeze([
   "weapon.selected",
   "world.platform-created", "world.platform-mutated", "world.platform-destroyed",
   "world.hazard-started", "world.hazard-resolved", "world.void-scroll-started", "world.void-rescue",
-  "world.environment-field-started", "world.environment-field-resolved", "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed", "world.environment-object-cleaned",
+  "world.environment-field-started", "world.environment-field-resolved", "world.environment-combat-object-link-created", "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed", "world.environment-object-cleaned",
   "ui.screen-entered", "ui.screen-exited", "ui.focus-changed", "ui.action-confirmed",
   "system.checkpoint", "system.integrity-warning", "system.drift-detected", "system.exception",
   "system.storage-pressure",

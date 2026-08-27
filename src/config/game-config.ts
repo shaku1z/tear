@@ -394,6 +394,13 @@ const CONFIG = {
     drMult: 0.5, dmgBuff: 1.35,        // War Priest: protects AND empowers nearby enemies
     speedBuff: 1.45, hasteBuff: 1.5,   // Herald: faster movement AND faster attacks
     anchorDR: 0.4, anchorRegen: 9 },   // Anchor: shields + regens + immobilizes its bonded ally (shared fate)
+  // Rootbinder is a separate controller family: it creates bounded, severable
+  // links and never inherits Support's aura/heal/Anchor capability fields.
+  rootbinder: { w: 34, h: 46, hp: 72, speed: 105, contactDmg: 7, knockbackTaken: 8, weight: 1.8,
+    ticksPerSecond: 120, repositionTicks: 60, plantWindupTicks: 36, plantedTicks: 48,
+    linkWarningTicks: 48, linkedTicks: 240, brokenTicks: 36, recoverTicks: 60,
+    maxLeashForce: 80, maxNetworkRedistribution: 80, leashRadius: 120, lineMaxLength: 520,
+    maxNetworksPerRootbinder: 1, maxPlayerLeashes: 1, maxNetworkTargets: 3 },
   // wraith: immune to direct blade hits — only your thrown blade or a deflected shot kills it
   wraith: { w: 36, h: 42, hp: 64, speed: 170, contactDmg: 12, knockbackTaken: 0, weight: 1.4, hoverY: 70 },
   // chimera: a beast that adopts the attacks of the enemy types in its wave (often several),
@@ -433,6 +440,7 @@ const CONFIG = {
     herald: "#e0902f",         // support: speed buff
     mender: "#1faf5a",         // support: heals allies
     anchor: "#1597c2",         // support: shields a tethered ally
+    rootbinder: "#56b870",      // Rootbinder: warning/link geometry only
     wraith: "#6a6f88",         // special: blade-immune phantom
     chimera: "#444a5c",        // special: adopts other enemies' attacks
     sludge: "#6f7a35",         // hazard: slowing mud puddle

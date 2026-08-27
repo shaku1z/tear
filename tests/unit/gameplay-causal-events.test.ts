@@ -183,10 +183,11 @@ describe("native gameplay causal-event adapter", () => {
     const bus = new TearGameplayEventBus(() => 12);
     bus.subscribe((event) => facts.push(event));
     publishEnvironmentEvent(bus, { event: "field-started", objectId: "field:1", category: "field", objectKind: "bloom-well" });
+    publishEnvironmentEvent(bus, { event: "combat-object-link-created", objectId: "link:1", category: "combat-object", objectKind: "root-link" });
     publishEnvironmentEvent(bus, { event: "combat-object-damaged", objectId: "link:1", category: "combat-object", objectKind: "root-link", integrity: 2 });
     publishEnvironmentEvent(bus, { event: "combat-object-destroyed", objectId: "link:1", category: "combat-object", objectKind: "root-link", integrity: 0 });
     expect(facts.map((event) => projectGameplayEventForParity(event, facts.indexOf(event))).map((event) => [event.type, event.phase])).toEqual([
-      ["world.environment-field-started", "projectiles-and-hazards"], ["world.environment-combat-object-damaged", "collision-and-damage"], ["world.environment-combat-object-destroyed", "deaths-and-rewards"],
+      ["world.environment-field-started", "projectiles-and-hazards"], ["world.environment-combat-object-link-created", "collision-and-damage"], ["world.environment-combat-object-damaged", "collision-and-damage"], ["world.environment-combat-object-destroyed", "deaths-and-rewards"],
     ]);
   });
 });

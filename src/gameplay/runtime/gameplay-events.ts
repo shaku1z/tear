@@ -40,7 +40,7 @@ export type TearGameplayEvent =
   | Readonly<{ kind: "world"; tick: number; event: "void-rescue"; x: number; y: number; lane: "lower" | "upper" | null; hp: number }>
   | Readonly<{
     kind: "environment"; tick: number;
-    event: "field-started" | "field-resolved" | "combat-object-damaged" | "combat-object-destroyed" | "object-cleaned";
+    event: "field-started" | "field-resolved" | "combat-object-link-created" | "combat-object-damaged" | "combat-object-destroyed" | "object-cleaned";
     objectId: string; category: "field" | "combat-object" | "route"; objectKind: string;
     integrity?: number; reason?: string;
   }>

@@ -3,7 +3,7 @@ import {
   type TearWorldEntityConstructionPort,
 } from "./tear-world-entity-construction";
 
-type SupportKind = "priest" | "herald" | "mender" | "anchor";
+type SupportKind = "priest" | "herald" | "mender" | "anchor" | "rootbinder";
 
 /**
  * Constructor ports for the production actor families. The stable factory-ID
@@ -71,6 +71,7 @@ export function createTearWorldLegacyEntityConstruction<
       herald: { create: (x, y) => ports.enemy.support(x, y, "herald") },
       mender: { create: (x, y) => ports.enemy.support(x, y, "mender") },
       anchor: { create: (x, y) => ports.enemy.support(x, y, "anchor") },
+      rootbinder: { create: (x, y) => ports.enemy.support(x, y, "rootbinder") },
       boss: { create: ports.enemy.boss },
     },
     ...(ports.rebindEchoMods === undefined ? {} : {

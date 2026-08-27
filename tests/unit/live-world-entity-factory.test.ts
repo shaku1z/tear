@@ -34,7 +34,7 @@ function fixtureDependencies(calls: ConstructorCall[]): LiveWorldEntityDependenc
     Charger: enemy("charger"), Ranged: enemy("ranged"), Flyer: enemy("flyer"), Bomber: enemy("bomber"),
     Armored: enemy("armored"), Wraith: enemy("wraith"), Chimera: enemy("chimera"), Warden: enemy("warden"),
     Colossus: enemy("colossus"), Aldric: enemy("aldric"), MirrorHost: enemy("echo"), Source: enemy("source"),
-    VoidWisp: enemy("void-wisp"), ReflectionEnemy: enemy("reflection"), Support: enemy("support"), Boss: enemy("boss"),
+    VoidWisp: enemy("void-wisp"), ReflectionEnemy: enemy("reflection"), Support: enemy("support"), Rootbinder: enemy("rootbinder"), Boss: enemy("boss"),
   } as unknown as LiveWorldEntityDependencies;
 }
 
@@ -56,7 +56,7 @@ describe("live world entity factory", () => {
     expect(calls.map((call) => call.kind)).toEqual([
       "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera",
       "warden", "colossus", "aldric", "echo", "source", "void-wisp", "reflection",
-      "support", "support", "support", "support", "boss",
+      "support", "support", "support", "support", "rootbinder", "boss",
     ]);
     expect(calls.every((call) => call.x === 40 && call.y === 50)).toBe(true);
     expect(calls.find((call) => call.kind === "echo")?.extra).toEqual([initialRun.mods]);

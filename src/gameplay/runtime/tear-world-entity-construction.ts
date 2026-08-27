@@ -6,7 +6,7 @@
 export const TEAR_WORLD_ENTITY_FACTORY_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera",
   "warden", "colossus", "aldric", "echo", "source", "void-wisp", "reflection",
-  "priest", "herald", "mender", "anchor", "boss",
+  "priest", "herald", "mender", "anchor", "rootbinder", "boss",
 ] as const);
 
 export type TearWorldEntityFactoryId = typeof TEAR_WORLD_ENTITY_FACTORY_IDS[number];

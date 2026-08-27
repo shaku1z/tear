@@ -44,9 +44,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   and `bloom-well`/`root-link`/`graft-anchor`/`regrowth-link` exactly once.
   TearBench projects those identities from production owners and has negative
   unmapped-identity proofs. The runtime campaign remains five stages, the
-  public game-reference schema remains unchanged, and Rootbound/Rootbinder
-  remain explicitly factory-unavailable until VS3-C10/VS3-C6. Pale identities
-  remain reserved design-only.
+  public game-reference schema remains unchanged, and Rootbound remains
+  explicitly factory-unavailable until VS3-C10. Rootbinder became
+  factory-ready in VS3-C6 without entering campaign wave selection. Pale
+  identities remain reserved design-only.
 - [x] Verdant C3 environment evidence foundation (engineering-only) — the
   existing `tear.hazard.v1` codec now reports v2, migrates legacy slow-zone /
   wall payloads, validates bounded environment fields/combat objects/routes,
@@ -68,6 +69,17 @@ This is the migration checklist for the architectural redesign. A checked featur
   supported detached replay proof cover lifecycle and cleanup; real production
   Sword, Hammer, Greatsword, Chainblade, and Riftlock transport remains
   unchanged. Verdant is not inserted into the campaign by this checkpoint.
+- [x] Verdant C6 Rootbinder and Shared Root Network (engineering-only) — a
+  distinct factory-ready controller owns deterministic reposition, planting,
+  warning, linked, broken, and recovery phases. The world environment runtime
+  creates warned player leashes or two-to-three-ally networks through the
+  canonical combat-object kernel, applies time-scaled bounded restoring and
+  formation forces, preserves full player controls, enforces world-owned caps,
+  revalidates live geometry, and cleans relationships across sever, death,
+  stage, retry, clear, and restore paths. Native creation/damage/destruction/
+  cleanup facts, State Forge/browser evidence, source-owned presentation, and
+  non-proc contracts are covered. Rootbinder is not inserted into campaign
+  waves by this checkpoint.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
@@ -135,8 +147,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   detached-safe view. Production and detached lifecycle seams share the same
   environment port, and focused runtime tests prove concurrent
   collection/configuration/ID isolation plus reset/phase ordering. Environment
-  codecs, hashes, and observations are now covered by VS3-C3; concrete
-  Bloom/Rootbinder/Rootbound behavior remains VS3-C4+ work.
+  codecs, hashes, and observations are now covered by VS3-C3; Bloom Wells and
+  Rootbinder relationship behavior are covered by VS3-C5/C6, while Rootbound
+  encounter behavior remains later work.
   Boss-intro and boss-beat state also flow directly from world state through
   live music, frame, State Forge, and presentation paths. This preserves the
   existing live path through focused and rebuilt campaign evidence, but leaves

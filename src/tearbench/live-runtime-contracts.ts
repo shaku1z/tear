@@ -126,6 +126,8 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   forgeEnvironmentField(): TearLiveRestoreResult;
   forgeEnvironmentCombatObject(): TearLiveRestoreResult;
   forgeBloomWellCycle(): TearLiveRestoreResult;
+  /** Restores a source-owned Rootbinder relationship fixture through State Forge. */
+  forgeRootbinderNetwork(): TearLiveRestoreResult;
 }
 
 export interface TearClassBRuntimeEnvironment extends Omit<TearStructuredRuntimeEnvironment, "accessClass" | "rng"> {
