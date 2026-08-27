@@ -80,6 +80,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   cleanup facts, State Forge/browser evidence, source-owned presentation, and
   non-proc contracts are covered. Rootbinder is not inserted into campaign
   waves by this checkpoint.
+- [x] Verdant C7 stage-aware enemy variants (engineering-only) — the typed
+  `VariantSelectionContext` carries authored stage, local/global wave, mode,
+  discovery, and injected RNG inputs. Four Verdant family variants have
+  source-owned behavior branches, strict campaign stage/local-wave gates,
+  Endless/Gauntlet discovery gates, and explicit Playground/Enemy Test
+  selection. Legacy rolls remain Verdant-safe; serialized `variantId` values
+  resolve through the canonical family and are preserved in spawn/replay
+  facts. Reference projection, restore-safe spawn tests, and the dedicated
+  C7 TearBench route cover the contract. Verdant remains absent from the
+  runtime campaign stage roster.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

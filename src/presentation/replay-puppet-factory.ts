@@ -1,7 +1,7 @@
 import type { ReplayPuppet } from "./replay-world-frame";
 
 export interface ReplaySpawnSource {
-  readonly k: string; readonly b?: string; readonly vn?: string;
+  readonly k: string; readonly b?: string; readonly vn?: string; readonly vid?: string;
 }
 
 export interface ReplayPuppetSource extends ReplayPuppet {
@@ -25,7 +25,9 @@ export function createReplayPuppet<Puppet extends ReplayPuppetSource, Variant ex
   applyVariant: (puppet: Puppet, variant: Variant) => void): Puppet | null {
   try {
     const puppet = input.k === "boss" ? factories.boss(input.b ?? "warden") : createEnemy(input.k, factories);
-    const variant = input.vn === undefined ? undefined : variants[puppet.kind]?.find((entry) => entry.name === input.vn);
+    const variant = input.vid === undefined
+      ? input.vn === undefined ? undefined : variants[puppet.kind]?.find((entry) => entry.name === input.vn)
+      : variants[puppet.kind]?.find((entry) => (entry as Readonly<{ id?: string }>).id === input.vid);
     if (variant !== undefined) {
       try { applyVariant(puppet, variant); } catch { /* corrupt legacy variant data should not block playback */ }
     }

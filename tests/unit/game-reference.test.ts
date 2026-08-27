@@ -108,7 +108,9 @@ describe("game-reference.v1", () => {
     expect(result.collections.enemies.items.families.map((family) => family.id)).toEqual([
       "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
     ]);
-    expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([]);
+    expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([
+      { id: "bark-sentinel", name: "Bark Sentinel", weight: 0.45, minWave: 5 },
+    ]);
     expect(result.collections.enemies.items.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
     expect(result.collections.enemies.items.presets).toEqual([
       { familyId: "ranged", affixIds: ["rapid", "volley"] },

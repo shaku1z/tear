@@ -17,7 +17,7 @@ export type TearGameplayEvent =
   | Readonly<{ kind: "wave"; tick: number; wave: number; event: string }>
   | Readonly<{
     kind: "spawn"; tick: number; actorId: string; actorKind: string; x: number; y: number;
-    variantName?: string; bossId?: string;
+    variantName?: string; variantId?: string; bossId?: string;
   }>
   | Readonly<{ kind: "death"; tick: number; actorId: string; cause: string }>
   | Readonly<{ kind: "loadout"; tick: number; choiceId: string; tier: number; wave: number }>

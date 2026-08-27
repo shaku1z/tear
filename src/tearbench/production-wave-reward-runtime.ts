@@ -140,10 +140,13 @@ export function createProductionWaveRewardRuntime(
       random: random.streams.stream("spawn"),
       run: () => run() as never,
       campaignStage: () => stage.index,
+      stageId: () => stageAt(stage.index).id,
       contentWave: () => 0,
       groundSpawn: () => ({ x: 0, y: 0 }),
       applyPreset: (enemy, preset) => { applyPreset(enemy, preset); },
-      rollVariant: (kind, wave) => rollVariant(kind as never, wave, random.streams.stream("spawn")),
+      rollVariant: (kind, wave, context) => context === undefined
+        ? rollVariant(kind as never, wave, random.streams.stream("spawn"))
+        : rollVariant(kind as never, context),
       applyVariant: (enemy, variant) => { applyVariant(enemy, variant); },
       rollAffixes: (enemy, wave) => { rollAffixes(enemy, wave, random.streams.stream("spawn")); },
       arrivalEffect: note("arrivalEffect"),

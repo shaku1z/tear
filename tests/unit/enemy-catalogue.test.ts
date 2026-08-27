@@ -43,10 +43,11 @@ describe("enemy content preservation catalogue", () => {
 
   it("retains every named family variant and its wave gate", () => {
     expect(Object.fromEntries(Object.entries(VARIANTS).map(([family, variants]) => [family, variants.map((variant) => variant.id)]))).toEqual({
-      charger: ["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist"],
-      ranged: ["sentinel", "rifleman", "marksman", "warlock", "chain"],
-      flyer: ["swooper", "divebomber", "highdiver"],
+      charger: ["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker"],
+      ranged: ["sentinel", "rifleman", "marksman", "warlock", "chain", "seedcaster"],
+      flyer: ["swooper", "divebomber", "highdiver", "canopy-diver"],
       bomber: ["lobber", "juggler", "trapper", "sludge", "geomancer"],
+      armored: ["bark-sentinel"],
     });
 
     const first = rollVariant("charger", 1, { next: () => 0.999 });

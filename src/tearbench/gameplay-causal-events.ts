@@ -73,6 +73,7 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       payload: Object.freeze({
         actorKind: event.actorKind, x: event.x, y: event.y,
         ...(event.variantName === undefined ? {} : { variantName: event.variantName }),
+        ...(event.variantId === undefined ? {} : { variantId: event.variantId }),
         ...(event.bossId === undefined ? {} : { bossId: event.bossId }),
       }),
     };

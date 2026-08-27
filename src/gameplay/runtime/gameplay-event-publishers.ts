@@ -4,6 +4,7 @@ import type { OutcomeRunState } from "../run/outcome-planner";
 export interface TearSpawnFactDetail {
   readonly vn: string;
   readonly b: string;
+  readonly vid?: string;
 }
 
 /** Shared native-fact boundary for every host that installs spawned enemies. */
@@ -15,6 +16,7 @@ export function createTearSpawnFactPublisher<TEnemy extends Readonly<{ x: number
     events.emit({
       kind: "spawn", actorId: actorId(enemy), actorKind, x: enemy.x, y: enemy.y,
       variantName: detail.vn, bossId: detail.b,
+      ...(detail.vid === undefined ? {} : { variantId: detail.vid }),
     });
   };
 }

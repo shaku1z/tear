@@ -79,4 +79,29 @@ describe("live enemy spawn", () => {
     expect(base.rollAffixes).not.toHaveBeenCalled();
     expect(base.recordSpawn).toHaveBeenCalledWith(target, "boss", { vn: "", b: "warden" });
   });
+
+  it("passes authored stage context and restores a selected identity without rerolling", () => {
+    const target = enemy();
+    const { base } = port({
+      run: () => ({ mode: "campaign" as const, wave: 6, stageId: "verdant-sanctum" as const }),
+      contentWave: () => 6,
+      rollVariant: vi.fn(() => null),
+    });
+    completeEnemySpawn(target, { type: "charger" }, base);
+    expect(base.rollVariant).toHaveBeenCalledWith("charger", 6, expect.objectContaining({
+      stageId: "verdant-sanctum", localWave: 6, globalWave: 6, mode: "campaign",
+    }));
+
+    const restored = enemy();
+    completeEnemySpawn(restored, { type: "charger", variantId: "briar-stalker" }, base);
+    expect(base.rollVariant).toHaveBeenCalledTimes(1);
+    expect(base.applyVariant).toHaveBeenLastCalledWith(restored, expect.objectContaining({ id: "briar-stalker" }));
+  });
+
+  it("rejects an unknown serialized identity before installing the enemy", () => {
+    const target = enemy();
+    const { base, installed } = port();
+    expect(() => completeEnemySpawn(target, { type: "charger", variantId: "seedcaster" }, base)).toThrow(/unknown variant/u);
+    expect(installed).toHaveLength(0);
+  });
 });

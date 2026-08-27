@@ -34,9 +34,9 @@ describe("enemy reference catalog", () => {
       "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
     ]);
     expect(result.families).toHaveLength(11);
-    expect(result.families.filter((family) => family.variants.length === 0)).toHaveLength(7);
+    expect(result.families.filter((family) => family.variants.length === 0)).toHaveLength(6);
     expect(result.families.find((family) => family.id === "charger")?.variants.map((variant) => variant.id)).toEqual([
-      "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist",
+      "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker",
     ]);
     expect(result.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
     expect(result.presets).toEqual([

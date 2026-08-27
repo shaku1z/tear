@@ -31,6 +31,7 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
       const dx = player.x - this.x, dist = Math.abs(dx), dir = Math.sign(dx) || 1;
 
       if (this.behavior === "brawler" || this.behavior === "duelist") this._brawler(dt, player, dist, dir);
+      else if (this.behavior === "briar-stalker") this._briarStalker(dt, player, dist, dir, E);
       else if (this.behavior === "stalker") this._stalker(dt, player, dist, dir, E);
       else if (this.behavior === "executioner") this._executioner(dt, player, dist, dir, projectiles);
       else if (this.behavior === "gravedigger") this._gravedigger(dt, player, dist, dir, projectiles);
@@ -134,6 +135,29 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
         default:
           this.vx = lerp(this.vx, dir * this.speed, clamp(8 * dt, 0, 1));
           if (dist < 300 && this.atkCd <= 0) { this.atk = "windup"; this.atkT = 0.28; this.atkDir = dir; }
+      }
+    }
+
+    /** Verdant Charger verb: a shorter thorn feint, then a bounded dash. */
+    _briarStalker(dt: number, player: EnemyPlayerPort, dist: number, dir: number, E: typeof CONFIG.enemy) {
+      if (player.dashTimer > 0 && Math.sign(player.dashX) === dir && dist < 220 && this.evadeCd <= 0 && this.onGround) {
+        this.vx = -dir * 620; this.vy = -420; this.evadeCd = 1.2; this.atk = "recover"; this.atkCd = 0.45;
+        FX.burst(this.x, this.y, -dir, -1, 4, this.color);
+        return;
+      }
+      if (this.atk === "windup") {
+        this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
+        if (this.atkT <= 0) { this.atk = "commit"; this.atkT = 0.3; this.vx = this.atkDir * E.chargeSpeed * 1.05; if (this.onGround) this.vy = -280; }
+      } else if (this.atk === "commit") {
+        this.vx = this.atkDir * E.chargeSpeed * 1.05; this.atkT -= dt;
+        if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = 0.7; }
+      } else if (this.atk === "recover") {
+        this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1)); if (this.atkCd <= 0) this.atk = "idle";
+      } else {
+        this.vx = lerp(this.vx, dir * this.speed * 1.08, clamp(8 * dt, 0, 1));
+        if (dist < 270 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 140) {
+          this.atk = "windup"; this.atkT = 0.34; this.atkMax = 0.34; this.atkDir = dir;
+        }
       }
     }
 
@@ -269,6 +293,12 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
         const p = new Projectile(this.x, this.y, (dx / m) * X.warlockSpeed, (dy / m) * X.warlockSpeed);
         this.ownProjectile(p); p.dmg = X.warlockDmg * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt; p.r = 11; p.tint = this.color; p.kind = "orb";
         projectiles.push(p); return;
+      }
+      if (b === "seedcaster") {                     // Verdant seed: a smaller, drifting orb
+        const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+        const p = new Projectile(this.x, this.y, (dx / m) * X.warlockSpeed * 0.82, (dy / m) * X.warlockSpeed * 0.82);
+        this.ownProjectile(p); p.dmg = X.warlockDmg * 0.82 * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt * 0.7;
+        p.r = 8; p.tint = this.color; p.kind = "seed"; p.mine = true; p.armT = 0.45; p.life = 6; p.gravity = CONFIG.bomber.bombGravity; projectiles.push(p); return;
       }
       if (b === "chain") {                          // a shot that roots you in place on hit
         const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;

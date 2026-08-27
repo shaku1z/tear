@@ -12,6 +12,8 @@ export interface VisualSpawnEvent {
   readonly x: number;
   readonly y: number;
   readonly vn?: string;
+  /** Stable authored variant identity; vn remains for legacy visual packets. */
+  readonly vid?: string;
   readonly b?: string;
 }
 export interface VisualDeathEvent { readonly t: number; readonly id: number; readonly c: string }

@@ -24,6 +24,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.tickTimers(dt);
       const C = this.cfg;
       if (this.behavior === "divebomb") this._divebomb(dt, player, C);
+      else if (this.behavior === "canopy-diver") this._canopyDiver(dt, player, C);
       else if (this.behavior === "highdive") this._highdive(dt, player, C);
       else this._swoop(dt, player, C);
       this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
@@ -86,6 +87,28 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
         this.x += this.vx * dt; this.y += this.vy * dt;
         this.aimTimer -= dt;
         if (this.aimTimer <= 0) { this.state = "warn"; this.warnT = 1.1; this.diveX = player.x; }
+      }
+    }
+
+    /** Verdant Flyer verb: a high warning, then a steeper, shorter dive. */
+    _canopyDiver(dt: number, player: EnemyPlayerPort, C: typeof CONFIG.flyer) {
+      if (this.state === "warn") {
+        this.diveX = this.diveX == null ? player.x : lerp(this.diveX, player.x, clamp(1.1 * dt, 0, 1));
+        this.vx = lerp(this.vx, (this.diveX - this.x) * 0.8, clamp(3 * dt, 0, 1));
+        this.vy = lerp(this.vy, 0, clamp(3 * dt, 0, 1)); this.x += this.vx * dt; this.y += this.vy * dt;
+        this.warnT -= dt;
+        if (this.warnT <= 0) { this.state = "dive"; this.vx = 0; this.vy = C.swoopSpeed * 1.7; }
+      } else if (this.state === "dive") {
+        this.y += this.vy * dt; this.x += this.vx * dt;
+        if (this.y >= CONFIG.world.groundY - this.hh - 2) {
+          this.y = CONFIG.world.groundY - this.hh; this.stun = 0.65; this.state = "hover"; this.aimTimer = C.swoopInterval * 1.35; this.diveX = null;
+          FX.ring(this.x, this.y + this.hh, 11, this.color);
+        }
+      } else {
+        this.y = lerp(this.y, 96, clamp(2.5 * dt, 0, 1));
+        this.vx = lerp(this.vx, (player.x - this.x) * 0.45, clamp(2 * dt, 0, 1)); this.x += this.vx * dt;
+        this.aimTimer -= dt;
+        if (this.aimTimer <= 0 && Math.abs(player.x - this.x) < 620) { this.state = "warn"; this.warnT = 0.75; this.diveX = player.x; }
       }
     }
 
@@ -252,7 +275,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
           this.integrate(dt, platforms); return;
         }
       }
-      const sp = this.stun > 0 ? 0 : (this.enraged ? this.speed * 1.8 : this.speed);
+      const sp = this.stun > 0 ? 0 : (this.enraged ? this.speed * 1.8 : this.behavior === "bark-sentinel" ? this.speed * 0.82 : this.speed);
       this.vx = lerp(this.vx, this.guardSide * sp, clamp((this.enraged ? 8 : 5) * dt, 0, 1));
       this.integrate(dt, platforms);
     }

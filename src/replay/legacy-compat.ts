@@ -211,9 +211,10 @@ export class LegacyGhostEngine {
       this.#visualIds.set(event.actorId, visualId);
       this.#actorIdsByVisualId.set(visualId, event.actorId);
       const base = { t: this.#time(), id: visualId, k: event.actorKind, x: Math.round(event.x), y: Math.round(event.y) };
-      recording.spawns.push(event.variantName === undefined && event.bossId === undefined
+      recording.spawns.push(event.variantName === undefined && event.variantId === undefined && event.bossId === undefined
         ? base
         : { ...base, ...(event.variantName === undefined ? {} : { vn: event.variantName }),
+          ...(event.variantId === undefined ? {} : { vid: event.variantId }),
           ...(event.bossId === undefined ? {} : { b: event.bossId }) });
     } else if (event.kind === "death") {
       const visualId = this.#visualIds.get(event.actorId);
