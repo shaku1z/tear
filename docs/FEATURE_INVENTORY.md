@@ -101,6 +101,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   proves the ordered chapter handoff and baseline Verdant pool. Protected-main
   publication, wiki dispatch, and deployment gates keep this feature branch
   explicitly non-publishable pending Pale and authorized seven-stage integration.
+- [x] Verdant C9 presentation slice (engineering-only) — stable stage-ID
+  dispatch now renders the pale-jade canopy opening, sanctuary tree, flooded
+  cloisters, framing roots, bounded pollen, restrained water bands, and
+  verdant-rootstone platform states. Immutable presentation snapshots drive
+  Bloom, link, Graft/Regrowth, and boss-warning rendering; reduced-motion,
+  high-contrast, flash-scale, and low-graphics settings preserve canonical
+  environment hashes. Bounded cache/light metrics, true viewport-bleed tests,
+  and an exact-build four-viewport browser journey provide responsive evidence.
+  This is the biome's first player-visible art slice, not completion of its
+  enemies, Rootbound fight, final soundtrack, or public release package.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

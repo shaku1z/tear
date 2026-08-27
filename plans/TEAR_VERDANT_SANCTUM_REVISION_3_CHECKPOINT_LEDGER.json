@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C9",
-  "currentSubgoal": "VS3-C9-S1",
+  "currentCheckpoint": "VS3-C10",
+  "currentSubgoal": "VS3-C10-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -18,14 +18,15 @@
     "VS3-C5",
     "VS3-C6",
     "VS3-C7",
-    "VS3-C8"
+    "VS3-C8",
+    "VS3-C9"
   ],
-  "lastGreenCheckpoint": "VS3-C8",
+  "lastGreenCheckpoint": "VS3-C9",
   "lastEvidence": [
-    "VS3-C8 engineering-only six-stage insertion is green at fbfc070128c64a5ac74c0ca8645e875c902a71cb; typed stage/chapter/environment data, local-wave pools, central activation, exact State Forge and natural wave-31 entry, temporary non-public music fallback, protected publication boundaries, and all checkpoint gates pass."
+    "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C9-S1: implement the source-owned rootstone material contract.",
+  "nextAction": "Execute VS3-C10-S1: add Rootbound identity, provisional phase marks, and source-owned Verdant stage mapping.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1351,47 +1352,47 @@
         {
           "id": "VS3-C9-S1",
           "description": "Dispatch Verdant art through stable stage/presentation identity rather than display name.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S2",
           "description": "Implement sky, far tree/city, middle flooded ruins, near framing roots, and sparse motes.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S3",
           "description": "Implement restrained lower-field water/reflection without expensive full mirror simulation.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S4",
           "description": "Implement verdant-rootstone for normal and living-arena platform states.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S5",
           "description": "Implement Bloom, link, Graft, Regrowth, and boss warning presentation from immutable snapshots/facts.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S6",
           "description": "Implement reduced-motion, high-contrast, flash-scale, and low-graphics variants.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S7",
           "description": "Bound particles, gradients, cached assets, and transient lights.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S8",
           "description": "Prove world bleed/overscan without moving the safe gameplay composition.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C9-S9",
           "description": "Capture craft review at required viewports while keeping permanent tests geometry/behavior based.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -1436,13 +1437,37 @@
         "Craft review notes",
         "Presentation performance counters"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "bc9ffa2",
+      "completionIdentity": "c14988f380b3fbd9bfd59820d1adeaac27c7ba81",
+      "commandsRun": [
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm exec vitest run tests/unit/backdrop-biomes.test.ts tests/unit/platform-materials.test.ts tests/unit/verdant-presentation.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:responsive",
+        "pnpm test:browser:features",
+        "pnpm test:browser:verdant-presentation",
+        "node scripts/check-docs.mjs",
+        "git diff --check"
+      ],
+      "evidence": [
+        "Stable stage-ID dispatch and cache seeding select Verdant art without coupling to the public display name.",
+        "Layered backdrop rendering provides the jade canopy opening, sanctuary tree, flooded cloisters, framing roots, bounded pollen, and fixed lower-water reflection bands.",
+        "Verdant-rootstone owns stable, stressed, warning, broken, and reforming platform states for ordinary and future living-arena platforms.",
+        "Bloom Wells, root links, Graft/Regrowth, and boss warnings render from immutable environment presentation snapshots; accessibility and graphics settings preserve the canonical environment hash.",
+        "Backdrop resources remain bounded at 40 cached motes per stage and 16 transient lights, with observable metrics; Verdant reflection work uses fixed loop budgets rather than mirror simulation.",
+        "Permanent geometry tests prove true viewport bleed at ultrawide and 4:3 shapes without moving the safe gameplay composition.",
+        "The exact-build Verdant wave-31 browser journey captured four required viewport shapes with no browser errors and painted-pixel ratios from 0.8865 to 0.9448.",
+        "Browser validation exposed a real State Forge stage/environment mismatch; the live runtime now routes forged stage loads through the same central stage-plus-environment transition path as campaign progression.",
+        "Checkpoint minimum gates passed: 12 focused presentation tests, 6 responsive viewport/DPR profiles, the browser feature matrix, and the four-viewport Verdant presentation journey.",
+        "Test-standalone fingerprint 3b6fff6a386e763df703db973c25e4ca915189ce73252609efa20f6e683aa003."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Craft review confirms a distinct, readable pale-jade sanctuary slice. Narrow engineering captures retain a dense debug inventory overlay; full player-facing UI/accessibility integration remains scheduled later.",
+        "This remains an engineering-only six-stage intermediate. Verdant publication is prohibited, Rootbound gameplay is not implemented until VS3-C10, and C40 is unchanged."
+      ]
     },
     {
       "id": "VS3-C10",

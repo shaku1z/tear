@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C8 green** |
-| Current checkpoint | `VS3-C9` |
+| Status | **Active implementation authority — VS3-C9 green** |
+| Current checkpoint | `VS3-C10` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4227,7 +4227,7 @@ Add the authored Verdant stage to current typed catalogs and campaign flow for e
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Presentation / accessibility owner |
 | Dependencies | VS3-C5, VS3-C8 |
 | Release boundary | Player-visible engineering build; no protected promotion |
@@ -4238,9 +4238,9 @@ Implement the locked Verdant visual identity through current stable presentation
 
 ## Entry conditions
 
-- [ ] VS3-C8 is green.
-- [ ] Gameplay geometry and environment facts are stable.
-- [ ] Current backdrop, platform, cinematic, accessibility, overscan, and responsive contracts have been read.
+- [x] VS3-C8 is green.
+- [x] Gameplay geometry and environment facts are stable.
+- [x] Current backdrop, platform, cinematic, accessibility, overscan, and responsive contracts have been read.
 
 ## Primary files and authorities
 
@@ -4255,15 +4255,15 @@ Implement the locked Verdant visual identity through current stable presentation
 
 ## Sub-goals
 
-- [ ] **VS3-C9-S1** — Dispatch Verdant art through stable stage/presentation identity rather than display name.
-- [ ] **VS3-C9-S2** — Implement sky, far tree/city, middle flooded ruins, near framing roots, and sparse motes.
-- [ ] **VS3-C9-S3** — Implement restrained lower-field water/reflection without expensive full mirror simulation.
-- [ ] **VS3-C9-S4** — Implement verdant-rootstone for normal and living-arena platform states.
-- [ ] **VS3-C9-S5** — Implement Bloom, link, Graft, Regrowth, and boss warning presentation from immutable snapshots/facts.
-- [ ] **VS3-C9-S6** — Implement reduced-motion, high-contrast, flash-scale, and low-graphics variants.
-- [ ] **VS3-C9-S7** — Bound particles, gradients, cached assets, and transient lights.
-- [ ] **VS3-C9-S8** — Prove world bleed/overscan without moving the safe gameplay composition.
-- [ ] **VS3-C9-S9** — Capture craft review at required viewports while keeping permanent tests geometry/behavior based.
+- [x] **VS3-C9-S1** — Dispatch Verdant art through stable stage/presentation identity rather than display name.
+- [x] **VS3-C9-S2** — Implement sky, far tree/city, middle flooded ruins, near framing roots, and sparse motes.
+- [x] **VS3-C9-S3** — Implement restrained lower-field water/reflection without expensive full mirror simulation.
+- [x] **VS3-C9-S4** — Implement verdant-rootstone for normal and living-arena platform states.
+- [x] **VS3-C9-S5** — Implement Bloom, link, Graft, Regrowth, and boss warning presentation from immutable snapshots/facts.
+- [x] **VS3-C9-S6** — Implement reduced-motion, high-contrast, flash-scale, and low-graphics variants.
+- [x] **VS3-C9-S7** — Bound particles, gradients, cached assets, and transient lights.
+- [x] **VS3-C9-S8** — Prove world bleed/overscan without moving the safe gameplay composition.
+- [x] **VS3-C9-S9** — Capture craft review at required viewports while keeping permanent tests geometry/behavior based.
 
 ## Agent implementation procedure
 
@@ -4276,11 +4276,11 @@ Implement the locked Verdant visual identity through current stable presentation
 
 ## TearBench same-change response
 
-- [ ] Presentation paths route through presentation evidence, not simulation scenarios alone.
-- [ ] Add actual browser journey/screenshot evidence with build identity.
-- [ ] Add no-browser-error and no-privileged-state-leak assertions.
-- [ ] Keep environment canonical hash identical with graphics/high-contrast/reduced-motion changes.
-- [ ] Update evidence routes for stable presentation paths.
+- [x] Presentation paths route through presentation evidence, not simulation scenarios alone.
+- [x] Add actual browser journey/screenshot evidence with build identity.
+- [x] Add no-browser-error and no-privileged-state-leak assertions.
+- [x] Keep environment canonical hash identical with graphics/high-contrast/reduced-motion changes.
+- [x] Update evidence routes for stable presentation paths.
 
 ## Minimum focused proof
 
@@ -4293,11 +4293,11 @@ Implement the locked Verdant visual identity through current stable presentation
 
 ## Exit conditions
 
-- [ ] Verdant is visually distinct and readable.
-- [ ] Gameplay hashes are unchanged by presentation settings.
-- [ ] All required viewports paint through true viewport bounds.
-- [ ] Warnings remain readable in high contrast/low graphics/reduced motion.
-- [ ] No unbounded allocation or DOM layout is introduced.
+- [x] Verdant is visually distinct and readable.
+- [x] Gameplay hashes are unchanged by presentation settings.
+- [x] All required viewports paint through true viewport bounds.
+- [x] Warnings remain readable in high contrast/low graphics/reduced motion.
+- [x] No unbounded allocation or DOM layout is introduced.
 
 ## Stop and escalate conditions
 
@@ -4313,9 +4313,23 @@ Implement the locked Verdant visual identity through current stable presentation
 - Craft review notes
 - Presentation performance counters
 
+## Checkpoint record
+
+- Implementation identity: `c14988f380b3fbd9bfd59820d1adeaac27c7ba81`.
+- Stable stage-ID dispatch now selects the Verdant backdrop and deterministic cache seed without depending on a mutable display name.
+- The player-visible engineering slice paints a jade canopy opening, giant sanctuary tree, layered flooded cloisters, near framing roots, sparse pollen, restrained lower-water reflection bands, and verdant-rootstone platform states.
+- Bloom Wells, root links, Graft/Regrowth, and boss-warning facts render from immutable presentation snapshots; graphics, contrast, reduced-motion, and flash settings do not mutate canonical environment hashes.
+- Cached motes and transient lights are bounded and observable through presentation metrics; reflection work remains a fixed-band effect rather than mirror simulation.
+- True viewport-bleed geometry is covered at ultrawide and 4:3 shapes without changing the safe gameplay composition. The exact wave-31 browser journey captures 1600×900, 2048×1024, 1200×900, and 896×414 frames with exact build identity, no browser errors, and a permanent painted-pixel guard.
+- Craft review found the intended distinct pale-jade sanctuary silhouette and gameplay readability intact across the required shapes. The engineering/debug inventory overlay is visibly dense at narrow widths but is not part of the world presentation contract and remains covered by the later full UI/accessibility checkpoint.
+- The browser journey exposed and permanently corrected a real integration defect: State Forge had received the platform-only stage loader. It now uses the same central stage-plus-environment transition path as campaign progression.
+- Minimum proof passed: typecheck, lint, 12/12 focused presentation tests, exact test-standalone build, the 6-profile responsive matrix, browser feature matrix, and the four-viewport Verdant presentation journey.
+- Test-standalone fingerprint: `3b6fff6a386e763df703db973c25e4ca915189ce73252609efa20f6e683aa003`.
+- Evidence is engineering-only and non-certifying; Verdant publication remains prohibited and C40 is unchanged.
+
 ## Required handoff sentence
 
-> `VS3-C9 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+> `VS3-C9 is GREEN at c14988f380b3fbd9bfd59820d1adeaac27c7ba81. The next authorized action is VS3-C10-S1, adding Rootbound identity, provisional phase marks, and source-owned Verdant stage mapping. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
