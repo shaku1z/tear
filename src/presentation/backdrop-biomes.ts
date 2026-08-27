@@ -5,6 +5,14 @@ import type { BiomeArt, Stage } from "./backdrop";
 // surface biomes are light (warm/cool atmospheres), only The Tear is a dark void.
 type BiomeArtCatalog = Readonly<Partial<Record<Stage["id"], BiomeArt>>> & Readonly<{ _default: BiomeArt }>;
 
+export const VERDANT_BACKDROP_LIMITS = Object.freeze({
+  reflectionBands: 5,
+  lowGraphicsReflectionBands: 2,
+  sanctuaryArches: 10,
+  floodedCloisters: 6,
+  framingRootPairs: 3,
+});
+
 const BIOME_ART: BiomeArtCatalog = {
   _default: {
     sky(B, ctx, stage, c, _t, gy, view) { B.baseSky(ctx, stage, c, gy, undefined, view); },
@@ -185,9 +193,31 @@ const BIOME_ART: BiomeArtCatalog = {
       }
       ctx.restore();
 
+      // A bounded lower-field wash suggests water without mirroring the live scene.
+      const waterTop = gy - 142, waterBottom = view ? Math.max(gy, view.bottom) : B.H + B.PY;
+      const water = ctx.createLinearGradient(0, waterTop, 0, waterBottom);
+      water.addColorStop(0, "rgba(134,205,178,0.10)");
+      water.addColorStop(0.42, "rgba(67,170,155,0.22)");
+      water.addColorStop(1, "rgba(16,59,54,0.30)");
+      ctx.fillStyle = water; ctx.fillRect(vl, waterTop, vr - vl, waterBottom - waterTop);
+      const reflectionBands = B.lowGraphics()
+        ? VERDANT_BACKDROP_LIMITS.lowGraphicsReflectionBands
+        : VERDANT_BACKDROP_LIMITS.reflectionBands;
+      ctx.save(); ctx.strokeStyle = "#bce7c9"; ctx.lineCap = "round";
+      for (let index = 0; index < reflectionBands; index += 1) {
+        const y = waterTop + 22 + index * 24;
+        const width = 210 + index * 68;
+        const center = B.W * 0.52 - px * (10 + index * 3);
+        ctx.globalAlpha = 0.16 - index * 0.018;
+        ctx.lineWidth = index === 0 ? 3 : 2;
+        ctx.beginPath(); ctx.moveTo(center - width, y); ctx.lineTo(center - 28, y);
+        ctx.moveTo(center + 34, y); ctx.lineTo(center + width * 0.86, y); ctx.stroke();
+      }
+      ctx.restore();
+
       // Near roots frame the arena edges without crossing the central silhouette lane.
       ctx.save(); ctx.globalAlpha = 0.72; ctx.strokeStyle = "#103b36"; ctx.lineCap = "round";
-      for (let index = 0; index < 3; index += 1) {
+      for (let index = 0; index < VERDANT_BACKDROP_LIMITS.framingRootPairs; index += 1) {
         const inset = index * 42;
         ctx.lineWidth = 34 - index * 7;
         ctx.beginPath(); ctx.moveTo(vl - 28, gy - 24 - inset); ctx.bezierCurveTo(vl + 110, gy - 150 - inset, vl + 118, gy - 300, vl + 22, gy - 390 - inset); ctx.stroke();

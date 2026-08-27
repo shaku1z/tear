@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { STAGES } from "../../src/gameplay/stages";
 import { createBackdrop, type BackdropPolicy } from "../../src/presentation/backdrop";
+import { VERDANT_BACKDROP_LIMITS } from "../../src/presentation/backdrop-biomes";
 
-interface DrawCounts { readonly fills: number; readonly strokes: number; readonly arcs: number; readonly curves: number }
+interface DrawCounts { readonly fills: number; readonly strokes: number; readonly arcs: number; readonly curves: number; readonly images: number }
 
 function renderVerdant(low: boolean): DrawCounts {
-  let fills = 0, strokes = 0, arcs = 0, curves = 0;
+  let fills = 0, strokes = 0, arcs = 0, curves = 0, images = 0;
   const gradient = { addColorStop: () => undefined };
   const context = new Proxy({}, {
     get: (_target, key) => {
@@ -14,6 +15,7 @@ function renderVerdant(low: boolean): DrawCounts {
       if (key === "stroke") return () => { strokes += 1; };
       if (key === "arc") return () => { arcs += 1; };
       if (key === "bezierCurveTo") return () => { curves += 1; };
+      if (key === "drawImage") return () => { images += 1; };
       if (key === "createRadialGradient" || key === "createLinearGradient") return () => gradient;
       return () => undefined;
     },
@@ -33,7 +35,7 @@ function renderVerdant(low: boolean): DrawCounts {
   const stage = STAGES.find((candidate) => candidate.id === "verdant-sanctum");
   if (stage === undefined) throw new Error("Verdant stage is required");
   createBackdrop(policy).draw(context, stage, 3, 800, { left: -224, top: -126, right: 1_824, bottom: 1_026 });
-  return { fills, strokes, arcs, curves };
+  return { fills, strokes, arcs, curves, images };
 }
 
 describe("Verdant backdrop", () => {
@@ -47,8 +49,20 @@ describe("Verdant backdrop", () => {
 
   it("keeps the structural silhouette while low graphics removes ambient motes", () => {
     const full = renderVerdant(false), low = renderVerdant(true);
-    expect(low.strokes).toBe(full.strokes);
+    expect(full.strokes - low.strokes).toBe(
+      VERDANT_BACKDROP_LIMITS.reflectionBands - VERDANT_BACKDROP_LIMITS.lowGraphicsReflectionBands,
+    );
     expect(low.arcs).toBeLessThan(full.arcs);
     expect(low.curves).toBe(full.curves);
+  });
+
+  it("uses a fixed lower-field reflection budget without a live-scene mirror", () => {
+    const full = renderVerdant(false), low = renderVerdant(true);
+    expect(VERDANT_BACKDROP_LIMITS).toMatchObject({ reflectionBands: 5, lowGraphicsReflectionBands: 2 });
+    expect(full.strokes - low.strokes).toBe(
+      VERDANT_BACKDROP_LIMITS.reflectionBands - VERDANT_BACKDROP_LIMITS.lowGraphicsReflectionBands,
+    );
+    expect(full.images).toBe(0);
+    expect(low.images).toBe(0);
   });
 });
