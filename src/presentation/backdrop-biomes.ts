@@ -1,9 +1,11 @@
-import type { BiomeArt } from "./backdrop";
+import type { BiomeArt, Stage } from "./backdrop";
 
 // ------- per-biome art direction (lush atmosphere, layered on the engine) -------
 // Each biome keeps its stage.bg luminance polarity so THEME ink stays readable: the four
 // surface biomes are light (warm/cool atmospheres), only The Tear is a dark void.
-const BIOME_ART: Record<string, BiomeArt> = {
+type BiomeArtCatalog = Readonly<Partial<Record<Stage["id"], BiomeArt>>> & Readonly<{ _default: BiomeArt }>;
+
+const BIOME_ART: BiomeArtCatalog = {
   _default: {
     sky(B, ctx, stage, c, _t, gy, view) { B.baseSky(ctx, stage, c, gy, undefined, view); },
     far(B, ctx, stage, c, _t, px, gy, view) {
@@ -14,7 +16,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Grounds — clean dawn, disciplined order: warm light, a colonnade, light shafts
-  "The Grounds": {
+  grounds: {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.10, view);
       const g = ctx.createLinearGradient(0, 0, 0, gy);
@@ -43,7 +45,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Undercroft — gray steel industry: furnace glow, girders, a slow-turning gear, embers
-  "The Undercroft": {
+  undercroft: {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.08, view);
       const fx = B.W * 0.16, fy = gy - 40;
@@ -88,7 +90,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Crimson Fields — golden-hour battlefield: warm sky, hills, burning banners, ash
-  "The Crimson Fields": {
+  "crimson-fields": {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.0, view);
       const g = ctx.createLinearGradient(0, 0, 0, gy);
@@ -119,7 +121,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Voidspire — surreal violet: aurora bands, floating broken geometry, drifting shards
-  "The Voidspire": {
+  voidspire: {
     sky(B, ctx, stage, c, t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.14, view);
       ctx.save();
@@ -153,7 +155,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Tear — the void: a central glowing rift that pulses and lights the scene, a starfield
-  "The Tear": {
+  tear: {
     sky(B, ctx, stage, c, t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.10, view);
       const vl = view ? view.left : -B.PX, vr = view ? view.right : B.W + B.PX;
@@ -241,5 +243,9 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "190,230,255", twinkle: true, drift: 6, aMul: 1.1 }, view); },
   },
 };
+
+export function biomeArtForStage(stage: Pick<Stage, "id">): BiomeArt {
+  return BIOME_ART[stage.id] ?? BIOME_ART._default;
+}
 
 export { BIOME_ART };

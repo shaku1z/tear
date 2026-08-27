@@ -7,7 +7,7 @@
 // per-biome art (silhouettes, biome particles, set dressing) on top of this engine.
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type { STAGES as StageValues } from "../gameplay/stages";
-import { BIOME_ART } from "./backdrop-biomes";
+import { biomeArtForStage } from "./backdrop-biomes";
 import { clamp, lerp } from "../domain/geometry";
 import { VoidGen } from "../gameplay/voidgen";
 import type { VoidPlatform } from "../gameplay/voidgen";
@@ -50,7 +50,7 @@ type BackdropEffect = LocalFlare | ScreenBloom;
 export interface BackdropController {
   readonly W: number; readonly H: number; readonly PX: number; readonly PY: number;
   lowGraphics(): boolean;
-  _cache: Record<string, BackdropCache>; _fx: BackdropEffect[];
+  _cache: Partial<Record<Stage["id"], BackdropCache>>; _fx: BackdropEffect[];
   fillFull(context: CanvasRenderingContext2D, view?: ViewRect): void; resetFx(): void;
   _rgb(hex?: string): [number, number, number]; _mix(a: string, b: string, amount: number): string;
   _lighten(color: string, amount: number): string; _darken(color: string, amount: number): string;
@@ -120,7 +120,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     const r = view ? view.right : this.W + this.PX, b = view ? view.bottom : this.H + this.PY;
     ctx.fillRect(l, t, r - l, b - t);
   },
-  _cache: {},                 // stage.name -> baked + spec
+  _cache: {},                 // stable stage ID -> baked + spec
   _fx: [],                    // transient reactive lights (combat -> backdrop)
   resetFx() { this._fx.length = 0; },
 
@@ -149,7 +149,8 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     const vg = v.createRadialGradient(lw / 2, lh * 0.46, lh * 0.32, lw / 2, lh * 0.5, lw * 0.72);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, dark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.20)");
     v.fillStyle = vg; v.fillRect(0, 0, lw, lh);
-    const r = this._rng(stage.name.length * 131 + 7);
+    const identitySeed = [...stage.id].reduce((seed, character) => Math.imul(seed ^ character.charCodeAt(0), 16777619), 2166136261);
+    const r = this._rng(identitySeed);
     v.globalAlpha = dark ? 0.05 : 0.035;
     for (let i = 0; i < 1500; i++) { const x = r() * lw, y = r() * lh, sz = r() * 1.4; v.fillStyle = r() > 0.5 ? "#fff" : "#000"; v.fillRect(x, y, sz, sz); }
     v.globalAlpha = 1;
@@ -159,18 +160,17 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     for (let i = 0; i < 40; i++) parts.push({ x: r() * this.W, y: r() * this.H, z: 0.3 + r() * 0.9, r: 0.6 + r() * 2.0, ph: r() * 6.28, sp: 5 + r() * 14 });
 
     const cache = { vign, dark, parts, accent: stage.accent, _vw: this.W, _vh: this.H };
-    this._cache[stage.name] = cache;
+    this._cache[stage.id] = cache;
     return cache;
   },
-  _get(stage) { const c = this._cache[stage.name]; if (c?._vw === this.W && c._vh === this.H) return c; return this._build(stage); },
+  _get(stage) { const c = this._cache[stage.id]; if (c?._vw === this.W && c._vh === this.H) return c; return this._build(stage); },
 
   // === sky + parallax + motes (inside world camera, before platforms) ===
   // dispatches to per-biome art (BIOME_ART), falling back to the generic treatment.
   draw(ctx, stage, t, playerX, view) {
     const c = this._get(stage), gy = config.world.groundY;
     const px = (playerX - this.W / 2) / (this.W / 2);   // -1..1, drives parallax
-    const art = BIOME_ART[stage.name] ?? BIOME_ART._default;
-    if (!art) throw new Error("Backdrop default biome art is unavailable");
+    const art = biomeArtForStage(stage);
     art.sky(this, ctx, stage, c, t, gy, view);
     art.far(this, ctx, stage, c, t, px, gy, view);
     art.motes(this, ctx, stage, c, t, px, view);

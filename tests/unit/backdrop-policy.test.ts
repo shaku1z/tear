@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { STAGES } from "../../src/gameplay/stages";
 import { createBackdrop, type BackdropPolicy } from "../../src/presentation/backdrop";
+import { biomeArtForStage } from "../../src/presentation/backdrop-biomes";
 
 function canvas(): HTMLCanvasElement {
   const gradient = { addColorStop: () => undefined };
@@ -52,5 +53,16 @@ describe("Backdrop policy", () => {
     expect(firstCache).not.toBe(secondCache);
     expect(firstCache.vign).not.toBe(secondCache.vign);
     expect(firstCache.parts).not.toBe(secondCache.parts);
+  });
+
+  it("dispatches and caches biome art by stable stage ID rather than display name", () => {
+    const controller = createBackdrop(policy({ sim: 0 }, 1_600));
+    const stage = STAGES[0];
+    if (stage === undefined) throw new Error("backdrop policy test requires a stage");
+    const renamed = { ...stage, name: "A COPY EDIT MUST NOT CHANGE ART" } as typeof stage;
+
+    expect(biomeArtForStage(renamed)).toBe(biomeArtForStage(stage));
+    expect(controller._get(renamed)).toBe(controller._get(stage));
+    expect(Object.keys(controller._cache)).toEqual([stage.id]);
   });
 });
