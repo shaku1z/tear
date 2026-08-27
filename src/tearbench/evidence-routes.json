@@ -165,6 +165,19 @@
     "authorityCommands": ["pnpm exec vitest run tests/unit/enemy-variants.test.ts tests/unit/verdant-variant-selection.test.ts tests/unit/live-enemy-spawn.test.ts tests/unit/tearbench-current-game-authority.test.ts", "pnpm exec vitest run tests/unit/game-reference.test.ts"]
   },
   {
+    "id": "verdant-c9-presentation",
+    "prefixes": ["src/presentation/backdrop.ts", "src/presentation/backdrop-biomes.ts", "src/presentation/platform-materials/verdant-rootstone.ts", "src/presentation/environment/", "src/gameplay/environment/bloom-well-presentation-facts.ts", "src/gameplay/environment/presentation-snapshot.ts", "src/app/live-world-presentation-adapters.ts", "tests/browser-verdant-presentation.js", "tests/unit/backdrop-biomes.test.ts", "tests/unit/platform-materials.test.ts", "tests/unit/verdant-presentation.test.ts"],
+    "scenarios": [],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "verdant-c9-responsive-presentation-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["browser", "viewport", "accessibility", "performance"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/backdrop-biomes.test.ts tests/unit/platform-materials.test.ts tests/unit/verdant-presentation.test.ts"],
+    "journeyCommands": ["pnpm test:browser:verdant-presentation"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],
