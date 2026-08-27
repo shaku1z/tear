@@ -1,4 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
+import { CAMPAIGN_STAGE_IDS } from "../gameplay/stages";
 import type { TearSnapshotV1 } from "./contracts";
 import type { TearSdlResolved } from "./tearsdl";
 import { validateEnvironmentCodecPayload } from "./environment-codec";
@@ -79,6 +80,17 @@ function patchEnvironment(snapshot: TearSnapshotV1, environment: unknown, expect
   hazard.routes = structuredClone(value.routes);
 }
 
+function patchExactStage(run: MutableRecord, stageId: string | undefined, wave: number): void {
+  if (stageId === undefined) return;
+  const stageIndex = CAMPAIGN_STAGE_IDS.findIndex((candidate) => candidate === stageId);
+  if (stageIndex < 0) throw new RangeError(`resolved scenario stage does not exist: ${stageId}`);
+  if (run.mode === "campaign" && Math.floor((wave - 1) / 10) !== stageIndex) {
+    throw new RangeError("campaign wave does not belong to the resolved scenario stage");
+  }
+  run.stage = stageIndex;
+  run._biomeIdx = stageIndex;
+}
+
 /** Compiles resolved TearSDL into a detached live-codec snapshot. */
 export function compileResolvedTearSdlSnapshot(
   source: TearSnapshotV1,
@@ -100,7 +112,9 @@ export function compileResolvedTearSdlSnapshot(
   run.difficulty = resolved.scenario.start.difficulty;
   run.diff = resolved.scenario.start.difficulty;
   run.weaponId = resolved.scenario.start.weapon;
-  run.wave = resolved.scenario.start.wave ?? 1;
+  const wave = resolved.scenario.start.wave ?? 1;
+  run.wave = wave;
+  patchExactStage(run, resolved.scenario.start.stage, wave);
   if (typeof state.playerHp === "number") player.hp = state.playerHp;
   if (typeof state.playerMaxHp === "number") player.maxHp = state.playerMaxHp;
   if (typeof state.playerHpRatio === "number") player.hp = Number(player.maxHp) * state.playerHpRatio;

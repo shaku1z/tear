@@ -29,6 +29,7 @@ export * from "./tearsdl";
 export * from "./state-forge-studio-model";
 export * from "./state-forge-timeline";
 export * from "./state-forge-live-compiler";
+export * from "./verdant-stage-engineering-scenario";
 export * from "./regression-intelligence";
 export * from "./bisection";
 export * from "./regression-minimization";
