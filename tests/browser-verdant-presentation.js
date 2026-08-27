@@ -31,6 +31,7 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
+    window.__VERDANT_C9_ENVIRONMENT__ = environment;
     const launched = environment.forgeResolvedScenario(scenario);
     for (let index = 0; index < 12; index += 1) environment.renderFrame(1 / 60);
     const snapshot = environment.captureSnapshot("verdant-c9-browser");
@@ -58,7 +59,7 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
   for (const [label, width, height] of viewports) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => {
-      const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
+      const environment = window.__VERDANT_C9_ENVIRONMENT__;
       environment.renderFrame(1 / 60);
       environment.renderFrame(1 / 60);
       return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
