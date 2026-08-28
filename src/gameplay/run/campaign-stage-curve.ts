@@ -35,3 +35,30 @@ export const CAMPAIGN_STAGE_CURVES = Object.freeze({
 export function campaignStageCurve(stageId: StageId): CampaignStageCurve {
   return CAMPAIGN_STAGE_CURVES[stageId];
 }
+
+export const SEVEN_STAGE_CURVE_IDS = Object.freeze([
+  "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "pale-traverse", "voidspire", "tear",
+] as const);
+export type SevenStageCurveId = typeof SEVEN_STAGE_CURVE_IDS[number];
+
+const prototypeCurve = (
+  health: number,
+  damage: number,
+  countAdd: number,
+  concurrentAdd: number,
+): CampaignStageCurve => Object.freeze({ health, damage, countAdd, concurrentAdd, disposition: "authored-prototype" });
+
+/** Inactive balance seed for joint Verdant + Pale reconciliation; never live campaign authority by itself. */
+export const SEVEN_STAGE_CURVE_PROTOTYPE = Object.freeze({
+  status: "engineering-prototype",
+  activation: "inactive-pending-pale",
+  stages: Object.freeze({
+    grounds: prototypeCurve(1, 1, 0, 0),
+    undercroft: prototypeCurve(1.28, 1.12, 2, 1),
+    "crimson-fields": prototypeCurve(1.56, 1.24, 4, 2),
+    "verdant-sanctum": prototypeCurve(1.82, 1.34, 5, 2),
+    "pale-traverse": prototypeCurve(2.08, 1.44, 6, 3),
+    voidspire: prototypeCurve(2.38, 1.52, 7, 3),
+    tear: prototypeCurve(2.72, 1.6, 8, 4),
+  } as const satisfies Readonly<Record<SevenStageCurveId, CampaignStageCurve>>),
+});
