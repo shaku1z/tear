@@ -375,6 +375,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   have an explicit cleanup matrix. Every boundary clears environment-owned
   Verdant objects and Rootbound-local encounter state; terminal outcomes run
   boss cleanup before environment cleanup and lifecycle termination.
+  The exact active roster and engineering ruleset are also bound to a tracked
+  campaign-publication policy. Release preflight refuses the engineering-only
+  six-stage state, and game-reference publication separately rejects Verdant
+  without Pale. Publication requires an explicit public policy whose active
+  stages include both `verdant-sanctum` and `pale-traverse`.
   Wayfarer and difficulty-completion goals/copy now derive from the stage and
   difficulty catalogs; Gauntlet roster copy derives from boss identities; and
   the standard-mode profile projection is shared by run start and Well-Rounded.
