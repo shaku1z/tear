@@ -366,6 +366,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   parsing remains available. Stage facts retain numeric compatibility for
   Ghost 2 and add a current-roster-validated stable stage ID plus explicit
   enter/exit semantics for causal consumers.
+  No profile-version bump accompanies this engineering slice. The existing v2
+  profile envelope intentionally preserves arbitrary source-owned statistic and
+  achievement keys, so current and legacy saves retain Verdant values without
+  structural migration. Any future schema change stays gated on authorized
+  Verdant-plus-Pale joint promotion.
   Wayfarer and difficulty-completion goals/copy now derive from the stage and
   difficulty catalogs; Gauntlet roster copy derives from boss identities; and
   the standard-mode profile projection is shared by run start and Well-Rounded.
