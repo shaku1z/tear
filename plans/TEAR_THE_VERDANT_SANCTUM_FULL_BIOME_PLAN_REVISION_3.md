@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C13-S10 green; VS3-C13 aggregate gates next** |
-| Current checkpoint | `VS3-C13` |
+| Status | **Active implementation authority — VS3-C13 green at `0baeca907e1cdea9b82d4bda730649d305844276`; VS3-C14-S1 next** |
+| Current checkpoint | `VS3-C14` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4631,7 +4631,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 
 | Field | Value |
 | --- | --- |
-| Status | `in-progress` |
+| Status | `complete` |
 | Owner | Boss terminal / replay integration owner |
 | Dependencies | VS3-C12 |
 | Release boundary | Complete Rootbound encounter engineering claim; still non-certifying |
@@ -4642,9 +4642,9 @@ Implement the one-use Regrowth outcome matrix, Last Spring, living-arena escalat
 
 ## Entry conditions
 
-- [ ] VS3-C12 is green.
-- [ ] Phase II object creation and cleanup are stable.
-- [ ] Current boss terminal, campaign outro, replay seek, State Forge fork, and outcome chronology contracts are understood.
+- [x] VS3-C12 is green.
+- [x] Phase II object creation and cleanup are stable.
+- [x] Current boss terminal, campaign outro, replay seek, State Forge fork, and outcome chronology contracts are understood.
 
 ## Primary files and authorities
 
@@ -4701,12 +4701,12 @@ Implement the one-use Regrowth outcome matrix, Last Spring, living-arena escalat
 
 ## Exit conditions
 
-- [ ] Regrowth outcomes are correct and bounded.
-- [ ] Last Spring is readable and terminal-safe.
-- [ ] No phase reopens.
-- [ ] Every environment object cleans on boss terminal paths.
-- [ ] Campaign outro chronology is correct.
-- [ ] Capture/restore/fork evidence is hash-stable and capability-honest.
+- [x] Regrowth outcomes are correct and bounded.
+- [x] Last Spring is readable and terminal-safe.
+- [x] No phase reopens.
+- [x] Every environment object cleans on boss terminal paths.
+- [x] Campaign outro chronology is correct.
+- [x] Capture/restore/fork evidence is hash-stable and capability-honest.
 
 ## Stop and escalate conditions
 
@@ -4726,13 +4726,15 @@ Implement the one-use Regrowth outcome matrix, Last Spring, living-arena escalat
 
 > `VS3-C13 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
 
+> `VS3-C13 is GREEN at 0baeca907e1cdea9b82d4bda730649d305844276. The next authorized action is VS3-C14-S1, defining and testing cut, break, and projectile-cut capability resolution. Verdant publication remains prohibited, and C40 status is unchanged.`
+
 ---
 
 # VS3-C14 — Final Five, universal abilities, status, and object conformance
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `in-progress` |
 | Owner | Weapon/combat conformance owner |
 | Dependencies | VS3-C6, VS3-C12, VS3-C13 |
 | Release boundary | Cross-cutting gameplay validation; no roster redesign |
@@ -4743,7 +4745,7 @@ Prove every active weapon can answer every required Verdant combat object withou
 
 ## Entry conditions
 
-- [ ] Root links, Grafts, Regrowth links, and complete Rootbound behavior are stable.
+- [x] Root links, Grafts, Regrowth links, and complete Rootbound behavior are stable.
 - [ ] Current Final Five and ability conformance suites are green before Verdant additions.
 - [ ] Bloom Wells V1 still excludes weapon transport mutation.
 
