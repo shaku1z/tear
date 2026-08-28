@@ -123,6 +123,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   references, integrity, connection geometry, and created tick. The shared codec
   accepts source-owned specialized combat-object factory IDs generically; no
   Graft placement registry or actor-local object collection was added.
+  VS3-C12-S3 locks the direct-damage rule against the actual production state:
+  with all three canonical Grafts present and active, Rootbound does not block
+  ordinary damage, its incoming-damage limit remains non-zero, and the normal
+  damage path reduces HP. No Graft-presence invulnerability flag exists; the
+  bounded Bastion multiplier remains canonical effect data for S4 resolution.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

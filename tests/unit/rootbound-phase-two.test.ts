@@ -56,4 +56,26 @@ describe("Rootbound Phase II Graft creation", () => {
     expect(grafts.map((graft) => graft.graftType)).toEqual(GRAFT_ANCHOR_TYPES);
     expect(grafts.every((graft) => graft.ownerId === "enemy:rootbound-live" && graft.targetId === "enemy:rootbound-live")).toBe(true);
   });
+
+  it("keeps Rootbound directly damageable while all three canonical Grafts exist and are active", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-direct-damage" });
+    environment.setRootboundActorsSource(() => [Object.freeze({
+      id: "enemy:rootbound-live",
+      source: actor,
+      state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+        graftPlacements: actor.graftAnchorPlacements(), ownerPosition: Object.freeze({ x: actor.x, y: actor.y }) }),
+    })]);
+    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    for (const graft of environment.combatObjects().filter(isGraftAnchorState)) environment.updateCombatObject(graft.id, { state: "active" });
+    expect(environment.combatObjects().filter(isGraftAnchorState)).toHaveLength(3);
+    expect(actor.blocksDamage()).toBe(false);
+    expect(actor.limitIncomingDamage(20)).toBe(20);
+    const hpBefore = actor.hp;
+    expect(actor._dot(20)).toBe(20);
+    expect(actor.hp).toBe(hpBefore - 20);
+  });
 });
