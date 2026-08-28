@@ -5264,7 +5264,7 @@ Complete all source/reference contracts and prepare—but do not prematurely exe
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | TearBench current-game integration owner |
 | Dependencies | VS3-C14, VS3-C16, VS3-C18 |
 | Release boundary | Engineering completion only; C40 remains separate |
@@ -5275,9 +5275,9 @@ Close every Verdant-specific evidence gap, make future drift fail the focused ga
 
 ## Entry conditions
 
-- [ ] All Verdant gameplay/content/reference checkpoints through VS3-C18 are green or have explicit authorized dispositions.
-- [ ] Current TearBench alignment remains green on the branch baseline.
-- [ ] Every existing Verdant scenario/evidence route can be executed from current source.
+- [x] All Verdant gameplay/content/reference checkpoints through VS3-C18 are green or have explicit authorized dispositions.
+- [x] Current TearBench alignment remains green on the branch baseline.
+- [x] Every existing Verdant scenario/evidence route can be executed from current source.
 
 ## Primary files and authorities
 
@@ -5298,18 +5298,18 @@ Close every Verdant-specific evidence gap, make future drift fail the focused ga
 
 ## Sub-goals
 
-- [ ] **VS3-C19-S1** — Reconcile source-derived coverage for Verdant stage, Rootbinder, Rootbound, variants, environment kinds, events, achievements, and music routing.
-- [ ] **VS3-C19-S2** — Finalize natural Rootbound scenario and all surgical State Forge Verdant scenarios.
-- [ ] **VS3-C19-S3** — Ensure every scenario launches its declared subject and backend and reaches a meaningful source-owned transition.
-- [ ] **VS3-C19-S4** — Finalize environment observation and invariant positive/negative proofs.
-- [ ] **VS3-C19-S5** — Finalize native environment causal event order and normal-session delivery.
-- [ ] **VS3-C19-S6** — Finalize live/detached capability map; implement support or fail closed explicitly.
-- [ ] **VS3-C19-S7** — Finalize environment codec migration, restore, and exact/semantic hash evidence.
-- [ ] **VS3-C19-S8** — Add diff-aware evidence routes for environment runtime, Verdant stage, Rootbinder, variants, Rootbound, progression, presentation, audio, and references.
-- [ ] **VS3-C19-S9** — Add negative anti-drift fixtures for unmapped stage, boss, enemy, environment kind, event, and wrong-subject scenario.
-- [ ] **VS3-C19-S10** — Ensure selected evidence commands are executed and artifacts are source/build bound.
-- [ ] **VS3-C19-S11** — Update current-game alignment/handoff/evidence documentation only with actual implemented capability.
-- [ ] **VS3-C19-S12** — Record every unresolved limitation without promoting engineering evidence to certification.
+- [x] **VS3-C19-S1** — Reconcile source-derived coverage for Verdant stage, Rootbinder, Rootbound, variants, environment kinds, events, achievements, and music routing.
+- [x] **VS3-C19-S2** — Finalize natural Rootbound scenario and all surgical State Forge Verdant scenarios.
+- [x] **VS3-C19-S3** — Ensure every scenario launches its declared subject and backend and reaches a meaningful source-owned transition.
+- [x] **VS3-C19-S4** — Finalize environment observation and invariant positive/negative proofs.
+- [x] **VS3-C19-S5** — Finalize native environment causal event order and normal-session delivery.
+- [x] **VS3-C19-S6** — Finalize live/detached capability map; implement support or fail closed explicitly.
+- [x] **VS3-C19-S7** — Finalize environment codec migration, restore, and exact/semantic hash evidence.
+- [x] **VS3-C19-S8** — Add diff-aware evidence routes for environment runtime, Verdant stage, Rootbinder, variants, Rootbound, progression, presentation, audio, and references.
+- [x] **VS3-C19-S9** — Add negative anti-drift fixtures for unmapped stage, boss, enemy, environment kind, event, and wrong-subject scenario.
+- [x] **VS3-C19-S10** — Ensure selected evidence commands are executed and artifacts are source/build bound.
+- [x] **VS3-C19-S11** — Update current-game alignment/handoff/evidence documentation only with actual implemented capability.
+- [x] **VS3-C19-S12** — Record every unresolved limitation without promoting engineering evidence to certification.
 
 ## Agent implementation procedure
 
@@ -5322,14 +5322,14 @@ Close every Verdant-specific evidence gap, make future drift fail the focused ga
 
 ## TearBench same-change response
 
-- [ ] Run current-game authority completeness from production catalogs.
-- [ ] Run actual scenario evidence, not command metadata checks.
-- [ ] Run one same-seed repeat for every randomness-dependent scenario.
-- [ ] Run one live-versus-detached comparison per claimed portable environment behavior.
-- [ ] Run State Forge round-trip/fork proof for Bloom, network, Grafts, Regrowth, and Last Spring.
-- [ ] Run normal-player/browser journey for player-visible Verdant entry and Rootbound encounter.
-- [ ] Prove stale build and wrong artifact identity rejection.
-- [ ] Keep C40 release certification unchecked and explicitly out of scope.
+- [x] Run current-game authority completeness from production catalogs.
+- [x] Run actual scenario evidence, not command metadata checks.
+- [x] Run one same-seed repeat for every randomness-dependent scenario.
+- [x] Run one live-versus-detached comparison per claimed portable environment behavior.
+- [x] Run State Forge round-trip/fork proof for Bloom, network, Grafts, Regrowth, and Last Spring.
+- [x] Run normal-player/browser journey for player-visible Verdant entry and Rootbound encounter.
+- [x] Prove stale build and wrong artifact identity rejection.
+- [x] Keep C40 release certification unchecked and explicitly out of scope.
 
 ## Minimum focused proof
 
@@ -5348,13 +5348,13 @@ Close every Verdant-specific evidence gap, make future drift fail the focused ga
 
 ## Exit conditions
 
-- [ ] Every new production identity has source-derived TearBench coverage.
-- [ ] Every selected scenario is real, subject-correct, backend-correct, and executable.
-- [ ] Environment hashes/events/invariants are truthful.
-- [ ] Unsupported capabilities refuse explicitly.
-- [ ] Diff-aware selection cannot silently omit Verdant changes.
-- [ ] Evidence binds to exact executed source/build.
-- [ ] Documentation does not overclaim C40 or release readiness.
+- [x] Every new production identity has source-derived TearBench coverage.
+- [x] Every selected scenario is real, subject-correct, backend-correct, and executable.
+- [x] Environment hashes/events/invariants are truthful.
+- [x] Unsupported capabilities refuse explicitly.
+- [x] Diff-aware selection cannot silently omit Verdant changes.
+- [x] Evidence binds to exact executed source/build.
+- [x] Documentation does not overclaim C40 or release readiness.
 
 ## Stop and escalate conditions
 
@@ -5375,7 +5375,7 @@ Close every Verdant-specific evidence gap, make future drift fail the focused ga
 
 ## Required handoff sentence
 
-> `VS3-C19 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+> `VS3-C19 is GREEN at 98c4134f6fd0bcbc670315ff62dc80b805efb1ca. The next authorized action is VS3-C20-S1. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

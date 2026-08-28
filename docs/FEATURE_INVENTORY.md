@@ -469,6 +469,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   codecs, hashes, and observations are now covered by VS3-C3; Bloom Wells and
   Rootbinder relationship behavior are covered by VS3-C5/C6, while Rootbound
   encounter behavior remains later work.
+  VS3-C19 closes the Verdant TearBench integration boundary: source-derived
+  authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
+  environment kinds, variants, achievements, audio disposition, and reference
+  identities. Actual selected browser, State Forge, boss, and live/detached
+  commands execute against an exact attributed test build. A persisted Bloom
+  Well run now reruns through its tick-zero State Forge context; empty restored
+  waves safely rebuild ownership from native spawn/death facts, while non-empty
+  ambiguous restores still fail closed. This is Class-A engineering evidence,
+  not Class-C certification or public-release approval.
   Boss-intro and boss-beat state also flow directly from world state through
   live music, frame, State Forge, and presentation paths. This preserves the
   existing live path through focused and rebuilt campaign evidence, but leaves

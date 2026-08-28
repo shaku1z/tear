@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C19",
-  "currentSubgoal": "VS3-C19-S1",
+  "currentCheckpoint": "VS3-C20",
+  "currentSubgoal": "VS3-C20-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -28,9 +28,10 @@
     "VS3-C15",
     "VS3-C16",
     "VS3-C17",
-    "VS3-C18"
+    "VS3-C18",
+    "VS3-C19"
   ],
-  "lastGreenCheckpoint": "VS3-C18",
+  "lastGreenCheckpoint": "VS3-C19",
   "lastEvidence": [
     "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass.",
     "VS3-C10-S6 Rootbound presentation identity is green: the existing enemy renderer composition installs its root-throne, branching mantle, plural-mask, gold-graft silhouette and intro rise pose; the shared boss-intro snapshot/UI path preserves THE ROOTBOUND, KEEPER OF THE LAST MERCY, and YOU DO NOT HAVE TO DIE HERE.; focused and adjacent presentation/factory/reference tests, typecheck, architecture, targeted lint, and docs gates pass.",
@@ -68,10 +69,11 @@
     "VS3-C16-S10 publication boundary is GREEN at ee3c7390cbbc991ef8c255478d159f37c4a7b27d: source policy marks the exact six-stage ruleset engineering-only; release preflight refuses it; game-reference publication rejects Verdant without Pale; only an explicit public policy containing both joint stages can pass. Policy/release/reference tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
     "VS3-C16 aggregate closure is GREEN at c7976332bf34bf06ff628d3e13b307fce2bd9a5d: all ten subgoals; repository static/docs/artifact/reference/publication gates; 9 files/30 focused tests plus 14 publication tests; attributed standalone artifact 0e6be53acb2bfcd9cfbdbd236685985b11f6d97a1f8dccd35231e94708a4def9; browser feature/journey and State Forge runtime/studio/exit matrices pass.",
     "VS3-C17 is AUTHORIZED-DEFERRED at fa1cc9735281eae0ab07541f242d665e1d942e5d: Static Bloom was auditioned and rejected; no replacement, route, release, vendor byte, or rights claim was invented. Current vendor provenance, engineering-only Verdant fallback, one-context/exclusive-backend lifecycle, standalone audio, PWA, and CrazyGames test iframe gates pass. Replacement selection through exact re-vendoring is deferred to VS3-C22-S5; lastGreenCheckpoint remains VS3-C16.",
-    "VS3-C18 is GREEN at 2bdb30e8a678cb4c7a217f5f0dbfd3dddc2fb3a4: game-reference schema 2 now projects Rootbinder from the complete production enemy identity authority; exact export, 40 focused projection tests, 10 artifact/publication tests, 24 evidence-selection tests, terminology/docs gates, and the protected wiki's 50-test full snapshot/build gate pass. Wiki promotion remains blocked pending joint Verdant/Pale main; the historical game-dev-tooling adapter is explicitly deferred under that repository's Tear prohibition."
+    "VS3-C18 is GREEN at 2bdb30e8a678cb4c7a217f5f0dbfd3dddc2fb3a4: game-reference schema 2 now projects Rootbinder from the complete production enemy identity authority; exact export, 40 focused projection tests, 10 artifact/publication tests, 24 evidence-selection tests, terminology/docs gates, and the protected wiki's 50-test full snapshot/build gate pass. Wiki promotion remains blocked pending joint Verdant/Pale main; the historical game-dev-tooling adapter is explicitly deferred under that repository's Tear prohibition.",
+    "VS3-C19 is GREEN at 98c4134f6fd0bcbc670315ff62dc80b805efb1ca: exact source-derived Verdant selection executes 12 routes and 24 scenarios; 203 selected authority tests, 24 anti-drift tests, 41 focused tests, current gameplay/boss/State Forge/live-detached browser gates, and a persisted 720-tick Bloom Well run/rerun pass. C30 terminal provenance was corrected and empty-wave State Forge replay ownership now rebuilds only from native facts. Evidence remains Class-A engineering/non-certifying; publication is prohibited and C40 is unchanged."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C19-S1 by reconciling source-derived TearBench coverage for every Verdant production identity and retained music-routing disposition.",
+  "nextAction": "Execute VS3-C20-S1 by validating high contrast, reduced motion, flash scale, low graphics, and audio-independent Verdant counterplay without changing product behavior.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2949,62 +2951,62 @@
         {
           "id": "VS3-C19-S1",
           "description": "Reconcile source-derived coverage for Verdant stage, Rootbinder, Rootbound, variants, environment kinds, events, achievements, and music routing.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S2",
           "description": "Finalize natural Rootbound scenario and all surgical State Forge Verdant scenarios.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S3",
           "description": "Ensure every scenario launches its declared subject and backend and reaches a meaningful source-owned transition.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S4",
           "description": "Finalize environment observation and invariant positive/negative proofs.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S5",
           "description": "Finalize native environment causal event order and normal-session delivery.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S6",
           "description": "Finalize live/detached capability map; implement support or fail closed explicitly.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S7",
           "description": "Finalize environment codec migration, restore, and exact/semantic hash evidence.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S8",
           "description": "Add diff-aware evidence routes for environment runtime, Verdant stage, Rootbinder, variants, Rootbound, progression, presentation, audio, and references.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S9",
           "description": "Add negative anti-drift fixtures for unmapped stage, boss, enemy, environment kind, event, and wrong-subject scenario.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S10",
           "description": "Ensure selected evidence commands are executed and artifacts are source/build bound.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S11",
           "description": "Update current-game alignment/handoff/evidence documentation only with actual implemented capability.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C19-S12",
           "description": "Record every unresolved limitation without promoting engineering evidence to certification.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -3063,13 +3065,37 @@
         "Updated TearBench/current-game documentation",
         "Non-certifying completion statement"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "f0214a1877f77a2f65727071db93c21569571d0f",
+      "completionIdentity": "98c4134f6fd0bcbc670315ff62dc80b805efb1ca",
+      "commandsRun": [
+        "pnpm requirements:check",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm check:architecture",
+        "pnpm test:tearbench-selection",
+        "pnpm check:active-roster",
+        "pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts tests/unit/environment-state-codec.test.ts tests/unit/tearbench-runner.test.ts tests/unit/production-headless-environment.test.ts tests/unit/verdant-tearbench-coverage.test.ts",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:current-gameplay-scenarios",
+        "pnpm test:browser:bosses",
+        "pnpm test:browser:state-forge",
+        "pnpm test:browser:current-live-detached-parity",
+        "pnpm tearbench run verdant-bloom-well-cycle --seed vs3-c19-bloom-well-cycle --artifact artifacts/tearbench/checkpoints/verdant-sanctum/VS3-C19/verdant-bloom-well-cycle.run.json",
+        "pnpm tearbench rerun --artifact artifacts/tearbench/checkpoints/verdant-sanctum/VS3-C19/verdant-bloom-well-cycle.run.json",
+        "pnpm tearbench ci --files-from artifacts/tearbench/checkpoints/verdant-sanctum/VS3-C19/changed-files.txt --artifact artifacts/tearbench/checkpoints/verdant-sanctum/VS3-C19/current-capability.json"
+      ],
+      "evidence": [
+        "docs/checkpoints/verdant-sanctum/VS3-C19_EVIDENCE.md"
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Selected evidence is clean-source bound to 98c4134f6fd0bcbc670315ff62dc80b805efb1ca and test-standalone artifact 7010878543fff27026b1a1cf234efaa8deba5a9f56905cf4f5de5dfed7bd7494.",
+        "The two C30 production terminal fixtures had stale configuration provenance only; exact natural traces now match.",
+        "State Forge replay resumes wave ownership only when the restored world contains no living enemies; ambiguous non-empty ownership remains unavailable and fails closed.",
+        "Static Bloom remains rejected. Replacement selection, rights, routing, and re-vendoring remain deferred to VS3-C22-S5.",
+        "Evidence is Class-A engineering/non-certifying. Verdant publication remains prohibited and C40 status is unchanged."
+      ]
     },
     {
       "id": "VS3-C20",

@@ -15,3 +15,4 @@ and may be recreated by the commands recorded in each manifest.
 | VS3-C17 owner music disposition | [VS3-C17_MUSIC_DECISION.md](VS3-C17_MUSIC_DECISION.md) |
 | VS3-C17 authorized-deferred closure | [VS3-C17_EVIDENCE.md](VS3-C17_EVIDENCE.md) |
 | VS3-C18 reference/tooling compatibility | [VS3-C18_EVIDENCE.md](VS3-C18_EVIDENCE.md) |
+| VS3-C19 TearBench completion/anti-drift | [VS3-C19_EVIDENCE.md](VS3-C19_EVIDENCE.md) |
