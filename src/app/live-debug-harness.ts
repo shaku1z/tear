@@ -214,6 +214,12 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       boss.hp = Math.max(1, Math.round(boss.maxHp * fraction));
       boss.hpDisplay = boss.hp;
     },
+    /** Journey-only: enter the normal player-death/outcome path on the next simulation tail. */
+    defeatPlayer() {
+      const player = context.state.player();
+      if (player === undefined) throw new Error("No live player to defeat");
+      player.hp = 0;
+    },
     startBoss(boss: BossId, difficulty?: RunDifficulty) {
       context.selectBoss(boss); context.startRun("bossonly", difficulty ?? "normal");
     },

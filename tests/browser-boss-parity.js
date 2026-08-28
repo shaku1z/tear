@@ -86,12 +86,25 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
   for (const bossId of BOSSES) {
     await startReadyBoss(page, bossId);
     const before = await bossSnapshot(page, bossId);
-    const after = await waitForBossCombatProgress(page, bossId, before, 0.8,
-      bossId === "echo" ? 7000 : 5000);
+    const after = bossId === "rootbound"
+      ? await waitForBossSimulationAdvance(page, bossId, before.aliveT, 0.8)
+      : await waitForBossCombatProgress(page, bossId, before, 0.8, bossId === "echo" ? 7000 : 5000);
     assert.ok(after.aliveT > before.aliveT + 0.8, `${bossId} AI must keep receiving fixed ticks after its intro`);
-    assert.ok(distance(before, after) > 1, `${bossId} must leave its arrival pose after its intro`);
+    if (bossId === "rootbound") assert.ok(distance(before, after) <= 1, "Rootbound foundation must remain attack-free and planted");
+    else assert.ok(distance(before, after) > 1, `${bossId} must leave its arrival pose after its intro`);
     if (bossId === "echo") assert.equal(after.live, true, "the Echo mirror brain must be live");
   }
+
+  // Rootbound enters and retries through the same production Boss Test result
+  // route as the rest of the roster; only the test hook supplies terminal HP.
+  await startReadyBoss(page, "rootbound");
+  await page.evaluate(() => window.__PANTHEON_TEST.defeatPlayer());
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, { timeout: 10000 });
+  await page.mouse.click(220, 347);
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === "rootbound"), undefined, { timeout: 10000 });
+  const retriedStage = await page.evaluate(() => window.__PANTHEON_TEST.bossStage("rootbound"));
+  assert.equal(retriedStage.currentId, retriedStage.authoredId, "Rootbound retry must return to Verdant Sanctum");
 
   // Warden and Colossus both have two serialized transformation gates. Crossing
   // either gate used to strand cinematicRequest and freeze the boss forever.

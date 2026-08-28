@@ -61,6 +61,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   Its opt-in encounter cleanup is idempotent and is dispatched by the existing
   death, new-run/reset, retry, exit, and transactional restore/rollback
   boundaries; stage transitions now also clear the living-arena broken set.
+  The source-derived Boss Test setup exposes Rootbound, launches it in Verdant
+  Sanctum, treats its planted attack-free foundation as live simulation, and
+  returns a defeat/result retry to that same selected boss and authored stage.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
