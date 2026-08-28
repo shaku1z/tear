@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C12",
-  "currentSubgoal": "VS3-C12-S1",
+  "currentSubgoal": "VS3-C12-S2",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -1789,7 +1789,7 @@
         {
           "id": "VS3-C12-S1",
           "description": "Implement Bastion, Mercy, and Haste Graft definitions with bounded effects.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C12-S2",
@@ -1884,10 +1884,20 @@
       "status": "in-progress",
       "sourceBaseline": "7bddac1b3d13ba872441913b3a9703b61c384dd0",
       "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "commandsRun": [
+        "pnpm exec vitest run tests/unit/graft-anchor.test.ts tests/unit/environment-combat-object-runtime.test.ts",
+        "pnpm typecheck",
+        "pnpm check:architecture",
+        "pnpm exec eslint src/gameplay/environment/graft-anchor.ts tests/unit/graft-anchor.test.ts",
+        "git diff --check"
+      ],
+      "evidence": [
+        "VS3-C12-S1 immutable Graft definitions prove exactly Bastion, Mercy, and Haste over the existing graft-anchor environment kind; Bastion remains non-zero damage, Mercy has finite pulse and total recovery caps, Haste retains the 0.55-second warning floor, and canonical reward/proc exclusion remains unchanged. Eleven focused and adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "S1 intentionally defines tuning only. Production construction, stable owner references, and lifecycle remain ordered work in S2-S4."
+      ]
     },
     {
       "id": "VS3-C13",

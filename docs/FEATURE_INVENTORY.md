@@ -109,6 +109,13 @@ This is the migration checklist for the architectural redesign. A checked featur
   VS3-C11-S9 freezes both attack selection and already-selected commits during
   boss intro or transformation protection. All four verbs remain unavailable,
   create no projectile/environment intent, and resume only after protection ends.
+  VS3-C12-S1 establishes the immutable Phase II Graft tuning contract without
+  adding another environment registry: Bastion reduces incoming boss damage to
+  80% but never zero, Mercy is bounded by 1.5% pulses and a 9% total budget, and
+  Haste raises selected-attack cadence by 15% while retaining the established
+  0.55-second warning floor. All three definitions reuse canonical
+  `graft-anchor` identity and boss-combat-object reward/proc policy; production
+  creation and lifecycle begin in VS3-C12-S2/S4.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

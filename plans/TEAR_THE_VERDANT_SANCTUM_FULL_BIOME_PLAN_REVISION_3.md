@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C11 green; VS3-C12-S1 next** |
+| Status | **Active implementation authority — VS3-C12-S1 green; VS3-C12-S2 next** |
 | Current checkpoint | `VS3-C12` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4532,7 +4532,7 @@ Implement and prove the complete Phase I attack grammar, punish windows, environ
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `in-progress` |
 | Owner | Boss/environment combat owner |
 | Dependencies | VS3-C11 |
 | Release boundary | Phase II engineering completion |
@@ -4543,9 +4543,9 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 
 ## Entry conditions
 
-- [ ] VS3-C11 is green.
-- [ ] Combat-object kernel, Bloom runtime, State Forge object factories, and Rootbound phase state are stable.
-- [ ] Proc and reward policy is proven.
+- [x] VS3-C11 is green.
+- [x] Combat-object kernel, Bloom runtime, State Forge object factories, and Rootbound phase state are stable.
+- [x] Proc and reward policy is proven.
 
 ## Primary files and authorities
 
@@ -4560,7 +4560,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 
 ## Sub-goals
 
-- [ ] **VS3-C12-S1** — Implement Bastion, Mercy, and Haste Graft definitions with bounded effects.
+- [x] **VS3-C12-S1** — Implement Bastion, Mercy, and Haste Graft definitions with bounded effects. `graft-anchor.ts` now owns the immutable three-type Rootbound subtype contract over the existing canonical `graft-anchor` environment kind: Bastion applies a non-zero 0.8 incoming-damage multiplier, Mercy is capped at 1.5% pulses and 9% total recovery, and Haste is capped at 1.15 cadence while preserving the 0.55-second warning floor. The shared environment definition remains the only kind/category/reward/proc authority.
 - [ ] **VS3-C12-S2** — Create Grafts through production environment factories and stable owner references.
 - [ ] **VS3-C12-S3** — Keep Rootbound directly damageable while Grafts exist.
 - [ ] **VS3-C12-S4** — Implement Graft warning, activation, integrity, destruction, effect removal, and phase cleanup.
