@@ -99,7 +99,7 @@ describe("game-reference.v1", () => {
     expect(result.collections.upgrades.status).toBe("complete");
     expect(result.collections.upgrades.items).toHaveLength(60);
     expect(result.collections.achievements.status).toBe("complete");
-    expect(result.collections.achievements.items).toHaveLength(98);
+    expect(result.collections.achievements.items).toHaveLength(100);
     expect(result.collections.stages.status).toBe("complete");
     expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"]);
     expect(result.collections.modes.status).toBe("complete");
@@ -141,7 +141,7 @@ describe("game-reference.v1", () => {
     expect(upgrades.filter((upgrade) => upgrade.rule.kind === "tiered")).toHaveLength(18);
     expect(upgrades.every((upgrade) => upgrade.tiers.every((tier) => tier.description.length > 0))).toBe(true);
     const achievements = result.collections.achievements.items;
-    expect(new Set(achievements.map((achievement) => achievement.id)).size).toBe(98);
+    expect(new Set(achievements.map((achievement) => achievement.id)).size).toBe(100);
     expect(new Set(achievements.map((achievement) => achievement.category))).toEqual(new Set(["combat", "skill", "progress", "boss", "survival", "mastery"]));
     expect(new Set(achievements.map((achievement) => achievement.rarity))).toEqual(new Set(["common", "uncommon", "rare", "epic", "legendary"]));
     expect(achievements.some((achievement) => achievement.rule.kind === "manual")).toBe(true);
@@ -521,7 +521,7 @@ describe("game-reference.v1", () => {
     const duplicateUpgrade = [...UPGRADES.slice(0, -1), firstUpgrade];
     expect(() => reference("a".repeat(40), WEAPONS, duplicateUpgrade)).toThrow(/duplicate IDs/u);
 
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(/exactly 98/u);
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(/exactly 100/u);
     const lastAchievement = ACHIEVEMENT_CATALOG.at(-1);
     if (lastAchievement === undefined) throw new Error("missing achievement source fixture");
     const firstAchievement = ACHIEVEMENT_CATALOG.at(0);

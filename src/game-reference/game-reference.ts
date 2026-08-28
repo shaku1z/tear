@@ -154,7 +154,7 @@ export interface GameReferenceProjectionInput {
   readonly tuningByWeapon: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 const EXPECTED_UPGRADE_COUNT = 60;
-const EXPECTED_ACHIEVEMENT_COUNT = 98;
+const EXPECTED_ACHIEVEMENT_COUNT = 100;
 const EXPECTED_STAGE_COUNT = STAGES.length;
 const UPGRADE_CATEGORIES = Object.freeze(["offense", "throw", "parry", "mobility", "resilience", "utility"] as const);
 const ACHIEVEMENT_CATEGORIES = Object.freeze(["combat", "skill", "progress", "boss", "survival", "mastery"] as const);

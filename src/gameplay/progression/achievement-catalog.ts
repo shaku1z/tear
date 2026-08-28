@@ -101,6 +101,8 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementCatalogEntry[] = Object.fr
   stat("boss_warden", "boss", "uncommon", "Jailbreak", "Defeat The Warden.", "killWarden", 1),
   stat("boss_colossus", "boss", "rare", "Scrap Metal", "Defeat The Iron Colossus.", "killColossus", 1),
   stat("boss_aldric", "boss", "rare", "Regicide", "Defeat The Berserker King, Aldric.", "killAldric", 1),
+  stat("boss_rootbound", "boss", "epic", "The Rootbound", "Defeat The Rootbound.", "killRootbound", 1),
+  stat("rootbound_regrowth", "boss", "legendary", "Regrowth Interrupted", "Defeat The Rootbound after fully interrupting Regrowth.", "rootboundRegrowthFullInterrupt", 1),
   stat("boss_echo", "boss", "epic", "Shattered Mirror", "Defeat The Echo.", "killEcho", 1),
   stat("boss_source", "boss", "legendary", "The Wound Closes", "Defeat The Source.", "killSource", 1),
   manual("witness", "boss", "epic", "Witness", "Stand witness through Aldric's kneel without striking him."),
