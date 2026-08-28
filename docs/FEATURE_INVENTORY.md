@@ -46,7 +46,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   unmapped-identity proofs. At C1 the runtime campaign remained five stages and
   the public game-reference schema remained unchanged; the later C8 engineering
   insertion supersedes only that roster-count statement. Rootbound remains
-  factory-ready through the existing enemy composition in VS3-C10. Rootbinder became
+  factory-ready through the existing enemy composition in VS3-C10, with its
+  grounded body placed deterministically by the shared boss placement planner
+  from the canonical boss height rather than a duplicate registry. Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
 - [x] Verdant C3 environment evidence foundation (engineering-only) — the

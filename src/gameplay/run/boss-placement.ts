@@ -8,6 +8,7 @@
  */
 export interface BossPlacementConfig {
   readonly world: { readonly groundY: number };
+  readonly boss: { readonly h: number };
   readonly echo: { readonly h: number };
   readonly aldric: { readonly h: number };
   readonly colossus: { readonly h: number };
@@ -30,7 +31,7 @@ export function planBossPlacement(
   if (id === "source") return Object.freeze({ factoryId: "source", x, y: ground - 300 });
   if (id === "echo") return Object.freeze({ factoryId: "echo", x, y: ground - config.echo.h / 2 });
   if (id === "aldric") return Object.freeze({ factoryId: "aldric", x, y: ground - config.aldric.h / 2 });
-  if (id === "rootbound") return Object.freeze({ factoryId: "rootbound", x, y: ground - 140 });
+  if (id === "rootbound") return Object.freeze({ factoryId: "rootbound", x, y: ground - config.boss.h / 2 });
   if (id === "colossus") return Object.freeze({ factoryId: "colossus", x, y: ground - config.colossus.h / 2 });
   if (id === "warden") return Object.freeze({ factoryId: "warden", x, y: ground - 140 });
   return Object.freeze({ factoryId: "boss", x, y: ground - 140 });

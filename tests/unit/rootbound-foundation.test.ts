@@ -41,4 +41,16 @@ describe("Rootbound production foundation", () => {
       phaseMarks: [0.65, 0.28],
     });
   });
+
+  it("places the grounded Rootbound body through the shared boss placement authority", () => {
+    const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG);
+
+    expect(placement).toEqual({
+      factoryId: "rootbound",
+      x: CONFIG.view.w / 2,
+      y: CONFIG.world.groundY - CONFIG.boss.h / 2,
+    });
+    expect(Object.isFrozen(placement)).toBe(true);
+    expect(planBossPlacement("rootbound", CONFIG.view.w, CONFIG)).toEqual(placement);
+  });
 });
