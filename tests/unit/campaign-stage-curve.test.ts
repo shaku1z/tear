@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { STAGE_IDS } from "../../src/gameplay/stages";
+import { STAGE_BOSS_HOME, STAGE_IDS } from "../../src/gameplay/stages";
 import {
   CAMPAIGN_STAGE_CURVES,
   SEVEN_STAGE_CURVE_IDS,
   SEVEN_STAGE_CURVE_PROTOTYPE,
   campaignStageCurve,
+  sevenStageCurveDelta,
 } from "../../src/gameplay/run/campaign-stage-curve";
+import { bossDefinition } from "../../src/gameplay/run/boss-definitions";
 
 describe("campaign stage curve authority", () => {
   it("covers every current source-owned StageId exactly once", () => {
@@ -47,5 +49,22 @@ describe("campaign stage curve authority", () => {
     expect(STAGE_IDS).not.toContain("pale-traverse");
     expect(CAMPAIGN_STAGE_CURVES).not.toHaveProperty("pale-traverse");
     expect(campaignStageCurve("voidspire")).not.toEqual(SEVEN_STAGE_CURVE_PROTOTYPE.stages.voidspire);
+  });
+
+  it("projects Echo and Source relocation deltas without changing boss authority", () => {
+    const echo = sevenStageCurveDelta("voidspire");
+    expect(echo).toMatchObject({ countAdd: -1, concurrentAdd: -1 });
+    expect(echo.health).toBeCloseTo(0.02);
+    expect(echo.damage).toBeCloseTo(-0.04);
+    const source = sevenStageCurveDelta("tear");
+    expect(source).toMatchObject({ countAdd: -2, concurrentAdd: 0 });
+    expect(source.health).toBeCloseTo(0.02);
+    expect(source.damage).toBeCloseTo(-0.1);
+    expect(bossDefinition("echo")).toMatchObject({ id: "echo" });
+    expect(bossDefinition("source")).toMatchObject({ id: "source" });
+    expect(STAGE_BOSS_HOME.voidspire).toBe("echo");
+    expect(STAGE_BOSS_HOME.tear).toBe("source");
+    expect(campaignStageCurve("voidspire").disposition).toBe("legacy-position-placeholder");
+    expect(campaignStageCurve("tear").disposition).toBe("legacy-position-placeholder");
   });
 });

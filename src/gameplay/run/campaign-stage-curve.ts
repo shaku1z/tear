@@ -62,3 +62,22 @@ export const SEVEN_STAGE_CURVE_PROTOTYPE = Object.freeze({
     tear: prototypeCurve(2.72, 1.6, 8, 4),
   } as const satisfies Readonly<Record<SevenStageCurveId, CampaignStageCurve>>),
 });
+
+export interface CampaignCurveDelta {
+  readonly health: number;
+  readonly damage: number;
+  readonly countAdd: number;
+  readonly concurrentAdd: number;
+}
+
+/** Read-only engineering comparison; it does not activate the seven-stage prototype. */
+export function sevenStageCurveDelta(stageId: StageId): CampaignCurveDelta {
+  const live = campaignStageCurve(stageId);
+  const projected = SEVEN_STAGE_CURVE_PROTOTYPE.stages[stageId];
+  return Object.freeze({
+    health: projected.health - live.health,
+    damage: projected.damage - live.damage,
+    countAdd: projected.countAdd - live.countAdd,
+    concurrentAdd: projected.concurrentAdd - live.concurrentAdd,
+  });
+}
