@@ -4969,7 +4969,7 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 ## Sub-goals
 
 - [x] **VS3-C16-S1** — Add Rootbound and Verdant behavior to Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test through current mode paths.
-- [ ] **VS3-C16-S2** — Prove Tutorial remains unaffected or update only an explicitly approved teaching surface.
+- [x] **VS3-C16-S2** — Prove Tutorial remains unaffected or update only an explicitly approved teaching surface.
 - [ ] **VS3-C16-S3** — Add Rootbound/Rootbinder/Bloom development controls through safe current test/State Forge boundaries.
 - [ ] **VS3-C16-S4** — Add stable achievement entries and runtime predicates for approved Verdant achievements.
 - [ ] **VS3-C16-S5** — Replace fixed-five copy/count assumptions with source-derived values where appropriate.
@@ -5034,6 +5034,8 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 > `VS3-C16 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
 
 > `VS3-C16-S1 is GREEN at 85ea62869e6f37117807f56ac61fd9d9b9ff8740. The next authorized action is VS3-C16-S2, proving Tutorial remains unaffected. Campaign and Boss Test retain their existing canonical paths; Endless/Gauntlet use rotating authored stage pools; Playground and Enemy Test project the canonical enemy identities. Verdant publication remains prohibited, and C40 status is unchanged.`
+
+> `VS3-C16-S2 is GREEN at c904cbb75d750bc33c0e17ef03e3380d5dae1913. Tutorial remains on its authored Charger/Ranged curriculum, baseline loadout, training arenas, and Verdant-variant exclusion. The next authorized action is VS3-C16-S3, adding safe Rootbound/Rootbinder/Bloom development controls through current test and State Forge boundaries. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

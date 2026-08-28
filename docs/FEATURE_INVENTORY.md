@@ -341,7 +341,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   local unlock and composition rules. Playground projects its spawn menu from
   the canonical enemy identity list, and Enemy Test derives its wave-one full
   roster from that same authority. The eight stable Playground number hotkeys
-  remain unchanged; no mode, enemy, stage, or boss registry was added.
+  remain unchanged; no mode, enemy, stage, or boss registry was added. Tutorial
+  remains isolated on its authored Charger/Ranged teaching surface, baseline
+  loadout, training arenas, and explicit variant exclusion.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

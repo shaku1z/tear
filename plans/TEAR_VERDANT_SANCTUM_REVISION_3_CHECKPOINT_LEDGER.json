@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C16",
-  "currentSubgoal": "VS3-C16-S2",
+  "currentSubgoal": "VS3-C16-S3",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -53,10 +53,11 @@
     "VS3-C13 Rootbound Phase III is GREEN at 0baeca907e1cdea9b82d4bda730649d305844276: all ten ordered subgoals pass; repository typecheck and lint, 40 aggregate terminal/replay/state-codec tests, attributed test-standalone build 44ce4a40f46cd702e09ccd23bcd99ce9677eee49c9b7cceb4d2e307dd8c2f819, live six-boss browser matrix, State Forge runtime/studio/exit matrix, and current live-detached parity are green.",
     "VS3-C14 Final Five object conformance is GREEN at df0412381728ae71c18b2259790bf8308de0a0ab: all ten ordered subgoals pass; repository typecheck/lint/architecture/docs, 19 weapon roster tests, 13 focused ability/projectile tests, 34 adjacent environment tests, 6 headless parity routes, attributed standalone artifact 70a80fab74a29afd54ee438dc12f1f79e1e1165d4a80da9e8a6fcf78200305d2, and all five browser/Ghost weapon routes are green. C40 records remain unchanged.",
     "VS3-C15 Verdant wave composition and curve engineering is GREEN at c019a42efc246e35827dd4014f2ccaac6fe3e794: all ten ordered subgoals and the TearBench same-change response pass; repository typecheck/lint/architecture/docs/artifact layout, 16 files/104 tests, attributed standalone artifact ba40e08c7ccb9a7dad54dcb5c029aac135fb0020329674f210d0c2072bca1e47, and browser progression journeys are green. Seven-stage tuning remains inactive pending Pale.",
-    "VS3-C16-S1 current-mode content paths are GREEN at 85ea62869e6f37117807f56ac61fd9d9b9ff8740: Campaign and Boss Test retain their canonical Verdant/Rootbound paths; Endless and Gauntlet use rotating authored stage pools; Playground and Enemy Test project canonical enemy identities. 39 focused/adjacent tests, typecheck, targeted lint, architecture, and artifact-layout gates pass."
+    "VS3-C16-S1 current-mode content paths are GREEN at 85ea62869e6f37117807f56ac61fd9d9b9ff8740: Campaign and Boss Test retain their canonical Verdant/Rootbound paths; Endless and Gauntlet use rotating authored stage pools; Playground and Enemy Test project canonical enemy identities. 39 focused/adjacent tests, typecheck, targeted lint, architecture, and artifact-layout gates pass.",
+    "VS3-C16-S2 Tutorial isolation is GREEN at c904cbb75d750bc33c0e17ef03e3380d5dae1913: the curriculum emits only its authored Charger/Ranged teaching actors and retains baseline-loadout, training-runtime, and Verdant-variant exclusion contracts. 34 focused/adjacent tests, typecheck, and targeted lint pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C16-S2 by proving Tutorial remains unaffected by Verdant and Rootbound mode integration.",
+  "nextAction": "Execute VS3-C16-S3 by adding safe Rootbound, Rootbinder, and Bloom development controls through current test and State Forge boundaries.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2479,7 +2480,7 @@
         {
           "id": "VS3-C16-S2",
           "description": "Prove Tutorial remains unaffected or update only an explicitly approved teaching surface.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C16-S3",
