@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C11 subgoals green; checkpoint gate running** |
-| Current checkpoint | `VS3-C11` |
+| Status | **Active implementation authority — VS3-C11 green; VS3-C12-S1 next** |
+| Current checkpoint | `VS3-C12` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
