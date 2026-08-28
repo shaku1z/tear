@@ -69,6 +69,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   State Forge derives the complete six-boss, eighteen-phase launch matrix.
   Rootbound phases 1–3 are explicitly attack-unavailable at the C10 boundary;
   State Forge preserves that fact instead of synthesizing placeholder commits.
+  VS3-C11-S1 adds the deterministic Phase I scheduling spine: a fixed cyclic
+  Vine Sweep / Seed Arc / Rootline / Canopy Step selection order, explicit
+  opening and recovery windows, and a selected-but-uncommitted boundary. No
+  attack becomes available and no hit geometry exists until its own subgoal.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

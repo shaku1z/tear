@@ -3,6 +3,12 @@ import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 
+export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
+  "vine-sweep", "seed-arc", "rootline", "canopy-step",
+] as const);
+export type RootboundPhaseOneAttack = typeof ROOTBOUND_PHASE_ONE_ATTACK_ORDER[number];
+export const ROOTBOUND_PHASE_ONE_CADENCE = Object.freeze({ openingDelay: 0.9, recovery: 0.55 });
+
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
   const { CONFIG } = dependencies;
@@ -12,13 +18,16 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     phaseMarker = 1;
     override phaseTag = "KEEPER OF SPRING";
     state: "intro" | "idle" | "recover" = "idle";
-    stateT = 0.9;
+    stateT: number = ROOTBOUND_PHASE_ONE_CADENCE.openingDelay;
     override facing = 1;
     override readonly phaseMarks: [number, number] = [
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[0],
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[1],
     ];
     readonly availableAttacks: readonly string[] = Object.freeze([]);
+    readonly phaseOneAttackOrder = ROOTBOUND_PHASE_ONE_ATTACK_ORDER;
+    pendingAttack: RootboundPhaseOneAttack | null = null;
+    attackIndex = 0;
     cleanupReason: BossEncounterCleanupReason | null = null;
 
     constructor(x: number, y: number) {
@@ -53,7 +62,25 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     override contactDamageEnabled(): boolean {
-      return this.introT <= 0 && this.state === "idle";
+      return this.introT <= 0 && this.state === "idle" && this.pendingAttack === null;
+    }
+
+    selectNextPhaseOneAttack(): RootboundPhaseOneAttack | null {
+      if (this.phase !== 1 || this.introT > 0 || this.state !== "idle" || this.pendingAttack !== null) return null;
+      const selected = this.phaseOneAttackOrder[this.attackIndex % this.phaseOneAttackOrder.length];
+      if (selected === undefined) throw new RangeError("Rootbound Phase I attack order is empty");
+      this.attackIndex += 1;
+      this.pendingAttack = selected;
+      this.stateT = 0;
+      return selected;
+    }
+
+    completePhaseOneAttack(): void {
+      if (this.pendingAttack === null) return;
+      this.pendingAttack = null;
+      this.state = "recover";
+      this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery;
+      this.atk = "unavailable";
     }
 
     cleanupEncounter(reason: BossEncounterCleanupReason): void {
@@ -65,6 +92,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.vx = 0;
       this.vy = 0;
       this.atk = "unavailable";
+      this.pendingAttack = null;
       this.cinematicRequest = null;
       this.cinematicPose = "";
       this.cinematicT = 0;
@@ -91,11 +119,14 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       if (this.state === "intro") {
         this.state = "recover";
         this.stateT = 0.35;
-      } else if (this.stun <= 0) {
+      } else if (this.stun <= 0 && this.pendingAttack === null) {
         this.stateT = Math.max(0, this.stateT - dt);
         if (this.stateT <= 0) {
-          this.state = this.state === "idle" ? "recover" : "idle";
-          this.stateT = this.state === "idle" ? 0.9 : 0.35;
+          if (this.state === "idle") this.selectNextPhaseOneAttack();
+          else {
+            this.state = "idle";
+            this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.openingDelay;
+          }
         }
       }
       this.integrate(dt, platforms);
