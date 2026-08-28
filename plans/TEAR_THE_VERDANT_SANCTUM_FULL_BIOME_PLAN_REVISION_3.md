@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C12-S1 green; VS3-C12-S2 next** |
+| Status | **Active implementation authority — VS3-C12-S2 green; VS3-C12-S3 next** |
 | Current checkpoint | `VS3-C12` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4561,7 +4561,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 ## Sub-goals
 
 - [x] **VS3-C12-S1** — Implement Bastion, Mercy, and Haste Graft definitions with bounded effects. `graft-anchor.ts` now owns the immutable three-type Rootbound subtype contract over the existing canonical `graft-anchor` environment kind: Bastion applies a non-zero 0.8 incoming-damage multiplier, Mercy is capped at 1.5% pulses and 9% total recovery, and Haste is capped at 1.15 cadence while preserving the 0.55-second warning floor. The shared environment definition remains the only kind/category/reward/proc authority.
-- [ ] **VS3-C12-S2** — Create Grafts through production environment factories and stable owner references.
+- [x] **VS3-C12-S2** — Create Grafts through production environment factories and stable owner references. The existing Rootbound enemy type derives one immutable Bastion/Mercy/Haste placement set only in Phase II; live composition supplies its canonical combat actor ID and position, and the world environment owner idempotently materializes the exact S1 definitions as specialized `graft-anchor` combat objects. IDs, owner/target references, connection geometry, created tick, integrity, proc policy, and warning state are canonical. The existing codec now generically accepts a source-owned combat-object kind as its specialized factory ID, covering `graft-anchor` and the already-existing `root-link` path without a second registry.
 - [ ] **VS3-C12-S3** — Keep Rootbound directly damageable while Grafts exist.
 - [ ] **VS3-C12-S4** — Implement Graft warning, activation, integrity, destruction, effect removal, and phase cleanup.
 - [ ] **VS3-C12-S5** — Implement authored boss-owned Bloom patterns through the shared Well runtime.

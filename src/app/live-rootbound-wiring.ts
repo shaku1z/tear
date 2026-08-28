@@ -14,6 +14,7 @@ export function bindLiveRootboundActors(
       rootlineStage?: RootboundRootlineStage | null;
       rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
       rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
+      graftAnchorPlacements?: () => NonNullable<RootboundEnvironmentActor["state"]["graftPlacements"]>;
     };
     const id = actorId(enemy);
     const target = player();
@@ -25,6 +26,8 @@ export function bindLiveRootboundActors(
         geometry: actor.rootlineGeometry?.() ?? Object.freeze({ x: enemy.x, y: enemy.y, w: 0, h: 0 }),
         damage: ROOTBOUND_ROOTLINE.damage,
         cleanupReason: actor.rootlineCleanupReason ?? null,
+        graftPlacements: actor.graftAnchorPlacements?.() ?? Object.freeze([]),
+        ownerPosition: Object.freeze({ x: enemy.x, y: enemy.y }),
       }),
       ...(target === null ? {} : { player: Object.freeze({
         x: target.x, y: target.y, hw: target.hw, hh: target.hh,

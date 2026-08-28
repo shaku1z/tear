@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   GRAFT_ANCHOR_DEFINITIONS,
+  GRAFT_ANCHOR_MAX_INTEGRITY,
   GRAFT_ANCHOR_TYPES,
   GRAFT_WARNING_FLOOR_SECONDS,
   MAX_ACTIVE_GRAFT_ANCHORS,
+  createGraftAnchorState,
   graftAnchorDefinition,
+  installGraftAnchor,
 } from "../../src/gameplay/environment/graft-anchor";
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import { validateEnvironmentCodecPayload } from "../../src/tearbench/environment-codec";
 
 describe("Rootbound Graft Anchor definitions", () => {
   it("defines the exact bounded Phase II roster without creating another environment kind", () => {
@@ -57,5 +62,61 @@ describe("Rootbound Graft Anchor definitions", () => {
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     });
+  });
+
+  it("promotes the exact subtype definition into specialized canonical state", () => {
+    const bastion = graftAnchorDefinition("bastion");
+    if (bastion.effect !== "incoming-damage-multiplier") throw new TypeError("expected Bastion definition");
+    const state = createGraftAnchorState({
+      ownerId: "enemy:rootbound",
+      ownerPosition: { x: 800, y: 520 },
+      graftType: "bastion",
+      geometry: { x: 280, y: 610, w: 54, h: 90 },
+      createdTick: 240,
+    });
+    expect(state).toMatchObject({
+      id: "enemy:rootbound:graft:bastion",
+      factoryId: "graft-anchor",
+      kind: "graft-anchor",
+      ownerId: "enemy:rootbound",
+      targetId: "enemy:rootbound",
+      graftType: "bastion",
+      effect: "incoming-damage-multiplier",
+      incomingDamageMultiplier: bastion.incomingDamageMultiplier,
+      integrity: GRAFT_ANCHOR_MAX_INTEGRITY,
+      maxIntegrity: GRAFT_ANCHOR_MAX_INTEGRITY,
+      state: "warning",
+      stateTick: 240,
+      createdTick: 240,
+      procPolicyId: "boss-combat-object",
+      procEligible: false,
+    });
+    expect(state.connectionGeometry.points).toEqual([{ x: 800, y: 520 }, { x: 307, y: 655 }]);
+    expect(Object.isFrozen(state)).toBe(true);
+    expect(Object.isFrozen(state.geometry)).toBe(true);
+    expect(Object.isFrozen(state.connectionGeometry.points)).toBe(true);
+  });
+
+  it("installs through the production environment owner with stable idempotent ownership", () => {
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-production" });
+    const base = { ownerId: "enemy:rootbound", ownerPosition: { x: 800, y: 520 }, geometry: { x: 280, y: 610, w: 54, h: 90 }, createdTick: 240 } as const;
+    const first = installGraftAnchor(environment, { ...base, graftType: "bastion" });
+    const repeated = installGraftAnchor(environment, { ...base, graftType: "bastion", createdTick: 241 });
+    installGraftAnchor(environment, { ...base, graftType: "mercy", geometry: { ...base.geometry, x: 773 } });
+    installGraftAnchor(environment, { ...base, graftType: "haste", geometry: { ...base.geometry, x: 1253 } });
+    expect(repeated).toBe(first);
+    expect(environment.combatObjects()).toHaveLength(MAX_ACTIVE_GRAFT_ANCHORS);
+    expect(environment.combatObjects().map((object) => object.ownerId)).toEqual([
+      "enemy:rootbound", "enemy:rootbound", "enemy:rootbound",
+    ]);
+    expect(environment.combatObjects().every((object) => object.factoryId === "graft-anchor")).toBe(true);
+  });
+
+  it("accepts the specialized source-owned factory in the existing codec and rejects invalid inputs", () => {
+    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 1 });
+    expect(validateEnvironmentCodecPayload({ slowZones: [], walls: [], fields: [], combatObjects: [state], routes: [] })).toEqual([]);
+    expect(() => createGraftAnchorState({ ownerId: "", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 1 })).toThrow(/owner ID/u);
+    expect(() => createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20 }, createdTick: 1 })).toThrow(/geometry/u);
+    expect(() => createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: -1 })).toThrow(/tick/u);
   });
 });

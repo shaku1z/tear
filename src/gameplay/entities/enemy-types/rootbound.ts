@@ -2,6 +2,7 @@ import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile
 import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
+import { GRAFT_ANCHOR_TYPES, type GraftAnchorPlacementRequest } from "../../environment/graft-anchor";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
   "vine-sweep", "seed-arc", "rootline", "canopy-step",
@@ -31,6 +32,8 @@ export const ROOTBOUND_ROOTLINE = Object.freeze({ windup: 0.7, active: 0.24, cle
 export type RootboundRootlineStage = "warning" | "active" | "cleanup";
 export const ROOTBOUND_CANOPY_STEP = Object.freeze({ telegraph: 0.55, travel: 0.48, settle: 0.24 });
 export type RootboundCanopyStepStage = "telegraph" | "travel" | "settle";
+
+export const ROOTBOUND_GRAFT_ANCHOR_GEOMETRY = Object.freeze({ width: 54, height: 90 });
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
@@ -222,6 +225,20 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         w: ROOTBOUND_ROOTLINE.width,
         h: ROOTBOUND_ROOTLINE.height,
       });
+    }
+
+    graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[] {
+      if (this.phase !== 2) return Object.freeze([]);
+      const y = CONFIG.world.groundY - ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height;
+      return Object.freeze(GRAFT_ANCHOR_TYPES.map((graftType, index) => Object.freeze({
+        graftType,
+        geometry: Object.freeze({
+          x: CONFIG.view.w * (0.2 + index * 0.3) - ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width / 2,
+          y,
+          w: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width,
+          h: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height,
+        }),
+      })));
     }
 
     private beginRootline(): void {

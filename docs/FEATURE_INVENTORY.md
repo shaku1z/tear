@@ -115,7 +115,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   Haste raises selected-attack cadence by 15% while retaining the established
   0.55-second warning floor. All three definitions reuse canonical
   `graft-anchor` identity and boss-combat-object reward/proc policy; production
-  creation and lifecycle begin in VS3-C12-S2/S4.
+  creation and lifecycle begin in VS3-C12-S2/S4. VS3-C12-S2 now makes that
+  production creation real: the existing Rootbound enemy type derives the exact
+  three authored Phase II placements, live composition binds the stable combat
+  actor ID, and the world environment runtime installs each definition once as
+  canonical warning-state combat-object data with deterministic IDs, owner/target
+  references, integrity, connection geometry, and created tick. The shared codec
+  accepts source-owned specialized combat-object factory IDs generically; no
+  Graft placement registry or actor-local object collection was added.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

@@ -7,6 +7,7 @@ import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
 import { applyBloomWellForce, advanceBloomWell, isBloomWellState, type BloomWellActor } from "./bloom-well";
 import { applyElasticLeashForce, createElasticLeash, createRootNetwork, installRootNetwork, isElasticLeashValid, isRootbinderLineValid, redistributeRootNetworkKnockback, type LeashPlayerState, type RootbinderCandidate, type RootbinderState } from "../entities/rootbinder-runtime";
+import { installGraftAnchor, type GraftAnchorPlacementRequest } from "./graft-anchor";
 
 /** The only phases an environment may own inside one authoritative tick. */
 export type EnvironmentStepPhase = "pre-step" | "active-fields" | "collision-resolution" | "post-commit";
@@ -52,6 +53,8 @@ export interface RootboundEnvironmentActor {
     geometry: Readonly<{ x: number; y: number; w: number; h: number }>;
     damage: number;
     cleanupReason: "natural-expiry" | "stage-transition" | null;
+    graftPlacements?: readonly GraftAnchorPlacementRequest[];
+    ownerPosition?: Readonly<{ x: number; y: number }>;
   }>;
   readonly player?: Readonly<{
     x: number; y: number; hw: number; hh: number; invulnerable: boolean; hazardDamageMultiplier: number;
@@ -181,6 +184,20 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     for (const [ownerId, fieldId] of this.#rootlineFields) if (!present.has(ownerId)) {
       this.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: "stage-transition" });
       this.#rootlineFields.delete(ownerId); this.#rootlineHitFields.delete(fieldId);
+    }
+  }
+
+  #advanceRootboundGrafts(tick: number): void {
+    for (const actor of this.#rootboundActors?.() ?? []) {
+      const ownerPosition = actor.state.ownerPosition;
+      if (ownerPosition === undefined) continue;
+      for (const placement of actor.state.graftPlacements ?? []) installGraftAnchor(this, {
+        ownerId: actor.id,
+        ownerPosition,
+        graftType: placement.graftType,
+        geometry: placement.geometry,
+        createdTick: tick,
+      });
     }
   }
 
@@ -363,7 +380,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   step(tick: number, seconds: number, gameplayStep: () => void, availableActorIds?: ReadonlySet<string>): void {
     if (typeof gameplayStep !== "function") throw new TypeError("environment gameplay step is required");
     this.clearPhaseLog(); this.#run("pre-step", tick, seconds, this.#hooks.preStep); gameplayStep();
-    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
+    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
     this.#run("collision-resolution", tick, seconds, this.#hooks.resolveCollisions);
     this.#run("post-commit", tick, seconds, () => { this.#cleanupOrphans(tick, availableActorIds); this.#hooks.postCommit?.({ tick, seconds, phase: "post-commit", environment: this }); });
   }

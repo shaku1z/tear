@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C12",
-  "currentSubgoal": "VS3-C12-S2",
+  "currentSubgoal": "VS3-C12-S3",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -1794,7 +1794,7 @@
         {
           "id": "VS3-C12-S2",
           "description": "Create Grafts through production environment factories and stable owner references.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C12-S3",
@@ -1889,14 +1889,18 @@
         "pnpm typecheck",
         "pnpm check:architecture",
         "pnpm exec eslint src/gameplay/environment/graft-anchor.ts tests/unit/graft-anchor.test.ts",
-        "git diff --check"
+        "git diff --check",
+        "pnpm exec vitest run tests/unit/graft-anchor.test.ts tests/unit/rootbound-phase-two.test.ts tests/unit/rootbound-phase-one.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/environment-state-codec.test.ts",
+        "pnpm exec eslint src/gameplay/environment/graft-anchor.ts src/gameplay/environment/environment-runtime.ts src/gameplay/entities/enemy-types/rootbound.ts src/app/live-rootbound-wiring.ts src/tearbench/environment-codec.ts tests/unit/graft-anchor.test.ts tests/unit/rootbound-phase-two.test.ts"
       ],
       "evidence": [
-        "VS3-C12-S1 immutable Graft definitions prove exactly Bastion, Mercy, and Haste over the existing graft-anchor environment kind; Bastion remains non-zero damage, Mercy has finite pulse and total recovery caps, Haste retains the 0.55-second warning floor, and canonical reward/proc exclusion remains unchanged. Eleven focused and adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass."
+        "VS3-C12-S1 immutable Graft definitions prove exactly Bastion, Mercy, and Haste over the existing graft-anchor environment kind; Bastion remains non-zero damage, Mercy has finite pulse and total recovery caps, Haste retains the 0.55-second warning floor, and canonical reward/proc exclusion remains unchanged. Eleven focused and adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass.",
+        "VS3-C12-S2 production Graft creation is green: Rootbound emits the exact three Phase II placement requests, live composition supplies the stable actor owner, and the canonical environment owner installs each specialized state once with deterministic IDs, owner/target references, connection geometry, integrity, created tick, and exact S1 effect data. The existing codec accepts specialized source-owned combat-object factory IDs without a registry. Thirty-six focused/adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass."
       ],
       "blockers": [],
       "notes": [
-        "S1 intentionally defines tuning only. Production construction, stable owner references, and lifecycle remain ordered work in S2-S4."
+        "S1 intentionally defines tuning only. Production construction, stable owner references, and lifecycle remain ordered work in S2-S4.",
+        "S2 installs warning-state data only. Activation, destruction effect removal, and phase cleanup remain ordered lifecycle work in S4."
       ]
     },
     {
