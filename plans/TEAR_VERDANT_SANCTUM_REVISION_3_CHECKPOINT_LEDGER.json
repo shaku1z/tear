@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C16",
-  "currentSubgoal": "VS3-C16-EXIT",
+  "currentCheckpoint": "VS3-C17",
+  "currentSubgoal": "VS3-C17-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -25,9 +25,10 @@
     "VS3-C12",
     "VS3-C13",
     "VS3-C14",
-    "VS3-C15"
+    "VS3-C15",
+    "VS3-C16"
   ],
-  "lastGreenCheckpoint": "VS3-C15",
+  "lastGreenCheckpoint": "VS3-C16",
   "lastEvidence": [
     "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass.",
     "VS3-C10-S6 Rootbound presentation identity is green: the existing enemy renderer composition installs its root-throne, branching mantle, plural-mask, gold-graft silhouette and intro rise pose; the shared boss-intro snapshot/UI path preserves THE ROOTBOUND, KEEPER OF THE LAST MERCY, and YOU DO NOT HAVE TO DIE HERE.; focused and adjacent presentation/factory/reference tests, typecheck, architecture, targeted lint, and docs gates pass.",
@@ -62,10 +63,11 @@
     "VS3-C16-S7 replay/ruleset compatibility is GREEN at 1cd2781b786264f71bba8df772df598eb0e26b28: the six-stage build has an explicit engineering-only ruleset; deterministic admission rejects mismatches while historical envelopes remain readable; stage facts retain numeric compatibility and add validated stable IDs plus entered/exited semantics. 49 focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
     "VS3-C16-S8 profile compatibility is GREEN at 1f7c8866b2a0b175736e858da05cb5b1a57c84e8: no schema migration is published because Verdant stats and achievements fit existing extensible v2 maps; current and legacy data retain all values and unknown fields. A structural migration remains deferred to authorized joint promotion. 13 focused/adjacent tests, typecheck, targeted lint, artifact-layout, and diff checks pass.",
     "VS3-C16-S9 lifecycle cleanup is GREEN at f1fe1748698d5fe1795a9886350ef5af97823ac9: reset, retry, quit, defeat, victory, stage transition, and mode change clear Verdant environment and Rootbound-local ownership; terminal outcomes now run boss cleanup before environment and lifecycle termination. 64 focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
-    "VS3-C16-S10 publication boundary is GREEN at ee3c7390cbbc991ef8c255478d159f37c4a7b27d: source policy marks the exact six-stage ruleset engineering-only; release preflight refuses it; game-reference publication rejects Verdant without Pale; only an explicit public policy containing both joint stages can pass. Policy/release/reference tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass."
+    "VS3-C16-S10 publication boundary is GREEN at ee3c7390cbbc991ef8c255478d159f37c4a7b27d: source policy marks the exact six-stage ruleset engineering-only; release preflight refuses it; game-reference publication rejects Verdant without Pale; only an explicit public policy containing both joint stages can pass. Policy/release/reference tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
+    "VS3-C16 aggregate closure is GREEN at c7976332bf34bf06ff628d3e13b307fce2bd9a5d: all ten subgoals; repository static/docs/artifact/reference/publication gates; 9 files/30 focused tests plus 14 publication tests; attributed standalone artifact 0e6be53acb2bfcd9cfbdbd236685985b11f6d97a1f8dccd35231e94708a4def9; browser feature/journey and State Forge runtime/studio/exit matrices pass."
   ],
   "blockers": [],
-  "nextAction": "Run the complete VS3-C16 focused, repository, standalone-build, browser-feature, journey, and State Forge exit gates; then record the durable checkpoint evidence.",
+  "nextAction": "Execute VS3-C17-S1 by auditioning Static Bloom against the locked Verdant emotional/gameplay brief without changing the safe fallback or vendored package.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2575,11 +2577,27 @@
         "Reset lifecycle evidence",
         "Player-facing journey evidence where applicable"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "complete",
+      "sourceBaseline": "998b85291d4122428ee996f8cc3e0391162653f9",
+      "completionIdentity": "c7976332bf34bf06ff628d3e13b307fce2bd9a5d",
+      "commandsRun": [
+        "pnpm typecheck; pnpm lint; pnpm check:architecture; pnpm check:docs; pnpm check:artifacts; pnpm check:publication-boundary",
+        "pnpm exec vitest run tests/unit/mode-catalog.test.ts tests/unit/achievement-catalog.test.ts tests/unit/achievement-runtime.test.ts tests/unit/replay-envelope.test.ts tests/unit/profile-envelope.test.ts tests/unit/run-lifecycle.test.ts tests/unit/verdant-mode-lifecycle.test.ts tests/unit/verdant-telemetry.test.ts tests/unit/verdant-publication-boundary.test.ts",
+        "node --test tests/game-reference-artifact-publication.test.mjs",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:features",
+        "pnpm test:browser:journeys",
+        "pnpm test:browser:state-forge",
+        "pnpm check:game-reference"
+      ],
+      "evidence": [
+        "All supported modes use canonical Verdant, Rootbound, enemy, stage, and tutorial-isolation authorities without new registries.",
+        "Approved achievements and authoritative Verdant/Rootbound telemetry update existing source-owned profile maps; ambiguous presentation-derived metrics remain deferred.",
+        "The six-stage engineering ruleset, stable stage events, deterministic replay admission, and no-migration profile decision are explicit and tested.",
+        "Reset, retry, quit, defeat, victory, stage transition, and mode change clear both environment and boss-local ownership.",
+        "Tracked publication policy, release preflight, and game-reference publication reject the six-stage Verdant-without-Pale state.",
+        "Aggregate closure is green at c7976332bf34bf06ff628d3e13b307fce2bd9a5d with 30 minimum focused tests, 14 publication tests, standalone artifact 0e6be53acb2bfcd9cfbdbd236685985b11f6d97a1f8dccd35231e94708a4def9, and all required browser matrices."
+      ],
       "blockers": [],
       "notes": []
     },
@@ -2613,7 +2631,7 @@
         {
           "id": "VS3-C17-S1",
           "description": "Audition Static Bloom against the locked Verdant emotional and gameplay brief.",
-          "status": "not-started"
+          "status": "in-progress"
         },
         {
           "id": "VS3-C17-S2",

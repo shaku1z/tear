@@ -4937,7 +4937,7 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 
 | Field | Value |
 | --- | --- |
-| Status | `in-progress` |
+| Status | `green` |
 | Owner | Progression/persistence/mode owner |
 | Dependencies | VS3-C13, VS3-C15 |
 | Release boundary | Feature completeness across supported modes; no public profile migration yet |
@@ -5052,6 +5052,8 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 > `VS3-C16-S9 is GREEN at f1fe1748698d5fe1795a9886350ef5af97823ac9. Reset, retry, quit, defeat, victory, stage transition, and mode change clear Verdant environment ownership and Rootbound-local encounter state; terminal defeat/victory now invokes boss cleanup before environment cleanup and lifecycle termination. Sixty-four focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass. The next authorized action is VS3-C16-S10, proving the intermediate six-stage profile/reference state remains non-publishable. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 > `VS3-C16-S10 is GREEN at ee3c7390cbbc991ef8c255478d159f37c4a7b27d. The exact six-stage roster/ruleset is registered as engineering-only; release preflight refuses it, and game-reference publication independently rejects any Verdant-without-Pale stage catalog. Only an explicit public policy containing both joint stages can pass. Policy, release-preflight, and reference-publication tests plus typecheck, targeted lint, architecture, artifact-layout, and diff checks pass. The next authorized action is the complete VS3-C16 exit gate. Verdant publication remains prohibited, and C40 status is unchanged.`
+
+> `VS3-C16 is GREEN at c7976332bf34bf06ff628d3e13b307fce2bd9a5d. All ten ordered subgoals pass; repository typecheck/lint/architecture/docs/artifact/reference/publication gates, the 9-file/30-test minimum proof, 14 publication tests, attributed standalone artifact 0e6be53acb2bfcd9cfbdbd236685985b11f6d97a1f8dccd35231e94708a4def9, browser feature/journey matrices, and State Forge runtime/studio/exit matrices are green. The next authorized action is VS3-C17-S1, auditioning Static Bloom against the locked Verdant brief without changing the safe fallback or vendored package. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
