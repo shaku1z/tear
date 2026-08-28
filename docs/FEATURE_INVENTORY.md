@@ -64,6 +64,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   The source-derived Boss Test setup exposes Rootbound, launches it in Verdant
   Sanctum, treats its planted attack-free foundation as live simulation, and
   returns a defeat/result retry to that same selected boss and authored stage.
+  Class-A live diagnostics now project Rootbound's current phase, valid ordinal
+  set, and `verdant-sanctum` home through production boss/stage authorities;
+  State Forge derives the complete six-boss, eighteen-phase launch matrix.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

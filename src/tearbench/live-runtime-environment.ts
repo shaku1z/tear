@@ -18,7 +18,7 @@ import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
 import { projectLiveProjectiles } from "./live-observation-projectiles"; import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
-import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
+import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLiveBossObservation, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
 import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
@@ -107,6 +107,7 @@ export function projectLiveTearObservation(
   }
   const livingEnemies = context.state.enemies().filter((enemy) => !enemy.dead);
   const boss = livingEnemies.find((enemy) => enemy.isBoss);
+  const bossObservation = boss === undefined ? undefined : projectLiveBossObservation(boss);
   const stage = canonicalObservationStage(context.stage().index);
   const lifecycle = context.lifecycle();
   const focusedId = context.focusedControlId?.();
@@ -163,15 +164,7 @@ export function projectLiveTearObservation(
           ? { waveOwnership: "unavailable" as const }
           : { waveOwnership: "source-events" as const,
             livingWaveEnemies: livingEnemies.filter((enemy) => waveActorIds.has(context.actorId(enemy))).length }),
-        ...(boss === undefined ? {} : {
-          boss: Object.freeze({
-            id: boss.bossId ?? boss.kind,
-            phase: "phase" in boss && (typeof boss.phase === "string" || typeof boss.phase === "number")
-              ? String(boss.phase)
-              : ("state" in boss && typeof boss.state === "string" ? boss.state : "active"),
-            validPhases: Object.freeze(Array.from({ length: boss.phaseMarks.length + 1 }, (_, index) => String(index + 1))),
-          }),
-        }),
+        ...(bossObservation === undefined ? {} : { boss: bossObservation }),
         paused: context.screen() === "paused",
         ui: Object.freeze({ focusableIds: Object.freeze([...context.choiceIds()]),
           ...(focusedId === undefined ? {} : { focusedId }) }),

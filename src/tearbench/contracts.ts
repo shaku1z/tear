@@ -195,7 +195,7 @@ export interface TearObservationV1 {
     waveComplete?: boolean;
     livingWaveEnemies?: number;
     waveOwnership?: "source-events" | "unavailable";
-    boss?: Readonly<{ id: string; phase: string; validPhases: readonly string[] }>;
+    boss?: Readonly<{ id: string; phase: string; validPhases: readonly string[]; homeStage: string }>;
     ui?: Readonly<{ focusedId?: string; focusableIds: readonly string[] }>;
     paused?: boolean;
     lifecyclePhase?: string;

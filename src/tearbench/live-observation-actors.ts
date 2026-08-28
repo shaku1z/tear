@@ -1,4 +1,28 @@
 import type { TearRuntimeAccessClass } from "./live-runtime-contracts";
+import { bossDefinition, isBossDefinitionId } from "../gameplay/run/boss-definitions";
+import { STAGE_BOSS_HOME, type StageId } from "../gameplay/stages";
+
+export interface LiveBossObservation {
+  readonly id: string;
+  readonly phase: string;
+  readonly validPhases: readonly string[];
+  readonly homeStage: StageId;
+}
+
+/** Projects boss identity, ordinals, and home stage only from production authorities. */
+export function projectLiveBossObservation(actor: Readonly<{
+  bossId?: unknown; kind?: unknown; phase?: unknown; state?: unknown;
+}>): LiveBossObservation | undefined {
+  const rawId = typeof actor.bossId === "string" ? actor.bossId : typeof actor.kind === "string" ? actor.kind : "";
+  if (!isBossDefinitionId(rawId)) return undefined;
+  const definition = bossDefinition(rawId);
+  const validPhases = Object.freeze(Array.from({ length: definition.phaseMarks.length + 1 }, (_, index) => String(index + 1)));
+  const rawPhase = typeof actor.phase === "number" || typeof actor.phase === "string" ? String(actor.phase) : "";
+  const phase = validPhases.includes(rawPhase) ? rawPhase : validPhases[0] ?? "1";
+  const home = Object.entries(STAGE_BOSS_HOME).find(([, bossId]) => bossId === rawId)?.[0] as StageId | undefined;
+  if (home === undefined) throw new RangeError(`boss ${rawId} has no source-owned home stage`);
+  return Object.freeze({ id: rawId, phase, validPhases, homeStage: home });
+}
 
 /** Projects authored actor modes only for structured Class A/B observers. */
 export function projectLiveBehaviorMode(

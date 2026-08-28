@@ -67,12 +67,13 @@ describe("C23 State Forge exit matrix", () => {
     });
   });
 
-  it("declares all fifteen boss phases and all thirty-nine one-frame boundary positions", () => {
+  it("declares all eighteen boss phases and all thirty-nine one-frame boundary positions", () => {
     const bosses = createBossPhaseLaunchMatrix();
     const boundaries = createOneFrameBoundaryLaunchMatrix();
-    expect(bosses).toHaveLength(15);
-    expect(new Set(bosses.map((entry) => entry.boss))).toHaveLength(5);
-    expect(bosses.filter((entry) => entry.phase === 3)).toHaveLength(5);
+    expect(bosses).toHaveLength(18);
+    expect(new Set(bosses.map((entry) => entry.boss))).toHaveLength(6);
+    expect(bosses.filter((entry) => entry.phase === 3)).toHaveLength(6);
+    expect(bosses.filter((entry) => entry.boss === "rootbound").map((entry) => entry.phase)).toEqual([1, 2, 3]);
     expect(boundaries).toHaveLength(39);
     expect(new Set(boundaries.map((entry) => entry.boundary))).toHaveLength(13);
     expect(boundaries.filter((entry) => entry.position === "at")).toHaveLength(13);
