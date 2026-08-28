@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C12-S8 green; VS3-C12-S9 next** |
+| Status | **Active implementation authority — VS3-C12-S9 green; VS3-C12-S10 next** |
 | Current checkpoint | `VS3-C12` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4568,7 +4568,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 - [x] **VS3-C12-S6** — Implement Memory Choir as bounded authoritative manifestations or a truthful existing add lifecycle. Rootbound owns at most three data-only strike manifestations with a 0.65-second warning, 0.12-second authored echo stagger, one bounded hit per silhouette, boss-owned source/damage, afterimage recovery, and explicit phase/encounter cancellation. They never enter enemy construction, HP, rewards, proc, or wave-clear ownership. The existing Rootbound renderer draws the exact warning/active geometry in low-graphics and reduced-motion modes.
 - [x] **VS3-C12-S7** — Implement Root Cage through the environment/hazard owner with a guaranteed response route. Rootbound now emits one generation-stable placement request; the existing environment runtime materializes exactly two specialized `root-link` combat objects without adding a kind or registry. Their canonical 72-tick warning, 240-tick active lifetime, stable boss ownership, 480-pixel interior, cut/break response, collision constraint, immediate sever removal, structured observation, static low-graphics warning, and natural/phase cleanup are permanent production-path facts.
 - [x] **VS3-C12-S8** — Prevent Root Cage and Rootbinder leash from creating a total movement lock. The environment owner now detects its one canonical active player leash and suspends Root Cage collision for exactly that overlap while retaining warning geometry and severability. Jump and dash remain available; when the leash cleans, intact Cage collision resumes in the same authoritative step. No boss-local compatibility flag or second relationship authority was added.
-- [ ] **VS3-C12-S9** — Implement Phase II attack selection/cadence and Phase III transition.
+- [x] **VS3-C12-S9** — Implement Phase II attack selection/cadence and Phase III transition. Rootbound now cycles the bounded `Memory Choir -> Root Cage -> Bloom shift` order, advances only the existing Bloom pattern index, and applies Haste to opening/recovery cadence without changing the 0.65/0.60/0.70-second authored warning floors. Crossing the Phase III threshold records the final active Graft types, cancels Phase II manifestations/Cage intent, and submits `rootbound-nothing-here-dies` through the existing shared boss transformation path.
 - [ ] **VS3-C12-S10** — Prove environment population caps and all reset/terminal cleanup.
 
 ## Agent implementation procedure

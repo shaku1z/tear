@@ -5,6 +5,7 @@ import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
 import type { RootCagePlacementRequest } from "../../environment/root-cage";
+import type { BossRuntime } from "./boss-runtime";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
   "vine-sweep", "seed-arc", "rootline", "canopy-step",
@@ -47,6 +48,9 @@ export const ROOTBOUND_MEMORY_CHOIR = Object.freeze({
   damage: 14,
 });
 export type RootboundMemoryChoirStage = "warning" | "active" | "afterimage";
+export const ROOTBOUND_PHASE_TWO_ATTACK_ORDER = Object.freeze(["memory-choir", "root-cage", "bloom-shift"] as const);
+export type RootboundPhaseTwoAttack = typeof ROOTBOUND_PHASE_TWO_ATTACK_ORDER[number];
+export const ROOTBOUND_PHASE_TWO_CADENCE = Object.freeze({ openingDelay: 0.85, recovery: 0.7 });
 export interface RootboundMemoryChoirManifestation {
   readonly id: string;
   readonly x: number;
@@ -58,8 +62,9 @@ export interface RootboundMemoryChoirManifestation {
 }
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
-export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
+export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime) {
   const { CONFIG, Projectile } = dependencies;
+  const { bossTransformation } = bossRuntime;
   class Rootbound extends Enemy {
     declare cfg: typeof CONFIG.boss;
     introT = 0;
@@ -103,6 +108,10 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     memoryChoirManifestations: readonly RootboundMemoryChoirManifestation[] = Object.freeze([]);
     rootCageSequence = 0;
     rootCageRequest: RootCagePlacementRequest | null = null;
+    readonly phaseTwoAttackOrder = ROOTBOUND_PHASE_TWO_ATTACK_ORDER;
+    phaseTwoAttackIndex = 0;
+    phaseTwoPendingAttack: RootboundPhaseTwoAttack | null = null;
+    finalPhaseTwoGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -292,6 +301,30 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       return ROOTBOUND_BLOOM_PATTERN_IDS[this.bloomPatternIndex % ROOTBOUND_BLOOM_PATTERN_IDS.length] ?? null;
     }
 
+    selectNextPhaseTwoAttack(playerX: number): RootboundPhaseTwoAttack | null {
+      if (this.phase !== 2 || this.attackCommitProtected() || this.state !== "idle" || this.phaseTwoPendingAttack !== null) return null;
+      const selected = this.phaseTwoAttackOrder[this.phaseTwoAttackIndex % this.phaseTwoAttackOrder.length];
+      if (selected === undefined) throw new RangeError("Rootbound Phase II attack order is empty");
+      this.phaseTwoAttackIndex += 1;
+      this.phaseTwoPendingAttack = selected;
+      this.stateT = 0;
+      if (selected === "memory-choir") this.startMemoryChoir();
+      else if (selected === "root-cage") this.startRootCage(playerX);
+      else {
+        this.bloomPatternIndex = (this.bloomPatternIndex + 1) % ROOTBOUND_BLOOM_PATTERN_IDS.length;
+        this.atk = "bloom-shift:warning";
+        this.completePhaseTwoAttack();
+      }
+      return selected;
+    }
+
+    private completePhaseTwoAttack(): void {
+      this.phaseTwoPendingAttack = null;
+      this.state = "recover";
+      this.stateT = ROOTBOUND_PHASE_TWO_CADENCE.recovery / this.graftCadenceMultiplier;
+      this.atk = "unavailable";
+    }
+
     startRootCage(centerX: number): boolean {
       if (this.phase !== 2 || this.attackCommitProtected() || this.rootCageRequest !== null || !Number.isFinite(centerX)) return false;
       this.rootCageSequence += 1;
@@ -311,7 +344,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
 
     completeRootCage(): void {
       this.rootCageRequest = null;
-      if (this.atk.startsWith("root-cage:")) this.atk = "unavailable";
+      if (this.phase === 2 && this.phaseTwoPendingAttack === "root-cage") this.completePhaseTwoAttack();
+      else if (this.atk.startsWith("root-cage:")) this.atk = "unavailable";
     }
 
     startMemoryChoir(): boolean {
@@ -375,8 +409,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       }
       if (this.memoryChoirT <= 0) {
         this.cancelMemoryChoir();
-        this.state = "recover";
-        this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery / this.graftCadenceMultiplier;
+        this.completePhaseTwoAttack();
       }
     }
 
@@ -494,6 +527,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.applyGraftEffects(ROOTBOUND_NO_GRAFT_EFFECTS);
       this.cancelMemoryChoir();
       this.completeRootCage();
+      this.phaseTwoPendingAttack = null;
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
@@ -504,7 +538,13 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         : this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[1] ? 2 : 3;
       if (nextPhase > this.phaseMarker) {
         if (this.phaseMarker === 1) this.exitPhaseOne(projectiles);
-        else if (this.phaseMarker === 2) { this.cancelMemoryChoir(); this.completeRootCage(); }
+        else if (this.phaseMarker === 2) {
+          this.finalPhaseTwoGraftTypes = Object.freeze([...this.activeGraftTypes]);
+          this.cancelMemoryChoir(); this.completeRootCage(); this.phaseTwoPendingAttack = null;
+          this.state = "recover"; this.stateT = ROOTBOUND_PHASE_TWO_CADENCE.recovery;
+          bossTransformation(this, { id: "rootbound-nothing-here-dies", title: "NOTHING HERE DIES", pose: "rootboundRegrowth",
+            line: "THE GARDEN WILL REMEMBER YOU.", color: this.color, sfx: "rootboundRegrowth" });
+        }
         this.phaseMarker = nextPhase;
         this.phaseTag = nextPhase === 2 ? "THE GARDEN REMEMBERS" : "NOTHING HERE DIES";
       }
@@ -537,10 +577,13 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       } else if (this.stun <= 0) {
         this.stateT = Math.max(0, this.stateT - dt);
         if (this.stateT <= 0) {
-          if (this.state === "idle") this.selectNextPhaseOneAttack();
+          if (this.state === "idle") {
+            if (this.phase === 1) this.selectNextPhaseOneAttack();
+            else if (this.phase === 2) this.selectNextPhaseTwoAttack(player.x);
+          }
           else {
             this.state = "idle";
-            this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.openingDelay;
+            this.stateT = (this.phase === 2 ? ROOTBOUND_PHASE_TWO_CADENCE.openingDelay / this.graftCadenceMultiplier : ROOTBOUND_PHASE_ONE_CADENCE.openingDelay);
           }
         }
       }

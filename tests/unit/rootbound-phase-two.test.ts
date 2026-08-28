@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { GRAFT_ANCHOR_TIMING, GRAFT_ANCHOR_TYPES, isGraftAnchorState, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../src/gameplay/environment/graft-anchor";
-import { ROOTBOUND_GRAFT_ANCHOR_GEOMETRY, ROOTBOUND_MEMORY_CHOIR } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_GRAFT_ANCHOR_GEOMETRY, ROOTBOUND_MEMORY_CHOIR, ROOTBOUND_PHASE_TWO_CADENCE, type RootboundPhaseTwoAttack } from "../../src/gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../src/gameplay/environment/bloom-well";
 import { ROOT_CAGE_GEOMETRY, ROOT_CAGE_TIMING, isRootCageState, type RootCagePlacementRequest } from "../../src/gameplay/environment/root-cage";
 import { createEnemyHarness } from "./enemy-test-harness";
@@ -17,6 +17,9 @@ type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"][
   startRootCage(centerX: number): boolean;
   rootCagePlacement(): RootCagePlacementRequest | null;
   completeRootCage(): void;
+  phaseTwoAttackIndex: number;
+  phaseTwoPendingAttack: RootboundPhaseTwoAttack | null;
+  finalPhaseTwoGraftTypes: readonly string[];
 };
 
 describe("Rootbound Phase II Graft creation", () => {
@@ -282,5 +285,56 @@ describe("Rootbound Phase II Graft creation", () => {
     environment.step(startTick + ROOT_CAGE_TIMING.warningTicks + 2, 1 / 120, () => undefined, new Set(["enemy:rootbound-live", rootbinder.id, "player"]));
     expect(cagePlayer).toMatchObject({ x: left.geometry.x + left.geometry.w + 20, vx: 0 });
     expect(environment.combatObjects().find((object) => object.id.includes(":leash:"))).toMatchObject({ state: "expired", cleanupReason: "stage-transition" });
+  });
+
+  it("cycles the bounded Phase II attack order, applies Haste only to cadence, and enters Phase III through boss theater", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    actor.state = "idle";
+    actor.stateT = 0;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor).toMatchObject({ phaseTwoPendingAttack: "memory-choir", memoryChoirStage: "warning", atk: "memory-choir:warning" });
+    expect(ROOTBOUND_MEMORY_CHOIR.warning).toBeGreaterThanOrEqual(0.55);
+    actor.update(ROOTBOUND_MEMORY_CHOIR.warning, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_MEMORY_CHOIR.active + ROOTBOUND_MEMORY_CHOIR.echoStagger * 2, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_MEMORY_CHOIR.afterimage, harness.platforms, harness.player, []);
+    expect(actor).toMatchObject({ phaseTwoPendingAttack: null, memoryChoirStage: null, state: "recover", stateT: ROOTBOUND_PHASE_TWO_CADENCE.recovery });
+
+    actor.state = "idle";
+    actor.stateT = 0;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor).toMatchObject({ phaseTwoPendingAttack: "root-cage", atk: "root-cage:warning" });
+    actor.completeRootCage();
+    expect(actor).toMatchObject({ phaseTwoPendingAttack: null, rootCageRequest: null, state: "recover" });
+
+    const priorPattern = actor.bloomPatternIndex;
+    actor.state = "idle";
+    actor.stateT = 0;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor.bloomPatternIndex).toBe((priorPattern + 1) % ROOTBOUND_BLOOM_PATTERN_IDS.length);
+    expect(actor).toMatchObject({ phaseTwoAttackIndex: 3, phaseTwoPendingAttack: null, state: "recover" });
+
+    actor.applyGraftEffects(Object.freeze({ incomingDamageMultiplier: 1, cadenceMultiplier: 1.15, activeTypes: Object.freeze(["haste"] as const) }));
+    actor.phaseTwoAttackIndex = 0;
+    actor.state = "idle";
+    actor.stateT = 0;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_MEMORY_CHOIR.warning, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_MEMORY_CHOIR.active + ROOTBOUND_MEMORY_CHOIR.echoStagger * 2, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_MEMORY_CHOIR.afterimage, harness.platforms, harness.player, []);
+    expect(actor.stateT).toBeCloseTo(ROOTBOUND_PHASE_TWO_CADENCE.recovery / 1.15, 8);
+    expect(ROOTBOUND_MEMORY_CHOIR.warning).toBe(0.65);
+    expect(ROOT_CAGE_TIMING.warningTicks / ROOT_CAGE_TIMING.ticksPerSecond).toBe(0.6);
+
+    actor.applyGraftEffects(Object.freeze({ incomingDamageMultiplier: 0.8, cadenceMultiplier: 1.15,
+      activeTypes: Object.freeze(["bastion", "haste"] as const) }));
+    actor.hp = actor.maxHp * 0.2;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor).toMatchObject({ phase: 3, phaseMarker: 3, phaseTag: "NOTHING HERE DIES",
+      phaseTwoPendingAttack: null, memoryChoirStage: null, rootCageRequest: null,
+      finalPhaseTwoGraftTypes: ["bastion", "haste"],
+      cinematicRequest: { id: "rootbound-nothing-here-dies", title: "NOTHING HERE DIES", pose: "rootboundRegrowth" } });
   });
 });

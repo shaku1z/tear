@@ -27,7 +27,7 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const Aldric = createAldricType(dependencies, Enemy, bossRuntime, throneFireRuntime);
   const { Echo, VoidWisp } = createEchoEnemyTypes(dependencies, Enemy, bossRuntime);
   const Source = createSourceType(dependencies, Enemy, bossRuntime, throneFireRuntime);
-  const Rootbound = createRootboundType(dependencies, Enemy);
+  const Rootbound = createRootboundType(dependencies, Enemy, bossRuntime);
 
   return Object.freeze({
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,

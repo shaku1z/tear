@@ -161,6 +161,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   collision is suspended but its warning/sever facts remain. Jump and dash stay
   enabled, and an intact Cage resumes collision in the same step that the leash
   cleans. No boss-local overlap flag or parallel relationship authority exists.
+  VS3-C12-S9 makes Phase II operational through a deterministic Memory Choir,
+  Root Cage, then Bloom-shift order. Haste scales only selection/recovery cadence
+  and never compresses the existing 0.65/0.60/0.70-second warnings. Bloom shift
+  advances the shared pattern IDs rather than constructing another field path.
+  At 28% HP Rootbound records final active Graft types, cancels invalid Phase II
+  attacks, and submits the Phase III declaration through shared boss theater.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
