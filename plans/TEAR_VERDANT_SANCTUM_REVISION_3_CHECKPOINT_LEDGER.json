@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C10",
-  "currentSubgoal": "VS3-C10-S5",
+  "currentSubgoal": "VS3-C10-S6",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -26,7 +26,7 @@
     "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C10-S5: implement Rootbound's base boss body, damageable HP/collision contract, phase ordinal, intro protection, and idle/recovery loop.",
+  "nextAction": "Execute VS3-C10-S6: add Rootbound's presentation identity, silhouette, name, epithet, intro pose, and opening line through existing boss presentation contracts.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1520,7 +1520,7 @@
         {
           "id": "VS3-C10-S5",
           "description": "Implement base boss body, HP, collision, damage, phase ordinal, intro state, and idle/recovery loop.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C10-S6",

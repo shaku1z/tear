@@ -105,4 +105,53 @@ describe("Rootbound production foundation", () => {
     expect(platforms).toContain(route);
     expect(run._arenaBroken).toEqual([]);
   });
+
+  it("owns a damageable base body, monotonic phase ordinal, and attack-free idle/recovery loop", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
+    const boss = actor as typeof actor & {
+      introT: number;
+      phaseMarker: number;
+      phaseTag: string;
+      state: "intro" | "idle" | "recover";
+      stateT: number;
+      contactDamageEnabled(): boolean;
+    };
+
+    expect(boss).toMatchObject({
+      hw: CONFIG.boss.w / 2,
+      hh: CONFIG.boss.h / 2,
+      hp: CONFIG.boss.hp,
+      maxHp: CONFIG.boss.hp,
+      phase: 1,
+      phaseMarker: 1,
+      phaseTag: "KEEPER OF SPRING",
+      state: "idle",
+      availableAttacks: [],
+    });
+
+    boss.introT = 0.5;
+    const introHp = boss.hp;
+    expect(boss.hit(100, 1, 0)).toBe(0);
+    expect(boss.hp).toBe(introHp);
+    expect(boss.contactDamageEnabled()).toBe(false);
+    boss.update(1 / 120, harness.platforms, harness.player, []);
+    expect(boss.state).toBe("intro");
+
+    boss.introT = 0;
+    boss.update(1 / 120, harness.platforms, harness.player, []);
+    expect(boss.state).toBe("recover");
+    expect(boss.hit(100, 1, 0)).toBe(100);
+    expect(boss.hp).toBe(introHp - 100);
+
+    boss.hp = boss.maxHp * boss.phaseMarks[0];
+    boss.update(1 / 120, harness.platforms, harness.player, []);
+    expect(boss).toMatchObject({ phase: 2, phaseMarker: 2, phaseTag: "THE GARDEN REMEMBERS" });
+    boss.hp = boss.maxHp;
+    expect(boss.phase).toBe(2);
+
+    boss.update(1, harness.platforms, harness.player, []);
+    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: [] });
+    expect(boss.contactDamageEnabled()).toBe(true);
+  });
 });
