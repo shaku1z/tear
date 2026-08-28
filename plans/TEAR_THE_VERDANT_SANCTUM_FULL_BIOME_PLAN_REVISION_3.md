@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C14-S2 green; VS3-C14-S3 next** |
+| Status | **Active implementation authority — VS3-C14-S3 green; VS3-C14-S4 next** |
 | Current checkpoint | `VS3-C14` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4764,7 +4764,7 @@ Prove every active weapon can answer every required Verdant combat object withou
 
 - [x] **VS3-C14-S1** — Define and test cut, break, and projectile-cut capability resolution. The existing environment combat-object kernel now exposes one typed exact-match resolver over source-owned counterplay metadata. Root links accept cut/break and reject projectile-cut; Grafts accept all three; unknown capabilities fail closed. This establishes a shared seam for weapon routing without weapon IDs, bespoke object handlers, or another capability registry.
 - [x] **VS3-C14-S2** — Prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption. The canonical Sword definition now declares its held `cut` capability, and the live collision phase resolves that capability against environment-owned Root link, Graft, and Regrowth geometry through the existing combat-object runtime. Object contacts use per-swing attack IDs and never enter enemy hit hooks, Reversal targeting, Threadcut waypoints, reward logic, or ordinary proc paths.
-- [ ] **VS3-C14-S3** — Prove Hammer Break and Meteor route/catch safety.
+- [x] **VS3-C14-S3** — Prove Hammer Break and Meteor route/catch safety. Hammer now declares held `break` in its existing canonical definition, so the shared production contact seam destroys Root and Regrowth links and applies its high-integrity pressure to Grafts. The same permanent proof executes the native ballistic Meteor launch, gravity step, recall, and catch-to-held lifecycle after the object contact; no transport behavior or catch guarantee changed.
 - [ ] **VS3-C14-S4** — Prove Greatsword broad multi-segment dedupe and Wheel Cut safety.
 - [ ] **VS3-C14-S5** — Prove Chainblade head-only object damage and Hook & Sling stability.
 - [ ] **VS3-C14-S6** — Prove Riftlock bayonet/Razor Round severing without invalid Capture and with Backblast safety.

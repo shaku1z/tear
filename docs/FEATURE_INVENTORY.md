@@ -299,8 +299,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   definition, and the production collision phase routes matching Root link,
   Graft, and Regrowth geometry through the environment owner with per-swing
   dedupe. Those contacts never become enemy targets, so Reversal and Threadcut
-  state remain untouched. Remaining weapon conformance is owned by VS3-C14-S3
-  through S8, and no C40 certification record changed.
+  state remain untouched. Hammer likewise declares held `break`; its object proof
+  covers both link forms and Graft pressure before exercising the unchanged
+  Meteor ballistic launch, recall, and held recovery. Remaining weapon
+  conformance is owned by VS3-C14-S4 through S8, and no C40 certification record
+  changed.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

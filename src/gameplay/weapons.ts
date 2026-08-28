@@ -178,6 +178,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Meteor", ratings: { handling: 1, impact: 5, reach: 2, difficulty: 3 },
     throwCollisionPad: 13,
     channels: weaponChannels({ throwPower: 1.35, throwSpeed: 0.82, secondaryPower: 1.18, returnSpeed: 0.78 }),
+    environmentCounterplay: Object.freeze({ held: "break" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.springStiffness *= 0.62; B.damping *= 1.18; B.gravity *= 1.58;
