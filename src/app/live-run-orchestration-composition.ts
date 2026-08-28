@@ -22,6 +22,7 @@ import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology
 import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 import { activateStageEnvironment } from "../gameplay/environment/stage-environment-activation";
+import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -178,6 +179,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     finishRecording: options.controllers.api.finishRecording,
     executeVictory, emitMusicOutcome: options.emitMusicOutcome,
     startRun: options.startRun,
+    cleanupBossActors: () => { cleanupBossEncounterActors(options.enemies(), "retry"); },
     startFinale: (witnessed) => { campaignRuntime.startAdventureFinale(witnessed); }, cinema,
     width: options.width, height: options.height,
     ...(options.observeOutcomeChronology === undefined

@@ -58,6 +58,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   branching-mantle, plural-mask, and gold-graft silhouette, including its intro
   rise pose; the shared boss-intro snapshot/UI contract carries its authored
   name, epithet, and opening line without a parallel presentation registry.
+  Its opt-in encounter cleanup is idempotent and is dispatched by the existing
+  death, new-run/reset, retry, exit, and transactional restore/rollback
+  boundaries; stage transitions now also clear the living-arena broken set.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

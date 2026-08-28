@@ -16,6 +16,7 @@ import type { TearWorldServices } from "../gameplay/runtime/tear-world-context";
 import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 import { resolveDiscoveredVariantIds } from "../gameplay/variants";
+import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -124,6 +125,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     },
     initializeWorld: (mode, difficulty) => {
       context.clearPracticeSession?.();
+      cleanupBossEncounterActors(state.enemies(), "reset");
       context.environment.clear("new-run");
       context.prepareWorld();
       context.resetCombatIdentity();

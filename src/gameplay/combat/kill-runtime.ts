@@ -1,3 +1,5 @@
+import { cleanupBossEncounterActors } from "../run/boss-encounter";
+
 export interface KillEnemy {
   readonly x: number; readonly y: number; readonly color: string; readonly noScore?: boolean;
   readonly firstPlayerDamageAt?: number | null; readonly affixCount?: number; readonly kind?: string;
@@ -5,6 +7,7 @@ export interface KillEnemy {
   readonly severT: number; readonly severTier: number; readonly bleedStacks: number; readonly burnT: number;
   readonly freezeVoid?: boolean; dead: boolean; zones?: readonly unknown[] | undefined;
   applyBleed?(stacks: number): void; applyBurn?(): void;
+  cleanupEncounter?(reason: "death"): void;
 }
 
 export interface KillRun {
@@ -101,6 +104,7 @@ function spreadDeathStatuses(options: KillRuntimeOptions): void {
 
 function resolveBossDeath(options: KillRuntimeOptions): void {
   const { enemy, run } = options;
+  cleanupBossEncounterActors([enemy], "death");
   if (run.mode === "campaign" && enemy.bossId === "source" && options.stageIndex >= options.finalStageIndex)
     run.finalBossDeath = { x: enemy.x, y: enemy.y, color: enemy.color };
   if (run._preBossPlatforms) {

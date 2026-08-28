@@ -1,6 +1,7 @@
 import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
+import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
@@ -18,6 +19,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[1],
     ];
     readonly availableAttacks: readonly string[] = Object.freeze([]);
+    cleanupReason: BossEncounterCleanupReason | null = null;
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -52,6 +54,20 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
 
     override contactDamageEnabled(): boolean {
       return this.introT <= 0 && this.state === "idle";
+    }
+
+    cleanupEncounter(reason: BossEncounterCleanupReason): void {
+      if (this.cleanupReason !== null) return;
+      this.cleanupReason = reason;
+      this.introT = 0;
+      this.state = "recover";
+      this.stateT = 0;
+      this.vx = 0;
+      this.vy = 0;
+      this.atk = "unavailable";
+      this.cinematicRequest = null;
+      this.cinematicPose = "";
+      this.cinematicT = 0;
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {

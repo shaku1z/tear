@@ -6,7 +6,7 @@ import {
   BOSS_IDENTITY_IDS,
   ROOTBOUND_PROVISIONAL_DEFINITION,
 } from "../../src/gameplay/run/boss-definitions";
-import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
+import { beginBossEncounter, cleanupBossEncounterActors, type BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
 import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { BossArenaRules, createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
@@ -187,5 +187,19 @@ describe("Rootbound production foundation", () => {
     boss.update(1, harness.platforms, harness.player, []);
     expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: [] });
     expect(boss.contactDamageEnabled()).toBe(true);
+  });
+
+  it("cleans Rootbound idempotently at every encounter replacement boundary", () => {
+    const reasons: readonly BossEncounterCleanupReason[] = ["death", "reset", "retry", "exit", "restore"];
+    for (const reason of reasons) {
+      const harness = createEnemyHarness();
+      const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2);
+      boss.introT = 0.8; boss.state = "idle"; boss.stateT = 0.7; boss.vx = 40; boss.vy = -20;
+      boss.cinematicPose = "test"; boss.cinematicT = 0.5;
+      cleanupBossEncounterActors([boss], reason);
+      cleanupBossEncounterActors([boss], reason === "death" ? "reset" : "death");
+      expect(boss).toMatchObject({ cleanupReason: reason, introT: 0, state: "recover", stateT: 0,
+        vx: 0, vy: 0, atk: "unavailable", cinematicPose: "", cinematicT: 0, cinematicRequest: null });
+    }
   });
 });

@@ -29,6 +29,7 @@ import {
   type TearStagedWorld,
   type TearWorldConstructionPort,
 } from "../tearbench/detached-world-hydrator";
+import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 
 interface Platform {
   readonly x: number;
@@ -323,6 +324,7 @@ export function createLiveStateForgeAdapter(
       return Object.freeze(issues);
     },
     commit(candidate) {
+      cleanupBossEncounterActors(options.state.enemies(), "restore");
       options.worldServices.configuration.resetToBase();
       const weapon = options.dependencies.applyWeapon(options.worldServices.configuration.value, candidate.weaponId);
       // Hydrate codec values into a detached snapshot, then reconcile them

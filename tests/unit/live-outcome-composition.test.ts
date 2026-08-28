@@ -12,6 +12,20 @@ vi.mock("../../src/gameplay/runtime/gameplay-event-publishers", () => ({
 import { createLiveOutcomeComposition } from "../../src/app/live-outcome-composition";
 
 describe("live outcome composition pending-finale persistence", () => {
+  it("cleans the active boss before retry starts a replacement run", () => {
+    const order: string[] = [];
+    createLiveOutcomeComposition({ dependencies: {
+      GAMEPLAY_EVENTS: {}, pendingFinalePersistence: { pending: () => null },
+      CG: { midgame: (callback: () => void) => { callback(); } },
+    } as never, run: () => ({ mode: "bossonly", diff: "normal" }),
+    cleanupBossActors: () => { order.push("cleanup"); }, environment: { clear: () => { order.push("environment"); } },
+    startRun: () => { order.push("start"); },
+    } as never);
+    const context = captured.context as unknown as { readonly restartCurrentRun: () => void };
+    context.restartCurrentRun();
+    expect(order).toEqual(["cleanup", "environment", "start"]);
+  });
+
   it("passes every outcome persistence operation through composition-owned adapters", () => {
     const persist = vi.fn();
     const saveProfile = vi.fn();

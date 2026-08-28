@@ -47,6 +47,7 @@ export interface LiveOutcomeCompositionOptions {
   readonly executeVictory: (intents: readonly VictoryProgressionIntent[]) => void;
   readonly emitMusicOutcome: (outcome: "defeat" | "victory") => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  readonly cleanupBossActors: () => void;
   readonly startFinale: (death: Readonly<{ x: number; y: number }>, recovered?: boolean) => void;
   readonly cinema: Readonly<{ active: boolean; cancel(reason: string): void }>;
   readonly width: number;
@@ -121,7 +122,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       if (outcome === "victory") { d.SFX.wave(); d.CG.happytime(); } else d.SFX.gameover();
     },
     midgame: (callback) => { d.CG.midgame(callback); },
-    restartCurrentRun: () => { options.environment.clear("retry"); options.startRun(active().mode, active().diff); },
+    restartCurrentRun: () => { options.cleanupBossActors(); options.environment.clear("retry"); options.startRun(active().mode, active().diff); },
     ...(options.observeOutcomeChronology === undefined
       ? {}
       : { observeOutcomeChronology: options.observeOutcomeChronology }),

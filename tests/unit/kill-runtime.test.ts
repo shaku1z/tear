@@ -20,7 +20,8 @@ function options(target: KillEnemy): KillRuntimeOptions {
 
 describe("enemy kill transaction", () => {
   it("handles boss scoring, hazard cleanup, finale state and hooks in one ordered transaction", () => {
-    const target = enemy({ isBoss: true, bossId: "source", affixCount: 2, firstPlayerDamageAt: 3, zones: [1] });
+    const cleanupEncounter = vi.fn();
+    const target = enemy({ isBoss: true, bossId: "source", affixCount: 2, firstPlayerDamageAt: 3, zones: [1], cleanupEncounter });
     const shot = { owner: target, dead: false }; const input = options(target); input.projectiles = [shot];
     const makeDeathEvent = vi.fn(() => ({})); const fire = vi.fn(); const bossPresentation = vi.fn();
     input.makeDeathEvent = makeDeathEvent; input.fire = fire; input.bossPresentation = bossPresentation;
@@ -29,6 +30,7 @@ describe("enemy kill transaction", () => {
     expect(shot.dead).toBe(true); expect(target.zones).toEqual([]);
     expect(makeDeathEvent).toHaveBeenCalledWith(target, "skill", true);
     expect(fire).toHaveBeenCalledTimes(3); expect(bossPresentation).toHaveBeenCalledOnce();
+    expect(cleanupEncounter).toHaveBeenCalledOnce(); expect(cleanupEncounter).toHaveBeenCalledWith("death");
   });
 
   it("keeps no-score deaths cosmetic only", () => {
