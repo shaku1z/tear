@@ -57,7 +57,7 @@ describe("Rootbound production foundation", () => {
       presentationId: "rootbound",
       isBoss: true,
       atk: "unavailable",
-      availableAttacks: ["vine-sweep"],
+      availableAttacks: ["vine-sweep", "seed-arc"],
       phaseMarks: [0.65, 0.28],
     });
   });
@@ -164,7 +164,7 @@ describe("Rootbound production foundation", () => {
       phaseMarker: 1,
       phaseTag: "KEEPER OF SPRING",
       state: "idle",
-      availableAttacks: ["vine-sweep"],
+      availableAttacks: ["vine-sweep", "seed-arc"],
     });
 
     boss.introT = 0.5;
@@ -188,7 +188,7 @@ describe("Rootbound production foundation", () => {
     expect(boss.phase).toBe(2);
 
     boss.update(1, harness.platforms, harness.player, []);
-    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: ["vine-sweep"] });
+    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc"] });
     expect(boss.contactDamageEnabled()).toBe(true);
   });
 

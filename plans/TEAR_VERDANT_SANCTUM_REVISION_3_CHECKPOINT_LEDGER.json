@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C11",
-  "currentSubgoal": "VS3-C11-S3",
+  "currentSubgoal": "VS3-C11-S4",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -32,10 +32,11 @@
     "VS3-C10-S10 explicit attack unavailability is green: production boss-definition authority marks Rootbound phases 1-3 unavailable and State Forge preserves unavailable instead of inventing opening-commit placeholder damage; existing bosses retain authored opening commits. 30 focused tests, typecheck, architecture, and targeted lint pass.",
     "VS3-C10 Rootbound foundation is GREEN at 00a3a9b360f44a6a9b152bd1a4ea6e0ffa0bf894: all ten ordered subgoals pass; repository lint, typecheck, architecture, 81 aggregate foundation tests, attributed test-standalone build bd5cdbe196d94857189ae7d3cbf70ad3c9629d371c392246e10b5b5878c5a69d, and the shared live boss browser matrix are green.",
     "VS3-C11-S1 deterministic Phase I cadence is green: Rootbound selects vine-sweep, seed-arc, rootline, and canopy-step in a fixed cyclic order, holds a selected attack until its implementation completes it, and observes explicit opening/recovery windows without fabricating attack availability or damage. Nine focused tests, typecheck, architecture, and targeted lint pass.",
-    "VS3-C11-S2 Vine Sweep is green: a visible root-arm windup owns the same forward geometry as its bounded active hit, locks facing at commitment, hits at most once, leaves safe routes behind and above, and enters explicit follow-through/recovery. Eleven focused tests, typecheck, architecture, and targeted lint pass."
+    "VS3-C11-S2 Vine Sweep is green: a visible root-arm windup owns the same forward geometry as its bounded active hit, locks facing at commitment, hits at most once, leaves safe routes behind and above, and enters explicit follow-through/recovery. Eleven focused tests, typecheck, architecture, and targeted lint pass.",
+    "VS3-C11-S3 Seed Arc is green: a bounded three-seed volley uses the current ordinary-projectile lifecycle, carries Rootbound owner/source identity, publishes exact landing coordinates/timing, remains explicitly deflectable, excludes poison/root persistence, and expires or impacts in under two seconds. Thirteen focused tests, typecheck, architecture, and targeted lint pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C11-S3: implement Seed Arc through the current projectile lifecycle with explicit deflectability and bounded cleanup.",
+  "nextAction": "Execute VS3-C11-S4: implement Rootline through the shared environment owner with bounded warning, active, and cleanup intervals.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1660,7 +1661,7 @@
         {
           "id": "VS3-C11-S3",
           "description": "Implement Seed Arc through current projectile lifecycle and explicit counterplay capability.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C11-S4",

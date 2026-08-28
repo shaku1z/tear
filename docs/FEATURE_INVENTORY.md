@@ -78,6 +78,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   owns one bounded active hit, preserves behind/high safe responses, and closes
   through visible follow-through into the shared recovery cadence. The remaining
   Phase I verbs and phase-level attack availability are still incomplete.
+  VS3-C11-S3 adds Seed Arc as a three-projectile, landing-authored volley using
+  the ordinary projectile family. Each seed exposes Rootbound owner/source,
+  landing position and time, deflect counterplay, and a sub-two-second bounded
+  impact/expiry path; it carries neither poison/mud nor root persistence.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

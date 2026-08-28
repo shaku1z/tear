@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
+import type { EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
 import {
   ROOTBOUND_PHASE_ONE_ATTACK_ORDER,
   ROOTBOUND_PHASE_ONE_CADENCE,
+  ROOTBOUND_SEED_ARC,
   ROOTBOUND_VINE_SWEEP,
   type RootboundPhaseOneAttack,
 } from "../../src/gameplay/entities/enemy-types/rootbound";
@@ -35,7 +37,7 @@ describe("Rootbound Phase I cadence", () => {
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, entry.harness.platforms, entry.harness.player, []);
         const target = entry === first ? selected : mirrored;
         if (entry.actor.pendingAttack !== null) target.push(entry.actor.pendingAttack);
-        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep"] });
+        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc"] });
         entry.actor.completePhaseOneAttack();
         expect(entry.actor).toMatchObject({ state: "recover", stateT: ROOTBOUND_PHASE_ONE_CADENCE.recovery, pendingAttack: null });
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, entry.harness.platforms, entry.harness.player, []);
@@ -108,5 +110,40 @@ describe("Rootbound Phase I cadence", () => {
       actor.update(1 / 120, harness.platforms, player, []);
       expect(player.damage, `offset ${String(playerOffset)}`).toEqual([]);
     }
+  });
+
+  it("releases a bounded, deflectable Seed Arc with visible landing ownership", () => {
+    const { harness, actor } = boss();
+    const shots: EnemyProjectile[] = [];
+    actor.pendingAttack = "seed-arc";
+    actor.update(1 / 120, harness.platforms, harness.player, shots);
+    expect(actor).toMatchObject({ seedArcStage: "windup", atk: "seed-arc:windup" });
+    expect(shots).toEqual([]);
+
+    actor.update(ROOTBOUND_SEED_ARC.windup, harness.platforms, harness.player, shots);
+    expect(actor).toMatchObject({ seedArcStage: "release", atk: "seed-arc:release" });
+    expect(shots).toHaveLength(3);
+    expect(shots.map((shot) => shot.landingX)).toEqual([
+      harness.player.x - ROOTBOUND_SEED_ARC.spread,
+      harness.player.x,
+      harness.player.x + ROOTBOUND_SEED_ARC.spread,
+    ]);
+    for (const shot of shots) expect(shot).toMatchObject({
+      family: "ordinaryProjectile",
+      counterplay: "deflect",
+      unparryable: false,
+      bossAttack: "seed-arc",
+      owner: actor,
+      sourceEnemy: actor,
+      landingY: CONFIG.world.groundY,
+      groundImpact: true,
+      mud: false,
+      root: 0,
+      dmg: ROOTBOUND_SEED_ARC.damage,
+    });
+    expect(Math.max(...shots.map((shot) => shot.life))).toBeLessThan(2);
+
+    actor.update(ROOTBOUND_SEED_ARC.release, harness.platforms, harness.player, shots);
+    expect(actor).toMatchObject({ pendingAttack: null, seedArcStage: null, state: "recover", atk: "unavailable" });
   });
 });

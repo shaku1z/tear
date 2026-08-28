@@ -17,10 +17,20 @@ export const ROOTBOUND_VINE_SWEEP = Object.freeze({
   damage: 18,
 });
 export type RootboundVineSweepStage = "windup" | "active" | "follow-through";
+export const ROOTBOUND_SEED_ARC = Object.freeze({
+  windup: 0.55,
+  release: 0.3,
+  launchSpeed: 560,
+  gravity: 820,
+  spread: 140,
+  damage: 16,
+  radius: 12,
+});
+export type RootboundSeedArcStage = "windup" | "release";
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
-  const { CONFIG } = dependencies;
+  const { CONFIG, Projectile } = dependencies;
   class Rootbound extends Enemy {
     declare cfg: typeof CONFIG.boss;
     introT = 0;
@@ -33,7 +43,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[0],
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[1],
     ];
-    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep"]);
+    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep", "seed-arc"]);
     readonly phaseOneAttackOrder = ROOTBOUND_PHASE_ONE_ATTACK_ORDER;
     pendingAttack: RootboundPhaseOneAttack | null = null;
     attackIndex = 0;
@@ -41,6 +51,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     vineSweepT = 0;
     vineSweepHitSpent = false;
     vineSweepFacing = 1;
+    seedArcStage: RootboundSeedArcStage | null = null;
+    seedArcT = 0;
     cleanupReason: BossEncounterCleanupReason | null = null;
 
     constructor(x: number, y: number) {
@@ -141,6 +153,50 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       }
     }
 
+    private beginSeedArc(): void {
+      this.seedArcStage = "windup";
+      this.seedArcT = ROOTBOUND_SEED_ARC.windup;
+      this.atk = "seed-arc:windup";
+    }
+
+    private releaseSeedArc(player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
+      const flightT = 2 * ROOTBOUND_SEED_ARC.launchSpeed / ROOTBOUND_SEED_ARC.gravity;
+      for (const offset of [-ROOTBOUND_SEED_ARC.spread, 0, ROOTBOUND_SEED_ARC.spread]) {
+        const startX = this.x + this.facing * this.hw * 0.45;
+        const startY = this.y - this.hh * 0.62;
+        const landingX = dependencies.clamp(player.x + offset, 80, CONFIG.view.w - 80);
+        const seed = new Projectile(startX, startY, (landingX - startX) / flightT, -ROOTBOUND_SEED_ARC.launchSpeed);
+        seed.setFamily("ordinaryProjectile");
+        seed.kind = "orb";
+        seed.tint = "#89b95d";
+        seed.r = ROOTBOUND_SEED_ARC.radius;
+        seed.dmg = ROOTBOUND_SEED_ARC.damage;
+        seed.gravity = ROOTBOUND_SEED_ARC.gravity;
+        seed.life = flightT + 0.4;
+        seed.owner = this;
+        seed.sourceEnemy = this;
+        seed.landingX = landingX;
+        seed.landingY = CONFIG.world.groundY;
+        seed.landingT = flightT;
+        seed.groundImpact = true;
+        seed.bossAttack = "seed-arc";
+        projectiles.push(seed);
+      }
+      this.seedArcStage = "release";
+      this.seedArcT = ROOTBOUND_SEED_ARC.release;
+      this.atk = "seed-arc:release";
+    }
+
+    private updateSeedArc(dt: number, player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
+      if (this.seedArcStage === null) this.beginSeedArc();
+      this.seedArcT = Math.max(0, this.seedArcT - dt);
+      if (this.seedArcStage === "windup" && this.seedArcT <= 0) this.releaseSeedArc(player, projectiles);
+      else if (this.seedArcStage === "release" && this.seedArcT <= 0) {
+        this.seedArcStage = null;
+        this.completePhaseOneAttack();
+      }
+    }
+
     cleanupEncounter(reason: BossEncounterCleanupReason): void {
       if (this.cleanupReason !== null) return;
       this.cleanupReason = reason;
@@ -155,6 +211,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.vineSweepT = 0;
       this.vineSweepHitSpent = false;
       this.vineSweepFacing = this.facing;
+      this.seedArcStage = null;
+      this.seedArcT = 0;
       this.cinematicRequest = null;
       this.cinematicPose = "";
       this.cinematicT = 0;
@@ -183,6 +241,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         this.stateT = 0.35;
       } else if (this.pendingAttack === "vine-sweep") {
         this.updateVineSweep(dt, player);
+      } else if (this.pendingAttack === "seed-arc") {
+        this.updateSeedArc(dt, player, projectiles);
       } else if (this.stun <= 0 && this.pendingAttack === null) {
         this.stateT = Math.max(0, this.stateT - dt);
         if (this.stateT <= 0) {
