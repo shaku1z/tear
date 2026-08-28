@@ -385,6 +385,20 @@ This is the migration checklist for the architectural redesign. A checked featur
   the standard-mode profile projection is shared by run start and Well-Rounded.
   Intentional Final Five weapon copy and cumulative boss milestones remain
   unchanged.
+- [x] Verdant C18 reference compatibility — `game-reference.v1` schema 2 now
+  projects the complete production enemy identity authority, including
+  variant-less `rootbinder`, rather than stopping at the older ordinary-wave
+  family subset. The existing exact collection shape also projects the six-stage
+  engineering catalog, Rootbound, both approved Rootbound achievements, current
+  modes, and public difficulty tuning without an unnecessary schema bump.
+  Clean-source export and protected publication/dispatch tests fail closed on
+  missing identities, stale source, or feature-branch custody. The protected
+  wiki remains on the five-stage `main` artifact until a joint Verdant/Pale
+  source dispatch exists; authored Verdant narrative pages remain a separate
+  future change. The historical game-dev-tooling Tear adapter is explicitly
+  deferred because that repository prohibits new Tear use and remains pinned to
+  a pre-Verdant five-boss origin. See
+  `docs/checkpoints/verdant-sanctum/VS3-C18_EVIDENCE.md`.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

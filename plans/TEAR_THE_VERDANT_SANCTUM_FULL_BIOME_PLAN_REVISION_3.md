@@ -5162,7 +5162,7 @@ Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtr
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `GREEN` |
 | Owner | Reference publication / cross-repository owner |
 | Dependencies | VS3-C16, VS3-C17 |
 | Release boundary | No publication until protected joint seven-stage source exists |
@@ -5173,9 +5173,9 @@ Complete all source/reference contracts and prepare—but do not prematurely exe
 
 ## Entry conditions
 
-- [ ] Verdant gameplay, progression, and music identities are stable.
-- [ ] Current game-reference export/publication/dispatch and wiki promotion contracts are understood.
-- [ ] Explicit authorization exists for any cross-repository change performed.
+- [x] Verdant gameplay and progression identities are stable; the C17 music disposition is explicitly deferred and stable.
+- [x] Current game-reference export/publication/dispatch and wiki promotion contracts are understood and verified.
+- [x] No cross-repository change was performed; protected promotion and the prohibited tooling adapter remain deferred to their explicit authorization gates.
 
 ## Primary files and authorities
 
@@ -5192,16 +5192,16 @@ Complete all source/reference contracts and prepare—but do not prematurely exe
 
 ## Sub-goals
 
-- [ ] **VS3-C18-S1** — Finalize public stage, boss, enemy, achievement, and tuning projection changes.
-- [ ] **VS3-C18-S2** — Version exact-key game-reference schema when compatibility requires it.
-- [ ] **VS3-C18-S3** — Update reference validators, deterministic export, publication receipt, and dispatch tests.
-- [ ] **VS3-C18-S4** — Update terminology for Verdant/Rootbound current-facing copy without rewriting historical evidence.
-- [ ] **VS3-C18-S5** — Prepare wiki source-driven reference consumption and bespoke Verdant narrative pages as separate changes.
-- [ ] **VS3-C18-S6** — Keep wiki promotion blocked until protected merged joint seven-stage game source dispatches an authorized artifact.
-- [ ] **VS3-C18-S7** — Audit game-dev-tooling wave-run/Tear adapter assumptions.
-- [ ] **VS3-C18-S8** — Update the adapter to seven-stage current truth or record an explicit deferred compatibility disposition.
-- [ ] **VS3-C18-S9** — Update feature inventory and documentation authority with exact evidence.
-- [ ] **VS3-C18-S10** — Prove no feature branch can masquerade as a protected publishable reference artifact.
+- [x] **VS3-C18-S1** — Finalize public stage, boss, enemy, achievement, and tuning projection changes. Rootbinder now joins the source-derived enemy identity projection; existing Verdant/Rootbound/progression/tuning projections remain exact.
+- [x] **VS3-C18-S2** — Version exact-key game-reference schema when compatibility requires it. No bump is required: schema-2 shape is unchanged and the complete enemy array gains one canonical item.
+- [x] **VS3-C18-S3** — Update reference validators, deterministic export, publication receipt, and dispatch tests. Export/check paths consume the complete identity authority; ten protected artifact tests pass.
+- [x] **VS3-C18-S4** — Update terminology for Verdant/Rootbound current-facing copy without rewriting historical evidence. Current names are already canonical; terminology audit is green with no registry migration.
+- [x] **VS3-C18-S5** — Prepare wiki source-driven reference consumption and bespoke Verdant narrative pages as separate changes. The two-stream package is recorded in C18 evidence.
+- [x] **VS3-C18-S6** — Keep wiki promotion blocked until protected merged joint seven-stage game source dispatches an authorized artifact. Protected wiki remains bound to Tear `main` `9170636...`.
+- [x] **VS3-C18-S7** — Audit game-dev-tooling wave-run/Tear adapter assumptions. The core is data-driven; the host adapter is pinned to pre-Verdant Tear and five bosses.
+- [x] **VS3-C18-S8** — Update the adapter to seven-stage current truth or record an explicit deferred compatibility disposition. Explicitly deferred under the tooling repository's accepted prohibition on new Tear use.
+- [x] **VS3-C18-S9** — Update feature inventory and documentation authority with exact evidence.
+- [x] **VS3-C18-S10** — Prove no feature branch can masquerade as a protected publishable reference artifact.
 
 ## Agent implementation procedure
 
@@ -5214,11 +5214,11 @@ Complete all source/reference contracts and prepare—but do not prematurely exe
 
 ## TearBench same-change response
 
-- [ ] Current-game authority derives all reference IDs from production.
-- [ ] Evidence selector routes game-reference and terminology changes to actual authority tests.
-- [ ] Add negative stale/unsupported schema and unprotected-publication cases.
-- [ ] No browser gameplay build is required for pure wiki prose; source reference changes retain their game gates.
-- [ ] No C40 status changes from wiki/reference publication.
+- [x] Current-game authority derives all reference IDs from production.
+- [x] Evidence selector routes game-reference and terminology changes to actual authority tests.
+- [x] Negative missing identity, stale/unsupported schema, and unprotected-publication cases pass.
+- [x] No browser gameplay build is required for pure reference projection; source reference changes retain type, architecture, and exact-source gates.
+- [x] No C40 status changes from wiki/reference work.
 
 ## Minimum focused proof
 
@@ -5233,11 +5233,11 @@ Complete all source/reference contracts and prepare—but do not prematurely exe
 
 ## Exit conditions
 
-- [ ] Public reference schema is deterministic and validated.
-- [ ] Feature-branch publication is rejected.
-- [ ] Wiki plan separates protected reference promotion from authored narrative content.
-- [ ] game-dev-tooling has an explicit update/defer disposition.
-- [ ] Documentation and terminology are current and truthful.
+- [x] Public reference schema is deterministic and validated.
+- [x] Feature-branch publication is rejected.
+- [x] Wiki plan separates protected reference promotion from authored narrative content.
+- [x] game-dev-tooling has an explicit deferred disposition under its own Tear prohibition.
+- [x] Documentation and terminology are current and truthful.
 
 ## Stop and escalate conditions
 
@@ -5256,7 +5256,7 @@ Complete all source/reference contracts and prepare—but do not prematurely exe
 
 ## Required handoff sentence
 
-> `VS3-C18 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+> `VS3-C18 is GREEN at 2bdb30e8a678cb4c7a217f5f0dbfd3dddc2fb3a4. The next authorized action is VS3-C19-S1. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

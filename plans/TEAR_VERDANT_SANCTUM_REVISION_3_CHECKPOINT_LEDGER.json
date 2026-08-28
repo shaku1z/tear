@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C18",
-  "currentSubgoal": "VS3-C18-S1",
+  "currentCheckpoint": "VS3-C19",
+  "currentSubgoal": "VS3-C19-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -27,9 +27,10 @@
     "VS3-C14",
     "VS3-C15",
     "VS3-C16",
-    "VS3-C17"
+    "VS3-C17",
+    "VS3-C18"
   ],
-  "lastGreenCheckpoint": "VS3-C16",
+  "lastGreenCheckpoint": "VS3-C18",
   "lastEvidence": [
     "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass.",
     "VS3-C10-S6 Rootbound presentation identity is green: the existing enemy renderer composition installs its root-throne, branching mantle, plural-mask, gold-graft silhouette and intro rise pose; the shared boss-intro snapshot/UI path preserves THE ROOTBOUND, KEEPER OF THE LAST MERCY, and YOU DO NOT HAVE TO DIE HERE.; focused and adjacent presentation/factory/reference tests, typecheck, architecture, targeted lint, and docs gates pass.",
@@ -66,10 +67,11 @@
     "VS3-C16-S9 lifecycle cleanup is GREEN at f1fe1748698d5fe1795a9886350ef5af97823ac9: reset, retry, quit, defeat, victory, stage transition, and mode change clear Verdant environment and Rootbound-local ownership; terminal outcomes now run boss cleanup before environment and lifecycle termination. 64 focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
     "VS3-C16-S10 publication boundary is GREEN at ee3c7390cbbc991ef8c255478d159f37c4a7b27d: source policy marks the exact six-stage ruleset engineering-only; release preflight refuses it; game-reference publication rejects Verdant without Pale; only an explicit public policy containing both joint stages can pass. Policy/release/reference tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
     "VS3-C16 aggregate closure is GREEN at c7976332bf34bf06ff628d3e13b307fce2bd9a5d: all ten subgoals; repository static/docs/artifact/reference/publication gates; 9 files/30 focused tests plus 14 publication tests; attributed standalone artifact 0e6be53acb2bfcd9cfbdbd236685985b11f6d97a1f8dccd35231e94708a4def9; browser feature/journey and State Forge runtime/studio/exit matrices pass.",
-    "VS3-C17 is AUTHORIZED-DEFERRED at fa1cc9735281eae0ab07541f242d665e1d942e5d: Static Bloom was auditioned and rejected; no replacement, route, release, vendor byte, or rights claim was invented. Current vendor provenance, engineering-only Verdant fallback, one-context/exclusive-backend lifecycle, standalone audio, PWA, and CrazyGames test iframe gates pass. Replacement selection through exact re-vendoring is deferred to VS3-C22-S5; lastGreenCheckpoint remains VS3-C16."
+    "VS3-C17 is AUTHORIZED-DEFERRED at fa1cc9735281eae0ab07541f242d665e1d942e5d: Static Bloom was auditioned and rejected; no replacement, route, release, vendor byte, or rights claim was invented. Current vendor provenance, engineering-only Verdant fallback, one-context/exclusive-backend lifecycle, standalone audio, PWA, and CrazyGames test iframe gates pass. Replacement selection through exact re-vendoring is deferred to VS3-C22-S5; lastGreenCheckpoint remains VS3-C16.",
+    "VS3-C18 is GREEN at 2bdb30e8a678cb4c7a217f5f0dbfd3dddc2fb3a4: game-reference schema 2 now projects Rootbinder from the complete production enemy identity authority; exact export, 40 focused projection tests, 10 artifact/publication tests, 24 evidence-selection tests, terminology/docs gates, and the protected wiki's 50-test full snapshot/build gate pass. Wiki promotion remains blocked pending joint Verdant/Pale main; the historical game-dev-tooling adapter is explicitly deferred under that repository's Tear prohibition."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C18-S1 by finalizing the source-owned stage, boss, enemy, achievement, and tuning reference projections without publishing Verdant or changing C40.",
+  "nextAction": "Execute VS3-C19-S1 by reconciling source-derived TearBench coverage for every Verdant production identity and retained music-routing disposition.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2790,52 +2792,52 @@
         {
           "id": "VS3-C18-S1",
           "description": "Finalize public stage, boss, enemy, achievement, and tuning projection changes.",
-          "status": "not-started"
+          "status": "completed"
         },
         {
           "id": "VS3-C18-S2",
           "description": "Version exact-key game-reference schema when compatibility requires it.",
-          "status": "not-started"
+          "status": "completed-no-bump-required"
         },
         {
           "id": "VS3-C18-S3",
           "description": "Update reference validators, deterministic export, publication receipt, and dispatch tests.",
-          "status": "not-started"
+          "status": "completed"
         },
         {
           "id": "VS3-C18-S4",
           "description": "Update terminology for Verdant/Rootbound current-facing copy without rewriting historical evidence.",
-          "status": "not-started"
+          "status": "completed-no-op-audit"
         },
         {
           "id": "VS3-C18-S5",
           "description": "Prepare wiki source-driven reference consumption and bespoke Verdant narrative pages as separate changes.",
-          "status": "not-started"
+          "status": "completed"
         },
         {
           "id": "VS3-C18-S6",
           "description": "Keep wiki promotion blocked until protected merged joint seven-stage game source dispatches an authorized artifact.",
-          "status": "not-started"
+          "status": "completed"
         },
         {
           "id": "VS3-C18-S7",
           "description": "Audit game-dev-tooling wave-run/Tear adapter assumptions.",
-          "status": "not-started"
+          "status": "completed"
         },
         {
           "id": "VS3-C18-S8",
           "description": "Update the adapter to seven-stage current truth or record an explicit deferred compatibility disposition.",
-          "status": "not-started"
+          "status": "completed-explicitly-deferred"
         },
         {
           "id": "VS3-C18-S9",
           "description": "Update feature inventory and documentation authority with exact evidence.",
-          "status": "not-started"
+          "status": "completed"
         },
         {
           "id": "VS3-C18-S10",
           "description": "Prove no feature branch can masquerade as a protected publishable reference artifact.",
-          "status": "not-started"
+          "status": "completed"
         }
       ],
       "agentProcedure": [
@@ -2883,13 +2885,33 @@
         "game-dev-tooling disposition",
         "Documentation/terminology GREEN record"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "8d8b98f98fcbcbe76f51007edd06eda14f04e880",
+      "completionIdentity": "2bdb30e8a678cb4c7a217f5f0dbfd3dddc2fb3a4",
+      "commandsRun": [
+        "pnpm check:game-reference",
+        "pnpm test:game-reference-artifact",
+        "pnpm exec vitest run tests/unit/enemy-reference.test.ts tests/unit/game-reference.test.ts tests/unit/game-reference-exporter-source.test.ts tests/unit/boss-reference.test.ts tests/unit/public-tuning-reference.test.ts tests/unit/achievement-catalog.test.ts",
+        "pnpm typecheck",
+        "pnpm check:architecture",
+        "pnpm check:terminology",
+        "pnpm test:terminology",
+        "pnpm check:docs",
+        "pnpm test:docs",
+        "pnpm test:tearbench-selection",
+        "In tear-wiki at 997f0ba9902c9a0ce3ff5f641b59082dc5054f07: npm run check:snapshot"
+      ],
+      "evidence": [
+        "docs/checkpoints/verdant-sanctum/VS3-C18_EVIDENCE.md"
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Rootbinder is the twelfth exact enemy family and has no variants.",
+        "Schema 2 remains canonical because the collection shape is unchanged; the complete family array gains a source-owned item.",
+        "The protected wiki remains on Tear main 91706363b80fb56a18df4d973b424bbce94a279e; no artifact was published, dispatched, promoted, or deployed.",
+        "The game-dev-tooling adapter remains pinned to pre-Verdant Tear and five bosses; its update is explicitly deferred because that repository prohibits new Tear use and contains unrelated user work.",
+        "Verdant publication remains prohibited and C40 status is unchanged."
+      ]
     },
     {
       "id": "VS3-C19",

@@ -14,3 +14,4 @@ and may be recreated by the commands recorded in each manifest.
 | VS3-C17-S1 Static Bloom technical audition | [VS3-C17-S1_STATIC_BLOOM_AUDITION.md](VS3-C17-S1_STATIC_BLOOM_AUDITION.md) |
 | VS3-C17 owner music disposition | [VS3-C17_MUSIC_DECISION.md](VS3-C17_MUSIC_DECISION.md) |
 | VS3-C17 authorized-deferred closure | [VS3-C17_EVIDENCE.md](VS3-C17_EVIDENCE.md) |
+| VS3-C18 reference/tooling compatibility | [VS3-C18_EVIDENCE.md](VS3-C18_EVIDENCE.md) |
