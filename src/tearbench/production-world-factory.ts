@@ -130,7 +130,8 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
     Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
     Chimera: factories.enemyTypes.Chimera, Warden: factories.enemyTypes.Warden, Colossus: factories.enemyTypes.Colossus,
-    Aldric: factories.enemyTypes.Aldric, Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
+    Aldric: factories.enemyTypes.Aldric, Rootbound: factories.enemyTypes.Rootbound,
+    Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
     VoidWisp: factories.enemyTypes.VoidWisp, Boss: factories.enemyTypes.Boss,
     MirrorHost: factories.mirrorTypes.MirrorHost, ReflectionEnemy: factories.mirrorTypes.ReflectionEnemy,
   } as unknown as GameRuntimeDependencies;

@@ -1,6 +1,8 @@
 import type { TearCodecId } from "./registries";
 import type { TearCodecIssue } from "./state-codecs";
 import { findVariant } from "../gameplay/variants";
+import { ROOTBOUND_LAST_SPRING } from "../gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_REGROWTH_CONNECTION_COUNT, ROOTBOUND_REGROWTH_OUTCOMES } from "../gameplay/environment/regrowth-link";
 
 function issue(codecId: TearCodecId, path: string, message: string): TearCodecIssue {
   return Object.freeze({ codecId, path, message });
@@ -8,6 +10,10 @@ function issue(codecId: TearCodecId, path: string, message: string): TearCodecIs
 
 function record(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function finite(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function requireRecord(codecId: TearCodecId, payload: unknown): readonly TearCodecIssue[] {
@@ -64,8 +70,90 @@ function entityArray(codecId: TearCodecId, payload: unknown): readonly TearCodec
       }
     }
     issues.push(...finiteField(codecId, entry, "x"), ...finiteField(codecId, entry, "y"));
+    if (codecId === "tear.boss.v1" && entry.factoryId === "rootbound") {
+      issues.push(...rootboundPhaseThreeState(codecId, entry, `$[${String(index)}]`));
+    }
     return issues;
   }));
+}
+
+function rootboundPhaseThreeState(
+  codecId: TearCodecId,
+  entry: Readonly<Record<string, unknown>>,
+  path: string,
+): TearCodecIssue[] {
+  const issues: TearCodecIssue[] = [];
+  const regrowth = entry.regrowthState;
+  if (!record(regrowth)) {
+    issues.push(issue(codecId, `${path}.regrowthState`, "Rootbound requires canonical Regrowth state"));
+  } else {
+    const phase = regrowth.phase;
+    const useCount = regrowth.useCount;
+    const required = regrowth.requiredConnectionIds;
+    const surviving = regrowth.survivingConnectionIds;
+    const classification = regrowth.interruptClassification;
+    const heal = regrowth.resolvedHealFraction;
+    if (!(["idle", "channeling", "resolved"] as const).includes(phase as never)) {
+      issues.push(issue(codecId, `${path}.regrowthState.phase`, "Regrowth phase is not approved"));
+    }
+    if (useCount !== 0 && useCount !== 1) issues.push(issue(codecId, `${path}.regrowthState.useCount`, "Regrowth use count must be zero or one"));
+    if (!Array.isArray(required) || !Array.isArray(surviving)
+      || required.some((id: unknown) => typeof id !== "string" || id.length === 0)
+      || surviving.some((id: unknown) => typeof id !== "string" || id.length === 0)
+      || new Set(required).size !== required.length || new Set(surviving).size !== surviving.length) {
+      issues.push(issue(codecId, `${path}.regrowthState.requiredConnectionIds`, "Regrowth connection IDs must be unique non-empty arrays"));
+    } else if (surviving.some((id) => !required.includes(id))) {
+      issues.push(issue(codecId, `${path}.regrowthState.survivingConnectionIds`, "surviving Regrowth connections must belong to the required set"));
+    }
+    if (!finite(regrowth.progress) || regrowth.progress < 0 || regrowth.progress > 1) {
+      issues.push(issue(codecId, `${path}.regrowthState.progress`, "Regrowth progress must be within zero and one"));
+    }
+    if (regrowth.startTick !== null && (!Number.isSafeInteger(regrowth.startTick) || Number(regrowth.startTick) < 0)) {
+      issues.push(issue(codecId, `${path}.regrowthState.startTick`, "Regrowth start tick must be null or a non-negative safe integer"));
+    }
+    if (classification !== null && !(["full-interrupt", "partial-interrupt", "no-interrupt"] as const).includes(classification as never)) {
+      issues.push(issue(codecId, `${path}.regrowthState.interruptClassification`, "Regrowth interrupt classification is not approved"));
+    }
+    if (heal !== null && (!finite(heal) || heal < 0 || heal > ROOTBOUND_REGROWTH_OUTCOMES.maximumHealFraction)) {
+      issues.push(issue(codecId, `${path}.regrowthState.resolvedHealFraction`, "Regrowth healing must remain within its canonical budget"));
+    }
+    if (phase === "idle" && (useCount !== 0 || regrowth.startTick !== null || (Array.isArray(required) && required.length !== 0)
+      || classification !== null || heal !== null)) {
+      issues.push(issue(codecId, `${path}.regrowthState`, "idle Regrowth cannot retain channel or resolution state"));
+    }
+    if ((phase === "channeling" || phase === "resolved") && (useCount !== 1 || !Number.isSafeInteger(regrowth.startTick)
+      || !Array.isArray(required) || required.length !== ROOTBOUND_REGROWTH_CONNECTION_COUNT)) {
+      issues.push(issue(codecId, `${path}.regrowthState`, `active or resolved Regrowth requires exactly ${String(ROOTBOUND_REGROWTH_CONNECTION_COUNT)} connections and one use`));
+    }
+    if (phase === "channeling" && (classification !== null || heal !== null)) {
+      issues.push(issue(codecId, `${path}.regrowthState`, "channeling Regrowth cannot retain a resolved outcome"));
+    }
+    if (phase === "resolved" && (regrowth.progress !== 1 || classification === null)) {
+      issues.push(issue(codecId, `${path}.regrowthState`, "resolved Regrowth requires complete progress and an interrupt classification"));
+    }
+  }
+  const springStages = ["warning", "bloom", "commit", "punish", "complete"] as const;
+  if (entry.lastSpringStage !== null && !springStages.includes(entry.lastSpringStage as never)) {
+    issues.push(issue(codecId, `${path}.lastSpringStage`, "Last Spring stage is not approved"));
+  }
+  if (entry.lastSpringUseCount !== 0 && entry.lastSpringUseCount !== 1) {
+    issues.push(issue(codecId, `${path}.lastSpringUseCount`, "Last Spring use count must be zero or one"));
+  }
+  if (!finite(entry.lastSpringT) || entry.lastSpringT < 0
+    || entry.lastSpringT > Math.max(ROOTBOUND_LAST_SPRING.warning, ROOTBOUND_LAST_SPRING.bloom,
+      ROOTBOUND_LAST_SPRING.commit, ROOTBOUND_LAST_SPRING.punish)) {
+    issues.push(issue(codecId, `${path}.lastSpringT`, "Last Spring timer is outside its authored bounds"));
+  }
+  if (typeof entry.lastSpringHitSpent !== "boolean") {
+    issues.push(issue(codecId, `${path}.lastSpringHitSpent`, "Last Spring hit state must be boolean"));
+  }
+  if (entry.lastSpringStage !== null && entry.lastSpringUseCount !== 1) {
+    issues.push(issue(codecId, `${path}.lastSpringStage`, "active or complete Last Spring requires its single use"));
+  }
+  if (entry.lastSpringStage === "complete" && entry.lastSpringT !== 0) {
+    issues.push(issue(codecId, `${path}.lastSpringT`, "complete Last Spring must have a zero timer"));
+  }
+  return issues;
 }
 
 /** Domain shape checks layered on top of bounded declarative-data validation. */

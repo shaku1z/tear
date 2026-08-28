@@ -105,10 +105,10 @@ function common(path: string, value: Readonly<Record<string, unknown>>, category
   else if (isEnvironmentObjectKind(value.kind) && environmentObjectDefinition(value.kind).category !== category) {
     issues.push(issue(`${path}.kind`, `environment kind is not approved for ${category} collection`));
   }
-  const specializedCombatFactory = category === "combat-object" && value.factoryId === value.kind
-    && isEnvironmentObjectKind(value.kind) && environmentObjectDefinition(value.kind).category === "combat-object";
+  const sourceOwnedFactory = value.factoryId === value.kind
+    && isEnvironmentObjectKind(value.kind) && environmentObjectDefinition(value.kind).category === category;
   if (value.factoryId !== undefined && (!text(value.factoryId)
-    || (!ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY.has(value.factoryId) && !specializedCombatFactory))) issues.push(issue(`${path}.factoryId`, "environment factory is not approved"));
+    || (!ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY.has(value.factoryId) && !sourceOwnedFactory))) issues.push(issue(`${path}.factoryId`, "environment factory is not approved"));
   if (category === "route") {
     if (!Array.isArray(value.points)) issues.push(issue(`${path}.points`, "route requires points"));
     else value.points.forEach((point, index) => { if (!record(point) || !finite(point.x) || !finite(point.y)) issues.push(issue(`${path}.points[${String(index)}]`, "route point must contain finite x and y")); });
@@ -151,8 +151,10 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
       if (!record(entry)) { issues.push(issue(path, "environment collection entry must be an object")); return; }
       issues.push(...common(path, entry, key === "routes" ? "route" : key === "fields" ? "field" : "combat-object"));
       const expectedFactory = key === "fields" ? "environment-field" : key === "combatObjects" ? "environment-combat-object" : "environment-route";
-      const specializedCombatFactory = key === "combatObjects" && entry.factoryId === entry.kind && isEnvironmentObjectKind(entry.kind);
-      if (entry.factoryId !== undefined && entry.factoryId !== expectedFactory && !specializedCombatFactory) issues.push(issue(`${path}.factoryId`, `factoryId must be ${expectedFactory} or the source-owned combat-object kind for this collection`));
+      const category = key === "fields" ? "field" : key === "combatObjects" ? "combat-object" : "route";
+      const sourceOwnedFactory = entry.factoryId === entry.kind && isEnvironmentObjectKind(entry.kind)
+        && environmentObjectDefinition(entry.kind).category === category;
+      if (entry.factoryId !== undefined && entry.factoryId !== expectedFactory && !sourceOwnedFactory) issues.push(issue(`${path}.factoryId`, `factoryId must be ${expectedFactory} or the source-owned kind for this collection`));
       if (key === "fields") {
         if (typeof entry.timer !== "number" || !Number.isFinite(entry.timer) || entry.timer < 0) issues.push(issue(`${path}.timer`, "timer must be finite and non-negative"));
         const eligibility = entry.eligibility;

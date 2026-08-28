@@ -206,7 +206,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   intent. Existing C12 cleanup continues to own Grafts and Cages. VS3-C13-S7
   proves Rootbound uses the existing ordered death, encounter cleanup, terminal
   presentation, boss reward, and pending chapter-outro flow; no boss-specific
-  terminal journal or reward route was introduced.
+  terminal journal or reward route was introduced. VS3-C13-S8 makes the new
+  phase state portable through the existing boss codec and detached production
+  constructor. Active Regrowth preserves its exact one-use state and three
+  environment-owned links/routes; active Last Spring preserves stage, timer,
+  use, and hit-spent truth. Rootbound-specific pre-hydration validation rejects
+  malformed phase/use/connection/progress/outcome/timer payloads. Exact boss
+  payload and semantic/environment hashes survive round-trip; portable world-ID
+  rebasing remains intentionally exact-distinct without semantic drift. No new
+  codec, registry, or boss serializer was added.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
