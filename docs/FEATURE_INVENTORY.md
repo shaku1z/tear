@@ -179,6 +179,13 @@ This is the migration checklist for the architectural redesign. A checked featur
   Rootbound also owns one natural engineering-only canonical encounter in
   Verdant Sanctum and participates in the source-derived six-boss browser
   matrix; no separate gameplay roster or environment registry was added.
+  VS3-C13-S1 adds the Phase III Regrowth authority as frozen, tick-based state:
+  one use, start tick, exact required and surviving connection IDs, bounded
+  progress, and one full/partial/no-interrupt resolution classification. The
+  existing `root-link` combat-object composition supplies exactly three
+  severable connections while data-only `regrowth-link` routes project the same
+  geometry for presentation. The production Rootbound type exposes the same
+  guarded state; S2 still owns healing and punish-recovery effects.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

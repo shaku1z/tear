@@ -5,6 +5,7 @@ import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
 import type { RootCagePlacementRequest } from "../../environment/root-cage";
+import { advanceRootboundRegrowth, beginRootboundRegrowth, createRootboundRegrowthState, type RootboundRegrowthState } from "../../environment/regrowth-link";
 import type { BossRuntime } from "./boss-runtime";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
@@ -112,6 +113,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     phaseTwoAttackIndex = 0;
     phaseTwoPendingAttack: RootboundPhaseTwoAttack | null = null;
     finalPhaseTwoGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
+    regrowthState: RootboundRegrowthState = createRootboundRegrowthState();
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -156,6 +158,23 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       const before = this.hp;
       this.hp = Math.min(this.maxHp, this.hp + this.maxHp * fraction);
       return (this.hp - before) / this.maxHp;
+    }
+
+    beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean {
+      if (this.phase !== 3 || this.attackCommitProtected() || this.cleanupReason !== null || this.regrowthState.useCount !== 0) return false;
+      this.regrowthState = beginRootboundRegrowth(this.regrowthState, startTick, connectionIds);
+      this.state = "idle";
+      this.stateT = 0;
+      this.atk = "regrowth:channeling";
+      return true;
+    }
+
+    advanceRegrowth(tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken = false): RootboundRegrowthState {
+      const next = advanceRootboundRegrowth(this.regrowthState, tick, activeConnectionIds, bossChannelBroken);
+      this.regrowthState = next;
+      if (next.phase === "channeling") this.atk = "regrowth:channeling";
+      else if (next.phase === "resolved") this.atk = `regrowth:${next.interruptClassification ?? "resolved"}`;
+      return next;
     }
 
     override contactDamageEnabled(): boolean {
