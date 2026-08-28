@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C10-S10 green; checkpoint gates pending** |
-| Current checkpoint | `VS3-C10` |
+| Status | **Active implementation authority — VS3-C10 green; VS3-C11-S1 next** |
+| Current checkpoint | `VS3-C11` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4337,7 +4337,7 @@ Implement the locked Verdant visual identity through current stable presentation
 
 | Field | Value |
 | --- | --- |
-| Status | `in-progress` |
+| Status | `green` |
 | Owner | Boss gameplay / encounter owner |
 | Dependencies | VS3-C8, VS3-C9 |
 | Release boundary | Boss Test engineering exposure; no full phase completion claim |
@@ -4348,9 +4348,9 @@ Create a lawful production Rootbound encounter that can spawn, introduce, simula
 
 ## Entry conditions
 
-- [ ] Verdant stage and presentation foundations are green.
-- [ ] Current boss factories, definitions, placement, encounter start, arena lifecycle, terminal flow, and browser boss matrix are understood.
-- [ ] Graft/Regrowth behavior is not implemented prematurely.
+- [x] Verdant stage and presentation foundations are green.
+- [x] Current boss factories, definitions, placement, encounter start, arena lifecycle, terminal flow, and browser boss matrix are understood.
+- [x] Graft/Regrowth behavior is not implemented prematurely.
 
 ## Primary files and authorities
 
@@ -4407,12 +4407,12 @@ Create a lawful production Rootbound encounter that can spawn, introduce, simula
 
 ## Exit conditions
 
-- [ ] Rootbound launches through production Boss Test in Verdant.
-- [ ] Intro and base simulation advance.
-- [ ] Boss takes legal damage and dies/cleans correctly.
-- [ ] Phase observation is valid.
-- [ ] Factory and home-stage completeness guards pass.
-- [ ] No phase-specific placeholder is claimed complete.
+- [x] Rootbound launches through production Boss Test in Verdant.
+- [x] Intro and base simulation advance.
+- [x] Boss takes legal damage and dies/cleans correctly.
+- [x] Phase observation is valid.
+- [x] Factory and home-stage completeness guards pass.
+- [x] No phase-specific placeholder is claimed complete.
 
 ## Stop and escalate conditions
 
@@ -4438,7 +4438,7 @@ Create a lawful production Rootbound encounter that can spawn, introduce, simula
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `in-progress` |
 | Owner | Boss combat owner |
 | Dependencies | VS3-C10 |
 | Release boundary | Phase I engineering completion |
@@ -4449,9 +4449,9 @@ Implement and prove the complete Phase I attack grammar, punish windows, environ
 
 ## Entry conditions
 
-- [ ] VS3-C10 is green.
-- [ ] Base boss damage/intro/terminal behavior is stable.
-- [ ] Current projectile, hazard, parry/counterplay, movement, cinematic, and boss feedback contracts are understood.
+- [x] VS3-C10 is green.
+- [x] Base boss damage/intro/terminal behavior is stable.
+- [x] Current projectile, hazard, parry/counterplay, movement, cinematic, and boss feedback contracts are understood.
 
 ## Primary files and authorities
 

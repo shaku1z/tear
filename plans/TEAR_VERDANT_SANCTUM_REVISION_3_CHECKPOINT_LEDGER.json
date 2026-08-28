@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C10",
-  "currentSubgoal": "VS3-C10-GATE",
+  "currentCheckpoint": "VS3-C11",
+  "currentSubgoal": "VS3-C11-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -19,19 +19,21 @@
     "VS3-C6",
     "VS3-C7",
     "VS3-C8",
-    "VS3-C9"
+    "VS3-C9",
+    "VS3-C10"
   ],
-  "lastGreenCheckpoint": "VS3-C9",
+  "lastGreenCheckpoint": "VS3-C10",
   "lastEvidence": [
     "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass.",
     "VS3-C10-S6 Rootbound presentation identity is green: the existing enemy renderer composition installs its root-throne, branching mantle, plural-mask, gold-graft silhouette and intro rise pose; the shared boss-intro snapshot/UI path preserves THE ROOTBOUND, KEEPER OF THE LAST MERCY, and YOU DO NOT HAVE TO DIE HERE.; focused and adjacent presentation/factory/reference tests, typecheck, architecture, targeted lint, and docs gates pass.",
     "VS3-C10-S7 deterministic Rootbound cleanup is green: one idempotent actor hook is dispatched through existing death, reset/new-run, retry, exit, and transactional restore/rollback boundaries; Rootbound clears intro, motion, recovery and cinematic state, and stage transitions clear living-arena broken state. Focused lifecycle/state-forge tests, typecheck, architecture, targeted lint, and docs gates pass.",
     "VS3-C10-S8 Rootbound Boss Test setup/result/retry is green: canonical roster setup exposes and selects THE ROOTBOUND, production Boss Test launches it in Verdant Sanctum, its attack-free planted simulation advances, and a normal defeat result retries the same selection in its authored stage. 29 focused tests, typecheck, architecture, exact test-standalone build attribution, and the shared live boss browser matrix pass.",
     "VS3-C10-S9 current boss observation is green: live Class-A diagnostics derive identity, valid ordinal phases, and home stage from production boss/stage authorities; Rootbound reports phases 1-3 and verdant-sanctum, and State Forge now proves the source-derived six-boss/18-phase matrix. 38 focused tests, typecheck, architecture, and targeted lint pass.",
-    "VS3-C10-S10 explicit attack unavailability is green: production boss-definition authority marks Rootbound phases 1-3 unavailable and State Forge preserves unavailable instead of inventing opening-commit placeholder damage; existing bosses retain authored opening commits. 30 focused tests, typecheck, architecture, and targeted lint pass."
+    "VS3-C10-S10 explicit attack unavailability is green: production boss-definition authority marks Rootbound phases 1-3 unavailable and State Forge preserves unavailable instead of inventing opening-commit placeholder damage; existing bosses retain authored opening commits. 30 focused tests, typecheck, architecture, and targeted lint pass.",
+    "VS3-C10 Rootbound foundation is GREEN at 00a3a9b360f44a6a9b152bd1a4ea6e0ffa0bf894: all ten ordered subgoals pass; repository lint, typecheck, architecture, 81 aggregate foundation tests, attributed test-standalone build bd5cdbe196d94857189ae7d3cbf70ad3c9629d371c392246e10b5b5878c5a69d, and the shared live boss browser matrix are green."
   ],
   "blockers": [],
-  "nextAction": "Run the complete VS3-C10 foundation gate, record exact build/browser evidence, and advance to VS3-C11 only if every required exit condition is green.",
+  "nextAction": "Execute VS3-C11-S1: implement deterministic Rootbound Phase I attack selection and recovery cadence without yet committing attack damage geometry.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1597,11 +1599,22 @@
         "Boss browser evidence",
         "Foundation limitations record"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "c14988f380b3fbd9bfd59820d1adeaac27c7ba81",
+      "completionIdentity": "00a3a9b360f44a6a9b152bd1a4ea6e0ffa0bf894",
+      "commandsRun": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/boss-reference.test.ts tests/unit/current-boss-observation-authority.test.ts tests/unit/boss-encounter.test.ts tests/unit/rootbound-foundation.test.ts tests/unit/tearbench-current-game-authority.test.ts tests/unit/tearbench-state-forge-exit-gate.test.ts tests/unit/enemy-factory.test.ts tests/unit/enemy-reference.test.ts tests/unit/game-reference.test.ts tests/unit/run-wave-planner-conformance.test.ts tests/unit/kill-runtime.test.ts tests/unit/live-outcome-composition.test.ts --no-file-parallelism",
+        "pnpm build:test:standalone",
+        "pnpm test:browser:bosses"
+      ],
+      "evidence": [
+        "81 aggregate Rootbound foundation/factory/reference/observation/lifecycle tests passed across 11 files.",
+        "Test-standalone build attribution passed at 00a3a9b360f44a6a9b152bd1a4ea6e0ffa0bf894 with artifact hash bd5cdbe196d94857189ae7d3cbf70ad3c9629d371c392246e10b5b5878c5a69d.",
+        "Shared live browser boss matrix passed with Rootbound home-stage launch, planted attack-free simulation, result, and retry evidence."
+      ],
       "blockers": [],
       "notes": [
         "VS3-C10-S9 resolved the pre-Rootbound State Forge matrix assumption; the source-derived matrix is six bosses and eighteen ordinal phases."
@@ -1718,7 +1731,7 @@
         "Accessibility attack review",
         "Phase I checkpoint record"
       ],
-      "status": "not-started",
+      "status": "in-progress",
       "sourceBaseline": null,
       "completionIdentity": null,
       "commandsRun": [],
