@@ -84,6 +84,41 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
     assert.ok(paintedRatio >= 0.6, `${label}: world presentation did not paint the viewport (${paintedRatio.toFixed(3)})`);
     screenshots.push({ label, width, height, file: `${label}.png`, paintedPixelRatio: Number(paintedRatio.toFixed(4)) });
   }
+  await page.evaluate(() => window.__PANTHEON_TEST.setOptions({
+    flash: 0, reducedMotion: true, highContrast: true, gfx: "low", masterMuted: true,
+  }));
+  const accessibility = await page.evaluate(() => window.__PANTHEON_TEST.state());
+  assert.equal(accessibility.reducedMotion, true);
+  assert.equal(accessibility.highContrast, true);
+  assert.equal(accessibility.lowEffects, true);
+  assert.equal(accessibility.settings.masterMuted, true);
+  const accessibilityDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints",
+    "verdant-sanctum", "VS3-C20", "accessibility");
+  fs.mkdirSync(accessibilityDirectory, { recursive: true });
+  const accessibilityScreenshots = [];
+  for (const [label, width, height] of [
+    ["desktop-1600x900", 1_600, 900], ["touch-landscape-896x414", 896, 414],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => {
+      const environment = window.__VERDANT_C9_ENVIRONMENT__;
+      environment.renderFrame(1 / 60);
+      environment.renderFrame(1 / 60);
+      return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    const file = `${label}-contrast-motion-low-audio-off.png`;
+    const png = await page.screenshot({ path: path.join(accessibilityDirectory, file) });
+    const decoded = decodePng(png), paintedRatio = paintedPixelRatio(png);
+    assert.deepEqual([decoded.width, decoded.height], [width, height], `${label}: accessible screenshot dimensions`);
+    assert.ok(paintedRatio >= 0.6, `${label}: accessible world presentation did not paint the viewport (${paintedRatio.toFixed(3)})`);
+    accessibilityScreenshots.push({ label, width, height, file, paintedPixelRatio: Number(paintedRatio.toFixed(4)) });
+  }
+  fs.writeFileSync(path.join(accessibilityDirectory, "evidence.json"), `${JSON.stringify({
+    format: "tear-verdant-c20-accessibility-evidence", schemaVersion: 1,
+    engineeringOnly: true, certifying: false, build: buildInfo,
+    profile: { highContrast: true, reducedMotion: true, lowGraphics: true, flashScale: 0, audioEnabled: false },
+    stage: "verdant-sanctum", wave: 31, screenshots: accessibilityScreenshots,
+  }, null, 2)}\n`);
   fs.writeFileSync(path.join(directory, "evidence.json"), `${JSON.stringify({
     format: "tear-verdant-c9-browser-evidence", schemaVersion: 1,
     engineeringOnly: true, certifying: false, build: buildInfo,
