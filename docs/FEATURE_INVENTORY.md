@@ -347,7 +347,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   frames use the generic boss State Forge factory, while Rootbinder networks and
   Bloom cycles retain their existing specialized projections. Their live
   mutation controls remain Class-A/test-build-only and are absent from Class B/C
-  and production player surfaces.
+  and production player surfaces. The source-owned achievement catalog now adds
+  `boss_rootbound` for the canonical `killRootbound` fact and
+  `rootbound_regrowth` for a resolved `full-interrupt` Regrowth state at boss
+  death. The optional hidden no-damage sequence remains unimplemented pending
+  approval. Runtime/catalog/reference projections and the 100-entry reward pool
+  agree on the same identities.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
