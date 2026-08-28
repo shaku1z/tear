@@ -97,6 +97,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   actor attack state, settles interrupted Canopy travel at its declared target,
   kills owned Seed Arc projectiles with phase-transition provenance, and causes
   environment-owned Rootline to expire with the same reason before Phase II.
+  VS3-C11-S7 proves all four attack tells without audio: Vine Sweep and Canopy
+  Step retain static geometry in high-contrast/reduced-motion/low-graphics
+  combinations, Rootline preserves warned bounds and active teeth, and Seed Arc
+  now renders its landing marker plus a high-contrast projectile cue even when
+  optional trails and effects are disabled.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

@@ -81,6 +81,31 @@ describe("Rootbound production foundation", () => {
     expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
   });
 
+  it("keeps Vine Sweep and Canopy Step tells static and geometry-readable in every accessibility profile", () => {
+    for (const profile of [
+      { highContrast: false, reducedMotion: false, low: false },
+      { highContrast: true, reducedMotion: false, low: false },
+      { highContrast: false, reducedMotion: true, low: true },
+      { highContrast: true, reducedMotion: true, low: true },
+    ]) {
+      const harness = createEnemyHarness();
+      createLegacyEnemyPresentation({
+        A11Y: { highContrast: profile.highContrast, reducedMotion: profile.reducedMotion }, CLOCK: { sim: 2 }, policy: CONFIG,
+        GFX: { low: profile.low }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
+        UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
+        clamp, len, lerp,
+      }).install(harness.types);
+      const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as
+        InstanceType<typeof harness.types.Rootbound> & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
+      boss.vineSweepStage = "windup"; boss.vineSweepT = 0.3; boss.vineSweepFacing = 1;
+      boss.canopyStepStage = "telegraph"; boss.canopyStepT = 0.3;
+      boss.canopyDestination = Object.freeze({ x: 595, y: 396, platformId: "rootbound:2" });
+      const calls: string[] = [];
+      boss.draw(recordingCanvas(calls), harness.player);
+      expect(calls, JSON.stringify(profile)).toEqual(expect.arrayContaining(["bezierCurveTo", "ellipse", "setLineDash", "stroke"]));
+    }
+  });
+
   it("places the grounded Rootbound body through the shared boss placement authority", () => {
     const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG);
 

@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C11",
-  "currentSubgoal": "VS3-C11-S7",
+  "currentSubgoal": "VS3-C11-S8",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -36,10 +36,11 @@
     "VS3-C11-S3 Seed Arc is green: a bounded three-seed volley uses the current ordinary-projectile lifecycle, carries Rootbound owner/source identity, publishes exact landing coordinates/timing, remains explicitly deflectable, excludes poison/root persistence, and expires or impacts in under two seconds. Thirteen focused tests, typecheck, architecture, and targeted lint pass.",
     "VS3-C11-S4 Rootline is green: Rootbound projects warned/active/cleanup intent into the existing environment runtime, which owns the canonical rootline field, visible bounds/teeth, one hazard-scaled hit, cooldown, causal start/resolve facts, and natural expiry. No actor-local hazard collection or additional registry was introduced. Sixty-eight adjacent authority tests and forty-seven focused combat/presentation/runtime tests, typecheck, architecture, and targeted lint pass.",
     "VS3-C11-S5 Canopy Step is green: Rootbound derives destinations from stable authored arena terraces, exposes the exact destination before motion, follows a deterministic arcing travel path, disables contact during the move, and owns no teleport/arrival hitbox. Phase I is now attack-available in canonical boss authority while Phases II-III remain unavailable; 57 factory/reference/State Forge/focused tests, typecheck, architecture, and targeted lint pass.",
-    "VS3-C11-S6 Phase I exit cleanup is green: the Phase II threshold atomically cancels attack state, settles interrupted Canopy travel on its declared destination, kills owned Seed Arc projectiles with phase-transition provenance, and drives environment-owned Rootline to stage-transition expiry before Phase II proceeds. 35 focused lifecycle/environment/causal tests, typecheck, architecture, and targeted lint pass."
+    "VS3-C11-S6 Phase I exit cleanup is green: the Phase II threshold atomically cancels attack state, settles interrupted Canopy travel on its declared destination, kills owned Seed Arc projectiles with phase-transition provenance, and drives environment-owned Rootline to stage-transition expiry before Phase II proceeds. 35 focused lifecycle/environment/causal tests, typecheck, architecture, and targeted lint pass.",
+    "VS3-C11-S7 accessibility telegraphs are green: Vine Sweep and Canopy Step retain static geometry in all high-contrast/reduced-motion/low-graphics combinations; Rootline preserves warning bounds and active teeth; Seed Arc now renders its landing marker and high-contrast projectile cue even with trails/effects disabled. All counterplay is visual and audio-independent. 24 focused presentation/combat tests, typecheck, architecture, and targeted lint pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C11-S7: consolidate high-contrast, reduced-motion, low-graphics, and audio-independent telegraphs for every Phase I attack.",
+  "nextAction": "Execute VS3-C11-S8: validate Phase I cadence and damage against the current difficulty catalog without duplicating difficulty tuning.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1684,7 +1685,7 @@
         {
           "id": "VS3-C11-S7",
           "description": "Add high-contrast, reduced-motion, low-graphics, and audio-independent attack telegraphs.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C11-S8",

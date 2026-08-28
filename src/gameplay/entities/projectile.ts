@@ -40,6 +40,8 @@ export interface ProjectileRenderSnapshot {
   readonly integrity: number; readonly maxIntegrity: number; readonly sweeperState: string | null;
   readonly spinDir: number; readonly embedded: boolean; readonly sweeperStyle?: string;
   readonly crescent?: boolean; readonly quake?: boolean; readonly sourceStolen: unknown;
+  readonly bossAttack?: string; readonly landingX?: number | null; readonly landingY?: number | null; readonly landingT?: number | null;
+  readonly counterplay?: string; readonly unparryable?: boolean;
   trailPoint(index: number): Readonly<{ x: number; y: number }> | undefined;
 }
 
