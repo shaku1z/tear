@@ -18,16 +18,35 @@ export interface EnvironmentCombatObjectPolicy {
   readonly counterplayTags: readonly EnvironmentCounterplayTag[];
 }
 
+export interface EnvironmentCounterplayResolution {
+  readonly capability: EnvironmentCounterplayTag;
+  readonly accepted: boolean;
+  readonly matchedTag: EnvironmentCounterplayTag | null;
+}
+
 export interface EnvironmentCombatObjectRuntime {
   readonly state: EnvironmentCombatObjectState;
   readonly policy: EnvironmentCombatObjectPolicy;
   damage(amount: number, attackId: string, tick?: number): EnvironmentDamageResult;
   cleanup(reason: EnvironmentClearReason): EnvironmentCombatObjectState;
   hasProcessedAttack(attackId: string): boolean;
+  resolveCounterplay(capability: EnvironmentCounterplayTag): EnvironmentCounterplayResolution;
 }
 
 const MAX_ATTACK_IDS = 512;
 const MAX_ATTACK_ID_LENGTH = 256;
+const COUNTERPLAY_CAPABILITIES = new Set<EnvironmentCounterplayTag>(["cut", "break", "projectile-cut"]);
+
+/** Resolves a weapon/action capability against source-owned object metadata. Capabilities match exactly. */
+export function resolveEnvironmentCounterplay(
+  counterplayTags: readonly EnvironmentCounterplayTag[],
+  capability: EnvironmentCounterplayTag,
+): EnvironmentCounterplayResolution {
+  if (!COUNTERPLAY_CAPABILITIES.has(capability)) throw new RangeError(`unknown environment counterplay capability: ${capability}`);
+  const accepted = counterplayTags.includes(capability);
+  return Object.freeze({ capability, accepted, matchedTag: accepted ? capability : null });
+}
+
 /** Creates a bounded damageable relationship object; it never enters enemy reward/proc paths. */
 export function createEnvironmentCombatObjectRuntime(
   initial: EnvironmentCombatObjectState,
@@ -45,6 +64,7 @@ export function createEnvironmentCombatObjectRuntime(
     get state(): EnvironmentCombatObjectState { return state; },
     policy,
     hasProcessedAttack(attackId: string): boolean { return processed.has(attackId); },
+    resolveCounterplay: (capability: EnvironmentCounterplayTag) => resolveEnvironmentCounterplay(policy.counterplayTags, capability),
     damage(amount: number, attackId: string, tick?: number): EnvironmentDamageResult {
       if (!Number.isFinite(amount) || amount < 0) throw new RangeError("environment damage must be finite and non-negative");
       if (typeof attackId !== "string" || attackId.length === 0) throw new TypeError("environment damage requires an attack ID");

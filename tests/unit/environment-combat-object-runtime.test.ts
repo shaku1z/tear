@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanupOrphanedEnvironmentCombatObjects, createEnvironmentCombatObjectRuntime } from "../../src/gameplay/environment/combat-object-runtime";
+import { cleanupOrphanedEnvironmentCombatObjects, createEnvironmentCombatObjectRuntime, resolveEnvironmentCounterplay } from "../../src/gameplay/environment/combat-object-runtime";
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
 import type { EnvironmentCombatObjectState } from "../../src/gameplay/environment/environment-contracts";
 import { forgeEnvironmentCombatObjectState } from "../../src/tearbench/state-forge-factories";
@@ -13,6 +13,20 @@ const object: EnvironmentCombatObjectState = {
 };
 
 describe("generic environment combat-object kernel", () => {
+  it("resolves cut, break, and projectile-cut exactly from source-owned capability tags", () => {
+    const rootLink = createEnvironmentCombatObjectRuntime({ ...object, counterplayTags: ["cut", "break"] }, ["cut", "break"]);
+    expect(["cut", "break", "projectile-cut"].map((capability) =>
+      rootLink.resolveCounterplay(capability as "cut" | "break" | "projectile-cut"))).toEqual([
+      { capability: "cut", accepted: true, matchedTag: "cut" },
+      { capability: "break", accepted: true, matchedTag: "break" },
+      { capability: "projectile-cut", accepted: false, matchedTag: null },
+    ]);
+    const graftTags = ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"].counterplayTags;
+    expect(["cut", "break", "projectile-cut"].every((capability) =>
+      resolveEnvironmentCounterplay(graftTags, capability as "cut" | "break" | "projectile-cut").accepted)).toBe(true);
+    expect(() => resolveEnvironmentCounterplay(graftTags, "status" as never)).toThrow(/unknown environment counterplay capability/u);
+  });
+
   it("uses source-owned counterplay metadata and keeps routes behavior-minimal", () => {
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["root-link"].counterplayTags).toEqual(["cut", "break"]);
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"].counterplayTags).toEqual(["cut", "break", "projectile-cut"]);

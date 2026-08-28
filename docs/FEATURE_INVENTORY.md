@@ -291,6 +291,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   and an exact-build four-viewport browser journey provide responsive evidence.
   This is the biome's first player-visible art slice, not completion of its
   enemies, Rootbound fight, final soundtrack, or public release package.
+- [x] Verdant C14 environment-object capability seam (engineering-only) —
+  the existing combat-object kernel resolves `cut`, `break`, and
+  `projectile-cut` exactly from source-owned object tags. Root links expose
+  cut/break; Grafts expose all three; unknown capabilities fail closed. This
+  is weapon-agnostic infrastructure only: per-weapon conformance remains owned
+  by VS3-C14-S2 through S8, and no C40 certification record changed.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

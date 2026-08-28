@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C13 green at `0baeca907e1cdea9b82d4bda730649d305844276`; VS3-C14-S1 next** |
+| Status | **Active implementation authority — VS3-C14-S1 green; VS3-C14-S2 next** |
 | Current checkpoint | `VS3-C14` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4762,7 +4762,7 @@ Prove every active weapon can answer every required Verdant combat object withou
 
 ## Sub-goals
 
-- [ ] **VS3-C14-S1** — Define and test cut, break, and projectile-cut capability resolution.
+- [x] **VS3-C14-S1** — Define and test cut, break, and projectile-cut capability resolution. The existing environment combat-object kernel now exposes one typed exact-match resolver over source-owned counterplay metadata. Root links accept cut/break and reject projectile-cut; Grafts accept all three; unknown capabilities fail closed. This establishes a shared seam for weapon routing without weapon IDs, bespoke object handlers, or another capability registry.
 - [ ] **VS3-C14-S2** — Prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption.
 - [ ] **VS3-C14-S3** — Prove Hammer Break and Meteor route/catch safety.
 - [ ] **VS3-C14-S4** — Prove Greatsword broad multi-segment dedupe and Wheel Cut safety.
