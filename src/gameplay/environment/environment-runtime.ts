@@ -1,7 +1,8 @@
 import { EnvironmentState, createEnvironmentState } from "./environment-state";
 import type { EnvironmentClearReason, EnvironmentCombatObjectState, EnvironmentRuntimeConfiguration, EnvironmentRuntimeState, EnvironmentSnapshot } from "./environment-contracts";
 import { advanceEnvironmentField } from "./field-runtime";
-import { createEnvironmentCombatObjectRuntime, type EnvironmentCombatObjectRuntime } from "./combat-object-runtime";
+import { createEnvironmentCombatObjectRuntime, type EnvironmentCombatObjectRuntime, type EnvironmentCounterplayResolution } from "./combat-object-runtime";
+import type { EnvironmentCounterplayTag } from "./environment-definitions";
 import { cleanupOrphanedEnvironmentReferences } from "./environment-cleanup";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
@@ -468,6 +469,17 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     if (result.accepted) this.updateCombatObject(id, { ...kernel.state, stateTick: tick });
     if (result.destroyed && isGraftAnchorState(kernel.state) && kernel.state.ownerId !== null) this.#applyRootboundGraftEffects(kernel.state.ownerId);
     return result;
+  }
+
+  resolveCombatObjectCounterplay(id: string, capability: EnvironmentCounterplayTag): EnvironmentCounterplayResolution {
+    const object = this.combatObjects().find((entry) => entry.id === id);
+    if (object === undefined) throw new RangeError(`unknown environment combat object: ${id}`);
+    let kernel = this.#combatKernels.get(id);
+    if (kernel === undefined) {
+      kernel = createEnvironmentCombatObjectRuntime(object, undefined, this.#events);
+      this.#combatKernels.set(id, kernel);
+    }
+    return kernel.resolveCounterplay(capability);
   }
 
   #advanceFields(tick: number, seconds: number): void {

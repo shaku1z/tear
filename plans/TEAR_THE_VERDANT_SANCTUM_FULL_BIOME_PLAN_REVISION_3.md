@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C14-S1 green; VS3-C14-S2 next** |
+| Status | **Active implementation authority — VS3-C14-S2 green; VS3-C14-S3 next** |
 | Current checkpoint | `VS3-C14` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4746,8 +4746,8 @@ Prove every active weapon can answer every required Verdant combat object withou
 ## Entry conditions
 
 - [x] Root links, Grafts, Regrowth links, and complete Rootbound behavior are stable.
-- [ ] Current Final Five and ability conformance suites are green before Verdant additions.
-- [ ] Bloom Wells V1 still excludes weapon transport mutation.
+- [x] Current Final Five and ability conformance suites are green before Verdant additions.
+- [x] Bloom Wells V1 still excludes weapon transport mutation.
 
 ## Primary files and authorities
 
@@ -4763,7 +4763,7 @@ Prove every active weapon can answer every required Verdant combat object withou
 ## Sub-goals
 
 - [x] **VS3-C14-S1** — Define and test cut, break, and projectile-cut capability resolution. The existing environment combat-object kernel now exposes one typed exact-match resolver over source-owned counterplay metadata. Root links accept cut/break and reject projectile-cut; Grafts accept all three; unknown capabilities fail closed. This establishes a shared seam for weapon routing without weapon IDs, bespoke object handlers, or another capability registry.
-- [ ] **VS3-C14-S2** — Prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption.
+- [x] **VS3-C14-S2** — Prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption. The canonical Sword definition now declares its held `cut` capability, and the live collision phase resolves that capability against environment-owned Root link, Graft, and Regrowth geometry through the existing combat-object runtime. Object contacts use per-swing attack IDs and never enter enemy hit hooks, Reversal targeting, Threadcut waypoints, reward logic, or ordinary proc paths.
 - [ ] **VS3-C14-S3** — Prove Hammer Break and Meteor route/catch safety.
 - [ ] **VS3-C14-S4** — Prove Greatsword broad multi-segment dedupe and Wheel Cut safety.
 - [ ] **VS3-C14-S5** — Prove Chainblade head-only object damage and Hook & Sling stability.

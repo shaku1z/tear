@@ -318,7 +318,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     temporaryWalls: () => hostState.temporaryWalls(), setTemporaryWalls: (value) => { hostState.setTemporaryWalls(value); },
   }, transient);
   const combatActions: ReturnType<typeof createLiveCombatActions> = createLiveCombatActions({
-    dependencies, canvas, width: W, bossRosterSize: BOSS_ROSTER.length,
+    dependencies, canvas, width: W, bossRosterSize: BOSS_ROSTER.length, environment,
     live: combatWorldState,
     ports: {
       stage: stageRuntime, story, cinema: CINEMA, tutorial: TUT,

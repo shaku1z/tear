@@ -295,8 +295,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   the existing combat-object kernel resolves `cut`, `break`, and
   `projectile-cut` exactly from source-owned object tags. Root links expose
   cut/break; Grafts expose all three; unknown capabilities fail closed. This
-  is weapon-agnostic infrastructure only: per-weapon conformance remains owned
-  by VS3-C14-S2 through S8, and no C40 certification record changed.
+  Sword now declares its held `cut` capability in the canonical weapon
+  definition, and the production collision phase routes matching Root link,
+  Graft, and Regrowth geometry through the environment owner with per-swing
+  dedupe. Those contacts never become enemy targets, so Reversal and Threadcut
+  state remain untouched. Remaining weapon conformance is owned by VS3-C14-S3
+  through S8, and no C40 certification record changed.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

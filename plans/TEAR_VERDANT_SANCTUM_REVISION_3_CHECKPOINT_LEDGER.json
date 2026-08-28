@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C14",
-  "currentSubgoal": "VS3-C14-S2",
+  "currentSubgoal": "VS3-C14-S3",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -51,7 +51,7 @@
     "VS3-C13 Rootbound Phase III is GREEN at 0baeca907e1cdea9b82d4bda730649d305844276: all ten ordered subgoals pass; repository typecheck and lint, 40 aggregate terminal/replay/state-codec tests, attributed test-standalone build 44ce4a40f46cd702e09ccd23bcd99ce9677eee49c9b7cceb4d2e307dd8c2f819, live six-boss browser matrix, State Forge runtime/studio/exit matrix, and current live-detached parity are green."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C14-S2: prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption.",
+  "nextAction": "Execute VS3-C14-S3: prove Hammer Break and Meteor route/catch safety.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2123,7 +2123,7 @@
         {
           "id": "VS3-C14-S2",
           "description": "Prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C14-S3",
@@ -2216,10 +2216,17 @@
         "pnpm exec vitest run tests/unit/environment-combat-object-runtime.test.ts tests/unit/environment-runtime.test.ts tests/unit/graft-anchor.test.ts tests/unit/rootbound-regrowth.test.ts",
         "pnpm typecheck",
         "pnpm exec eslint src/gameplay/environment/combat-object-runtime.ts tests/unit/environment-combat-object-runtime.test.ts",
+        "pnpm check:architecture",
+        "pnpm test:weapons",
+        "pnpm exec vitest run tests/unit/weapon-ability-conformance.test.ts tests/unit/weapon-secondary-runtime.test.ts tests/unit/weapon-projectile-runtime.test.ts tests/unit/verdant-final-five-conformance.test.ts",
+        "pnpm exec vitest run tests/unit/environment-weapon-contact-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/final-five-weapon-roster.test.ts tests/unit/weapon-ability-conformance.test.ts tests/unit/verdant-final-five-conformance.test.ts tests/unit/live-combat-runtime.test.ts tests/unit/live-combat-composition.test.ts",
+        "pnpm typecheck",
+        "pnpm lint",
         "pnpm check:architecture"
       ],
       "evidence": [
-        "VS3-C14-S1 capability resolution is green: one typed exact-match resolver in the existing environment combat-object kernel maps cut, break, and projectile-cut against source-owned tags. Root links accept cut/break and reject projectile-cut; Grafts accept all three; unknown capabilities fail closed. Thirty-five focused and adjacent tests plus typecheck, architecture, and targeted lint pass."
+        "VS3-C14-S1 capability resolution is green: one typed exact-match resolver in the existing environment combat-object kernel maps cut, break, and projectile-cut against source-owned tags. Root links accept cut/break and reject projectile-cut; Grafts accept all three; unknown capabilities fail closed. Thirty-five focused and adjacent tests plus typecheck, architecture, and targeted lint pass.",
+        "VS3-C14-S2 Sword object conformance is green: the canonical Sword definition supplies held cut capability to the production collision phase, which resolves Root link, Graft, and Regrowth geometry through the existing environment owner with one attack ID per swing. The permanent proof destroys both link forms, pressures the Graft, and leaves Reversal and Threadcut collections untouched. Final Five/ability/Bloom entry baselines, 33 focused and adjacent tests, typecheck, repository lint, and architecture pass; no C40 record changed."
       ],
       "blockers": [],
       "notes": []

@@ -4,6 +4,7 @@
 
 import type { CONFIG as GAME_CONFIG } from "../config/game-config";
 import { clamp, len, lerp } from "../domain/geometry";
+import type { EnvironmentCounterplayTag } from "./environment/environment-definitions";
 import { migrateWeaponSelection, type WeaponId } from "./weapon-selection";
 
 export type { WeaponId } from "./weapon-selection";
@@ -102,6 +103,12 @@ export interface WeaponDefinition {
   ratings: WeaponRatings;
   throwCollisionPad: number;
   channels: WeaponChannels;
+  /** Source-owned capabilities resolved against environment object metadata. */
+  environmentCounterplay?: Readonly<{
+    held?: EnvironmentCounterplayTag;
+    thrown?: EnvironmentCounterplayTag;
+    projectile?: EnvironmentCounterplayTag;
+  }>;
   applyPhysics(context: { config: WeaponConfiguration; weapon: WeaponDefinition }): void;
   applyPlayerChassis(context: { config: WeaponConfiguration; weapon: WeaponDefinition }): void;
   qualityMetric(context: WeaponQualityContext): number;
@@ -139,6 +146,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     tags: ["Precision", "Parry", "Recall"], weaknesses: ["Low burst", "Narrow control", "Requires timing"],
     throwIdentity: "Threadcut", ratings: { handling: 5, impact: 3, reach: 3, difficulty: 2 },
     throwCollisionPad: 4, channels: weaponChannels(),
+    environmentCounterplay: Object.freeze({ held: "cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.springStiffness *= 1.08; B.angleSmooth *= 1.1;
