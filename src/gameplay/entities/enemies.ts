@@ -7,6 +7,7 @@ import { createEchoEnemyTypes } from "./enemy-types/echo-enemies";
 import { createEnemyBase } from "./enemy-types/enemy-base";
 import { createGroundEnemyTypes } from "./enemy-types/ground-enemies";
 import { createSourceType } from "./enemy-types/source";
+import { createRootboundType } from "./enemy-types/rootbound";
 import { createSpecialEnemyTypes } from "./enemy-types/special-enemies";
 import { createThroneFireRuntime } from "./enemy-types/throne-fire";
 import { createWardenType } from "./enemy-types/warden";
@@ -26,10 +27,11 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const Aldric = createAldricType(dependencies, Enemy, bossRuntime, throneFireRuntime);
   const { Echo, VoidWisp } = createEchoEnemyTypes(dependencies, Enemy, bossRuntime);
   const Source = createSourceType(dependencies, Enemy, bossRuntime, throneFireRuntime);
+  const Rootbound = createRootboundType(dependencies, Enemy);
 
   return Object.freeze({
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,
-    Flyer, Ranged, Rootbinder, Source, Support, VoidWisp, Warden, Wraith,
+    Flyer, Ranged, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   });
 }

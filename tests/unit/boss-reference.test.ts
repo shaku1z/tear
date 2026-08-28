@@ -12,12 +12,13 @@ const expected = [
   { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.30] },
   { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
   { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
+  { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
   { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
   { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
 ] as const;
 
 describe("authored boss reference", () => {
-  it("is the frozen five-entry identity and phase authority", () => {
+  it("is the frozen six-entry identity and phase authority", () => {
     expect(BOSS_DEFINITIONS).toEqual(expected.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks })));
     expect(Object.isFrozen(BOSS_DEFINITIONS)).toBe(true);
     for (const definition of BOSS_DEFINITIONS) expect(Object.isFrozen(definition.phaseMarks)).toBe(true);
@@ -34,7 +35,7 @@ describe("authored boss reference", () => {
   it("projects the exact stage bijection and imported shape", () => {
     const result = projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES });
     expect(result).toEqual(expected);
-    expect(result.some((boss) => boss.id === "rootbound")).toBe(false);
+    expect(result.some((boss) => boss.id === "rootbound")).toBe(true);
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result[0])).toBe(true);
     expect(Object.isFrozen(result[0]?.phaseMarks)).toBe(true);
@@ -66,6 +67,7 @@ describe("authored boss reference", () => {
       warden: harness.types.Warden,
       colossus: harness.types.Colossus,
       aldric: harness.types.Aldric,
+      rootbound: harness.types.Rootbound,
       echo: harness.types.Echo,
       source: harness.types.Source,
     } as const;

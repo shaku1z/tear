@@ -11,6 +11,7 @@ function liveBossRuntime() {
     warden: harness.types.Warden,
     colossus: harness.types.Colossus,
     aldric: harness.types.Aldric,
+    rootbound: harness.types.Rootbound,
     echo: harness.types.Echo,
     source: harness.types.Source,
   } as const;

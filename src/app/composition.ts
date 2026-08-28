@@ -128,7 +128,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   });
   const {
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo,
-    Flyer, Ranged, Rootbinder, Source, Support, VoidWisp, Warden, Wraith,
+    Flyer, Ranged, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
@@ -201,7 +201,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
-    Ranged, ReflectionEnemy, Rootbinder, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
+    Ranged, ReflectionEnemy, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,
     clamp, cosmeticRandom, createRunSeed, drawBossTransformationWorld, len, lerp,

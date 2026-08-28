@@ -122,6 +122,7 @@ describe("game-reference.v1", () => {
       { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.30] },
       { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
       { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
+      { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
       { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
       { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
     ]);

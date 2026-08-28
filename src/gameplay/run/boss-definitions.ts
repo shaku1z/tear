@@ -1,4 +1,4 @@
-/** Pure authored boss identity authority; Rootbound remains factory-unavailable until VS3-C10. */
+/** Pure authored boss identity authority. */
 export const BOSS_IDENTITY_IDS = Object.freeze([
   "warden", "colossus", "aldric", "rootbound", "echo", "source",
 ] as const);
@@ -25,6 +25,7 @@ export const BOSS_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "warden", name: "The Warden", phaseMarks: Object.freeze([0.65, 0.30] as const) }),
   Object.freeze({ id: "colossus", name: "Iron Colossus", phaseMarks: Object.freeze([0.60, 0.25] as const) }),
   Object.freeze({ id: "aldric", name: "Berserker King", phaseMarks: Object.freeze([0.65, 0.20] as const) }),
+  ROOTBOUND_PROVISIONAL_DEFINITION,
   Object.freeze({ id: "echo", name: "The Echo", phaseMarks: Object.freeze([0.60, 0.25] as const) }),
   Object.freeze({ id: "source", name: "The Source", phaseMarks: Object.freeze([0.58, 0.28] as const) }),
 ] as const satisfies readonly BossDefinition[]);

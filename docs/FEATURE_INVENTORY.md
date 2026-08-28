@@ -33,9 +33,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   family/affix signatures. Source order is fail-closed; runtime callbacks,
   behavior/stat mutations, base stats, eligibility, CONFIG, and presentation
   objects are excluded. `null` represents an absent `minWave` gate.
-- [x] Authored boss reference catalog — the fixed game-reference collection
-  contains the exact five factory-ready boss definitions in authored order,
-  exact names, five-way stage mapping, and two descending phase thresholds per boss. The
+- [x] Authored boss reference catalog — the engineering game-reference collection
+  contains the exact six factory-ready boss definitions in authored order,
+  exact names, six-way stage mapping, and two descending phase thresholds per boss. The
   pure `boss-definitions.ts` authority and `boss-reference.ts` projection
   exclude constructors, runtime behavior, and tuning beyond those thresholds.
 - [x] Verdant identity foundation (engineering-only) — `stages.ts`,
@@ -46,7 +46,7 @@ This is the migration checklist for the architectural redesign. A checked featur
   unmapped-identity proofs. At C1 the runtime campaign remained five stages and
   the public game-reference schema remained unchanged; the later C8 engineering
   insertion supersedes only that roster-count statement. Rootbound remains
-  explicitly factory-unavailable until VS3-C10. Rootbinder became
+  factory-ready through the existing enemy composition in VS3-C10. Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
 - [x] Verdant C3 environment evidence foundation (engineering-only) — the
