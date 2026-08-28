@@ -105,10 +105,10 @@ FFmpeg 9 executable through the dependency's documented `FFMPEG_BIN` override.
 This changed no repository source. Codec results are evidence for this local
 audition, not a reviewed release identity.
 
-## Decision boundary
+## Decision outcome
 
-VS3-C17-S1 is prepared through its complete technical audition set. Its
-remaining acceptance action is the owner's listening pass. VS3-C17-S2 must then
-record exactly one decision: select Static Bloom, select another existing work,
-or commission a new work. Until that happens, rights confirmation, release,
-re-vendoring, routing, and publication remain blocked and unclaimed.
+The owner subsequently rejected Static Bloom and directed the plan to continue
+with replacement music deferred. The authoritative record is
+[VS3-C17_MUSIC_DECISION.md](VS3-C17_MUSIC_DECISION.md). This audition remains
+historical evidence for the rejected candidate; it grants no rights, release,
+re-vendoring, routing, or publication authority.
