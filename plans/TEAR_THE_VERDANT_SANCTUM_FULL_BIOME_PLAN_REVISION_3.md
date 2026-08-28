@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C12-S9 green; VS3-C12-S10 next** |
-| Current checkpoint | `VS3-C12` |
+| Status | **Active implementation authority — VS3-C12 green; VS3-C13-S1 next** |
+| Current checkpoint | `VS3-C13` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4389,12 +4389,12 @@ Create a lawful production Rootbound encounter that can spawn, introduce, simula
 
 ## TearBench same-change response
 
-- [ ] Add natural canonical scenario rootbound-verdant-sanctum-live-encounter.
-- [ ] Extend the shared boss browser matrix to include Rootbound in its production home stage.
-- [ ] Add source-derived current-stage-boss completeness mapping.
-- [ ] Add State Forge factory/phase-1 baseline restore proof.
-- [ ] Keep scenario engineering-only and non-certifying.
-- [ ] Explicitly report detached boss capability as unsupported until later behavior exists.
+- [x] Add natural canonical scenario rootbound-verdant-sanctum-live-encounter.
+- [x] Extend the shared boss browser matrix to include Rootbound in its production home stage.
+- [x] Add source-derived current-stage-boss completeness mapping.
+- [x] Add State Forge factory/phase-1 baseline restore proof.
+- [x] Keep scenario engineering-only and non-certifying.
+- [x] Explicitly report detached boss capability as unsupported until later behavior exists.
 
 ## Minimum focused proof
 
@@ -4438,7 +4438,7 @@ Create a lawful production Rootbound encounter that can spawn, introduce, simula
 
 | Field | Value |
 | --- | --- |
-| Status | `in-progress` |
+| Status | `complete` |
 | Owner | Boss combat owner |
 | Dependencies | VS3-C10 |
 | Release boundary | Phase I engineering completion |
@@ -4532,7 +4532,7 @@ Implement and prove the complete Phase I attack grammar, punish windows, environ
 
 | Field | Value |
 | --- | --- |
-| Status | `in-progress` |
+| Status | `complete` |
 | Owner | Boss/environment combat owner |
 | Dependencies | VS3-C11 |
 | Release boundary | Phase II engineering completion |
@@ -4569,7 +4569,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 - [x] **VS3-C12-S7** — Implement Root Cage through the environment/hazard owner with a guaranteed response route. Rootbound now emits one generation-stable placement request; the existing environment runtime materializes exactly two specialized `root-link` combat objects without adding a kind or registry. Their canonical 72-tick warning, 240-tick active lifetime, stable boss ownership, 480-pixel interior, cut/break response, collision constraint, immediate sever removal, structured observation, static low-graphics warning, and natural/phase cleanup are permanent production-path facts.
 - [x] **VS3-C12-S8** — Prevent Root Cage and Rootbinder leash from creating a total movement lock. The environment owner now detects its one canonical active player leash and suspends Root Cage collision for exactly that overlap while retaining warning geometry and severability. Jump and dash remain available; when the leash cleans, intact Cage collision resumes in the same authoritative step. No boss-local compatibility flag or second relationship authority was added.
 - [x] **VS3-C12-S9** — Implement Phase II attack selection/cadence and Phase III transition. Rootbound now cycles the bounded `Memory Choir -> Root Cage -> Bloom shift` order, advances only the existing Bloom pattern index, and applies Haste to opening/recovery cadence without changing the 0.65/0.60/0.70-second authored warning floors. Crossing the Phase III threshold records the final active Graft types, cancels Phase II manifestations/Cage intent, and submits `rootbound-nothing-here-dies` through the existing shared boss transformation path.
-- [ ] **VS3-C12-S10** — Prove environment population caps and all reset/terminal cleanup.
+- [x] **VS3-C12-S10** — Prove environment population caps and all reset/terminal cleanup. Forty repeated Root Cage generations stay within the configured six-field/five-combat-object bounds by pruning terminal prior generations; an undersized four-object configuration fails closed. Every environment clear reason and boss terminal/reset route removes live fields, combat objects, and routes while neutralizing Graft, Cage, Memory Choir, and pending-placement projections. The live State Forge journey restores one specialized Graft against the real Rootbound owner, destroys and cleans it in native event order without reward/proc leakage, and the natural canonical Rootbound scenario now participates in the source-derived boss/home-stage matrix. Transactional restore binds recorded actor identities before exposing staged actors to environment owners, closing the previously deferred C10 baseline-restore proof.
 
 ## Agent implementation procedure
 
@@ -4582,12 +4582,12 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 
 ## TearBench same-change response
 
-- [ ] Add State Forge scenario rootbound-graft-anchor-destruction.
-- [ ] Observe Graft integrity/effect/state through structured environment observation.
-- [ ] Assert boss remains damageable and object rewards/procs remain disabled.
-- [ ] Add positive/negative bounded-population and valid-reference invariants.
-- [ ] Add native environment and boss attack event order.
-- [ ] Extend evidence routes so Graft/Rootbound changes execute the real scenario and boss browser matrix.
+- [x] Add State Forge scenario rootbound-graft-anchor-destruction.
+- [x] Observe Graft integrity/effect/state through structured environment observation.
+- [x] Assert boss remains damageable and object rewards/procs remain disabled.
+- [x] Add positive/negative bounded-population and valid-reference invariants.
+- [x] Add native environment and boss attack event order.
+- [x] Extend evidence routes so Graft/Rootbound changes execute the real scenario and boss browser matrix.
 
 ## Minimum focused proof
 
@@ -4600,12 +4600,12 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 
 ## Exit conditions
 
-- [ ] All Graft types are readable and bounded.
-- [ ] Rootbound never becomes fully invulnerable.
-- [ ] Boss-owned Wells reuse the shared field runtime.
-- [ ] Root Cage preserves agency.
-- [ ] Phase cleanup removes every invalid object.
-- [ ] State Forge scenario and environment hash are stable.
+- [x] All Graft types are readable and bounded.
+- [x] Rootbound never becomes fully invulnerable.
+- [x] Boss-owned Wells reuse the shared field runtime.
+- [x] Root Cage preserves agency.
+- [x] Phase cleanup removes every invalid object.
+- [x] State Forge scenario and environment hash are stable.
 
 ## Stop and escalate conditions
 
@@ -4631,7 +4631,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `in-progress` |
 | Owner | Boss terminal / replay integration owner |
 | Dependencies | VS3-C12 |
 | Release boundary | Complete Rootbound encounter engineering claim; still non-certifying |

@@ -167,6 +167,18 @@ This is the migration checklist for the architectural redesign. A checked featur
   advances the shared pattern IDs rather than constructing another field path.
   At 28% HP Rootbound records final active Graft types, cancels invalid Phase II
   attacks, and submits the Phase III declaration through shared boss theater.
+  VS3-C12-S10 closes Phase II with bounded-state and live evidence. Repeated
+  Cage generations prune terminal predecessors and stay within configured
+  field/combat-object caps; undersized capacity fails closed. Every reset,
+  restore, retry, stage, terminal, defeat, abandon, and disposal path removes
+  live environment records and neutralizes boss-local Phase II projections.
+  State Forge now restores a specialized active Graft against the real
+  Rootbound actor, preserves its recorded owner ID before environment wiring
+  can allocate another identity, and proves damage, destruction, cleanup,
+  native event order, and reward/proc exclusion in the shared browser suite.
+  Rootbound also owns one natural engineering-only canonical encounter in
+  Verdant Sanctum and participates in the source-derived six-boss browser
+  matrix; no separate gameplay roster or environment registry was added.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
