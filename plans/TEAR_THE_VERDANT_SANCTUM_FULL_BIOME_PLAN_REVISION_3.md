@@ -4973,7 +4973,7 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 - [x] **VS3-C16-S3** — Add Rootbound/Rootbinder/Bloom development controls through safe current test/State Forge boundaries.
 - [x] **VS3-C16-S4** — Add stable achievement entries and runtime predicates for approved Verdant achievements.
 - [x] **VS3-C16-S5** — Replace fixed-five copy/count assumptions with source-derived values where appropriate.
-- [ ] **VS3-C16-S6** — Add source-owned Verdant/Rootbound/link/Graft/Regrowth telemetry facts and statistic updates.
+- [x] **VS3-C16-S6** — Add source-owned Verdant/Rootbound/link/Graft/Regrowth telemetry facts and statistic updates.
 - [ ] **VS3-C16-S7** — Define replay/ruleset identity implications and stable stage event compatibility.
 - [ ] **VS3-C16-S8** — Add versioned profile migration only when durable production data changes are ready for joint promotion.
 - [ ] **VS3-C16-S9** — Prove reset, retry, quit, defeat, victory, stage transition, and mode change cleanup.
@@ -5042,6 +5042,8 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 > `VS3-C16-S4 is GREEN at 1210e75676c502cf939a675ba8bfb96f975a077f. Stable source-owned Rootbound clear and full-Regrowth-interrupt achievements join the runtime and game-reference projections; the optional hidden no-damage achievement remains deferred pending approval. Sixty-one focused/adjacent tests, typecheck, targeted lint, architecture, and the clean-source game-reference gate pass. The next authorized action is VS3-C16-S5, replacing stale fixed-five copy/count assumptions with source-derived values where appropriate. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 > `VS3-C16-S5 is GREEN at 98e63f45fcf9021df2a1303460bd7901c98bb3bd. Biome, Gauntlet boss, difficulty, and standard-mode completion copy/counts derive from canonical catalogs; intentional Final Five weapon language and cumulative boss milestones remain unchanged. Thirty-eight focused/adjacent tests, typecheck, targeted lint, architecture, and clean-source game-reference pass. The next authorized action is VS3-C16-S6, adding source-owned Verdant gameplay telemetry facts and statistic updates. Verdant publication remains prohibited, and C40 status is unchanged.`
+
+> `VS3-C16-S6 is GREEN at 00fd9502023503284ac214021784f7f36c7905cf. Stable stage-entry, Bloom activation, Root-link sever, Graft destruction, Rootbound defeat/no-hit, and Regrowth interrupt facts update source-owned profile statistics from authoritative gameplay state. Metrics without authoritative gameplay facts remain deferred rather than inferred from presentation. Fifty-two focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass. The next authorized action is VS3-C16-S7, defining replay/ruleset identity and stable stage-event compatibility. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

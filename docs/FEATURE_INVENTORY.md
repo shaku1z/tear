@@ -353,6 +353,13 @@ This is the migration checklist for the architectural redesign. A checked featur
   death. The optional hidden no-damage sequence remains unimplemented pending
   approval. Runtime/catalog/reference projections and the 100-entry reward pool
   agree on the same identities.
+  Authoritative gameplay telemetry now records stable Verdant entry, Bloom Well
+  activation, Root-link severing, Graft destruction, Rootbound kills/no-hit
+  kills, and full/partial Regrowth interruption through the existing profile
+  statistics port. Presentation-only observations do not contribute. Proposed
+  metrics without an authoritative gameplay fact—such as time inside Wells,
+  Bloom-assisted launches, deaths while leashed, or inferred displacement—stay
+  deferred until their owning runtime publishes an exact fact.
   Wayfarer and difficulty-completion goals/copy now derive from the stage and
   difficulty catalogs; Gauntlet roster copy derives from boss identities; and
   the standard-mode profile projection is shared by run start and Well-Rounded.
