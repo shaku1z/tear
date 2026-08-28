@@ -210,6 +210,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Wheel Cut", ratings: { handling: 2, impact: 4, reach: 5, difficulty: 4 },
     throwCollisionPad: 10,
     channels: weaponChannels({ throwPower: 1.14, throwSpeed: 0.92, returnSpeed: 0.94 }),
+    environmentCounterplay: Object.freeze({ held: "cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.length += 30; B.aimRadius += 14; B.maxReach += 24;

@@ -302,8 +302,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   state remain untouched. Hammer likewise declares held `break`; its object proof
   covers both link forms and Graft pressure before exercising the unchanged
   Meteor ballistic launch, recall, and held recovery. Remaining weapon
-  conformance is owned by VS3-C14-S4 through S8, and no C40 certification record
-  changed.
+  Greatsword declares held `cut`; one broad swing can sever multiple distinct
+  Root segments while per-swing environment dedupe, enemy repeat-hit state, and
+  momentum retention stay isolated. Wheel Cut spin/recall/catch remains intact.
+  Remaining weapon conformance is owned by VS3-C14-S5 through S8, and no C40
+  certification record changed.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

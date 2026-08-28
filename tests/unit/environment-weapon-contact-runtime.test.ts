@@ -8,7 +8,7 @@ import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-r
 import type { EnvironmentCombatObjectState } from "../../src/gameplay/environment/environment-contracts";
 import { getWeapon } from "../../src/gameplay/weapons";
 
-function makeBlade(weaponId: "sword" | "hammer") {
+function makeBlade(weaponId: "sword" | "hammer" | "greatsword") {
   const config = structuredClone(CONFIG);
   const Blade = createBlade({
     CLOCK: { sim: 0 }, CONFIG: config,
@@ -95,6 +95,45 @@ describe("environment weapon contact runtime", () => {
     expect(blade.state).toBe("returning");
     blade.x = 0; blade.y = 0;
     blade._updateBallisticThrown(1 / 120, player, []);
+    expect(blade.state).toBe("held");
+  });
+
+  it("lets one Greatsword swing sever distinct segments once without corrupting Wheel Cut recovery", () => {
+    const environment = new EnvironmentRuntime("verdant-sanctum", "greatsword-contact");
+    for (const [index, x] of [20, 40, 60].entries()) environment.addCombatObject(object(`segment-${String(index + 1)}`, "root-link", {
+      x, y: 0, points: Object.freeze([{ x, y: -20 }, { x, y: 20 }]),
+    }));
+    const { blade } = makeBlade("greatsword");
+    blade.state = "held"; blade.x = 0; blade.y = 0; blade.tipX = 80; blade.tipY = 0;
+    blade.angle = 0; blade.vx = 900; blade.vy = 0; blade.tipVX = 0; blade.tipVY = 1800; blade.tipSpeed = 1800;
+    blade.swingId = 9; blade.aimX = 300; blade.aimY = 0;
+    const momentumBefore = blade.vx;
+
+    const first = resolveHeldEnvironmentWeaponContacts({
+      environment, blade, segment: blade.heldCollisionSegment({} as never), tick: 30,
+    });
+    const repeated = resolveHeldEnvironmentWeaponContacts({
+      environment, blade, segment: blade.heldCollisionSegment({} as never), tick: 31,
+    });
+    expect(first).toMatchObject({ accepted: 3, damaged: 3, destroyed: 3 });
+    expect(repeated).toMatchObject({ damaged: 0, destroyed: 0 });
+    expect(blade._repeatHits.size).toBe(0);
+    expect(blade.vx).toBe(momentumBefore);
+
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    blade.x = 120; blade.y = 180; blade.angle = Math.PI / 2;
+    blade.tipX = blade.x + Math.cos(blade.angle) * blade.curLength;
+    blade.tipY = blade.y + Math.sin(blade.angle) * blade.curLength;
+    blade.aimX = 300; blade.aimY = 0;
+    expect(blade.throwBlade()).toBe(true);
+    expect(blade.state).toBe("flying");
+    const angle = blade.angle;
+    blade._updateWheelCut(1 / 120, player, []);
+    expect(blade.angle).not.toBe(angle);
+    blade.state = "embedded"; blade.x = 10; blade.y = 0;
+    expect(blade.tryRecall(player)).toBe("recalled");
+    blade.x = 0; blade.y = 0;
+    blade._updateWheelCut(1 / 120, player, []);
     expect(blade.state).toBe("held");
   });
 });
