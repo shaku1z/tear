@@ -11,6 +11,12 @@ rules remain authoritative through Rootbound at wave 40.
 This is engineering evidence, not final seven-stage balance or publication
 authority. The complete seven-stage table is an inactive prototype pending Pale.
 
+- Completion source: `c019a42efc246e35827dd4014f2ccaac6fe3e794`
+- Focused aggregate: 16 files / 104 tests passed.
+- Standalone artifact: `ba40e08c7ccb9a7dad54dcb5c029aac135fb0020329674f210d0c2072bca1e47`
+- Additional gates: typecheck, full lint, architecture, documentation, artifact
+  layout, and browser progression journeys passed.
+
 ## Code-correctness evidence
 
 - Current campaign base pressure no longer compounds array position.

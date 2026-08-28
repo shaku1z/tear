@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C15-S10 green; aggregate closure gates next** |
-| Current checkpoint | `VS3-C15` |
+| Status | **Active implementation authority — VS3-C15 green; VS3-C16-S1 next** |
+| Current checkpoint | `VS3-C16` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4838,7 +4838,7 @@ The original S1 proof encoded Root links as `cut`/`break` only. That contradicte
 
 | Field | Value |
 | --- | --- |
-| Status | `in-progress` |
+| Status | `green` |
 | Owner | Run/balance/progression owner |
 | Dependencies | VS3-C8, VS3-C14 |
 | Release boundary | Engineering balance; no final seven-stage claim before Pale |
@@ -4905,11 +4905,11 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 
 ## Exit conditions
 
-- [ ] Verdant wave pressure comes from composition and relationships.
-- [ ] Wave clear ignores non-enemy environment objects correctly.
-- [ ] Economy/draft/healing are production-rule consistent through wave 40.
-- [ ] Current difficulty behavior remains lawful.
-- [ ] Prototype curve is explicitly non-final until Pale integration.
+- [x] Verdant wave pressure comes from composition and relationships.
+- [x] Wave clear ignores non-enemy environment objects correctly.
+- [x] Economy/draft/healing are production-rule consistent through wave 40.
+- [x] Current difficulty behavior remains lawful.
+- [x] Prototype curve is explicitly non-final until Pale integration.
 
 ## Stop and escalate conditions
 
@@ -4928,6 +4928,8 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 ## Required handoff sentence
 
 > `VS3-C15 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+
+> `VS3-C15 is GREEN at c019a42efc246e35827dd4014f2ccaac6fe3e794. The next authorized action is VS3-C16-S1, validating Verdant and Rootbound through every current mode path. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

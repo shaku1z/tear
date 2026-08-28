@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C15",
-  "currentSubgoal": "VS3-C15-CLOSE",
+  "currentCheckpoint": "VS3-C16",
+  "currentSubgoal": "VS3-C16-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -24,9 +24,10 @@
     "VS3-C11",
     "VS3-C12",
     "VS3-C13",
-    "VS3-C14"
+    "VS3-C14",
+    "VS3-C15"
   ],
-  "lastGreenCheckpoint": "VS3-C14",
+  "lastGreenCheckpoint": "VS3-C15",
   "lastEvidence": [
     "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass.",
     "VS3-C10-S6 Rootbound presentation identity is green: the existing enemy renderer composition installs its root-throne, branching mantle, plural-mask, gold-graft silhouette and intro rise pose; the shared boss-intro snapshot/UI path preserves THE ROOTBOUND, KEEPER OF THE LAST MERCY, and YOU DO NOT HAVE TO DIE HERE.; focused and adjacent presentation/factory/reference tests, typecheck, architecture, targeted lint, and docs gates pass.",
@@ -50,10 +51,11 @@
     "VS3-C13-S9 lifecycle and fork behavior is green: retry, defeat, victory, and abandon remove active final-phase boss/environment ownership through existing cleanup reasons; repeated production Ghost seeks select and reproduce the same active Last Spring keyframe; and a TearSDL State Forge child changes only its requested boss timer while the parent remains immutable. Seven focused tests, typecheck, and targeted lint pass.",
     "VS3-C13-S10 mode terminal separation is green: Campaign Rootbound death retains cleanup, presentation, boss reward, and pending Verdant chapter outro; Boss Test retains cleanup/presentation and advances boss-only reward/roster truth without campaign outro, stage-completion, or adventure-finale intent. Fourteen focused terminal/final-phase/replay tests, typecheck, and targeted lint pass.",
     "VS3-C13 Rootbound Phase III is GREEN at 0baeca907e1cdea9b82d4bda730649d305844276: all ten ordered subgoals pass; repository typecheck and lint, 40 aggregate terminal/replay/state-codec tests, attributed test-standalone build 44ce4a40f46cd702e09ccd23bcd99ce9677eee49c9b7cceb4d2e307dd8c2f819, live six-boss browser matrix, State Forge runtime/studio/exit matrix, and current live-detached parity are green.",
-    "VS3-C14 Final Five object conformance is GREEN at df0412381728ae71c18b2259790bf8308de0a0ab: all ten ordered subgoals pass; repository typecheck/lint/architecture/docs, 19 weapon roster tests, 13 focused ability/projectile tests, 34 adjacent environment tests, 6 headless parity routes, attributed standalone artifact 70a80fab74a29afd54ee438dc12f1f79e1e1165d4a80da9e8a6fcf78200305d2, and all five browser/Ghost weapon routes are green. C40 records remain unchanged."
+    "VS3-C14 Final Five object conformance is GREEN at df0412381728ae71c18b2259790bf8308de0a0ab: all ten ordered subgoals pass; repository typecheck/lint/architecture/docs, 19 weapon roster tests, 13 focused ability/projectile tests, 34 adjacent environment tests, 6 headless parity routes, attributed standalone artifact 70a80fab74a29afd54ee438dc12f1f79e1e1165d4a80da9e8a6fcf78200305d2, and all five browser/Ghost weapon routes are green. C40 records remain unchanged.",
+    "VS3-C15 Verdant wave composition and curve engineering is GREEN at c019a42efc246e35827dd4014f2ccaac6fe3e794: all ten ordered subgoals and the TearBench same-change response pass; repository typecheck/lint/architecture/docs/artifact layout, 16 files/104 tests, attributed standalone artifact ba40e08c7ccb9a7dad54dcb5c029aac135fb0020329674f210d0c2072bca1e47, and browser progression journeys are green. Seven-stage tuning remains inactive pending Pale."
   ],
   "blockers": [],
-  "nextAction": "Run the complete VS3-C15 minimum proof and close the checkpoint from one clean source identity.",
+  "nextAction": "Begin VS3-C16-S1 by validating Verdant and Rootbound through Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test using current mode paths.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2382,9 +2384,9 @@
         "TearBench progression comparison",
         "Balance decision backlog"
       ],
-      "status": "in-progress",
+      "status": "complete",
       "sourceBaseline": "7d53946d20d65c16114d485262381f5907242fea",
-      "completionIdentity": null,
+      "completionIdentity": "c019a42efc246e35827dd4014f2ccaac6fe3e794",
       "commandsRun": [
         "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/run-wave-planner-conformance.test.ts tests/unit/live-wave-controller.test.ts",
         "pnpm typecheck",
@@ -2417,7 +2419,8 @@
         "pnpm typecheck",
         "pnpm check:docs",
         "pnpm exec vitest run tests/unit/verdant-stage-state-forge.test.ts tests/unit/verdant-wave-composition.test.ts",
-        "pnpm check:architecture"
+        "pnpm check:architecture",
+        "pnpm typecheck; pnpm lint; pnpm check:architecture; pnpm check:docs; pnpm check:artifacts; pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/run-wave-planner-conformance.test.ts tests/unit/live-wave-controller.test.ts tests/unit/run-spawn-scheduler.test.ts tests/unit/run-wave-clear-planner.test.ts tests/unit/environment-runtime.test.ts tests/unit/graft-anchor.test.ts tests/unit/rootbinder-runtime.test.ts tests/unit/difficulty-catalog.test.ts tests/unit/run-start-plan.test.ts tests/unit/coin-awards.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts tests/unit/verdant-stage-state-forge.test.ts tests/unit/tearbench-progression-ledger.test.ts tests/unit/tearbench-current-game-authority.test.ts; pnpm build:test:standalone; node tests/browser-progression-journeys.js"
       ],
       "evidence": [
         "VS3-C15-S1 StageId-owned campaign curve authority is green: one complete current-stage record owns base HP, damage, count, and future concurrent additions; the production wave planner resolves the selected stage identity rather than multiplying its array position. Grounds through Verdant use authored prototype values, while Voidspire and Tear remain explicitly labeled legacy-position placeholders pending S8. Eighteen focused curve/planner/controller tests, typecheck, targeted lint, and architecture pass.",
@@ -2430,7 +2433,8 @@
         "VS3-C15-S8 seven-stage curve seed is green: one explicitly inactive engineering prototype records Pale 2.08/1.44/+6/+3, relocated Voidspire 2.38/1.52/+7/+3, and relocated Tear 2.72/1.60/+8/+4. Pale remains absent from live StageId/campaign authority and current late stages retain legacy-position placeholders. Twenty-one focused tests, typecheck, and targeted lint pass.",
         "VS3-C15-S9 relocated boss projection is green: the inactive seed delta is Voidspire +0.02 HP/-0.04 damage/-1 count/-1 concurrent and Tear +0.02 HP/-0.10 damage/-2 count/+0 concurrent. Echo/Source identities and home-stage mappings remain canonical; no boss implementation or live curve changed. Five focused tests, typecheck, and targeted lint pass.",
         "VS3-C15-S10 evidence disposition is green: the durable checkpoint report separates verified code behavior from provisional tuning, absent Pale authority, inactive relocated slots, and pending Echo/Source owner decisions. Raw closure output is routed to canonical ignored checkpoint/generated artifact paths.",
-        "C15 TearBench same-change response is present: exact reachable waves 31/35/39 carry early/middle/late composition constraints; impossible support-only budgets fail closed; environment objects remain outside enemy cap/clear ownership; and the focused evidence route selects wave/draft scenarios plus browser progression journeys."
+        "C15 TearBench same-change response is present: exact reachable waves 31/35/39 carry early/middle/late composition constraints; impossible support-only budgets fail closed; environment objects remain outside enemy cap/clear ownership; and the focused evidence route selects wave/draft scenarios plus browser progression journeys.",
+        "VS3-C15 aggregate closure is green on exact clean source c019a42efc246e35827dd4014f2ccaac6fe3e794: typecheck, full lint, architecture/docs/artifact layout, 16 files/104 tests, standalone artifact ba40e08c7ccb9a7dad54dcb5c029aac135fb0020329674f210d0c2072bca1e47, and browser progression journeys passed."
       ],
       "blockers": [],
       "notes": [
