@@ -156,6 +156,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   active boundary; severing it removes that constraint immediately. Codec,
   structured observation, and static low-graphics presentation preserve the
   exact boundary/response facts, while expiry and phase cleanup leave no wall.
+  VS3-C12-S8 adds the cross-system agency rule at their shared environment
+  owner: while the globally capped player Rootbinder leash is active, Root Cage
+  collision is suspended but its warning/sever facts remain. Jump and dash stay
+  enabled, and an intact Cage resumes collision in the same step that the leash
+  cleans. No boss-local overlap flag or parallel relationship authority exists.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

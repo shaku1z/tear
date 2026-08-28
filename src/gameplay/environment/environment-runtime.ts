@@ -256,6 +256,8 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   }
 
   #resolveRootboundCages(): void {
+    const activePlayerLeash = [...this.#rootbinderLeashes.values()].some((id) => this.combatObjects().some((object) => object.id === id && object.state === "active"));
+    if (activePlayerLeash) return;
     for (const actor of this.#rootboundActors?.() ?? []) {
       const target = actor.player;
       const request = actor.state.rootCagePlacement;

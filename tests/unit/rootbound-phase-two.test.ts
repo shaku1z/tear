@@ -8,6 +8,7 @@ import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../..
 import { ROOT_CAGE_GEOMETRY, ROOT_CAGE_TIMING, isRootCageState, type RootCagePlacementRequest } from "../../src/gameplay/environment/root-cage";
 import { createEnemyHarness } from "./enemy-test-harness";
 import { environmentSnapshotToObservation, validateEnvironmentCodecPayload } from "../../src/tearbench/environment-codec";
+import { createRootbinderState } from "../../src/gameplay/entities/rootbinder-runtime";
 
 type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
   graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[];
@@ -236,5 +237,50 @@ describe("Rootbound Phase II Graft creation", () => {
     environment.step(startTick + ROOT_CAGE_TIMING.warningTicks + ROOT_CAGE_TIMING.activeTicks, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
     expect(environment.combatObjects().filter(isRootCageState).every((boundary) => boundary.state === "destroyed" || boundary.state === "expired")).toBe(true);
     expect(actor.rootCagePlacement()).toBeNull();
+  });
+
+  it("suspends Root Cage collision while the canonical player leash is active, then restores it after leash cleanup", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor.startRootCage(CONFIG.view.w / 2)).toBe(true);
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "root-cage-leash-policy" });
+    const cagePlayer = { x: CONFIG.view.w / 2, y: CONFIG.world.groundY - 32, vx: 0, vy: 0, jumpEnabled: true, dashEnabled: true };
+    const rootbinder = createRootbinderState({ id: "rootbinder:live", worldId: environment.worldId, stageId: environment.stageId, x: 0, y: cagePlayer.y });
+    let rootbinderPhase: "linked" | "broken" = "linked";
+    environment.setRootbinderActorsSource(() => [Object.freeze({
+      id: rootbinder.id, state: Object.freeze({ ...rootbinder, state: rootbinderPhase, transitionTick: 1_000 }),
+      candidates: Object.freeze([]),
+      player: Object.freeze({ id: "player", ...cagePlayer, alive: true,
+        apply: (value: { readonly vx: number; readonly vy: number }) => { cagePlayer.vx = value.vx; cagePlayer.vy = value.vy; } }),
+    })]);
+    environment.setRootboundActorsSource(() => [Object.freeze({
+      id: "enemy:rootbound-live", source: actor, completeRootCage: () => { actor.completeRootCage(); },
+      player: Object.freeze({ ...cagePlayer, hw: 20, hh: 32, invulnerable: false, hazardDamageMultiplier: 1,
+        takeDamage: () => undefined, applyCageConstraint: (x: number, vx: number) => { cagePlayer.x = x; cagePlayer.vx = vx; } }),
+      state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+        rootCagePlacement: actor.rootCagePlacement() }),
+    })]);
+
+    const startTick = 400;
+    environment.step(startTick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live", rootbinder.id, "player"]));
+    environment.step(startTick + 1, 1 / 120, () => undefined, new Set(["enemy:rootbound-live", rootbinder.id, "player"]));
+    const leash = environment.combatObjects().find((object) => object.id.includes(":leash:"));
+    expect(leash?.state).toBe("active");
+    environment.step(startTick + ROOT_CAGE_TIMING.warningTicks, 1 / 120, () => undefined, new Set(["enemy:rootbound-live", rootbinder.id, "player"]));
+    const left = environment.combatObjects().filter(isRootCageState).find((boundary) => boundary.boundarySide === "left");
+    if (left?.geometry.w === undefined) throw new TypeError("expected active left Root Cage boundary");
+    cagePlayer.x = left.geometry.x + left.geometry.w + 10;
+    cagePlayer.vx = -120;
+    environment.step(startTick + ROOT_CAGE_TIMING.warningTicks + 1, 1 / 120, () => undefined, new Set(["enemy:rootbound-live", rootbinder.id, "player"]));
+    expect(cagePlayer.x).toBe(left.geometry.x + left.geometry.w + 10);
+    expect(cagePlayer.vx).toBeLessThan(0);
+    expect(cagePlayer.jumpEnabled && cagePlayer.dashEnabled).toBe(true);
+
+    rootbinderPhase = "broken";
+    environment.step(startTick + ROOT_CAGE_TIMING.warningTicks + 2, 1 / 120, () => undefined, new Set(["enemy:rootbound-live", rootbinder.id, "player"]));
+    expect(cagePlayer).toMatchObject({ x: left.geometry.x + left.geometry.w + 20, vx: 0 });
+    expect(environment.combatObjects().find((object) => object.id.includes(":leash:"))).toMatchObject({ state: "expired", cleanupReason: "stage-transition" });
   });
 });
