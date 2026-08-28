@@ -8,6 +8,9 @@ import {
   scheduleWaveSpawn,
   type SpawnScheduleState,
 } from "../../src/gameplay/run/spawn-scheduler";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import { installRootNetwork, type RootbinderCandidate } from "../../src/gameplay/entities/rootbinder-runtime";
+import { installGraftAnchor, MAX_ACTIVE_GRAFT_ANCHORS } from "../../src/gameplay/environment/graft-anchor";
 
 class SequenceRandom implements RandomSource {
   private index = 0;
@@ -28,12 +31,33 @@ function state(overrides: Partial<SpawnScheduleState> = {}): SpawnScheduleState 
 
 describe("spawn scheduling conformance", () => {
   it("preserves concurrency caps for campaign depth, endless depth, and hordes", () => {
-    expect(concurrentEnemyCap(state({ mode: "campaign", wave: 1 }), CONFIG.run)).toBe(6);
-    expect(concurrentEnemyCap(state({ mode: "campaign", wave: 41 }), CONFIG.run)).toBe(10);
+    expect(concurrentEnemyCap(state({ mode: "campaign", wave: 1, stageId: "grounds" }), CONFIG.run)).toBe(6);
+    expect(concurrentEnemyCap(state({ mode: "campaign", wave: 31, stageId: "verdant-sanctum" }), CONFIG.run)).toBe(8);
+    expect(concurrentEnemyCap(state({ mode: "campaign", wave: 41, stageId: "voidspire" }), CONFIG.run)).toBe(10);
     expect(concurrentEnemyCap(state({ mode: "endless", wave: 21 }), CONFIG.run)).toBe(9);
     expect(concurrentEnemyCap(state({ mode: "endless", wave: 21, horde: true }), CONFIG.run)).toBe(12);
     expect(concurrentEnemyCap(state({ mode: "endless", wave: 200, horde: true }), CONFIG.run)).toBe(13);
     expect(concurrentEnemyCap(state({ mode: "sandbox", wave: 99 }), CONFIG.run)).toBe(6);
+    expect(() => concurrentEnemyCap(state({ mode: "campaign", wave: 31 }), CONFIG.run)).toThrow(/StageId/u);
+  });
+
+  it("keeps bounded environment objects outside the StageId-owned enemy cap", () => {
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "wave-cap" });
+    const candidate = (id: string, x: number): RootbinderCandidate => ({
+      id, worldId: "wave-cap", stageId: "verdant-sanctum", kind: "ordinary", x, y: 400, dead: false, dying: false,
+    });
+    installRootNetwork(environment, {
+      id: "network", worldId: "wave-cap", stageId: "verdant-sanctum", ownerId: "rootbinder", sourceX: 400, sourceY: 400,
+    }, [candidate("ally-a", 520), candidate("ally-b", 640)]);
+    const base = { ownerId: "rootbound", ownerPosition: { x: 800, y: 520 }, createdTick: 1 } as const;
+    installGraftAnchor(environment, { ...base, graftType: "bastion", geometry: { x: 200, y: 600, radius: 20 } });
+    installGraftAnchor(environment, { ...base, graftType: "mercy", geometry: { x: 600, y: 600, radius: 20 } });
+    installGraftAnchor(environment, { ...base, graftType: "haste", geometry: { x: 1000, y: 600, radius: 20 } });
+    expect(environment.combatObjects()).toHaveLength(2 + MAX_ACTIVE_GRAFT_ANCHORS);
+
+    const wave = state({ mode: "campaign", wave: 31, stageId: "verdant-sanctum", spawnTimer: 0 });
+    expect(scheduleWaveSpawn({ state: wave, tuning: CONFIG.run, enemyCount: 7, loreBusy: false, dt: 1 }).spawned).not.toBeNull();
+    expect(scheduleWaveSpawn({ state: wave, tuning: CONFIG.run, enemyCount: 8, loreBusy: false, dt: 1 })).toMatchObject({ eligible: false, spawned: null });
   });
 
   it("holds queued spawns during lore and at the live-enemy cap", () => {

@@ -106,7 +106,7 @@ export interface PlannedWave {
   readonly intents: readonly WavePlanIntent[];
 }
 
-function stageAt(stages: readonly WaveStage[], index: number): WaveStage {
+export function stageAt(stages: readonly WaveStage[], index: number): WaveStage {
   if (stages.length === 0) throw new RangeError("at least one stage is required");
   const stage = stages[((index % stages.length) + stages.length) % stages.length];
   if (stage === undefined) throw new RangeError("stage index escaped configured stages");

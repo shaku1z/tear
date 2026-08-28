@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C15",
-  "currentSubgoal": "VS3-C15-S5",
+  "currentSubgoal": "VS3-C15-S6",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -53,7 +53,7 @@
     "VS3-C14 Final Five object conformance is GREEN at df0412381728ae71c18b2259790bf8308de0a0ab: all ten ordered subgoals pass; repository typecheck/lint/architecture/docs, 19 weapon roster tests, 13 focused ability/projectile tests, 34 adjacent environment tests, 6 headless parity routes, attributed standalone artifact 70a80fab74a29afd54ee438dc12f1f79e1e1165d4a80da9e8a6fcf78200305d2, and all five browser/Ghost weapon routes are green. C40 records remain unchanged."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C15-S5 by sourcing the campaign concurrency cap from the StageId curve and proving it remains separate from bounded environment-object ownership.",
+  "nextAction": "Execute VS3-C15-S6 by retesting Verdant queue HP/count and player damage under every current production difficulty definition.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2313,7 +2313,7 @@
         {
           "id": "VS3-C15-S5",
           "description": "Validate max concurrent counts and environment object caps together.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C15-S6",
@@ -2399,13 +2399,18 @@
         "pnpm check:architecture",
         "pnpm exec vitest run tests/unit/verdant-wave-composition.test.ts tests/unit/run-wave-planner-conformance.test.ts tests/unit/live-wave-controller.test.ts",
         "pnpm typecheck",
-        "pnpm exec eslint tests/unit/verdant-wave-composition.test.ts"
+        "pnpm exec eslint tests/unit/verdant-wave-composition.test.ts",
+        "pnpm typecheck",
+        "pnpm exec eslint src/gameplay/run/spawn-scheduler.ts src/gameplay/run/wave-planner.ts src/gameplay/run/live-wave-controller.ts tests/unit/run-spawn-scheduler.test.ts",
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/run-spawn-scheduler.test.ts tests/unit/live-wave-controller.test.ts tests/unit/environment-runtime.test.ts tests/unit/graft-anchor.test.ts tests/unit/rootbinder-runtime.test.ts"
       ],
       "evidence": [
         "VS3-C15-S1 StageId-owned campaign curve authority is green: one complete current-stage record owns base HP, damage, count, and future concurrent additions; the production wave planner resolves the selected stage identity rather than multiplying its array position. Grounds through Verdant use authored prototype values, while Voidspire and Tear remain explicitly labeled legacy-position placeholders pending S8. Eighteen focused curve/planner/controller tests, typecheck, targeted lint, and architecture pass.",
         "VS3-C15-S2 local-wave preservation is green: CONFIG retains countPerWave 1.4, inStageHp 0.06, and inStageDmg 0.02; production wave-31/wave-39 proof yields 8/19 enemies and applies those exact local multipliers to the Verdant base. Nineteen focused tests, typecheck, and targeted lint pass.",
         "VS3-C15-S3 composition budgeting is green: the existing wave planner applies one reusable cost/cap filter before weighted and preset campaign selection. Verdant owns local-wave budgets 0/3/4/5/5/6/7/8/9/0, authored support costs, and Rootbinder ceilings of one through wave 6 and two through wave 9. Six hundred representative seeded queues plus one hundred opening queues prove budget/cap and unlock safety; 21 focused tests, typecheck, targeted lint, and architecture pass.",
-        "VS3-C15-S4 full Verdant block validation is green: production planning proves local waves 1-9 are regular Verdant queues with exact counts and unlocked identities only; local wave 10/global wave 40 is one boss spawn in the Rootbound-owned stage with the canonical boss Ghost marker. Twenty focused tests, typecheck, and targeted lint pass."
+        "VS3-C15-S4 full Verdant block validation is green: production planning proves local waves 1-9 are regular Verdant queues with exact counts and unlocked identities only; local wave 10/global wave 40 is one boss spawn in the Rootbound-owned stage with the canonical boss Ghost marker. Twenty focused tests, typecheck, and targeted lint pass.",
+        "VS3-C15-S5 concurrent/object cap separation is green: campaign scheduling requires StageId and sources Verdant's cap of 8 from the shared curve. A production environment with two Root links and all three Grafts leaves a seven-enemy spawn eligible and an eight-enemy spawn capped. Thirty-six adjacent scheduler/controller/environment tests, typecheck, targeted lint, and architecture pass."
       ],
       "blockers": [],
       "notes": [

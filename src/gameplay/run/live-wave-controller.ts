@@ -7,6 +7,7 @@ import { scheduleWaveSpawn, type SpawnTuning } from "./spawn-scheduler";
 import {
   activatePreparedWave,
   planNextWave,
+  stageAt,
   type WavePlanIntent,
   type WaveSpawnSpec,
   type WaveStage,
@@ -188,10 +189,13 @@ export class LiveWaveController {
   update(dt: number): void {
     const run = this.#requireRun();
     const tuning = this.#port.tuning();
+    const stage = this.#port.currentStage();
+    const stageId = stageAt(this.#stages, stage.index).id;
     const scheduled = scheduleWaveSpawn({
       state: {
         mode: run.mode,
         wave: run.wave,
+        ...(run.mode === "campaign" ? { stageId } : {}),
         horde: Boolean(run.horde),
         spawnQueue: run.spawnQueue,
         spawnTimer: run.spawnTimer,
@@ -205,7 +209,6 @@ export class LiveWaveController {
     run.spawnTimer = scheduled.state.spawnTimer;
     if (scheduled.spawned !== null) this.#port.spawn(scheduled.spawned);
 
-    const stage = this.#port.currentStage();
     const cleared = planWaveClear({
       state: {
         mode: run.mode,
