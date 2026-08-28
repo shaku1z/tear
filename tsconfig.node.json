@@ -13,7 +13,8 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["node"]
+    "types": ["node"],
+    "tsBuildInfoFile": "./artifacts/build-cache/typescript/node.tsbuildinfo"
   },
   "include": ["vite.config.ts", "vitest.config.ts", "vitest.endurance.config.ts"]
 }

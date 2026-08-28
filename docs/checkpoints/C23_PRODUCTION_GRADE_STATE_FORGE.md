@@ -23,14 +23,14 @@ platform, hazard, reward, UI, configuration, RNG, and world/identity state.
 
 | Claim | Implementation | Evidence |
 |---|---|---|
-| Exact live capture and transactional restore | `src/app/live-state-forge-adapter.ts`, `src/tearbench/live-state-snapshot.ts`, `src/tearbench/live-codec-validation.ts` | `tests/browser-state-forge-runtime.js`, `artifacts/tearbench/c23/live-restore-600.json` |
-| Stable IDs, factories, rollback | `src/gameplay/combat/combat-entity-runtime.ts`, `src/replay/legacy-compat.ts`, codec factories | `artifacts/tearbench/c23/failed-restore-rollback.json` |
-| Production progression truth | `src/tearbench/progression-ledger.ts`, `src/tearbench/progression-replay.ts`, `src/app/live-state-forge-progression.ts` | 10,000-target unit matrix and `artifacts/tearbench/c23/progression-10000.json` |
-| Wave-99 Hard Endless Hammer case | `src/tearbench/state-forge-exit-gate.ts` | `artifacts/tearbench/c23/wave99-hard-endless-hammer.json` and PNG |
+| Exact live capture and transactional restore | `src/app/live-state-forge-adapter.ts`, `src/tearbench/live-state-snapshot.ts`, `src/tearbench/live-codec-validation.ts` | `tests/browser-state-forge-runtime.js`, `artifacts/tearbench/checkpoints/core/C23/state-forge/live-restore-600.json` |
+| Stable IDs, factories, rollback | `src/gameplay/combat/combat-entity-runtime.ts`, `src/replay/legacy-compat.ts`, codec factories | `artifacts/tearbench/checkpoints/core/C23/state-forge/failed-restore-rollback.json` |
+| Production progression truth | `src/tearbench/progression-ledger.ts`, `src/tearbench/progression-replay.ts`, `src/app/live-state-forge-progression.ts` | 10,000-target unit matrix and `artifacts/tearbench/checkpoints/core/C23/state-forge/progression-10000.json` |
+| Wave-99 Hard Endless Hammer case | `src/tearbench/state-forge-exit-gate.ts` | `artifacts/tearbench/checkpoints/core/C23/state-forge/wave99-hard-endless-hammer.json` and PNG |
 | Boss and one-frame launch matrices | State Forge factories and live exit gate | 15 boss/phase launches and 39 boundary launches in the C23 artifacts |
 | Five state classes and separate validity reports | `src/tearbench/state-validity.ts`, `src/tearbench/state-forge-live-compiler.ts` | Studio browser journey and focused unit tests |
 | Timeline, migration, forks, counterfactuals | `src/tearbench/state-forge-timeline.ts`, `src/tearbench/tearsdl.ts` | `tests/unit/tearbench-state-forge-timeline.test.ts` |
-| Developer-visible Studio | `src/tearbench/state-forge-studio.ts`, live Studio host | `artifacts/tearbench/c23/state-forge-studio-journey.json` and PNG |
+| Developer-visible Studio | `src/tearbench/state-forge-studio.ts`, live Studio host | `artifacts/tearbench/checkpoints/core/C23/state-forge/state-forge-studio-journey.json` and PNG |
 
 ## Safety and evidence boundaries
 

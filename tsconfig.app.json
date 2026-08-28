@@ -19,7 +19,8 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["vite/client", "vite-plugin-pwa/client"]
+    "types": ["vite/client", "vite-plugin-pwa/client"],
+    "tsBuildInfoFile": "./artifacts/build-cache/typescript/app.tsbuildinfo"
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"]
 }

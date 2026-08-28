@@ -32,3 +32,4 @@ tear-crazygames.zip
 # build scratch
 .tmp-tone-host-esm/
 artifacts/
+.artifact-quarantine/

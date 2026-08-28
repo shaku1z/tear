@@ -60,7 +60,7 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
   assert.equal(state.hazard.stageId, "verdant-sanctum");
   assert.equal(state.bloom.length, 2);
 
-  const directory = path.resolve(__dirname, "..", "artifacts", "tearbench", "verdant-c9");
+  const directory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints", "verdant-sanctum", "VS3-C9", "presentation");
   fs.mkdirSync(directory, { recursive: true });
   const viewports = [
     ["desktop-1600x900", 1_600, 900],

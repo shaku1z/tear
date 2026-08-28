@@ -44,14 +44,14 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
   assert.equal(result.pathBoundArtifacts, 10);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
-  assert.equal(result.currentAuthorities, 9);
+  assert.equal(result.currentAuthorities, 10);
   assert.equal(result.activePlans, ACTIVE_PLAN_METADATA_PATHS.length);
 });
 
 test("current authority table has one local primary per unique topic", () => {
   const result = checkCurrentAuthorityTable(repositoryRoot);
   assert.deepEqual(result.errors, []);
-  assert.equal(result.rows.length, 9);
+  assert.equal(result.rows.length, 10);
 });
 
 test("current authority parser rejects duplicate topics, primary paths, and malformed multiple links", () => {

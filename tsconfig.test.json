@@ -2,7 +2,8 @@
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "vitest/globals"]
+    "types": ["node", "vitest/globals"],
+    "tsBuildInfoFile": "./artifacts/build-cache/typescript/test.tsbuildinfo"
   },
   "include": ["tests/**/*.ts"],
   "exclude": ["tests/unit/ghost-publication-worker-auth.test.ts"]

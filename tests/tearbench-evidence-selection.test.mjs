@@ -148,7 +148,7 @@ test("production stages select their exact authored live boss encounters", () =>
   }
   const shared = selection.evidenceCommands.filter((entry) => entry.command ===
     "pnpm build:test:standalone && node tests/browser-boss-parity.js");
-  assert.equal(shared.length, 4);
+  assert.equal(shared.length, 5);
 });
 
 test("missing, duplicate, retired, or mismatched production stage/boss evidence fails closed", () => {

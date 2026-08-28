@@ -585,7 +585,7 @@ function executeCurrentWeaponParity() {
 }
 
 async function writeSelection(selection) {
-  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "evidence-selection.json")));
+  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "evidence-selection.json")));
   await mkdir(dirname(artifactPath), { recursive: true });
   await writeFile(artifactPath, `${JSON.stringify(selection, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(selection, null, 2));
@@ -1028,7 +1028,7 @@ async function graveyardReopen() {
  */
 async function executeSelectedGraveyardCases(selectors, options = {}) {
   const registryPath = resolve(options.registryPath ?? resolve(root, "artifacts", "tearbench", "graveyard-registry.json"));
-  const outputPath = resolve(options.artifactPath ?? resolve(root, "artifacts", "tearbench", "graveyard-rerun.json"));
+  const outputPath = resolve(options.artifactPath ?? resolve(root, "artifacts", "tearbench", "generated", "graveyard-rerun.json"));
   const result = await withTearbenchModule(async (graveyard) => {
     const registry = await readGraveyardRegistry(registryPath, graveyard);
     const artifacts = await artifactStoreForRegistry(registry);
@@ -1108,7 +1108,7 @@ async function graveyardRun() {
   if (cases.length === 0) throw new TypeError(usage);
   const report = await executeSelectedGraveyardCases(cases, {
     registryPath: option("--registry", resolve(root, "artifacts", "tearbench", "graveyard-registry.json")),
-    artifactPath: option("--artifact", resolve(root, "artifacts", "tearbench", "graveyard-rerun.json")),
+    artifactPath: option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "graveyard-rerun.json")),
   });
   if (report.status !== "passed") process.exitCode = 1;
 }
@@ -1225,7 +1225,7 @@ try {
     const graveyardReport = !docsOnly && evidence.status === 0 && evidenceExecution.status === "passed"
       ? await executeSelectedGraveyardCases(selection.graveyardCases, {
         registryPath: option("--registry", resolve(root, "artifacts", "tearbench", "graveyard-registry.json")),
-        artifactPath: resolve(root, "artifacts", "tearbench", "graveyard-rerun.json"),
+        artifactPath: resolve(root, "artifacts", "tearbench", "generated", "graveyard-rerun.json"),
       })
       : undefined;
     console.log(`selection: ${artifactPath}`);
