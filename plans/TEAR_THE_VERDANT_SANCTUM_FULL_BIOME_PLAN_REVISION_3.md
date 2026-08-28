@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C15-S1 green; VS3-C15-S2 next** |
+| Status | **Active implementation authority — VS3-C15-S2 green; VS3-C15-S3 next** |
 | Current checkpoint | `VS3-C15` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4868,7 +4868,7 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 ## Sub-goals
 
 - [x] **VS3-C15-S1** — Introduce a source-owned campaign stage curve keyed by StageId or the smallest equivalent current authority. `campaign-stage-curve.ts` is now the complete current-`StageId` campaign pressure owner, and `wave-planner.ts` resolves HP, damage, and count additions from the selected stage identity instead of multiplying array position. Grounds through Verdant use the authored engineering prototype; Voidspire and Tear retain explicitly labeled legacy-position placeholders until S8 evaluates their relocated slots. The existing in-stage ramp remains separately owned and unchanged for S2.
-- [ ] **VS3-C15-S2** — Preserve the current in-stage ramp unless evidence supports a change.
+- [x] **VS3-C15-S2** — Preserve the current in-stage ramp unless evidence supports a change. The production planner still applies the existing `countPerWave: 1.4`, `inStageHp: 0.06`, and `inStageDmg: 0.02` after resolving the StageId-owned base. Permanent wave-31/wave-39 proof establishes Verdant counts of 8 and 19 and exact local-wave HP/damage multiplication; no cadence number changed.
 - [ ] **VS3-C15-S3** — Implement Verdant support/control composition budget and simultaneous Rootbinder safeguards.
 - [ ] **VS3-C15-S4** — Validate local waves 1–9 and Rootbound wave 10.
 - [ ] **VS3-C15-S5** — Validate max concurrent counts and environment object caps together.

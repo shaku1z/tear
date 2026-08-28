@@ -122,6 +122,24 @@ describe("wave planning conformance", () => {
     expect(matureVerdant.state.spawnQueue.some((spawn) => spawn.type === "chimera")).toBe(true);
   });
 
+  it("preserves the existing local-wave ramp on the StageId-owned Verdant base", () => {
+    expect(CONFIG.run).toMatchObject({ countPerWave: 1.4, inStageHp: 0.06, inStageDmg: 0.02 });
+    const opening = planNextWave(options({
+      state: state({ mode: "campaign", wave: 30, currentStageIndex: 2 }),
+      random: new ConstantRandom(0.999),
+    }));
+    const mastery = planNextWave(options({
+      state: state({ mode: "campaign", wave: 38, currentStageIndex: 3 }),
+      random: new ConstantRandom(0.999),
+    }));
+
+    expect(opening.state.spawnQueue).toHaveLength(8);
+    expect(opening.state.spawnQueue[0]).toMatchObject({ hpScale: 1.82, dmgScale: 1.34 });
+    expect(mastery.state.spawnQueue).toHaveLength(19);
+    expect(mastery.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.82 * (1 + 8 * 0.06));
+    expect(mastery.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.34 * (1 + 8 * 0.02));
+  });
+
   it("defers campaign activation without overwriting live timers", () => {
     const planned = planNextWave(options({
       state: state({ mode: "campaign", pendingBossOutro: { page: 2 } }),
