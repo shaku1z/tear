@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C17",
-  "currentSubgoal": "VS3-C17-S1",
+  "currentCheckpoint": "VS3-C18",
+  "currentSubgoal": "VS3-C18-S1",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -26,7 +26,8 @@
     "VS3-C13",
     "VS3-C14",
     "VS3-C15",
-    "VS3-C16"
+    "VS3-C16",
+    "VS3-C17"
   ],
   "lastGreenCheckpoint": "VS3-C16",
   "lastEvidence": [
@@ -64,10 +65,11 @@
     "VS3-C16-S8 profile compatibility is GREEN at 1f7c8866b2a0b175736e858da05cb5b1a57c84e8: no schema migration is published because Verdant stats and achievements fit existing extensible v2 maps; current and legacy data retain all values and unknown fields. A structural migration remains deferred to authorized joint promotion. 13 focused/adjacent tests, typecheck, targeted lint, artifact-layout, and diff checks pass.",
     "VS3-C16-S9 lifecycle cleanup is GREEN at f1fe1748698d5fe1795a9886350ef5af97823ac9: reset, retry, quit, defeat, victory, stage transition, and mode change clear Verdant environment and Rootbound-local ownership; terminal outcomes now run boss cleanup before environment and lifecycle termination. 64 focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
     "VS3-C16-S10 publication boundary is GREEN at ee3c7390cbbc991ef8c255478d159f37c4a7b27d: source policy marks the exact six-stage ruleset engineering-only; release preflight refuses it; game-reference publication rejects Verdant without Pale; only an explicit public policy containing both joint stages can pass. Policy/release/reference tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
-    "VS3-C16 aggregate closure is GREEN at c7976332bf34bf06ff628d3e13b307fce2bd9a5d: all ten subgoals; repository static/docs/artifact/reference/publication gates; 9 files/30 focused tests plus 14 publication tests; attributed standalone artifact 0e6be53acb2bfcd9cfbdbd236685985b11f6d97a1f8dccd35231e94708a4def9; browser feature/journey and State Forge runtime/studio/exit matrices pass."
+    "VS3-C16 aggregate closure is GREEN at c7976332bf34bf06ff628d3e13b307fce2bd9a5d: all ten subgoals; repository static/docs/artifact/reference/publication gates; 9 files/30 focused tests plus 14 publication tests; attributed standalone artifact 0e6be53acb2bfcd9cfbdbd236685985b11f6d97a1f8dccd35231e94708a4def9; browser feature/journey and State Forge runtime/studio/exit matrices pass.",
+    "VS3-C17 is AUTHORIZED-DEFERRED at fa1cc9735281eae0ab07541f242d665e1d942e5d: Static Bloom was auditioned and rejected; no replacement, route, release, vendor byte, or rights claim was invented. Current vendor provenance, engineering-only Verdant fallback, one-context/exclusive-backend lifecycle, standalone audio, PWA, and CrazyGames test iframe gates pass. Replacement selection through exact re-vendoring is deferred to VS3-C22-S5; lastGreenCheckpoint remains VS3-C16."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C17-S1 by auditioning Static Bloom against the locked Verdant emotional/gameplay brief without changing the safe fallback or vendored package.",
+  "nextAction": "Execute VS3-C18-S1 by finalizing the source-owned stage, boss, enemy, achievement, and tuning reference projections without publishing Verdant or changing C40.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2631,52 +2633,52 @@
         {
           "id": "VS3-C17-S1",
           "description": "Audition Static Bloom against the locked Verdant emotional and gameplay brief.",
-          "status": "in-progress"
+          "status": "completed"
         },
         {
           "id": "VS3-C17-S2",
           "description": "Choose Static Bloom, another existing work, or a new work through an owner-recorded decision.",
-          "status": "not-started"
+          "status": "completed"
         },
         {
           "id": "VS3-C17-S3",
           "description": "Confirm rights, source evidence, game-use status, and release boundaries.",
-          "status": "not-started"
+          "status": "completed-negative-disposition"
         },
         {
           "id": "VS3-C17-S4",
           "description": "Produce/validate adaptive stems, cue, tier map, transitions, and boss escalation as required.",
-          "status": "not-started"
+          "status": "deferred-to-VS3-C22-S5"
         },
         {
           "id": "VS3-C17-S5",
           "description": "Run tear-music formatting, lint, type, test, rights, render, manifest, analysis, codec, and build gates.",
-          "status": "not-started"
+          "status": "deferred-to-VS3-C22-S5"
         },
         {
           "id": "VS3-C17-S6",
           "description": "Create a reviewed Adaptive Soundtrack release artifact.",
-          "status": "not-started"
+          "status": "deferred-to-VS3-C22-S5"
         },
         {
           "id": "VS3-C17-S7",
           "description": "Re-vendor the exact selected ESM/Tone pair and provenance into Tear.",
-          "status": "not-started"
+          "status": "deferred-to-VS3-C22-S5"
         },
         {
           "id": "VS3-C17-S8",
           "description": "Update stageId/scene/boss routing with compatibility for current routes.",
-          "status": "not-started"
+          "status": "completed-no-op-disposition"
         },
         {
           "id": "VS3-C17-S9",
           "description": "Publish semantic context for stage, boss phase, Regrowth, victory, and defeat only where musically used.",
-          "status": "not-started"
+          "status": "completed-no-op-disposition"
         },
         {
           "id": "VS3-C17-S10",
           "description": "Prove canonical/fallback exclusivity, no second AudioContext, repeated-run cleanup, and nonfatal failure.",
-          "status": "not-started"
+          "status": "completed"
         }
       ],
       "agentProcedure": [
@@ -2724,13 +2726,38 @@
         "Routing/context implementation",
         "Audio browser/lifecycle evidence"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "authorized-deferred",
+      "sourceBaseline": "fa1cc9735281eae0ab07541f242d665e1d942e5d",
+      "completionIdentity": "fa1cc9735281eae0ab07541f242d665e1d942e5d",
+      "commandsRun": [
+        "In tear-music: pnpm check (RED: isolated-worktree basename assertion plus parallel studio timeout; focused studio server rerun PASS 5/5)",
+        "In tear-music: pnpm music:check (RED after license PASS: ignored VSCO2/VCSL source libraries are not provisioned)",
+        "pnpm check:adaptive-soundtrack",
+        "pnpm check:tear-score",
+        "pnpm exec vitest run tests/unit/audio-system.test.ts tests/unit/tear-score-adapter.test.ts tests/unit/adaptive-soundtrack.test.ts tests/unit/music-routing.test.ts",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm build:standalone",
+        "pnpm test:browser:audio",
+        "pnpm test:pwa",
+        "pnpm build:crazygames",
+        "pnpm build:test:crazygames",
+        "pnpm test:browser:crazygames-iframe"
+      ],
+      "evidence": [
+        "docs/checkpoints/verdant-sanctum/VS3-C17-S1_STATIC_BLOOM_AUDITION.md",
+        "docs/checkpoints/verdant-sanctum/VS3-C17_MUSIC_DECISION.md",
+        "docs/checkpoints/verdant-sanctum/VS3-C17_EVIDENCE.md"
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Static Bloom is rejected; no replacement work is selected.",
+        "S4-S7 and the complete selected-work music release proof move to VS3-C22-S5 by owner authorization.",
+        "No audio source, route, asset, release, package, or vendor byte changed.",
+        "Verdant retains the explicit engineering-only fillet fallback outside the public routing manifest.",
+        "This is an authorized-deferred closure, not a green music integration claim; lastGreenCheckpoint remains VS3-C16.",
+        "Verdant publication remains prohibited and C40 status is unchanged."
+      ]
     },
     {
       "id": "VS3-C18",

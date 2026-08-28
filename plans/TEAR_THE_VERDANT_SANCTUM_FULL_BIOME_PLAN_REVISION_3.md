@@ -5061,7 +5061,7 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `authorized-deferred` |
 | Owner | TEAR Music / audio integration owner |
 | Dependencies | VS3-C8, VS3-C13 |
 | Release boundary | Separate tear-music release and game re-vendoring authorization required |
@@ -5072,9 +5072,9 @@ Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtr
 
 ## Entry conditions
 
-- [ ] Verdant stage and complete Rootbound semantic events are stable.
-- [ ] Music owner has explicit authorization for tear-music work and later game re-vendoring.
-- [ ] Current game pinned Adaptive Soundtrack and fallback provenance are understood.
+- [x] Verdant stage and complete Rootbound semantic events are stable.
+- [x] Music owner explicitly rejected Static Bloom and deferred replacement selection and later re-vendoring to `VS3-C22-S5`.
+- [x] Current game pinned Adaptive Soundtrack and fallback provenance are understood and reverified unchanged.
 
 ## Primary files and authorities
 
@@ -5090,16 +5090,16 @@ Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtr
 
 ## Sub-goals
 
-- [ ] **VS3-C17-S1** — Audition Static Bloom against the locked Verdant emotional and gameplay brief.
-- [ ] **VS3-C17-S2** — Choose Static Bloom, another existing work, or a new work through an owner-recorded decision.
-- [ ] **VS3-C17-S3** — Confirm rights, source evidence, game-use status, and release boundaries.
-- [ ] **VS3-C17-S4** — Produce/validate adaptive stems, cue, tier map, transitions, and boss escalation as required.
-- [ ] **VS3-C17-S5** — Run tear-music formatting, lint, type, test, rights, render, manifest, analysis, codec, and build gates.
-- [ ] **VS3-C17-S6** — Create a reviewed Adaptive Soundtrack release artifact.
-- [ ] **VS3-C17-S7** — Re-vendor the exact selected ESM/Tone pair and provenance into Tear.
-- [ ] **VS3-C17-S8** — Update stageId/scene/boss routing with compatibility for current routes.
-- [ ] **VS3-C17-S9** — Publish semantic context for stage, boss phase, Regrowth, victory, and defeat only where musically used.
-- [ ] **VS3-C17-S10** — Prove canonical/fallback exclusivity, no second AudioContext, repeated-run cleanup, and nonfatal failure.
+- [x] **VS3-C17-S1** — Audition Static Bloom against the locked Verdant emotional and gameplay brief. Auditioned and rejected.
+- [x] **VS3-C17-S2** — Choose Static Bloom, another existing work, or a new work through an owner-recorded decision. Owner rejected Static Bloom and deliberately deferred replacement selection.
+- [x] **VS3-C17-S3** — Confirm rights, source evidence, game-use status, and release boundaries. Negative disposition: no selected work, no new rights/release claim, and current provenance remains unchanged.
+- [ ] **VS3-C17-S4** — Produce/validate adaptive stems, cue, tier map, transitions, and boss escalation as required. **Deferred to `VS3-C22-S5`.**
+- [ ] **VS3-C17-S5** — Run tear-music formatting, lint, type, test, rights, render, manifest, analysis, codec, and build gates. **Deferred to `VS3-C22-S5` for the selected replacement; current baseline limitations are recorded in C17 evidence.**
+- [ ] **VS3-C17-S6** — Create a reviewed Adaptive Soundtrack release artifact. **Deferred to `VS3-C22-S5`.**
+- [ ] **VS3-C17-S7** — Re-vendor the exact selected ESM/Tone pair and provenance into Tear. **Deferred to `VS3-C22-S5`.**
+- [x] **VS3-C17-S8** — Update stageId/scene/boss routing with compatibility for current routes. No-op disposition proven: no unapproved public route; engineering-only fallback retained.
+- [x] **VS3-C17-S9** — Publish semantic context for stage, boss phase, Regrowth, victory, and defeat only where musically used. No-op disposition proven: no selected work, therefore no invented semantic music route.
+- [x] **VS3-C17-S10** — Prove canonical/fallback exclusivity, no second AudioContext, repeated-run cleanup, and nonfatal failure.
 
 ## Agent implementation procedure
 
@@ -5112,11 +5112,11 @@ Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtr
 
 ## TearBench same-change response
 
-- [ ] Audio changes select the current audio evidence route and actual browser audio journey.
-- [ ] Replay metadata records the exact backend/version/event-journal identity through current contracts.
-- [ ] No TearBench scenario owns the audio context or starts music from the frame loop.
-- [ ] Build identity and vendor hashes are recorded in evidence.
-- [ ] This checkpoint does not publish wiki or deploy the game.
+- [x] No audio change was made; current audio evidence and actual browser journeys prove the retained path.
+- [x] Current replay/backend identity contracts remain unchanged.
+- [x] No TearBench scenario owns the audio context or starts music from the frame loop.
+- [x] Build identity and vendor hashes are recorded in evidence.
+- [x] This checkpoint did not publish wiki or deploy the game.
 
 ## Minimum focused proof
 
@@ -5131,11 +5131,11 @@ Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtr
 
 ## Exit conditions
 
-- [ ] Approved work and rights decision are recorded.
-- [ ] Vendored bytes match a reviewed release.
-- [ ] Verdant/Rootbound routing works in canonical and fallback paths.
-- [ ] One AudioContext and exclusive backend ownership remain true.
-- [ ] Repeated run/stage/boss lifecycle is leak-free.
+- [ ] Approved replacement work and rights decision are recorded. **Deferred to `VS3-C22-S5`; Static Bloom rejection is recorded.**
+- [ ] Vendored replacement bytes match a reviewed release. **Deferred to `VS3-C22-S5`; existing reviewed bytes remain exact.**
+- [x] Current Verdant engineering fallback works and no unapproved canonical Verdant/Rootbound route exists.
+- [x] One AudioContext and exclusive backend ownership remain true.
+- [x] Repeated run/stage/boss lifecycle is leak-free.
 
 ## Stop and escalate conditions
 
@@ -5154,7 +5154,7 @@ Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtr
 
 ## Required handoff sentence
 
-> `VS3-C17 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+> `VS3-C17 is AUTHORIZED-DEFERRED at fa1cc9735281eae0ab07541f242d665e1d942e5d. Static Bloom is rejected; VS3-C22-S5 owns replacement selection, rights, release, routing, and re-vendoring. The next authorized action is VS3-C18-S1. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
