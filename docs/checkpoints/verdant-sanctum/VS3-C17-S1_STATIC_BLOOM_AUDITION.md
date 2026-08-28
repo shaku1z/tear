@@ -57,6 +57,33 @@ realism, mix translation, adaptive continuity, game readability, fatigue, and
 the specific theme of healing turned into captivity. Those judgments cannot be
 inferred from meters or source code.
 
+## Listening landmarks
+
+These authored landmarks make the three-minute pass reproducible. Times derive
+from the locked 156 BPM composition grid; they are not inferred from waveform
+peaks.
+
+| Time | Authored change | Decision question |
+| --- | --- | --- |
+| 0:00 | foundation opens | Does the apparent sanctuary relief read before threat arrives? |
+| 0:03 | first glass pulse | Does the luminous detail feel beautiful without becoming benign? |
+| 0:08–0:09 | first swell, sub-bass, and rhythm entry | Is the turn into normal combat legible and proportionate? |
+| 0:28 | vocal-air melody | Does preserved memory feel human rather than generically pastoral? |
+| 0:40–0:46 | silk lead, transition, and new pulse | Does the middle develop without crowding game information? |
+| 0:58–1:00 | transition into first apex | Can this support Rootbound escalation rather than merely louder combat? |
+| 1:34 | transition out of the first apex region | Does the cue regain breathable space cleanly? |
+| 1:46–2:02 | second melodic development | Is repetition transformed enough for extended encounter play? |
+| 2:12–2:14 | second transition and apex entry | Does the late escalation feel earned and distinct? |
+| 2:39–2:43 | late transition and pulse detail | Does intensity remain readable instead of fatiguing? |
+| 2:56–3:00 | closing transition | Is the ending/loop boundary emotionally and technically acceptable? |
+
+The owner verdict should name the listening device and score the existing ten
+rubric categories. A valid selection requires every category to be at least
+7/10, an average of at least 8/10, and an explicit choice of Static Bloom,
+another existing work, or a new commission. The exact owner response will be
+quoted into the VS3-C17-S2 decision record; Soundtrack Desk promotion records
+are intentionally not fabricated for a standalone composition candidate.
+
 ## Commands
 
 Run from the isolated tear-music worktree with source at the identity above:
