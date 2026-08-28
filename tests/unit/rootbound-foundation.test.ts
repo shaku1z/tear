@@ -4,6 +4,7 @@ import { CONFIG } from "../../src/config/game-config";
 import {
   BOSS_DEFINITIONS,
   BOSS_IDENTITY_IDS,
+  bossPhaseAttackAvailable,
   ROOTBOUND_PROVISIONAL_DEFINITION,
 } from "../../src/gameplay/run/boss-definitions";
 import { beginBossEncounter, cleanupBossEncounterActors, type BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
@@ -45,6 +46,8 @@ describe("Rootbound production foundation", () => {
     const boss = new harness.types.Rootbound(placement.x, placement.y);
 
     expect(placement.factoryId).toBe("rootbound");
+    expect([1, 2, 3].map((phase) => bossPhaseAttackAvailable("rootbound", phase))).toEqual([false, false, false]);
+    expect(bossPhaseAttackAvailable("warden", 1)).toBe(true);
     expect(boss).toMatchObject({
       kind: "rootbound",
       bossId: "rootbound",

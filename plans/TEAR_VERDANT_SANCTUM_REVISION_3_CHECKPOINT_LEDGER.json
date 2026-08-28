@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C10",
-  "currentSubgoal": "VS3-C10-S10",
+  "currentSubgoal": "VS3-C10-GATE",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -27,10 +27,11 @@
     "VS3-C10-S6 Rootbound presentation identity is green: the existing enemy renderer composition installs its root-throne, branching mantle, plural-mask, gold-graft silhouette and intro rise pose; the shared boss-intro snapshot/UI path preserves THE ROOTBOUND, KEEPER OF THE LAST MERCY, and YOU DO NOT HAVE TO DIE HERE.; focused and adjacent presentation/factory/reference tests, typecheck, architecture, targeted lint, and docs gates pass.",
     "VS3-C10-S7 deterministic Rootbound cleanup is green: one idempotent actor hook is dispatched through existing death, reset/new-run, retry, exit, and transactional restore/rollback boundaries; Rootbound clears intro, motion, recovery and cinematic state, and stage transitions clear living-arena broken state. Focused lifecycle/state-forge tests, typecheck, architecture, targeted lint, and docs gates pass.",
     "VS3-C10-S8 Rootbound Boss Test setup/result/retry is green: canonical roster setup exposes and selects THE ROOTBOUND, production Boss Test launches it in Verdant Sanctum, its attack-free planted simulation advances, and a normal defeat result retries the same selection in its authored stage. 29 focused tests, typecheck, architecture, exact test-standalone build attribution, and the shared live boss browser matrix pass.",
-    "VS3-C10-S9 current boss observation is green: live Class-A diagnostics derive identity, valid ordinal phases, and home stage from production boss/stage authorities; Rootbound reports phases 1-3 and verdant-sanctum, and State Forge now proves the source-derived six-boss/18-phase matrix. 38 focused tests, typecheck, architecture, and targeted lint pass."
+    "VS3-C10-S9 current boss observation is green: live Class-A diagnostics derive identity, valid ordinal phases, and home stage from production boss/stage authorities; Rootbound reports phases 1-3 and verdant-sanctum, and State Forge now proves the source-derived six-boss/18-phase matrix. 38 focused tests, typecheck, architecture, and targeted lint pass.",
+    "VS3-C10-S10 explicit attack unavailability is green: production boss-definition authority marks Rootbound phases 1-3 unavailable and State Forge preserves unavailable instead of inventing opening-commit placeholder damage; existing bosses retain authored opening commits. 30 focused tests, typecheck, architecture, and targeted lint pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C10-S10: lock unavailable Rootbound attacks explicitly and complete the C10 foundation gates without placeholder damage.",
+  "nextAction": "Run the complete VS3-C10 foundation gate, record exact build/browser evidence, and advance to VS3-C11 only if every required exit condition is green.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1549,7 +1550,7 @@
         {
           "id": "VS3-C10-S10",
           "description": "Leave unavailable attacks explicit rather than filling phases with placeholder damage.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [

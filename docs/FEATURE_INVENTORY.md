@@ -67,6 +67,8 @@ This is the migration checklist for the architectural redesign. A checked featur
   Class-A live diagnostics now project Rootbound's current phase, valid ordinal
   set, and `verdant-sanctum` home through production boss/stage authorities;
   State Forge derives the complete six-boss, eighteen-phase launch matrix.
+  Rootbound phases 1–3 are explicitly attack-unavailable at the C10 boundary;
+  State Forge preserves that fact instead of synthesizing placeholder commits.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

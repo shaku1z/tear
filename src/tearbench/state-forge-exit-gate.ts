@@ -7,6 +7,7 @@ import type {
 import { reconstructProgression, synthesizeProgression } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
 import { BOSS_FACTORY_IDS, type TearBossId } from "./registries";
+import { bossPhaseAttackAvailable } from "../gameplay/run/boss-definitions";
 import {
   DECLARED_ONE_FRAME_BOUNDARIES,
   type TearOneFrameBoundaryDefinition,
@@ -22,7 +23,7 @@ export interface StateForgeBossPhaseLaunch {
   readonly kind: "boss-phase";
   readonly boss: TearBossId;
   readonly phase: TearBossPhase;
-  readonly attack: "opening-commit";
+  readonly attack: "opening-commit" | "unavailable";
   readonly attackFrame: 0;
 }
 
@@ -175,7 +176,7 @@ export function createBossPhaseLaunchMatrix(): readonly StateForgeBossPhaseLaunc
     kind: "boss-phase" as const,
     boss,
     phase,
-    attack: "opening-commit" as const,
+    attack: bossPhaseAttackAvailable(boss, phase) ? "opening-commit" as const : "unavailable" as const,
     attackFrame: 0 as const,
   }))));
 }

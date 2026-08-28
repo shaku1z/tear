@@ -47,3 +47,9 @@ export function bossPhaseMarks(id: BossDefinitionId): readonly [number, number] 
 export function bossPhaseMark(id: BossDefinitionId, index: 0 | 1): number {
   return bossPhaseMarks(id)[index];
 }
+
+/** Transitional production authority: authored phase work removes ordinals as attacks become real. */
+export const ROOTBOUND_UNAVAILABLE_PHASE_ORDINALS = Object.freeze([1, 2, 3] as const);
+export function bossPhaseAttackAvailable(id: BossDefinitionId, phase: number): boolean {
+  return id !== "rootbound" || !ROOTBOUND_UNAVAILABLE_PHASE_ORDINALS.some((ordinal) => ordinal === phase);
+}
