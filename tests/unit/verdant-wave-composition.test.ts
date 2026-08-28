@@ -7,6 +7,8 @@ import { campaignStageCurve } from "../../src/gameplay/run/campaign-stage-curve"
 import { compositionCost } from "../../src/gameplay/run/composition-budget";
 import { BOSS_ROSTER, type EnemyKind } from "../../src/gameplay/run/content-director";
 import { planNextWave, type WaveStage } from "../../src/gameplay/run/wave-planner";
+import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
+import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 
 const stages: readonly WaveStage[] = STAGES.map((stage) => ({
   id: stage.id,
@@ -15,10 +17,10 @@ const stages: readonly WaveStage[] = STAGES.map((stage) => ({
   pool: stage.pool.map(([kind, weight, unlockWave]) => ({ kind, weight, unlockWave: unlockWave ?? 1 })),
 }));
 
-function verdantPlan(localWave: number, seed: string) {
+function verdantPlan(localWave: number, seed: string, scaling = { enemyHealth: 1, enemyCount: 1 }) {
   return planNextWave({
     state: {
-      mode: "campaign", wave: 29 + localWave, diffHp: 1, diffCount: 1,
+      mode: "campaign", wave: 29 + localWave, diffHp: scaling.enemyHealth, diffCount: scaling.enemyCount,
       bossOrder: BOSS_ROSTER.map((boss) => boss.id), bossIdx: 0, bossesBeaten: 0,
       curBoss: null, currentStageIndex: 3, biomeIdx: 3, pendingBossOutro: null,
     },
@@ -75,5 +77,24 @@ describe("Verdant wave composition budget", () => {
     expect(planned.state).toMatchObject({ wave: 40, stage: 3, currentStageIndex: 3, isBossWave: true });
     expect(planned.state.spawnQueue).toEqual([{ type: "boss" }]);
     expect(planned.intents).toContainEqual({ type: "ghost-wave", wave: 40, marker: "boss" });
+  });
+
+  it("applies each production difficulty exactly once across Verdant planning and player damage", () => {
+    for (const difficulty of DIFFICULTY_CATALOG) {
+      const planned = verdantPlan(1, `difficulty-${difficulty.id}`, difficulty.modifiers);
+      expect(planned.state.spawnQueue).toHaveLength(Math.round(8 * difficulty.modifiers.enemyCount));
+      expect(planned.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.82 * difficulty.modifiers.enemyHealth);
+      expect(planned.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.34);
+
+      const replay = createProductionReplayWorld({ seed: `verdant-${difficulty.id}`, mode: "campaign", difficulty: difficulty.id });
+      const player = replay.world.state.player() as never as {
+        hp: number; maxHp: number; oneHit: boolean;
+        takeDamage(damage: number, sourceX: number): string;
+      };
+      expect(replay.dependencies.CONFIG.player.dmgTakenMult).toBeCloseTo(difficulty.modifiers.playerDamageTaken);
+      expect(player.oneHit).toBe(difficulty.oneHit);
+      expect(player.takeDamage(10, 0)).toBe("hit");
+      expect(player.hp).toBe(difficulty.oneHit ? 0 : player.maxHp - 10 * difficulty.modifiers.playerDamageTaken);
+    }
   });
 });
