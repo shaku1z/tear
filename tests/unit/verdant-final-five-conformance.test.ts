@@ -33,11 +33,12 @@ describe("Verdant Final Five conformance", () => {
     expect(resolveHeldEnvironmentWeaponContacts({ environment, blade, segment, tick: 1 }).damaged).toBe(1);
     expect(resolveHeldEnvironmentWeaponContacts({ environment, blade, segment, tick: 2 }).damaged).toBe(0);
     const after = environment.combatObjects()[0];
+    if (after === undefined) throw new Error(`missing ${weaponId} conformance object`);
     expect(after).toEqual({ ...original, integrity: 90, stateTick: 1 });
     for (const forbidden of ["bleedStacks", "burnT", "markT", "rootT", "seamT", "coins", "score", "reward"]) {
-      expect(Object.hasOwn(after ?? {}, forbidden)).toBe(false);
+      expect(Object.hasOwn(after, forbidden)).toBe(false);
     }
-    expect(createEnvironmentCombatObjectRuntime(after!).policy).toEqual({
+    expect(createEnvironmentCombatObjectRuntime(after).policy).toEqual({
       countsAsOrdinaryEnemy: false, grantsEnemyReward: false, procEligible: false,
       counterplayTags: ["cut", "break", "projectile-cut"],
     });
