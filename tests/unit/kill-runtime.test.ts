@@ -52,8 +52,11 @@ describe("enemy kill transaction", () => {
     input.makeDeathEvent = () => { trace.push("boss-defeated"); return {}; };
     input.happyTime = () => { trace.push("terminal-release"); };
     input.bossPresentation = () => { trace.push("terminal-presentation"); };
+    const addStat = vi.fn(); input.addStat = addStat;
     resolveEnemyKill(input);
     expect(input.run.pendingBossOutro).toBe(outro);
+    expect(addStat).toHaveBeenCalledWith("rootboundKills", 1);
+    expect(addStat).toHaveBeenCalledWith("rootboundNoHitKills", 1);
 
     const clear = planWaveClear({
       state: { mode: "campaign", diff: "normal", wave: 40, isBossWave: true, horde: false, waveTime: 12,

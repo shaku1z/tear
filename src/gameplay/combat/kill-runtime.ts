@@ -76,6 +76,13 @@ function trackKillAchievements(options: KillRuntimeOptions): void {
       if (run._bossOnlyKills >= options.bossRosterSize) options.maxStat("gauntletFull", 1);
     }
     if (enemy.bossId) options.maxStat(`kill${enemy.bossId.charAt(0).toUpperCase()}${enemy.bossId.slice(1)}`, 1);
+    if (enemy.bossId === "rootbound") {
+      options.addStat("rootboundKills", 1);
+      if (!run._dmgThisWave) options.addStat("rootboundNoHitKills", 1);
+      const classification = Reflect.get(enemy, "regrowthState") as Readonly<{ interruptClassification?: unknown }> | undefined;
+      if (classification?.interruptClassification === "full-interrupt") options.addStat("regrowthFullInterrupts", 1);
+      else if (classification?.interruptClassification === "partial-interrupt") options.addStat("regrowthPartialInterrupts", 1);
+    }
     if (player.hp > 0 && player.hp <= player.maxHp * 0.1) options.maxStat("bossKillsLowHP", 1);
     options.bossKillAchievement(enemy); options.bossGhostMoment(enemy);
   }

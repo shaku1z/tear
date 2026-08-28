@@ -2,8 +2,7 @@ import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; im
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
 import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveTrainingOperationsScreen, createLiveReplayHub, createLiveInterfaceComposition, GameAgentEvidenceController, RunMonitorController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
-import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
-import { createLiveSessionServices } from "./live-session-services-composition";
+import { createLiveRunOrchestration } from "./live-run-orchestration-composition"; import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration"; import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
@@ -29,7 +28,7 @@ import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGame
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
 import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, seekBrowserGhostCapsuleProductionReplay, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
-import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
+import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events"; import { executeVerdantTelemetryIntents, verdantTelemetryIntents } from "../gameplay/progression/verdant-telemetry"; import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
 import { createGhostAuthoritativeReceipt } from "../ghost/authoritative-receipt";
@@ -116,6 +115,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   GAMEPLAY_EVENTS.subscribe((event) => {
     ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ghostV3Session.nextEventSequence()));
+    if (tracksAchievements(hostState.run())) executeVerdantTelemetryIntents(verdantTelemetryIntents(event), dependencies.profileStatsPersistence);
   });
   function liveRun(): GameRun {
     // Menu services intentionally ask before a run exists and treat the absent

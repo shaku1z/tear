@@ -74,7 +74,10 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     rememberBiome: (name) => { services.rememberBiome(name); },
     resetStageAchievements: () => { services.resetStageAchievements(); },
     resetPlayerStagePassives: () => { state.player()?.resetStagePassives(); },
-    recordReplayStage: (index) => { d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index }); },
+    recordReplayStage: (index) => {
+      const authored = d.STAGES[index];
+      d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index, ...(authored === undefined ? {} : { stageId: authored.id }), transition: "entered" });
+    },
   }));
   const runtime = createLiveCampaignRuntime({ runtime: story,
     cinema: {
