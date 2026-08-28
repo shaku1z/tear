@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ACHIEVEMENT_CATALOG, CANONICAL_ACHIEVEMENT_IDS } from "../../src/gameplay/progression/achievement-catalog";
+import { DIFFICULTY_IDS } from "../../src/gameplay/run/difficulty-catalog";
+import { PROFILE_TRACKED_MODE_IDS } from "../../src/gameplay/run/mode-catalog";
+import { STAGE_IDS } from "../../src/gameplay/stages";
 
 describe("achievement catalog", () => {
   it("owns stable Rootbound clear and Regrowth mastery entries", () => {
@@ -17,5 +20,19 @@ describe("achievement catalog", () => {
 
   it("does not invent the optional hidden no-damage achievement before approval", () => {
     expect(ACHIEVEMENT_CATALOG.some((entry) => entry.id.includes("graft") && entry.hidden)).toBe(false);
+  });
+
+  it("derives completion goals and copy from current source catalogs", () => {
+    expect(ACHIEVEMENT_CATALOG.find((entry) => entry.id === "all_biomes")).toMatchObject({
+      desc: `Fight in all ${String(STAGE_IDS.length)} biomes.`,
+      rule: { kind: "stat-threshold", stat: "biomesSeen", goal: STAGE_IDS.length },
+    });
+    expect(ACHIEVEMENT_CATALOG.find((entry) => entry.id === "well_rounded")).toMatchObject({
+      rule: { kind: "stat-threshold", stat: "modesPlayed", goal: PROFILE_TRACKED_MODE_IDS.length },
+    });
+    expect(ACHIEVEMENT_CATALOG.find((entry) => entry.id === "adv_all")).toMatchObject({
+      desc: `Clear Adventure on all ${String(DIFFICULTY_IDS.length)} difficulties.`,
+      rule: { kind: "stat-threshold", stat: "clearAdvAll", goal: DIFFICULTY_IDS.length },
+    });
   });
 });

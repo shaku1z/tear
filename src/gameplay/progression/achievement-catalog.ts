@@ -1,4 +1,7 @@
 import type { AchievementCategory, AchievementRarity } from "./achievements";
+import { DIFFICULTY_IDS } from "../run/difficulty-catalog";
+import { PROFILE_TRACKED_MODE_IDS } from "../run/mode-catalog";
+import { STAGE_IDS } from "../stages";
 
 export type AchievementCatalogRule =
   | Readonly<{ kind: "stat-threshold"; stat: string; goal: number }>
@@ -73,7 +76,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementCatalogEntry[] = Object.fr
   stat("wave_100", "progress", "legendary", "Endless", "Reach wave 100 in any mode.", "bestWave", 100),
   stat("stage_clear", "progress", "uncommon", "Threshold", "Clear a full campaign stage.", "stageClears", 1),
   stat("campaign", "progress", "epic", "Sealed", "Complete the Adventure campaign.", "campaignClears", 1),
-  stat("all_biomes", "progress", "rare", "Wayfarer", "Fight in all five biomes.", "biomesSeen", 5),
+  stat("all_biomes", "progress", "rare", "Wayfarer", `Fight in all ${String(STAGE_IDS.length)} biomes.`, "biomesSeen", STAGE_IDS.length),
 
   // ---- BOSSES ----
   stat("first_boss", "boss", "uncommon", "Giant Slayer", "Defeat your first boss.", "bossKills", 1),
@@ -94,7 +97,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementCatalogEntry[] = Object.fr
   stat("collector", "mastery", "rare", "Collector", "Own 6 abilities in a single run.", "abilitiesInRun", 6),
   stat("rich", "mastery", "epic", "Coin Baron", "Earn 25,000 coins in total.", "coinsEarned", 25000),
   stat("veteran", "mastery", "uncommon", "Veteran", "Finish 25 runs.", "runs", 25),
-  stat("well_rounded", "mastery", "rare", "Well-Rounded", "Play every game mode.", "modesPlayed", 5),
+  stat("well_rounded", "mastery", "rare", "Well-Rounded", "Play every standard game mode.", "modesPlayed", PROFILE_TRACKED_MODE_IDS.length),
   stat("student", "mastery", "common", "Apprentice", "Complete the tutorial.", "tutorialDone", 1),
 
   // ---- THE BOSS PANTHEON ----
@@ -116,7 +119,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementCatalogEntry[] = Object.fr
   // ---- DIFFICULTY MASTERY ----
   stat("adv_hard", "progress", "rare", "Hardened", "Clear Adventure on Hard difficulty.", "clearAdvHard", 1),
   stat("adv_extreme", "progress", "epic", "Masochist", "Clear Adventure on Extreme difficulty.", "clearAdvExtreme", 1),
-  stat("adv_all", "progress", "legendary", "Omnipotent", "Clear Adventure on all 5 difficulties.", "clearAdvAll", 5),
+  stat("adv_all", "progress", "legendary", "Omnipotent", `Clear Adventure on all ${String(DIFFICULTY_IDS.length)} difficulties.`, "clearAdvAll", DIFFICULTY_IDS.length),
   stat("endless_50_hard", "survival", "epic", "Endurance", "Reach Wave 50 in Endless on Hard.", "wave50Hard", 1),
   stat("endless_100_extreme", "survival", "legendary", "Beyond Human", "Reach Wave 100 in Endless on Extreme.", "wave100Extreme", 1),
   stat("adv_flawless", "survival", "legendary", "Flawless Victory", "Clear the whole Adventure campaign without taking a single hit.", "clearAdvNoHit", 1),

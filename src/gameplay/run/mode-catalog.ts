@@ -1,4 +1,5 @@
 import type { RunMode } from "./session";
+import { BOSS_IDENTITY_IDS } from "./boss-definitions";
 
 /**
  * The authored lifecycle family for a published run mode. This is deliberately
@@ -38,7 +39,7 @@ const authoredModes = [
   },
   {
     id: "gauntlet", order: 2, label: "Gauntlet",
-    blurb: "Endless, but a full boss storms in every 8 waves — cycling all five, ever tougher.",
+    blurb: `Endless, but a full boss storms in every 8 waves — cycling all ${String(BOSS_IDENTITY_IDS.length)}, ever tougher.`,
     enabled: true, classification: "gauntlet", training: false, bossOnly: false, sandbox: false,
   },
   {
@@ -72,3 +73,12 @@ if (authoredIds.length !== MODE_IDS.length || authoredIds.some((id, index) => id
 export const MODE_CATALOG: readonly ModeDefinition[] = Object.freeze(
   authoredModes.map((mode) => Object.freeze(mode)),
 );
+
+/** Modes persisted by the standard-play progression path; test modes remain intentionally excluded. */
+export const PROFILE_TRACKED_MODE_IDS: readonly RunMode[] = Object.freeze(
+  MODE_CATALOG.filter((mode) => !mode.bossOnly && !mode.sandbox).map((mode) => mode.id),
+);
+
+export function tracksModeProgress(mode: RunMode): boolean {
+  return PROFILE_TRACKED_MODE_IDS.includes(mode);
+}

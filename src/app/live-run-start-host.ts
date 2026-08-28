@@ -7,6 +7,7 @@ import { planRunStart, type RunStartPlan } from "../gameplay/run/run-start-plan"
 import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
 import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
+import { tracksModeProgress } from "../gameplay/run/mode-catalog";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
 import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
@@ -215,7 +216,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     updateProgressionTracking: (mode) => {
       if (context.achievementTracking() && META.level("reach") > 0 && META.level("throwarm") > 0
         && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
-      if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); context.achievementCheck(); }
+      if (tracksModeProgress(mode)) { PROFILE.markMode(mode); context.achievementCheck(); }
     },
     startRecording: (runId, seed) => {
       // Canonical device input is the live simulation's normal route, not a
