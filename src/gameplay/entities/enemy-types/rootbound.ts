@@ -101,11 +101,15 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     override contactDamageEnabled(): boolean {
-      return this.introT <= 0 && this.state === "idle" && this.pendingAttack === null;
+      return !this.attackCommitProtected() && this.state === "idle" && this.pendingAttack === null;
+    }
+
+    attackCommitProtected(): boolean {
+      return this.introT > 0 || this.state === "intro" || this.cinematicT > 0 || this.cinematicRequest !== null;
     }
 
     selectNextPhaseOneAttack(): RootboundPhaseOneAttack | null {
-      if (this.phase !== 1 || this.introT > 0 || this.state !== "idle" || this.pendingAttack !== null) return null;
+      if (this.phase !== 1 || this.attackCommitProtected() || this.state !== "idle" || this.pendingAttack !== null) return null;
       const selected = this.phaseOneAttackOrder[this.attackIndex % this.phaseOneAttackOrder.length];
       if (selected === undefined) throw new RangeError("Rootbound Phase I attack order is empty");
       this.attackIndex += 1;
@@ -349,6 +353,11 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       if (this.introT > 0) {
         this.state = "intro";
         this.stateT = this.introT;
+        this.integrate(dt, platforms);
+        return;
+      }
+      if (this.cinematicT > 0 || this.cinematicRequest !== null) {
+        this.atk = "unavailable";
         this.integrate(dt, platforms);
         return;
       }

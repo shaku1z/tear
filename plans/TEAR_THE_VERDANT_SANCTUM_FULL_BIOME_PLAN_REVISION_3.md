@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C11-S8 green; VS3-C11-S9 next** |
+| Status | **Active implementation authority — VS3-C11 subgoals green; checkpoint gate running** |
 | Current checkpoint | `VS3-C11` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4474,7 +4474,7 @@ Implement and prove the complete Phase I attack grammar, punish windows, environ
 - [x] **VS3-C11-S6** — Implement phase-entry/exit state and remove invalid temporary objects before Phase II.
 - [x] **VS3-C11-S7** — Add high-contrast, reduced-motion, low-graphics, and audio-independent attack telegraphs.
 - [x] **VS3-C11-S8** — Validate attack cadence and damage under current difficulties.
-- [ ] **VS3-C11-S9** — Prove no attack commits during boss intro/transformation protection.
+- [x] **VS3-C11-S9** — Prove no attack commits during boss intro/transformation protection.
 
 ## Agent implementation procedure
 

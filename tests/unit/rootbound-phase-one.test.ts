@@ -277,4 +277,29 @@ describe("Rootbound Phase I cadence", () => {
       { id: "onehit", vine: "fatal", seed: "fatal", rootline: "fatal", cycleSeconds },
     ]);
   });
+
+  it("freezes every selected attack without commits during intro or transformation protection", () => {
+    for (const attack of ROOTBOUND_PHASE_ONE_ATTACK_ORDER) {
+      const { harness, actor } = boss();
+      const projectiles: EnemyProjectile[] = [];
+      actor.pendingAttack = attack;
+      actor.introT = 0.4;
+      actor.update(1 / 120, harness.platforms, harness.player, projectiles);
+      expect(actor).toMatchObject({ pendingAttack: attack, state: "intro", atk: "unavailable" });
+      expect(actor).toMatchObject({ vineSweepStage: null, seedArcStage: null, rootlineStage: null, canopyStepStage: null });
+      expect(projectiles).toEqual([]);
+
+      actor.introT = 0;
+      actor.cinematicT = 0.4;
+      actor.update(1 / 120, harness.platforms, harness.player, projectiles);
+      expect(actor).toMatchObject({ pendingAttack: attack, state: "intro", atk: "unavailable", cinematicT: 0.4 });
+      expect(actor).toMatchObject({ vineSweepStage: null, seedArcStage: null, rootlineStage: null, canopyStepStage: null });
+      expect(projectiles).toEqual([]);
+
+      actor.cinematicT = 0;
+      actor.state = "idle";
+      actor.update(1 / 120, harness.platforms, harness.player, projectiles);
+      expect(actor.atk).not.toBe("unavailable");
+    }
+  });
 });

@@ -106,6 +106,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   0.55-second tells. Existing global player-damage scaling applies exactly once
   on Easy/Normal/Hard/Extreme and the existing One-Hit rule remains fatal;
   Rootbound introduces no parallel difficulty tuning.
+  VS3-C11-S9 freezes both attack selection and already-selected commits during
+  boss intro or transformation protection. All four verbs remain unavailable,
+  create no projectile/environment intent, and resume only after protection ends.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
