@@ -246,7 +246,7 @@ describe("wave planning conformance", () => {
     expect(planned.state.spawnQueue).toEqual([{ type: "boss" }]);
   });
 
-  it("unlocks the full base roster on sandbox wave one without prematurely authoring presets", () => {
+  it("unlocks the full enemy identity roster on sandbox wave one without prematurely authoring presets", () => {
     const kinds = new Set<EnemyKind>();
     for (let seed = 0; seed < 400; seed += 1) {
       const planned = planNextWave(options({
@@ -259,7 +259,7 @@ describe("wave planning conformance", () => {
       }
     }
     expect(kinds).toEqual(new Set([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
     ]));
   });
 });

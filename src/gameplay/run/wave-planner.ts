@@ -2,6 +2,7 @@ import type { EnemyPreset } from "../affixes";
 import type { RandomSource } from "../../domain/random";
 import {
   bossName,
+  ENEMY_IDENTITY_IDS,
   pickEnemyKind,
   pickMiniBoss,
   shuffledBossRoster,
@@ -128,7 +129,9 @@ function regularWaveQueue(
   options: PlanNextWaveOptions,
 ): readonly WaveSpawnSpec[] {
   const tuning = options.tuning;
-  const localWave = (wave - 1) % 10 + 1;
+  const localWave = state.mode === "endless" || state.mode === "gauntlet"
+    ? (wave - 1) % 5 + 1
+    : (wave - 1) % 10 + 1;
   let count: number;
   let hpScale: number;
   let dmgScale = 1;
@@ -156,19 +159,24 @@ function regularWaveQueue(
 
   const queue: WaveSpawnSpec[] = [];
   if (miniBoss !== null) queue.push({ type: "miniboss", bossId: miniBoss });
-  const campaignStage = state.mode === "campaign" && stageIndex !== null ? stageAt(options.stages, stageIndex) : null;
-  const composition = campaignStage === null ? undefined : campaignStageCurve(campaignStage.id).composition;
-  const unlockedCampaignPool = campaignStage?.pool.filter((entry) => localWave >= entry.unlockWave) ?? null;
-  const availableCampaignPool = campaignStage === null
+  const stageOwnsPool = state.mode === "campaign" || state.mode === "endless" || state.mode === "gauntlet";
+  const contentStage = stageOwnsPool && stageIndex !== null ? stageAt(options.stages, stageIndex) : null;
+  const composition = contentStage === null ? undefined : campaignStageCurve(contentStage.id).composition;
+  const sandboxPool: readonly CampaignPoolEntry[] | null = state.mode === "sandbox"
+    ? ENEMY_IDENTITY_IDS.map((kind) => ({ kind, weight: 1, unlockWave: 1 }))
+    : null;
+  const authoredPool = contentStage?.pool ?? sandboxPool;
+  const unlockedAuthoredPool = authoredPool?.filter((entry) => localWave >= entry.unlockWave) ?? null;
+  const availableAuthoredPool = authoredPool === null
     ? null
-    : unlockedCampaignPool !== null && unlockedCampaignPool.length > 0 ? unlockedCampaignPool : campaignStage.pool;
+    : unlockedAuthoredPool !== null && unlockedAuthoredPool.length > 0 ? unlockedAuthoredPool : authoredPool;
   let compositionState = emptyCompositionBudgetState();
   for (let index = 0; index < count; index += 1) {
-    const eligiblePool = campaignStage === null || composition === undefined
-      ? availableCampaignPool
-      : eligibleCompositionPool(availableCampaignPool ?? [], composition, localWave, compositionState);
-    if (campaignStage !== null && (eligiblePool?.length ?? 0) === 0) {
-      throw new RangeError(`${campaignStage.id} composition budget excludes every available enemy`);
+    const eligiblePool = contentStage === null || composition === undefined
+      ? availableAuthoredPool
+      : eligibleCompositionPool(availableAuthoredPool ?? [], composition, localWave, compositionState);
+    if (contentStage !== null && (eligiblePool?.length ?? 0) === 0) {
+      throw new RangeError(`${contentStage.id} composition budget excludes every available enemy`);
     }
     const stageTypes = eligiblePool?.map((entry) => entry.kind) ?? null;
     if (wave >= 4 && options.random.next() < 0.15) {
@@ -185,7 +193,7 @@ function regularWaveQueue(
       }
     }
     const contentWave = state.mode === "sandbox" ? 99 : wave;
-    const kind = campaignStage === null
+    const kind = eligiblePool === null
       ? pickEnemyKind(contentWave, options.random)
       : pickEnemyKind(contentWave, options.random, eligiblePool, localWave);
     queue.push({ type: kind, hpScale, dmgScale });
