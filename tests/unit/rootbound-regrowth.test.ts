@@ -111,6 +111,7 @@ describe("Rootbound Regrowth channel", () => {
     };
     expect(actor.beginRegrowth(0, connections)).toBe(false);
     actor.hp = actor.maxHp * 0.2;
+    expect(actor.beginRegrowth(99, connections)).toBe(false);
     actor.update(1 / 120, harness.platforms, harness.player, []);
     actor.cinematicRequest = null;
     actor.cinematicT = 0;
@@ -169,5 +170,11 @@ describe("Rootbound Regrowth channel", () => {
     const hp = actor.hp;
     actor.advanceRegrowth(1_000, new Set(), true);
     expect(actor.hp).toBe(hp);
+    actor.hp = actor.maxHp;
+    actor.cinematicRequest = null;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor).toMatchObject({ phase: 3, phaseMarker: 3 });
+    expect(actor.cinematicRequest).toBeNull();
+    expect(actor.beginRegrowth(1_001, connections)).toBe(false);
   });
 });

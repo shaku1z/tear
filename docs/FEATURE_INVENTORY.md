@@ -189,7 +189,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   with the longest punish recovery, partial interrupt heals in exact proportion
   to surviving required links, and no interrupt requests at most 12% max HP.
   Actual recovery is capped by missing HP, recorded in canonical state, and
-  cannot reduce the monotonic Phase III marker.
+  cannot reduce the monotonic Phase III marker. VS3-C13-S3 hardens that floor:
+  HP-derived Phase III cannot start Regrowth before the committed transition,
+  healing cannot replay theater or reopen Phase II, and both channeling and
+  resolved one-use state refuse another begin.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

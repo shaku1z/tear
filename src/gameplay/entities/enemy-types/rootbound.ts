@@ -161,7 +161,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean {
-      if (this.phase !== 3 || this.attackCommitProtected() || this.cleanupReason !== null || this.regrowthState.useCount !== 0) return false;
+      if (this.phaseMarker !== 3 || this.phase !== 3 || this.attackCommitProtected() || this.cleanupReason !== null || this.regrowthState.useCount !== 0) return false;
       this.regrowthState = beginRootboundRegrowth(this.regrowthState, startTick, connectionIds);
       this.state = "idle";
       this.stateT = 0;
