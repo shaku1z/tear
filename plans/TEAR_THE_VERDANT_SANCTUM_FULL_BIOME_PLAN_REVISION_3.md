@@ -4937,7 +4937,7 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `in-progress` |
 | Owner | Progression/persistence/mode owner |
 | Dependencies | VS3-C13, VS3-C15 |
 | Release boundary | Feature completeness across supported modes; no public profile migration yet |
@@ -4948,9 +4948,9 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 
 ## Entry conditions
 
-- [ ] Complete Rootbound and Verdant wave flow are green.
-- [ ] Current mode catalog, achievements, profile envelope, replay envelope, cloud adapters, and terminal controllers are understood.
-- [ ] Joint publication remains blocked.
+- [x] Complete Rootbound and Verdant wave flow are green.
+- [x] Current mode catalog and current mode-routing owners are understood; later C16 sub-goals retain the focused achievement/profile/replay/lifecycle audits.
+- [x] Joint publication remains blocked.
 
 ## Primary files and authorities
 
@@ -4968,7 +4968,7 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 
 ## Sub-goals
 
-- [ ] **VS3-C16-S1** — Add Rootbound and Verdant behavior to Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test through current mode paths.
+- [x] **VS3-C16-S1** — Add Rootbound and Verdant behavior to Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test through current mode paths.
 - [ ] **VS3-C16-S2** — Prove Tutorial remains unaffected or update only an explicitly approved teaching surface.
 - [ ] **VS3-C16-S3** — Add Rootbound/Rootbinder/Bloom development controls through safe current test/State Forge boundaries.
 - [ ] **VS3-C16-S4** — Add stable achievement entries and runtime predicates for approved Verdant achievements.
@@ -5032,6 +5032,8 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 ## Required handoff sentence
 
 > `VS3-C16 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+
+> `VS3-C16-S1 is GREEN at 85ea62869e6f37117807f56ac61fd9d9b9ff8740. The next authorized action is VS3-C16-S2, proving Tutorial remains unaffected. Campaign and Boss Test retain their existing canonical paths; Endless/Gauntlet use rotating authored stage pools; Playground and Enemy Test project the canonical enemy identities. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

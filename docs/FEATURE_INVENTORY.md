@@ -334,6 +334,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   Verdant bounds Rootbinder, Anchor, Mender, Chimera, and Armored pressure and
   limits Rootbinders to one through local wave 6 and two thereafter. This is not
   final seven-stage balance, and no Pale slot or publication claim exists yet.
+- [x] Verdant C16 current-mode content paths (engineering-only) — Campaign and
+  Boss Test retain their existing source-owned Verdant/Rootbound routing.
+  Endless and Gauntlet now consume the active rotating stage's authored enemy
+  pool, so their Verdant interval can lawfully select Rootbinder under the same
+  local unlock and composition rules. Playground projects its spawn menu from
+  the canonical enemy identity list, and Enemy Test derives its wave-one full
+  roster from that same authority. The eight stable Playground number hotkeys
+  remain unchanged; no mode, enemy, stage, or boss registry was added.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
