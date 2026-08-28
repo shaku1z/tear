@@ -6,6 +6,7 @@ import { createEnvironmentRuntime } from "../../src/gameplay/environment/environ
 import {
   ROOTBOUND_PHASE_ONE_ATTACK_ORDER,
   ROOTBOUND_PHASE_ONE_CADENCE,
+  ROOTBOUND_CANOPY_STEP,
   ROOTBOUND_SEED_ARC,
   ROOTBOUND_ROOTLINE,
   ROOTBOUND_VINE_SWEEP,
@@ -39,7 +40,7 @@ describe("Rootbound Phase I cadence", () => {
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, entry.harness.platforms, entry.harness.player, []);
         const target = entry === first ? selected : mirrored;
         if (entry.actor.pendingAttack !== null) target.push(entry.actor.pendingAttack);
-        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc", "rootline"] });
+        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"] });
         entry.actor.completePhaseOneAttack();
         expect(entry.actor).toMatchObject({ state: "recover", stateT: ROOTBOUND_PHASE_ONE_CADENCE.recovery, pendingAttack: null });
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, entry.harness.platforms, entry.harness.player, []);
@@ -188,5 +189,33 @@ describe("Rootbound Phase I cadence", () => {
     environment.step(5, 1 / 120, () => undefined);
     expect(environment.fields()[0]).toMatchObject({ state: "expired", cleanupReason: "natural-expiry" });
     expect(actor).toMatchObject({ pendingAttack: null, rootlineStage: null, state: "recover" });
+  });
+
+  it("telegraphs an authored Canopy Step destination before moving without an arrival hit", () => {
+    const { harness, actor } = boss();
+    const player = harness.player;
+    const start = { x: actor.x, y: actor.y };
+    actor.pendingAttack = "canopy-step";
+    actor.update(1 / 120, harness.platforms, player, []);
+    expect(actor).toMatchObject({
+      canopyStepStage: "telegraph",
+      canopyDestination: { x: 800, y: 461, platformId: "test:ledge" },
+      atk: "canopy-step:telegraph",
+      x: start.x,
+      y: start.y,
+    });
+    expect(actor.contactDamageEnabled()).toBe(false);
+    expect(player.damage).toEqual([]);
+
+    actor.update(ROOTBOUND_CANOPY_STEP.telegraph, harness.platforms, player, []);
+    expect(actor).toMatchObject({ canopyStepStage: "travel", x: start.x, y: start.y });
+    actor.update(ROOTBOUND_CANOPY_STEP.travel / 2, harness.platforms, player, []);
+    expect(actor.y).toBeLessThan(start.y);
+    actor.update(ROOTBOUND_CANOPY_STEP.travel / 2, harness.platforms, player, []);
+    expect(actor).toMatchObject({ canopyStepStage: "settle", x: 800, y: 461, atk: "canopy-step:settle" });
+    expect(player.damage).toEqual([]);
+    actor.update(ROOTBOUND_CANOPY_STEP.settle, harness.platforms, player, []);
+    expect(actor).toMatchObject({ pendingAttack: null, canopyStepStage: null, canopyDestination: null, state: "recover" });
+    expect(player.damage).toEqual([]);
   });
 });

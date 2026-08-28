@@ -29,6 +29,8 @@ export const ROOTBOUND_SEED_ARC = Object.freeze({
 export type RootboundSeedArcStage = "windup" | "release";
 export const ROOTBOUND_ROOTLINE = Object.freeze({ windup: 0.7, active: 0.24, cleanup: 0.18, width: 430, height: 104, damage: 20 });
 export type RootboundRootlineStage = "warning" | "active" | "cleanup";
+export const ROOTBOUND_CANOPY_STEP = Object.freeze({ telegraph: 0.55, travel: 0.48, settle: 0.24 });
+export type RootboundCanopyStepStage = "telegraph" | "travel" | "settle";
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
@@ -45,7 +47,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[0],
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[1],
     ];
-    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep", "seed-arc", "rootline"]);
+    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep", "seed-arc", "rootline", "canopy-step"]);
     readonly phaseOneAttackOrder = ROOTBOUND_PHASE_ONE_ATTACK_ORDER;
     pendingAttack: RootboundPhaseOneAttack | null = null;
     attackIndex = 0;
@@ -58,6 +60,11 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     rootlineStage: RootboundRootlineStage | null = null;
     rootlineT = 0;
     rootlineFacing = 1;
+    canopyStepStage: RootboundCanopyStepStage | null = null;
+    canopyStepT = 0;
+    canopyStepIndex = 0;
+    canopyStepStart: Readonly<{ x: number; y: number }> = Object.freeze({ x: 0, y: 0 });
+    canopyDestination: Readonly<{ x: number; y: number; platformId: string }> | null = null;
     cleanupReason: BossEncounterCleanupReason | null = null;
 
     constructor(x: number, y: number) {
@@ -235,6 +242,49 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       }
     }
 
+    private selectCanopyDestination(platforms: readonly EnemyPlatform[]): Readonly<{ x: number; y: number; platformId: string }> | null {
+      const destinations = platforms.filter((platform) => platform.oneway && platform.arenaPlatId !== undefined
+        && platform.arenaState !== "broken" && platform.arenaState !== "warning" && platform.w >= this.hw * 2)
+        .map((platform) => Object.freeze({ x: platform.x + platform.w / 2, y: platform.y - this.hh, platformId: platform.arenaPlatId ?? "" }))
+        .filter((destination) => Math.abs(destination.x - this.x) > this.hw || Math.abs(destination.y - this.y) > 8);
+      if (destinations.length === 0) return null;
+      const destination = destinations[this.canopyStepIndex % destinations.length];
+      this.canopyStepIndex += 1;
+      return destination ?? null;
+    }
+
+    private beginCanopyStep(platforms: readonly EnemyPlatform[]): void {
+      this.canopyDestination = this.selectCanopyDestination(platforms);
+      if (this.canopyDestination === null) { this.completePhaseOneAttack(); return; }
+      this.canopyStepStart = Object.freeze({ x: this.x, y: this.y });
+      this.canopyStepStage = "telegraph";
+      this.canopyStepT = ROOTBOUND_CANOPY_STEP.telegraph;
+      this.atk = "canopy-step:telegraph";
+    }
+
+    private updateCanopyStep(dt: number, platforms: readonly EnemyPlatform[]): void {
+      if (this.canopyStepStage === null) this.beginCanopyStep(platforms);
+      if (this.canopyStepStage === null || this.canopyDestination === null) return;
+      this.canopyStepT = Math.max(0, this.canopyStepT - dt);
+      if (this.canopyStepStage === "telegraph" && this.canopyStepT <= 0) {
+        this.canopyStepStage = "travel";
+        this.canopyStepT = ROOTBOUND_CANOPY_STEP.travel;
+        this.atk = "canopy-step:travel";
+      } else if (this.canopyStepStage === "travel") {
+        const progress = dependencies.clamp(1 - this.canopyStepT / ROOTBOUND_CANOPY_STEP.travel, 0, 1);
+        const eased = progress * progress * (3 - 2 * progress);
+        this.x = dependencies.lerp(this.canopyStepStart.x, this.canopyDestination.x, eased);
+        this.y = dependencies.lerp(this.canopyStepStart.y, this.canopyDestination.y, eased) - Math.sin(progress * Math.PI) * 64;
+        this.vx = 0; this.vy = 0; this.onGround = false;
+        if (this.canopyStepT <= 0) {
+          this.x = this.canopyDestination.x; this.y = this.canopyDestination.y; this.onGround = true;
+          this.canopyStepStage = "settle"; this.canopyStepT = ROOTBOUND_CANOPY_STEP.settle; this.atk = "canopy-step:settle";
+        }
+      } else if (this.canopyStepStage === "settle" && this.canopyStepT <= 0) {
+        this.canopyStepStage = null; this.canopyDestination = null; this.completePhaseOneAttack();
+      }
+    }
+
     cleanupEncounter(reason: BossEncounterCleanupReason): void {
       if (this.cleanupReason !== null) return;
       this.cleanupReason = reason;
@@ -253,6 +303,9 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.seedArcT = 0;
       this.rootlineStage = null;
       this.rootlineT = 0;
+      this.canopyStepStage = null;
+      this.canopyStepT = 0;
+      this.canopyDestination = null;
       this.cinematicRequest = null;
       this.cinematicPose = "";
       this.cinematicT = 0;
@@ -285,7 +338,9 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         this.updateSeedArc(dt, player, projectiles);
       } else if (this.pendingAttack === "rootline") {
         this.updateRootline(dt);
-      } else if (this.stun <= 0 && this.pendingAttack === null) {
+      } else if (this.pendingAttack === "canopy-step") {
+        this.updateCanopyStep(dt, platforms);
+      } else if (this.stun <= 0) {
         this.stateT = Math.max(0, this.stateT - dt);
         if (this.stateT <= 0) {
           if (this.state === "idle") this.selectNextPhaseOneAttack();
@@ -295,7 +350,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
           }
         }
       }
-      this.integrate(dt, platforms);
+      if (this.canopyStepStage !== "travel") this.integrate(dt, platforms);
     }
   }
   return Rootbound;

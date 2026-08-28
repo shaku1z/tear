@@ -87,6 +87,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   owns warning geometry, the active field, one hazard-scaled hit, cooldown,
   causal start/resolve facts, and natural expiry; presentation consumes the same
   field bounds for its warning outline and active root teeth.
+  VS3-C11-S5 completes the Phase I verb set with Canopy Step. It derives only
+  stable authored terrace centers from the existing arena/placement path,
+  publishes the destination marker before a deterministic arcing move, disables
+  contact throughout, and has no teleport or arrival hitbox. Canonical boss
+  authority now marks Rootbound Phase I attack-available; Phases II–III remain
+  explicitly unavailable until their checkpoints.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

@@ -46,7 +46,7 @@ describe("Rootbound production foundation", () => {
     const boss = new harness.types.Rootbound(placement.x, placement.y);
 
     expect(placement.factoryId).toBe("rootbound");
-    expect([1, 2, 3].map((phase) => bossPhaseAttackAvailable("rootbound", phase))).toEqual([false, false, false]);
+    expect([1, 2, 3].map((phase) => bossPhaseAttackAvailable("rootbound", phase))).toEqual([true, false, false]);
     expect(bossPhaseAttackAvailable("warden", 1)).toBe(true);
     expect(boss).toMatchObject({
       kind: "rootbound",
@@ -57,7 +57,7 @@ describe("Rootbound production foundation", () => {
       presentationId: "rootbound",
       isBoss: true,
       atk: "unavailable",
-      availableAttacks: ["vine-sweep", "seed-arc", "rootline"],
+      availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
       phaseMarks: [0.65, 0.28],
     });
   });
@@ -164,7 +164,7 @@ describe("Rootbound production foundation", () => {
       phaseMarker: 1,
       phaseTag: "KEEPER OF SPRING",
       state: "idle",
-      availableAttacks: ["vine-sweep", "seed-arc", "rootline"],
+      availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
     });
 
     boss.introT = 0.5;
@@ -188,7 +188,7 @@ describe("Rootbound production foundation", () => {
     expect(boss.phase).toBe(2);
 
     boss.update(1, harness.platforms, harness.player, []);
-    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc", "rootline"] });
+    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"] });
     expect(boss.contactDamageEnabled()).toBe(true);
   });
 

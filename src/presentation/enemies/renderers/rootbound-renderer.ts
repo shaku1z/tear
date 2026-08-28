@@ -15,6 +15,19 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       const root = THEME.dark ? "#253627" : "#304b31";
 
       ctx.save();
+      if (this.canopyStepStage && this.canopyDestination) {
+        const destination = this.canopyDestination;
+        const pulse = A11Y.reducedMotion ? 1 : 0.84 + Math.sin(runtime.CLOCK.sim * 8) * 0.16;
+        ctx.globalAlpha = this.canopyStepStage === "settle" ? 0.42 : pulse;
+        ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
+        ctx.fillStyle = A11Y.highContrast ? "#ffffff" : "#7bbf72";
+        ctx.lineWidth = A11Y.highContrast ? 6 : 4;
+        ctx.setLineDash(this.canopyStepStage === "telegraph" ? [14, 9] : []);
+        ctx.beginPath(); ctx.ellipse(destination.x, destination.y + this.hh, this.hw + 20, 18, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(destination.x, destination.y - 20); ctx.lineTo(destination.x - 14, destination.y + 4); ctx.lineTo(destination.x + 14, destination.y + 4); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       ctx.translate(this.x, footY);
       if (this.dying) ctx.rotate(this.facing * this.deathP * 0.4);
 
