@@ -267,6 +267,10 @@ export function createLiveTearRuntimeEnvironment(
   });
   const snapshots = createLiveRuntimeSnapshotController(context, accessClass, (snapshot, result) => {
     waveOwnership.invalidate();
+    const restoredRun = context.state.run();
+    if (restoredRun !== null && context.state.enemies().every((enemy) => enemy.dead)) {
+      waveOwnership.restoreEmptyWave(restoredRun.wave);
+    }
     lastCallerEnvelopeId = 0;
     context.resetSemanticInput();
     context.drainConsumedActions();

@@ -88,5 +88,10 @@ describe("TearBench current-game invariants", () => {
     expect([...ownership.actors(2) ?? []]).toEqual([]);
     ownership.invalidate();
     expect(ownership.actors(2)).toBeUndefined();
+    ownership.restoreEmptyWave(2);
+    expect([...ownership.actors(2) ?? []]).toEqual([]);
+    ownership.consume({ kind: "spawn", tick: 6, actorId: "enemy:restored", actorKind: "charger", x: 5, y: 6 });
+    expect([...ownership.actors(2) ?? []]).toEqual(["enemy:restored"]);
+    expect(() => { ownership.restoreEmptyWave(-1); }).toThrow(/non-negative safe integer/u);
   });
 });

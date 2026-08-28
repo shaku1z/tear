@@ -30,6 +30,17 @@ export function createSourceWaveOwnershipTracker() {
     actors(wave: number): ReadonlySet<string> | undefined {
       return activeWave === wave ? actorIds : undefined;
     },
+    /**
+     * Re-establishes an empty current wave after a validated State Forge
+     * restore. Callers must prove that the restored world has no living
+     * enemies; non-empty snapshots cannot reconstruct wave ownership from
+     * entity presence alone.
+     */
+    restoreEmptyWave(wave: number): void {
+      if (!Number.isSafeInteger(wave) || wave < 0) throw new RangeError("restored wave must be a non-negative safe integer");
+      activeWave = wave;
+      actorIds.clear();
+    },
     invalidate(): void {
       activeWave = undefined;
       actorIds.clear();
