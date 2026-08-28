@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C14-S9 green; VS3-C14-S10 next** |
+| Status | **Active implementation authority — VS3-C14-S10 green; aggregate closure gates next** |
 | Current checkpoint | `VS3-C14` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4775,7 +4775,7 @@ The original S1 proof encoded Root links as `cut`/`break` only. That contradicte
 - [x] **VS3-C14-S7** — Prove attack-ID dedupe, no reward leakage, and no status attachment to default objects. A source-derived `WEAPON_IDS` matrix now resolves two same-swing contacts for every active weapon against a Graft and proves exactly one integrity change. The exact resulting payload contains no enemy status or reward fields, while the kernel policy remains non-enemy, non-rewarding, and proc-ineligible.
 - [x] **VS3-C14-S8** — Prove universal ability behavior remains unchanged across every weapon. The post-integration source-derived `WEAPONS × UPGRADES` evolution matrix remains green alongside weapon secondary/projectile and Verdant conformance. Environment-object contacts expose no `onHit`/enemy target surface, `src/gameplay/upgrades.ts` is unchanged, and no Verdant-specific ability fork or nerf exists.
 - [x] **VS3-C14-S9** — Run existing narrow C40 weapon scenarios only when actual weapon runtime paths changed. Because the live collision phase changed, the clean-source headless current-weapon parity gate and all five existing browser/Ghost seek routes were rerun. Sword Threadcut, Hammer Meteor, Greatsword Wheel Cut, Chainblade Hook & Sling, and Riftlock Loose Cannon/Backblast all retain their certified transport/catch behavior. This is explicit no-change validation; no C40 certification record was rewritten.
-- [ ] **VS3-C14-S10** — Update current weapon documentation/evidence only where behavior truly changed.
+- [x] **VS3-C14-S10** — Update current weapon documentation/evidence only where behavior truly changed. The canonical Final Five implementation guide now documents the definition-driven environment capability seam, exact five-weapon answers, per-attack dedupe/non-proc boundary, S6 Root-link tag correction, Bloom exclusion, and unchanged transport/ability behavior. Existing C40 certification indexes remain untouched because S9 proved no certified route changed.
 
 ## Agent implementation procedure
 

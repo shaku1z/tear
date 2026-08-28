@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C14",
-  "currentSubgoal": "VS3-C14-S10",
+  "currentSubgoal": "VS3-C14-CLOSE",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -51,7 +51,7 @@
     "VS3-C13 Rootbound Phase III is GREEN at 0baeca907e1cdea9b82d4bda730649d305844276: all ten ordered subgoals pass; repository typecheck and lint, 40 aggregate terminal/replay/state-codec tests, attributed test-standalone build 44ce4a40f46cd702e09ccd23bcd99ce9677eee49c9b7cceb4d2e307dd8c2f819, live six-boss browser matrix, State Forge runtime/studio/exit matrix, and current live-detached parity are green."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C14-S10: update current weapon documentation/evidence only where behavior truly changed.",
+  "nextAction": "Run the complete VS3-C14 minimum proof and close the checkpoint from one clean source identity.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2163,7 +2163,7 @@
         {
           "id": "VS3-C14-S10",
           "description": "Update current weapon documentation/evidence only where behavior truly changed.",
-          "status": "not-started"
+          "status": "complete"
         }
       ],
       "agentProcedure": [
@@ -2186,7 +2186,8 @@
         "pnpm exec vitest run tests/unit/weapon-ability-conformance.test.ts tests/unit/weapon-secondary-runtime.test.ts tests/unit/weapon-projectile-runtime.test.ts tests/unit/verdant-final-five-conformance.test.ts",
         "pnpm test:headless:current-weapon-parity",
         "pnpm build:test:standalone",
-        "pnpm test:browser:current-weapon-parity"
+        "pnpm test:browser:current-weapon-parity",
+        "pnpm check:docs"
       ],
       "exitConditions": [
         "All five active weapons have a valid object answer.",
@@ -2250,7 +2251,8 @@
         "VS3-C14-S6 Riftlock object conformance is green: the canonical Riftlock definition supplies held cut and player-projectile projectile-cut. The live phase consumes one matching non-secondary Razor Round on accepted Root/Regrowth/Graft contact without invoking enemy Capture; Backblast projectiles are excluded and zero-chamber Backblast still returns/catches. S6 corrected the narrower S1 Root-link tag assumption to match authoritative Sections 9.8/16.7, updating all production Root-link factories and making the kernel default to serialized object tags. Fifty-four focused object/factory tests, 13 live/projectile tests, the 19-test weapon suite, typecheck, and architecture pass; no C40 record changed.",
         "VS3-C14-S7 default-object isolation is green: a source-derived WEAPON_IDS matrix proves every active weapon changes Graft integrity exactly once for two contacts sharing one swing ID. Exact resulting payloads contain no enemy status/reward fields, and the kernel policy remains countsAsOrdinaryEnemy false, grantsEnemyReward false, and procEligible false. Twenty-three focused tests plus typecheck pass.",
         "VS3-C14-S8 universal-ability conformance is green: the post-integration WEAPONS x UPGRADES evolution matrix and adjacent secondary/projectile/Verdant suites pass. Environment-object contacts expose no enemy onHit target surface, upgrades.ts has no diff, and no Verdant-specific ability fork or nerf exists. Thirteen tests pass.",
-        "VS3-C14-S9 existing transport evidence is green on clean source dbcf75552cc00d035f6aee60c26f7d318f2748c8: headless current-weapon parity passes 6/6; attributed standalone artifact c6e89b413e7da389002e4e5df078a1df6c89652f8b55c00254b860896938a0c5 builds; and all five Sword/Hammer/Greatsword/Chainblade/Riftlock browser Ghost seek routes pass. Generated receipts remained ignored; C40 certification records are unchanged."
+        "VS3-C14-S9 existing transport evidence is green on clean source dbcf75552cc00d035f6aee60c26f7d318f2748c8: headless current-weapon parity passes 6/6; attributed standalone artifact c6e89b413e7da389002e4e5df078a1df6c89652f8b55c00254b860896938a0c5 builds; and all five Sword/Hammer/Greatsword/Chainblade/Riftlock browser Ghost seek routes pass. Generated receipts remained ignored; C40 certification records are unchanged.",
+        "VS3-C14-S10 documentation truth is green: the canonical Final Five implementation guide records the shared environment capability architecture, five-weapon conformance matrix, exact dedupe/non-proc/status boundary, S6 Root-link contract correction, Bloom exclusion, and unchanged transport/ability behavior. Existing C40 certification indexes were intentionally not rewritten."
       ],
       "blockers": [],
       "notes": [
