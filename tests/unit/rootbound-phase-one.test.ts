@@ -158,7 +158,7 @@ describe("Rootbound Phase I cadence", () => {
     environment.setRootboundActorsSource(() => [Object.freeze({
       id: "rootbound:test",
       source: actor,
-      state: Object.freeze({ stage: actor.rootlineStage, geometry: actor.rootlineGeometry(), damage: ROOTBOUND_ROOTLINE.damage }),
+      state: Object.freeze({ stage: actor.rootlineStage, geometry: actor.rootlineGeometry(), damage: ROOTBOUND_ROOTLINE.damage, cleanupReason: actor.rootlineCleanupReason }),
       player: Object.freeze({
         x: player.x, y: player.y, hw: player.hw, hh: player.hh, invulnerable: Boolean(player.invulnerable),
         hazardDamageMultiplier: 1,
@@ -217,5 +217,32 @@ describe("Rootbound Phase I cadence", () => {
     actor.update(ROOTBOUND_CANOPY_STEP.settle, harness.platforms, player, []);
     expect(actor).toMatchObject({ pendingAttack: null, canopyStepStage: null, canopyDestination: null, state: "recover" });
     expect(player.damage).toEqual([]);
+  });
+
+  it("cleans every temporary Phase I owner before Phase II becomes active", () => {
+    const { harness, actor } = boss();
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "phase-exit" });
+    environment.setRootboundActorsSource(() => [Object.freeze({
+      id: "rootbound:phase-exit", source: actor,
+      state: Object.freeze({ stage: actor.rootlineStage, geometry: actor.rootlineGeometry(), damage: ROOTBOUND_ROOTLINE.damage, cleanupReason: actor.rootlineCleanupReason }),
+    })]);
+    actor.pendingAttack = "rootline";
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    environment.step(1, 1 / 120, () => undefined);
+    expect(environment.fields()[0]).toMatchObject({ state: "warning" });
+
+    const seed = new harness.Projectile(actor.x, actor.y, 10, -10);
+    seed.owner = actor; seed.sourceEnemy = actor; seed.bossAttack = "seed-arc";
+    const projectiles: EnemyProjectile[] = [seed];
+    actor.hp = actor.maxHp * actor.phaseMarks[0];
+    actor.update(1 / 120, harness.platforms, harness.player, projectiles);
+    expect(actor).toMatchObject({
+      phase: 2, phaseMarker: 2, phaseOneExited: true, pendingAttack: null,
+      vineSweepStage: null, seedArcStage: null, rootlineStage: null, canopyStepStage: null,
+      state: "recover", atk: "unavailable", rootlineCleanupReason: "stage-transition",
+    });
+    expect(seed).toMatchObject({ dead: true, shatterReason: "phase-transition" });
+    environment.step(2, 1 / 120, () => undefined);
+    expect(environment.fields()[0]).toMatchObject({ state: "expired", cleanupReason: "stage-transition" });
   });
 });

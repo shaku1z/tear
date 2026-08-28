@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C11-S5 green; VS3-C11-S6 next** |
+| Status | **Active implementation authority — VS3-C11-S6 green; VS3-C11-S7 next** |
 | Current checkpoint | `VS3-C11` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4471,7 +4471,7 @@ Implement and prove the complete Phase I attack grammar, punish windows, environ
 - [x] **VS3-C11-S3** — Implement Seed Arc through current projectile lifecycle and explicit counterplay capability.
 - [x] **VS3-C11-S4** — Implement Rootline through the shared environment/hazard owner with bounded warning/active/cleanup.
 - [x] **VS3-C11-S5** — Implement Canopy Step through authored destinations and visible destination telegraph.
-- [ ] **VS3-C11-S6** — Implement phase-entry/exit state and remove invalid temporary objects before Phase II.
+- [x] **VS3-C11-S6** — Implement phase-entry/exit state and remove invalid temporary objects before Phase II.
 - [ ] **VS3-C11-S7** — Add high-contrast, reduced-motion, low-graphics, and audio-independent attack telegraphs.
 - [ ] **VS3-C11-S8** — Validate attack cadence and damage under current difficulties.
 - [ ] **VS3-C11-S9** — Prove no attack commits during boss intro/transformation protection.

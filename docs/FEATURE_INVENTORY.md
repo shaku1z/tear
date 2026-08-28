@@ -93,6 +93,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   contact throughout, and has no teleport or arrival hitbox. Canonical boss
   authority now marks Rootbound Phase I attack-available; Phases II–III remain
   explicitly unavailable until their checkpoints.
+  VS3-C11-S6 adds an atomic Phase I exit barrier: threshold crossing clears
+  actor attack state, settles interrupted Canopy travel at its declared target,
+  kills owned Seed Arc projectiles with phase-transition provenance, and causes
+  environment-owned Rootline to expire with the same reason before Phase II.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

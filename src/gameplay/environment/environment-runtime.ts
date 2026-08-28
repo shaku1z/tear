@@ -51,6 +51,7 @@ export interface RootboundEnvironmentActor {
     stage: "warning" | "active" | "cleanup" | null;
     geometry: Readonly<{ x: number; y: number; w: number; h: number }>;
     damage: number;
+    cleanupReason: "natural-expiry" | "stage-transition" | null;
   }>;
   readonly player?: Readonly<{
     x: number; y: number; hw: number; hh: number; invulnerable: boolean; hazardDamageMultiplier: number;
@@ -169,9 +170,10 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
         }
       }
       if (stage === null && fieldId !== undefined) {
-        this.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+        const cleanupReason = actor.state.cleanupReason ?? "natural-expiry";
+        this.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason });
         if (this.#events !== undefined) publishEnvironmentEvent(this.#events, {
-          event: "field-resolved", objectId: fieldId, category: "field", objectKind: "rootline", reason: "natural-expiry",
+          event: "field-resolved", objectId: fieldId, category: "field", objectKind: "rootline", reason: cleanupReason,
         }, tick);
         this.#rootlineFields.delete(actor.id); this.#rootlineHitFields.delete(fieldId);
       }

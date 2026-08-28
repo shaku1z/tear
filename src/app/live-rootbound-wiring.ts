@@ -12,6 +12,7 @@ export function bindLiveRootboundActors(
   environment.setRootboundActorsSource(() => enemies().filter((enemy) => enemy.kind === "rootbound").map((enemy): RootboundEnvironmentActor => {
     const actor = enemy as GameEnemy & {
       rootlineStage?: RootboundRootlineStage | null;
+      rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
       rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
     };
     const id = actorId(enemy);
@@ -23,6 +24,7 @@ export function bindLiveRootboundActors(
         stage: actor.rootlineStage ?? null,
         geometry: actor.rootlineGeometry?.() ?? Object.freeze({ x: enemy.x, y: enemy.y, w: 0, h: 0 }),
         damage: ROOTBOUND_ROOTLINE.damage,
+        cleanupReason: actor.rootlineCleanupReason ?? null,
       }),
       ...(target === null ? {} : { player: Object.freeze({
         x: target.x, y: target.y, hw: target.hw, hh: target.hh,

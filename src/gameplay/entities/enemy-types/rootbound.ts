@@ -60,12 +60,14 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     rootlineStage: RootboundRootlineStage | null = null;
     rootlineT = 0;
     rootlineFacing = 1;
+    rootlineCleanupReason: "natural-expiry" | "stage-transition" | null = null;
     canopyStepStage: RootboundCanopyStepStage | null = null;
     canopyStepT = 0;
     canopyStepIndex = 0;
     canopyStepStart: Readonly<{ x: number; y: number }> = Object.freeze({ x: 0, y: 0 });
     canopyDestination: Readonly<{ x: number; y: number; platformId: string }> | null = null;
     cleanupReason: BossEncounterCleanupReason | null = null;
+    phaseOneExited = false;
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -222,6 +224,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.rootlineStage = "warning";
       this.rootlineT = ROOTBOUND_ROOTLINE.windup;
       this.rootlineFacing = this.facing;
+      this.rootlineCleanupReason = null;
       this.atk = "rootline:warning";
     }
 
@@ -237,7 +240,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         this.rootlineT = ROOTBOUND_ROOTLINE.cleanup;
         this.atk = "rootline:cleanup";
       } else if (this.rootlineStage === "cleanup" && this.rootlineT <= 0) {
-        this.rootlineStage = null;
+        this.rootlineStage = null; this.rootlineCleanupReason = "natural-expiry";
         this.completePhaseOneAttack();
       }
     }
@@ -285,6 +288,24 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       }
     }
 
+    private exitPhaseOne(projectiles: EnemyProjectile[]): void {
+      if (this.phaseOneExited) return;
+      this.phaseOneExited = true;
+      if (this.canopyDestination !== null && this.canopyStepStage === "travel") {
+        this.x = this.canopyDestination.x; this.y = this.canopyDestination.y; this.onGround = true;
+      }
+      this.pendingAttack = null;
+      this.vineSweepStage = null; this.vineSweepT = 0; this.vineSweepHitSpent = false;
+      this.seedArcStage = null; this.seedArcT = 0;
+      if (this.rootlineStage !== null) this.rootlineCleanupReason = "stage-transition";
+      this.rootlineStage = null; this.rootlineT = 0;
+      this.canopyStepStage = null; this.canopyStepT = 0; this.canopyDestination = null;
+      for (const projectile of projectiles) if (projectile.owner === this && projectile.bossAttack === "seed-arc" && !projectile.dead) {
+        projectile.dead = true; projectile.shatterReason = "phase-transition";
+      }
+      this.atk = "unavailable"; this.state = "recover"; this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery;
+    }
+
     cleanupEncounter(reason: BossEncounterCleanupReason): void {
       if (this.cleanupReason !== null) return;
       this.cleanupReason = reason;
@@ -303,6 +324,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.seedArcT = 0;
       this.rootlineStage = null;
       this.rootlineT = 0;
+      this.rootlineCleanupReason = "stage-transition";
       this.canopyStepStage = null;
       this.canopyStepT = 0;
       this.canopyDestination = null;
@@ -318,6 +340,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         ? 1
         : this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[1] ? 2 : 3;
       if (nextPhase > this.phaseMarker) {
+        if (this.phaseMarker === 1) this.exitPhaseOne(projectiles);
         this.phaseMarker = nextPhase;
         this.phaseTag = nextPhase === 2 ? "THE GARDEN REMEMBERS" : "NOTHING HERE DIES";
       }
