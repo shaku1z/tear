@@ -7,6 +7,10 @@ import { planNextWave, type PlanNextWaveOptions, type WavePlanningState, type Wa
 import { STAGES } from "../../src/gameplay/stages";
 import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
 import { TUTORIAL_LESSONS, TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import type { EnvironmentClearReason } from "../../src/gameplay/environment/environment-contracts";
+import { cleanupBossEncounterActors, type BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
+import { createEnemyHarness } from "./enemy-test-harness";
 
 class ConstantRandom implements RandomSource {
   constructor(private readonly value: number) {}
@@ -87,5 +91,38 @@ describe("Verdant mode coverage", () => {
     }
     expect(spawnKinds).toEqual(new Set(["charger", "ranged"]));
     expect(spawnKinds.has("rootbinder")).toBe(false);
+  });
+
+  it("cleans Verdant environment and Rootbound ownership at every supported lifecycle boundary", () => {
+    const boundaries: readonly Readonly<{
+      label: "reset" | "retry" | "quit" | "defeat" | "victory" | "stage-transition" | "mode-change";
+      boss: BossEncounterCleanupReason;
+      environment: EnvironmentClearReason;
+    }>[] = [
+      { label: "reset", boss: "reset", environment: "new-run" },
+      { label: "retry", boss: "retry", environment: "retry" },
+      { label: "quit", boss: "exit", environment: "abandon" },
+      { label: "defeat", boss: "death", environment: "defeat" },
+      { label: "victory", boss: "death", environment: "boss-terminal" },
+      { label: "stage-transition", boss: "exit", environment: "stage-transition" },
+      { label: "mode-change", boss: "reset", environment: "new-run" },
+    ];
+    for (const boundary of boundaries) {
+      const harness = createEnemyHarness();
+      const boss = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
+      const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: `lifecycle:${boundary.label}` });
+      environment.addField({ kind: "bloom-well", geometry: { x: 800, y: 700, radius: 120 }, state: "active",
+        stateTick: 0, timer: 0, ownerId: "enemy:rootbound", schedule: null,
+        eligibility: { player: true, enemies: true, bosses: true }, force: null, cleanupReason: null });
+      environment.addRoute({ kind: "regrowth-link", points: [{ x: 800, y: 700 }], state: "active",
+        stateTick: 0, ownerId: "enemy:rootbound", cleanupReason: null });
+
+      cleanupBossEncounterActors([boss], boundary.boss);
+      environment.clear(boundary.environment);
+
+      expect(environment.snapshot(), boundary.label).toMatchObject({ fields: [], combatObjects: [], routes: [] });
+      expect(environment.lastClearReason, boundary.label).toBe(boundary.environment);
+      expect(boss, boundary.label).toMatchObject({ cleanupReason: boundary.boss });
+    }
   });
 });

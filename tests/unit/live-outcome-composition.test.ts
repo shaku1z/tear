@@ -12,6 +12,21 @@ vi.mock("../../src/gameplay/runtime/gameplay-event-publishers", () => ({
 import { createLiveOutcomeComposition } from "../../src/app/live-outcome-composition";
 
 describe("live outcome composition pending-finale persistence", () => {
+  it.each([
+    ["defeat", "defeat"],
+    ["victory", "boss-terminal"],
+  ] as const)("cleans boss-local and environment ownership before %s termination", (outcome, environmentReason) => {
+    const order: string[] = [];
+    createLiveOutcomeComposition({ dependencies: {
+      GAMEPLAY_EVENTS: {}, pendingFinalePersistence: { pending: () => null }, Input: { stopSemanticRecording: () => { order.push("input"); } },
+    } as never, cleanupBossActors: () => { order.push("boss"); }, environment: { clear: (reason: string) => { order.push(`environment:${reason}`); } },
+    lifecycle: { terminate: (reason: string) => { order.push(`lifecycle:${reason}`); } },
+    } as never);
+    const context = captured.context as unknown as { readonly terminate: (reason: "defeat" | "victory") => void };
+    context.terminate(outcome);
+    expect(order).toEqual(["boss", `environment:${environmentReason}`, `lifecycle:${outcome}`, "input"]);
+  });
+
   it("cleans the active boss before retry starts a replacement run", () => {
     const order: string[] = [];
     createLiveOutcomeComposition({ dependencies: {

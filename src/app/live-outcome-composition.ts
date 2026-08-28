@@ -89,7 +89,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
     stopClipper: () => { d.Clipper?.stop(); },
     terminate: (outcome) => {
-      try { options.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal"); options.lifecycle.terminate(outcome); }
+      try { options.cleanupBossActors(); options.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal"); options.lifecycle.terminate(outcome); }
       finally { d.Input.stopSemanticRecording(); }
     },
     publishTerminal,
