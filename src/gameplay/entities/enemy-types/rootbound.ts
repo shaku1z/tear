@@ -5,7 +5,7 @@ import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
 import type { RootCagePlacementRequest } from "../../environment/root-cage";
-import { advanceRootboundRegrowth, beginRootboundRegrowth, createRootboundRegrowthState, type RootboundRegrowthState } from "../../environment/regrowth-link";
+import { advanceRootboundRegrowth, beginRootboundRegrowth, createRootboundRegrowthState, resolveRootboundRegrowthOutcome, type RootboundRegrowthState } from "../../environment/regrowth-link";
 import type { BossRuntime } from "./boss-runtime";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
@@ -173,8 +173,18 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       const next = advanceRootboundRegrowth(this.regrowthState, tick, activeConnectionIds, bossChannelBroken);
       this.regrowthState = next;
       if (next.phase === "channeling") this.atk = "regrowth:channeling";
-      else if (next.phase === "resolved") this.atk = `regrowth:${next.interruptClassification ?? "resolved"}`;
-      return next;
+      else if (next.phase === "resolved") {
+        if (next.resolvedHealFraction === null) {
+          const recoverable = this.maxHp > 0 ? Math.max(0, (this.maxHp - this.hp) / this.maxHp) : 0;
+          const outcome = resolveRootboundRegrowthOutcome(next, recoverable);
+          this.regrowthState = outcome.state;
+          this.hp = Math.min(this.maxHp, this.hp + this.maxHp * outcome.resolvedHealFraction);
+          this.state = "recover";
+          this.stateT = outcome.recoverySeconds;
+        }
+        this.atk = `regrowth:${this.regrowthState.interruptClassification ?? "resolved"}`;
+      }
+      return this.regrowthState;
     }
 
     override contactDamageEnabled(): boolean {

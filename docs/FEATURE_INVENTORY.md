@@ -185,7 +185,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   existing `root-link` combat-object composition supplies exactly three
   severable connections while data-only `regrowth-link` routes project the same
   geometry for presentation. The production Rootbound type exposes the same
-  guarded state; S2 still owns healing and punish-recovery effects.
+  guarded state. VS3-C13-S2 resolves that state once: full interrupt heals zero
+  with the longest punish recovery, partial interrupt heals in exact proportion
+  to surviving required links, and no interrupt requests at most 12% max HP.
+  Actual recovery is capped by missing HP, recorded in canonical state, and
+  cannot reduce the monotonic Phase III marker.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

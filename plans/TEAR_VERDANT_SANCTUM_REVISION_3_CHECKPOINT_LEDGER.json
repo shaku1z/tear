@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C13",
-  "currentSubgoal": "VS3-C13-S2",
+  "currentSubgoal": "VS3-C13-S3",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -46,7 +46,7 @@
     "VS3-C12 Rootbound Phase II is GREEN at 6b0a5e6e0309d6004d09947b352837601fca069a: all ten ordered subgoals pass; 89 aggregate Phase II/environment/State Forge tests, repository lint, typecheck, architecture, exact-commit game-reference, standalone build, live Graft destruction journey, State Forge matrix, Verdant presentation, and source-derived six-boss browser matrix are green."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C13-S2: apply the full, partial, and no-interrupt Regrowth outcomes with bounded healing and recovery.",
+  "nextAction": "Execute VS3-C13-S3: prove Regrowth cannot reopen a completed phase or begin a second time.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1973,7 +1973,7 @@
         {
           "id": "VS3-C13-S2",
           "description": "Implement full, partial, and no-interrupt outcomes with bounded healing.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C13-S3",
@@ -2068,10 +2068,12 @@
         "pnpm exec vitest run tests/unit/rootbound-regrowth.test.ts tests/unit/rootbound-phase-two.test.ts",
         "pnpm typecheck",
         "pnpm exec eslint src/gameplay/environment/regrowth-link.ts src/gameplay/entities/enemy-types/rootbound.ts tests/unit/rootbound-regrowth.test.ts",
-        "pnpm check:architecture"
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/rootbound-regrowth.test.ts tests/unit/rootbound-phase-two.test.ts"
       ],
       "evidence": [
-        "VS3-C13-S1 Regrowth channel authority is green: frozen tick-based state records one-use count, start tick, exact required and surviving connection IDs, bounded progress, and a single full/partial/no-interrupt classification without applying S2 healing. The existing root-link combat-object composition supplies exactly three cut/break connections and regrowth-link routes supply immutable presentation geometry; production Rootbound exposes the same guarded state. Sixteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass."
+        "VS3-C13-S1 Regrowth channel authority is green: frozen tick-based state records one-use count, start tick, exact required and surviving connection IDs, bounded progress, and a single full/partial/no-interrupt classification without applying S2 healing. The existing root-link combat-object composition supplies exactly three cut/break connections and regrowth-link routes supply immutable presentation geometry; production Rootbound exposes the same guarded state. Sixteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
+        "VS3-C13-S2 bounded outcomes are green: full interrupt heals zero and grants the longest 1.8-second punish recovery; partial interrupt heals proportionally to surviving required links with a 1.1-second recovery; no interrupt requests at most 12% max HP with a 0.65-second recovery. Actual healing is capped by missing HP, recorded canonically, applied once, and cannot lower the monotonic Phase III marker. Eighteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass."
       ],
       "blockers": [],
       "notes": []

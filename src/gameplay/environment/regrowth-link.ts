@@ -5,6 +5,12 @@ export const ROOTBOUND_REGROWTH_TIMING = Object.freeze({
   channelTicks: 480,
 });
 export const ROOTBOUND_REGROWTH_CONNECTION_COUNT = 3;
+export const ROOTBOUND_REGROWTH_OUTCOMES = Object.freeze({
+  maximumHealFraction: 0.12,
+  fullInterruptRecovery: 1.8,
+  partialInterruptRecovery: 1.1,
+  noInterruptRecovery: 0.65,
+});
 
 export interface RootboundRegrowthConnectionBundle {
   readonly combatObjects: readonly EnvironmentCombatObjectState[];
@@ -78,6 +84,13 @@ export interface RootboundRegrowthState {
   readonly survivingConnectionIds: readonly string[];
   readonly progress: number;
   readonly interruptClassification: RootboundRegrowthInterruptClassification | null;
+  readonly resolvedHealFraction: number | null;
+}
+
+export interface RootboundRegrowthResolution {
+  readonly state: RootboundRegrowthState;
+  readonly resolvedHealFraction: number;
+  readonly recoverySeconds: number;
 }
 
 function freezeState(state: RootboundRegrowthState): RootboundRegrowthState {
@@ -108,6 +121,7 @@ export function createRootboundRegrowthState(): RootboundRegrowthState {
     survivingConnectionIds: Object.freeze([]),
     progress: 0,
     interruptClassification: null,
+    resolvedHealFraction: null,
   });
 }
 
@@ -127,6 +141,7 @@ export function beginRootboundRegrowth(
     survivingConnectionIds: requiredConnectionIds,
     progress: 0,
     interruptClassification: null,
+    resolvedHealFraction: null,
   });
 }
 
@@ -149,4 +164,31 @@ export function advanceRootboundRegrowth(
     ? "full-interrupt"
     : survivingConnectionIds.length === state.requiredConnectionIds.length ? "no-interrupt" : "partial-interrupt";
   return freezeState({ ...state, phase: "resolved", survivingConnectionIds, progress: 1, interruptClassification });
+}
+
+function recoveryFor(classification: RootboundRegrowthInterruptClassification): number {
+  if (classification === "full-interrupt") return ROOTBOUND_REGROWTH_OUTCOMES.fullInterruptRecovery;
+  if (classification === "partial-interrupt") return ROOTBOUND_REGROWTH_OUTCOMES.partialInterruptRecovery;
+  return ROOTBOUND_REGROWTH_OUTCOMES.noInterruptRecovery;
+}
+
+/** Applies the bounded outcome once; the caller owns converting the fraction into actor HP. */
+export function resolveRootboundRegrowthOutcome(
+  state: RootboundRegrowthState,
+  maximumRecoverableFraction: number,
+): RootboundRegrowthResolution {
+  if (state.phase !== "resolved" || state.interruptClassification === null) throw new RangeError("Regrowth outcome requires a resolved channel");
+  if (!Number.isFinite(maximumRecoverableFraction) || maximumRecoverableFraction < 0) {
+    throw new RangeError("Regrowth recoverable fraction must be finite and non-negative");
+  }
+  const recoverySeconds = recoveryFor(state.interruptClassification);
+  if (state.resolvedHealFraction !== null) return Object.freeze({ state, resolvedHealFraction: state.resolvedHealFraction, recoverySeconds });
+  const survivingRatio = state.requiredConnectionIds.length === 0 ? 0
+    : state.survivingConnectionIds.length / state.requiredConnectionIds.length;
+  const requestedHealFraction = state.interruptClassification === "full-interrupt"
+    ? 0
+    : ROOTBOUND_REGROWTH_OUTCOMES.maximumHealFraction * survivingRatio;
+  const resolvedHealFraction = Math.min(requestedHealFraction, maximumRecoverableFraction);
+  const resolvedState = freezeState({ ...state, resolvedHealFraction });
+  return Object.freeze({ state: resolvedState, resolvedHealFraction, recoverySeconds });
 }

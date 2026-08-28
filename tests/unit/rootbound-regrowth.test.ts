@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   ROOTBOUND_REGROWTH_CONNECTION_COUNT,
+  ROOTBOUND_REGROWTH_OUTCOMES,
   ROOTBOUND_REGROWTH_TIMING,
   advanceRootboundRegrowth,
   beginRootboundRegrowth,
   createRootboundRegrowthConnections,
   createRootboundRegrowthState,
+  resolveRootboundRegrowthOutcome,
 } from "../../src/gameplay/environment/regrowth-link";
 import { CONFIG } from "../../src/config/game-config";
 import { createEnemyHarness } from "./enemy-test-harness";
@@ -117,5 +119,55 @@ describe("Rootbound Regrowth channel", () => {
     expect(actor.beginRegrowth(501, connections)).toBe(false);
     actor.advanceRegrowth(501, new Set(), false);
     expect(actor).toMatchObject({ atk: "regrowth:full-interrupt", regrowthState: { phase: "resolved", interruptClassification: "full-interrupt" } });
+  });
+
+  it("maps full, proportional partial, and no interrupt to bounded healing and ordered recovery", () => {
+    const outcomes = [
+      { active: [] as string[], classification: "full-interrupt", expectedHeal: 0, recovery: ROOTBOUND_REGROWTH_OUTCOMES.fullInterruptRecovery },
+      { active: [connections[0]], classification: "partial-interrupt", expectedHeal: ROOTBOUND_REGROWTH_OUTCOMES.maximumHealFraction / 3,
+        recovery: ROOTBOUND_REGROWTH_OUTCOMES.partialInterruptRecovery },
+      { active: [...connections], classification: "no-interrupt", expectedHeal: ROOTBOUND_REGROWTH_OUTCOMES.maximumHealFraction,
+        recovery: ROOTBOUND_REGROWTH_OUTCOMES.noInterruptRecovery },
+    ] as const;
+    for (const outcome of outcomes) {
+      const classified = advanceRootboundRegrowth(
+        beginRootboundRegrowth(createRootboundRegrowthState(), 0, connections),
+        ROOTBOUND_REGROWTH_TIMING.channelTicks,
+        new Set(outcome.active),
+        false,
+      );
+      const resolved = resolveRootboundRegrowthOutcome(classified, 1);
+      expect(resolved.state.interruptClassification).toBe(outcome.classification);
+      expect(resolved.state.resolvedHealFraction).toBeCloseTo(outcome.expectedHeal, 8);
+      expect(resolved.recoverySeconds).toBe(outcome.recovery);
+      expect(resolved.resolvedHealFraction).toBeLessThanOrEqual(ROOTBOUND_REGROWTH_OUTCOMES.maximumHealFraction);
+      expect(resolveRootboundRegrowthOutcome(resolved.state, 1)).toEqual(resolved);
+    }
+    expect(ROOTBOUND_REGROWTH_OUTCOMES.fullInterruptRecovery).toBeGreaterThan(ROOTBOUND_REGROWTH_OUTCOMES.partialInterruptRecovery);
+    expect(ROOTBOUND_REGROWTH_OUTCOMES.partialInterruptRecovery).toBeGreaterThanOrEqual(0.55);
+  });
+
+  it("applies the bounded outcome once to production HP and recovery", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as InstanceType<
+      ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]
+    > & {
+      regrowthState: ReturnType<typeof createRootboundRegrowthState>;
+      beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean;
+      advanceRegrowth(tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken?: boolean): ReturnType<typeof createRootboundRegrowthState>;
+    };
+    actor.hp = actor.maxHp * 0.2;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    actor.cinematicRequest = null;
+    actor.cinematicT = 0;
+    actor.hp = actor.maxHp * 0.95;
+    expect(actor.beginRegrowth(100, connections)).toBe(true);
+    actor.advanceRegrowth(100 + ROOTBOUND_REGROWTH_TIMING.channelTicks, new Set(connections), false);
+    expect(actor.hp).toBe(actor.maxHp);
+    expect(actor.regrowthState).toMatchObject({ resolvedHealFraction: 0.05, interruptClassification: "no-interrupt" });
+    expect(actor).toMatchObject({ phase: 3, state: "recover", stateT: ROOTBOUND_REGROWTH_OUTCOMES.noInterruptRecovery });
+    const hp = actor.hp;
+    actor.advanceRegrowth(1_000, new Set(), true);
+    expect(actor.hp).toBe(hp);
   });
 });
