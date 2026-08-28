@@ -4970,7 +4970,7 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 
 - [x] **VS3-C16-S1** — Add Rootbound and Verdant behavior to Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test through current mode paths.
 - [x] **VS3-C16-S2** — Prove Tutorial remains unaffected or update only an explicitly approved teaching surface.
-- [ ] **VS3-C16-S3** — Add Rootbound/Rootbinder/Bloom development controls through safe current test/State Forge boundaries.
+- [x] **VS3-C16-S3** — Add Rootbound/Rootbinder/Bloom development controls through safe current test/State Forge boundaries.
 - [ ] **VS3-C16-S4** — Add stable achievement entries and runtime predicates for approved Verdant achievements.
 - [ ] **VS3-C16-S5** — Replace fixed-five copy/count assumptions with source-derived values where appropriate.
 - [ ] **VS3-C16-S6** — Add source-owned Verdant/Rootbound/link/Graft/Regrowth telemetry facts and statistic updates.
@@ -5036,6 +5036,8 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 > `VS3-C16-S1 is GREEN at 85ea62869e6f37117807f56ac61fd9d9b9ff8740. The next authorized action is VS3-C16-S2, proving Tutorial remains unaffected. Campaign and Boss Test retain their existing canonical paths; Endless/Gauntlet use rotating authored stage pools; Playground and Enemy Test project the canonical enemy identities. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 > `VS3-C16-S2 is GREEN at c904cbb75d750bc33c0e17ef03e3380d5dae1913. Tutorial remains on its authored Charger/Ranged curriculum, baseline loadout, training arenas, and Verdant-variant exclusion. The next authorized action is VS3-C16-S3, adding safe Rootbound/Rootbinder/Bloom development controls through current test and State Forge boundaries. Verdant publication remains prohibited, and C40 status is unchanged.`
+
+> `VS3-C16-S3 is GREEN at b4f3cd219af984b7f8632e746972b122d0b74040. Rootbound uses the generic boss-frame forge; Rootbinder networks and Bloom cycles use their existing specialized State Forge projections; live mutation remains Class-A/test-build-only. No duplicate development registry or production shortcut was added. The next authorized action is VS3-C16-S4, implementing approved Verdant achievements through the source-owned catalog and runtime predicates. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 

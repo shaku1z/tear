@@ -343,7 +343,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   roster from that same authority. The eight stable Playground number hotkeys
   remain unchanged; no mode, enemy, stage, or boss registry was added. Tutorial
   remains isolated on its authored Charger/Ranged teaching surface, baseline
-  loadout, training arenas, and explicit variant exclusion.
+  loadout, training arenas, and explicit variant exclusion. Rootbound boss
+  frames use the generic boss State Forge factory, while Rootbinder networks and
+  Bloom cycles retain their existing specialized projections. Their live
+  mutation controls remain Class-A/test-build-only and are absent from Class B/C
+  and production player surfaces.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
