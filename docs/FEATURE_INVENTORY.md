@@ -360,6 +360,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   metrics without an authoritative gameplay fact—such as time inside Wells,
   Bloom-assisted launches, deaths while leashed, or inferred displacement—stay
   deferred until their owning runtime publishes an exact fact.
+  Replay provenance now identifies this intermediate content as
+  `tear-rules-verdant-r3-engineering-v1`, separate from the pre-Verdant public
+  ruleset. Deterministic admission can reject mismatched rules while archival
+  parsing remains available. Stage facts retain numeric compatibility for
+  Ghost 2 and add a current-roster-validated stable stage ID plus explicit
+  enter/exit semantics for causal consumers.
   Wayfarer and difficulty-completion goals/copy now derive from the stage and
   difficulty catalogs; Gauntlet roster copy derives from boss identities; and
   the standard-mode profile projection is shared by run start and Well-Rounded.
