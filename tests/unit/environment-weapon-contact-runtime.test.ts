@@ -8,17 +8,18 @@ import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-r
 import type { EnvironmentCombatObjectState } from "../../src/gameplay/environment/environment-contracts";
 import { getWeapon } from "../../src/gameplay/weapons";
 
-function makeBlade(weaponId: "sword" | "hammer" | "greatsword") {
+function makeBlade(weaponId: "sword" | "hammer" | "greatsword" | "chainblade") {
   const config = structuredClone(CONFIG);
+  const input = { touchAim: false, stickAim: null, locked: false, mouseX: 0, mouseY: 0, tetherHeld: false,
+    consumeDelta: () => ({ x: 0, y: 0 }) };
   const Blade = createBlade({
     CLOCK: { sim: 0 }, CONFIG: config,
-    Input: { touchAim: false, stickAim: null, locked: false, mouseX: 0, mouseY: 0, tetherHeld: false,
-      consumeDelta: () => ({ x: 0, y: 0 }) },
+    Input: input,
     presentation: { draw: () => undefined }, clamp, len, lerp, lerpAngle,
   });
   const blade = new Blade(), weapon = getWeapon(weaponId);
   blade.weapon = weapon; blade.model = weapon.model; weapon.onReset?.({ blade });
-  return { blade, config };
+  return { blade, config, input };
 }
 
 function object(id: string, kind: "root-link" | "graft-anchor", geometry: EnvironmentCombatObjectState["geometry"], integrity = 1): EnvironmentCombatObjectState {
@@ -134,6 +135,40 @@ describe("environment weapon contact runtime", () => {
     expect(blade.tryRecall(player)).toBe("recalled");
     blade.x = 0; blade.y = 0;
     blade._updateWheelCut(1 / 120, player, []);
+    expect(blade.state).toBe("held");
+  });
+
+  it("limits Chainblade object damage to the head and preserves Hook & Sling release/catch", () => {
+    const environment = new EnvironmentRuntime("verdant-sanctum", "chainblade-contact");
+    environment.addCombatObject(object("chain-only", "root-link", {
+      x: 20, y: 0, points: Object.freeze([{ x: 20, y: -20 }, { x: 20, y: 20 }]),
+    }));
+    environment.addCombatObject(object("head-contact", "root-link", {
+      x: 68, y: 0, points: Object.freeze([{ x: 68, y: -20 }, { x: 68, y: 20 }]),
+    }));
+    const { blade, config, input } = makeBlade("chainblade");
+    blade.state = "held"; blade.x = 0; blade.y = 0; blade.tipX = 80; blade.tipY = 0;
+    blade.angle = 0; blade.vx = 900; blade.vy = 0; blade.tipVX = 0; blade.tipVY = 1800; blade.tipSpeed = 1800;
+    blade.swingId = 11;
+
+    const contact = resolveHeldEnvironmentWeaponContacts({
+      environment, blade, segment: blade.heldCollisionSegment({} as never), tick: 40,
+    });
+    expect(contact).toMatchObject({ considered: 1, accepted: 1, damaged: 1, destroyed: 1 });
+    expect(environment.combatObjects().find(({ id }) => id === "chain-only")?.state).toBe("active");
+    expect(environment.combatObjects().find(({ id }) => id === "head-contact")?.state).toBe("destroyed");
+
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    const target = { x: 150, y: 0, vx: 0, vy: 0, radius: 16, weight: 1, stun: 0,
+      dead: false, dying: false, isBoss: false, hit: () => undefined };
+    blade.state = "hooked"; blade.hookTarget = target; blade.linkT = 2;
+    blade.aimX = 0; blade.aimY = config.weapons.chainblade.maxRadius; input.tetherHeld = true;
+    blade._updateHookThrown(0.1, player, []);
+    expect(blade.slingRadius).toBeGreaterThanOrEqual(config.weapons.chainblade.minRadius);
+    expect(blade._releaseHook(player)).toBe("recalled");
+    expect(blade.hookTarget).toBeNull();
+    blade.x = 0; blade.y = 0;
+    blade._updateHookThrown(1 / 120, player, []);
     expect(blade.state).toBe("held");
   });
 });

@@ -238,6 +238,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Hook & Sling", ratings: { handling: 3, impact: 3, reach: 5, difficulty: 5 },
     throwCollisionPad: 9,
     channels: weaponChannels({ remoteRange: 1.35, controlDuration: 1.2, secondaryPower: 1.15 }),
+    environmentCounterplay: Object.freeze({ held: "cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.length -= 20; B.aimRadius += 18; B.maxReach += 40;

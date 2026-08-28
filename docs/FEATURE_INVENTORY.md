@@ -305,7 +305,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   Greatsword declares held `cut`; one broad swing can sever multiple distinct
   Root segments while per-swing environment dedupe, enemy repeat-hit state, and
   momentum retention stay isolated. Wheel Cut spin/recall/catch remains intact.
-  Remaining weapon conformance is owned by VS3-C14-S5 through S8, and no C40
+  Chainblade declares held `cut`, but only the canonical head collision segment
+  reaches the environment resolver; visible chain links cannot duplicate object
+  damage. Its Hook & Sling orbit/release/recall/catch route remains intact.
+  Remaining weapon conformance is owned by VS3-C14-S6 through S8, and no C40
   certification record changed.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
