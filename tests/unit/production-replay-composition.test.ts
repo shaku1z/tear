@@ -9,6 +9,9 @@ import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director
 import { stageAt } from "../../src/gameplay/stages";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition, createProductionReplayWorld, environmentHash, environmentSnapshotToObservation, restoreProductionReplayChapterBinding, restoreProductionReplaySnapshot } from "../../src/tearbench";
+import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
+import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 const timing: CampaignChapterTiming = Object.freeze({
   loreReveal: 0.1, chapterIn: 0.2, loreExit: 0.3, biomeRevealBrief: 0.4,
@@ -77,6 +80,25 @@ describe("production replay composition", () => {
     const malformed = { ...spring.snapshot, state: { ...spring.snapshot.state,
       "tear.boss.v1": [{ ...bossPayload[0], lastSpringUseCount: 2 }] } };
     expect(() => composition.create(malformed)).toThrow(/Last Spring use count/u);
+
+    const ghost = createGhostV3({ id: "rootbound-last-spring-seek", rulesetVersion: "live", sourceClassification: "native-v3",
+      trident: replayTrident, actions: [], snapshots: [spring.snapshot], events: [] });
+    const replay = new GhostProductionReplayWorld(ghost, composition);
+    const firstSeek = replay.seek(spring.snapshot.tick);
+    const repeatedSeek = replay.seek(spring.snapshot.tick);
+    expect(repeatedSeek).toMatchObject({ usedSnapshotId: spring.snapshot.id, semanticHash: firstSeek.semanticHash });
+
+    const forkDocument: TearSdlDocumentV1 = { format: "tearsdl", schemaVersion: 1, id: "rootbound-last-spring-fork",
+      stateClass: "surgical-valid", seed: spring.snapshot.seed,
+      start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
+      state: { boss: { lastSpringT: ROOTBOUND_LAST_SPRING.warning / 4 } } };
+    const fork = compileResolvedTearSdlSnapshot(spring.snapshot, resolveTearSdl(forkDocument));
+    const forked = composition.create(fork);
+    expect((forked.replay.world.state.enemies()[0] as never as typeof boss).lastSpringT)
+      .toBe(ROOTBOUND_LAST_SPRING.warning / 4);
+    expect((composition.create(spring.snapshot).replay.world.state.enemies()[0] as never as typeof boss).lastSpringT)
+      .toBe(ROOTBOUND_LAST_SPRING.warning / 2);
+    expect(fork.hashes.exact).not.toBe(spring.snapshot.hashes.exact);
   });
 
   it("restores an active data-bound chapter and activates its prepared wave", () => {
@@ -138,3 +160,8 @@ describe("production replay composition", () => {
     expect(target.world.context.environment.snapshot()).toEqual(targetBeforeMalformed);
   });
 });
+const replayTrident = Object.freeze({
+  command: { kind: "command", status: "verified", available: true, resumable: true, seekable: false, reason: "Rootbound S9 proof" },
+  state: { kind: "state", status: "verified", available: true, resumable: true, seekable: true, reason: "Rootbound S9 proof" },
+  visual: { kind: "visual", status: "absent", available: false, resumable: false, seekable: false, reason: "not required" },
+} satisfies GhostReplayTrident);

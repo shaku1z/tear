@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C13",
-  "currentSubgoal": "VS3-C13-S9",
+  "currentSubgoal": "VS3-C13-S10",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -44,10 +44,11 @@
     "VS3-C11-S9 intro/transformation protection is green: all four selected attacks remain frozen with unavailable attack state and create no projectile or environment commit while intro or cinematic protection is active; each resumes only after protection clears. 26 focused Rootbound/boss conformance tests, typecheck, architecture, and targeted lint pass.",
     "VS3-C11 Rootbound Phase I is GREEN at 7bddac1b3d13ba872441913b3a9703b61c384dd0: all nine ordered subgoals pass; repository lint, typecheck, architecture, 98 aggregate tests, attributed test-standalone build b8f92e9553c55488fdc8e1181e014aacd3604e29d9e93cf2eff409420ebdc751, and the shared live boss browser matrix are green.",
     "VS3-C12 Rootbound Phase II is GREEN at 6b0a5e6e0309d6004d09947b352837601fca069a: all ten ordered subgoals pass; 89 aggregate Phase II/environment/State Forge tests, repository lint, typecheck, architecture, exact-commit game-reference, standalone build, live Graft destruction journey, State Forge matrix, Verdant presentation, and source-derived six-boss browser matrix are green.",
-    "VS3-C13-S8 active phase restoration is green: production-shaped capture/hydration round-trips active Regrowth boss state plus its three combat objects/routes and active Last Spring state through the shared codec path. Rootbound-specific validation rejects malformed one-use/timer/connection/outcome state before construction; exact boss payload and semantic/environment hashes are stable across portable world-ID rebasing. Sixteen focused tests, typecheck, and targeted lint pass."
+    "VS3-C13-S8 active phase restoration is green: production-shaped capture/hydration round-trips active Regrowth boss state plus its three combat objects/routes and active Last Spring state through the shared codec path. Rootbound-specific validation rejects malformed one-use/timer/connection/outcome state before construction; exact boss payload and semantic/environment hashes are stable across portable world-ID rebasing. Sixteen focused tests, typecheck, and targeted lint pass.",
+    "VS3-C13-S9 lifecycle and fork behavior is green: retry, defeat, victory, and abandon remove active final-phase boss/environment ownership through existing cleanup reasons; repeated production Ghost seeks select and reproduce the same active Last Spring keyframe; and a TearSDL State Forge child changes only its requested boss timer while the parent remains immutable. Seven focused tests, typecheck, and targeted lint pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C13-S9: prove retry, defeat, victory, abandon, replay seek, and State Forge fork behavior.",
+  "nextAction": "Execute VS3-C13-S10: validate campaign and Boss Test terminal flows separately.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2009,7 +2010,7 @@
         {
           "id": "VS3-C13-S9",
           "description": "Prove retry, defeat, victory, abandon, replay seek, and State Forge fork behavior.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C13-S10",

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { ROOTBOUND_LAST_SPRING, type RootboundLastSpringStage } from "../../src/gameplay/entities/enemy-types/rootbound";
-import { ROOTBOUND_REGROWTH_TIMING, type RootboundRegrowthState } from "../../src/gameplay/environment/regrowth-link";
+import { createRootboundRegrowthConnections, ROOTBOUND_REGROWTH_TIMING, type RootboundRegrowthState } from "../../src/gameplay/environment/regrowth-link";
+import { createRootboundBloomPattern } from "../../src/gameplay/environment/bloom-well";
 import { createEnemyHarness } from "./enemy-test-harness";
 import { BossArenaRules, createBossArena } from "../../src/gameplay/training/arena-rules";
 import { createEnvironmentRuntime, type RootboundEnvironmentActor } from "../../src/gameplay/environment/environment-runtime";
@@ -127,5 +128,30 @@ describe("Rootbound Last Spring", () => {
     environment.clear("boss-terminal");
     expect(environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
     expect(actor).toMatchObject({ lastSpringStage: null, lastSpringT: 0, lastSpringHitSpent: false, cleanupReason: "death" });
+  });
+
+  it("cleans active final-phase ownership across retry, defeat, victory, and abandon boundaries", () => {
+    const cases = [
+      { label: "retry", bossReason: "retry", environmentReason: "retry" },
+      { label: "defeat", bossReason: "death", environmentReason: "defeat" },
+      { label: "victory", bossReason: "death", environmentReason: "boss-terminal" },
+      { label: "abandon", bossReason: "exit", environmentReason: "abandon" },
+    ] as const;
+    for (const entry of cases) {
+      const { actor } = resolvedBoss();
+      expect(actor.startLastSpring()).toBe(true);
+      const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: `rootbound-${entry.label}` });
+      const links = createRootboundRegrowthConnections({ ownerId: "enemy:rootbound", ownerPosition: { x: actor.x, y: actor.y }, startTick: 10,
+        rootNodes: [{ id: "left-remnant", x: 280, y: 800 }, { id: "heart-root", x: 800, y: 800 }, { id: "right-remnant", x: 1_320, y: 800 }] });
+      links.combatObjects.forEach((value) => environment.addCombatObject(value));
+      links.routes.forEach((value) => environment.addRoute(value));
+      createRootboundBloomPattern({ patternId: "last-spring", bossOwnerId: "enemy:rootbound", stageOwnerId: "verdant-sanctum",
+        startTick: 10, arenaWidth: CONFIG.view.w, groundY: CONFIG.world.groundY }).forEach((value) => environment.addField(value));
+      actor.cleanupEncounter(entry.bossReason);
+      environment.clear(entry.environmentReason);
+      expect(environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
+      expect(actor).toMatchObject({ cleanupReason: entry.bossReason, lastSpringStage: null, lastSpringT: 0,
+        lastSpringHitSpent: false, regrowthState: { phase: "resolved", resolvedHealFraction: 0 } });
+    }
   });
 });

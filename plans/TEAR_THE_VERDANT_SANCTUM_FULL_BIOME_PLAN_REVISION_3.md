@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C13-S8 green; VS3-C13-S9 next** |
+| Status | **Active implementation authority — VS3-C13-S9 green; VS3-C13-S10 next** |
 | Current checkpoint | `VS3-C13` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4668,7 +4668,7 @@ Implement the one-use Regrowth outcome matrix, Last Spring, living-arena escalat
 - [x] **VS3-C13-S6** — Implement boss death cleanup for all fields, links, Grafts, cages, routes, and arena ownership.
 - [x] **VS3-C13-S7** — Preserve boss-defeated, terminal, reward, and chapter-outro event order.
 - [x] **VS3-C13-S8** — Capture/restore active Regrowth and Last Spring states transactionally. The shared boss codec now validates the complete one-use Regrowth and Last Spring state machines before hydration, while the existing production factory composition supplies Rootbound to the detached constructor path. Active channel links/routes and active Last Spring round-trip through the existing State Forge codec/hydrator without a new registry; the exact boss payload plus semantic/environment hashes remain stable, and malformed use counts fail before construction. Portable environment world-ID rebasing remains intentionally exact-hash-distinct while its semantic hash is stable.
-- [ ] **VS3-C13-S9** — Prove retry, defeat, victory, abandon, replay seek, and State Forge fork behavior.
+- [x] **VS3-C13-S9** — Prove retry, defeat, victory, abandon, replay seek, and State Forge fork behavior. Active Last Spring plus retained final-phase environment ownership now has a permanent four-boundary cleanup matrix using the existing boss/environment reasons. The production Ghost path repeatedly seeks the same active Last Spring keyframe with the same selected snapshot and semantic result. The existing TearSDL compiler forks its timer through the shared boss patch/hydration path while the parent remains immutable and exact state differs as declared; no lifecycle, replay, or fork subsystem was added.
 - [ ] **VS3-C13-S10** — Validate campaign and Boss Test terminal flows separately.
 
 ## Agent implementation procedure

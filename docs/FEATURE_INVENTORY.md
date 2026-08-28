@@ -214,7 +214,13 @@ This is the migration checklist for the architectural redesign. A checked featur
   malformed phase/use/connection/progress/outcome/timer payloads. Exact boss
   payload and semantic/environment hashes survive round-trip; portable world-ID
   rebasing remains intentionally exact-distinct without semantic drift. No new
-  codec, registry, or boss serializer was added.
+  codec, registry, or boss serializer was added. VS3-C13-S9 proves the same
+  final-phase ownership exits cleanly through retry, defeat, victory, and
+  abandon. Repeated production Ghost seeks reconstruct the selected active
+  Last Spring keyframe deterministically, while an existing TearSDL boss-state
+  child fork changes only its declared timer and leaves the source snapshot
+  immutable. These are engineering-only lifecycle/replay facts, not C40
+  certification.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
