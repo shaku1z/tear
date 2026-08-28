@@ -319,8 +319,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   status/reward fields; the shared non-enemy/non-reward/proc-ineligible policy is
   retained. The post-integration `WEAPONS × UPGRADES` evolution matrix remains
   green; object contacts never enter enemy `onHit` hooks, and no universal
-  ability code or per-weapon tuning was changed. C40 certification records are
-  still unchanged pending the explicit S9 disposition.
+  ability code or per-weapon tuning was changed. The clean-source headless gate
+  and all five existing C40 browser/Ghost weapon routes pass after the live
+  collision change; this is no-change validation, so certification records remain
+  untouched.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
