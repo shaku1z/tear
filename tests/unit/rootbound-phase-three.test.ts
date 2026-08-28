@@ -5,6 +5,7 @@ import { ROOTBOUND_LAST_SPRING, type RootboundLastSpringStage } from "../../src/
 import { ROOTBOUND_REGROWTH_TIMING, type RootboundRegrowthState } from "../../src/gameplay/environment/regrowth-link";
 import { createEnemyHarness } from "./enemy-test-harness";
 import { BossArenaRules, createBossArena } from "../../src/gameplay/training/arena-rules";
+import { createEnvironmentRuntime, type RootboundEnvironmentActor } from "../../src/gameplay/environment/environment-runtime";
 
 type PhaseThreeBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
   regrowthState: RootboundRegrowthState;
@@ -77,5 +78,54 @@ describe("Rootbound Last Spring", () => {
     expect(route.arenaState).toBe("stable");
     expect(platforms).toContain(route);
     expect(broken).toEqual([]);
+  });
+
+  it("materializes Regrowth through the environment owner and clears every terminal collection", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseThreeBoss;
+    actor.hp = actor.maxHp * 0.2;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    actor.cinematicRequest = null;
+    actor.cinematicT = 0;
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-phase-three" });
+    environment.setRootboundActorsSource(() => [Object.freeze({
+      id: "enemy:rootbound-live",
+      source: actor,
+      beginRegrowth: (startTick: number, ids: readonly string[]) => actor.beginRegrowth(startTick, ids),
+      advanceRegrowth: (tick: number, ids: ReadonlySet<string>, brokenChannel = false) => actor.advanceRegrowth(tick, ids, brokenChannel),
+      state: Object.freeze({
+        stage: null,
+        geometry: Object.freeze({ x: actor.x, y: actor.y, w: 0, h: 0 }),
+        damage: 0,
+        cleanupReason: null,
+        ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
+        arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
+        phase: actor.phase,
+        regrowth: actor.regrowthState,
+        bloomPattern: actor.bossBloomPattern(),
+      }),
+    }) satisfies RootboundEnvironmentActor]);
+    environment.step(100, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(environment.combatObjects()).toHaveLength(3);
+    expect(environment.routes()).toHaveLength(3);
+    expect(actor.regrowthState).toMatchObject({ phase: "channeling", startTick: 100 });
+
+    const severed = environment.combatObjects()[0];
+    if (severed === undefined) throw new Error("Regrowth must install a severable connection");
+    environment.cleanupCombatObject(severed.id, "natural-expiry", 101);
+    environment.step(100 + ROOTBOUND_REGROWTH_TIMING.channelTicks, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(actor.regrowthState).toMatchObject({ phase: "resolved", interruptClassification: "partial-interrupt" });
+    expect(environment.combatObjects().every((object) => object.state === "expired")).toBe(true);
+    expect(environment.routes().every((route) => route.state === "expired")).toBe(true);
+
+    actor.state = "idle";
+    actor.stateT = 0;
+    actor.startLastSpring();
+    environment.step(700, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(environment.fields().some((field) => field.patternId?.includes("last-spring") === true)).toBe(true);
+    actor.cleanupEncounter("death");
+    environment.clear("boss-terminal");
+    expect(environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
+    expect(actor).toMatchObject({ lastSpringStage: null, lastSpringT: 0, lastSpringHitSpent: false, cleanupReason: "death" });
   });
 });

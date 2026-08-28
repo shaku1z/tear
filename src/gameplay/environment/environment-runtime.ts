@@ -9,6 +9,7 @@ import { applyBloomWellForce, advanceBloomWell, installRootboundBloomPattern, is
 import { applyElasticLeashForce, createElasticLeash, createRootNetwork, installRootNetwork, isElasticLeashValid, isRootbinderLineValid, redistributeRootNetworkKnockback, type LeashPlayerState, type RootbinderCandidate, type RootbinderState } from "../entities/rootbinder-runtime";
 import { advanceGraftAnchor, installGraftAnchor, isGraftAnchorState, resolveRootboundGraftEffects, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "./graft-anchor";
 import { advanceRootCage, installRootCage, isRootCageState, type RootCagePlacementRequest } from "./root-cage";
+import { createRootboundRegrowthConnections, type RootboundRegrowthState } from "./regrowth-link";
 
 /** The only phases an environment may own inside one authoritative tick. */
 export type EnvironmentStepPhase = "pre-step" | "active-fields" | "collision-resolution" | "post-commit";
@@ -59,10 +60,14 @@ export interface RootboundEnvironmentActor {
     bloomPattern?: RootboundBloomPatternId | null;
     rootCagePlacement?: RootCagePlacementRequest | null;
     arena?: Readonly<{ width: number; groundY: number }>;
+    phase?: number;
+    regrowth?: RootboundRegrowthState;
   }>;
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
   readonly recoverGraftHealth?: (fraction: number) => number;
   readonly completeRootCage?: () => void;
+  readonly beginRegrowth?: (startTick: number, connectionIds: readonly string[]) => boolean;
+  readonly advanceRegrowth?: (tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken?: boolean) => RootboundRegrowthState;
   readonly player?: Readonly<{
     x: number; y: number; vx?: number; hw: number; hh: number; invulnerable: boolean; hazardDamageMultiplier: number;
     takeDamage: (damage: number, sourceX: number, source: unknown) => void;
@@ -222,6 +227,41 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       installRootboundBloomPattern(this, {
         patternId, bossOwnerId: actor.id, startTick: tick, arenaWidth: arena.width, groundY: arena.groundY,
       });
+    }
+  }
+
+  #advanceRootboundRegrowth(tick: number): void {
+    for (const actor of this.#rootboundActors?.() ?? []) {
+      const regrowth = actor.state.regrowth;
+      const arena = actor.state.arena;
+      const ownerPosition = actor.state.ownerPosition;
+      if (actor.state.phase !== 3 || regrowth === undefined || arena === undefined || ownerPosition === undefined) continue;
+      if (regrowth.phase === "idle") {
+        const rootNodes = Object.freeze([
+          Object.freeze({ id: "left-remnant", x: arena.width * 0.18, y: arena.groundY }),
+          Object.freeze({ id: "heart-root", x: arena.width * 0.5, y: arena.groundY }),
+          Object.freeze({ id: "right-remnant", x: arena.width * 0.82, y: arena.groundY }),
+        ]);
+        const bundle = createRootboundRegrowthConnections({ ownerId: actor.id, ownerPosition, rootNodes, startTick: tick });
+        const ids = bundle.combatObjects.map(({ id }) => id);
+        if (actor.beginRegrowth?.(tick, ids) !== true) continue;
+        for (const object of bundle.combatObjects) this.addCombatObject(object);
+        for (const route of bundle.routes) this.addRoute(route);
+        continue;
+      }
+      if (regrowth.phase !== "channeling") continue;
+      const active = new Set(regrowth.requiredConnectionIds.filter((id) => this.combatObjects().some((object) => object.id === id
+        && object.state !== "destroyed" && object.state !== "expired")));
+      const resolved = actor.advanceRegrowth?.(tick, active, false);
+      if (resolved?.phase !== "resolved") continue;
+      for (const id of resolved.requiredConnectionIds) {
+        const object = this.combatObjects().find((entry) => entry.id === id);
+        if (object !== undefined && object.state !== "destroyed" && object.state !== "expired") this.cleanupCombatObject(id, "natural-expiry", tick);
+        const route = this.routes().find((entry) => entry.id === `${id}:route`);
+        if (route !== undefined && route.state !== "destroyed" && route.state !== "expired") {
+          this.updateRoute(route.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+        }
+      }
     }
   }
 
@@ -469,7 +509,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   step(tick: number, seconds: number, gameplayStep: () => void, availableActorIds?: ReadonlySet<string>): void {
     if (typeof gameplayStep !== "function") throw new TypeError("environment gameplay step is required");
     this.clearPhaseLog(); this.#run("pre-step", tick, seconds, this.#hooks.preStep); gameplayStep();
-    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#advanceRootboundBloom(tick); this.#advanceRootboundCages(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
+    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#advanceRootboundRegrowth(tick); this.#advanceRootboundBloom(tick); this.#advanceRootboundCages(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
     this.#run("collision-resolution", tick, seconds, () => { this.#resolveRootboundCages(); this.#hooks.resolveCollisions?.({ tick, seconds, phase: "collision-resolution", environment: this }); });
     this.#run("post-commit", tick, seconds, () => { this.#cleanupOrphans(tick, availableActorIds); this.#hooks.postCommit?.({ tick, seconds, phase: "post-commit", environment: this }); });
   }

@@ -602,6 +602,13 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.cancelMemoryChoir();
       this.completeRootCage();
       this.phaseTwoPendingAttack = null;
+      if (this.regrowthState.phase === "channeling") {
+        const interrupted = advanceRootboundRegrowth(this.regrowthState, this.regrowthState.startTick ?? 0, new Set(), true);
+        this.regrowthState = resolveRootboundRegrowthOutcome(interrupted, 0).state;
+      }
+      this.lastSpringStage = null;
+      this.lastSpringT = 0;
+      this.lastSpringHitSpent = false;
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {

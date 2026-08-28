@@ -199,6 +199,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   no route framework or random desperation scheduler was added. VS3-C13-S5
   proves that request through the existing warning, broken, reforming, and
   stable lifecycle while its minimum elevated-route guard preserves recovery.
+  VS3-C13-S6 connects Regrowth to the existing live environment projection:
+  the world owner creates/severs/expires its canonical link objects and routes,
+  installs Last Spring Bloom through shared fields, and clears every collection
+  on boss terminal; actor death cancels channel healing and local final-route
+  intent. Existing C12 cleanup continues to own Grafts and Cages.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
