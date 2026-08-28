@@ -127,6 +127,7 @@
     "check:terminology": "node scripts/check-terminology.mjs",
     "check:active-roster": "node scripts/check-active-roster.mjs",
     "check:game-reference": "node scripts/check-game-reference.mjs",
+    "check:publication-boundary": "node --test tests/campaign-publication-boundary.test.mjs tests/release-preflight.test.mjs",
     "export:game-reference": "node scripts/export-game-reference.mjs",
     "publish:game-reference": "node scripts/publish-game-reference-artifact.mjs",
     "dispatch:wiki-reference": "node scripts/dispatch-wiki-reference.mjs",

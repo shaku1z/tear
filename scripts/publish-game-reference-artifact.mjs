@@ -82,6 +82,10 @@ export function validateManifestEnvelope(manifest, { sourceSha, repository = GAM
     exactKeys(collection, ["status", "items"], `game-reference manifest collections.${collectionId}`);
     if (collection.status !== "complete") throw new TypeError(`game-reference collection ${collectionId} is not complete`);
   }
+  const stageIds = manifest.collections.stages.items.map((stage) => stage?.id);
+  if (stageIds.includes("verdant-sanctum") && !stageIds.includes("pale-traverse")) {
+    throw new Error("game-reference publication prohibits a Verdant-without-Pale campaign catalog");
+  }
   return manifestSha;
 }
 

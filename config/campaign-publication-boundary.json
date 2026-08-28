@@ -1,0 +1,18 @@
+{
+  "format": "tear-campaign-publication-boundary",
+  "schemaVersion": 1,
+  "status": "engineering-only",
+  "rulesetVersion": "tear-rules-verdant-r3-engineering-v1",
+  "activeStageIds": [
+    "grounds",
+    "undercroft",
+    "crimson-fields",
+    "verdant-sanctum",
+    "voidspire",
+    "tear"
+  ],
+  "requiredJointStageIds": [
+    "verdant-sanctum",
+    "pale-traverse"
+  ]
+}

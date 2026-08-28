@@ -158,6 +158,12 @@ test("manifest, digest, and receipt are all required and source-bound", () => {
   delete missingCollection.collections.weapons;
   assert.throws(() => validateManifestEnvelope(missingCollection, { sourceSha }), /unexpected or missing/u);
 
+  const sixStage = validManifest();
+  sixStage.collections.stages.items = ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"].map((id) => ({ id }));
+  assert.throws(() => validateManifestEnvelope(sixStage, { sourceSha }), /Verdant-without-Pale/u);
+  sixStage.collections.stages.items.push({ id: "pale-traverse" });
+  assert.equal(validateManifestEnvelope(sixStage, { sourceSha }), sourceSha);
+
   const receipt = buildReceipt({
     sourceSha,
     artifactName,
