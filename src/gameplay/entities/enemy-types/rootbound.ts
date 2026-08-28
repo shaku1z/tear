@@ -35,6 +35,26 @@ export const ROOTBOUND_CANOPY_STEP = Object.freeze({ telegraph: 0.55, travel: 0.
 export type RootboundCanopyStepStage = "telegraph" | "travel" | "settle";
 
 export const ROOTBOUND_GRAFT_ANCHOR_GEOMETRY = Object.freeze({ width: 54, height: 90 });
+export const ROOTBOUND_MEMORY_CHOIR = Object.freeze({
+  maxManifestations: 3,
+  warning: 0.65,
+  echoStagger: 0.12,
+  active: 0.18,
+  afterimage: 0.3,
+  width: 180,
+  height: 120,
+  damage: 14,
+});
+export type RootboundMemoryChoirStage = "warning" | "active" | "afterimage";
+export interface RootboundMemoryChoirManifestation {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly activationDelay: number;
+  readonly hitSpent: boolean;
+}
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
@@ -76,6 +96,10 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     graftCadenceMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.cadenceMultiplier;
     activeGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
     bloomPatternIndex = 0;
+    memoryChoirStage: RootboundMemoryChoirStage | null = null;
+    memoryChoirT = 0;
+    memoryChoirElapsed = 0;
+    memoryChoirManifestations: readonly RootboundMemoryChoirManifestation[] = Object.freeze([]);
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -265,6 +289,72 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       return ROOTBOUND_BLOOM_PATTERN_IDS[this.bloomPatternIndex % ROOTBOUND_BLOOM_PATTERN_IDS.length] ?? null;
     }
 
+    startMemoryChoir(): boolean {
+      if (this.phase !== 2 || this.attackCommitProtected() || this.memoryChoirStage !== null) return false;
+      this.memoryChoirStage = "warning";
+      this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.warning;
+      this.memoryChoirElapsed = 0;
+      this.memoryChoirManifestations = Object.freeze(Array.from({ length: ROOTBOUND_MEMORY_CHOIR.maxManifestations }, (_, index) => Object.freeze({
+        id: `memory-choir:${String(index + 1)}`,
+        x: CONFIG.view.w * (0.25 + index * 0.25) - ROOTBOUND_MEMORY_CHOIR.width / 2,
+        y: CONFIG.world.groundY - ROOTBOUND_MEMORY_CHOIR.height,
+        w: ROOTBOUND_MEMORY_CHOIR.width,
+        h: ROOTBOUND_MEMORY_CHOIR.height,
+        activationDelay: index * ROOTBOUND_MEMORY_CHOIR.echoStagger,
+        hitSpent: false,
+      })));
+      this.atk = "memory-choir:warning";
+      return true;
+    }
+
+    memoryChoirManifestationActive(manifestation: RootboundMemoryChoirManifestation): boolean {
+      return this.memoryChoirStage === "active" && this.memoryChoirElapsed >= manifestation.activationDelay
+        && this.memoryChoirElapsed < manifestation.activationDelay + ROOTBOUND_MEMORY_CHOIR.active;
+    }
+
+    private cancelMemoryChoir(): void {
+      this.memoryChoirStage = null;
+      this.memoryChoirT = 0;
+      this.memoryChoirElapsed = 0;
+      this.memoryChoirManifestations = Object.freeze([]);
+      if (this.atk.startsWith("memory-choir:")) this.atk = "unavailable";
+    }
+
+    private updateMemoryChoir(dt: number, player: EnemyPlayerPort): void {
+      if (this.memoryChoirStage === null) return;
+      this.memoryChoirT = Math.max(0, this.memoryChoirT - dt);
+      if (this.memoryChoirStage === "warning") {
+        if (this.memoryChoirT <= 0) {
+          this.memoryChoirStage = "active";
+          this.memoryChoirElapsed = 0;
+          this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.active + ROOTBOUND_MEMORY_CHOIR.echoStagger * (ROOTBOUND_MEMORY_CHOIR.maxManifestations - 1);
+          this.atk = "memory-choir:active";
+        }
+        return;
+      }
+      if (this.memoryChoirStage === "active") {
+        this.memoryChoirElapsed += dt;
+        this.memoryChoirManifestations = Object.freeze(this.memoryChoirManifestations.map((manifestation) => {
+          if (manifestation.hitSpent || !this.memoryChoirManifestationActive(manifestation) || player.invulnerable
+            || !dependencies.aabbOverlap(manifestation.x + manifestation.w / 2, manifestation.y + manifestation.h / 2,
+              manifestation.w / 2, manifestation.h / 2, player.x, player.y, player.hw, player.hh)) return manifestation;
+          player.takeDamage(ROOTBOUND_MEMORY_CHOIR.damage, manifestation.x + manifestation.w / 2, this);
+          return Object.freeze({ ...manifestation, hitSpent: true });
+        }));
+        if (this.memoryChoirT <= 0) {
+          this.memoryChoirStage = "afterimage";
+          this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.afterimage;
+          this.atk = "memory-choir:afterimage";
+        }
+        return;
+      }
+      if (this.memoryChoirT <= 0) {
+        this.cancelMemoryChoir();
+        this.state = "recover";
+        this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery / this.graftCadenceMultiplier;
+      }
+    }
+
     private beginRootline(): void {
       this.rootlineStage = "warning";
       this.rootlineT = ROOTBOUND_ROOTLINE.windup;
@@ -377,6 +467,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.cinematicPose = "";
       this.cinematicT = 0;
       this.applyGraftEffects(ROOTBOUND_NO_GRAFT_EFFECTS);
+      this.cancelMemoryChoir();
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
@@ -387,6 +478,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         : this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[1] ? 2 : 3;
       if (nextPhase > this.phaseMarker) {
         if (this.phaseMarker === 1) this.exitPhaseOne(projectiles);
+        else if (this.phaseMarker === 2) this.cancelMemoryChoir();
         this.phaseMarker = nextPhase;
         this.phaseTag = nextPhase === 2 ? "THE GARDEN REMEMBERS" : "NOTHING HERE DIES";
       }
@@ -406,6 +498,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       if (this.state === "intro") {
         this.state = "recover";
         this.stateT = 0.35;
+      } else if (this.memoryChoirStage !== null) {
+        this.updateMemoryChoir(dt, player);
       } else if (this.pendingAttack === "vine-sweep") {
         this.updateVineSweep(dt, player);
       } else if (this.pendingAttack === "seed-arc") {

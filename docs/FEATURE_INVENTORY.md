@@ -142,6 +142,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   `BloomWellState` fields with deterministic offsets and stable Rootbound owner
   references; production composition installs the selected Phase II pattern
   idempotently. S9 remains responsible for cycling and attack cadence.
+  VS3-C12-S6 implements Memory Choir as three bounded Rootbound-owned attack
+  manifestations rather than cloned enemies. A static 0.65-second warning,
+  staggered one-hit rectangles, boss source/damage, afterimage recovery, and
+  phase/encounter cleanup live on the boss attack state. The silhouettes never
+  acquire HP/reward/proc/wave-clear identity, while low-graphics and
+  reduced-motion rendering retains their exact authoritative geometry.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

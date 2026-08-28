@@ -28,6 +28,24 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
         ctx.beginPath(); ctx.moveTo(destination.x, destination.y - 20); ctx.lineTo(destination.x - 14, destination.y + 4); ctx.lineTo(destination.x + 14, destination.y + 4); ctx.closePath(); ctx.fill();
         ctx.globalAlpha = 1;
       }
+      if (this.memoryChoirStage) for (const manifestation of this.memoryChoirManifestations) {
+        const active = this.memoryChoirManifestationActive(manifestation);
+        const centerX = manifestation.x + manifestation.w / 2;
+        const centerY = manifestation.y + manifestation.h / 2;
+        ctx.save();
+        ctx.globalAlpha = this.memoryChoirStage === "afterimage" ? 0.3 : active ? 0.82 : 0.58;
+        ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
+        ctx.fillStyle = A11Y.highContrast ? "#ffffff" : "#5d765e";
+        ctx.lineWidth = A11Y.highContrast ? 5 : 3;
+        ctx.setLineDash(this.memoryChoirStage === "warning" ? [12, 8] : []);
+        ctx.strokeRect(manifestation.x, manifestation.y, manifestation.w, manifestation.h);
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(centerX, centerY - manifestation.h * 0.22, 13, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(centerX - 16, centerY - manifestation.h * 0.08, 32, manifestation.h * 0.42);
+        ctx.beginPath(); ctx.moveTo(centerX - 16, centerY); ctx.lineTo(centerX - 42, centerY + manifestation.h * 0.24);
+        ctx.moveTo(centerX + 16, centerY); ctx.lineTo(centerX + 42, centerY + manifestation.h * 0.24); ctx.stroke();
+        ctx.restore();
+      }
       ctx.translate(this.x, footY);
       if (this.dying) ctx.rotate(this.facing * this.deathP * 0.4);
 

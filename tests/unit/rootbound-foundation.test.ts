@@ -106,6 +106,24 @@ describe("Rootbound production foundation", () => {
     }
   });
 
+  it("keeps Memory Choir warning geometry visible in low-graphics reduced-motion rendering", () => {
+    const harness = createEnemyHarness();
+    createLegacyEnemyPresentation({
+      A11Y: { highContrast: true, reducedMotion: true }, CLOCK: { sim: 2 }, policy: CONFIG,
+      GFX: { low: true }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
+      UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
+      clamp, len, lerp,
+    }).install(harness.types);
+    const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as
+      InstanceType<typeof harness.types.Rootbound> & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
+    boss.hp = boss.maxHp * 0.5;
+    boss.update(1 / 120, harness.platforms, harness.player, []);
+    expect(boss.startMemoryChoir()).toBe(true);
+    const calls: string[] = [];
+    boss.draw(recordingCanvas(calls), harness.player);
+    expect(calls).toEqual(expect.arrayContaining(["strokeRect", "setLineDash", "arc", "fillRect", "lineTo", "stroke"]));
+  });
+
   it("places the grounded Rootbound body through the shared boss placement authority", () => {
     const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG);
 

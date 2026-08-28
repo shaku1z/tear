@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { GRAFT_ANCHOR_TIMING, GRAFT_ANCHOR_TYPES, isGraftAnchorState, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../src/gameplay/environment/graft-anchor";
-import { ROOTBOUND_GRAFT_ANCHOR_GEOMETRY } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_GRAFT_ANCHOR_GEOMETRY, ROOTBOUND_MEMORY_CHOIR } from "../../src/gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../src/gameplay/environment/bloom-well";
 import { createEnemyHarness } from "./enemy-test-harness";
 
@@ -148,5 +148,32 @@ describe("Rootbound Phase II Graft creation", () => {
     actor.bloomPatternIndex = 2;
     environment.step(242, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
     expect(environment.fields().filter((field) => field.patternId?.startsWith("bloom-well/rootbound/cage-route") === true)).toHaveLength(3);
+  });
+
+  it("runs Memory Choir as three bounded boss-owned attack manifestations rather than enemy clones", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor.startMemoryChoir()).toBe(true);
+    expect(actor.memoryChoirManifestations).toHaveLength(ROOTBOUND_MEMORY_CHOIR.maxManifestations);
+    expect(actor.memoryChoirManifestations.every((manifestation) => !("hp" in manifestation) && !("kind" in manifestation))).toBe(true);
+    const first = actor.memoryChoirManifestations[0];
+    if (first === undefined) throw new TypeError("expected Memory Choir manifestation");
+    harness.player.x = first.x + first.w / 2;
+    harness.player.y = first.y + first.h / 2;
+    actor.update(ROOTBOUND_MEMORY_CHOIR.warning - 1 / 120, harness.platforms, harness.player, []);
+    expect(harness.player.damage).toEqual([]);
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor.memoryChoirStage).toBe("active");
+    expect(harness.player.damage).toEqual([]);
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(harness.player.damage).toEqual([expect.objectContaining({ amount: ROOTBOUND_MEMORY_CHOIR.damage, source: actor })]);
+
+    actor.hp = actor.maxHp * 0.2;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor.memoryChoirStage).toBeNull();
+    expect(actor.memoryChoirManifestations).toEqual([]);
   });
 });
