@@ -15,6 +15,11 @@ describe("campaign stage curve authority", () => {
       countAdd: 5,
       concurrentAdd: 2,
       disposition: "authored-prototype",
+      composition: {
+        localWaveBudgets: [0, 3, 4, 5, 5, 6, 7, 8, 9, 0],
+        costs: { rootbinder: 3, anchor: 3, mender: 2, chimera: 2, armored: 1 },
+        maximumPerWave: { rootbinder: [0, 1, 1, 1, 1, 1, 2, 2, 2, 0] },
+      },
     });
   });
 

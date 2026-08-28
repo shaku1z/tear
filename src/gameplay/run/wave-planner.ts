@@ -13,6 +13,11 @@ import {
 import type { RunMode } from "./session";
 import type { StageId } from "../stages";
 import { campaignStageCurve } from "./campaign-stage-curve";
+import {
+  eligibleCompositionPool,
+  emptyCompositionBudgetState,
+  recordCompositionKind,
+} from "./composition-budget";
 import { describeWave } from "./wave-rules";
 
 export interface WaveTuning {
@@ -152,8 +157,20 @@ function regularWaveQueue(
   const queue: WaveSpawnSpec[] = [];
   if (miniBoss !== null) queue.push({ type: "miniboss", bossId: miniBoss });
   const campaignStage = state.mode === "campaign" && stageIndex !== null ? stageAt(options.stages, stageIndex) : null;
-  const stageTypes = campaignStage?.pool.map((entry) => entry.kind) ?? null;
+  const composition = campaignStage === null ? undefined : campaignStageCurve(campaignStage.id).composition;
+  const unlockedCampaignPool = campaignStage?.pool.filter((entry) => localWave >= entry.unlockWave) ?? null;
+  const availableCampaignPool = campaignStage === null
+    ? null
+    : unlockedCampaignPool !== null && unlockedCampaignPool.length > 0 ? unlockedCampaignPool : campaignStage.pool;
+  let compositionState = emptyCompositionBudgetState();
   for (let index = 0; index < count; index += 1) {
+    const eligiblePool = campaignStage === null || composition === undefined
+      ? availableCampaignPool
+      : eligibleCompositionPool(availableCampaignPool ?? [], composition, localWave, compositionState);
+    if (campaignStage !== null && (eligiblePool?.length ?? 0) === 0) {
+      throw new RangeError(`${campaignStage.id} composition budget excludes every available enemy`);
+    }
+    const stageTypes = eligiblePool?.map((entry) => entry.kind) ?? null;
     if (wave >= 4 && options.random.next() < 0.15) {
       const candidates = stageTypes === null
         ? options.presets
@@ -162,6 +179,7 @@ function regularWaveQueue(
         const preset = candidates[Math.floor(options.random.next() * candidates.length)];
         if (preset !== undefined) {
           queue.push({ type: preset.type as EnemyKind, hpScale, dmgScale, preset });
+          if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, preset.type as EnemyKind);
           continue;
         }
       }
@@ -169,8 +187,9 @@ function regularWaveQueue(
     const contentWave = state.mode === "sandbox" ? 99 : wave;
     const kind = campaignStage === null
       ? pickEnemyKind(contentWave, options.random)
-      : pickEnemyKind(contentWave, options.random, campaignStage.pool, localWave);
+      : pickEnemyKind(contentWave, options.random, eligiblePool, localWave);
     queue.push({ type: kind, hpScale, dmgScale });
+    if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, kind);
   }
   return queue;
 }

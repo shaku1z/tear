@@ -329,8 +329,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   index. Grounds through Verdant carry the authored seven-stage prototype seed;
   Voidspire and Tear retain explicit legacy-position placeholders until their
   relocated slots are evaluated. The existing local-wave ramps remain separate
-  and unchanged. This is not final seven-stage balance, and no Pale slot or
-  publication claim exists yet.
+  and unchanged. The same production planner now applies a reusable
+  support/control cost-and-cap filter to both normal and preset selection;
+  Verdant bounds Rootbinder, Anchor, Mender, Chimera, and Armored pressure and
+  limits Rootbinders to one through local wave 6 and two thereafter. This is not
+  final seven-stage balance, and no Pale slot or publication claim exists yet.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
