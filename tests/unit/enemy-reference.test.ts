@@ -108,5 +108,9 @@ describe("enemy reference catalog", () => {
     const reordered = cloneProjected();
     reordered.families.reverse();
     expect(() => validateProjectedEnemies(reordered, "enemies")).toThrow(/exact canonical authored order/u);
+
+    const missingRootbinder = cloneProjected();
+    missingRootbinder.families.pop();
+    expect(() => validateProjectedEnemies(missingRootbinder, "enemies")).toThrow(/exact canonical authored order/u);
   });
 });
