@@ -2,7 +2,7 @@ import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile
 import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
-import { GRAFT_ANCHOR_TYPES, type GraftAnchorPlacementRequest } from "../../environment/graft-anchor";
+import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
   "vine-sweep", "seed-arc", "rootline", "canopy-step",
@@ -71,6 +71,9 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     canopyDestination: Readonly<{ x: number; y: number; platformId: string }> | null = null;
     cleanupReason: BossEncounterCleanupReason | null = null;
     phaseOneExited = false;
+    graftDamageTakenMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.incomingDamageMultiplier;
+    graftCadenceMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.cadenceMultiplier;
+    activeGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -100,7 +103,21 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     override limitIncomingDamage(damage: number): number {
-      return this.introT > 0 ? 0 : damage;
+      return this.introT > 0 ? 0 : damage * this.graftDamageTakenMultiplier;
+    }
+
+    applyGraftEffects(effects: RootboundGraftEffects): void {
+      this.graftDamageTakenMultiplier = effects.incomingDamageMultiplier;
+      this.graftCadenceMultiplier = effects.cadenceMultiplier;
+      this.activeGraftTypes = effects.activeTypes;
+    }
+
+    recoverGraftHealth(fraction: number): number {
+      if (!Number.isFinite(fraction) || fraction < 0) throw new RangeError("Rootbound Graft recovery must be finite and non-negative");
+      if (this.dead || this.dying || this.hp <= 0 || this.maxHp <= 0) return 0;
+      const before = this.hp;
+      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * fraction);
+      return (this.hp - before) / this.maxHp;
     }
 
     override contactDamageEnabled(): boolean {
@@ -352,6 +369,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.cinematicRequest = null;
       this.cinematicPose = "";
       this.cinematicT = 0;
+      this.applyGraftEffects(ROOTBOUND_NO_GRAFT_EFFECTS);
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {

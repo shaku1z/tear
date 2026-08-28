@@ -148,6 +148,9 @@ export interface TearObservedEnvironmentCombatObjectV1 {
   readonly state: string;
   readonly counterplayTags: readonly string[];
   readonly procEligible: boolean;
+  readonly graftType?: string;
+  readonly effect?: string;
+  readonly recoverySpentHealthFraction?: number;
 }
 
 export interface TearObservedEnvironmentRouteV1 {

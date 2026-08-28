@@ -1,9 +1,10 @@
 import type { EnvironmentSnapshot, EnvironmentObjectState } from "./environment-contracts";
+import { isGraftAnchorState, type GraftAnchorType } from "./graft-anchor";
 
 export interface EnvironmentPresentationSnapshot {
   readonly stageId: string;
   readonly fields: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; active: boolean; bounds: Readonly<{ minX: number; maxX: number; minY: number; maxY: number }> }>[];
-  readonly combatObjects: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"]; integrityRatio: number; counterplayTags: readonly string[] }>[];
+  readonly combatObjects: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"]; integrityRatio: number; counterplayTags: readonly string[]; graftType?: GraftAnchorType; effect?: string; connectionGeometry?: EnvironmentSnapshot["combatObjects"][number]["geometry"] }>[];
   readonly routes: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; points: readonly Readonly<{ x: number; y: number }>[] }>[];
 }
 
@@ -16,7 +17,9 @@ export function buildEnvironmentPresentationSnapshot(snapshot: EnvironmentSnapsh
   return Object.freeze({
     stageId: snapshot.stageId,
     fields: Object.freeze(snapshot.fields.map((field) => Object.freeze({ id: field.id, kind: field.kind, state: field.state, active: field.state === "active", bounds: bounds(field.geometry) }))),
-    combatObjects: Object.freeze(snapshot.combatObjects.map((object) => Object.freeze({ id: object.id, kind: object.kind, state: object.state, geometry: structuredClone(object.geometry), integrityRatio: object.maxIntegrity > 0 ? object.integrity / object.maxIntegrity : 0, counterplayTags: Object.freeze([...object.counterplayTags]) }))),
+    combatObjects: Object.freeze(snapshot.combatObjects.map((object) => Object.freeze({ id: object.id, kind: object.kind, state: object.state, geometry: structuredClone(object.geometry), integrityRatio: object.maxIntegrity > 0 ? object.integrity / object.maxIntegrity : 0, counterplayTags: Object.freeze([...object.counterplayTags]),
+      ...(isGraftAnchorState(object) ? { graftType: object.graftType, effect: object.effect, connectionGeometry: structuredClone(object.connectionGeometry) } : {}),
+    }))),
     routes: Object.freeze(snapshot.routes.map((route) => Object.freeze({ id: route.id, kind: route.kind, state: route.state, points: Object.freeze(route.points.map((point) => Object.freeze({ x: point.x, y: point.y }))) }))),
   });
 }

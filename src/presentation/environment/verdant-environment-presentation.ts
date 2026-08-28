@@ -45,11 +45,27 @@ export function renderVerdantEnvironmentPresentation(
     const warning = anchor.state === "warning" || anchor.state === "scheduled";
     const pulse = options.reducedMotion ? 1 : 1 - 0.22 * options.flashScale + Math.sin(options.timeSeconds * 6) * 0.22 * options.flashScale;
     canvas.globalAlpha = anchor.state === "destroyed" || anchor.state === "expired" ? 0.34 : pulse;
-    canvas.fillStyle = options.highContrast ? "#4b00d1" : "#7fa96a";
+    const connection = anchor.connectionGeometry?.points;
+    if (connection !== undefined && connection.length >= 2) {
+      const first = connection[0];
+      if (first !== undefined) {
+        canvas.strokeStyle = options.highContrast ? "#ffffff" : "#d0b957";
+        canvas.lineWidth = options.highContrast ? 5 : 3;
+        canvas.setLineDash(warning ? [10, 7] : []);
+        canvas.beginPath(); canvas.moveTo(first.x, first.y);
+        for (let index = 1; index < connection.length; index += 1) { const point = connection[index]; if (point !== undefined) canvas.lineTo(point.x, point.y); }
+        canvas.stroke(); canvas.setLineDash([]);
+      }
+    }
+    const typeColor = anchor.graftType === "bastion" ? "#6f8f78" : anchor.graftType === "mercy" ? "#d4b85f" : anchor.graftType === "haste" ? "#91bf62" : "#7fa96a";
+    canvas.fillStyle = options.highContrast ? "#4b00d1" : typeColor;
     canvas.strokeStyle = options.highContrast ? "#ffffff" : "#e4c95a";
     canvas.lineWidth = options.highContrast ? 5 : 3;
     canvas.beginPath(); canvas.moveTo(x, y - radius); canvas.lineTo(x + radius, y);
     canvas.lineTo(x, y + radius); canvas.lineTo(x - radius, y); canvas.closePath(); canvas.fill(); canvas.stroke();
+    if (anchor.graftType === "bastion") canvas.strokeRect(x - radius * 0.34, y - radius * 0.34, radius * 0.68, radius * 0.68);
+    else if (anchor.graftType === "mercy") { canvas.beginPath(); canvas.arc(x, y, radius * 0.34, 0, Math.PI * 2); canvas.stroke(); }
+    else if (anchor.graftType === "haste") { canvas.beginPath(); canvas.moveTo(x - radius * 0.18, y - radius * 0.45); canvas.lineTo(x + radius * 0.12, y - radius * 0.05); canvas.lineTo(x - radius * 0.04, y + radius * 0.05); canvas.lineTo(x + radius * 0.18, y + radius * 0.45); canvas.stroke(); }
     if (warning) {
       canvas.setLineDash([10, 7]); canvas.beginPath(); canvas.arc(x, y, radius + 14, 0, Math.PI * 2); canvas.stroke(); canvas.setLineDash([]);
     }

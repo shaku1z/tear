@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import { ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
 import { isValidBloomWellForcePolicy } from "../gameplay/environment/bloom-well";
+import { GRAFT_ANCHOR_TYPES, graftAnchorDefinition } from "../gameplay/environment/graft-anchor";
 import type { TearEnvironmentObservationV1 } from "./contracts";
 import { ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY } from "./state-forge-factories";
 
@@ -173,6 +174,19 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
         }
         if (!text(entry.damageDedupeId)) issues.push(issue(`${path}.damageDedupeId`, "damageDedupeId is required"));
         if (entry.procEligible !== false) issues.push(issue(`${path}.procEligible`, "environment combat objects cannot be ordinary-proc eligible"));
+        if (entry.factoryId === "graft-anchor") {
+          const graftType = GRAFT_ANCHOR_TYPES.find((candidate) => candidate === entry.graftType);
+          if (graftType === undefined) issues.push(issue(`${path}.graftType`, "Graft Anchor type is not approved"));
+          else {
+            const definition = graftAnchorDefinition(graftType);
+            for (const [name, expected] of Object.entries(definition)) if (entry[name] !== expected) issues.push(issue(`${path}.${name}`, "Graft Anchor effect definition does not match canonical tuning"));
+          }
+          issues.push(...geometry(entry.connectionGeometry, `${path}.connectionGeometry`));
+          for (const name of ["createdTick", "activationTick"] as const) if (!Number.isSafeInteger(entry[name]) || Number(entry[name]) < 0) issues.push(issue(`${path}.${name}`, `${name} must be a non-negative safe integer`));
+          if (entry.nextPulseTick !== null && (!Number.isSafeInteger(entry.nextPulseTick) || Number(entry.nextPulseTick) < 0)) issues.push(issue(`${path}.nextPulseTick`, "nextPulseTick must be null or a non-negative safe integer"));
+          if (!finite(entry.recoverySpentHealthFraction) || entry.recoverySpentHealthFraction < 0 || entry.recoverySpentHealthFraction > 0.1) issues.push(issue(`${path}.recoverySpentHealthFraction`, "Graft recovery spend must be finite and bounded"));
+          if (entry.procPolicyId !== "boss-combat-object") issues.push(issue(`${path}.procPolicyId`, "Graft Anchor proc policy must remain boss-combat-object"));
+        }
       } else {
         if (!Array.isArray(entry.points) || entry.points.length < 2 || entry.points.length > MAX_POINTS) issues.push(issue(`${path}.points`, "route points must be a bounded array with at least two points"));
         else entry.points.forEach((point, pointIndex) => { if (!record(point) || !finite(point.x) || !finite(point.y)) issues.push(issue(`${path}.points[${String(pointIndex)}]`, "route point must contain finite x and y")); });
@@ -203,7 +217,20 @@ export function projectEnvironmentHash(value: unknown): unknown {
     if (key === "fields") Object.assign(commonValue, { timer: finite(entry.timer) ? rounded(entry.timer) : entry.timer, eligibility: entry.eligibility ?? null, force: entry.force ?? null, schedule: entry.schedule ?? null, patternId: entry.patternId ?? null,
       variant: entry.variant ?? null, bloomWellId: entry.bloomWellId ?? null, stageOwnerId: entry.stageOwnerId ?? null,
       bossOwnerId: portableEnvironmentId(entry.bossOwnerId ?? null, remapping), startTick: entry.startTick ?? null, transitionTick: entry.transitionTick ?? null });
-    if (key === "combatObjects") Object.assign(commonValue, { targetId: portableEnvironmentId(entry.targetId ?? null, remapping), ...(Array.isArray(entry.targetIds) ? { targetIds: entry.targetIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), ...(Array.isArray(entry.linkedActorIds) ? { linkedActorIds: entry.linkedActorIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), integrity: entry.integrity, maxIntegrity: entry.maxIntegrity, counterplayTags: entry.counterplayTags ?? [], procEligible: entry.procEligible, damageDedupeId: entry.damageDedupeId, patternId: entry.patternId ?? null });
+    if (key === "combatObjects") {
+      Object.assign(commonValue, { targetId: portableEnvironmentId(entry.targetId ?? null, remapping), ...(Array.isArray(entry.targetIds) ? { targetIds: entry.targetIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), ...(Array.isArray(entry.linkedActorIds) ? { linkedActorIds: entry.linkedActorIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), integrity: entry.integrity, maxIntegrity: entry.maxIntegrity, counterplayTags: entry.counterplayTags ?? [], procEligible: entry.procEligible, damageDedupeId: entry.damageDedupeId, patternId: entry.patternId ?? null });
+      if (entry.factoryId === "graft-anchor") Object.assign(commonValue, {
+        factoryId: entry.factoryId, graftType: entry.graftType, effect: entry.effect, procPolicyId: entry.procPolicyId,
+        connectionGeometry: projectionGeometry(record(entry.connectionGeometry) ? entry.connectionGeometry : {}),
+        createdTick: entry.createdTick, activationTick: entry.activationTick, nextPulseTick: entry.nextPulseTick,
+        recoverySpentHealthFraction: entry.recoverySpentHealthFraction,
+        ...(entry.effect === "incoming-damage-multiplier" ? { incomingDamageMultiplier: entry.incomingDamageMultiplier } : {}),
+        ...(entry.effect === "bounded-pulse-recovery" ? { pulseIntervalSeconds: entry.pulseIntervalSeconds,
+          pulseHealthFraction: entry.pulseHealthFraction, maxRecoveryHealthFraction: entry.maxRecoveryHealthFraction } : {}),
+        ...(entry.effect === "selected-attack-cadence-multiplier" ? { cadenceMultiplier: entry.cadenceMultiplier,
+          minimumWarningSeconds: entry.minimumWarningSeconds } : {}),
+      });
+    }
     if (key === "routes") commonValue.points = Array.isArray(entry.points) ? entry.points.map((point) => ({ x: rounded(Number((point as Record<string, unknown>).x)), y: rounded(Number((point as Record<string, unknown>).y)) })) : [];
     return Object.freeze(commonValue);
     });
@@ -227,7 +254,10 @@ export function environmentSnapshotToObservation(value: unknown): TearEnvironmen
   };
   return Object.freeze({
     fields: (projection.fields as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, bounds: bounds(entry.geometry), state: entry.state, active: entry.state === "active", ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), eligibility: entry.eligibility })),
-    combatObjects: (projection.combatObjects as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), ...(typeof entry.targetId === "string" ? { targetId: entry.targetId } : {}), bounds: bounds(entry.geometry), integrityRatio: Number(entry.maxIntegrity) > 0 ? Number(entry.integrity) / Number(entry.maxIntegrity) : 0, state: entry.state, counterplayTags: entry.counterplayTags, procEligible: entry.procEligible })),
+    combatObjects: (projection.combatObjects as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), ...(typeof entry.targetId === "string" ? { targetId: entry.targetId } : {}), bounds: bounds(entry.geometry), integrityRatio: Number(entry.maxIntegrity) > 0 ? Number(entry.integrity) / Number(entry.maxIntegrity) : 0, state: entry.state, counterplayTags: entry.counterplayTags, procEligible: entry.procEligible,
+      ...(typeof entry.graftType === "string" ? { graftType: entry.graftType } : {}), ...(typeof entry.effect === "string" ? { effect: entry.effect } : {}),
+      ...(typeof entry.recoverySpentHealthFraction === "number" ? { recoverySpentHealthFraction: entry.recoverySpentHealthFraction } : {}),
+    })),
     routes: (projection.routes as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, points: entry.points, state: entry.state, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}) })),
   }) as TearEnvironmentObservationV1;
 }

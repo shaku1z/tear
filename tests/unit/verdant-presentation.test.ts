@@ -52,6 +52,24 @@ describe("Verdant environment presentation", () => {
     expect(snapshot.combatObjects[0]).toMatchObject({ state: "warning", integrityRatio: 0.5 });
   });
 
+  it("keeps the three Graft questions distinguishable without motion or audio", () => {
+    const value = recorder();
+    const graft = (id: string, graftType: "bastion" | "mercy" | "haste", x: number) => Object.freeze({
+      id, kind: "graft-anchor", state: "active" as const, graftType, effect: "effect",
+      geometry: Object.freeze({ x, y: 400, radius: 24 }), integrityRatio: 1, counterplayTags: Object.freeze(["cut"]),
+      connectionGeometry: Object.freeze({ x: 800, y: 500, points: Object.freeze([Object.freeze({ x: 800, y: 500 }), Object.freeze({ x, y: 400 })]) }),
+    });
+    renderVerdantEnvironmentPresentation(value.context, Object.freeze({
+      stageId: "verdant-sanctum", fields: Object.freeze([]), routes: Object.freeze([]),
+      combatObjects: Object.freeze([graft("bastion", "bastion", 300), graft("mercy", "mercy", 600), graft("haste", "haste", 900)]),
+    }), { highContrast: false, reducedMotion: true, lowGraphics: true, timeSeconds: 3, flashScale: 0 });
+    expect(value.calls).toContain("fillStyle:#6f8f78");
+    expect(value.calls).toContain("fillStyle:#d4b85f");
+    expect(value.calls).toContain("fillStyle:#91bf62");
+    expect(value.calls).toContain("strokeRect");
+    expect(value.calls).toContain("arc");
+  });
+
   it("renders Rootline warning bounds before its active teeth", () => {
     const warning = recorder();
     const snapshot: EnvironmentPresentationSnapshot = Object.freeze({

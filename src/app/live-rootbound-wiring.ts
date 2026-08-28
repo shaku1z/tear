@@ -15,12 +15,16 @@ export function bindLiveRootboundActors(
       rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
       rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
       graftAnchorPlacements?: () => NonNullable<RootboundEnvironmentActor["state"]["graftPlacements"]>;
+      applyGraftEffects?: NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>;
+      recoverGraftHealth?: NonNullable<RootboundEnvironmentActor["recoverGraftHealth"]>;
     };
     const id = actorId(enemy);
     const target = player();
     return Object.freeze({
       id,
       source: enemy,
+      applyGraftEffects: (effects: Parameters<NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>>[0]) => { actor.applyGraftEffects?.(effects); },
+      recoverGraftHealth: (fraction: number) => actor.recoverGraftHealth?.(fraction) ?? 0,
       state: Object.freeze({
         stage: actor.rootlineStage ?? null,
         geometry: actor.rootlineGeometry?.() ?? Object.freeze({ x: enemy.x, y: enemy.y, w: 0, h: 0 }),

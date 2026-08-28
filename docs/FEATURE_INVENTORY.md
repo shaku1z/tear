@@ -128,6 +128,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   ordinary damage, its incoming-damage limit remains non-zero, and the normal
   damage path reduces HP. No Graft-presence invulnerability flag exists; the
   bounded Bastion multiplier remains canonical effect data for S4 resolution.
+  VS3-C12-S4 completes that lifecycle: warning lasts 84 authoritative ticks;
+  active Bastion/Haste projections and Mercy pulses are derived from canonical
+  objects; Mercy stores its next pulse and spent fraction under a hard 9% cap;
+  destruction removes effects immediately; and Phase III/clear cleanup expires
+  survivors and restores neutral projections. Codec validation, environment
+  hashing, and structured observation retain Graft subtype/effect/budget facts.
+  Presentation consumes immutable connection geometry and uses distinct static
+  shape plus color cues for Bastion, Mercy, and Haste in reduced-motion modes.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

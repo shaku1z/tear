@@ -7,7 +7,7 @@ import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
 import { applyBloomWellForce, advanceBloomWell, isBloomWellState, type BloomWellActor } from "./bloom-well";
 import { applyElasticLeashForce, createElasticLeash, createRootNetwork, installRootNetwork, isElasticLeashValid, isRootbinderLineValid, redistributeRootNetworkKnockback, type LeashPlayerState, type RootbinderCandidate, type RootbinderState } from "../entities/rootbinder-runtime";
-import { installGraftAnchor, type GraftAnchorPlacementRequest } from "./graft-anchor";
+import { advanceGraftAnchor, installGraftAnchor, isGraftAnchorState, resolveRootboundGraftEffects, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "./graft-anchor";
 
 /** The only phases an environment may own inside one authoritative tick. */
 export type EnvironmentStepPhase = "pre-step" | "active-fields" | "collision-resolution" | "post-commit";
@@ -56,6 +56,8 @@ export interface RootboundEnvironmentActor {
     graftPlacements?: readonly GraftAnchorPlacementRequest[];
     ownerPosition?: Readonly<{ x: number; y: number }>;
   }>;
+  readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
+  readonly recoverGraftHealth?: (fraction: number) => number;
   readonly player?: Readonly<{
     x: number; y: number; hw: number; hh: number; invulnerable: boolean; hazardDamageMultiplier: number;
     takeDamage: (damage: number, sourceX: number, source: unknown) => void;
@@ -109,8 +111,8 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       if (object.kind === "root-link" && !priorIds.has(object.id)) publishEnvironmentEvent(this.#events, { event: "combat-object-link-created", objectId: object.id, category: "combat-object", objectKind: object.kind }, object.stateTick);
     }
   }
-  override clear(reason: EnvironmentClearReason): void { super.clear(reason); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear(); this.#rootbinderGenerations.clear(); this.#rootlineFields.clear(); this.#rootlineHitFields.clear(); }
-  override removeCombatObject(id: string): void { super.removeCombatObject(id); this.#combatKernels.delete(id); this.#rootbinderRedistribution.delete(id); }
+  override clear(reason: EnvironmentClearReason): void { for (const actor of this.#rootboundActors?.() ?? []) actor.applyGraftEffects?.(ROOTBOUND_NO_GRAFT_EFFECTS); super.clear(reason); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear(); this.#rootbinderGenerations.clear(); this.#rootlineFields.clear(); this.#rootlineHitFields.clear(); }
+  override removeCombatObject(id: string): void { const prior = this.combatObjects().find((object) => object.id === id); super.removeCombatObject(id); this.#combatKernels.delete(id); this.#rootbinderRedistribution.delete(id); if (prior !== undefined && isGraftAnchorState(prior) && prior.ownerId !== null) this.#applyRootboundGraftEffects(prior.ownerId); }
 
   /** Cleans one relationship through its kernel so the native cleanup fact is delivered. */
   cleanupCombatObject(id: string, reason: EnvironmentClearReason, tick = 0): void {
@@ -123,6 +125,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     }
     this.updateCombatObject(id, { ...kernel.cleanup(reason), stateTick: tick });
     this.#combatKernels.delete(id); this.#rootbinderRedistribution.delete(id);
+    if (isGraftAnchorState(object) && object.ownerId !== null) this.#applyRootboundGraftEffects(object.ownerId);
   }
 
   #run(phase: EnvironmentStepPhase, tick: number, seconds: number, callback: ((context: EnvironmentStepContext) => void) | undefined): void {
@@ -190,15 +193,24 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   #advanceRootboundGrafts(tick: number): void {
     for (const actor of this.#rootboundActors?.() ?? []) {
       const ownerPosition = actor.state.ownerPosition;
-      if (ownerPosition === undefined) continue;
-      for (const placement of actor.state.graftPlacements ?? []) installGraftAnchor(this, {
-        ownerId: actor.id,
-        ownerPosition,
-        graftType: placement.graftType,
-        geometry: placement.geometry,
-        createdTick: tick,
+      const placements = actor.state.graftPlacements ?? [];
+      if (ownerPosition !== undefined) for (const placement of placements) installGraftAnchor(this, {
+        ownerId: actor.id, ownerPosition, graftType: placement.graftType, geometry: placement.geometry, createdTick: tick,
       });
+      const owned = this.combatObjects().filter(isGraftAnchorState).filter((graft) => graft.ownerId === actor.id);
+      if (placements.length === 0) {
+        for (const graft of owned) if (graft.state !== "destroyed" && graft.state !== "expired") this.cleanupCombatObject(graft.id, "stage-transition", tick);
+      } else for (const graft of owned) {
+        const next = advanceGraftAnchor(graft, tick, actor.recoverGraftHealth);
+        if (next !== graft) this.updateCombatObject(graft.id, next);
+      }
+      this.#applyRootboundGraftEffects(actor.id);
     }
+  }
+
+  #applyRootboundGraftEffects(ownerId: string): void {
+    const actor = (this.#rootboundActors?.() ?? []).find((candidate) => candidate.id === ownerId);
+    actor?.applyGraftEffects?.(resolveRootboundGraftEffects(this.combatObjects(), ownerId));
   }
 
   #nextRootbinderId(ownerId: string, kind: "network" | "leash"): string {
@@ -338,6 +350,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     }
     const result = kernel.damage(amount, attackId, tick);
     if (result.accepted) this.updateCombatObject(id, { ...kernel.state, stateTick: tick });
+    if (result.destroyed && isGraftAnchorState(kernel.state) && kernel.state.ownerId !== null) this.#applyRootboundGraftEffects(kernel.state.ownerId);
     return result;
   }
 

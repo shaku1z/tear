@@ -2,16 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   GRAFT_ANCHOR_DEFINITIONS,
   GRAFT_ANCHOR_MAX_INTEGRITY,
+  GRAFT_ANCHOR_TIMING,
   GRAFT_ANCHOR_TYPES,
   GRAFT_WARNING_FLOOR_SECONDS,
   MAX_ACTIVE_GRAFT_ANCHORS,
+  advanceGraftAnchor,
   createGraftAnchorState,
   graftAnchorDefinition,
   installGraftAnchor,
 } from "../../src/gameplay/environment/graft-anchor";
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { validateEnvironmentCodecPayload } from "../../src/tearbench/environment-codec";
+import { environmentHash, environmentSnapshotToObservation, validateEnvironmentCodecPayload } from "../../src/tearbench/environment-codec";
 
 describe("Rootbound Graft Anchor definitions", () => {
   it("defines the exact bounded Phase II roster without creating another environment kind", () => {
@@ -118,5 +120,37 @@ describe("Rootbound Graft Anchor definitions", () => {
     expect(() => createGraftAnchorState({ ownerId: "", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 1 })).toThrow(/owner ID/u);
     expect(() => createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20 }, createdTick: 1 })).toThrow(/geometry/u);
     expect(() => createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: -1 })).toThrow(/tick/u);
+  });
+
+  it("advances from visible warning to active on an absolute tick", () => {
+    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "bastion", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 10 });
+    expect(advanceGraftAnchor(state, 10 + GRAFT_ANCHOR_TIMING.warningTicks - 1).state).toBe("warning");
+    expect(advanceGraftAnchor(state, 10 + GRAFT_ANCHOR_TIMING.warningTicks)).toMatchObject({
+      state: "active", stateTick: 10 + GRAFT_ANCHOR_TIMING.warningTicks,
+    });
+  });
+
+  it("caps Mercy recovery at the exact definition budget even across a large tick jump", () => {
+    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "mercy", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 0 });
+    const mercy = graftAnchorDefinition("mercy");
+    if (mercy.effect !== "bounded-pulse-recovery") throw new TypeError("expected Mercy definition");
+    const after = advanceGraftAnchor(state, GRAFT_ANCHOR_TIMING.warningTicks + 120 * 30, (fraction) => fraction);
+    expect(after).toMatchObject({ state: "active", recoverySpentHealthFraction: mercy.maxRecoveryHealthFraction });
+    expect(advanceGraftAnchor(after, 120 * 60, (fraction) => fraction)).toBe(after);
+  });
+
+  it("carries Graft effect and spent-budget truth through hash and structured observation", () => {
+    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "mercy", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 0 });
+    const snapshot = { stageId: "verdant-sanctum", fields: [], combatObjects: [state], routes: [] } as const;
+    const spent = { ...snapshot, combatObjects: [{ ...state, recoverySpentHealthFraction: 0.015 }] } as const;
+    expect(environmentHash(spent)).not.toBe(environmentHash(snapshot));
+    expect(environmentSnapshotToObservation(spent).combatObjects[0]).toMatchObject({
+      graftType: "mercy", effect: "bounded-pulse-recovery", recoverySpentHealthFraction: 0.015,
+    });
+    expect(validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...spent })).toEqual([]);
+    const invalid = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...snapshot,
+      combatObjects: [{ ...state, pulseHealthFraction: 0.5 }],
+    });
+    expect(invalid.some((entry) => entry.path.endsWith(".pulseHealthFraction"))).toBe(true);
   });
 });
