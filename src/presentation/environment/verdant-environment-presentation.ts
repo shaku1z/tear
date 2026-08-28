@@ -16,6 +16,26 @@ export function renderVerdantEnvironmentPresentation(
 ): void {
   if (snapshot.stageId !== "verdant-sanctum") return;
   canvas.save(); canvas.lineCap = "round";
+  for (const field of snapshot.fields) {
+    if (field.kind !== "rootline") continue;
+    const { minX, maxX, minY, maxY } = field.bounds;
+    const warning = field.state === "warning" || field.state === "scheduled";
+    canvas.globalAlpha = field.state === "expired" ? 0.2 : warning ? 0.72 : field.state === "cooldown" ? 0.45 : 0.94;
+    canvas.strokeStyle = options.highContrast ? "#fff36b" : "#d7b84c";
+    canvas.fillStyle = options.highContrast ? "#ffffff" : "#4f713f";
+    canvas.lineWidth = options.highContrast ? 6 : 4;
+    canvas.setLineDash(warning ? [18, 10] : []);
+    canvas.strokeRect(minX, minY, maxX - minX, maxY - minY);
+    canvas.setLineDash([]);
+    if (!warning) {
+      const toothWidth = options.lowGraphics ? 54 : 34;
+      canvas.beginPath();
+      for (let x = minX; x < maxX; x += toothWidth) {
+        canvas.moveTo(x, maxY); canvas.lineTo(Math.min(maxX, x + toothWidth / 2), minY); canvas.lineTo(Math.min(maxX, x + toothWidth), maxY);
+      }
+      canvas.fill();
+    }
+  }
   for (const anchor of snapshot.combatObjects) {
     if (anchor.kind !== "graft-anchor") continue;
     const geometry = anchor.geometry;

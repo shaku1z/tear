@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import type { EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import {
   ROOTBOUND_PHASE_ONE_ATTACK_ORDER,
   ROOTBOUND_PHASE_ONE_CADENCE,
   ROOTBOUND_SEED_ARC,
+  ROOTBOUND_ROOTLINE,
   ROOTBOUND_VINE_SWEEP,
   type RootboundPhaseOneAttack,
 } from "../../src/gameplay/entities/enemy-types/rootbound";
@@ -37,7 +39,7 @@ describe("Rootbound Phase I cadence", () => {
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, entry.harness.platforms, entry.harness.player, []);
         const target = entry === first ? selected : mirrored;
         if (entry.actor.pendingAttack !== null) target.push(entry.actor.pendingAttack);
-        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc"] });
+        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc", "rootline"] });
         entry.actor.completePhaseOneAttack();
         expect(entry.actor).toMatchObject({ state: "recover", stateT: ROOTBOUND_PHASE_ONE_CADENCE.recovery, pendingAttack: null });
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, entry.harness.platforms, entry.harness.player, []);
@@ -145,5 +147,46 @@ describe("Rootbound Phase I cadence", () => {
 
     actor.update(ROOTBOUND_SEED_ARC.release, harness.platforms, harness.player, shots);
     expect(actor).toMatchObject({ pendingAttack: null, seedArcStage: null, state: "recover", atk: "unavailable" });
+  });
+
+  it("routes Rootline warning, one active hit, and cleanup through the environment owner", () => {
+    const { harness, actor } = boss();
+    const player = harness.player;
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootline-test" });
+    player.x = actor.x + 180;
+    environment.setRootboundActorsSource(() => [Object.freeze({
+      id: "rootbound:test",
+      source: actor,
+      state: Object.freeze({ stage: actor.rootlineStage, geometry: actor.rootlineGeometry(), damage: ROOTBOUND_ROOTLINE.damage }),
+      player: Object.freeze({
+        x: player.x, y: player.y, hw: player.hw, hh: player.hh, invulnerable: Boolean(player.invulnerable),
+        hazardDamageMultiplier: 1,
+        takeDamage: (damage: number, sourceX: number, source: unknown) => { player.takeDamage(damage, sourceX, source as never); },
+      }),
+    })]);
+    actor.pendingAttack = "rootline";
+
+    actor.update(1 / 120, harness.platforms, player, []);
+    environment.step(1, 1 / 120, () => undefined);
+    expect(environment.fields()).toEqual([expect.objectContaining({
+      kind: "rootline", ownerId: "rootbound:test", state: "warning", patternId: "rootbound-rootline",
+      geometry: actor.rootlineGeometry(),
+    })]);
+    expect(player.damage).toEqual([]);
+
+    actor.update(ROOTBOUND_ROOTLINE.windup, harness.platforms, player, []);
+    environment.step(2, 1 / 120, () => undefined);
+    expect(environment.fields()[0]).toMatchObject({ state: "active" });
+    expect(player.damage).toHaveLength(1);
+    environment.step(3, 1 / 120, () => undefined);
+    expect(player.damage).toHaveLength(1);
+
+    actor.update(ROOTBOUND_ROOTLINE.active, harness.platforms, player, []);
+    environment.step(4, 1 / 120, () => undefined);
+    expect(environment.fields()[0]).toMatchObject({ state: "cooldown" });
+    actor.update(ROOTBOUND_ROOTLINE.cleanup, harness.platforms, player, []);
+    environment.step(5, 1 / 120, () => undefined);
+    expect(environment.fields()[0]).toMatchObject({ state: "expired", cleanupReason: "natural-expiry" });
+    expect(actor).toMatchObject({ pendingAttack: null, rootlineStage: null, state: "recover" });
   });
 });

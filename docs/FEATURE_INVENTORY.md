@@ -41,7 +41,7 @@ This is the migration checklist for the architectural redesign. A checked featur
 - [x] Verdant identity foundation (engineering-only) — `stages.ts`,
   `boss-definitions.ts`, `content-director.ts`, and
   `environment-contracts.ts` own `verdant-sanctum`, `rootbound`, `rootbinder`,
-  and `bloom-well`/`root-link`/`graft-anchor`/`regrowth-link` exactly once.
+  and `bloom-well`/`rootline`/`root-link`/`graft-anchor`/`regrowth-link` exactly once.
   TearBench projects those identities from production owners and has negative
   unmapped-identity proofs. At C1 the runtime campaign remained five stages and
   the public game-reference schema remained unchanged; the later C8 engineering
@@ -82,6 +82,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   the ordinary projectile family. Each seed exposes Rootbound owner/source,
   landing position and time, deflect counterplay, and a sub-two-second bounded
   impact/expiry path; it carries neither poison/mud nor root persistence.
+  VS3-C11-S4 extends that existing environment-kind authority with `rootline`
+  and routes the boss intent through the shared environment runtime. The runtime
+  owns warning geometry, the active field, one hazard-scaled hit, cooldown,
+  causal start/resolve facts, and natural expiry; presentation consumes the same
+  field bounds for its warning outline and active root teeth.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

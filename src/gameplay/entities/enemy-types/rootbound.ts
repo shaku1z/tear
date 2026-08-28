@@ -27,6 +27,8 @@ export const ROOTBOUND_SEED_ARC = Object.freeze({
   radius: 12,
 });
 export type RootboundSeedArcStage = "windup" | "release";
+export const ROOTBOUND_ROOTLINE = Object.freeze({ windup: 0.7, active: 0.24, cleanup: 0.18, width: 430, height: 104, damage: 20 });
+export type RootboundRootlineStage = "warning" | "active" | "cleanup";
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
@@ -43,7 +45,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[0],
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[1],
     ];
-    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep", "seed-arc"]);
+    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep", "seed-arc", "rootline"]);
     readonly phaseOneAttackOrder = ROOTBOUND_PHASE_ONE_ATTACK_ORDER;
     pendingAttack: RootboundPhaseOneAttack | null = null;
     attackIndex = 0;
@@ -53,6 +55,9 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     vineSweepFacing = 1;
     seedArcStage: RootboundSeedArcStage | null = null;
     seedArcT = 0;
+    rootlineStage: RootboundRootlineStage | null = null;
+    rootlineT = 0;
+    rootlineFacing = 1;
     cleanupReason: BossEncounterCleanupReason | null = null;
 
     constructor(x: number, y: number) {
@@ -197,6 +202,39 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       }
     }
 
+    rootlineGeometry(): Readonly<{ x: number; y: number; w: number; h: number }> {
+      return Object.freeze({
+        x: this.rootlineFacing > 0 ? this.x + this.hw : this.x - this.hw - ROOTBOUND_ROOTLINE.width,
+        y: CONFIG.world.groundY - ROOTBOUND_ROOTLINE.height,
+        w: ROOTBOUND_ROOTLINE.width,
+        h: ROOTBOUND_ROOTLINE.height,
+      });
+    }
+
+    private beginRootline(): void {
+      this.rootlineStage = "warning";
+      this.rootlineT = ROOTBOUND_ROOTLINE.windup;
+      this.rootlineFacing = this.facing;
+      this.atk = "rootline:warning";
+    }
+
+    private updateRootline(dt: number): void {
+      if (this.rootlineStage === null) this.beginRootline();
+      this.rootlineT = Math.max(0, this.rootlineT - dt);
+      if (this.rootlineStage === "warning" && this.rootlineT <= 0) {
+        this.rootlineStage = "active";
+        this.rootlineT = ROOTBOUND_ROOTLINE.active;
+        this.atk = "rootline:active";
+      } else if (this.rootlineStage === "active" && this.rootlineT <= 0) {
+        this.rootlineStage = "cleanup";
+        this.rootlineT = ROOTBOUND_ROOTLINE.cleanup;
+        this.atk = "rootline:cleanup";
+      } else if (this.rootlineStage === "cleanup" && this.rootlineT <= 0) {
+        this.rootlineStage = null;
+        this.completePhaseOneAttack();
+      }
+    }
+
     cleanupEncounter(reason: BossEncounterCleanupReason): void {
       if (this.cleanupReason !== null) return;
       this.cleanupReason = reason;
@@ -213,6 +251,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.vineSweepFacing = this.facing;
       this.seedArcStage = null;
       this.seedArcT = 0;
+      this.rootlineStage = null;
+      this.rootlineT = 0;
       this.cinematicRequest = null;
       this.cinematicPose = "";
       this.cinematicT = 0;
@@ -243,6 +283,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         this.updateVineSweep(dt, player);
       } else if (this.pendingAttack === "seed-arc") {
         this.updateSeedArc(dt, player, projectiles);
+      } else if (this.pendingAttack === "rootline") {
+        this.updateRootline(dt);
       } else if (this.stun <= 0 && this.pendingAttack === null) {
         this.stateT = Math.max(0, this.stateT - dt);
         if (this.stateT <= 0) {

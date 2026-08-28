@@ -44,6 +44,20 @@ export interface RootbinderPlayerTarget extends LeashPlayerState {
   readonly apply: (value: LeashPlayerState) => void;
 }
 
+export interface RootboundEnvironmentActor {
+  readonly id: string;
+  readonly source: unknown;
+  readonly state: Readonly<{
+    stage: "warning" | "active" | "cleanup" | null;
+    geometry: Readonly<{ x: number; y: number; w: number; h: number }>;
+    damage: number;
+  }>;
+  readonly player?: Readonly<{
+    x: number; y: number; hw: number; hh: number; invulnerable: boolean; hazardDamageMultiplier: number;
+    takeDamage: (damage: number, sourceX: number, source: unknown) => void;
+  }>;
+}
+
 /** Collection owner plus the bounded fixed-step phase seam. */
 export class EnvironmentRuntime extends EnvironmentState implements EnvironmentStepPort {
   readonly #hooks: EnvironmentStepHooks;
@@ -51,11 +65,14 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   #availableActorIds: (() => ReadonlySet<string>) | undefined;
   #bloomWellActors: (() => readonly BloomWellActor[]) | undefined;
   #rootbinderActors: (() => readonly RootbinderEnvironmentActor[]) | undefined;
+  #rootboundActors: (() => readonly RootboundEnvironmentActor[]) | undefined;
   readonly #combatKernels = new Map<string, EnvironmentCombatObjectRuntime>();
   readonly #rootbinderNetworks = new Map<string, readonly string[]>();
   readonly #rootbinderLeashes = new Map<string, string>();
   readonly #rootbinderRedistribution = new Map<string, Readonly<{ x: number; y: number }>>();
   readonly #rootbinderGenerations = new Map<string, number>();
+  readonly #rootlineFields = new Map<string, string>();
+  readonly #rootlineHitFields = new Set<string>();
   #phaseLog: EnvironmentStepPhase[] = [];
 
   constructor(stageId = "unknown", worldId: string, configuration?: Partial<EnvironmentRuntimeConfiguration>, hooks: EnvironmentStepHooks = {}, options: Readonly<{ events?: TearGameplayEventPort; availableActorIds?: () => ReadonlySet<string>; bloomWellActors?: () => readonly BloomWellActor[] }> = {}) {
@@ -66,7 +83,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   clearPhaseLog(): void { this.#phaseLog = []; }
   override replace(snapshot: EnvironmentSnapshot): void {
     const priorIds = new Set(this.combatObjects().map((object) => object.id));
-    super.replace(snapshot); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear();
+    super.replace(snapshot); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear(); this.#rootlineFields.clear(); this.#rootlineHitFields.clear();
     this.#rootbinderGenerations.clear();
     for (const object of snapshot.combatObjects) {
       const match = /^(.*):(network|leash):g(\d+)(?::\d+)?$/u.exec(object.id);
@@ -88,7 +105,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       if (object.kind === "root-link" && !priorIds.has(object.id)) publishEnvironmentEvent(this.#events, { event: "combat-object-link-created", objectId: object.id, category: "combat-object", objectKind: object.kind }, object.stateTick);
     }
   }
-  override clear(reason: EnvironmentClearReason): void { super.clear(reason); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear(); this.#rootbinderGenerations.clear(); }
+  override clear(reason: EnvironmentClearReason): void { super.clear(reason); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear(); this.#rootbinderGenerations.clear(); this.#rootlineFields.clear(); this.#rootlineHitFields.clear(); }
   override removeCombatObject(id: string): void { super.removeCombatObject(id); this.#combatKernels.delete(id); this.#rootbinderRedistribution.delete(id); }
 
   /** Cleans one relationship through its kernel so the native cleanup fact is delivered. */
@@ -116,6 +133,54 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   setAvailableActorIdsSource(source: (() => ReadonlySet<string>) | undefined): void { this.#availableActorIds = source; }
   setBloomWellActorsSource(source: (() => readonly BloomWellActor[]) | undefined): void { this.#bloomWellActors = source; }
   setRootbinderActorsSource(source: (() => readonly RootbinderEnvironmentActor[]) | undefined): void { this.#rootbinderActors = source; }
+  setRootboundActorsSource(source: (() => readonly RootboundEnvironmentActor[]) | undefined): void { this.#rootboundActors = source; }
+
+  #advanceRootboundRootlines(tick: number): void {
+    const present = new Set<string>();
+    for (const actor of this.#rootboundActors?.() ?? []) {
+      present.add(actor.id);
+      const stage = actor.state.stage;
+      const environmentState = stage === null ? "expired" : stage === "cleanup" ? "cooldown" : stage;
+      let fieldId = this.#rootlineFields.get(actor.id);
+      if (stage !== null && fieldId === undefined) {
+        fieldId = this.addField({
+          kind: "rootline", geometry: actor.state.geometry, state: environmentState, stateTick: tick, timer: 0,
+          ownerId: actor.id, schedule: null, eligibility: Object.freeze({ player: true, enemies: false, bosses: false }),
+          force: null, cleanupReason: null, patternId: "rootbound-rootline",
+        });
+        this.#rootlineFields.set(actor.id, fieldId);
+      } else if (stage !== null && fieldId !== undefined) {
+        const prior = this.fields().find((field) => field.id === fieldId);
+        if (prior !== undefined && prior.state !== environmentState) {
+          this.updateField(fieldId, { state: environmentState, stateTick: tick, geometry: actor.state.geometry });
+          if (stage === "active" && this.#events !== undefined) publishEnvironmentEvent(this.#events, {
+            event: "field-started", objectId: fieldId, category: "field", objectKind: "rootline",
+          }, tick);
+        } else if (prior !== undefined) this.updateField(fieldId, { geometry: actor.state.geometry });
+      }
+      if (stage === "active" && fieldId !== undefined && !this.#rootlineHitFields.has(fieldId)) {
+        const target = actor.player;
+        const geometry = actor.state.geometry;
+        if (target !== undefined && !target.invulnerable
+          && target.x + target.hw >= geometry.x && target.x - target.hw <= geometry.x + geometry.w
+          && target.y + target.hh >= geometry.y && target.y - target.hh <= geometry.y + geometry.h) {
+          this.#rootlineHitFields.add(fieldId);
+          target.takeDamage(actor.state.damage * target.hazardDamageMultiplier, geometry.x + geometry.w / 2, actor.source);
+        }
+      }
+      if (stage === null && fieldId !== undefined) {
+        this.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+        if (this.#events !== undefined) publishEnvironmentEvent(this.#events, {
+          event: "field-resolved", objectId: fieldId, category: "field", objectKind: "rootline", reason: "natural-expiry",
+        }, tick);
+        this.#rootlineFields.delete(actor.id); this.#rootlineHitFields.delete(fieldId);
+      }
+    }
+    for (const [ownerId, fieldId] of this.#rootlineFields) if (!present.has(ownerId)) {
+      this.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: "stage-transition" });
+      this.#rootlineFields.delete(ownerId); this.#rootlineHitFields.delete(fieldId);
+    }
+  }
 
   #nextRootbinderId(ownerId: string, kind: "network" | "leash"): string {
     const generation = (this.#rootbinderGenerations.get(ownerId) ?? 0) + 1;
@@ -296,7 +361,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   step(tick: number, seconds: number, gameplayStep: () => void, availableActorIds?: ReadonlySet<string>): void {
     if (typeof gameplayStep !== "function") throw new TypeError("environment gameplay step is required");
     this.clearPhaseLog(); this.#run("pre-step", tick, seconds, this.#hooks.preStep); gameplayStep();
-    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
+    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
     this.#run("collision-resolution", tick, seconds, this.#hooks.resolveCollisions);
     this.#run("post-commit", tick, seconds, () => { this.#cleanupOrphans(tick, availableActorIds); this.#hooks.postCommit?.({ tick, seconds, phase: "post-commit", environment: this }); });
   }

@@ -6,7 +6,7 @@
  * import these IDs rather than maintaining a second registry.
  */
 export const ENVIRONMENT_OBJECT_KIND_IDS = Object.freeze([
-  "bloom-well", "root-link", "graft-anchor", "regrowth-link",
+  "bloom-well", "rootline", "root-link", "graft-anchor", "regrowth-link",
 ] as const);
 
 export type EnvironmentObjectKind = typeof ENVIRONMENT_OBJECT_KIND_IDS[number];

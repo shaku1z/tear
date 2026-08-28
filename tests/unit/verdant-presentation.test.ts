@@ -52,6 +52,32 @@ describe("Verdant environment presentation", () => {
     expect(snapshot.combatObjects[0]).toMatchObject({ state: "warning", integrityRatio: 0.5 });
   });
 
+  it("renders Rootline warning bounds before its active teeth", () => {
+    const warning = recorder();
+    const snapshot: EnvironmentPresentationSnapshot = Object.freeze({
+      stageId: "verdant-sanctum",
+      fields: Object.freeze([Object.freeze({
+        id: "rootline", kind: "rootline", state: "warning", active: false,
+        bounds: Object.freeze({ minX: 820, maxX: 1250, minY: 696, maxY: 800 }),
+      })]),
+      combatObjects: Object.freeze([]), routes: Object.freeze([]),
+    });
+    renderVerdantEnvironmentPresentation(warning.context, snapshot, {
+      highContrast: false, reducedMotion: true, lowGraphics: true, timeSeconds: 0, flashScale: 0,
+    });
+    expect(warning.calls).toContain("strokeRect");
+    expect(warning.calls).not.toContain("fill");
+
+    const active = recorder();
+    renderVerdantEnvironmentPresentation(active.context, {
+      ...snapshot, fields: Object.freeze([Object.freeze({
+        id: "rootline", kind: "rootline", state: "active", active: true,
+        bounds: Object.freeze({ minX: 820, maxX: 1250, minY: 696, maxY: 800 }),
+      })]),
+    }, { highContrast: true, reducedMotion: true, lowGraphics: true, timeSeconds: 0, flashScale: 0 });
+    expect(active.calls).toEqual(expect.arrayContaining(["strokeRect", "fill", "fillStyle:#ffffff"]));
+  });
+
   it("does not draw Verdant-only boss facts in another stage", () => {
     const value = recorder();
     renderVerdantEnvironmentPresentation(value.context, {
