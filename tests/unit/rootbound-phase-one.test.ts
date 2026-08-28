@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import type { EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
 import {
   ROOTBOUND_PHASE_ONE_ATTACK_ORDER,
   ROOTBOUND_PHASE_ONE_CADENCE,
@@ -244,5 +245,36 @@ describe("Rootbound Phase I cadence", () => {
     expect(seed).toMatchObject({ dead: true, shatterReason: "phase-transition" });
     environment.step(2, 1 / 120, () => undefined);
     expect(environment.fields()[0]).toMatchObject({ state: "expired", cleanupReason: "stage-transition" });
+  });
+
+  it("keeps authored cadence fixed while current difficulty authority scales damage exactly once", () => {
+    const cycleSeconds = ROOTBOUND_PHASE_ONE_CADENCE.openingDelay * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length
+      + ROOTBOUND_PHASE_ONE_CADENCE.recovery * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length
+      + ROOTBOUND_VINE_SWEEP.windup + ROOTBOUND_VINE_SWEEP.active + ROOTBOUND_VINE_SWEEP.followThrough
+      + ROOTBOUND_SEED_ARC.windup + ROOTBOUND_SEED_ARC.release
+      + ROOTBOUND_ROOTLINE.windup + ROOTBOUND_ROOTLINE.active + ROOTBOUND_ROOTLINE.cleanup
+      + ROOTBOUND_CANOPY_STEP.telegraph + ROOTBOUND_CANOPY_STEP.travel + ROOTBOUND_CANOPY_STEP.settle;
+    expect(cycleSeconds).toBeCloseTo(10.05);
+    expect(Math.min(
+      ROOTBOUND_VINE_SWEEP.windup,
+      ROOTBOUND_SEED_ARC.windup,
+      ROOTBOUND_ROOTLINE.windup,
+      ROOTBOUND_CANOPY_STEP.telegraph,
+    )).toBeGreaterThanOrEqual(0.55);
+
+    const scaled = (damage: number, multiplier: number): number => Math.round(damage * multiplier * 10) / 10;
+    expect(DIFFICULTY_CATALOG.map((difficulty) => ({
+      id: difficulty.id,
+      vine: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_VINE_SWEEP.damage, difficulty.modifiers.playerDamageTaken),
+      seed: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_SEED_ARC.damage, difficulty.modifiers.playerDamageTaken),
+      rootline: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_ROOTLINE.damage, difficulty.modifiers.playerDamageTaken),
+      cycleSeconds,
+    }))).toEqual([
+      { id: "easy", vine: 11.7, seed: 10.4, rootline: 13, cycleSeconds },
+      { id: "normal", vine: 18, seed: 16, rootline: 20, cycleSeconds },
+      { id: "hard", vine: 24.3, seed: 21.6, rootline: 27, cycleSeconds },
+      { id: "extreme", vine: 32.4, seed: 28.8, rootline: 36, cycleSeconds },
+      { id: "onehit", vine: "fatal", seed: "fatal", rootline: "fatal", cycleSeconds },
+    ]);
   });
 });

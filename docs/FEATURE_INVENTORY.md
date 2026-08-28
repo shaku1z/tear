@@ -102,6 +102,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   combinations, Rootline preserves warned bounds and active teeth, and Seed Arc
   now renders its landing marker plus a high-contrast projectile cue even when
   optional trails and effects are disabled.
+  VS3-C11-S8 validates a fixed 10.05-second four-verb cycle with minimum
+  0.55-second tells. Existing global player-damage scaling applies exactly once
+  on Easy/Normal/Hard/Extreme and the existing One-Hit rule remains fatal;
+  Rootbound introduces no parallel difficulty tuning.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
