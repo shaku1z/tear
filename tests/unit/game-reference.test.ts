@@ -14,7 +14,7 @@ import { UPGRADES, type UpgradeDefinition } from "../../src/gameplay/upgrades";
 import { WEAPONS, type WeaponDefinition } from "../../src/gameplay/weapons";
 import { STAGES } from "../../src/gameplay/stages";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
-import { ENEMY_KIND_IDS } from "../../src/gameplay/run/content-director";
+import { ENEMY_IDENTITY_IDS } from "../../src/gameplay/run/content-director";
 import { BOSS_DEFINITIONS } from "../../src/gameplay/run/boss-definitions";
 import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
 import { FINAL_FIVE_WEAPON_TUNING } from "../../src/gameplay/weapon-tuning";
@@ -25,7 +25,7 @@ const tuningByWeapon = FINAL_FIVE_WEAPON_TUNING;
 const firstWeapon = WEAPONS.at(0);
 if (firstWeapon === undefined) throw new Error("Final Five source is empty");
 const achievementSource = ACHIEVEMENT_CATALOG;
-const enemyFamilySource = ENEMY_KIND_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
+const enemyFamilySource = ENEMY_IDENTITY_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
 
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
   upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
@@ -106,8 +106,9 @@ describe("game-reference.v1", () => {
     expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
     expect(result.collections.enemies.status).toBe("complete");
     expect(result.collections.enemies.items.families.map((family) => family.id)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
     ]);
+    expect(result.collections.enemies.items.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
     expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([
       { id: "bark-sentinel", name: "Bark Sentinel", weight: 0.45, minWave: 5 },
     ]);

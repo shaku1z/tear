@@ -22,7 +22,7 @@ try {
   if (reference.collections.upgrades?.status !== "complete" || reference.collections.upgrades.items?.length !== 60) throw new Error("game reference check produced an incomplete upgrade catalog");
   if (reference.collections.achievements?.status !== "complete" || reference.collections.achievements.items?.length !== 100) throw new Error("game reference check produced an incomplete achievement catalog");
   if (reference.collections.enemies?.status !== "complete") throw new Error("game reference check produced an incomplete enemy catalog");
-  if (JSON.stringify(reference.collections.enemies.items?.families?.map((family) => family.id)) !== JSON.stringify(["charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera"])) throw new Error("game reference check produced an invalid enemy-family catalog");
+  if (JSON.stringify(reference.collections.enemies.items?.families?.map((family) => family.id)) !== JSON.stringify(["charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder"])) throw new Error("game reference check produced an invalid enemy-family catalog");
   if (JSON.stringify(reference.collections.enemies.items?.affixes?.map((affix) => affix.id)) !== JSON.stringify(["tank", "swift", "rapid", "volley", "armed", "warded"])) throw new Error("game reference check produced an invalid enemy-affix catalog");
   if (reference.collections.enemies.items?.presets?.length !== 3) throw new Error("game reference check produced an incomplete enemy-preset catalog");
   if (reference.collections.bosses?.status !== "complete") throw new Error("game reference check produced an incomplete boss catalog");

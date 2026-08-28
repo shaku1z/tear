@@ -1,4 +1,4 @@
-import { ENEMY_KIND_IDS, type ActiveEnemyKind } from "../gameplay/run/content-director";
+import { ENEMY_IDENTITY_IDS, type EnemyKind } from "../gameplay/run/content-director";
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
 import type { EnemyVariant } from "../gameplay/variants";
 
@@ -11,7 +11,7 @@ export interface GameReferenceEnemyVariantV1 {
 }
 
 export interface GameReferenceEnemyFamilyV1 {
-  readonly id: ActiveEnemyKind;
+  readonly id: EnemyKind;
   readonly variants: readonly GameReferenceEnemyVariantV1[];
 }
 
@@ -21,7 +21,7 @@ export interface GameReferenceEnemyAffixV1 {
 }
 
 export interface GameReferenceEnemyPresetV1 {
-  readonly familyId: ActiveEnemyKind;
+  readonly familyId: EnemyKind;
   readonly affixIds: readonly string[];
 }
 
@@ -32,7 +32,7 @@ export interface GameReferenceEnemiesV1 {
 }
 
 export interface EnemyReferenceFamilySource {
-  readonly id: ActiveEnemyKind;
+  readonly id: EnemyKind;
   readonly variants: readonly EnemyVariant[];
 }
 
@@ -43,12 +43,13 @@ export interface EnemyReferenceProjectionInput {
 }
 
 /** Explicit contract signatures keep source reordering fail-closed. */
-export const CANONICAL_ENEMY_KIND_IDS = Object.freeze([
+export const CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",
   "priest", "mender", "herald", "anchor", "wraith", "chimera",
+  "rootbinder",
 ] as const);
 
-export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<ActiveEnemyKind, readonly string[]>> = Object.freeze({
+export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze({
   charger: Object.freeze(["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker"]),
   ranged: Object.freeze(["sentinel", "rifleman", "marksman", "warlock", "chain", "seedcaster"]),
   flyer: Object.freeze(["swooper", "divebomber", "highdiver", "canopy-diver"]),
@@ -60,6 +61,7 @@ export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<ActiveEnemyKind, reado
   anchor: Object.freeze([]),
   wraith: Object.freeze([]),
   chimera: Object.freeze([]),
+  rootbinder: Object.freeze([]),
 });
 
 export const CANONICAL_ENEMY_AFFIX_IDS = Object.freeze([
@@ -67,7 +69,7 @@ export const CANONICAL_ENEMY_AFFIX_IDS = Object.freeze([
 ] as const);
 
 export interface EnemyPresetSignatureV1 {
-  readonly familyId: ActiveEnemyKind;
+  readonly familyId: EnemyKind;
   readonly affixIds: readonly string[];
 }
 
@@ -141,7 +143,7 @@ function expectedAt<T>(values: readonly T[], index: number, path: string): T {
 }
 
 function assertEnemyKindContract(): void {
-  assertCanonicalOrderedIds(ENEMY_KIND_IDS, CANONICAL_ENEMY_KIND_IDS, "ENEMY_KIND_IDS");
+  assertCanonicalOrderedIds(ENEMY_IDENTITY_IDS, CANONICAL_ENEMY_IDENTITY_IDS, "ENEMY_IDENTITY_IDS");
 }
 
 assertEnemyKindContract();
@@ -166,7 +168,7 @@ function validateSourceVariant(value: unknown, expectedId: string, path: string)
   return validateProjectedVariant({ id, name: source.name, weight: source.weight, minWave }, expectedId, path);
 }
 
-function projectFamily(sourceValue: unknown, expectedId: ActiveEnemyKind, path: string): GameReferenceEnemyFamilyV1 {
+function projectFamily(sourceValue: unknown, expectedId: EnemyKind, path: string): GameReferenceEnemyFamilyV1 {
   const source = record(sourceValue, path);
   exactKeys(source, path, ["id", "variants"]);
   const id = text(source.id, `${path}.id`);
@@ -204,8 +206,8 @@ export function projectEnemyReference(input: EnemyReferenceProjectionInput): Gam
   assertEnemyKindContract();
   if (!Array.isArray(input.enemyFamilies)) throw new TypeError("enemyFamilies must be an array");
   const familyIds = input.enemyFamilies.map((family, index) => text(record(family, `enemyFamilies[${String(index)}]`).id, `enemyFamilies[${String(index)}].id`));
-  assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_KIND_IDS, "enemyFamilies");
-  const families = Object.freeze(input.enemyFamilies.map((family, index) => projectFamily(family, expectedAt(CANONICAL_ENEMY_KIND_IDS, index, "enemyFamilies"), `enemyFamilies[${String(index)}]`)));
+  assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_IDENTITY_IDS, "enemyFamilies");
+  const families = Object.freeze(input.enemyFamilies.map((family, index) => projectFamily(family, expectedAt(CANONICAL_ENEMY_IDENTITY_IDS, index, "enemyFamilies"), `enemyFamilies[${String(index)}]`)));
 
   if (!Array.isArray(input.enemyAffixes)) throw new TypeError("enemyAffixes must be an array");
   const affixIds = input.enemyAffixes.map((affix, index) => text(record(affix, `enemyAffixes[${String(index)}]`).id, `enemyAffixes[${String(index)}].id`));
@@ -227,11 +229,11 @@ export function validateProjectedEnemies(value: unknown, path: string): GameRefe
 
   if (!Array.isArray(source.families)) throw new TypeError(`${path}.families must be an array`);
   const familyIds = source.families.map((family, index) => text(record(family, `${path}.families[${String(index)}]`).id, `${path}.families[${String(index)}].id`));
-  assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_KIND_IDS, `${path}.families`);
+  assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_IDENTITY_IDS, `${path}.families`);
   const families = Object.freeze(source.families.map((family, index) => {
     const item = record(family, `${path}.families[${String(index)}]`);
     exactKeys(item, `${path}.families[${String(index)}]`, ["id", "variants"]);
-    const id = expectedAt(CANONICAL_ENEMY_KIND_IDS, index, `${path}.families`);
+    const id = expectedAt(CANONICAL_ENEMY_IDENTITY_IDS, index, `${path}.families`);
     if (!Array.isArray(item.variants)) throw new TypeError(`${path}.families[${String(index)}].variants must be an array`);
     const expectedVariantIds = CANONICAL_ENEMY_VARIANT_IDS[id];
     const variantIds = item.variants.map((variant, variantIndex) => text(record(variant, `${path}.families[${String(index)}].variants[${String(variantIndex)}]`).id, `${path}.families[${String(index)}].variants[${String(variantIndex)}].id`));
