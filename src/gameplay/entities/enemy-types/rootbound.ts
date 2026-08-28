@@ -8,6 +8,15 @@ export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
 ] as const);
 export type RootboundPhaseOneAttack = typeof ROOTBOUND_PHASE_ONE_ATTACK_ORDER[number];
 export const ROOTBOUND_PHASE_ONE_CADENCE = Object.freeze({ openingDelay: 0.9, recovery: 0.55 });
+export const ROOTBOUND_VINE_SWEEP = Object.freeze({
+  windup: 0.65,
+  active: 0.14,
+  followThrough: 0.22,
+  reach: 360,
+  halfHeight: 72,
+  damage: 18,
+});
+export type RootboundVineSweepStage = "windup" | "active" | "follow-through";
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
 export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
@@ -24,10 +33,14 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[0],
       ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[1],
     ];
-    readonly availableAttacks: readonly string[] = Object.freeze([]);
+    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep"]);
     readonly phaseOneAttackOrder = ROOTBOUND_PHASE_ONE_ATTACK_ORDER;
     pendingAttack: RootboundPhaseOneAttack | null = null;
     attackIndex = 0;
+    vineSweepStage: RootboundVineSweepStage | null = null;
+    vineSweepT = 0;
+    vineSweepHitSpent = false;
+    vineSweepFacing = 1;
     cleanupReason: BossEncounterCleanupReason | null = null;
 
     constructor(x: number, y: number) {
@@ -83,6 +96,51 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.atk = "unavailable";
     }
 
+    vineSweepGeometry(): Readonly<{ x: number; y: number; hw: number; hh: number; facing: number }> {
+      return Object.freeze({
+        x: this.x + this.vineSweepFacing * (this.hw + ROOTBOUND_VINE_SWEEP.reach) / 2,
+        y: this.y + this.hh - ROOTBOUND_VINE_SWEEP.halfHeight,
+        hw: (ROOTBOUND_VINE_SWEEP.reach - this.hw) / 2,
+        hh: ROOTBOUND_VINE_SWEEP.halfHeight,
+        facing: this.vineSweepFacing,
+      });
+    }
+
+    private beginVineSweep(): void {
+      this.vineSweepStage = "windup";
+      this.vineSweepT = ROOTBOUND_VINE_SWEEP.windup;
+      this.vineSweepHitSpent = false;
+      this.vineSweepFacing = this.facing;
+      this.atk = "vine-sweep:windup";
+    }
+
+    private updateVineSweep(dt: number, player: EnemyPlayerPort): void {
+      if (this.vineSweepStage === null) this.beginVineSweep();
+      this.vineSweepT = Math.max(0, this.vineSweepT - dt);
+      if (this.vineSweepStage === "windup" && this.vineSweepT <= 0) {
+        this.vineSweepStage = "active";
+        this.vineSweepT = ROOTBOUND_VINE_SWEEP.active;
+        this.atk = "vine-sweep:active";
+      } else if (this.vineSweepStage === "active") {
+        const geometry = this.vineSweepGeometry();
+        if (!this.vineSweepHitSpent && !player.invulnerable && dependencies.aabbOverlap(
+          geometry.x, geometry.y, geometry.hw, geometry.hh,
+          player.x, player.y, player.hw, player.hh,
+        )) {
+          this.vineSweepHitSpent = true;
+          player.takeDamage(ROOTBOUND_VINE_SWEEP.damage, this.x, this);
+        }
+        if (this.vineSweepT <= 0) {
+          this.vineSweepStage = "follow-through";
+          this.vineSweepT = ROOTBOUND_VINE_SWEEP.followThrough;
+          this.atk = "vine-sweep:follow-through";
+        }
+      } else if (this.vineSweepStage === "follow-through" && this.vineSweepT <= 0) {
+        this.vineSweepStage = null;
+        this.completePhaseOneAttack();
+      }
+    }
+
     cleanupEncounter(reason: BossEncounterCleanupReason): void {
       if (this.cleanupReason !== null) return;
       this.cleanupReason = reason;
@@ -93,6 +151,10 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.vy = 0;
       this.atk = "unavailable";
       this.pendingAttack = null;
+      this.vineSweepStage = null;
+      this.vineSweepT = 0;
+      this.vineSweepHitSpent = false;
+      this.vineSweepFacing = this.facing;
       this.cinematicRequest = null;
       this.cinematicPose = "";
       this.cinematicT = 0;
@@ -119,6 +181,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       if (this.state === "intro") {
         this.state = "recover";
         this.stateT = 0.35;
+      } else if (this.pendingAttack === "vine-sweep") {
+        this.updateVineSweep(dt, player);
       } else if (this.stun <= 0 && this.pendingAttack === null) {
         this.stateT = Math.max(0, this.stateT - dt);
         if (this.stateT <= 0) {

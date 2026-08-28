@@ -4,6 +4,7 @@ import { CONFIG } from "../../src/config/game-config";
 import {
   ROOTBOUND_PHASE_ONE_ATTACK_ORDER,
   ROOTBOUND_PHASE_ONE_CADENCE,
+  ROOTBOUND_VINE_SWEEP,
   type RootboundPhaseOneAttack,
 } from "../../src/gameplay/entities/enemy-types/rootbound";
 import { createEnemyHarness } from "./enemy-test-harness";
@@ -12,6 +13,7 @@ type PhaseOneBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"][
   pendingAttack: RootboundPhaseOneAttack | null;
   attackIndex: number;
   completePhaseOneAttack(): void;
+  selectNextPhaseOneAttack(): RootboundPhaseOneAttack | null;
 };
 
 function boss() {
@@ -33,7 +35,7 @@ describe("Rootbound Phase I cadence", () => {
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, entry.harness.platforms, entry.harness.player, []);
         const target = entry === first ? selected : mirrored;
         if (entry.actor.pendingAttack !== null) target.push(entry.actor.pendingAttack);
-        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: [] });
+        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep"] });
         entry.actor.completePhaseOneAttack();
         expect(entry.actor).toMatchObject({ state: "recover", stateT: ROOTBOUND_PHASE_ONE_CADENCE.recovery, pendingAttack: null });
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, entry.harness.platforms, entry.harness.player, []);
@@ -58,7 +60,53 @@ describe("Rootbound Phase I cadence", () => {
     actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, harness.platforms, harness.player, []);
     actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, harness.platforms, harness.player, []);
     expect(actor.pendingAttack).toBe("vine-sweep");
-    actor.update(10, harness.platforms, harness.player, []);
+    expect(actor.selectNextPhaseOneAttack()).toBeNull();
     expect(actor).toMatchObject({ pendingAttack: "vine-sweep", attackIndex: 1, atk: "unavailable" });
+  });
+
+  it("telegraphs Vine Sweep geometry before one bounded active hit and punish recovery", () => {
+    const { harness, actor } = boss();
+    const player = harness.player;
+    player.x = actor.x + 220;
+    player.y = CONFIG.world.groundY - player.hh;
+
+    actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, harness.platforms, player, []);
+    actor.update(1 / 120, harness.platforms, player, []);
+    expect(actor).toMatchObject({
+      pendingAttack: "vine-sweep",
+      vineSweepStage: "windup",
+      atk: "vine-sweep:windup",
+      vineSweepHitSpent: false,
+    });
+    expect(actor.vineSweepGeometry()).toMatchObject({ facing: 1, hh: ROOTBOUND_VINE_SWEEP.halfHeight });
+    expect(player.damage).toEqual([]);
+
+    actor.update(ROOTBOUND_VINE_SWEEP.windup, harness.platforms, player, []);
+    expect(actor).toMatchObject({ vineSweepStage: "active", atk: "vine-sweep:active" });
+    expect(player.damage).toEqual([]);
+    actor.update(1 / 120, harness.platforms, player, []);
+    actor.update(1 / 120, harness.platforms, player, []);
+    expect(player.damage).toHaveLength(1);
+    expect(player.damage[0]).toMatchObject({ amount: ROOTBOUND_VINE_SWEEP.damage, sourceX: actor.x, source: actor });
+
+    actor.update(ROOTBOUND_VINE_SWEEP.active, harness.platforms, player, []);
+    expect(actor).toMatchObject({ vineSweepStage: "follow-through", atk: "vine-sweep:follow-through" });
+    actor.update(ROOTBOUND_VINE_SWEEP.followThrough, harness.platforms, player, []);
+    expect(actor).toMatchObject({ pendingAttack: null, vineSweepStage: null, state: "recover", atk: "unavailable" });
+  });
+
+  it("keeps Vine Sweep safe behind the committed facing and above its near-air coverage", () => {
+    for (const playerOffset of [-180, 220] as const) {
+      const { harness, actor } = boss();
+      const player = harness.player;
+      player.x = actor.x + 220;
+      actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, harness.platforms, player, []);
+      actor.update(1 / 120, harness.platforms, player, []);
+      player.x = actor.x + playerOffset;
+      if (playerOffset > 0) player.y = actor.y - ROOTBOUND_VINE_SWEEP.halfHeight * 2 - player.hh;
+      actor.update(ROOTBOUND_VINE_SWEEP.windup, harness.platforms, player, []);
+      actor.update(1 / 120, harness.platforms, player, []);
+      expect(player.damage, `offset ${String(playerOffset)}`).toEqual([]);
+    }
   });
 });

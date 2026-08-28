@@ -4,7 +4,7 @@ import type { RenderInstance } from "./enemy-renderer-types";
 
 /** Rootbound's base silhouette. Authored attacks add their own readable geometry later. */
 export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRendererRuntime): void {
-  const { CONFIG, GFX, THEME, clamp, lerp } = runtime;
+  const { A11Y, CONFIG, GFX, THEME, clamp, lerp } = runtime;
   Object.assign(types.Rootbound.prototype, {
     draw(this: RenderInstance<"Rootbound">, ctx: CanvasRenderingContext2D) {
       const intro = this.introT > 0
@@ -17,6 +17,38 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       ctx.save();
       ctx.translate(this.x, footY);
       if (this.dying) ctx.rotate(this.facing * this.deathP * 0.4);
+
+      // The root arm is present throughout windup; only the filled, thick pass is active.
+      if (this.vineSweepStage) {
+        const stage = this.vineSweepStage;
+        const sweepFacing = this.vineSweepFacing;
+        const reach = 360 * sweepFacing;
+        const windupK = stage === "windup" ? clamp(1 - this.vineSweepT / 0.65, 0, 1) : 1;
+        ctx.save();
+        ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : stage === "active" ? gold : "#7bbf72";
+        ctx.globalAlpha = stage === "follow-through" ? 0.48 : 0.72 + windupK * 0.28;
+        ctx.lineCap = "round";
+        ctx.lineWidth = stage === "active" ? 28 : 12 + windupK * 7;
+        if (stage === "windup") ctx.setLineDash([18, 10]);
+        ctx.beginPath();
+        ctx.moveTo(sweepFacing * this.hw * 0.58, -this.hh * 1.08);
+        ctx.bezierCurveTo(
+          sweepFacing * (this.hw + 72), -this.hh * (1.5 - windupK * 0.45),
+          reach * 0.72, -35 - windupK * 30,
+          reach, -18,
+        );
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.moveTo(reach, -18);
+        ctx.lineTo(reach - sweepFacing * 34, -42);
+        ctx.lineTo(reach - sweepFacing * 28, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
       // Intro pose: the keeper rises out of the throne while the mantle opens.
       ctx.scale(lerp(0.9, 1, intro), lerp(0.72, 1, intro));
       ctx.translate(0, -this.hh * 2);

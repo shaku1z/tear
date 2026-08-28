@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C11-S1 green; VS3-C11-S2 next** |
+| Status | **Active implementation authority — VS3-C11-S2 green; VS3-C11-S3 next** |
 | Current checkpoint | `VS3-C11` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4467,7 +4467,7 @@ Implement and prove the complete Phase I attack grammar, punish windows, environ
 ## Sub-goals
 
 - [x] **VS3-C11-S1** — Implement deterministic Phase I attack selection and recovery cadence.
-- [ ] **VS3-C11-S2** — Implement Vine Sweep with geometry-first windup, active window, hit ownership, and recovery.
+- [x] **VS3-C11-S2** — Implement Vine Sweep with geometry-first windup, active window, hit ownership, and recovery.
 - [ ] **VS3-C11-S3** — Implement Seed Arc through current projectile lifecycle and explicit counterplay capability.
 - [ ] **VS3-C11-S4** — Implement Rootline through the shared environment/hazard owner with bounded warning/active/cleanup.
 - [ ] **VS3-C11-S5** — Implement Canopy Step through authored destinations and visible destination telegraph.

@@ -40,7 +40,7 @@ describe("Rootbound production foundation", () => {
     expect(Object.isFrozen(ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks)).toBe(true);
   });
 
-  it("constructs through the approved enemy family without placeholder attacks", () => {
+  it("constructs through the approved enemy family with only implemented attacks declared", () => {
     const harness = createEnemyHarness();
     const placement = planBossPlacement("rootbound", CONFIG.view.w, CONFIG);
     const boss = new harness.types.Rootbound(placement.x, placement.y);
@@ -57,7 +57,7 @@ describe("Rootbound production foundation", () => {
       presentationId: "rootbound",
       isBoss: true,
       atk: "unavailable",
-      availableAttacks: [],
+      availableAttacks: ["vine-sweep"],
       phaseMarks: [0.65, 0.28],
     });
   });
@@ -143,7 +143,7 @@ describe("Rootbound production foundation", () => {
     expect(run._arenaBroken).toEqual([]);
   });
 
-  it("owns a damageable base body, monotonic phase ordinal, and attack-free idle/recovery loop", () => {
+  it("owns a damageable base body, monotonic phase ordinal, and bounded idle/recovery loop", () => {
     const harness = createEnemyHarness();
     const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
     const boss = actor as typeof actor & {
@@ -164,7 +164,7 @@ describe("Rootbound production foundation", () => {
       phaseMarker: 1,
       phaseTag: "KEEPER OF SPRING",
       state: "idle",
-      availableAttacks: [],
+      availableAttacks: ["vine-sweep"],
     });
 
     boss.introT = 0.5;
@@ -188,7 +188,7 @@ describe("Rootbound production foundation", () => {
     expect(boss.phase).toBe(2);
 
     boss.update(1, harness.platforms, harness.player, []);
-    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: [] });
+    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: ["vine-sweep"] });
     expect(boss.contactDamageEnabled()).toBe(true);
   });
 

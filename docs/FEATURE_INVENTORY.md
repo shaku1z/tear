@@ -73,6 +73,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   Vine Sweep / Seed Arc / Rootline / Canopy Step selection order, explicit
   opening and recovery windows, and a selected-but-uncommitted boundary. No
   attack becomes available and no hit geometry exists until its own subgoal.
+  VS3-C11-S2 promotes Vine Sweep as the first implemented Phase I verb: its
+  root-arm windup exposes production hit geometry before damage, commits facing,
+  owns one bounded active hit, preserves behind/high safe responses, and closes
+  through visible follow-through into the shared recovery cadence. The remaining
+  Phase I verbs and phase-level attack availability are still incomplete.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
