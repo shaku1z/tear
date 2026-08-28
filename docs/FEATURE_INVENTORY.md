@@ -371,6 +371,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   achievement keys, so current and legacy saves retain Verdant values without
   structural migration. Any future schema change stays gated on authorized
   Verdant-plus-Pale joint promotion.
+  Reset, retry, quit, defeat, victory, stage transition, and mode change now
+  have an explicit cleanup matrix. Every boundary clears environment-owned
+  Verdant objects and Rootbound-local encounter state; terminal outcomes run
+  boss cleanup before environment cleanup and lifecycle termination.
   Wayfarer and difficulty-completion goals/copy now derive from the stage and
   difficulty catalogs; Gauntlet roster copy derives from boss identities; and
   the standard-mode profile projection is shared by run start and Well-Rounded.

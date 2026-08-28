@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C16",
-  "currentSubgoal": "VS3-C16-S9",
+  "currentSubgoal": "VS3-C16-S10",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -60,10 +60,11 @@
     "VS3-C16-S5 source-derived completion copy/counts are GREEN at 98e63f45fcf9021df2a1303460bd7901c98bb3bd: biome, Gauntlet boss, difficulty, and standard-mode truths derive from canonical catalogs; intentional Final Five and milestone values remain unchanged. 38 focused/adjacent tests, typecheck, targeted lint, architecture, and clean-source game-reference pass.",
     "VS3-C16-S6 authoritative telemetry is GREEN at 00fd9502023503284ac214021784f7f36c7905cf: stable stage entry, Bloom activation, Root-link sever, Graft destruction, Rootbound defeat/no-hit, and Regrowth interrupt facts update source-owned profile statistics; ambiguous presentation-only metrics remain deferred. 52 focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
     "VS3-C16-S7 replay/ruleset compatibility is GREEN at 1cd2781b786264f71bba8df772df598eb0e26b28: the six-stage build has an explicit engineering-only ruleset; deterministic admission rejects mismatches while historical envelopes remain readable; stage facts retain numeric compatibility and add validated stable IDs plus entered/exited semantics. 49 focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass.",
-    "VS3-C16-S8 profile compatibility is GREEN at 1f7c8866b2a0b175736e858da05cb5b1a57c84e8: no schema migration is published because Verdant stats and achievements fit existing extensible v2 maps; current and legacy data retain all values and unknown fields. A structural migration remains deferred to authorized joint promotion. 13 focused/adjacent tests, typecheck, targeted lint, artifact-layout, and diff checks pass."
+    "VS3-C16-S8 profile compatibility is GREEN at 1f7c8866b2a0b175736e858da05cb5b1a57c84e8: no schema migration is published because Verdant stats and achievements fit existing extensible v2 maps; current and legacy data retain all values and unknown fields. A structural migration remains deferred to authorized joint promotion. 13 focused/adjacent tests, typecheck, targeted lint, artifact-layout, and diff checks pass.",
+    "VS3-C16-S9 lifecycle cleanup is GREEN at f1fe1748698d5fe1795a9886350ef5af97823ac9: reset, retry, quit, defeat, victory, stage transition, and mode change clear Verdant environment and Rootbound-local ownership; terminal outcomes now run boss cleanup before environment and lifecycle termination. 64 focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C16-S9 by proving reset, retry, quit, defeat, victory, stage-transition, and mode-change cleanup for Verdant environment and Rootbound ownership.",
+  "nextAction": "Execute VS3-C16-S10 by proving and enforcing that the intermediate six-stage profile/reference state cannot enter public publication paths.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2521,12 +2522,12 @@
         {
           "id": "VS3-C16-S9",
           "description": "Prove reset, retry, quit, defeat, victory, stage transition, and mode change cleanup.",
-          "status": "in-progress"
+          "status": "complete"
         },
         {
           "id": "VS3-C16-S10",
           "description": "Keep intermediate six-stage profile/reference state non-publishable.",
-          "status": "not-started"
+          "status": "in-progress"
         }
       ],
       "agentProcedure": [

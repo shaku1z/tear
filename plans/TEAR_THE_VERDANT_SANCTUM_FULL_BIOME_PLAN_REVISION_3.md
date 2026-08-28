@@ -4976,7 +4976,7 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 - [x] **VS3-C16-S6** — Add source-owned Verdant/Rootbound/link/Graft/Regrowth telemetry facts and statistic updates.
 - [x] **VS3-C16-S7** — Define replay/ruleset identity implications and stable stage event compatibility.
 - [x] **VS3-C16-S8** — Add versioned profile migration only when durable production data changes are ready for joint promotion.
-- [ ] **VS3-C16-S9** — Prove reset, retry, quit, defeat, victory, stage transition, and mode change cleanup.
+- [x] **VS3-C16-S9** — Prove reset, retry, quit, defeat, victory, stage transition, and mode change cleanup.
 - [ ] **VS3-C16-S10** — Keep intermediate six-stage profile/reference state non-publishable.
 
 ## Agent implementation procedure
@@ -5048,6 +5048,8 @@ Make Verdant and Rootbound truthful across current modes, progression catalogs, 
 > `VS3-C16-S7 is GREEN at 1cd2781b786264f71bba8df772df598eb0e26b28. The active six-stage build uses the source-owned tear-rules-verdant-r3-engineering-v1 identity; deterministic replay admission rejects mismatches while historical envelopes remain parseable. Stage facts preserve their legacy numeric index, validate an optional stable stage ID, and project explicit entered/exited events without changing Ghost 2 packets. Forty-nine focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass. The next authorized action is VS3-C16-S8, deciding profile migration at the joint-promotion boundary. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 > `VS3-C16-S8 is GREEN at 1f7c8866b2a0b175736e858da05cb5b1a57c84e8. No profile schema migration is published: Verdant statistics and achievement IDs fit the existing extensible v2 profile maps, and both current envelopes and legacy saves preserve them plus unknown data exactly. A structural/versioned migration remains deferred to an authorized Verdant-plus-Pale joint promotion if that promotion introduces durable schema change. Thirteen focused/adjacent tests, typecheck, targeted lint, artifact-layout, and diff checks pass. The next authorized action is VS3-C16-S9, proving lifecycle cleanup across every terminal and transition path. Verdant publication remains prohibited, and C40 status is unchanged.`
+
+> `VS3-C16-S9 is GREEN at f1fe1748698d5fe1795a9886350ef5af97823ac9. Reset, retry, quit, defeat, victory, stage transition, and mode change clear Verdant environment ownership and Rootbound-local encounter state; terminal defeat/victory now invokes boss cleanup before environment cleanup and lifecycle termination. Sixty-four focused/adjacent tests, typecheck, targeted lint, architecture, artifact-layout, and diff checks pass. The next authorized action is VS3-C16-S10, proving the intermediate six-stage profile/reference state remains non-publishable. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
