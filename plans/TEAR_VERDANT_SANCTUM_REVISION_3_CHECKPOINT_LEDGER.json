@@ -2415,7 +2415,9 @@
         "pnpm exec eslint src/gameplay/run/campaign-stage-curve.ts tests/unit/campaign-stage-curve.test.ts",
         "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts",
         "pnpm typecheck",
-        "pnpm check:docs"
+        "pnpm check:docs",
+        "pnpm exec vitest run tests/unit/verdant-stage-state-forge.test.ts tests/unit/verdant-wave-composition.test.ts",
+        "pnpm check:architecture"
       ],
       "evidence": [
         "VS3-C15-S1 StageId-owned campaign curve authority is green: one complete current-stage record owns base HP, damage, count, and future concurrent additions; the production wave planner resolves the selected stage identity rather than multiplying its array position. Grounds through Verdant use authored prototype values, while Voidspire and Tear remain explicitly labeled legacy-position placeholders pending S8. Eighteen focused curve/planner/controller tests, typecheck, targeted lint, and architecture pass.",
@@ -2427,7 +2429,8 @@
         "VS3-C15-S7 wave-40 economy/progression is green: production synthesis records four stage entries, bosses at 10/20/30/40, forty legal mutations, and production-derived wave-40 currency. Kill score, regular/boss healing, draft/boss rewards, and One-Hit suppression remain in their existing owners. Seventeen focused tests, typecheck, and targeted lint pass.",
         "VS3-C15-S8 seven-stage curve seed is green: one explicitly inactive engineering prototype records Pale 2.08/1.44/+6/+3, relocated Voidspire 2.38/1.52/+7/+3, and relocated Tear 2.72/1.60/+8/+4. Pale remains absent from live StageId/campaign authority and current late stages retain legacy-position placeholders. Twenty-one focused tests, typecheck, and targeted lint pass.",
         "VS3-C15-S9 relocated boss projection is green: the inactive seed delta is Voidspire +0.02 HP/-0.04 damage/-1 count/-1 concurrent and Tear +0.02 HP/-0.10 damage/-2 count/+0 concurrent. Echo/Source identities and home-stage mappings remain canonical; no boss implementation or live curve changed. Five focused tests, typecheck, and targeted lint pass.",
-        "VS3-C15-S10 evidence disposition is green: the durable checkpoint report separates verified code behavior from provisional tuning, absent Pale authority, inactive relocated slots, and pending Echo/Source owner decisions. Raw closure output is routed to canonical ignored checkpoint/generated artifact paths."
+        "VS3-C15-S10 evidence disposition is green: the durable checkpoint report separates verified code behavior from provisional tuning, absent Pale authority, inactive relocated slots, and pending Echo/Source owner decisions. Raw closure output is routed to canonical ignored checkpoint/generated artifact paths.",
+        "C15 TearBench same-change response is present: exact reachable waves 31/35/39 carry early/middle/late composition constraints; impossible support-only budgets fail closed; environment objects remain outside enemy cap/clear ownership; and the focused evidence route selects wave/draft scenarios plus browser progression journeys."
       ],
       "blockers": [],
       "notes": [

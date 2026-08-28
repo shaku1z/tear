@@ -52,6 +52,22 @@ describe("Verdant wave composition budget", () => {
     }
   });
 
+  it("fails closed for an impossible support-only budget instead of creating a stalled queue", () => {
+    const impossibleStages = stages.map((stage) => stage.id === "verdant-sanctum"
+      ? { ...stage, pool: [{ kind: "rootbinder" as const, weight: 1, unlockWave: 1 }] }
+      : stage);
+    expect(() => planNextWave({
+      state: {
+        mode: "campaign", wave: 30, diffHp: 1, diffCount: 1,
+        bossOrder: BOSS_ROSTER.map((boss) => boss.id), bossIdx: 0, bossesBeaten: 0,
+        curBoss: null, currentStageIndex: 3, biomeIdx: 3, pendingBossOutro: null,
+      },
+      tuning: CONFIG.run, stages: impossibleStages, presets: PRESETS,
+      random: new SeededRandom("impossible-support-budget"),
+      startDelay: CONFIG.run.startDelay, currentMultiplier: 1,
+    })).toThrow(/composition budget excludes every available enemy/u);
+  });
+
   it("keeps the opening wave free of support/control cost", () => {
     for (let seed = 0; seed < 100; seed += 1) {
       const queue = verdantWave(1, `opening-${String(seed)}`);

@@ -10,7 +10,10 @@ import { launchResolvedLiveState } from "../../src/tearbench/live-state-forge-sc
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
-import { VERDANT_STAGE_ENGINEERING_TEARSDL } from "../../src/tearbench/verdant-stage-engineering-scenario";
+import {
+  VERDANT_STAGE_ENGINEERING_TEARSDL,
+  VERDANT_WAVE_ENGINEERING_TEARSDL,
+} from "../../src/tearbench/verdant-stage-engineering-scenario";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
 
 function sourceSnapshot(): TearSnapshotV1 {
@@ -24,24 +27,29 @@ function sourceSnapshot(): TearSnapshotV1 {
 }
 
 describe("Verdant stage State Forge entry", () => {
-  it("locks an engineering-only reconstructed wave-31 scenario", () => {
-    const resolved = resolveTearSdl(VERDANT_STAGE_ENGINEERING_TEARSDL);
-
-    expect(resolved.structural.valid).toBe(true);
-    expect(resolved.reachability.reachable).toBe(true);
-    expect(resolved.scenario.start).toMatchObject({
-      mode: "campaign",
-      stage: "verdant-sanctum",
-      wave: 31,
-    });
-    expect(resolved.scenario.tags).toEqual(expect.arrayContaining(["engineering-only", "non-publishable"]));
+  it("locks exact engineering-only early, middle, and late wave scenarios", () => {
+    expect(VERDANT_WAVE_ENGINEERING_TEARSDL.map((scenario) => scenario.start.wave)).toEqual([31, 35, 39]);
+    expect(VERDANT_WAVE_ENGINEERING_TEARSDL.map((scenario) => scenario.constraints?.verdantComposition)).toEqual([
+      { profile: "early", localWave: 1, controlBudget: 0, maxRootbinders: 0 },
+      { profile: "middle", localWave: 5, controlBudget: 5, maxRootbinders: 1 },
+      { profile: "late", localWave: 9, controlBudget: 9, maxRootbinders: 2 },
+    ]);
+    for (const document of VERDANT_WAVE_ENGINEERING_TEARSDL) {
+      const resolved = resolveTearSdl(document);
+      expect(resolved.structural.valid).toBe(true);
+      expect(resolved.reachability.reachable).toBe(true);
+      expect(resolved.scenario.start).toMatchObject({ mode: "campaign", stage: "verdant-sanctum" });
+      expect(resolved.scenario.tags).toEqual(expect.arrayContaining(["wave-composition", "engineering-only", "non-publishable"]));
+    }
   });
 
   it("compiles the exact campaign stage and rejects a stage-wave contradiction", () => {
+    for (const document of VERDANT_WAVE_ENGINEERING_TEARSDL) {
+      const resolved = resolveTearSdl(document);
+      const compiled = compileResolvedTearSdlSnapshot(sourceSnapshot(), resolved);
+      expect(compiled.state["tear.run.v1"]).toMatchObject({ wave: document.start.wave, stage: 3, _biomeIdx: 3 });
+    }
     const resolved = resolveTearSdl(VERDANT_STAGE_ENGINEERING_TEARSDL);
-    const compiled = compileResolvedTearSdlSnapshot(sourceSnapshot(), resolved);
-
-    expect(compiled.state["tear.run.v1"]).toMatchObject({ wave: 31, stage: 3, _biomeIdx: 3 });
     expect(() => compileResolvedTearSdlSnapshot(sourceSnapshot(), {
       ...resolved,
       scenario: { ...resolved.scenario, start: { ...resolved.scenario.start, wave: 21 } },

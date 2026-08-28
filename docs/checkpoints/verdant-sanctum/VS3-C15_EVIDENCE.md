@@ -24,6 +24,9 @@ authority. The complete seven-stage table is an inactive prototype pending Pale.
 - Easy, Normal, Hard, Extreme, and One-Hit use production difficulty owners.
 - Production score, coin, healing, draft/tier, and upgrade synthesis remain
   lawful through wave 40.
+- Exact reachable State Forge entries cover waves 31, 35, and 39 with matching
+  early/middle/late composition constraints; the C15 evidence route selects
+  wave/draft scenarios and the browser progression journey.
 
 Relevant sources include `src/gameplay/run/campaign-stage-curve.ts`,
 `src/gameplay/run/composition-budget.ts`, `src/gameplay/run/wave-planner.ts`,

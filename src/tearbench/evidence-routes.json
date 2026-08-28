@@ -191,6 +191,19 @@
     "journeyCommands": ["node tests/browser-current-gameplay-scenarios.js"]
   },
   {
+    "id": "verdant-c15-wave-balance",
+    "prefixes": ["src/gameplay/run/campaign-stage-curve.ts", "src/gameplay/run/composition-budget.ts", "src/gameplay/run/wave-planner.ts", "src/gameplay/run/spawn-scheduler.ts", "src/gameplay/run/live-wave-controller.ts", "src/tearbench/progression-ledger.ts", "src/tearbench/verdant-stage-engineering-scenario.ts", "tests/unit/campaign-stage-curve.test.ts", "tests/unit/verdant-stage-state-forge.test.ts", "tests/unit/verdant-wave-composition.test.ts", "tests/unit/verdant-wave-economy.test.ts", "tests/browser-progression-journeys.js"],
+    "scenarios": ["wave-clear-to-draft", "draft-selection-to-gameplay"],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "verdant-c15-wave-balance-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["progression", "difficulty", "composition", "browser"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-forge.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts"],
+    "journeyCommands": ["node tests/browser-progression-journeys.js"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],

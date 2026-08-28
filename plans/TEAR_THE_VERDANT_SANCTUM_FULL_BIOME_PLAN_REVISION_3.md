@@ -4889,12 +4889,12 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 
 ## TearBench same-change response
 
-- [ ] Use production progression/economy functions in TearBench synthesis.
-- [ ] Add exact Verdant wave State Forge scenarios for early, middle, and late composition.
-- [ ] Add wave-ownership observations that exclude links/Grafts/environment objects from living wave enemies.
-- [ ] Add negative support-budget fixture and no-softlock/wave-completion invariant.
-- [ ] Route balance source changes to wave/draft scenarios and one current browser journey.
-- [ ] Do not claim seven-stage balance completion before Pale and joint end-to-end evidence.
+- [x] Use production progression/economy functions in TearBench synthesis.
+- [x] Add exact Verdant wave State Forge scenarios for early, middle, and late composition.
+- [x] Add wave-ownership observations that exclude links/Grafts/environment objects from living wave enemies.
+- [x] Add negative support-budget fixture and no-softlock/wave-completion invariant.
+- [x] Route balance source changes to wave/draft scenarios and one current browser journey.
+- [x] Do not claim seven-stage balance completion before Pale and joint end-to-end evidence.
 
 ## Minimum focused proof
 
