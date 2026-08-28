@@ -51,6 +51,18 @@ remain historical compatibility evidence under the exact paths and hashes in
 `preservation/artifact-retention-disposition.json`. Generated requirements and
 release interfaces also retain their established paths.
 
+### Follow-up audit during VS3-C20
+
+A later safepoint audit found that active C23, C26, C27A, C30, and C39
+generators could still recreate flat checkpoint directories after the original
+migration. The C23 progression test had done so, leaving an exact duplicate of
+the canonical 10,000-target result. Those active emitters now use
+`artifacts/tearbench/checkpoints/core/<checkpoint>/<subsystem>/`, their tests
+and checkpoint references follow the same paths, and the layout checker rejects
+the known legacy forms. The exact duplicate C23 raw file was removed only after
+its SHA-256 matched the retained canonical file. The two C27A focused files
+were moved into the canonical C27A live-parity bundle; no evidence was deleted.
+
 ## Version-control and lifecycle policy
 
 Checkpoint reports, compact evidence manifests, and preservation records are

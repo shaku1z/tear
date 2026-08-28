@@ -31,7 +31,7 @@ import {
   restoreDetachedTransientRuntime,
 } from "./detached-world-harness";
 
-const ARTIFACT = resolve("artifacts/tearbench/c27a/campaign-source-victory.json");
+const ARTIFACT = resolve("artifacts/tearbench/checkpoints/core/C27A/live-parity/campaign-source-victory.json");
 interface RuntimeSnapshot {
   readonly tick: number;
   readonly state: Record<string, TearCodecValue>;

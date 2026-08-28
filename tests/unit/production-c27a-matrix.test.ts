@@ -9,7 +9,7 @@ import {
   type ProductionC27ATrace,
 } from "../../src/tearbench";
 
-const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
+const ARTIFACT_DIR = resolve("artifacts/tearbench/checkpoints/core/C27A/live-parity");
 
 function traceFromArtifact(value: unknown): ProductionC27ATrace {
   if (typeof value !== "object" || value === null) throw new TypeError("C27A trace artifact must be an object");

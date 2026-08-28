@@ -13,7 +13,7 @@ import { applyWeapon } from "../../src/gameplay/weapons";
 import { createDetachedCombatSimulation, createDetachedWaveRewardRuntime, createDetachedWorld,
   createDetachedRunOutcomeController, restoreDetachedChapterBinding } from "./detached-world-harness";
 
-const ARTIFACT_DIR = resolve("artifacts/tearbench/c27a");
+const ARTIFACT_DIR = resolve("artifacts/tearbench/checkpoints/core/C27A/live-parity");
 
 interface LiveTrace {
   readonly scenario: { readonly id: string; readonly seed: string; readonly maxTicks: number;

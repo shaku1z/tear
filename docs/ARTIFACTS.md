@@ -62,3 +62,9 @@ quarantine. It is not an active evidence directory and is always ignored.
 4. Run `pnpm check:artifacts`; stale active paths and root cache pollution fail.
 5. Archive superseded raw material only when it remains useful; otherwise allow
    the retention workflow to quarantine disposable output.
+
+Active generators must not recreate flat checkpoint directories directly under
+`artifacts/tearbench/` (for example `c23/` or `c27a-focused/`). Core-program
+evidence uses `checkpoints/core/<checkpoint>/`; Verdant Sanctum uses
+`checkpoints/verdant-sanctum/<checkpoint>/`. `pnpm check:artifacts` rejects the
+known legacy emitter forms in executable source and package scripts.

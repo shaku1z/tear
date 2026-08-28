@@ -332,7 +332,7 @@ execution evidence.
   RNG state. It runs the whole scenario twice in one page and asserts both
   runs produce one hash sequence, one event sequence, and one RNG state, so
   live determinism is established before anything is compared against it.
-  The artifact is written to `artifacts/tearbench/c27a/live-parity-trace.json`
+  The artifact is written to `artifacts/tearbench/checkpoints/core/C27A/live-parity/c27a.live-parity-trace.json`
   (untracked) and is the input the detached comparison will consume. This is
   live-side capture and live determinism only; no detached trace has been
   compared against it yet.

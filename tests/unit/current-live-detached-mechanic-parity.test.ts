@@ -7,8 +7,9 @@ import { validateTearContract } from "../../src/tearbench";
 import { readSourceIdentitySync } from "../../scripts/release-artifact.mjs";
 
 const SELECTED_SCENARIO_ID = "c27a.live-parity-trace";
-const focusedArtifact = resolve("artifacts/tearbench/c27a-focused", `${SELECTED_SCENARIO_ID}.json`);
-const matrixArtifact = resolve("artifacts/tearbench/c27a", `${SELECTED_SCENARIO_ID}.json`);
+const artifactDirectory = resolve("artifacts/tearbench/checkpoints/core/C27A/live-parity");
+const focusedArtifact = resolve(artifactDirectory, `focused-${SELECTED_SCENARIO_ID}.json`);
+const matrixArtifact = resolve(artifactDirectory, `${SELECTED_SCENARIO_ID}.json`);
 const defaultArtifact = existsSync(focusedArtifact) ? focusedArtifact : matrixArtifact;
 const requestedArtifact = process.env.TEAR_C27A_PARITY_ARTIFACT;
 const artifactPath = resolve(requestedArtifact ?? defaultArtifact);

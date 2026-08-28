@@ -68,6 +68,17 @@ const activeLegacyReferences = [
   ["tests/browser-state-forge-studio.js", "artifacts\", \"tearbench\", \"c23"],
   ["tests/browser-state-forge-exit-matrix.js", "artifacts\", \"tearbench\", \"c23"],
   ["tests/browser-verdant-presentation.js", "artifacts\", \"tearbench\", \"verdant-c9"],
+  ["tests/unit/tearbench-progression-ledger.test.ts", "\"tearbench\", \"c23\""],
+  ["tests/browser-c27a-live-parity-trace.js", "focusedCapture ? \"c27a-focused\" : \"c27a\""],
+  ["scripts/run-current-live-detached-parity.mjs", "\"c27a-focused\""],
+  ["tests/unit/current-live-detached-mechanic-parity.test.ts", "artifacts/tearbench/c27a"],
+  ["tests/unit/detached-live-parity.test.ts", "artifacts/tearbench/c27a"],
+  ["tests/unit/detached-finale-live-parity.test.ts", "artifacts/tearbench/c27a"],
+  ["tests/unit/production-c27a-matrix.test.ts", "artifacts/tearbench/c27a"],
+  ["scripts/measure-production-headless-long-run.mjs", "artifacts/tearbench/c30/"],
+  ["package.json", "artifacts/tearbench/c26/"],
+  ["package.json", "artifacts/tearbench/c30/"],
+  ["package.json", "artifacts/tearbench/c39/"],
 ];
 for (const [relativePath, needle] of activeLegacyReferences) {
   const source = fs.readFileSync(path.join(root, relativePath), "utf8");

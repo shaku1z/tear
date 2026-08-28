@@ -29,7 +29,7 @@ only `exact`, `migrated`, `visual-only`, `unsupported`, and `rejected`;
 admission is detail, never replay truth. Run `pnpm test:preservation-corpus`.
 The canonical PR, nightly, and release `pnpm check` gate runs that corpus once
 before the remaining unit suite, writes its machine-readable Vitest result to
-`artifacts/tearbench/c39/preservation-corpus-vitest.json`, and retains it
+`artifacts/tearbench/checkpoints/core/C39/preservation/preservation-corpus-vitest.json`, and retains it
 through the existing CI evidence upload. The remaining unit suite explicitly
 excludes this file so the same corpus is not rerun as incidental broad-suite
 coverage.

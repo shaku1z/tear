@@ -254,7 +254,7 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes the developer observation plus target-declaration integrity and three-workload artifact tests. A declared target artifact remains an observation, not certification.
 - `pnpm measure:c30:long-run` invokes Node with `--expose-gc`, writes the
   versioned bounded long-run artifact to
-  `artifacts/tearbench/c30/production-headless-long-run.json`, and records the
+  `artifacts/tearbench/checkpoints/core/C30/production-headless/long-run.json`, and records the
   exact host classification rather than inferring target hardware. The current
   developer-host observation completed deterministically with a retained-heap
   and modest developer-throughput pass (610.4 episodes/minute); it is evidence
