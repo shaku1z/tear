@@ -69,4 +69,31 @@ describe("enemy kill transaction", () => {
       "boss-defeated", "boss-terminal-cleanup", "terminal-release", "terminal-presentation", "boss-reward", "chapter-outro-pending",
     ]);
   });
+
+  it("keeps Rootbound Boss Test reward/roster flow separate from campaign chapter progression", () => {
+    const cleanupEncounter = vi.fn();
+    const target = enemy({ isBoss: true, bossId: "rootbound", cleanupEncounter });
+    const input = options(target);
+    input.run.mode = "bossonly";
+    input.run.wave = 1;
+    input.stageIndex = 3;
+    input.finalStageIndex = 5;
+    input.stageChapterBossOutro = { id: "must-not-enter-boss-test" };
+    resolveEnemyKill(input);
+    expect(cleanupEncounter).toHaveBeenCalledWith("death");
+    expect(input.run.pendingBossOutro).toBeUndefined();
+    expect(input.run._bossOnlyKills).toBe(1);
+
+    const clear = planWaveClear({
+      state: { mode: "bossonly", diff: "normal", wave: 1, isBossWave: true, horde: false, waveTime: 12,
+        waveKills: 1, wavePeak: 1, runTime: 120, bossesBeaten: 0, damagedThisWave: false, damagedThisStage: false,
+        clearTimer: 0, pendingReward: null, waveLog: [] },
+      dt: 0, waveLifecycleActive: true, spawnQueueLength: 0, enemyCount: 0, achievementTracking: true,
+      playerOneHit: false, ownedAbilityCount: 0, stageIndex: 3, stageCount: 6, currentStageAccent: "#89b95d",
+      healEachWave: 4, waveHealBonus: 0, waveClearPause: 1, availableTierUpCount: 1,
+    });
+    expect(clear).toMatchObject({ terminal: false, state: { bossesBeaten: 1, pendingReward: "boss" } });
+    expect(clear.intents).toContainEqual({ type: "prepare-reward", reward: "boss" });
+    expect(clear.intents.some((intent) => intent.type === "stage-done" || intent.type === "start-adventure-finale")).toBe(false);
+  });
 });

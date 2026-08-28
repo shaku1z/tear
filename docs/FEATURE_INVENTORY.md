@@ -220,7 +220,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   Last Spring keyframe deterministically, while an existing TearSDL boss-state
   child fork changes only its declared timer and leaves the source snapshot
   immutable. These are engineering-only lifecycle/replay facts, not C40
-  certification.
+  certification. VS3-C13-S10 keeps terminal modes distinct: Campaign carries
+  Rootbound's pending Verdant chapter outro after its boss reward, whereas Boss
+  Test advances boss-only kill/reward/roster state and never emits campaign
+  stage-completion or finale intent. Both retain the shared death cleanup and
+  terminal presentation path; the existing Boss Test browser journey owns
+  defeat/result/retry back into Rootbound's Verdant home stage.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
