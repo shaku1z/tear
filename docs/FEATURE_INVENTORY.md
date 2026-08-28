@@ -353,6 +353,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   death. The optional hidden no-damage sequence remains unimplemented pending
   approval. Runtime/catalog/reference projections and the 100-entry reward pool
   agree on the same identities.
+  Wayfarer and difficulty-completion goals/copy now derive from the stage and
+  difficulty catalogs; Gauntlet roster copy derives from boss identities; and
+  the standard-mode profile projection is shared by run start and Well-Rounded.
+  Intentional Final Five weapon copy and cumulative boss milestones remain
+  unchanged.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
