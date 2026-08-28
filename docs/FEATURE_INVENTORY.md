@@ -54,6 +54,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   the source-owned boss identity predicate instead of a stale five-boss copy. Its
   base body now owns canonical boss HP/collision, intro protection, legal damage,
   monotonic phase ordinals, and a deterministic attack-free idle/recovery loop.
+  Rootbound's existing enemy-presentation path now installs its root-throne,
+  branching-mantle, plural-mask, and gold-graft silhouette, including its intro
+  rise pose; the shared boss-intro snapshot/UI contract carries its authored
+  name, epithet, and opening line without a parallel presentation registry.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

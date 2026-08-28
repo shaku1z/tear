@@ -23,7 +23,9 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       super(x, y, CONFIG.boss);
       this.kind = "rootbound";
       this.bossId = ROOTBOUND_PROVISIONAL_DEFINITION.id;
-      this.bossName = ROOTBOUND_PROVISIONAL_DEFINITION.name;
+      this.bossName = "THE ROOTBOUND";
+      this.epithet = "KEEPER OF THE LAST MERCY";
+      this.openingLine = "YOU DO NOT HAVE TO DIE HERE.";
       this.presentationId = ROOTBOUND_PROVISIONAL_DEFINITION.id;
       this.isBoss = true;
       this.color = CONFIG.colors.boss;

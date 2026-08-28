@@ -36,6 +36,7 @@ type BossPresentationActor = Parameters<GameRuntimeDependencies["drawBossTransfo
 type PresentationRun = GameRun & { readonly _arenaBroken?: Platforms | null };
 type PresentationEnemy = VisualEnemySource & {
   readonly presentationId?: string; readonly facing?: number; readonly bossName?: string;
+  readonly epithet?: string; readonly openingLine?: string;
 };
 
 export interface WorldPresentationState {
@@ -313,7 +314,8 @@ function projectPresentationEnemy(enemy: DrawableEnemy): PresentationEnemy {
     spawnT: enemy.spawnT, flash: enemy.flash, dead: enemy.dead, buffs: enemy.buffs, kind: enemy.kind,
     enraged: enemy.enraged, variantName: enemy.variantName, affixes: enemy.affixes,
     bleedStacks: enemy.bleedStacks, burnT: enemy.burnT, markT: enemy.markT,
-    bossName: enemy.bossName, presentationId: enemy.presentationId, facing: enemy.facing,
+    bossName: enemy.bossName, epithet: enemy.epithet, openingLine: enemy.openingLine,
+    presentationId: enemy.presentationId, facing: enemy.facing,
     cinematicPose: !!enemy.cinematicPose,
     draw: (canvas, player) => { enemy.draw(canvas, player); },
     ...(enemy.drawRear === undefined ? {} : { drawRear: (canvas: CanvasRenderingContext2D) => { enemy.drawRear?.(canvas); } }),

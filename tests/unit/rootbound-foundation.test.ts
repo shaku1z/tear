@@ -11,6 +11,19 @@ import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { BossArenaRules, createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
 import { createEnemyHarness } from "./enemy-test-harness";
+import { createLegacyEnemyPresentation } from "../../src/presentation/enemies/legacy-enemy-renderers";
+import { clamp, len, lerp } from "../../src/domain/geometry";
+
+function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
+  const values = new Map<PropertyKey, unknown>();
+  return new Proxy({} as CanvasRenderingContext2D, {
+    get(_target, property): unknown {
+      if (values.has(property)) return values.get(property);
+      return (): void => { calls.push(String(property)); };
+    },
+    set(_target, property, value): boolean { values.set(property, value); return true; },
+  });
+}
 
 describe("Rootbound production foundation", () => {
   it("locks identity, authored name, provisional phase marks, and Verdant home stage before factory promotion", () => {
@@ -35,13 +48,34 @@ describe("Rootbound production foundation", () => {
     expect(boss).toMatchObject({
       kind: "rootbound",
       bossId: "rootbound",
-      bossName: "The Rootbound",
+      bossName: "THE ROOTBOUND",
+      epithet: "KEEPER OF THE LAST MERCY",
+      openingLine: "YOU DO NOT HAVE TO DIE HERE.",
       presentationId: "rootbound",
       isBoss: true,
       atk: "unavailable",
       availableAttacks: [],
       phaseMarks: [0.65, 0.28],
     });
+  });
+
+  it("installs a distinct root-throne silhouette with an authored intro pose", () => {
+    const harness = createEnemyHarness();
+    createLegacyEnemyPresentation({
+      A11Y: { highContrast: false, reducedMotion: false }, CLOCK: { sim: 0 }, policy: CONFIG,
+      GFX: { low: false }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
+      UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
+      clamp, len, lerp,
+    }).install(harness.types);
+    const boss = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as
+      InstanceType<typeof harness.types.Rootbound> & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
+    const calls: string[] = [];
+    boss.introT = CONFIG.bossTheater.introDur / 2;
+    boss.draw(recordingCanvas(calls), harness.player);
+
+    expect(calls.filter((name) => name === "lineTo").length).toBeGreaterThanOrEqual(14);
+    expect(calls.filter((name) => name === "arc").length).toBeGreaterThanOrEqual(7);
+    expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
   });
 
   it("places the grounded Rootbound body through the shared boss placement authority", () => {

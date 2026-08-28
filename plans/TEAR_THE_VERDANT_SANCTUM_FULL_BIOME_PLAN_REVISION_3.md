@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C10-S5 green** |
+| Status | **Active implementation authority — VS3-C10-S6 green** |
 | Current checkpoint | `VS3-C10` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4372,7 +4372,7 @@ Create a lawful production Rootbound encounter that can spawn, introduce, simula
 - [x] **VS3-C10-S3** — Add one coherent placement path without a third registry.
 - [x] **VS3-C10-S4** — Use the current boss encounter start and living arena lifecycle.
 - [x] **VS3-C10-S5** — Implement base boss body, HP, collision, damage, phase ordinal, intro state, and idle/recovery loop.
-- [ ] **VS3-C10-S6** — Add boss presentation identity, silhouette, name, epithet, intro pose, and opening line.
+- [x] **VS3-C10-S6** — Add boss presentation identity, silhouette, name, epithet, intro pose, and opening line.
 - [ ] **VS3-C10-S7** — Implement deterministic cleanup on death, reset, retry, exit, and failed restore.
 - [ ] **VS3-C10-S8** — Add Boss Test setup and result/retry path.
 - [ ] **VS3-C10-S9** — Add current boss observation of valid phase ordinals and home stage.

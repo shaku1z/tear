@@ -54,7 +54,7 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 bossGuardH: 6, bossGuardGap: 10, bossGuardScale: 0.60,
                 bossShimmerW: 112, bossCrackJut: 10,
                 bossIntroBarH: 96, bossIntroAccentHalfW: 150, bossIntroAccentH: 3,
-                bossIntroTitleBottom: 34, bossIntroAccentBottom: 22, bossIntroEpithetBottom: 2,
+                bossIntroTitleBottom: 34, bossIntroAccentBottom: 22, bossIntroEpithetBottom: 2, bossIntroOpeningBottom: 76,
                 bossVignetteFocusY: 0.46, bossVignetteInner: 0.18, bossVignetteOuter: 0.72,
                 bossPhaseBannerW: 760, bossPhaseBannerH: 72, bossPhaseBannerY: 0.24,
                 bossPhaseAccentH: 3,
