@@ -32,6 +32,7 @@ import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
+import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
@@ -164,7 +165,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     captureSemanticActions: false,
     gameplayEvents: GAMEPLAY_EVENTS,
     defaults: {
-      rulesetVersion: "tear-rules-2026.07",
+      rulesetVersion: CURRENT_RULESET_VERSION,
       build: { version: "0.1.0", revision: __TEAR_BUILD_REVISION__, target },
       ticksPerSecond: 120,
       weaponId: "sword",

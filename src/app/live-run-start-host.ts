@@ -18,6 +18,7 @@ import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulatio
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 import { resolveDiscoveredVariantIds } from "../gameplay/variants";
 import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -266,7 +267,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       } else context.tutorial.start();
     },
     enterPlayingState: (sessionId) => { context.setScreen("playing", { runId: sessionId }); },
-    beginMusic: (runId, seed) => { context.music.begin({ runId, runSeed: String(seed), rulesetVersion: "tear-rules-2026.07",
+    beginMusic: (runId, seed) => { context.music.begin({ runId, runSeed: String(seed), rulesetVersion: CURRENT_RULESET_VERSION,
       gameVersion: "0.1.0", scoreVersion: SFX.musicScoreVersion() }); },
     requestPointerLock: context.requestPointerLock,
   });

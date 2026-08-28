@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { GAMEPLAY_EVENT_KIND_IDS, TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { createTearSpawnFactPublisher, createTearTerminalRunFactPublisher, createTearWaveFactPublisher } from
   "../../src/gameplay/runtime/gameplay-event-publishers";
-import { createGameplayCausalEvent, nativeCausalEventAvailability, projectGameplayEventForParity } from
+import { createGameplayCausalEvent, mapGameplayEventToCausalEvent, nativeCausalEventAvailability, projectGameplayEventForParity } from
   "../../src/tearbench/gameplay-causal-events";
 import { validateTearContract } from "../../src/tearbench/validation";
 import { publishEnvironmentEvent } from "../../src/gameplay/environment/environment-events";
@@ -176,6 +176,16 @@ describe("native gameplay causal-event adapter", () => {
     ]);
     expect(facts[0]).toEqual({ kind: "run", tick: 903, transition: "defeated", runId: "run-1",
       mode: "endless", difficulty: "hard", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 7.525 });
+  });
+
+  it("keeps numeric stage compatibility while projecting stable stage identity and exits", () => {
+    expect(mapGameplayEventToCausalEvent({ kind: "stage", tick: 7, stage: 3 })).toMatchObject({
+      type: "stage.entered", payload: { stage: 3 },
+    });
+    expect(mapGameplayEventToCausalEvent({ kind: "stage", tick: 8, stage: 3, stageId: "verdant-sanctum", transition: "entered" }))
+      .toMatchObject({ type: "stage.entered", payload: { stage: 3, stageId: "verdant-sanctum" } });
+    expect(mapGameplayEventToCausalEvent({ kind: "stage", tick: 9, stage: 3, stageId: "verdant-sanctum", transition: "exited" }))
+      .toMatchObject({ type: "stage.exited", payload: { stage: 3, stageId: "verdant-sanctum" } });
   });
 
   it("publishes environment transitions in stable arrival order and maps every family", () => {

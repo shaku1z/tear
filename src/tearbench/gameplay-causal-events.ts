@@ -17,7 +17,7 @@ const NATIVE_EFFECT_EVENTS = Object.freeze({ stolenBlade: "blade.stolen", revive
   "dash-start": "player.dash-started", superslam: "blade.power-slam", slam: "blade.slam",
   updraft: "blade.launch", pickup: "draft.selected", tierup: "tier.selected" }) satisfies Readonly<Record<string, TearEventId>>;
 const NATIVE_CAUSAL_EVENTS: ReadonlySet<TearEventId> = new Set([
-  "run.started", "run.paused", "run.resumed", "run.completed", "run.defeated", "run.abandoned", "stage.entered",
+  "run.started", "run.paused", "run.resumed", "run.completed", "run.defeated", "run.abandoned", "stage.entered", "stage.exited",
   "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "blade.thrown", "blade.caught",
   "blade.throw-resolved", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit",
   "projectile.expired", "world.void-rescue", ...Object.values(NATIVE_WAVE_EVENTS), ...Object.values(NATIVE_EFFECT_EVENTS),
@@ -59,8 +59,8 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       }),
     };
     case "stage": return {
-      type: "stage.entered", phase: "wave-draft-and-state-transitions",
-      payload: Object.freeze({ stage: event.stage }),
+      type: event.transition === "exited" ? "stage.exited" : "stage.entered", phase: "wave-draft-and-state-transitions",
+      payload: Object.freeze({ stage: event.stage, ...(event.stageId === undefined ? {} : { stageId: event.stageId }) }),
     };
     case "wave": {
       const type = (NATIVE_WAVE_EVENTS as Readonly<Record<string, TearEventId>>)[event.event];

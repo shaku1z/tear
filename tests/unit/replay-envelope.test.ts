@@ -8,6 +8,7 @@ import {
   type ReplayEnvelopeV2,
 } from "../../src/replay/envelope";
 import { stableVerificationHash } from "../../src/replay/hash";
+import { CURRENT_RULESET_VERSION, PRE_VERDANT_RULESET_VERSION } from "../../src/gameplay/run/ruleset-version";
 
 function replayFixture(): ReplayEnvelopeV2 {
   const finalState = { tick: 12, score: 900, player: { health: 3 } };
@@ -77,5 +78,17 @@ describe("replay envelope", () => {
     expect(validateReplayEnvelope(missingSchema)).toMatchObject({ ok: false, issues: [
       expect.objectContaining({ path: "run" }),
     ] });
+  });
+
+  it("round-trips the engineering ruleset and rejects deterministic playback under a different ruleset", () => {
+    const current = { ...replayFixture(), rulesetVersion: CURRENT_RULESET_VERSION };
+    expect(parseReplayEnvelope(JSON.stringify(current), CURRENT_RULESET_VERSION)).toMatchObject({
+      ok: true, replay: { rulesetVersion: CURRENT_RULESET_VERSION },
+    });
+    expect(parseReplayEnvelope({ ...current, rulesetVersion: PRE_VERDANT_RULESET_VERSION })).toMatchObject({
+      ok: true, replay: { rulesetVersion: PRE_VERDANT_RULESET_VERSION },
+    });
+    expect(parseReplayEnvelope({ ...current, rulesetVersion: PRE_VERDANT_RULESET_VERSION }, CURRENT_RULESET_VERSION))
+      .toMatchObject({ ok: false, issues: [{ path: "rulesetVersion" }] });
   });
 });

@@ -5,7 +5,7 @@
  * numeric index for existing replay consumers while optionally carrying the
  * stable authored stage identity for new consumers.
  */
-import type { StageId } from "../stages";
+import { STAGES, type StageId } from "../stages";
 
 export type TearGameplayEvent =
   | Readonly<{
@@ -105,6 +105,13 @@ export class TearGameplayEventBus implements TearGameplayEventPort {
   publish(event: TearGameplayEvent): void {
     if (!Number.isSafeInteger(event.tick) || event.tick < 0) {
       throw new RangeError("gameplay event tick must be a non-negative safe integer");
+    }
+    if (event.kind === "stage") {
+      if (!Number.isSafeInteger(event.stage) || event.stage < 0) throw new RangeError("gameplay stage index must be a non-negative safe integer");
+      const expectedStageId = STAGES[event.stage]?.id;
+      if (event.stageId !== undefined && event.stageId !== expectedStageId) {
+        throw new RangeError(`gameplay stage identity ${event.stageId} does not match index ${String(event.stage)}`);
+      }
     }
     const frozen = Object.freeze({ ...event }) as TearGameplayEvent;
     for (const listener of this.#listeners) listener(frozen);
