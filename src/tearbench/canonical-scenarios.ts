@@ -44,7 +44,9 @@ export function materializeCanonicalScenario(
   }
   if (entry.subject.kind === "environment-field") ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
   if (entry.subject.kind === "environment-combat-object") ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
-  if (boss !== undefined && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {
+  const environmentBossContext = entry.subject.kind === "environment-field"
+    || entry.subject.kind === "environment-combat-object";
+  if (boss !== undefined && !environmentBossContext && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {
     throw new RangeError(`canonical boss scenario ${entry.id} requires its matching authoritative boss subject`);
   }
   if (boss !== undefined && (mode !== "bossonly" || entry.backends.includes("headless"))) {

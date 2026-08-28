@@ -3,6 +3,7 @@ import type { EnvironmentCombatObjectState, EnvironmentFieldState, EnvironmentRo
 import { createStableRegistry } from "./registries";
 import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "../gameplay/environment/environment-definitions";
 import type { BloomWellState } from "../gameplay/environment/bloom-well";
+import { createGraftAnchorState } from "../gameplay/environment/graft-anchor";
 
 type Patch = Readonly<Record<string, unknown>>;
 
@@ -49,6 +50,17 @@ export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDoc
     enemyComposition: [{ kind: "rootbinder", count: 1 }, { kind: "charger", count: 2 }],
     environment: { fields: [], combatObjects: links, routes: [] },
   });
+}
+
+/** C12 surgical fixture: one active production Graft retains the live Rootbound owner/target identity. */
+export function forgeRootboundGraftAnchorState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
+  const warning = createGraftAnchorState({
+    ownerId: "enemy:1", ownerPosition: { x: 800, y: 620 }, graftType: "bastion",
+    geometry: { x: 280, y: 610, w: 54, h: 90 }, createdTick: 0,
+  });
+  const active = Object.freeze({ ...warning, state: "active" as const, stateTick: warning.activationTick });
+  const forged = forgeEnvironmentCombatObjectState(base, active);
+  return Object.freeze({ ...forged, id: `${base.id}-graft-bastion` });
 }
 
 export function forgeEnvironmentRouteState(

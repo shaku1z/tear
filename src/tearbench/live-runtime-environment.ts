@@ -26,6 +26,7 @@ import { createGameplayCausalEvent, projectGameplayEventForParity } from "./game
 import { environmentSnapshotToObservation } from "./environment-codec";
 import { forgeBloomWellCycleState, forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
 import { forgeRootbinderNetworkEnvironment } from "./rootbinder-network-forge";
+import { forgeRootboundGraftAnchorEnvironment } from "./rootbound-graft-anchor-forge";
 import { createBloomWellState, isBloomWellState } from "../gameplay/environment/bloom-well";
 import { projectBloomWellPresentation, type BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
@@ -663,6 +664,7 @@ export function createLiveTearRuntimeEnvironment(
     forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
     forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
     forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
+    forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
   });
   return Object.freeze({
     accessClass: "B" as const,
@@ -687,6 +689,7 @@ export function createLiveTearRuntimeEnvironment(
     forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
     forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
     forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
+    forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
     screenshot: () => environment.screenshot(),
   });
 }

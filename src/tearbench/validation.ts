@@ -287,6 +287,7 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
       || !stringValue(subject.id)) {
       issue(issues, "subject", "must declare a recognized current scenario subject");
     } else if (isRecord(start) && start.boss !== undefined
+      && subject.kind !== "environment-field" && subject.kind !== "environment-combat-object"
       && (subject.kind !== "boss" || subject.id !== start.boss)) {
       issue(issues, "subject", "a current boss start requires its matching authoritative boss subject");
     } else if (subject.kind === "weapon") {

@@ -175,7 +175,20 @@
     "interactionMatrices": ["browser", "viewport", "accessibility", "performance"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/backdrop-biomes.test.ts tests/unit/platform-materials.test.ts tests/unit/verdant-presentation.test.ts"],
-    "journeyCommands": ["pnpm test:browser:verdant-presentation"]
+    "journeyCommands": ["node tests/browser-verdant-presentation.js"]
+  },
+  {
+    "id": "verdant-c12-rootbound-phase-two",
+    "prefixes": ["src/gameplay/entities/enemy-types/rootbound.ts", "src/gameplay/entities/enemies.ts", "src/gameplay/environment/graft-anchor.ts", "src/gameplay/environment/root-cage.ts", "src/gameplay/environment/environment-runtime.ts", "src/app/live-rootbound-wiring.ts", "src/presentation/enemies/renderers/rootbound-renderer.ts", "src/presentation/environment/verdant-environment-presentation.ts", "src/tearbench/rootbound-graft-anchor-forge.ts", "src/tearbench/state-forge-factories.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-contracts.ts", "src/tearbench/registries.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-current-gameplay-scenarios.js", "tests/unit/rootbound-phase-two.test.ts", "tests/unit/graft-anchor.test.ts"],
+    "scenarios": ["rootbound-graft-anchor-destruction"],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "verdant-c12-rootbound-phase-two-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["fixed-step", "combat", "events", "restore", "browser", "accessibility"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/rootbound-phase-two.test.ts tests/unit/graft-anchor.test.ts tests/unit/bloom-well-runtime.test.ts tests/unit/environment-state-codec.test.ts tests/unit/verdant-final-five-conformance.test.ts"],
+    "journeyCommands": ["node tests/browser-current-gameplay-scenarios.js"]
   },
   {
     "id": "current-player-surfaces",

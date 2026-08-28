@@ -117,7 +117,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       if (object.kind === "root-link" && !priorIds.has(object.id)) publishEnvironmentEvent(this.#events, { event: "combat-object-link-created", objectId: object.id, category: "combat-object", objectKind: object.kind }, object.stateTick);
     }
   }
-  override clear(reason: EnvironmentClearReason): void { for (const actor of this.#rootboundActors?.() ?? []) actor.applyGraftEffects?.(ROOTBOUND_NO_GRAFT_EFFECTS); super.clear(reason); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear(); this.#rootbinderGenerations.clear(); this.#rootlineFields.clear(); this.#rootlineHitFields.clear(); }
+  override clear(reason: EnvironmentClearReason): void { for (const actor of this.#rootboundActors?.() ?? []) { actor.applyGraftEffects?.(ROOTBOUND_NO_GRAFT_EFFECTS); actor.completeRootCage?.(); } super.clear(reason); this.#combatKernels.clear(); this.#rootbinderNetworks.clear(); this.#rootbinderLeashes.clear(); this.#rootbinderRedistribution.clear(); this.#rootbinderGenerations.clear(); this.#rootlineFields.clear(); this.#rootlineHitFields.clear(); }
   override removeCombatObject(id: string): void { const prior = this.combatObjects().find((object) => object.id === id); super.removeCombatObject(id); this.#combatKernels.delete(id); this.#rootbinderRedistribution.delete(id); if (prior !== undefined && isGraftAnchorState(prior) && prior.ownerId !== null) this.#applyRootboundGraftEffects(prior.ownerId); }
 
   /** Cleans one relationship through its kernel so the native cleanup fact is delivered. */
@@ -240,6 +240,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       const rootCageId = `${actor.id}:root-cage:g${String(request.sequence)}`;
       let matching = owned.filter((boundary) => boundary.rootCageId === rootCageId);
       if (matching.length === 0) {
+        for (const boundary of owned) if (boundary.state === "destroyed" || boundary.state === "expired") this.removeCombatObject(boundary.id);
         installRootCage(this, actor.id, request, tick);
         matching = this.combatObjects().filter(isRootCageState).filter((boundary) => boundary.rootCageId === rootCageId);
       }

@@ -325,6 +325,10 @@ export function createLiveStateForgeAdapter(
     },
     commit(candidate) {
       cleanupBossEncounterActors(options.state.enemies(), "restore");
+      // Rebind the detached candidate before any host/environment owner can
+      // observe it and allocate a competing ID from the restored sequence.
+      options.restoreIdentityState(candidate.identityState);
+      for (const binding of candidate.identityBindings) options.bindActorId(binding.entity, binding.id);
       options.worldServices.configuration.resetToBase();
       const weapon = options.dependencies.applyWeapon(options.worldServices.configuration.value, candidate.weaponId);
       // Hydrate codec values into a detached snapshot, then reconcile them
@@ -355,9 +359,7 @@ export function createLiveStateForgeAdapter(
       options.replacePlatforms(candidate.platforms);
       options.worldServices.random.restore(candidate.rng);
       options.restoreGhost(candidate.ghost);
-      options.restoreIdentityState(candidate.identityState);
       options.restoreReward(candidate.reward);
-      for (const binding of candidate.identityBindings) options.bindActorId(binding.entity, binding.id);
       options.setTick(candidate.tick);
       options.clearInputProjection();
       options.setFocus(candidate.focus);

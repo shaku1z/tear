@@ -14,6 +14,8 @@ import {
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { environmentHash, environmentSnapshotToObservation, validateEnvironmentCodecPayload } from "../../src/tearbench/environment-codec";
+import { forgeRootboundGraftAnchorState } from "../../src/tearbench/state-forge-factories";
+import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
 describe("Rootbound Graft Anchor definitions", () => {
   it("defines the exact bounded Phase II roster without creating another environment kind", () => {
@@ -97,6 +99,27 @@ describe("Rootbound Graft Anchor definitions", () => {
     expect(Object.isFrozen(state)).toBe(true);
     expect(Object.isFrozen(state.geometry)).toBe(true);
     expect(Object.isFrozen(state.connectionGeometry.points)).toBe(true);
+  });
+
+  it("composes the surgical Rootbound fixture through the existing combat-object factory", () => {
+    const base: TearSdlDocumentV1 = {
+      format: "tearsdl", schemaVersion: 1, id: "rootbound-graft-anchor-destruction", stateClass: "surgical-valid",
+      seed: "rootbound-graft-anchor-destruction",
+      start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
+    };
+    const forged = forgeRootboundGraftAnchorState(base);
+    expect(forged.id).toBe("rootbound-graft-anchor-destruction-graft-bastion");
+    expect(forged.start).toEqual(base.start);
+    expect(forged.state?.environment).toMatchObject({
+      fields: [], routes: [],
+      combatObjects: [expect.objectContaining({
+        id: "enemy:1:graft:bastion", factoryId: "graft-anchor", kind: "graft-anchor",
+        ownerId: "enemy:1", targetId: "enemy:1", graftType: "bastion", state: "active",
+      })],
+    });
+    expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"]).toMatchObject({
+      category: "combat-object", behavior: "generic-combat-object",
+    });
   });
 
   it("installs through the production environment owner with stable idempotent ownership", () => {

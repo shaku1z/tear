@@ -234,6 +234,35 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
             && final.every((object) => object.procEligible === false) && ordered;
           break;
         }
+        case "rootbound-graft-anchor": {
+          const forge = environment.forgeRootboundGraftAnchor();
+          if (!forge.ok) throw new Error(`Rootbound Graft must launch through State Forge restore: ${JSON.stringify(forge)}`);
+          const env = environment.environment();
+          const beforeObservation = environment.observe();
+          const boss = beforeObservation.entities.find((actor) => actor.kind === "rootbound");
+          const graft = env.snapshot().combatObjects.find((object) => object.factoryId === "graft-anchor");
+          if (boss === undefined || graft === undefined) throw new Error("Rootbound Graft restore did not retain its live boss owner");
+          const scoreBefore = beforeObservation.run.score;
+          const damage = env.damageCombatObject(graft.id, graft.integrity, "rootbound-graft-browser-cut", beforeObservation.tick + 1);
+          const transition = step();
+          env.cleanupCombatObject(graft.id, "boss-terminal", transition.observation.tick);
+          step();
+          const after = env.snapshot().combatObjects.find((object) => object.id === graft.id);
+          const eventTypes = environment.events().map((event) => event.type);
+          const damagedIndex = eventTypes.indexOf("world.environment-combat-object-damaged");
+          const destroyedIndex = eventTypes.indexOf("world.environment-combat-object-destroyed");
+          const cleanedIndex = eventTypes.indexOf("world.environment-object-cleaned");
+          const finalObservation = environment.observe();
+          evidence = { forge, graft, damage, after, bossId: boss.id, eventTypes,
+            bossDamageableContract: "production-path-unit", scoreBefore, scoreAfter: finalObservation.run.score };
+          proved = graft.ownerId === boss.id && graft.targetId === boss.id && graft.procEligible === false
+            && graft.counterplayTags.includes("cut") && damage.accepted && damage.destroyed
+            && after?.state === "expired" && after.cleanupReason === "boss-terminal"
+            && damagedIndex >= 0 && destroyedIndex > damagedIndex && cleanedIndex > destroyedIndex
+            && finalObservation.run.score === scoreBefore
+            && !environment.events().some((event) => event.type === "enemy.defeated");
+          break;
+        }
         default: throw new Error(`no live scenario evidence exists for current gameplay subject ${source.subject.id}`);
       }
       const final = environment.observe();

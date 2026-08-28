@@ -9,6 +9,8 @@ import { ROOT_CAGE_GEOMETRY, ROOT_CAGE_TIMING, isRootCageState, type RootCagePla
 import { createEnemyHarness } from "./enemy-test-harness";
 import { environmentSnapshotToObservation, validateEnvironmentCodecPayload } from "../../src/tearbench/environment-codec";
 import { createRootbinderState } from "../../src/gameplay/entities/rootbinder-runtime";
+import type { EnvironmentClearReason } from "../../src/gameplay/environment/environment-contracts";
+import type { BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
 
 type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
   graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[];
@@ -20,6 +22,7 @@ type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"][
   phaseTwoAttackIndex: number;
   phaseTwoPendingAttack: RootboundPhaseTwoAttack | null;
   finalPhaseTwoGraftTypes: readonly string[];
+  cleanupEncounter(reason: BossEncounterCleanupReason): void;
 };
 
 describe("Rootbound Phase II Graft creation", () => {
@@ -336,5 +339,82 @@ describe("Rootbound Phase II Graft creation", () => {
       phaseTwoPendingAttack: null, memoryChoirStage: null, rootCageRequest: null,
       finalPhaseTwoGraftTypes: ["bastion", "haste"],
       cinematicRequest: { id: "rootbound-nothing-here-dies", title: "NOTHING HERE DIES", pose: "rootboundRegrowth" } });
+  });
+
+  it("keeps repeated Phase II placement below exact collection caps and rejects an undersized host", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-caps",
+      configuration: { maxFields: 6, maxCombatObjects: 5 } });
+    environment.setRootboundActorsSource(() => [Object.freeze({
+      id: "enemy:rootbound-live", source: actor, completeRootCage: () => { actor.completeRootCage(); },
+      applyGraftEffects: (effects: RootboundGraftEffects) => { actor.applyGraftEffects(effects); },
+      recoverGraftHealth: (fraction: number) => actor.recoverGraftHealth(fraction),
+      state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+        graftPlacements: actor.graftAnchorPlacements(), ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
+        bloomPattern: actor.bossBloomPattern(), arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
+        rootCagePlacement: actor.rootCagePlacement() }),
+    })]);
+    let tick = 1_000;
+    for (let cycle = 0; cycle < 40; cycle += 1) {
+      actor.bloomPatternIndex = cycle % ROOTBOUND_BLOOM_PATTERN_IDS.length;
+      expect(actor.startRootCage(CONFIG.view.w / 2)).toBe(true);
+      environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+      expect(environment.fields().length).toBeLessThanOrEqual(6);
+      expect(environment.combatObjects().length).toBeLessThanOrEqual(5);
+      tick += ROOT_CAGE_TIMING.warningTicks + ROOT_CAGE_TIMING.activeTicks;
+      environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+      expect(actor.rootCagePlacement()).toBeNull();
+      tick += 1;
+    }
+    expect(environment.fields()).toHaveLength(6);
+    expect(environment.combatObjects().filter(isRootCageState)).toHaveLength(2);
+
+    const undersized = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-cap-negative",
+      configuration: { maxFields: 6, maxCombatObjects: 4 } });
+    expect(actor.startRootCage(CONFIG.view.w / 2)).toBe(true);
+    undersized.setRootboundActorsSource(() => [Object.freeze({
+      id: "enemy:rootbound-live", source: actor,
+      state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+        graftPlacements: actor.graftAnchorPlacements(), ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
+        rootCagePlacement: actor.rootCagePlacement() }),
+    })]);
+    expect(() => {
+      undersized.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    }).toThrow("environment combat-object population bound exceeded");
+  });
+
+  it("clears every Rootbound environment and boss-local Phase II owner across reset and terminal reasons", () => {
+    const clearReasons: readonly EnvironmentClearReason[] = ["new-run", "retry", "stage-transition", "boss-encounter-replacement",
+      "boss-terminal", "defeat", "abandon", "tutorial-reset", "restore", "replay-seek", "disposal"];
+    const bossReason = (reason: EnvironmentClearReason): BossEncounterCleanupReason => reason === "retry" ? "retry"
+      : reason === "restore" ? "restore" : reason === "defeat" || reason === "boss-terminal" ? "death"
+        : reason === "abandon" || reason === "disposal" || reason === "stage-transition" ? "exit" : "reset";
+    for (const reason of clearReasons) {
+      const harness = createEnemyHarness();
+      const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+      actor.hp = actor.maxHp * 0.5;
+      actor.update(1 / 120, harness.platforms, harness.player, []);
+      actor.startMemoryChoir();
+      actor.startRootCage(CONFIG.view.w / 2);
+      const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: `rootbound-clear:${reason}` });
+      environment.setRootboundActorsSource(() => [Object.freeze({
+        id: "enemy:rootbound-live", source: actor, completeRootCage: () => { actor.completeRootCage(); },
+        applyGraftEffects: (effects: RootboundGraftEffects) => { actor.applyGraftEffects(effects); },
+        state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+          graftPlacements: actor.graftAnchorPlacements(), ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
+          bloomPattern: actor.bossBloomPattern(), arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
+          rootCagePlacement: actor.rootCagePlacement() }),
+      })]);
+      environment.step(100, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+      actor.cleanupEncounter(bossReason(reason));
+      environment.clear(reason);
+      expect(environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
+      expect(environment.lastClearReason).toBe(reason);
+      expect(actor).toMatchObject({ memoryChoirStage: null, memoryChoirManifestations: [], rootCageRequest: null,
+        phaseTwoPendingAttack: null, graftDamageTakenMultiplier: 1, graftCadenceMultiplier: 1, activeGraftTypes: [] });
+    }
   });
 });

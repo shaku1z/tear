@@ -128,6 +128,8 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   forgeBloomWellCycle(): TearLiveRestoreResult;
   /** Restores a source-owned Rootbinder relationship fixture through State Forge. */
   forgeRootbinderNetwork(): TearLiveRestoreResult;
+  /** Restores one specialized active Graft against the real Rootbound owner. */
+  forgeRootboundGraftAnchor(): TearLiveRestoreResult;
 }
 
 export interface TearClassBRuntimeEnvironment extends Omit<TearStructuredRuntimeEnvironment, "accessClass" | "rng"> {

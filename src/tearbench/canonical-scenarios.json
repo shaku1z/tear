@@ -155,6 +155,23 @@
     }
   },
   {
+    "id": "rootbound-verdant-sanctum-live-encounter",
+    "description": "Launch the production Rootbound encounter in Verdant Sanctum and prove its live simulation reaches the first authored Phase I attack transition.",
+    "subject": { "kind": "boss", "id": "rootbound" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "rootbound" },
+    "backends": ["live"],
+    "tags": ["rootbound", "verdant-sanctum", "boss", "stage", "encounter"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts", "tests/unit/rootbound-phase-one.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
+      "artifact": "The shared production boss journey starts Rootbound through Boss Test in its source-owned Verdant Sanctum stage and observes its first authored Phase I attack transition.",
+      "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
     "id": "echo-voidspire-live-encounter",
     "description": "Launch the production Echo encounter in its authored Voidspire biome and prove its live combat simulation advances.",
     "subject": { "kind": "boss", "id": "echo" },
@@ -221,6 +238,19 @@
     "testFiles": ["tests/unit/rootbinder-network.test.ts"],
     "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared Class-A browser proof restores Rootbinder relationship state through State Forge, observes non-proc root-link segments, severs one segment, and verifies cleanup of the remaining links.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
+    "id": "rootbound-graft-anchor-destruction",
+    "description": "Restore Rootbound with one canonical active Graft Anchor through State Forge, destroy it through the environment combat kernel, and prove valid ownership plus reward/proc exclusion.",
+    "subject": { "kind": "environment-combat-object", "id": "rootbound-graft-anchor" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "rootbound" },
+    "backends": ["live"],
+    "tags": ["environment", "combat-object", "rootbound", "rootbound-graft-anchor", "graft-anchor", "destruction", "phase-two", "c12"],
+    "maxTicks": 24,
+    "testFiles": ["tests/unit/graft-anchor.test.ts", "tests/unit/rootbound-phase-two.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared Class-A browser proof launches the real Rootbound encounter, restores one specialized Graft through State Forge, observes stable owner/target references, destroys it through the canonical combat-object kernel, and proves no enemy reward/proc leakage.",
       "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {

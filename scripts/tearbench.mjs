@@ -156,7 +156,9 @@ function validateScenarioMetadata(scenario) {
     || typeof subject.id !== "string" || subject.id.trim() === "") {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
-  if (scenario.start?.boss !== undefined && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
+  const isRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor"
+    && scenario.start?.boss === "rootbound";
+  if (scenario.start?.boss !== undefined && !isRootboundGraft && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
     throw new TypeError(`scenario ${scenario.id} boss start requires its matching authoritative boss subject`);
   }
   if (subject.kind === "gameplay") {
@@ -189,12 +191,13 @@ function validateScenarioMetadata(scenario) {
     const expected = subject.kind === "environment-field" ? "generic-field" : "generic-combat-object";
     const isSupportedBloomWell = subject.kind === "environment-field" && subject.id === "verdant-bloom-well";
     const isSupportedRootNetwork = subject.kind === "environment-combat-object" && subject.id === "verdant-root-network";
+    const isSupportedRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor";
     const supportedBackends = isSupportedBloomWell
       ? Array.isArray(scenario.backends) && scenario.backends.length === 2 && scenario.backends.includes("live") && scenario.backends.includes("headless")
       : isSupportedRootNetwork
         ? Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live"
       : Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live";
-    if ((subject.id !== expected && !isSupportedBloomWell && !isSupportedRootNetwork) || !supportedBackends) {
+    if ((subject.id !== expected && !isSupportedBloomWell && !isSupportedRootNetwork && !isSupportedRootboundGraft) || !supportedBackends) {
       throw new TypeError(`scenario ${scenario.id} environment subject requires a supported environment evidence backend`);
     }
   }

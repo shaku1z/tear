@@ -144,25 +144,20 @@ describe("TearBench current-game catalog authority", () => {
       .toThrow(/missing future-enemy/u);
   });
 
-  it("maps executable authored bosses to live scenarios without inventing a Rootbound scenario before its factory", () => {
+  it("maps every executable authored boss to one live scenario in its production home stage", () => {
     const encounters = currentCatalog.filter((entry) => entry.subject.kind === "boss");
-    const executableBossIds = BOSS_IDS.filter((id) => id !== "rootbound");
-    assertProductionOwnerCoverage("boss scenario", executableBossIds, encounters.map((entry) => entry.subject.id));
+    assertProductionOwnerCoverage("boss scenario", BOSS_IDS, encounters.map((entry) => entry.subject.id));
     for (const stage of STAGES) {
       const matching = encounters.filter((entry) => entry.subject.id === stage.boss && entry.tags.includes(stage.id));
-      if (stage.boss === "rootbound") {
-        expect(matching, `${stage.id} must not claim a pre-factory Rootbound scenario`).toHaveLength(0);
-      } else {
-        expect(matching, `${stage.id} must own exactly one executable ${stage.boss} encounter`).toHaveLength(1);
-        expect(matching[0]?.start, stage.id).toMatchObject({ mode: "bossonly", boss: stage.boss });
-        expect(matching[0]?.backends, stage.id).toEqual(["live"]);
-      }
+      expect(matching, `${stage.id} must own exactly one executable ${stage.boss} encounter`).toHaveLength(1);
+      expect(matching[0]?.start, stage.id).toMatchObject({ mode: "bossonly", boss: stage.boss });
+      expect(matching[0]?.backends, stage.id).toEqual(["live"]);
     }
 
-    expect(() => { assertProductionOwnerCoverage("boss scenario", executableBossIds,
+    expect(() => { assertProductionOwnerCoverage("boss scenario", BOSS_IDS,
       encounters.filter((entry) => entry.subject.id !== "warden").map((entry) => entry.subject.id)); })
       .toThrow(/missing warden/u);
-    expect(encounters.filter((entry) => entry.subject.id === "rootbound")).toHaveLength(0);
+    expect(encounters.filter((entry) => entry.subject.id === "rootbound")).toHaveLength(1);
     expect(encounters.filter((entry) => entry.subject.id === "warden" && entry.tags.includes("undercroft")))
       .toHaveLength(0);
   });
