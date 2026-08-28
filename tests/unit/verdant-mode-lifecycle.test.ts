@@ -6,6 +6,7 @@ import { BOSS_ROSTER, ENEMY_IDENTITY_IDS, type EnemyKind } from "../../src/gamep
 import { planNextWave, type PlanNextWaveOptions, type WavePlanningState, type WaveStage } from "../../src/gameplay/run/wave-planner";
 import { STAGES } from "../../src/gameplay/stages";
 import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
+import { TUTORIAL_LESSONS, TutorialController } from "../../src/gameplay/training/tutorial-controller";
 
 class ConstantRandom implements RandomSource {
   constructor(private readonly value: number) {}
@@ -69,5 +70,22 @@ describe("Verdant mode coverage", () => {
       bossOnly: true,
     });
     expect(bossTest.state).toMatchObject({ curBoss: "rootbound", stage: 3, currentStageIndex: 3 });
+  });
+
+  it("keeps Tutorial on its authored Charger/Ranged teaching surface", () => {
+    const controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    const spawnKinds = new Set<string>();
+    for (let index = 0; index < TUTORIAL_LESSONS.length; index += 1) {
+      controller.lessonIndex = index;
+      const intents = controller.update({
+        dt: 0, skipPressed: false, movingLeft: false, movingRight: false,
+        player: { onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 },
+        bladeState: "held", enemies: [], viewportWidth: 1600,
+      });
+      for (const intent of intents) if (intent.type === "spawn") spawnKinds.add(intent.kind);
+    }
+    expect(spawnKinds).toEqual(new Set(["charger", "ranged"]));
+    expect(spawnKinds.has("rootbinder")).toBe(false);
   });
 });
