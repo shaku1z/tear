@@ -203,7 +203,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   the world owner creates/severs/expires its canonical link objects and routes,
   installs Last Spring Bloom through shared fields, and clears every collection
   on boss terminal; actor death cancels channel healing and local final-route
-  intent. Existing C12 cleanup continues to own Grafts and Cages.
+  intent. Existing C12 cleanup continues to own Grafts and Cages. VS3-C13-S7
+  proves Rootbound uses the existing ordered death, encounter cleanup, terminal
+  presentation, boss reward, and pending chapter-outro flow; no boss-specific
+  terminal journal or reward route was introduced.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

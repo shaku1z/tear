@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C13",
-  "currentSubgoal": "VS3-C13-S7",
+  "currentSubgoal": "VS3-C13-S8",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -46,7 +46,7 @@
     "VS3-C12 Rootbound Phase II is GREEN at 6b0a5e6e0309d6004d09947b352837601fca069a: all ten ordered subgoals pass; 89 aggregate Phase II/environment/State Forge tests, repository lint, typecheck, architecture, exact-commit game-reference, standalone build, live Graft destruction journey, State Forge matrix, Verdant presentation, and source-derived six-boss browser matrix are green."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C13-S7: preserve boss-defeated, terminal, reward, and chapter-outro event order.",
+  "nextAction": "Execute VS3-C13-S8: capture and restore active Regrowth and Last Spring state transactionally.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1998,7 +1998,7 @@
         {
           "id": "VS3-C13-S7",
           "description": "Preserve boss-defeated, terminal, reward, and chapter-outro event order.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C13-S8",
@@ -2077,7 +2077,8 @@
         "VS3-C13-S3 phase/repeat guards are green: Regrowth requires the committed Phase III marker rather than HP-derived phase alone; healing above prior thresholds cannot lower the monotonic marker, replay transformation theater, or reopen Phase II; channeling and resolved states both refuse another begin. Eighteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
         "VS3-C13-S4 Last Spring is green as one authored warning, shared last-spring Bloom route, committed bounded ground attack, and punish sequence. It starts only after resolved Regrowth, deals at most one 24-damage hit, submits one rootbound-last-spring request to the existing arena fracture contract, exposes a single-use completion state, and adds no route framework. Thirty-three focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
         "VS3-C13-S5 living-arena integration is green: the exact Last Spring request enters the existing Rootbound route as warning, removes it into the broken collection while four elevated routes remain, advances through reforming warning, and restores stable geometry with no orphaned broken entry. The enemy platform port now truthfully admits the existing lifecycle's consumed-request and cleared-color null states. Eighteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
-        "VS3-C13-S6 terminal cleanup is green: the existing live Rootbound projection now lets the environment owner materialize Regrowth's three canonical root-link objects and three presentation routes, observe severing, resolve once, expire survivors, and install Last Spring Bloom through shared fields. Boss-terminal clear removes all fields/combat objects/routes; actor death cancels a channel with zero healing and clears Last Spring intent. C12 retains the adjacent Graft/Cage/reset matrix. Thirty focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass."
+        "VS3-C13-S6 terminal cleanup is green: the existing live Rootbound projection now lets the environment owner materialize Regrowth's three canonical root-link objects and three presentation routes, observe severing, resolve once, expire survivors, and install Last Spring Bloom through shared fields. Boss-terminal clear removes all fields/combat objects/routes; actor death cancels a channel with zero healing and clears Last Spring intent. C12 retains the adjacent Graft/Cage/reset matrix. Thirty focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
+        "VS3-C13-S7 terminal chronology is green without a Rootbound-specific journal: the existing transaction orders boss-defeated event creation, encounter cleanup, terminal release/presentation, boss reward preparation, and preservation of the Verdant chapter outro for subsequent campaign consumption. Shared victory/defeat journal and next-wave chapter-flow proofs remain green. Twenty-one focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass."
       ],
       "blockers": [],
       "notes": []

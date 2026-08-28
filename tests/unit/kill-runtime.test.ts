@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveEnemyKill, type KillEnemy, type KillRuntimeOptions } from "../../src/gameplay/combat/kill-runtime";
+import { planWaveClear } from "../../src/gameplay/run/wave-clear-planner";
 
 function enemy(patch: Partial<KillEnemy> = {}): KillEnemy {
   return { x: 0, y: 0, color: "red", dead: true, zones: [], severT: 0, severTier: 0,
@@ -38,5 +39,34 @@ describe("enemy kill transaction", () => {
     const deathEffect = vi.fn(); const addKillScore = vi.fn(); input.deathEffect = deathEffect; input.addKillScore = addKillScore;
     resolveEnemyKill(input);
     expect(deathEffect).toHaveBeenCalledWith(target, 8); expect(addKillScore).not.toHaveBeenCalled();
+  });
+
+  it("preserves Rootbound defeat cleanup, terminal presentation, reward, and chapter-outro order", () => {
+    const trace: string[] = [];
+    const outro = { id: "verdant-rootbound-outro" };
+    const target = enemy({ isBoss: true, bossId: "rootbound", cleanupEncounter: () => { trace.push("boss-terminal-cleanup"); } });
+    const input = options(target);
+    input.stageIndex = 3;
+    input.finalStageIndex = 5;
+    input.stageChapterBossOutro = outro;
+    input.makeDeathEvent = () => { trace.push("boss-defeated"); return {}; };
+    input.happyTime = () => { trace.push("terminal-release"); };
+    input.bossPresentation = () => { trace.push("terminal-presentation"); };
+    resolveEnemyKill(input);
+    expect(input.run.pendingBossOutro).toBe(outro);
+
+    const clear = planWaveClear({
+      state: { mode: "campaign", diff: "normal", wave: 40, isBossWave: true, horde: false, waveTime: 12,
+        waveKills: 1, wavePeak: 1, runTime: 120, bossesBeaten: 0, damagedThisWave: false, damagedThisStage: false,
+        clearTimer: 0, pendingReward: null, waveLog: [] },
+      dt: 0, waveLifecycleActive: true, spawnQueueLength: 0, enemyCount: 0, achievementTracking: true,
+      playerOneHit: false, ownedAbilityCount: 0, stageIndex: 3, stageCount: 6, currentStageAccent: "#89b95d",
+      healEachWave: 4, waveHealBonus: 0, waveClearPause: 1, availableTierUpCount: 1,
+    });
+    if (clear.intents.some((intent) => intent.type === "prepare-reward" && intent.reward === "boss")) trace.push("boss-reward");
+    if (input.run.pendingBossOutro === outro) trace.push("chapter-outro-pending");
+    expect(trace).toEqual([
+      "boss-defeated", "boss-terminal-cleanup", "terminal-release", "terminal-presentation", "boss-reward", "chapter-outro-pending",
+    ]);
   });
 });

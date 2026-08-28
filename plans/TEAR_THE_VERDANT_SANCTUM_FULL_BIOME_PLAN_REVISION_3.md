@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C13-S6 green; VS3-C13-S7 next** |
+| Status | **Active implementation authority — VS3-C13-S7 green; VS3-C13-S8 next** |
 | Current checkpoint | `VS3-C13` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4666,7 +4666,7 @@ Implement the one-use Regrowth outcome matrix, Last Spring, living-arena escalat
 - [x] **VS3-C13-S4** — Implement Last Spring as one authored final sequence using Bloom and arena state without a new route framework.
 - [x] **VS3-C13-S5** — Integrate existing living-arena warning/broken/reforming lifecycle.
 - [x] **VS3-C13-S6** — Implement boss death cleanup for all fields, links, Grafts, cages, routes, and arena ownership.
-- [ ] **VS3-C13-S7** — Preserve boss-defeated, terminal, reward, and chapter-outro event order.
+- [x] **VS3-C13-S7** — Preserve boss-defeated, terminal, reward, and chapter-outro event order.
 - [ ] **VS3-C13-S8** — Capture/restore active Regrowth and Last Spring states transactionally.
 - [ ] **VS3-C13-S9** — Prove retry, defeat, victory, abandon, replay seek, and State Forge fork behavior.
 - [ ] **VS3-C13-S10** — Validate campaign and Boss Test terminal flows separately.
