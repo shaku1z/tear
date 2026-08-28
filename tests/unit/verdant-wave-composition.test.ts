@@ -15,7 +15,7 @@ const stages: readonly WaveStage[] = STAGES.map((stage) => ({
   pool: stage.pool.map(([kind, weight, unlockWave]) => ({ kind, weight, unlockWave: unlockWave ?? 1 })),
 }));
 
-function verdantWave(localWave: number, seed: string) {
+function verdantPlan(localWave: number, seed: string) {
   return planNextWave({
     state: {
       mode: "campaign", wave: 29 + localWave, diffHp: 1, diffCount: 1,
@@ -28,7 +28,11 @@ function verdantWave(localWave: number, seed: string) {
     random: new SeededRandom(seed),
     startDelay: CONFIG.run.startDelay,
     currentMultiplier: 1,
-  }).state.spawnQueue;
+  });
+}
+
+function verdantWave(localWave: number, seed: string) {
+  return verdantPlan(localWave, seed).state.spawnQueue;
 }
 
 describe("Verdant wave composition budget", () => {
@@ -51,5 +55,25 @@ describe("Verdant wave composition budget", () => {
       const queue = verdantWave(1, `opening-${String(seed)}`);
       expect(queue.every((spawn) => ["flyer", "ranged", "charger"].includes(spawn.type))).toBe(true);
     }
+  });
+
+  it("keeps local waves 1-9 inside authored counts and unlocks", () => {
+    const verdant = STAGES.find((stage) => stage.id === "verdant-sanctum");
+    if (verdant === undefined) throw new Error("Verdant stage is missing");
+    for (let localWave = 1; localWave <= 9; localWave += 1) {
+      const planned = verdantPlan(localWave, `local-${String(localWave)}`);
+      const allowed = new Set(verdant.pool.filter((entry) => localWave >= (entry[2] ?? 1)).map((entry) => entry[0]));
+      expect(planned.state).toMatchObject({ wave: 30 + localWave, stage: 3, isBossWave: false });
+      expect(planned.state.spawnQueue).toHaveLength(3 + Math.floor((localWave - 1) * 1.4) + 5);
+      expect(planned.state.spawnQueue.every((spawn) => allowed.has(spawn.type as EnemyKind))).toBe(true);
+    }
+  });
+
+  it("resolves local wave 10 as the single Rootbound boss queue", () => {
+    const planned = verdantPlan(10, "rootbound-wave");
+    expect(STAGES[3]).toMatchObject({ id: "verdant-sanctum", boss: "rootbound" });
+    expect(planned.state).toMatchObject({ wave: 40, stage: 3, currentStageIndex: 3, isBossWave: true });
+    expect(planned.state.spawnQueue).toEqual([{ type: "boss" }]);
+    expect(planned.intents).toContainEqual({ type: "ghost-wave", wave: 40, marker: "boss" });
   });
 });

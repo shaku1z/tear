@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C15-S3 green; VS3-C15-S4 next** |
+| Status | **Active implementation authority — VS3-C15-S4 green; VS3-C15-S5 next** |
 | Current checkpoint | `VS3-C15` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4870,7 +4870,7 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 - [x] **VS3-C15-S1** — Introduce a source-owned campaign stage curve keyed by StageId or the smallest equivalent current authority. `campaign-stage-curve.ts` is now the complete current-`StageId` campaign pressure owner, and `wave-planner.ts` resolves HP, damage, and count additions from the selected stage identity instead of multiplying array position. Grounds through Verdant use the authored engineering prototype; Voidspire and Tear retain explicitly labeled legacy-position placeholders until S8 evaluates their relocated slots. The existing in-stage ramp remains separately owned and unchanged for S2.
 - [x] **VS3-C15-S2** — Preserve the current in-stage ramp unless evidence supports a change. The production planner still applies the existing `countPerWave: 1.4`, `inStageHp: 0.06`, and `inStageDmg: 0.02` after resolving the StageId-owned base. Permanent wave-31/wave-39 proof establishes Verdant counts of 8 and 19 and exact local-wave HP/damage multiplication; no cadence number changed.
 - [x] **VS3-C15-S3** — Implement Verdant support/control composition budget and simultaneous Rootbinder safeguards. The existing production wave planner now applies a reusable cost/cap filter before every weighted campaign selection, including preset selection. Verdant owns local-wave budgets of 0/3/4/5/5/6/7/8/9/0 with the authored Rootbinder/Anchor/Mender/Chimera/Armored costs and caps Rootbinders at one through local wave 6 and two through wave 9. One hundred seeded queues per representative wave prove total cost and Rootbinder ceilings; the opening wave also proves locked enemy kinds cannot leak through the preset route.
-- [ ] **VS3-C15-S4** — Validate local waves 1–9 and Rootbound wave 10.
+- [x] **VS3-C15-S4** — Validate local waves 1–9 and Rootbound wave 10. A production-planner matrix now proves every local wave 1–9 remains a regular Verdant wave with the exact authored count and only currently unlocked stage-pool identities. Local wave 10/global wave 40 resolves as one boss spawn in Verdant, whose source-owned boss identity is Rootbound, and emits the canonical boss Ghost marker.
 - [ ] **VS3-C15-S5** — Validate max concurrent counts and environment object caps together.
 - [ ] **VS3-C15-S6** — Retest difficulty scaling and player damage under current difficulty definitions.
 - [ ] **VS3-C15-S7** — Retest coin, score, healing, draft, and upgrade acquisition through wave 40.
