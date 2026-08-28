@@ -21,6 +21,7 @@ class ConstantRandom implements RandomSource {
 }
 
 const STAGE_INPUT: readonly WaveStage[] = STAGES.map((stage) => ({
+  id: stage.id,
   name: stage.name,
   boss: stage.boss,
   pool: stage.pool.map((entry) => {
@@ -97,8 +98,8 @@ describe("wave planning conformance", () => {
     }));
     expect(stageTwo.state).toMatchObject({ wave: 11, stage: 1, currentStageIndex: 1 });
     expect(stageTwo.state.spawnQueue).toHaveLength(5);
-    expect(stageTwo.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.34);
-    expect(stageTwo.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.14);
+    expect(stageTwo.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.28);
+    expect(stageTwo.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.12);
     expect(stageTwo.intents.map((intent) => intent.type).slice(0, 4)).toEqual([
       "begin-wipe", "load-stage", "set-stage-banner", "begin-campaign-chapter",
     ]);

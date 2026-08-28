@@ -2,6 +2,7 @@ import type { RandomSource } from "../../domain/random";
 import type { EnemyPreset } from "../affixes";
 import type { BossId, CampaignPoolEntry, EnemyKind, MiniBossId } from "./content-director";
 import type { RunDifficulty, RunMode } from "./session";
+import type { StageId } from "../stages";
 import { scheduleWaveSpawn, type SpawnTuning } from "./spawn-scheduler";
 import {
   activatePreparedWave,
@@ -19,6 +20,7 @@ import {
 } from "./wave-clear-planner";
 
 export interface LiveWaveStageSource {
+  readonly id: StageId;
   readonly name: string;
   readonly boss: BossId;
   readonly pool?: readonly (CampaignPoolEntry | readonly [EnemyKind, number, number?])[];
@@ -89,6 +91,7 @@ export interface LiveWavePort {
 
 function normalizeStages(stages: readonly LiveWaveStageSource[]): readonly WaveStage[] {
   return stages.map((stage) => ({
+    id: stage.id,
     name: stage.name,
     boss: stage.boss,
     pool: (stage.pool ?? []).map((entry) => {

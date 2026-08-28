@@ -11,6 +11,8 @@ import {
   type MiniBossId,
 } from "./content-director";
 import type { RunMode } from "./session";
+import type { StageId } from "../stages";
+import { campaignStageCurve } from "./campaign-stage-curve";
 import { describeWave } from "./wave-rules";
 
 export interface WaveTuning {
@@ -25,6 +27,7 @@ export interface WaveTuning {
 }
 
 export interface WaveStage {
+  readonly id: StageId;
   readonly name: string;
   readonly boss: BossId;
   readonly pool: readonly CampaignPoolEntry[];
@@ -125,10 +128,11 @@ function regularWaveQueue(
   let hpScale: number;
   let dmgScale = 1;
   if (state.mode === "campaign") {
-    const stage = Math.floor((wave - 1) / 10);
-    count = tuning.firstWaveCount + Math.floor((localWave - 1) * tuning.countPerWave) + stage * tuning.stageCountStep;
-    hpScale = (1 + stage * tuning.stageHpStep) * (1 + (localWave - 1) * tuning.inStageHp);
-    dmgScale = (1 + stage * tuning.stageDmgStep) * (1 + (localWave - 1) * tuning.inStageDmg);
+    if (stageIndex === null) throw new Error("campaign wave is missing its stage curve identity");
+    const curve = campaignStageCurve(stageAt(options.stages, stageIndex).id);
+    count = tuning.firstWaveCount + Math.floor((localWave - 1) * tuning.countPerWave) + curve.countAdd;
+    hpScale = curve.health * (1 + (localWave - 1) * tuning.inStageHp);
+    dmgScale = curve.damage * (1 + (localWave - 1) * tuning.inStageDmg);
   } else {
     count = tuning.firstWaveCount + Math.floor((wave - 1) * tuning.countPerWave);
     hpScale = 1 + (wave - 1) * tuning.hpScalePerWave;

@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C14 green; VS3-C15-S1 next** |
+| Status | **Active implementation authority — VS3-C15-S1 green; VS3-C15-S2 next** |
 | Current checkpoint | `VS3-C15` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4838,7 +4838,7 @@ The original S1 proof encoded Root links as `cut`/`break` only. That contradicte
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `in-progress` |
 | Owner | Run/balance/progression owner |
 | Dependencies | VS3-C8, VS3-C14 |
 | Release boundary | Engineering balance; no final seven-stage claim before Pale |
@@ -4849,9 +4849,9 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 
 ## Entry conditions
 
-- [ ] Verdant content and Final Five conformance are green.
-- [ ] Current campaign tuning, wave planner, spawn scheduler, difficulty catalog, draft/reward cadence, and economy functions are characterized.
-- [ ] Pale tuning remains provisional.
+- [x] Verdant content and Final Five conformance are green.
+- [x] Current campaign tuning, wave planner, spawn scheduler, difficulty catalog, draft/reward cadence, and economy functions are characterized.
+- [x] Pale tuning remains provisional.
 
 ## Primary files and authorities
 
@@ -4867,7 +4867,7 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 
 ## Sub-goals
 
-- [ ] **VS3-C15-S1** — Introduce a source-owned campaign stage curve keyed by StageId or the smallest equivalent current authority.
+- [x] **VS3-C15-S1** — Introduce a source-owned campaign stage curve keyed by StageId or the smallest equivalent current authority. `campaign-stage-curve.ts` is now the complete current-`StageId` campaign pressure owner, and `wave-planner.ts` resolves HP, damage, and count additions from the selected stage identity instead of multiplying array position. Grounds through Verdant use the authored engineering prototype; Voidspire and Tear retain explicitly labeled legacy-position placeholders until S8 evaluates their relocated slots. The existing in-stage ramp remains separately owned and unchanged for S2.
 - [ ] **VS3-C15-S2** — Preserve the current in-stage ramp unless evidence supports a change.
 - [ ] **VS3-C15-S3** — Implement Verdant support/control composition budget and simultaneous Rootbinder safeguards.
 - [ ] **VS3-C15-S4** — Validate local waves 1–9 and Rootbound wave 10.

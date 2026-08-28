@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C15",
-  "currentSubgoal": "VS3-C15-S1",
+  "currentSubgoal": "VS3-C15-S2",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -53,7 +53,7 @@
     "VS3-C14 Final Five object conformance is GREEN at df0412381728ae71c18b2259790bf8308de0a0ab: all ten ordered subgoals pass; repository typecheck/lint/architecture/docs, 19 weapon roster tests, 13 focused ability/projectile tests, 34 adjacent environment tests, 6 headless parity routes, attributed standalone artifact 70a80fab74a29afd54ee438dc12f1f79e1e1165d4a80da9e8a6fcf78200305d2, and all five browser/Ghost weapon routes are green. C40 records remain unchanged."
   ],
   "blockers": [],
-  "nextAction": "Begin VS3-C15-S1 by characterizing current campaign curve ownership and introducing the smallest source-owned StageId-keyed curve authority.",
+  "nextAction": "Execute VS3-C15-S2 by proving the current local-wave HP, damage, and count ramps remain unchanged around the new StageId-owned base curve.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2293,7 +2293,7 @@
         {
           "id": "VS3-C15-S1",
           "description": "Introduce a source-owned campaign stage curve keyed by StageId or the smallest equivalent current authority.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C15-S2",
@@ -2382,13 +2382,22 @@
         "TearBench progression comparison",
         "Balance decision backlog"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
+      "status": "in-progress",
+      "sourceBaseline": "7d53946d20d65c16114d485262381f5907242fea",
       "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "commandsRun": [
+        "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/run-wave-planner-conformance.test.ts tests/unit/live-wave-controller.test.ts",
+        "pnpm typecheck",
+        "pnpm exec eslint src/gameplay/run/campaign-stage-curve.ts src/gameplay/run/wave-planner.ts src/gameplay/run/live-wave-controller.ts tests/unit/campaign-stage-curve.test.ts tests/unit/run-wave-planner-conformance.test.ts",
+        "pnpm check:architecture"
+      ],
+      "evidence": [
+        "VS3-C15-S1 StageId-owned campaign curve authority is green: one complete current-stage record owns base HP, damage, count, and future concurrent additions; the production wave planner resolves the selected stage identity rather than multiplying its array position. Grounds through Verdant use authored prototype values, while Voidspire and Tear remain explicitly labeled legacy-position placeholders pending S8. Eighteen focused curve/planner/controller tests, typecheck, targeted lint, and architecture pass."
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Pale does not yet exist in the current StageId authority. Its slot and relocated Voidspire/Tear prototype values remain deliberately deferred to VS3-C15-S8; this checkpoint does not claim final seven-stage tuning."
+      ]
     },
     {
       "id": "VS3-C16",
