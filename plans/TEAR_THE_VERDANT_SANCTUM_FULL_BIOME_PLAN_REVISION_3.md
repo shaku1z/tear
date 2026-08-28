@@ -10,8 +10,8 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C14-S10 green; aggregate closure gates next** |
-| Current checkpoint | `VS3-C14` |
+| Status | **Active implementation authority — VS3-C14 green; VS3-C15-S1 next** |
+| Current checkpoint | `VS3-C15` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -4734,7 +4734,7 @@ Implement the one-use Regrowth outcome matrix, Last Spring, living-arena escalat
 
 | Field | Value |
 | --- | --- |
-| Status | `in-progress` |
+| Status | `green` |
 | Owner | Weapon/combat conformance owner |
 | Dependencies | VS3-C6, VS3-C12, VS3-C13 |
 | Release boundary | Cross-cutting gameplay validation; no roster redesign |
@@ -4788,11 +4788,11 @@ The original S1 proof encoded Root links as `cut`/`break` only. That contradicte
 
 ## TearBench same-change response
 
-- [ ] Add parameterized verdant-final-five-object-conformance suite from production WEAPON_IDS.
-- [ ] Add a source-derived guard that fails if a new weapon lacks Verdant object coverage.
-- [ ] Keep Verdant object proof separate from existing C40 transport certification records.
-- [ ] If any existing C40 scenario is invalidated, refresh its exact proof in the same reviewed change.
-- [ ] Record explicit no-change evidence for Bloom transport exclusion.
+- [x] Add parameterized verdant-final-five-object-conformance suite from production WEAPON_IDS.
+- [x] Add a source-derived guard that fails if a new weapon lacks Verdant object coverage.
+- [x] Keep Verdant object proof separate from existing C40 transport certification records.
+- [x] If any existing C40 scenario is invalidated, refresh its exact proof in the same reviewed change.
+- [x] Record explicit no-change evidence for Bloom transport exclusion.
 
 ## Minimum focused proof
 
@@ -4804,12 +4804,12 @@ The original S1 proof encoded Root links as `cut`/`break` only. That contradicte
 
 ## Exit conditions
 
-- [ ] All five active weapons have a valid object answer.
-- [ ] No weapon route loses bounded catch/held recovery.
-- [ ] No per-weapon ability nerf exists.
-- [ ] No object grants accidental progression/procs.
-- [ ] Any affected C40 evidence is refreshed truthfully.
-- [ ] Retired weapon IDs remain absent.
+- [x] All five active weapons have a valid object answer.
+- [x] No weapon route loses bounded catch/held recovery.
+- [x] No per-weapon ability nerf exists.
+- [x] No object grants accidental progression/procs.
+- [x] Any affected C40 evidence is refreshed truthfully.
+- [x] Retired weapon IDs remain absent.
 
 ## Stop and escalate conditions
 
@@ -4829,6 +4829,8 @@ The original S1 proof encoded Root links as `cut`/`break` only. That contradicte
 ## Required handoff sentence
 
 > `VS3-C14 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+
+> `VS3-C14 is GREEN at df0412381728ae71c18b2259790bf8308de0a0ab. The next authorized action is VS3-C15-S1, introducing the smallest source-owned campaign stage curve authority. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
