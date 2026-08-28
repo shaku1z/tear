@@ -317,8 +317,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   zero-chamber Backblast still returns and catches. A source-derived five-weapon
   matrix proves same-swing attack-ID dedupe and exact object payloads without
   status/reward fields; the shared non-enemy/non-reward/proc-ineligible policy is
-  retained. Remaining cross-cutting conformance is owned by VS3-C14-S8, and no
-  C40 certification record changed.
+  retained. The post-integration `WEAPONS × UPGRADES` evolution matrix remains
+  green; object contacts never enter enemy `onHit` hooks, and no universal
+  ability code or per-weapon tuning was changed. C40 certification records are
+  still unchanged pending the explicit S9 disposition.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
