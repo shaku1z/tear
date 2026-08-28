@@ -49,6 +49,8 @@ export const ROOTBOUND_MEMORY_CHOIR = Object.freeze({
   damage: 14,
 });
 export type RootboundMemoryChoirStage = "warning" | "active" | "afterimage";
+export const ROOTBOUND_LAST_SPRING = Object.freeze({ warning: 0.8, bloom: 1.5, commit: 0.35, punish: 0.9, damage: 24 });
+export type RootboundLastSpringStage = "warning" | "bloom" | "commit" | "punish" | "complete";
 export const ROOTBOUND_PHASE_TWO_ATTACK_ORDER = Object.freeze(["memory-choir", "root-cage", "bloom-shift"] as const);
 export type RootboundPhaseTwoAttack = typeof ROOTBOUND_PHASE_TWO_ATTACK_ORDER[number];
 export const ROOTBOUND_PHASE_TWO_CADENCE = Object.freeze({ openingDelay: 0.85, recovery: 0.7 });
@@ -114,6 +116,10 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     phaseTwoPendingAttack: RootboundPhaseTwoAttack | null = null;
     finalPhaseTwoGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
     regrowthState: RootboundRegrowthState = createRootboundRegrowthState();
+    lastSpringStage: RootboundLastSpringStage | null = null;
+    lastSpringT = 0;
+    lastSpringUseCount = 0;
+    lastSpringHitSpent = false;
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -188,7 +194,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     override contactDamageEnabled(): boolean {
-      return !this.attackCommitProtected() && this.state === "idle" && this.pendingAttack === null;
+      return !this.attackCommitProtected() && this.state === "idle" && this.pendingAttack === null
+        && (this.lastSpringStage === null || this.lastSpringStage === "complete");
     }
 
     attackCommitProtected(): boolean {
@@ -326,8 +333,46 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     bossBloomPattern(): RootboundBloomPatternId | null {
+      if (this.phase === 3 && this.lastSpringStage !== null && this.lastSpringStage !== "complete") return "last-spring";
       if (this.phase !== 2) return null;
       return ROOTBOUND_BLOOM_PATTERN_IDS[this.bloomPatternIndex % ROOTBOUND_BLOOM_PATTERN_IDS.length] ?? null;
+    }
+
+    startLastSpring(): boolean {
+      if (this.phaseMarker !== 3 || this.regrowthState.phase !== "resolved" || this.lastSpringUseCount !== 0
+        || this.attackCommitProtected() || this.cleanupReason !== null || this.state !== "idle") return false;
+      this.lastSpringUseCount = 1;
+      this.lastSpringStage = "warning";
+      this.lastSpringT = ROOTBOUND_LAST_SPRING.warning;
+      this.lastSpringHitSpent = false;
+      this.atk = "last-spring:warning";
+      return true;
+    }
+
+    private updateLastSpring(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort): void {
+      if (this.lastSpringStage === null || this.lastSpringStage === "complete") return;
+      this.lastSpringT = Math.max(0, this.lastSpringT - dt);
+      if (this.lastSpringStage === "warning" && this.lastSpringT <= 0) {
+        const fracture = platforms.find((platform) => platform.oneway && platform.arenaPlatId !== undefined
+          && (platform.arenaState === "stable" || platform.arenaState === "stressed"));
+        if (fracture !== undefined) fracture.arenaFractureRequest = { reason: "rootbound-last-spring", color: "#e4c95a" };
+        this.lastSpringStage = "bloom"; this.lastSpringT = ROOTBOUND_LAST_SPRING.bloom; this.atk = "last-spring:bloom";
+      } else if (this.lastSpringStage === "bloom" && this.lastSpringT <= 0) {
+        this.lastSpringStage = "commit"; this.lastSpringT = ROOTBOUND_LAST_SPRING.commit; this.atk = "last-spring:commit";
+      } else if (this.lastSpringStage === "commit") {
+        if (!this.lastSpringHitSpent && !player.invulnerable && dependencies.aabbOverlap(
+          CONFIG.view.w / 2, CONFIG.world.groundY - 65, CONFIG.view.w * 0.4, 65,
+          player.x, player.y, player.hw, player.hh,
+        )) {
+          this.lastSpringHitSpent = true;
+          player.takeDamage(ROOTBOUND_LAST_SPRING.damage, this.x, this);
+        }
+        if (this.lastSpringT <= 0) {
+          this.lastSpringStage = "punish"; this.lastSpringT = ROOTBOUND_LAST_SPRING.punish; this.atk = "last-spring:punish";
+        }
+      } else if (this.lastSpringStage === "punish" && this.lastSpringT <= 0) {
+        this.lastSpringStage = "complete"; this.lastSpringT = 0; this.state = "recover"; this.stateT = 0.6; this.atk = "unavailable";
+      }
     }
 
     selectNextPhaseTwoAttack(playerX: number): RootboundPhaseTwoAttack | null {
@@ -595,6 +640,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         this.stateT = 0.35;
       } else if (this.memoryChoirStage !== null) {
         this.updateMemoryChoir(dt, player);
+      } else if (this.lastSpringStage !== null && this.lastSpringStage !== "complete") {
+        this.updateLastSpring(dt, platforms, player);
       } else if (this.pendingAttack === "vine-sweep") {
         this.updateVineSweep(dt, player);
       } else if (this.pendingAttack === "seed-arc") {
@@ -609,6 +656,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
           if (this.state === "idle") {
             if (this.phase === 1) this.selectNextPhaseOneAttack();
             else if (this.phase === 2) this.selectNextPhaseTwoAttack(player.x);
+            else if (this.phase === 3 && this.regrowthState.phase === "resolved") this.startLastSpring();
           }
           else {
             this.state = "idle";

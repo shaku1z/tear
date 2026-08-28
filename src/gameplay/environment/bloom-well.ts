@@ -16,7 +16,7 @@ export type BloomWellVariant = "stage" | "boss";
 export const ROOTBOUND_BLOOM_PATTERN_IDS = Object.freeze([
   "alternating-rise", "central-safe-lanes", "cage-route",
 ] as const);
-export type RootboundBloomPatternId = typeof ROOTBOUND_BLOOM_PATTERN_IDS[number];
+export type RootboundBloomPatternId = typeof ROOTBOUND_BLOOM_PATTERN_IDS[number] | "last-spring";
 
 export interface RootboundBloomPatternInput {
   readonly patternId: RootboundBloomPatternId;
@@ -186,7 +186,9 @@ export function createRootboundBloomPattern(input: RootboundBloomPatternInput): 
     ? [{ x: input.arenaWidth * 0.1, w: input.arenaWidth * 0.24, delay: 0 }, { x: input.arenaWidth * 0.66, w: input.arenaWidth * 0.24, delay: 120 }]
     : input.patternId === "central-safe-lanes"
       ? [{ x: input.arenaWidth * 0.36, w: input.arenaWidth * 0.28, delay: 0 }]
-      : [{ x: input.arenaWidth * 0.16, w: input.arenaWidth * 0.16, delay: 0 }, { x: input.arenaWidth * 0.42, w: input.arenaWidth * 0.16, delay: 60 }, { x: input.arenaWidth * 0.68, w: input.arenaWidth * 0.16, delay: 120 }];
+      : input.patternId === "cage-route"
+        ? [{ x: input.arenaWidth * 0.16, w: input.arenaWidth * 0.16, delay: 0 }, { x: input.arenaWidth * 0.42, w: input.arenaWidth * 0.16, delay: 60 }, { x: input.arenaWidth * 0.68, w: input.arenaWidth * 0.16, delay: 120 }]
+        : [{ x: input.arenaWidth * 0.08, w: input.arenaWidth * 0.26, delay: 0 }, { x: input.arenaWidth * 0.37, w: input.arenaWidth * 0.26, delay: 72 }, { x: input.arenaWidth * 0.66, w: input.arenaWidth * 0.26, delay: 144 }];
   return Object.freeze(authored.map((entry, index) => createBloomWellState({
     id: `${input.bossOwnerId}:bloom:${input.patternId}:${String(index + 1)}`,
     ownerId: input.stageOwnerId,
