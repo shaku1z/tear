@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C15",
-  "currentSubgoal": "VS3-C15-S10",
+  "currentSubgoal": "VS3-C15-CLOSE",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -53,7 +53,7 @@
     "VS3-C14 Final Five object conformance is GREEN at df0412381728ae71c18b2259790bf8308de0a0ab: all ten ordered subgoals pass; repository typecheck/lint/architecture/docs, 19 weapon roster tests, 13 focused ability/projectile tests, 34 adjacent environment tests, 6 headless parity routes, attributed standalone artifact 70a80fab74a29afd54ee438dc12f1f79e1e1165d4a80da9e8a6fcf78200305d2, and all five browser/Ghost weapon routes are green. C40 records remain unchanged."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C15-S10 by recording code-correctness evidence separately from unresolved balance-owner decisions, then run the complete C15 closure gate.",
+  "nextAction": "Run the complete VS3-C15 minimum proof and close the checkpoint from one clean source identity.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2338,7 +2338,7 @@
         {
           "id": "VS3-C15-S10",
           "description": "Record tuning evidence and unresolved owner judgments separately from code correctness.",
-          "status": "not-started"
+          "status": "complete"
         }
       ],
       "agentProcedure": [
@@ -2414,7 +2414,8 @@
         "pnpm typecheck",
         "pnpm exec eslint src/gameplay/run/campaign-stage-curve.ts tests/unit/campaign-stage-curve.test.ts",
         "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts",
-        "pnpm typecheck"
+        "pnpm typecheck",
+        "pnpm check:docs"
       ],
       "evidence": [
         "VS3-C15-S1 StageId-owned campaign curve authority is green: one complete current-stage record owns base HP, damage, count, and future concurrent additions; the production wave planner resolves the selected stage identity rather than multiplying its array position. Grounds through Verdant use authored prototype values, while Voidspire and Tear remain explicitly labeled legacy-position placeholders pending S8. Eighteen focused curve/planner/controller tests, typecheck, targeted lint, and architecture pass.",
@@ -2425,7 +2426,8 @@
         "VS3-C15-S6 difficulty conformance is green: a source-derived five-difficulty matrix proves Verdant queue count/HP apply production modifiers exactly once, contact scale remains stage-owned, production worlds install player-damage multipliers exactly once, and One-Hit remains fatal through Player. Twenty-one focused difficulty/Rootbound tests, typecheck, and targeted lint pass.",
         "VS3-C15-S7 wave-40 economy/progression is green: production synthesis records four stage entries, bosses at 10/20/30/40, forty legal mutations, and production-derived wave-40 currency. Kill score, regular/boss healing, draft/boss rewards, and One-Hit suppression remain in their existing owners. Seventeen focused tests, typecheck, and targeted lint pass.",
         "VS3-C15-S8 seven-stage curve seed is green: one explicitly inactive engineering prototype records Pale 2.08/1.44/+6/+3, relocated Voidspire 2.38/1.52/+7/+3, and relocated Tear 2.72/1.60/+8/+4. Pale remains absent from live StageId/campaign authority and current late stages retain legacy-position placeholders. Twenty-one focused tests, typecheck, and targeted lint pass.",
-        "VS3-C15-S9 relocated boss projection is green: the inactive seed delta is Voidspire +0.02 HP/-0.04 damage/-1 count/-1 concurrent and Tear +0.02 HP/-0.10 damage/-2 count/+0 concurrent. Echo/Source identities and home-stage mappings remain canonical; no boss implementation or live curve changed. Five focused tests, typecheck, and targeted lint pass."
+        "VS3-C15-S9 relocated boss projection is green: the inactive seed delta is Voidspire +0.02 HP/-0.04 damage/-1 count/-1 concurrent and Tear +0.02 HP/-0.10 damage/-2 count/+0 concurrent. Echo/Source identities and home-stage mappings remain canonical; no boss implementation or live curve changed. Five focused tests, typecheck, and targeted lint pass.",
+        "VS3-C15-S10 evidence disposition is green: the durable checkpoint report separates verified code behavior from provisional tuning, absent Pale authority, inactive relocated slots, and pending Echo/Source owner decisions. Raw closure output is routed to canonical ignored checkpoint/generated artifact paths."
       ],
       "blockers": [],
       "notes": [

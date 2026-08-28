@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C15-S9 green; VS3-C15-S10 next** |
+| Status | **Active implementation authority — VS3-C15-S10 green; aggregate closure gates next** |
 | Current checkpoint | `VS3-C15` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4876,7 +4876,7 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 - [x] **VS3-C15-S7** — Retest coin, score, healing, draft, and upgrade acquisition through wave 40. The production progression ledger reaches Verdant at wave 31, records bosses at 10/20/30/40, and applies forty legal configuration mutations. Wave-40 currency equals the production coin award, kill score remains owned by the live coordinator, wave 39 retains normal healing/draft, Rootbound retains non-final boss healing/reward in the engineering six-stage branch, and One-Hit suppresses healing.
 - [x] **VS3-C15-S8** — Prototype Pale/Voidspire/Tear curve slots without presenting them as final until Pale implementation. One inactive `engineering-prototype` record now contains the complete Grounds/Undercroft/Crimson/Verdant/Pale/Voidspire/Tear seed table. Its activation is explicitly `inactive-pending-pale`; Pale remains absent from live `StageId`/campaign authority, and current Voidspire/Tear continue to use their labeled six-stage placeholders.
 - [x] **VS3-C15-S9** — Compare relocated Echo/Source projections without changing those bosses prematurely. A read-only delta projection records that the inactive seven-stage seed changes Voidspire by +0.02 HP/-0.04 damage/-1 count/-1 concurrent and Tear by +0.02 HP/-0.10 damage/-2 count/+0 concurrent relative to current placeholders. Echo/Source identity and home-stage authorities remain unchanged, and neither boss implementation nor live curve was modified.
-- [ ] **VS3-C15-S10** — Record tuning evidence and unresolved owner judgments separately from code correctness.
+- [x] **VS3-C15-S10** — Record tuning evidence and unresolved owner judgments separately from code correctness. The durable `docs/checkpoints/verdant-sanctum/VS3-C15_EVIDENCE.md` manifest distinguishes verified StageId/planner/budget/difficulty/economy behavior from provisional tuning, absent Pale authority, inactive late-stage slots, and pending Echo/Source playtest decisions. Raw closure material remains in the canonical ignored checkpoint artifact path.
 
 ## Agent implementation procedure
 
