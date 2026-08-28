@@ -6,8 +6,10 @@ import {
   BOSS_IDENTITY_IDS,
   ROOTBOUND_PROVISIONAL_DEFINITION,
 } from "../../src/gameplay/run/boss-definitions";
+import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
 import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
+import { BossArenaRules, createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
 import { createEnemyHarness } from "./enemy-test-harness";
 
 describe("Rootbound production foundation", () => {
@@ -52,5 +54,55 @@ describe("Rootbound production foundation", () => {
     });
     expect(Object.isFrozen(placement)).toBe(true);
     expect(planBossPlacement("rootbound", CONFIG.view.w, CONFIG)).toEqual(placement);
+  });
+
+  it("starts Rootbound through the shared encounter and living-arena lifecycle", () => {
+    const stagePlatforms: ArenaPlatform[] = [{ x: 0, y: 700, w: 100, h: 20 }];
+    let platforms = stagePlatforms;
+    const run = {
+      runTime: 14,
+      bossAdds: [{}],
+      _brokenPlats: [{}],
+      _arenaBroken: [{ x: 1, y: 1, w: 1, h: 1 }],
+    };
+    const boss = { bossId: "rootbound", introT: 0 };
+
+    beginBossEncounter(run, boss, CONFIG.bossTheater.introDur, {
+      platforms: () => platforms,
+      setPlatforms: (next) => { platforms = next; },
+      arenaFor: (id) => createBossArena(
+        id,
+        CONFIG.view.w,
+        CONFIG.view.h,
+        CONFIG.world.groundY,
+        CONFIG.bossArena.reformWarn,
+      )?.map((platform) => ({ ...platform })) ?? null,
+    });
+
+    expect(run).toMatchObject({
+      _bossFightT: 14,
+      bossAdds: null,
+      _preBossPlatforms: stagePlatforms,
+      _brokenPlats: null,
+      _arenaBroken: [],
+    });
+    expect(boss.introT).toBe(CONFIG.bossTheater.introDur);
+    expect(platforms.length).toBeGreaterThan(2);
+    expect(platforms.every((platform) => platform.arenaBoss === "rootbound")).toBe(true);
+    expect(platforms.every((platform) => platform.arenaMaterial === "verdant-rootstone")).toBe(true);
+
+    const route = platforms.find((platform) => platform.oneway);
+    if (route === undefined) throw new Error("Rootbound arena must provide an elevated living route");
+    route.arenaFractureRequest = { reason: "rootbound-test", color: "#e4c95a" };
+    const rules = new BossArenaRules(CONFIG.bossArena, CONFIG.colors);
+    rules.update({ platforms, broken: run._arenaBroken }, 0, null, [], true);
+    expect(route.arenaState).toBe("warning");
+    rules.update({ platforms, broken: run._arenaBroken }, CONFIG.bossArena.crackWarn, null, [], true);
+    expect(route.arenaState).toBe("broken");
+    expect(run._arenaBroken).toContain(route);
+    rules.update({ platforms, broken: run._arenaBroken }, CONFIG.bossArena.brokenDuration + CONFIG.bossArena.reformWarn, null, [], true);
+    expect(route.arenaState).toBe("stable");
+    expect(platforms).toContain(route);
+    expect(run._arenaBroken).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { BOSS_DEFINITIONS, type BossDefinition, type BossDefinitionId } from "../gameplay/run/boss-definitions";
+import { BOSS_DEFINITIONS, isBossDefinitionId, type BossDefinition, type BossDefinitionId } from "../gameplay/run/boss-definitions";
 import { STAGES, type StageDefinition, type StageId } from "../gameplay/stages";
 
 export interface GameReferenceBossV1 {
@@ -59,10 +59,6 @@ function assertCanonicalIdSet(actual: readonly string[], expected: readonly stri
   if (actual.length !== expected.length || [...actual].sort().some((id, index) => id !== [...expected].sort()[index])) throw new TypeError(`${path} must contain the exact canonical ID set`);
 }
 
-function isBossId(value: string): value is BossDefinitionId {
-  return CANONICAL_BOSS_IDS.some((id) => id === value);
-}
-
 function isStageId(value: string): value is StageId {
   return ACTIVE_STAGE_IDS.some((id) => id === value);
 }
@@ -101,7 +97,7 @@ function sourceStageBossMap(stages: readonly StageDefinition[], path: string): R
     if (boss !== canonical.boss) throw new TypeError(`${path}.${stageId}.boss does not match the canonical stage mapping`);
     // An engineering stage may precede its boss factory/reference definition.
     // Validate the stage join, but do not publish that reserved boss yet.
-    if (!isBossId(boss)) continue;
+    if (!isBossDefinitionId(boss)) continue;
     if (result.has(boss)) throw new TypeError(`${path} must map each boss exactly once`);
     result.set(boss, stageId);
   }

@@ -6,6 +6,7 @@ import { LiveRunStartController } from "../gameplay/run/live-run-start-controlle
 import { planRunStart, type RunStartPlan } from "../gameplay/run/run-start-plan";
 import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
+import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
 import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
@@ -296,6 +297,4 @@ function isRunDifficulty(value: string): value is RunDifficulty {
   return value === "easy" || value === "normal" || value === "hard" || value === "extreme" || value === "onehit";
 }
 
-function isBossId(value: string): value is BossId {
-  return value === "warden" || value === "colossus" || value === "aldric" || value === "echo" || value === "source";
-}
+const isBossId = isBossDefinitionId satisfies (value: string) => value is BossId;

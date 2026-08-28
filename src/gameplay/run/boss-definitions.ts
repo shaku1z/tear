@@ -4,6 +4,10 @@ export const BOSS_IDENTITY_IDS = Object.freeze([
 ] as const);
 export type BossDefinitionId = typeof BOSS_IDENTITY_IDS[number];
 
+export function isBossDefinitionId(value: string): value is BossDefinitionId {
+  return BOSS_IDENTITY_IDS.some((id) => id === value);
+}
+
 export interface BossDefinition {
   readonly id: BossDefinitionId;
   readonly name: string;

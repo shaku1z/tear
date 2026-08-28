@@ -156,17 +156,17 @@ describe("wave planning conformance", () => {
 
   it("preserves gauntlet boss cadence and boss roster wrapping", () => {
     const boss = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 7, biomeIdx: 1, bossIdx: 4 }),
+      state: state({ mode: "gauntlet", wave: 7, biomeIdx: 1, bossIdx: 5 }),
     }));
-    expect(boss.state).toMatchObject({ wave: 8, isBossWave: true, curBoss: "source", bossIdx: 5, waveTag: "The Source" });
+    expect(boss.state).toMatchObject({ wave: 8, isBossWave: true, curBoss: "source", bossIdx: 6, waveTag: "The Source" });
     expect(boss.state.spawnQueue).toEqual([{ type: "boss" }]);
 
     const wrappedA = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 5 }),
+      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 6 }),
       random: new SeededRandom("wrap"),
     }));
     const wrappedB = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 5 }),
+      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 6 }),
       random: new SeededRandom("wrap"),
     }));
     expect(wrappedA.state.bossOrder).toEqual(wrappedB.state.bossOrder);

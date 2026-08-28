@@ -48,7 +48,10 @@ This is the migration checklist for the architectural redesign. A checked featur
   insertion supersedes only that roster-count statement. Rootbound remains
   factory-ready through the existing enemy composition in VS3-C10, with its
   grounded body placed deterministically by the shared boss placement planner
-  from the canonical boss height rather than a duplicate registry. Rootbinder became
+  from the canonical boss height rather than a duplicate registry. Its production
+  encounter now uses the shared intro/fight-clock/arena swap and living-platform
+  fracture/reform lifecycle with `verdant-rootstone`; app-layer selection consumes
+  the source-owned boss identity predicate instead of a stale five-boss copy. Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
 - [x] Verdant C3 environment evidence foundation (engineering-only) — the
