@@ -1,6 +1,7 @@
 import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../gameplay/entities/enemy-types/rootbound";
 import type { EnvironmentRuntime, RootboundEnvironmentActor } from "../gameplay/environment/environment-runtime";
 import type { GameEnemy, GamePlayer } from "./game-runtime-state";
+import { CONFIG } from "../config/game-config";
 
 /** Projects Rootbound attack intent into the world-owned environment phase. */
 export function bindLiveRootboundActors(
@@ -17,6 +18,7 @@ export function bindLiveRootboundActors(
       graftAnchorPlacements?: () => NonNullable<RootboundEnvironmentActor["state"]["graftPlacements"]>;
       applyGraftEffects?: NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>;
       recoverGraftHealth?: NonNullable<RootboundEnvironmentActor["recoverGraftHealth"]>;
+      bossBloomPattern?: () => NonNullable<RootboundEnvironmentActor["state"]["bloomPattern"]>;
     };
     const id = actorId(enemy);
     const target = player();
@@ -32,6 +34,8 @@ export function bindLiveRootboundActors(
         cleanupReason: actor.rootlineCleanupReason ?? null,
         graftPlacements: actor.graftAnchorPlacements?.() ?? Object.freeze([]),
         ownerPosition: Object.freeze({ x: enemy.x, y: enemy.y }),
+        bloomPattern: actor.bossBloomPattern?.() ?? null,
+        arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
       }),
       ...(target === null ? {} : { player: Object.freeze({
         x: target.x, y: target.y, hw: target.hw, hh: target.hh,

@@ -136,6 +136,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   hashing, and structured observation retain Graft subtype/effect/budget facts.
   Presentation consumes immutable connection geometry and uses distinct static
   shape plus color cues for Bastion, Mercy, and Haste in reduced-motion modes.
+  VS3-C12-S5 adds three boss-owned Bloom arrangements without forking Well
+  behavior: alternating left/right rise, a central lift with outer safe lanes,
+  and a short three-step cage-response route. Each produces bounded shared
+  `BloomWellState` fields with deterministic offsets and stable Rootbound owner
+  references; production composition installs the selected Phase II pattern
+  idempotently. S9 remains responsible for cycling and attack cadence.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

@@ -5,7 +5,7 @@ import { createEnvironmentCombatObjectRuntime, type EnvironmentCombatObjectRunti
 import { cleanupOrphanedEnvironmentReferences } from "./environment-cleanup";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
-import { applyBloomWellForce, advanceBloomWell, isBloomWellState, type BloomWellActor } from "./bloom-well";
+import { applyBloomWellForce, advanceBloomWell, installRootboundBloomPattern, isBloomWellState, type BloomWellActor, type RootboundBloomPatternId } from "./bloom-well";
 import { applyElasticLeashForce, createElasticLeash, createRootNetwork, installRootNetwork, isElasticLeashValid, isRootbinderLineValid, redistributeRootNetworkKnockback, type LeashPlayerState, type RootbinderCandidate, type RootbinderState } from "../entities/rootbinder-runtime";
 import { advanceGraftAnchor, installGraftAnchor, isGraftAnchorState, resolveRootboundGraftEffects, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "./graft-anchor";
 
@@ -55,6 +55,8 @@ export interface RootboundEnvironmentActor {
     cleanupReason: "natural-expiry" | "stage-transition" | null;
     graftPlacements?: readonly GraftAnchorPlacementRequest[];
     ownerPosition?: Readonly<{ x: number; y: number }>;
+    bloomPattern?: RootboundBloomPatternId | null;
+    arena?: Readonly<{ width: number; groundY: number }>;
   }>;
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
   readonly recoverGraftHealth?: (fraction: number) => number;
@@ -205,6 +207,17 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
         if (next !== graft) this.updateCombatObject(graft.id, next);
       }
       this.#applyRootboundGraftEffects(actor.id);
+    }
+  }
+
+  #advanceRootboundBloom(tick: number): void {
+    for (const actor of this.#rootboundActors?.() ?? []) {
+      const patternId = actor.state.bloomPattern;
+      const arena = actor.state.arena;
+      if (patternId === null || patternId === undefined || arena === undefined) continue;
+      installRootboundBloomPattern(this, {
+        patternId, bossOwnerId: actor.id, startTick: tick, arenaWidth: arena.width, groundY: arena.groundY,
+      });
     }
   }
 
@@ -393,7 +406,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   step(tick: number, seconds: number, gameplayStep: () => void, availableActorIds?: ReadonlySet<string>): void {
     if (typeof gameplayStep !== "function") throw new TypeError("environment gameplay step is required");
     this.clearPhaseLog(); this.#run("pre-step", tick, seconds, this.#hooks.preStep); gameplayStep();
-    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
+    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#advanceRootboundBloom(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
     this.#run("collision-resolution", tick, seconds, this.#hooks.resolveCollisions);
     this.#run("post-commit", tick, seconds, () => { this.#cleanupOrphans(tick, availableActorIds); this.#hooks.postCommit?.({ tick, seconds, phase: "post-commit", environment: this }); });
   }

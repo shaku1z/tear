@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C12-S4 green; VS3-C12-S5 next** |
+| Status | **Active implementation authority — VS3-C12-S5 green; VS3-C12-S6 next** |
 | Current checkpoint | `VS3-C12` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4564,7 +4564,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 - [x] **VS3-C12-S2** — Create Grafts through production environment factories and stable owner references. The existing Rootbound enemy type derives one immutable Bastion/Mercy/Haste placement set only in Phase II; live composition supplies its canonical combat actor ID and position, and the world environment owner idempotently materializes the exact S1 definitions as specialized `graft-anchor` combat objects. IDs, owner/target references, connection geometry, created tick, integrity, proc policy, and warning state are canonical. The existing codec now generically accepts a source-owned combat-object kind as its specialized factory ID, covering `graft-anchor` and the already-existing `root-link` path without a second registry.
 - [x] **VS3-C12-S3** — Keep Rootbound directly damageable while Grafts exist. Permanent production-path evidence materializes all three canonical Grafts, advances them to active state, and proves Rootbound still rejects no ordinary hit, returns a non-zero legal incoming amount from its limit seam, and loses HP through the normal damage path. Graft presence is absent from boss invulnerability/blocking logic; S4 later resolves bounded Bastion mitigation as effect data, not a shield boolean.
 - [x] **VS3-C12-S4** — Implement Graft warning, activation, integrity, destruction, effect removal, and phase cleanup. The environment owner advances an 84-tick visible warning into active state, resolves Bastion/Haste only from active canonical objects, spends Mercy from serialized next-pulse/total-budget fields, and removes an effect in the same damage call that destroys its Anchor. Phase exit expires surviving Grafts with `stage-transition`; clear/encounter cleanup neutralizes derived actor projections. Hash, codec validation, and structured observation preserve subtype/effect/budget truth. Presentation renders connection geometry plus distinct Bastion/Mercy/Haste color-and-shape cues, including static reduced-motion readability.
-- [ ] **VS3-C12-S5** — Implement authored boss-owned Bloom patterns through the shared Well runtime.
+- [x] **VS3-C12-S5** — Implement authored boss-owned Bloom patterns through the shared Well runtime. `alternating-rise`, `central-safe-lanes`, and `cage-route` author bounded 2/1/3-Well arrangements with deterministic start offsets and stable Rootbound ownership. The existing `createBloomWellState`, environment field collection, fixed-tick warning/active/cooldown lifecycle, force policy, observation, and presentation remain the sole runtime path. Rootbound exposes only its selected Phase II pattern; S9 owns pattern cycling/cadence.
 - [ ] **VS3-C12-S6** — Implement Memory Choir as bounded authoritative manifestations or a truthful existing add lifecycle.
 - [ ] **VS3-C12-S7** — Implement Root Cage through the environment/hazard owner with a guaranteed response route.
 - [ ] **VS3-C12-S8** — Prevent Root Cage and Rootbinder leash from creating a total movement lock.

@@ -4,10 +4,13 @@ import { CONFIG } from "../../src/config/game-config";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { GRAFT_ANCHOR_TIMING, GRAFT_ANCHOR_TYPES, isGraftAnchorState, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../src/gameplay/environment/graft-anchor";
 import { ROOTBOUND_GRAFT_ANCHOR_GEOMETRY } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../src/gameplay/environment/bloom-well";
 import { createEnemyHarness } from "./enemy-test-harness";
 
 type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
   graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[];
+  bloomPatternIndex: number;
+  bossBloomPattern(): RootboundBloomPatternId | null;
 };
 
 describe("Rootbound Phase II Graft creation", () => {
@@ -124,5 +127,26 @@ describe("Rootbound Phase II Graft creation", () => {
       state: "expired", cleanupReason: "stage-transition",
     });
     expect(actor).toMatchObject({ graftDamageTakenMultiplier: 1, graftCadenceMultiplier: 1, activeGraftTypes: [] });
+  });
+
+  it("projects the selected authored Bloom arrangement into the shared production field runtime", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    expect(actor.bossBloomPattern()).toBe(ROOTBOUND_BLOOM_PATTERN_IDS[0]);
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom-production" });
+    environment.setRootboundActorsSource(() => [Object.freeze({
+      id: "enemy:rootbound-live", source: actor,
+      state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+        bloomPattern: actor.bossBloomPattern(), arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }) }),
+    })]);
+    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    environment.step(241, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(environment.fields()).toHaveLength(2);
+    expect(environment.fields().every((field) => field.kind === "bloom-well" && field.ownerId === "enemy:rootbound-live")).toBe(true);
+    actor.bloomPatternIndex = 2;
+    environment.step(242, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(environment.fields().filter((field) => field.patternId?.startsWith("bloom-well/rootbound/cage-route") === true)).toHaveLength(3);
   });
 });

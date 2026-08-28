@@ -6,6 +6,9 @@ import {
   cleanupBloomWell,
   createBloomWellDefinition,
   createBloomWellState,
+  createRootboundBloomPattern,
+  installRootboundBloomPattern,
+  ROOTBOUND_BLOOM_PATTERN_IDS,
   type BloomWellActor,
 } from "../../src/gameplay/environment/bloom-well";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
@@ -170,5 +173,30 @@ describe("Bloom Well V1", () => {
       expect(runtime.fields()).toHaveLength(0);
       expect(runtime.lastClearReason).toBe(reason);
     }
+  });
+
+  it("authors all three bounded Rootbound arrangements through shared Bloom Well states", () => {
+    const counts = [2, 1, 3];
+    ROOTBOUND_BLOOM_PATTERN_IDS.forEach((patternId, index) => {
+      const fields = createRootboundBloomPattern({ patternId, bossOwnerId: "enemy:rootbound", stageOwnerId: "verdant-sanctum",
+        startTick: 240, arenaWidth: 1600, groundY: 800 });
+      expect(fields).toHaveLength(counts[index] ?? 0);
+      for (const field of fields) expect(field).toMatchObject({ kind: "bloom-well", variant: "boss",
+        factoryId: "environment-field", bossOwnerId: "enemy:rootbound" });
+      expect(fields.every((field) => field.geometry.x >= 0 && field.geometry.x + (field.geometry.w ?? 0) <= 1600)).toBe(true);
+      expect([...fields].sort((left, right) => left.startTick - right.startTick)).toEqual(fields);
+    });
+  });
+
+  it("installs a Rootbound pattern idempotently and advances it in the existing field runtime", () => {
+    const runtime = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom" });
+    const input = { patternId: "alternating-rise" as const, bossOwnerId: "enemy:rootbound", startTick: 240, arenaWidth: 1600, groundY: 800 };
+    const first = installRootboundBloomPattern(runtime, input);
+    const repeated = installRootboundBloomPattern(runtime, { ...input, startTick: 241 });
+    expect(runtime.fields()).toHaveLength(2);
+    expect(repeated.map((field) => field.id)).toEqual(first.map((field) => field.id));
+    runtime.step(first[0]?.transitionTick ?? 0, 1 / 120, () => undefined, new Set(["enemy:rootbound"]));
+    expect(runtime.fields()[0]).toMatchObject({ state: "active", bossOwnerId: "enemy:rootbound" });
+    expect(runtime.fields()[1]).toMatchObject({ state: "dormant", bossOwnerId: "enemy:rootbound" });
   });
 });

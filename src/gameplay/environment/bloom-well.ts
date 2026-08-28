@@ -1,4 +1,4 @@
-import type { EnvironmentClearReason, EnvironmentFieldState, EnvironmentForcePolicy, EnvironmentGeometry } from "./environment-contracts";
+import type { EnvironmentClearReason, EnvironmentFieldState, EnvironmentForcePolicy, EnvironmentGeometry, EnvironmentRuntimeState } from "./environment-contracts";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
 
@@ -12,6 +12,20 @@ export const BLOOM_WELL_TIMING = Object.freeze({
 });
 
 export type BloomWellVariant = "stage" | "boss";
+
+export const ROOTBOUND_BLOOM_PATTERN_IDS = Object.freeze([
+  "alternating-rise", "central-safe-lanes", "cage-route",
+] as const);
+export type RootboundBloomPatternId = typeof ROOTBOUND_BLOOM_PATTERN_IDS[number];
+
+export interface RootboundBloomPatternInput {
+  readonly patternId: RootboundBloomPatternId;
+  readonly bossOwnerId: string;
+  readonly stageOwnerId: string;
+  readonly startTick: number;
+  readonly arenaWidth: number;
+  readonly groundY: number;
+}
 
 export interface BloomWellDefinition {
   readonly id: string;
@@ -160,4 +174,44 @@ export function cleanupBloomWell(state: BloomWellState, reason: EnvironmentClear
 
 export function isBloomWellState(value: EnvironmentFieldState): value is BloomWellState {
   return value.kind === "bloom-well" && value.factoryId === "environment-field" && typeof (value as Partial<BloomWellState>).bloomWellId === "string";
+}
+
+/** Authored Phase II arrangements expressed only as shared Bloom Well states. */
+export function createRootboundBloomPattern(input: RootboundBloomPatternInput): readonly BloomWellState[] {
+  if (!input.bossOwnerId || !input.stageOwnerId) throw new TypeError("Rootbound Bloom ownership is required");
+  assertTick(input.startTick, "Rootbound Bloom startTick");
+  if (!(input.arenaWidth > 0) || !Number.isFinite(input.arenaWidth) || !(input.groundY > 0) || !Number.isFinite(input.groundY)) throw new RangeError("Rootbound Bloom arena bounds must be finite and positive");
+  const height = Math.min(360, input.groundY);
+  const authored = input.patternId === "alternating-rise"
+    ? [{ x: input.arenaWidth * 0.1, w: input.arenaWidth * 0.24, delay: 0 }, { x: input.arenaWidth * 0.66, w: input.arenaWidth * 0.24, delay: 120 }]
+    : input.patternId === "central-safe-lanes"
+      ? [{ x: input.arenaWidth * 0.36, w: input.arenaWidth * 0.28, delay: 0 }]
+      : [{ x: input.arenaWidth * 0.16, w: input.arenaWidth * 0.16, delay: 0 }, { x: input.arenaWidth * 0.42, w: input.arenaWidth * 0.16, delay: 60 }, { x: input.arenaWidth * 0.68, w: input.arenaWidth * 0.16, delay: 120 }];
+  return Object.freeze(authored.map((entry, index) => createBloomWellState({
+    id: `${input.bossOwnerId}:bloom:${input.patternId}:${String(index + 1)}`,
+    ownerId: input.stageOwnerId,
+    bossOwnerId: input.bossOwnerId,
+    variant: "boss",
+    geometry: Object.freeze({ x: entry.x, y: input.groundY - height, w: entry.w, h: height }),
+    patternId: `rootbound/${input.patternId}/${String(index + 1)}`,
+  }, input.startTick + entry.delay)));
+}
+
+export function installRootboundBloomPattern(
+  environment: Pick<EnvironmentRuntimeState, "stageId" | "fields" | "addField">,
+  input: Omit<RootboundBloomPatternInput, "stageOwnerId">,
+): readonly BloomWellState[] {
+  const states = createRootboundBloomPattern({ ...input, stageOwnerId: environment.stageId });
+  const installed: BloomWellState[] = [];
+  for (const state of states) {
+    const existing = environment.fields().find((field) => field.id === state.id);
+    if (existing !== undefined) {
+      if (!isBloomWellState(existing) || existing.bossOwnerId !== input.bossOwnerId) throw new TypeError(`Rootbound Bloom ID collision: ${state.id}`);
+      installed.push(existing);
+    } else {
+      environment.addField(state);
+      installed.push(state);
+    }
+  }
+  return Object.freeze(installed);
 }

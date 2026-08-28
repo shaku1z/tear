@@ -3,6 +3,7 @@ import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
+import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
   "vine-sweep", "seed-arc", "rootline", "canopy-step",
@@ -74,6 +75,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     graftDamageTakenMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.incomingDamageMultiplier;
     graftCadenceMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.cadenceMultiplier;
     activeGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
+    bloomPatternIndex = 0;
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -256,6 +258,11 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
           h: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height,
         }),
       })));
+    }
+
+    bossBloomPattern(): RootboundBloomPatternId | null {
+      if (this.phase !== 2) return null;
+      return ROOTBOUND_BLOOM_PATTERN_IDS[this.bloomPatternIndex % ROOTBOUND_BLOOM_PATTERN_IDS.length] ?? null;
     }
 
     private beginRootline(): void {
