@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { clamp, len, lerp, lerpAngle } from "../../src/domain/geometry";
-import { resolveHeldEnvironmentWeaponContacts } from "../../src/gameplay/combat/environment-weapon-contact-runtime";
+import { resolveEnvironmentWeaponProjectileContacts, resolveHeldEnvironmentWeaponContacts } from "../../src/gameplay/combat/environment-weapon-contact-runtime";
 import { createBlade } from "../../src/gameplay/entities/blade";
 import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import type { EnvironmentCombatObjectState } from "../../src/gameplay/environment/environment-contracts";
 import { getWeapon } from "../../src/gameplay/weapons";
 
-function makeBlade(weaponId: "sword" | "hammer" | "greatsword" | "chainblade") {
+function makeBlade(weaponId: "sword" | "hammer" | "greatsword" | "chainblade" | "riftlock") {
   const config = structuredClone(CONFIG);
   const input = { touchAim: false, stickAim: null, locked: false, mouseX: 0, mouseY: 0, tetherHeld: false,
     consumeDelta: () => ({ x: 0, y: 0 }) };
@@ -25,9 +25,8 @@ function makeBlade(weaponId: "sword" | "hammer" | "greatsword" | "chainblade") {
 function object(id: string, kind: "root-link" | "graft-anchor", geometry: EnvironmentCombatObjectState["geometry"], integrity = 1): EnvironmentCombatObjectState {
   return Object.freeze({
     id, factoryId: kind, kind, ownerId: "rootbound", targetId: null, geometry,
-    integrity, maxIntegrity: integrity, counterplayTags: kind === "graft-anchor"
-      ? Object.freeze(["cut", "break", "projectile-cut"])
-      : Object.freeze(["cut", "break"]),
+    integrity, maxIntegrity: integrity,
+    counterplayTags: Object.freeze(["cut", "break", "projectile-cut"]),
     procEligible: false, damageDedupeId: `${id}:damage`, state: "active", stateTick: 1, cleanupReason: null,
   });
 }
@@ -169,6 +168,51 @@ describe("environment weapon contact runtime", () => {
     expect(blade.hookTarget).toBeNull();
     blade.x = 0; blade.y = 0;
     blade._updateHookThrown(1 / 120, player, []);
+    expect(blade.state).toBe("held");
+  });
+
+  it("routes Riftlock bayonet and Razor Round cuts without Capture or Backblast corruption", () => {
+    const environment = new EnvironmentRuntime("verdant-sanctum", "riftlock-contact");
+    environment.addCombatObject(object("bayonet-link", "root-link", {
+      x: 68, y: 0, points: Object.freeze([{ x: 68, y: -20 }, { x: 68, y: 20 }]),
+    }));
+    environment.addCombatObject(object("razor-link", "root-link", {
+      x: 120, y: 0, points: Object.freeze([{ x: 120, y: -20 }, { x: 120, y: 20 }]),
+    }));
+    environment.addCombatObject(object("backblast-link", "root-link", {
+      x: 140, y: 0, points: Object.freeze([{ x: 140, y: -20 }, { x: 140, y: 20 }]),
+    }));
+    const { blade } = makeBlade("riftlock");
+    blade.state = "held"; blade.x = 0; blade.y = 0; blade.tipX = 80; blade.tipY = 0;
+    blade.angle = 0; blade.vx = 900; blade.vy = 0; blade.tipVX = 0; blade.tipVY = 1800; blade.tipSpeed = 1800;
+    blade.swingId = 13;
+    const bayonet = resolveHeldEnvironmentWeaponContacts({
+      environment, blade, segment: blade.heldCollisionSegment({} as never), tick: 50,
+    });
+    expect(bayonet).toMatchObject({ accepted: 1, damaged: 1, destroyed: 1 });
+
+    const razor = { x: 120, y: 0, r: 6, dead: false, dmg: 42, family: "weaponProjectile",
+      playerOwned: true, weaponId: "riftlock", attackId: 71, secondary: false };
+    const backblast = { x: 140, y: 0, r: 6, dead: false, dmg: 42, family: "weaponProjectile",
+      playerOwned: true, weaponId: "riftlock", attackId: 72, secondary: true };
+    const projectiles = resolveEnvironmentWeaponProjectileContacts({
+      environment, weapon: getWeapon("riftlock"), projectiles: [razor, backblast], tick: 51,
+    });
+    expect(projectiles).toMatchObject({ considered: 1, accepted: 1, damaged: 1, destroyed: 1 });
+    expect(razor.dead).toBe(true);
+    expect(backblast.dead).toBe(false);
+    expect(environment.combatObjects().find(({ id }) => id === "backblast-link")?.state).toBe("active");
+    expect(blade.hookTarget).toBeNull();
+    expect(blade.state).toBe("held");
+
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    blade.riftChambers = 0; blade.state = "embedded"; blade.x = 10; blade.y = 0;
+    expect(blade._beginBackblast(player)).toBe("recalled");
+    expect(blade.backblastActive).toBe(true);
+    expect(blade.riftChambers).toBe(0);
+    expect(blade.drainWeaponEvents()).toEqual([expect.objectContaining({ type: "backblastRound", secondary: true })]);
+    blade.x = 0; blade.y = 0;
+    blade._updateLooseCannon(1 / 120, player, []);
     expect(blade.state).toBe("held");
   });
 });

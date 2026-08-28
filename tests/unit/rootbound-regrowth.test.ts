@@ -91,7 +91,7 @@ describe("Rootbound Regrowth channel", () => {
     expect(bundle.combatObjects.map(({ id }) => id)).toEqual(connections);
     expect(bundle.combatObjects.every((object) => object.kind === "root-link" && object.factoryId === "root-link"
       && object.ownerId === "enemy:rootbound" && object.targetId === null && !object.procEligible
-      && object.counterplayTags.join(",") === "cut,break")).toBe(true);
+      && object.counterplayTags.join(",") === "cut,break,projectile-cut")).toBe(true);
     expect(bundle.routes.map(({ id, kind, factoryId }) => ({ id, kind, factoryId }))).toEqual(connections.map((id) => ({
       id: `${id}:route`, kind: "regrowth-link", factoryId: "regrowth-link",
     })));

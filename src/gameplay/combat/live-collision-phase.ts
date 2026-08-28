@@ -12,14 +12,18 @@ import { finalizeCombatTick, markFallenEnemies, resolvePlayerDeath, runTrainingT
   type TailPlayer, type TailProjectile, type TailRun } from "./combat-tail-runtime";
 import type { CombatEntityRuntime } from "./combat-entity-runtime";
 import type { BladePlayerPort } from "../entities/blade-contracts";
-import { resolveHeldEnvironmentWeaponContacts, type EnvironmentWeaponContactPort } from "./environment-weapon-contact-runtime";
+import { resolveEnvironmentWeaponProjectileContacts, resolveHeldEnvironmentWeaponContacts,
+  type EnvironmentWeaponContactPort } from "./environment-weapon-contact-runtime";
 
 export type LivePlayer = HeldBladePlayer & ThrownPlayer & ParryPlayer & ContactPlayer & TailPlayer & BladePlayerPort;
 export type LiveBlade = HeldBladeWeapon & ThrownBlade & ParryBlade & HostileBlade & {
   heldCollisionSegment(player: LivePlayer): HeldBladeCollisionInput["segment"];
   aimX: number; aimY: number;
   state: string; swingId: number;
-  weapon?: Readonly<{ id: string; environmentCounterplay?: Readonly<{ held?: "cut" | "break" | "projectile-cut" }> }> | null;
+  weapon?: Readonly<{ id: string; environmentCounterplay?: Readonly<{
+    held?: "cut" | "break" | "projectile-cut";
+    projectile?: "cut" | "break" | "projectile-cut";
+  }> }> | null;
   refillRiftChambers(amount: number): void;
   primeReversal(target: object): boolean;
 };
@@ -89,6 +93,12 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
     environment: host.environment, blade, segment: held,
     ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
   });
+  if (host.environment !== undefined && blade.weapon !== null && blade.weapon !== undefined) {
+    resolveEnvironmentWeaponProjectileContacts({
+      environment: host.environment, weapon: blade.weapon, projectiles: state.projectiles,
+      ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
+    });
+  }
   runThrown(host); runParries(host, held); host.combat.resolveProjectilePhases(dt, projectileTuning(host));
   resolveEnemyContact(state.enemies, player, { overlaps: host.overlap, segmentDistance: () => Infinity,
     onHit: () => { host.loseStyle(); host.sound("hurt"); }, onAbsorbed: host.onShieldAbsorb, onHostileBladeResolved: () => undefined });

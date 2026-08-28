@@ -1,5 +1,5 @@
 import type { EnvironmentClearReason, EnvironmentCombatObjectState } from "./environment-contracts";
-import { assertEnvironmentCombatCapabilities, environmentObjectDefinition, type EnvironmentCounterplayTag } from "./environment-definitions";
+import { assertEnvironmentCombatCapabilities, type EnvironmentCounterplayTag } from "./environment-definitions";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
 
@@ -50,7 +50,7 @@ export function resolveEnvironmentCounterplay(
 /** Creates a bounded damageable relationship object; it never enters enemy reward/proc paths. */
 export function createEnvironmentCombatObjectRuntime(
   initial: EnvironmentCombatObjectState,
-  counterplayTags: readonly EnvironmentCounterplayTag[] = environmentObjectDefinition(initial.kind).counterplayTags,
+  counterplayTags: readonly EnvironmentCounterplayTag[] = initial.counterplayTags as readonly EnvironmentCounterplayTag[],
   events?: TearGameplayEventPort,
 ): EnvironmentCombatObjectRuntime {
   if (!Number.isFinite(initial.integrity) || initial.integrity < 0

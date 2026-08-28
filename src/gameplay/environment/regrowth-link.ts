@@ -1,4 +1,5 @@
 import type { EnvironmentCombatObjectState, EnvironmentPoint, EnvironmentRouteState } from "./environment-contracts";
+import { environmentObjectDefinition } from "./environment-definitions";
 
 export const ROOTBOUND_REGROWTH_TIMING = Object.freeze({
   ticksPerSecond: 120,
@@ -50,7 +51,7 @@ export function createRootboundRegrowthConnections(input: Readonly<{
       }),
       integrity: 1,
       maxIntegrity: 1,
-      counterplayTags: Object.freeze(["cut", "break"]),
+      counterplayTags: environmentObjectDefinition("root-link").counterplayTags,
       procEligible: false,
       damageDedupeId: `${id}:damage`,
       state: "active",

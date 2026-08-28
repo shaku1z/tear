@@ -14,12 +14,12 @@ const object: EnvironmentCombatObjectState = {
 
 describe("generic environment combat-object kernel", () => {
   it("resolves cut, break, and projectile-cut exactly from source-owned capability tags", () => {
-    const rootLink = createEnvironmentCombatObjectRuntime({ ...object, counterplayTags: ["cut", "break"] }, ["cut", "break"]);
+    const rootLink = createEnvironmentCombatObjectRuntime({ ...object, counterplayTags: ["cut", "break", "projectile-cut"] });
     expect(["cut", "break", "projectile-cut"].map((capability) =>
       rootLink.resolveCounterplay(capability as "cut" | "break" | "projectile-cut"))).toEqual([
       { capability: "cut", accepted: true, matchedTag: "cut" },
       { capability: "break", accepted: true, matchedTag: "break" },
-      { capability: "projectile-cut", accepted: false, matchedTag: null },
+      { capability: "projectile-cut", accepted: true, matchedTag: "projectile-cut" },
     ]);
     const graftTags = ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"].counterplayTags;
     expect(["cut", "break", "projectile-cut"].every((capability) =>
@@ -28,7 +28,7 @@ describe("generic environment combat-object kernel", () => {
   });
 
   it("uses source-owned counterplay metadata and keeps routes behavior-minimal", () => {
-    expect(ENVIRONMENT_OBJECT_DEFINITIONS["root-link"].counterplayTags).toEqual(["cut", "break"]);
+    expect(ENVIRONMENT_OBJECT_DEFINITIONS["root-link"].counterplayTags).toEqual(["cut", "break", "projectile-cut"]);
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"].counterplayTags).toEqual(["cut", "break", "projectile-cut"]);
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["regrowth-link"].behavior).toBe("data-only-route");
     const base: TearSdlDocumentV1 = {
@@ -81,7 +81,7 @@ describe("generic environment combat-object kernel", () => {
   it("rejects non-finite or out-of-range initial integrity", () => {
     expect(() => createEnvironmentCombatObjectRuntime({ ...object, integrity: Number.NaN })).toThrow(/integrity/u);
     expect(() => createEnvironmentCombatObjectRuntime({ ...object, integrity: 6 })).toThrow(/integrity/u);
-    expect(() => createEnvironmentCombatObjectRuntime(object, ["projectile-cut"])).toThrow(/not allowed/u);
+    expect(() => createEnvironmentCombatObjectRuntime(object, ["status" as never])).toThrow(/not allowed/u);
     expect(() => createEnvironmentCombatObjectRuntime(object).damage(1, "x".repeat(257))).toThrow(/length/u);
   });
 });

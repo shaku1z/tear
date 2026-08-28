@@ -19,7 +19,7 @@ export function isEnvironmentObjectKind(value: unknown): value is EnvironmentObj
 export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKind, EnvironmentObjectDefinition>> = Object.freeze({
   "bloom-well": Object.freeze({ kind: "bloom-well", category: "field", behavior: "generic-field", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
   "rootline": Object.freeze({ kind: "rootline", category: "field", behavior: "generic-field", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
-  "root-link": Object.freeze({ kind: "root-link", category: "combat-object", behavior: "generic-combat-object", counterplayTags: ["cut", "break"] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
+  "root-link": Object.freeze({ kind: "root-link", category: "combat-object", behavior: "generic-combat-object", counterplayTags: ["cut", "break", "projectile-cut"] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
   "graft-anchor": Object.freeze({ kind: "graft-anchor", category: "combat-object", behavior: "generic-combat-object", counterplayTags: ["cut", "break", "projectile-cut"] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
   "regrowth-link": Object.freeze({ kind: "regrowth-link", category: "route", behavior: "data-only-route", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
 });

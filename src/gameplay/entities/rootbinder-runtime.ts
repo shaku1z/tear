@@ -1,4 +1,5 @@
 import type { EnvironmentCombatObjectState, EnvironmentGeometry, EnvironmentRuntimeState, EnvironmentClearReason } from "../environment/environment-contracts";
+import { environmentObjectDefinition } from "../environment/environment-definitions";
 
 /** Authoritative world-owned tuning for all Rootbinder timers and forces. */
 export interface RootbinderTuning {
@@ -166,7 +167,7 @@ export function createElasticLeash(input: ElasticLeashInput): ElasticLeash {
     tuning,
     integrity: 1,
     maxIntegrity: 1,
-    counterplayTags: Object.freeze(["cut", "break"]),
+    counterplayTags: environmentObjectDefinition("root-link").counterplayTags,
     procEligible: false,
     damageDedupeId: `${input.id}:damage`,
     state: "warning" as const,
@@ -322,7 +323,7 @@ export function createRootNetwork(input: RootNetworkInput, candidates: readonly 
     geometry: linkGeometry(input.sourceX, input.sourceY, candidate.x, candidate.y),
     integrity: 1,
     maxIntegrity: 1,
-    counterplayTags: Object.freeze(["cut", "break"]),
+    counterplayTags: environmentObjectDefinition("root-link").counterplayTags,
     procEligible: false,
     damageDedupeId: `${input.id}:${candidate.id}:damage`,
     state: "active" as const,

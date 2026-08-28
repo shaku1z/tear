@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C14-S5 green; VS3-C14-S6 next** |
+| Status | **Active implementation authority — VS3-C14-S6 green; VS3-C14-S7 next** |
 | Current checkpoint | `VS3-C14` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4762,12 +4762,16 @@ Prove every active weapon can answer every required Verdant combat object withou
 
 ## Sub-goals
 
-- [x] **VS3-C14-S1** — Define and test cut, break, and projectile-cut capability resolution. The existing environment combat-object kernel now exposes one typed exact-match resolver over source-owned counterplay metadata. Root links accept cut/break and reject projectile-cut; Grafts accept all three; unknown capabilities fail closed. This establishes a shared seam for weapon routing without weapon IDs, bespoke object handlers, or another capability registry.
+- [x] **VS3-C14-S1** — Define and test cut, break, and projectile-cut capability resolution. The existing environment combat-object kernel exposes one typed exact-match resolver over serialized, source-owned counterplay metadata; unknown capabilities fail closed. Root links and Grafts accept all three canonical capabilities. S6 corrected S1's narrower Root-link assumption after the authoritative Link Damage and Final Five sections proved that player-owned Riftlock Razor Rounds must sever Root and Regrowth links through `projectile-cut`; no weapon-specific exception was added.
 - [x] **VS3-C14-S2** — Prove Sword link/Graft/Regrowth interaction without Reversal or Threadcut corruption. The canonical Sword definition now declares its held `cut` capability, and the live collision phase resolves that capability against environment-owned Root link, Graft, and Regrowth geometry through the existing combat-object runtime. Object contacts use per-swing attack IDs and never enter enemy hit hooks, Reversal targeting, Threadcut waypoints, reward logic, or ordinary proc paths.
 - [x] **VS3-C14-S3** — Prove Hammer Break and Meteor route/catch safety. Hammer now declares held `break` in its existing canonical definition, so the shared production contact seam destroys Root and Regrowth links and applies its high-integrity pressure to Grafts. The same permanent proof executes the native ballistic Meteor launch, gravity step, recall, and catch-to-held lifecycle after the object contact; no transport behavior or catch guarantee changed.
 - [x] **VS3-C14-S4** — Prove Greatsword broad multi-segment dedupe and Wheel Cut safety. Greatsword declares held `cut` in the canonical weapon definition; its broad production collision segment can sever multiple distinct Root segments once per swing through the shared environment kernel. Object contacts do not consume the enemy-only repeat-hit set or momentum resistance, and the same proof retains Wheel Cut spin, recall, catch, and held recovery.
 - [x] **VS3-C14-S5** — Prove Chainblade head-only object damage and Hook & Sling stability. Chainblade declares held `cut`, but the shared resolver receives only its existing head collision segment; a Root link touching visible chain geometry alone remains intact while a head contact severs. The same proof retains the native bounded orbit, tangential Hook & Sling release, recall, and catch-to-held recovery.
-- [ ] **VS3-C14-S6** — Prove Riftlock bayonet/Razor Round severing without invalid Capture and with Backblast safety.
+- [x] **VS3-C14-S6** — Prove Riftlock bayonet/Razor Round severing without invalid Capture and with Backblast safety. Riftlock declares held `cut` and player-projectile `projectile-cut`. The live collision phase resolves only matching, player-owned, non-secondary weapon projectiles against serialized object tags, consumes a Razor Round on one accepted object contact, and never enters enemy `onThrowHit`/Capture. Secondary Backblast rounds remain excluded, and zero-chamber Backblast retains its return/catch path.
+
+### S6 contract correction
+
+The original S1 proof encoded Root links as `cut`/`break` only. That contradicted the already-authoritative Section 9.8 requirement that Riftlock Razor Rounds qualify through `projectile-cut`, the Section 16.7 all-weapon matrix, and S6 itself. The canonical direction is now: Root links, Regrowth combat links, and Grafts serialize `cut`, `break`, and `projectile-cut`; the generic kernel resolves exactly against those serialized tags; weapon definitions declare capabilities; Backblast remains a separate non-cutting secondary projectile. This supersedes only the narrower S1 tag claim, not S1's shared exact-match architecture.
 - [ ] **VS3-C14-S7** — Prove attack-ID dedupe, no reward leakage, and no status attachment to default objects.
 - [ ] **VS3-C14-S8** — Prove universal ability behavior remains unchanged across every weapon.
 - [ ] **VS3-C14-S9** — Run existing narrow C40 weapon scenarios only when actual weapon runtime paths changed.

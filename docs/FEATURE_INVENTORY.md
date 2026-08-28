@@ -293,8 +293,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   enemies, Rootbound fight, final soundtrack, or public release package.
 - [x] Verdant C14 environment-object capability seam (engineering-only) —
   the existing combat-object kernel resolves `cut`, `break`, and
-  `projectile-cut` exactly from source-owned object tags. Root links expose
-  cut/break; Grafts expose all three; unknown capabilities fail closed. This
+  `projectile-cut` exactly from serialized source-owned object tags. Root links,
+  Regrowth combat links, and Grafts expose all three; unknown capabilities fail
+  closed. This corrects the narrower C14-S1 Root-link assumption because the
+  authoritative Link Damage and Final Five contracts require player-owned Razor
+  Rounds to sever links via `projectile-cut`.
   Sword now declares its held `cut` capability in the canonical weapon
   definition, and the production collision phase routes matching Root link,
   Graft, and Regrowth geometry through the environment owner with per-swing
@@ -308,8 +311,12 @@ This is the migration checklist for the architectural redesign. A checked featur
   Chainblade declares held `cut`, but only the canonical head collision segment
   reaches the environment resolver; visible chain links cannot duplicate object
   damage. Its Hook & Sling orbit/release/recall/catch route remains intact.
-  Remaining weapon conformance is owned by VS3-C14-S6 through S8, and no C40
-  certification record changed.
+  Riftlock declares held `cut` plus player-projectile `projectile-cut`; only
+  matching player-owned non-secondary Razor Rounds enter the object seam.
+  Enemy Capture hooks and secondary Backblast rounds remain excluded, while
+  zero-chamber Backblast still returns and catches. Remaining cross-cutting
+  conformance is owned by VS3-C14-S7 through S8, and no C40 certification record
+  changed.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`

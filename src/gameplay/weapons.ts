@@ -264,6 +264,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Loose Cannon", ratings: { handling: 4, impact: 3, reach: 5, difficulty: 5 },
     throwCollisionPad: 7,
     channels: weaponChannels({ throwSpeed: 1.06, remoteRange: 1.35, returnSpeed: 1.15, controlDuration: 1.1 }),
+    environmentCounterplay: Object.freeze({ held: "cut", projectile: "projectile-cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.length += 8; B.springStiffness *= 1.12; B.damping *= 1.04; B.gravity *= 0.82; B.angleSmooth *= 1.16;
