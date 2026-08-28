@@ -4,6 +4,7 @@ import { ROOTBOUND_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
+import type { RootCagePlacementRequest } from "../../environment/root-cage";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
   "vine-sweep", "seed-arc", "rootline", "canopy-step",
@@ -100,6 +101,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     memoryChoirT = 0;
     memoryChoirElapsed = 0;
     memoryChoirManifestations: readonly RootboundMemoryChoirManifestation[] = Object.freeze([]);
+    rootCageSequence = 0;
+    rootCageRequest: RootCagePlacementRequest | null = null;
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
@@ -289,6 +292,28 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       return ROOTBOUND_BLOOM_PATTERN_IDS[this.bloomPatternIndex % ROOTBOUND_BLOOM_PATTERN_IDS.length] ?? null;
     }
 
+    startRootCage(centerX: number): boolean {
+      if (this.phase !== 2 || this.attackCommitProtected() || this.rootCageRequest !== null || !Number.isFinite(centerX)) return false;
+      this.rootCageSequence += 1;
+      this.rootCageRequest = Object.freeze({
+        sequence: this.rootCageSequence,
+        centerX,
+        arenaWidth: CONFIG.view.w,
+        groundY: CONFIG.world.groundY,
+      });
+      this.atk = "root-cage:warning";
+      return true;
+    }
+
+    rootCagePlacement(): RootCagePlacementRequest | null {
+      return this.phase === 2 ? this.rootCageRequest : null;
+    }
+
+    completeRootCage(): void {
+      this.rootCageRequest = null;
+      if (this.atk.startsWith("root-cage:")) this.atk = "unavailable";
+    }
+
     startMemoryChoir(): boolean {
       if (this.phase !== 2 || this.attackCommitProtected() || this.memoryChoirStage !== null) return false;
       this.memoryChoirStage = "warning";
@@ -468,6 +493,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.cinematicT = 0;
       this.applyGraftEffects(ROOTBOUND_NO_GRAFT_EFFECTS);
       this.cancelMemoryChoir();
+      this.completeRootCage();
     }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
@@ -478,7 +504,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         : this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[1] ? 2 : 3;
       if (nextPhase > this.phaseMarker) {
         if (this.phaseMarker === 1) this.exitPhaseOne(projectiles);
-        else if (this.phaseMarker === 2) this.cancelMemoryChoir();
+        else if (this.phaseMarker === 2) { this.cancelMemoryChoir(); this.completeRootCage(); }
         this.phaseMarker = nextPhase;
         this.phaseTag = nextPhase === 2 ? "THE GARDEN REMEMBERS" : "NOTHING HERE DIES";
       }

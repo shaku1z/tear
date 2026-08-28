@@ -8,6 +8,7 @@ import { publishEnvironmentEvent } from "./environment-events";
 import { applyBloomWellForce, advanceBloomWell, installRootboundBloomPattern, isBloomWellState, type BloomWellActor, type RootboundBloomPatternId } from "./bloom-well";
 import { applyElasticLeashForce, createElasticLeash, createRootNetwork, installRootNetwork, isElasticLeashValid, isRootbinderLineValid, redistributeRootNetworkKnockback, type LeashPlayerState, type RootbinderCandidate, type RootbinderState } from "../entities/rootbinder-runtime";
 import { advanceGraftAnchor, installGraftAnchor, isGraftAnchorState, resolveRootboundGraftEffects, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "./graft-anchor";
+import { advanceRootCage, installRootCage, isRootCageState, type RootCagePlacementRequest } from "./root-cage";
 
 /** The only phases an environment may own inside one authoritative tick. */
 export type EnvironmentStepPhase = "pre-step" | "active-fields" | "collision-resolution" | "post-commit";
@@ -56,13 +57,16 @@ export interface RootboundEnvironmentActor {
     graftPlacements?: readonly GraftAnchorPlacementRequest[];
     ownerPosition?: Readonly<{ x: number; y: number }>;
     bloomPattern?: RootboundBloomPatternId | null;
+    rootCagePlacement?: RootCagePlacementRequest | null;
     arena?: Readonly<{ width: number; groundY: number }>;
   }>;
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
   readonly recoverGraftHealth?: (fraction: number) => number;
+  readonly completeRootCage?: () => void;
   readonly player?: Readonly<{
-    x: number; y: number; hw: number; hh: number; invulnerable: boolean; hazardDamageMultiplier: number;
+    x: number; y: number; vx?: number; hw: number; hh: number; invulnerable: boolean; hazardDamageMultiplier: number;
     takeDamage: (damage: number, sourceX: number, source: unknown) => void;
+    applyCageConstraint?: (x: number, vx: number) => void;
   }>;
 }
 
@@ -218,6 +222,62 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       installRootboundBloomPattern(this, {
         patternId, bossOwnerId: actor.id, startTick: tick, arenaWidth: arena.width, groundY: arena.groundY,
       });
+    }
+  }
+
+  #advanceRootboundCages(tick: number): void {
+    const present = new Set<string>();
+    for (const actor of this.#rootboundActors?.() ?? []) {
+      present.add(actor.id);
+      const request = actor.state.rootCagePlacement;
+      const owned = this.combatObjects().filter(isRootCageState).filter((object) => object.ownerId === actor.id);
+      if (request === null || request === undefined) {
+        for (const boundary of owned) if (boundary.state !== "destroyed" && boundary.state !== "expired") {
+          this.cleanupCombatObject(boundary.id, "stage-transition", tick);
+        }
+        continue;
+      }
+      const rootCageId = `${actor.id}:root-cage:g${String(request.sequence)}`;
+      let matching = owned.filter((boundary) => boundary.rootCageId === rootCageId);
+      if (matching.length === 0) {
+        installRootCage(this, actor.id, request, tick);
+        matching = this.combatObjects().filter(isRootCageState).filter((boundary) => boundary.rootCageId === rootCageId);
+      }
+      for (const boundary of matching) {
+        const next = advanceRootCage(boundary, tick);
+        if (next !== boundary) this.updateCombatObject(boundary.id, next);
+      }
+      const liveBoundary = this.combatObjects().filter(isRootCageState).some((boundary) => boundary.rootCageId === rootCageId
+        && boundary.state !== "destroyed" && boundary.state !== "expired");
+      if (!liveBoundary) actor.completeRootCage?.();
+    }
+    for (const boundary of this.combatObjects().filter(isRootCageState)) if (boundary.ownerId !== null && !present.has(boundary.ownerId)
+      && boundary.state !== "destroyed" && boundary.state !== "expired") this.cleanupCombatObject(boundary.id, "stage-transition", tick);
+  }
+
+  #resolveRootboundCages(): void {
+    for (const actor of this.#rootboundActors?.() ?? []) {
+      const target = actor.player;
+      const request = actor.state.rootCagePlacement;
+      if (target === undefined || request === null || request === undefined) continue;
+      const rootCageId = `${actor.id}:root-cage:g${String(request.sequence)}`;
+      const active = this.combatObjects().filter(isRootCageState).filter((boundary) => boundary.rootCageId === rootCageId && boundary.state === "active");
+      let x = target.x;
+      let vx = target.vx ?? 0;
+      for (const boundary of active) {
+        const width = boundary.geometry.w ?? 0;
+        const height = boundary.geometry.h ?? 0;
+        const verticalOverlap = target.y + target.hh > boundary.geometry.y && target.y - target.hh < boundary.geometry.y + height;
+        if (!verticalOverlap) continue;
+        if (boundary.boundarySide === "left") {
+          const innerEdge = boundary.geometry.x + width;
+          if (x - target.hw < innerEdge && x + target.hw > boundary.geometry.x) { x = innerEdge + target.hw; vx = Math.max(0, vx); }
+        } else {
+          const innerEdge = boundary.geometry.x;
+          if (x + target.hw > innerEdge && x - target.hw < boundary.geometry.x + width) { x = innerEdge - target.hw; vx = Math.min(0, vx); }
+        }
+      }
+      if ((x !== target.x || vx !== (target.vx ?? 0)) && target.applyCageConstraint !== undefined) target.applyCageConstraint(x, vx);
     }
   }
 
@@ -406,8 +466,8 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   step(tick: number, seconds: number, gameplayStep: () => void, availableActorIds?: ReadonlySet<string>): void {
     if (typeof gameplayStep !== "function") throw new TypeError("environment gameplay step is required");
     this.clearPhaseLog(); this.#run("pre-step", tick, seconds, this.#hooks.preStep); gameplayStep();
-    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#advanceRootboundBloom(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
-    this.#run("collision-resolution", tick, seconds, this.#hooks.resolveCollisions);
+    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#advanceRootboundBloom(tick); this.#advanceRootboundCages(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
+    this.#run("collision-resolution", tick, seconds, () => { this.#resolveRootboundCages(); this.#hooks.resolveCollisions?.({ tick, seconds, phase: "collision-resolution", environment: this }); });
     this.#run("post-commit", tick, seconds, () => { this.#cleanupOrphans(tick, availableActorIds); this.#hooks.postCommit?.({ tick, seconds, phase: "post-commit", environment: this }); });
   }
 }

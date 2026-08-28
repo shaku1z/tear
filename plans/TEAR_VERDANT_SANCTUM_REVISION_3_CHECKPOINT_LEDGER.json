@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C12",
-  "currentSubgoal": "VS3-C12-S7",
+  "currentSubgoal": "VS3-C12-S8",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -1819,7 +1819,7 @@
         {
           "id": "VS3-C12-S7",
           "description": "Implement Root Cage through the environment/hazard owner with a guaranteed response route.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C12-S8",
@@ -1898,7 +1898,9 @@
         "pnpm exec vitest run tests/unit/bloom-well-runtime.test.ts tests/unit/rootbound-phase-two.test.ts tests/unit/graft-anchor.test.ts tests/unit/environment-state-codec.test.ts tests/unit/verdant-presentation.test.ts",
         "pnpm exec eslint src/gameplay/environment/bloom-well.ts src/gameplay/environment/environment-runtime.ts src/gameplay/entities/enemy-types/rootbound.ts src/app/live-rootbound-wiring.ts tests/unit/bloom-well-runtime.test.ts tests/unit/rootbound-phase-two.test.ts",
         "pnpm exec vitest run tests/unit/rootbound-phase-two.test.ts tests/unit/rootbound-foundation.test.ts tests/unit/rootbound-phase-one.test.ts tests/unit/bloom-well-runtime.test.ts",
-        "pnpm exec eslint src/gameplay/entities/enemy-types/rootbound.ts src/presentation/enemies/renderers/rootbound-renderer.ts tests/unit/rootbound-phase-two.test.ts tests/unit/rootbound-foundation.test.ts"
+        "pnpm exec eslint src/gameplay/entities/enemy-types/rootbound.ts src/presentation/enemies/renderers/rootbound-renderer.ts tests/unit/rootbound-phase-two.test.ts tests/unit/rootbound-foundation.test.ts",
+        "pnpm exec vitest run tests/unit/rootbound-phase-two.test.ts tests/unit/rootbound-phase-one.test.ts tests/unit/verdant-presentation.test.ts tests/unit/environment-state-codec.test.ts tests/unit/rootbinder-network.test.ts",
+        "pnpm exec eslint src/gameplay/environment/root-cage.ts src/gameplay/environment/environment-runtime.ts src/gameplay/environment/presentation-snapshot.ts src/gameplay/entities/enemy-types/rootbound.ts src/app/live-rootbound-wiring.ts src/tearbench/environment-codec.ts src/tearbench/contracts.ts src/presentation/environment/verdant-environment-presentation.ts tests/unit/rootbound-phase-two.test.ts tests/unit/verdant-presentation.test.ts"
       ],
       "evidence": [
         "VS3-C12-S1 immutable Graft definitions prove exactly Bastion, Mercy, and Haste over the existing graft-anchor environment kind; Bastion remains non-zero damage, Mercy has finite pulse and total recovery caps, Haste retains the 0.55-second warning floor, and canonical reward/proc exclusion remains unchanged. Eleven focused and adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass.",
@@ -1906,7 +1908,8 @@
         "VS3-C12-S3 direct boss damage is green: with all three production Grafts installed and active, Rootbound blocks no ordinary hit, its incoming-damage limit remains non-zero, and canonical damage reduces HP. Twenty-five focused/adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass.",
         "VS3-C12-S4 Graft lifecycle is green: an 84-tick warning advances to active state, canonical Bastion/Haste projections and bounded Mercy spend apply, integrity damage/destruction removes effects immediately, Phase III cleans surviving objects, and codec/hash/observation retain subtype/effect/budget truth. Immutable presentation carries connection geometry and three static type cues. Forty-seven focused/adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass.",
         "VS3-C12-S5 boss-owned Bloom patterns are green: alternating-rise, central-safe-lanes, and cage-route produce bounded 2/1/3-field arrangements with deterministic offsets and stable Rootbound ownership through the existing Bloom Well state/runtime. Production selection installs idempotently; forty-six focused/adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass.",
-        "VS3-C12-S6 Memory Choir is green: Rootbound owns no more than three authoritative, presentation-backed strike manifestations with a 0.65-second warning, staggered one-hit geometry, boss damage/source, afterimage, and phase/encounter cleanup. They never become enemy clones or wave ownership. Thirty-nine focused/adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass."
+        "VS3-C12-S6 Memory Choir is green: Rootbound owns no more than three authoritative, presentation-backed strike manifestations with a 0.65-second warning, staggered one-hit geometry, boss damage/source, afterimage, and phase/encounter cleanup. They never become enemy clones or wave ownership. Thirty-nine focused/adjacent tests, typecheck, architecture, targeted lint, and diff hygiene pass.",
+        "VS3-C12-S7 Root Cage is green: one generation-stable Rootbound request produces exactly two canonical root-link boundaries through the existing environment owner, with a 72-tick warning, 240-tick active lifetime, 480-pixel interior, cut/break response, collision constraint, immediate sever release, structured observation, static low-graphics presentation, and expiry/phase cleanup. No environment kind or registry was added. Forty-seven focused/adjacent tests and typecheck pass before closure gates."
       ],
       "blockers": [],
       "notes": [

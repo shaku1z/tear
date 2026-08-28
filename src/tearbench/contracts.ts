@@ -151,6 +151,9 @@ export interface TearObservedEnvironmentCombatObjectV1 {
   readonly graftType?: string;
   readonly effect?: string;
   readonly recoverySpentHealthFraction?: number;
+  readonly rootCageId?: string;
+  readonly boundarySide?: "left" | "right";
+  readonly response?: "sever-either-boundary";
 }
 
 export interface TearObservedEnvironmentRouteV1 {

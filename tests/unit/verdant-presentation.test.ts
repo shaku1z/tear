@@ -96,6 +96,21 @@ describe("Verdant environment presentation", () => {
     expect(active.calls).toEqual(expect.arrayContaining(["strokeRect", "fill", "fillStyle:#ffffff"]));
   });
 
+  it("keeps Root Cage warning and sever geometry visible in reduced low-graphics presentation", () => {
+    const value = recorder();
+    renderVerdantEnvironmentPresentation(value.context, Object.freeze({
+      stageId: "verdant-sanctum", fields: Object.freeze([]), routes: Object.freeze([]),
+      combatObjects: Object.freeze([Object.freeze({
+        id: "root-cage:left", kind: "root-link", state: "warning" as const,
+        geometry: Object.freeze({ x: 300, y: 620, w: 56, h: 180 }), integrityRatio: 1,
+        counterplayTags: Object.freeze(["cut", "break"]), rootCageId: "root-cage", boundarySide: "left" as const,
+        response: "sever-either-boundary" as const,
+      })]),
+    }), { highContrast: true, reducedMotion: true, lowGraphics: true, timeSeconds: 0, flashScale: 0 });
+    expect(value.calls).toEqual(expect.arrayContaining(["strokeRect", "beginPath", "moveTo", "lineTo", "stroke", "strokeStyle:#ffffff"]));
+    expect(value.calls).not.toContain("fillRect");
+  });
+
   it("does not draw Verdant-only boss facts in another stage", () => {
     const value = recorder();
     renderVerdantEnvironmentPresentation(value.context, {

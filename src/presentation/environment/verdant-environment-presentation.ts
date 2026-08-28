@@ -36,6 +36,22 @@ export function renderVerdantEnvironmentPresentation(
       canvas.fill();
     }
   }
+  for (const boundary of snapshot.combatObjects) {
+    if (boundary.kind !== "root-link" || boundary.rootCageId === undefined) continue;
+    const { x, y, w = 0, h = 0 } = boundary.geometry;
+    const warning = boundary.state === "warning" || boundary.state === "scheduled";
+    canvas.globalAlpha = boundary.state === "destroyed" || boundary.state === "expired" ? 0.25 : warning ? 0.78 : 0.94;
+    canvas.strokeStyle = options.highContrast ? "#ffffff" : "#d6c55b";
+    canvas.fillStyle = options.highContrast ? "#3b007f" : "#425f37";
+    canvas.lineWidth = options.highContrast ? 6 : 4;
+    canvas.setLineDash(warning ? [14, 8] : []);
+    canvas.strokeRect(x, y, w, h);
+    canvas.setLineDash([]);
+    if (!warning) canvas.fillRect(x, y, w, h);
+    canvas.beginPath();
+    canvas.moveTo(x, y); canvas.lineTo(x + w, y + h * 0.34); canvas.lineTo(x, y + h * 0.68); canvas.lineTo(x + w, y + h);
+    canvas.stroke();
+  }
   for (const anchor of snapshot.combatObjects) {
     if (anchor.kind !== "graft-anchor") continue;
     const geometry = anchor.geometry;

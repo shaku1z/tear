@@ -187,6 +187,18 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
           if (!finite(entry.recoverySpentHealthFraction) || entry.recoverySpentHealthFraction < 0 || entry.recoverySpentHealthFraction > 0.1) issues.push(issue(`${path}.recoverySpentHealthFraction`, "Graft recovery spend must be finite and bounded"));
           if (entry.procPolicyId !== "boss-combat-object") issues.push(issue(`${path}.procPolicyId`, "Graft Anchor proc policy must remain boss-combat-object"));
         }
+        if (entry.factoryId === "root-link" && entry.rootCageId !== undefined) {
+          if (!text(entry.rootCageId)) issues.push(issue(`${path}.rootCageId`, "Root Cage ID must be stable"));
+          if (entry.patternId !== "root-cage") issues.push(issue(`${path}.patternId`, "Root Cage must retain its canonical pattern ID"));
+          if (entry.boundarySide !== "left" && entry.boundarySide !== "right") issues.push(issue(`${path}.boundarySide`, "Root Cage boundary side is not approved"));
+          if (entry.response !== "sever-either-boundary") issues.push(issue(`${path}.response`, "Root Cage must retain a guaranteed sever response"));
+          for (const name of ["createdTick", "activationTick", "expiryTick"] as const) if (!Number.isSafeInteger(entry[name]) || Number(entry[name]) < 0) {
+            issues.push(issue(`${path}.${name}`, `${name} must be a non-negative safe integer`));
+          }
+          if (Number(entry.createdTick) > Number(entry.activationTick) || Number(entry.activationTick) >= Number(entry.expiryTick)) {
+            issues.push(issue(`${path}.expiryTick`, "Root Cage timing must preserve warning before bounded expiry"));
+          }
+        }
       } else {
         if (!Array.isArray(entry.points) || entry.points.length < 2 || entry.points.length > MAX_POINTS) issues.push(issue(`${path}.points`, "route points must be a bounded array with at least two points"));
         else entry.points.forEach((point, pointIndex) => { if (!record(point) || !finite(point.x) || !finite(point.y)) issues.push(issue(`${path}.points[${String(pointIndex)}]`, "route point must contain finite x and y")); });
@@ -230,6 +242,10 @@ export function projectEnvironmentHash(value: unknown): unknown {
         ...(entry.effect === "selected-attack-cadence-multiplier" ? { cadenceMultiplier: entry.cadenceMultiplier,
           minimumWarningSeconds: entry.minimumWarningSeconds } : {}),
       });
+      if (entry.factoryId === "root-link" && typeof entry.rootCageId === "string") Object.assign(commonValue, {
+        factoryId: entry.factoryId, rootCageId: entry.rootCageId, boundarySide: entry.boundarySide,
+        response: entry.response, createdTick: entry.createdTick, activationTick: entry.activationTick, expiryTick: entry.expiryTick,
+      });
     }
     if (key === "routes") commonValue.points = Array.isArray(entry.points) ? entry.points.map((point) => ({ x: rounded(Number((point as Record<string, unknown>).x)), y: rounded(Number((point as Record<string, unknown>).y)) })) : [];
     return Object.freeze(commonValue);
@@ -257,6 +273,7 @@ export function environmentSnapshotToObservation(value: unknown): TearEnvironmen
     combatObjects: (projection.combatObjects as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), ...(typeof entry.targetId === "string" ? { targetId: entry.targetId } : {}), bounds: bounds(entry.geometry), integrityRatio: Number(entry.maxIntegrity) > 0 ? Number(entry.integrity) / Number(entry.maxIntegrity) : 0, state: entry.state, counterplayTags: entry.counterplayTags, procEligible: entry.procEligible,
       ...(typeof entry.graftType === "string" ? { graftType: entry.graftType } : {}), ...(typeof entry.effect === "string" ? { effect: entry.effect } : {}),
       ...(typeof entry.recoverySpentHealthFraction === "number" ? { recoverySpentHealthFraction: entry.recoverySpentHealthFraction } : {}),
+      ...(typeof entry.rootCageId === "string" ? { rootCageId: entry.rootCageId, boundarySide: entry.boundarySide, response: entry.response } : {}),
     })),
     routes: (projection.routes as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, points: entry.points, state: entry.state, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}) })),
   }) as TearEnvironmentObservationV1;

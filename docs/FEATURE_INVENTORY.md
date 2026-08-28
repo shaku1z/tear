@@ -148,6 +148,14 @@ This is the migration checklist for the architectural redesign. A checked featur
   phase/encounter cleanup live on the boss attack state. The silhouettes never
   acquire HP/reward/proc/wave-clear identity, while low-graphics and
   reduced-motion rendering retains their exact authoritative geometry.
+  VS3-C12-S7 composes Root Cage from the existing source-owned `root-link`
+  combat-object definition rather than introducing another kind or registry.
+  One stable Rootbound request produces exactly two severable boundaries, a
+  72-tick warning, a bounded 240-tick active collision interval, and a readable
+  480-pixel interior. Environment collision ownership clamps only an intact
+  active boundary; severing it removes that constraint immediately. Codec,
+  structured observation, and static low-graphics presentation preserve the
+  exact boundary/response facts, while expiry and phase cleanup leave no wall.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.
