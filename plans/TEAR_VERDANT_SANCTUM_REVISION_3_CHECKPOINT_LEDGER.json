@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C14",
-  "currentSubgoal": "VS3-C14-S7",
+  "currentSubgoal": "VS3-C14-S8",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -51,7 +51,7 @@
     "VS3-C13 Rootbound Phase III is GREEN at 0baeca907e1cdea9b82d4bda730649d305844276: all ten ordered subgoals pass; repository typecheck and lint, 40 aggregate terminal/replay/state-codec tests, attributed test-standalone build 44ce4a40f46cd702e09ccd23bcd99ce9677eee49c9b7cceb4d2e307dd8c2f819, live six-boss browser matrix, State Forge runtime/studio/exit matrix, and current live-detached parity are green."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C14-S7: prove attack-ID dedupe, no reward leakage, and no status attachment to default objects.",
+  "nextAction": "Execute VS3-C14-S8: prove universal ability behavior remains unchanged across every weapon.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -2148,7 +2148,7 @@
         {
           "id": "VS3-C14-S7",
           "description": "Prove attack-ID dedupe, no reward leakage, and no status attachment to default objects.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C14-S8",
@@ -2232,7 +2232,9 @@
         "pnpm typecheck",
         "pnpm exec vitest run tests/unit/live-combat-runtime.test.ts tests/unit/live-combat-composition.test.ts tests/unit/projectile-collision-resolver.test.ts tests/unit/weapon-projectile-runtime.test.ts tests/unit/environment-weapon-contact-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts",
         "pnpm test:weapons",
-        "pnpm check:architecture"
+        "pnpm check:architecture",
+        "pnpm exec vitest run tests/unit/verdant-final-five-conformance.test.ts tests/unit/environment-weapon-contact-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/weapon-ability-conformance.test.ts",
+        "pnpm typecheck"
       ],
       "evidence": [
         "VS3-C14-S1 capability resolution is green, as corrected by S6: one typed exact-match resolver in the existing environment combat-object kernel maps cut, break, and projectile-cut against serialized source-owned tags. Root links and Grafts accept all three, as required by the authoritative Razor Round link-damage matrix; unknown capabilities fail closed. The shared architecture is unchanged, while S1's narrower Root-link tag assertion is superseded.",
@@ -2240,7 +2242,8 @@
         "VS3-C14-S3 Hammer object conformance is green: the canonical Hammer definition supplies held break capability to the same environment contact seam. Its permanent proof destroys normal and Regrowth links, pressures a Graft, then executes native Meteor ballistic launch/gravity, recall, and catch-to-held recovery unchanged. Twenty-nine focused and adjacent tests plus typecheck pass; no transport implementation or C40 record changed.",
         "VS3-C14-S4 Greatsword object conformance is green: the canonical Greatsword definition supplies held cut capability; one broad production segment severs three distinct Root segments, repeated resolution adds no damage, and enemy-only repeat/momentum state remains unchanged. Wheel Cut still spins, recalls, catches, and returns held. Twenty-nine focused and adjacent tests pass; no C40 record changed.",
         "VS3-C14-S5 Chainblade object conformance is green: the canonical Chainblade definition supplies held cut capability, but only its existing head collision segment reaches environment objects. A link touching visible chain geometry alone remains active while a head contact severs; native Hook & Sling orbit, tangential release, recall, and catch-to-held recovery remain intact. Thirty-one focused and adjacent tests plus typecheck pass; no C40 record changed.",
-        "VS3-C14-S6 Riftlock object conformance is green: the canonical Riftlock definition supplies held cut and player-projectile projectile-cut. The live phase consumes one matching non-secondary Razor Round on accepted Root/Regrowth/Graft contact without invoking enemy Capture; Backblast projectiles are excluded and zero-chamber Backblast still returns/catches. S6 corrected the narrower S1 Root-link tag assumption to match authoritative Sections 9.8/16.7, updating all production Root-link factories and making the kernel default to serialized object tags. Fifty-four focused object/factory tests, 13 live/projectile tests, the 19-test weapon suite, typecheck, and architecture pass; no C40 record changed."
+        "VS3-C14-S6 Riftlock object conformance is green: the canonical Riftlock definition supplies held cut and player-projectile projectile-cut. The live phase consumes one matching non-secondary Razor Round on accepted Root/Regrowth/Graft contact without invoking enemy Capture; Backblast projectiles are excluded and zero-chamber Backblast still returns/catches. S6 corrected the narrower S1 Root-link tag assumption to match authoritative Sections 9.8/16.7, updating all production Root-link factories and making the kernel default to serialized object tags. Fifty-four focused object/factory tests, 13 live/projectile tests, the 19-test weapon suite, typecheck, and architecture pass; no C40 record changed.",
+        "VS3-C14-S7 default-object isolation is green: a source-derived WEAPON_IDS matrix proves every active weapon changes Graft integrity exactly once for two contacts sharing one swing ID. Exact resulting payloads contain no enemy status/reward fields, and the kernel policy remains countsAsOrdinaryEnemy false, grantsEnemyReward false, and procEligible false. Twenty-three focused tests plus typecheck pass."
       ],
       "blockers": [],
       "notes": [

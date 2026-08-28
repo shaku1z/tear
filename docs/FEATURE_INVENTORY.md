@@ -314,9 +314,11 @@ This is the migration checklist for the architectural redesign. A checked featur
   Riftlock declares held `cut` plus player-projectile `projectile-cut`; only
   matching player-owned non-secondary Razor Rounds enter the object seam.
   Enemy Capture hooks and secondary Backblast rounds remain excluded, while
-  zero-chamber Backblast still returns and catches. Remaining cross-cutting
-  conformance is owned by VS3-C14-S7 through S8, and no C40 certification record
-  changed.
+  zero-chamber Backblast still returns and catches. A source-derived five-weapon
+  matrix proves same-swing attack-ID dedupe and exact object payloads without
+  status/reward fields; the shared non-enemy/non-reward/proc-ineligible policy is
+  retained. Remaining cross-cutting conformance is owned by VS3-C14-S8, and no
+  C40 certification record changed.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
