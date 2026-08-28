@@ -10,7 +10,7 @@
 | --- | --- |
 | Document | `TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — VS3-C15-S6 green; VS3-C15-S7 next** |
+| Status | **Active implementation authority — VS3-C15-S7 green; VS3-C15-S8 next** |
 | Current checkpoint | `VS3-C15` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
@@ -4873,7 +4873,7 @@ Implement source-owned stage curve/composition pressure and validate Verdant wav
 - [x] **VS3-C15-S4** — Validate local waves 1–9 and Rootbound wave 10. A production-planner matrix now proves every local wave 1–9 remains a regular Verdant wave with the exact authored count and only currently unlocked stage-pool identities. Local wave 10/global wave 40 resolves as one boss spawn in Verdant, whose source-owned boss identity is Rootbound, and emits the canonical boss Ghost marker.
 - [x] **VS3-C15-S5** — Validate max concurrent counts and environment object caps together. Campaign spawn scheduling now requires the live stage identity and resolves `concurrentAdd` from the same StageId curve; Verdant’s live-enemy cap is 8. A production environment holding two Root links plus all three bounded Grafts does not affect scheduling at seven live enemies and cannot keep spawning at eight, proving environment combat objects remain separate from ordinary-enemy concurrency/wave ownership.
 - [x] **VS3-C15-S6** — Retest difficulty scaling and player damage under current difficulty definitions. A source-derived Easy/Normal/Hard/Extreme/One-Hit matrix proves Verdant wave count and HP apply the canonical difficulty multipliers exactly once, while stage contact scale remains 1.34. Fresh production worlds prove the canonical player-damage multiplier is installed exactly once and One-Hit remains fatal through the existing player authority; no Verdant difficulty branch exists.
-- [ ] **VS3-C15-S7** — Retest coin, score, healing, draft, and upgrade acquisition through wave 40.
+- [x] **VS3-C15-S7** — Retest coin, score, healing, draft, and upgrade acquisition through wave 40. The production progression ledger reaches Verdant at wave 31, records bosses at 10/20/30/40, and applies forty legal configuration mutations. Wave-40 currency equals the production coin award, kill score remains owned by the live coordinator, wave 39 retains normal healing/draft, Rootbound retains non-final boss healing/reward in the engineering six-stage branch, and One-Hit suppresses healing.
 - [ ] **VS3-C15-S8** — Prototype Pale/Voidspire/Tear curve slots without presenting them as final until Pale implementation.
 - [ ] **VS3-C15-S9** — Compare relocated Echo/Source projections without changing those bosses prematurely.
 - [ ] **VS3-C15-S10** — Record tuning evidence and unresolved owner judgments separately from code correctness.
