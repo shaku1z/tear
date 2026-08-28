@@ -16,12 +16,12 @@ export interface EnemyPlatform {
   arenaPlatId?: string;
   stress?: number;
   stressDelay?: number;
-  arenaFractureRequest?: { reason: string; color: string };
+  arenaFractureRequest?: { reason: string; color: string } | null;
   platformId?: string;
   void?: boolean;
   crackT?: number;
   crackMax?: number;
-  crackColor?: string;
+  crackColor?: string | null;
 }
 
 export interface EnemyPlayerPort {

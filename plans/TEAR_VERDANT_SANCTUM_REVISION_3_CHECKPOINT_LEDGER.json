@@ -4,7 +4,7 @@
   "revision": "3.0",
   "status": "active",
   "currentCheckpoint": "VS3-C13",
-  "currentSubgoal": "VS3-C13-S5",
+  "currentSubgoal": "VS3-C13-S6",
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -46,7 +46,7 @@
     "VS3-C12 Rootbound Phase II is GREEN at 6b0a5e6e0309d6004d09947b352837601fca069a: all ten ordered subgoals pass; 89 aggregate Phase II/environment/State Forge tests, repository lint, typecheck, architecture, exact-commit game-reference, standalone build, live Graft destruction journey, State Forge matrix, Verdant presentation, and source-derived six-boss browser matrix are green."
   ],
   "blockers": [],
-  "nextAction": "Execute VS3-C13-S5: prove Last Spring through the existing living-arena warning, broken, and reforming lifecycle.",
+  "nextAction": "Execute VS3-C13-S6: clean every Rootbound-owned field, link, Graft, cage, route, and arena request on boss death.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -1988,7 +1988,7 @@
         {
           "id": "VS3-C13-S5",
           "description": "Integrate existing living-arena warning/broken/reforming lifecycle.",
-          "status": "not-started"
+          "status": "complete"
         },
         {
           "id": "VS3-C13-S6",
@@ -2075,7 +2075,8 @@
         "VS3-C13-S1 Regrowth channel authority is green: frozen tick-based state records one-use count, start tick, exact required and surviving connection IDs, bounded progress, and a single full/partial/no-interrupt classification without applying S2 healing. The existing root-link combat-object composition supplies exactly three cut/break connections and regrowth-link routes supply immutable presentation geometry; production Rootbound exposes the same guarded state. Sixteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
         "VS3-C13-S2 bounded outcomes are green: full interrupt heals zero and grants the longest 1.8-second punish recovery; partial interrupt heals proportionally to surviving required links with a 1.1-second recovery; no interrupt requests at most 12% max HP with a 0.65-second recovery. Actual healing is capped by missing HP, recorded canonically, applied once, and cannot lower the monotonic Phase III marker. Eighteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
         "VS3-C13-S3 phase/repeat guards are green: Regrowth requires the committed Phase III marker rather than HP-derived phase alone; healing above prior thresholds cannot lower the monotonic marker, replay transformation theater, or reopen Phase II; channeling and resolved states both refuse another begin. Eighteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
-        "VS3-C13-S4 Last Spring is green as one authored warning, shared last-spring Bloom route, committed bounded ground attack, and punish sequence. It starts only after resolved Regrowth, deals at most one 24-damage hit, submits one rootbound-last-spring request to the existing arena fracture contract, exposes a single-use completion state, and adds no route framework. Thirty-three focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass."
+        "VS3-C13-S4 Last Spring is green as one authored warning, shared last-spring Bloom route, committed bounded ground attack, and punish sequence. It starts only after resolved Regrowth, deals at most one 24-damage hit, submits one rootbound-last-spring request to the existing arena fracture contract, exposes a single-use completion state, and adds no route framework. Thirty-three focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass.",
+        "VS3-C13-S5 living-arena integration is green: the exact Last Spring request enters the existing Rootbound route as warning, removes it into the broken collection while four elevated routes remain, advances through reforming warning, and restores stable geometry with no orphaned broken entry. The enemy platform port now truthfully admits the existing lifecycle's consumed-request and cleared-color null states. Eighteen focused and adjacent tests plus typecheck, architecture, targeted lint, and diff hygiene pass."
       ],
       "blockers": [],
       "notes": []

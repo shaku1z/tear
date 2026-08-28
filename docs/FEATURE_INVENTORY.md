@@ -196,7 +196,9 @@ This is the migration checklist for the architectural redesign. A checked featur
   one post-Regrowth warning/Bloom/commit/punish sequence. It reuses shared Bloom
   field creation, submits one request to the existing living-arena fracture
   contract, commits one bounded 24-damage ground hit, and cannot start twice;
-  no route framework or random desperation scheduler was added.
+  no route framework or random desperation scheduler was added. VS3-C13-S5
+  proves that request through the existing warning, broken, reforming, and
+  stable lifecycle while its minimum elevated-route guard preserves recovery.
   Rootbinder became
   factory-ready in VS3-C6 without entering campaign wave selection. Pale
   identities remain reserved design-only.

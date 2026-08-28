@@ -4,6 +4,7 @@ import { CONFIG } from "../../src/config/game-config";
 import { ROOTBOUND_LAST_SPRING, type RootboundLastSpringStage } from "../../src/gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_REGROWTH_TIMING, type RootboundRegrowthState } from "../../src/gameplay/environment/regrowth-link";
 import { createEnemyHarness } from "./enemy-test-harness";
+import { BossArenaRules, createBossArena } from "../../src/gameplay/training/arena-rules";
 
 type PhaseThreeBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
   regrowthState: RootboundRegrowthState;
@@ -53,5 +54,28 @@ describe("Rootbound Last Spring", () => {
     actor.update(ROOTBOUND_LAST_SPRING.punish, harness.platforms, harness.player, []);
     expect(actor).toMatchObject({ lastSpringStage: "complete", state: "recover", atk: "unavailable" });
     expect(actor.startLastSpring()).toBe(false);
+  });
+
+  it("drives the existing living arena through warning, broken, reforming, and stable", () => {
+    const { actor, harness } = resolvedBoss();
+    const platforms = createBossArena("rootbound", CONFIG.view.w, CONFIG.view.h, CONFIG.world.groundY, CONFIG.bossArena.reformWarn)
+      ?.map((platform) => ({ ...platform })) ?? [];
+    const broken: typeof platforms = [];
+    expect(actor.startLastSpring()).toBe(true);
+    actor.update(ROOTBOUND_LAST_SPRING.warning, platforms, harness.player, []);
+    const route = platforms.find((platform) => platform.arenaFractureRequest?.reason === "rootbound-last-spring");
+    if (route === undefined) throw new Error("Last Spring must request one authored living route fracture");
+    const rules = new BossArenaRules(CONFIG.bossArena, CONFIG.colors);
+    rules.update({ platforms, broken }, 0, null, [actor], true);
+    expect(route.arenaState).toBe("warning");
+    rules.update({ platforms, broken }, CONFIG.bossArena.crackWarn, null, [actor], true);
+    expect(route.arenaState).toBe("broken");
+    expect(platforms.filter((platform) => platform.oneway)).toHaveLength(4);
+    rules.update({ platforms, broken }, CONFIG.bossArena.brokenDuration - CONFIG.bossArena.crackWarn + 0.05, null, [actor], true);
+    expect(route.arenaState).toBe("reforming");
+    rules.update({ platforms, broken }, CONFIG.bossArena.reformWarn, null, [actor], true);
+    expect(route.arenaState).toBe("stable");
+    expect(platforms).toContain(route);
+    expect(broken).toEqual([]);
   });
 });
