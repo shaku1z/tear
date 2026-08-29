@@ -38,7 +38,7 @@ describe("enemy reference catalog", () => {
     expect(result.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
     expect(result.families.find((family) => family.id === "rimehound")?.variants).toEqual([]);
     expect(result.families.find((family) => family.id === "charger")?.variants.map((variant) => variant.id)).toEqual([
-      "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker",
+      "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker", "rime-runner",
     ]);
     expect(result.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
     expect(result.presets).toEqual([

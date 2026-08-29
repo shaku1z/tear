@@ -62,6 +62,7 @@ const VARIANTS: Readonly<Record<string, readonly EnemyVariant[]>> = {
     // Verdant content reuses the authored Charger verbs; the gate below is
     // source-owned so it cannot leak into existing campaign stages.
     { id: "briar-stalker", name: "Briar Stalker", weight: 0.55, minWave: 4, apply: (e) => { e.behavior = "briar-stalker"; e.speedMult *= 1.18; } },
+    { id: "rime-runner", name: "Rime Runner", weight: 0.7, minWave: 4, apply: (e) => { e.behavior = "rime-runner"; e.speedMult *= 1.08; } },
   ],
   ranged: [
     { id: "sentinel", name: "Sentinel", weight: 1.0,             apply: (e) => { e.behavior = "sentinel"; } },
@@ -70,12 +71,14 @@ const VARIANTS: Readonly<Record<string, readonly EnemyVariant[]>> = {
     { id: "warlock",  name: "Warlock",  weight: 0.55, minWave: 6, apply: (e) => { e.behavior = "warlock"; } },
     { id: "chain",    name: "Chain Caster", weight: 0.5, minWave: 7, apply: (e) => { e.behavior = "chain"; } },
     { id: "seedcaster", name: "Seedcaster", weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "seedcaster"; e.speedMult *= 0.92; } },
+    { id: "prism-seer", name: "Prism Seer", weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "prism-seer"; e.speedMult *= 0.9; } },
   ],
   flyer: [
     { id: "swooper",    name: "Flyer",       weight: 1.0,             apply: (e) => { e.behavior = "swoop"; } },
     { id: "divebomber", name: "Dive Bomber", weight: 0.8, minWave: 3, apply: (e) => { e.behavior = "divebomb"; } },
     { id: "highdiver",  name: "Swooper",     weight: 0.6, minWave: 5, apply: (e) => { e.behavior = "highdive"; } },
     { id: "canopy-diver", name: "Canopy Diver", weight: 0.5, minWave: 4, apply: (e) => { e.behavior = "canopy-diver"; } },
+    { id: "snowfall-kite", name: "Snowfall Kite", weight: 0.5, minWave: 4, apply: (e) => { e.behavior = "snowfall-kite"; e.speedMult *= 0.94; } },
   ],
   bomber: [
     { id: "lobber",    name: "Bomber",    weight: 1.0,             apply: (e) => { e.behavior = "lob"; } },
@@ -83,6 +86,7 @@ const VARIANTS: Readonly<Record<string, readonly EnemyVariant[]>> = {
     { id: "trapper",   name: "Trapper",   weight: 0.6, minWave: 3, apply: (e) => { e.behavior = "trap"; } },
     { id: "sludge",    name: "Sludge",    weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "sludge"; } },
     { id: "geomancer", name: "Geomancer", weight: 0.45, minWave: 7, apply: (e) => { e.behavior = "geo"; e.hp *= 1.2; e.maxHp *= 1.2; } },
+    { id: "hailcaster", name: "Hailcaster", weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "hailcaster"; e.speedMult *= 0.9; } },
   ],
   // armored keeps its baseline (turn-to-face + enrage on shield break); an absent
   // list just means "no variant, use the family default". Bark Sentinel is
@@ -90,6 +94,7 @@ const VARIANTS: Readonly<Record<string, readonly EnemyVariant[]>> = {
   // implementation.
   armored: [
     { id: "bark-sentinel", name: "Bark Sentinel", weight: 0.45, minWave: 5, apply: (e) => { e.behavior = "bark-sentinel"; e.speedMult *= 0.82; if (e.weight !== undefined) e.weight *= 1.25; } },
+    { id: "glacier-guard", name: "Glacier Guard", weight: 0.45, minWave: 5, apply: (e) => { e.behavior = "glacier-guard"; e.speedMult *= 0.76; if (e.weight !== undefined) e.weight *= 1.35; } },
   ],
 };
 
@@ -97,6 +102,10 @@ export const VERDANT_VARIANT_IDS = Object.freeze([
   "briar-stalker", "seedcaster", "canopy-diver", "bark-sentinel",
 ] as const);
 const VERDANT_VARIANT_ID_SET: ReadonlySet<string> = new Set(VERDANT_VARIANT_IDS);
+export const PALE_VARIANT_IDS = Object.freeze([
+  "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard",
+] as const);
+const PALE_VARIANT_ID_SET: ReadonlySet<string> = new Set(PALE_VARIANT_IDS);
 
 function assertWave(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 1) throw new RangeError(`${label} must be a positive integer`);
@@ -123,6 +132,14 @@ export function isVerdantVariant(id: string): boolean {
   return VERDANT_VARIANT_ID_SET.has(id);
 }
 
+export function isPaleVariant(id: string): boolean {
+  return PALE_VARIANT_ID_SET.has(id);
+}
+
+function isStageNativeVariant(id: string): boolean {
+  return isVerdantVariant(id) || isPaleVariant(id);
+}
+
 /**
  * Resolves the persisted profile discovery authority into a run-owned list.
  * Endless/Gauntlet discovery is intentionally earned by having entered the
@@ -130,11 +147,15 @@ export function isVerdantVariant(id: string): boolean {
  */
 export function resolveDiscoveredVariantIds(mode: RunMode, discoveredBiomes: readonly string[]): readonly string[] {
   if (mode !== "endless" && mode !== "gauntlet") return [];
-  const seenVerdantSanctum = discoveredBiomes.some((biome) => {
-    const normalized = biome.trim().toLowerCase().replaceAll("-", " ");
-    return normalized === "verdant sanctum" || normalized === "the verdant sanctum";
+  const normalized = discoveredBiomes.map((biome) => biome.trim().toLowerCase().replaceAll("-", " "));
+  const seenVerdantSanctum = normalized.some((biome) => {
+    return biome === "verdant sanctum" || biome === "the verdant sanctum";
   });
-  return seenVerdantSanctum ? VERDANT_VARIANT_IDS : [];
+  const seenPaleTraverse = normalized.some((biome) => biome === "pale traverse" || biome === "the pale traverse");
+  return Object.freeze([
+    ...(seenVerdantSanctum ? VERDANT_VARIANT_IDS : []),
+    ...(seenPaleTraverse ? PALE_VARIANT_IDS : []),
+  ]);
 }
 
 /**
@@ -159,6 +180,13 @@ export function selectVariant(kind: string, context: VariantSelectionContext): E
       }
       return false;
     }
+    if (isPaleVariant(variant.id)) {
+      if (context.mode === "campaign") return context.stageId === "pale-traverse" && context.localWave >= (variant.minWave ?? 1);
+      if (context.mode === "endless" || context.mode === "gauntlet") {
+        return discovered.has(variant.id) && context.localWave >= (variant.minWave ?? 1);
+      }
+      return false;
+    }
     // Legacy variants have always been gated by the run's global/content wave.
     // Keep that contract in campaign too; only Verdant identities use the
     // authored stage + local-wave gate above.
@@ -176,7 +204,7 @@ function rollVariant(kind: string, waveOrContext: number | VariantSelectionConte
   if (typeof waveOrContext !== "number") return selectVariant(kind, waveOrContext);
   const wave = waveOrContext;
   if (random === undefined) throw new TypeError("legacy variant rolls require an injected random source");
-  const list = (VARIANTS[kind] ?? []).filter((v) => !isVerdantVariant(v.id) && (v.minWave === undefined || wave >= v.minWave));
+  const list = (VARIANTS[kind] ?? []).filter((v) => !isStageNativeVariant(v.id) && (v.minWave === undefined || wave >= v.minWave));
   if (!list.length) return null;
   let total = 0; for (const v of list) total += v.weight;
   let r = random.next() * total;

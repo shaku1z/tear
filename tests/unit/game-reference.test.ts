@@ -111,6 +111,7 @@ describe("game-reference.v1", () => {
     expect(result.collections.enemies.items.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
     expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([
       { id: "bark-sentinel", name: "Bark Sentinel", weight: 0.45, minWave: 5 },
+      { id: "glacier-guard", name: "Glacier Guard", weight: 0.45, minWave: 5 },
     ]);
     expect(result.collections.enemies.items.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
     expect(result.collections.enemies.items.presets).toEqual([

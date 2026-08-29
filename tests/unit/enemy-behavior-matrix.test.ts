@@ -14,7 +14,7 @@ function keysOf<T extends object>(record: T): (keyof T)[] {
 }
 
 const PUBLISHED_KINDS = keysOf(STANDARD_ACTOR_FACTORIES).sort();
-const VARIANT_KINDS: readonly ActiveEnemyKind[] = ["charger", "ranged", "flyer", "bomber"];
+const VARIANT_KINDS: readonly ActiveEnemyKind[] = ["charger", "ranged", "flyer", "bomber", "armored"];
 
 describe("enemy behavior preservation matrix", () => {
   it("constructs and deterministically updates every enemy family published by the stage catalogue", () => {

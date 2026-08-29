@@ -18,7 +18,7 @@ export interface DebugLifecycle {
 }
 interface DebugCinema { active: boolean; beat: unknown; cancel(reason: string): void; requestSkip(): void; advance(): void }
 interface DebugStage { index: number; current: unknown; platforms: unknown[] }
-type ExplicitVariantKind = "charger" | "ranged" | "flyer" | "armored";
+type ExplicitVariantKind = "charger" | "ranged" | "flyer" | "bomber" | "armored";
 
 export interface LiveDebugHarnessContext {
   readonly enabled: boolean;
@@ -88,6 +88,55 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
         throw new RangeError(`unknown variant ${variantId} for ${kind}`);
       }
       clearCombat(); context.spawnExplicitVariant(kind, variantId);
+    },
+    /** PT3-C4 browser fixture: puts one canonical Pale variant at the start of its authored readable action. */
+    preparePaleVariantEvidenceScenario(kind: ExplicitVariantKind, variantId: string) {
+      const run = runOf(context.state);
+      if (run.mode !== "playground" && run.mode !== "sandbox") throw new Error("Pale variant evidence requires Playground/Enemy Test");
+      if (context.spawnExplicitVariant === undefined) throw new Error("explicit variant training port is unavailable");
+      clearCombat(); context.spawnExplicitVariant(kind, variantId);
+      const actor = context.state.enemies().find((enemy) => enemy.variant === variantId) as
+        GameEnemy & { state?: string; aimTimer?: number; windT?: number; windMax?: number; warnT?: number;
+          diveX?: number | null; lobTimer?: number; rimeRebounds?: number } | undefined;
+      const player = context.state.player();
+      if (actor === undefined || player === undefined) throw new Error(`Pale evidence actor ${variantId} was not composed`);
+      Object.assign(player, { x: 800, y: d.CONFIG.world.groundY - player.hh, vx: 0, vy: 0,
+        onGround: true, hp: Math.max(player.hp, 1_000) });
+      Object.assign(actor, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0, vx: 0, vy: 0 });
+      if (kind === "charger") {
+        player.x = 1_450;
+        Object.assign(actor, { x: 1_100, y: d.CONFIG.world.groundY - actor.hh,
+        onGround: true, atk: "windup", atkT: 0.3, atkMax: 0.3, atkDir: 1, atkCd: 0,
+        chargePower: 0.72, rimeRebounds: 0 });
+      }
+      else if (kind === "ranged") Object.assign(actor, { x: 1_150, y: d.CONFIG.world.groundY - actor.hh,
+        onGround: true, state: "windup", windT: 0.35, windMax: 0.35, aimTimer: 99 });
+      else if (kind === "flyer") Object.assign(actor, { x: 800, y: 72, onGround: false,
+        state: "warn", warnT: 0.82, aimTimer: 99, diveX: 800 });
+      else if (kind === "bomber") Object.assign(actor, { x: 1_150, y: d.CONFIG.world.groundY - actor.hh,
+        onGround: true, lobTimer: 0.12 });
+      else Object.assign(actor, { x: 1_000, y: d.CONFIG.world.groundY - actor.hh, onGround: true });
+    },
+    positionDebugPlayer(x: number) {
+      const player = context.state.player();
+      if (player === undefined) throw new Error("Debug player positioning requires a live player");
+      Object.assign(player, { x: d.clamp(x, player.hw, context.width - player.hw),
+        y: d.CONFIG.world.groundY - player.hh, vx: 0, vy: 0, onGround: true });
+    },
+    /** Invokes canonical counterplay entry points on the live PT3-C4 evidence actor; it never writes authored result state. */
+    triggerPaleVariantCounterplay(variantId: "prism-seer" | "glacier-guard", action: "perfect-parry" | "launch" | "break") {
+      const actor = context.state.enemies().find((enemy) => enemy.variant === variantId);
+      if (actor === undefined) throw new Error(`Pale counterplay actor ${variantId} is unavailable`);
+      if (variantId === "prism-seer" && action === "perfect-parry") {
+        const shard = context.state.projectiles().find((projectile) => projectile.kind === "prism-shard");
+        if (shard === undefined) throw new Error("Prism counterplay requires a live shard pair");
+        shard.deflect(1, 0, d.CONFIG.blade.perfectSpeed, true); return;
+      }
+      if (variantId === "glacier-guard" && action === "launch") { actor.hit(1, 0, -1, { playerOwned: true }); return; }
+      if (variantId === "glacier-guard" && action === "break") {
+        actor.applyBreak(d.CONFIG.weapons.hammer.breakThreshold * 2); return;
+      }
+      throw new RangeError(`unsupported Pale counterplay action ${variantId}/${action}`);
     },
     prepareNaturalWaveClearScenario() {
       prepareCurrentGameplay();

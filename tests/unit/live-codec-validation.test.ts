@@ -6,6 +6,7 @@ describe("live enemy codec variant identity", () => {
 
   it("accepts an identity from the constructed family", () => {
     expect(validateLiveCodecPayload("tear.enemy.v1", [{ ...base, variant: "briar-stalker", behavior: "briar-stalker" }])).toEqual([]);
+    expect(validateLiveCodecPayload("tear.enemy.v1", [{ ...base, variantId: "rime-runner", behavior: "rime-runner" }])).toEqual([]);
   });
 
   it("rejects an unknown or cross-family identity before hydration", () => {

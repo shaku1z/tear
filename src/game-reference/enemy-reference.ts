@@ -50,11 +50,11 @@ export const CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze([
 ] as const);
 
 export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze({
-  charger: Object.freeze(["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker"]),
-  ranged: Object.freeze(["sentinel", "rifleman", "marksman", "warlock", "chain", "seedcaster"]),
-  flyer: Object.freeze(["swooper", "divebomber", "highdiver", "canopy-diver"]),
-  bomber: Object.freeze(["lobber", "juggler", "trapper", "sludge", "geomancer"]),
-  armored: Object.freeze(["bark-sentinel"]),
+  charger: Object.freeze(["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker", "rime-runner"]),
+  ranged: Object.freeze(["sentinel", "rifleman", "marksman", "warlock", "chain", "seedcaster", "prism-seer"]),
+  flyer: Object.freeze(["swooper", "divebomber", "highdiver", "canopy-diver", "snowfall-kite"]),
+  bomber: Object.freeze(["lobber", "juggler", "trapper", "sludge", "geomancer", "hailcaster"]),
+  armored: Object.freeze(["bark-sentinel", "glacier-guard"]),
   priest: Object.freeze([]),
   mender: Object.freeze([]),
   herald: Object.freeze([]),

@@ -200,7 +200,9 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
             const authored = enemy as typeof enemy & { state?: string; stateT?: number; atk?: string; atkT?: number; phase?: number;
               phaseMarker?: number; mode?: string; cinematicT?: number; cinematicRequest?: unknown;
               requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean;
-              packRole?: string; packFlank?: number; packAttackAuthorized?: boolean; pounceTargetX?: number };
+              packRole?: string; packFlank?: number; packAttackAuthorized?: boolean; pounceTargetX?: number;
+              variant?: string; variantName?: string; behavior?: string; rimeRebounds?: number;
+              snowWakeT?: number; glacierCracked?: boolean };
             return { kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
               stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
               boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
@@ -210,9 +212,16 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
               cinematicT: authored.cinematicT, cinematicPending: authored.cinematicRequest != null,
               voidPending: authored.requestVoidCinematic === true, mirrorBoss: authored.isMirrorBoss,
               live: authored._live, bound: enemy.boundT || 0,
+              variant: authored.variant, variantName: authored.variantName, behavior: authored.behavior,
+              rimeRebounds: authored.rimeRebounds, snowWakeT: authored.snowWakeT,
+              glacierCracked: authored.glacierCracked, enraged: enemy.enraged,
               packRole: authored.packRole, packFlank: authored.packFlank,
               packAttackAuthorized: authored.packAttackAuthorized, pounceTargetX: authored.pounceTargetX };
           }),
+          projectiles: state.projectiles().filter((projectile) => !projectile.dead).slice(0, 48).map((projectile) => ({
+            kind: projectile.kind, x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy,
+            deflected: projectile.deflected, perfect: projectile.perfect, counterplay: projectile.counterplay,
+          })),
           lifecycle: context.lifecycle.snapshot(),
         };
       };

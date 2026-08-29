@@ -1,4 +1,5 @@
-import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
+import type { EnemyDamageContext, EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
+import type { ProjectileEntity } from "../projectile";
 import type { EnemyBaseConstructor } from "./enemy-base";
 
 export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
@@ -6,6 +7,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
   // ---- Aerial family: Flyer (angled swoop), Dive Bomber (telegraphed drop), Swooper (high dive) ----
   class Flyer extends Enemy {
     state: string; aimTimer: number; swoopT: number; warnT: number; diveX: number | null;
+    snowWakeT = 0;
     declare cfg: typeof CONFIG.flyer;
 
     constructor(x: number, y: number) {
@@ -25,6 +27,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       const C = this.cfg;
       if (this.behavior === "divebomb") this._divebomb(dt, player, C);
       else if (this.behavior === "canopy-diver") this._canopyDiver(dt, player, C);
+      else if (this.behavior === "snowfall-kite") this._snowfallKite(dt, player, C);
       else if (this.behavior === "highdive") this._highdive(dt, player, C);
       else this._swoop(dt, player, C);
       this.x = clamp(this.x, this.hw, CONFIG.view.w - this.hw);
@@ -112,6 +115,35 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       }
     }
 
+    /** Pale Flyer verb: an upper-arena snow marker, vertical dive, then a launchable wake recovery. */
+    _snowfallKite(dt: number, player: EnemyPlayerPort, C: typeof CONFIG.flyer) {
+      this.snowWakeT = Math.max(0, this.snowWakeT - dt);
+      if (this.state === "warn") {
+        this.diveX = this.diveX == null ? player.x : lerp(this.diveX, player.x, clamp(0.9 * dt, 0, 1));
+        this.vx = lerp(this.vx, (this.diveX - this.x) * 0.72, clamp(3 * dt, 0, 1));
+        this.vy = lerp(this.vy, 0, clamp(4 * dt, 0, 1)); this.x += this.vx * dt; this.y += this.vy * dt;
+        this.warnT -= dt;
+        if (this.warnT <= 0) { this.state = "dive"; this.vx = 0; this.vy = C.swoopSpeed * 1.58; }
+      } else if (this.state === "dive") {
+        this.x += this.vx * dt; this.y += this.vy * dt;
+        if (this.y >= CONFIG.world.groundY - this.hh - 2) {
+          this.y = CONFIG.world.groundY - this.hh; this.state = "recover"; this.stun = 0.78;
+          this.snowWakeT = 0.7; this.aimTimer = C.swoopInterval * 1.25; this.diveX = null;
+          FX.ring(this.x, this.y + this.hh, 13, "#b9f4ff");
+        }
+      } else if (this.state === "recover") {
+        this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1));
+        if (this.stun <= 0) this.state = "hover";
+      } else {
+        this.y = lerp(this.y, 72, clamp(2.4 * dt, 0, 1));
+        this.vx = lerp(this.vx, (player.x - this.x) * 0.38, clamp(2 * dt, 0, 1)); this.x += this.vx * dt;
+        this.aimTimer -= dt;
+        if (this.aimTimer <= 0 && Math.abs(player.x - this.x) < 640) {
+          this.state = "warn"; this.warnT = 0.82; this.diveX = player.x;
+        }
+      }
+    }
+
     _highdive(dt: number, player: EnemyPlayerPort, C: typeof CONFIG.flyer) {
       if (this.state === "dive") {
         this.x += this.vx * dt; this.y += this.vy * dt;
@@ -142,6 +174,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
   class Bomber extends Enemy {
     lobTimer: number; mineTimer: number; bombsLeft: number; burstT: number;
     geoX = 0; wallRequest: { x: number } | null = null;
+    hailBursts: { x: number; y: number; deflected: boolean; perfect: boolean }[] = [];
     declare cfg: typeof CONFIG.bomber;
 
     constructor(x: number, y: number) {
@@ -157,6 +190,16 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);
+      for (const burst of this.hailBursts.splice(0)) {
+        for (let index = 0; index < 6; index += 1) {
+          const angle = index / 6 * Math.PI * 2;
+          const shard = new Projectile(burst.x, burst.y, Math.cos(angle) * 340, Math.sin(angle) * 340 - 80);
+          this.ownProjectile(shard); shard.r = 5; shard.dmg = CONFIG.proj.dmg * 0.38; shard.life = 1.4;
+          shard.tint = "#b9f4ff"; shard.kind = "hail-shard"; shard.deflected = burst.deflected;
+          shard.perfect = burst.perfect; if (burst.deflected) shard.deflectDmg = Math.round(CONFIG.proj.dmg * 0.8);
+          projectiles.push(shard);
+        }
+      }
       const C = this.cfg;
       if (this.canClimb && this.atk !== "channel" && this.climbNav(player, platforms, dt)) {   // reposition up to a perched player — but never abandon a Geomancer wall-channel mid-cast (its timer would pause and the half-wall linger, then teleport-resume); matches Charger/Ranged holding position during a committed attack
         if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed, clamp(7 * dt, 0, 1));
@@ -216,7 +259,17 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       const vx = clamp(dx * 1.05, -C.bombSpeed, C.bombSpeed) + (spread || 0);
       const p = new Projectile(this.x, this.y - this.hh, vx, -C.bombArc);
       this.ownProjectile(p); p.gravity = C.bombGravity; p.bomb = true; p.r = 12; p.dmg = C.blastDmg;
+      if (this.behavior === "hailcaster") {
+        p.r = 15; p.dmg = C.blastDmg * 0.82; p.tint = "#b9f4ff"; p.kind = "hail-orb";
+        p.counterplay = "deflect/detonate or ground shatter"; p.groundImpact = true; p.landingY = CONFIG.world.groundY;
+      }
       projectiles.push(p);
+    }
+
+    onProjectileGroundImpact(projectile: ProjectileEntity): void {
+      const hail = projectile as EnemyProjectile;
+      if (hail.kind !== "hail-orb") return;
+      this.hailBursts.push({ x: hail.x, y: hail.y, deflected: hail.deflected, perfect: hail.perfect });
     }
 
     _lob(dt: number, player: EnemyPlayerPort, projectiles: EnemyProjectile[], C: typeof CONFIG.bomber) {
@@ -249,6 +302,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
   // ---- Armored: shielded on the side it faces; needs a fast hit or a flank ----
   class Armored extends Enemy {
     guardSide: number; stompCd: number;
+    glacierCracked = false;
     declare cfg: typeof CONFIG.armored;
 
     constructor(x: number, y: number) { super(x, y, CONFIG.armored); this.guardSide = 1; this.color = CONFIG.colors.armored; this.kind = "armored"; this.stompCd = CONFIG.armored.stompCd * 0.6; }
@@ -275,7 +329,9 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
           this.integrate(dt, platforms); return;
         }
       }
-      const sp = this.stun > 0 ? 0 : (this.enraged ? this.speed * 1.8 : this.behavior === "bark-sentinel" ? this.speed * 0.82 : this.speed);
+      const guardedSpeed = this.behavior === "bark-sentinel" ? this.speed * 0.82
+        : this.behavior === "glacier-guard" ? this.speed * 0.68 : this.speed;
+      const sp = this.stun > 0 ? 0 : (this.enraged ? this.speed * (this.behavior === "glacier-guard" ? 2.05 : 1.8) : guardedSpeed);
       this.vx = lerp(this.vx, this.guardSide * sp, clamp((this.enraged ? 8 : 5) * dt, 0, 1));
       this.integrate(dt, platforms);
     }
@@ -297,7 +353,25 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       const side = Math.sign(hitFromX - this.x) || 1;
       return side === this.guardSide && tipSpeed < this.cfg.breakSpeed;
     }
-    override damageTakenMult() { return this.enraged ? 1.15 : (this.onGround ? CONFIG.armored.groundDR : CONFIG.armored.airDR); }
+    override applyBreak(amount: number) {
+      const broken = super.applyBreak(amount);
+      if (broken && this.behavior === "glacier-guard") {
+        this.enraged = true; this.glacierCracked = true; this.shield = 0;
+        FX.burst(this.x, this.y, 0, -1, 10, "#d9fbff");
+      }
+      return broken;
+    }
+    override hit(damage: number, knockX: number, knockY: number, context?: EnemyDamageContext) {
+      if (this.behavior === "glacier-guard" && knockY < -0.25) this.glacierCracked = true;
+      return super.hit(damage, knockX, knockY, context);
+    }
+    override damageTakenMult() {
+      if (this.behavior === "glacier-guard") {
+        if (this.enraged) return 1.35;
+        return this.onGround ? (this.glacierCracked ? 0.5 : 0.28) : 0.72;
+      }
+      return this.enraged ? 1.15 : (this.onGround ? CONFIG.armored.groundDR : CONFIG.armored.airDR);
+    }
   }
 
   return { Flyer, Bomber, Armored };

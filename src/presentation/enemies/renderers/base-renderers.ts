@@ -88,10 +88,10 @@ export function installBaseEnemyRenderers(types: EnemyTypes, runtime: EnemyRende
 
             // bull charge wind-up telegraph: a building dashed arrow — longer/thicker for a
             // higher-power (longer wind-up) charge, so you can read how hard it's coming
-            if (this.behavior === "bull" && this.atk === "windup" && !this.feint) {
+            if ((this.behavior === "bull" || this.behavior === "rime-runner") && this.atk === "windup" && !this.feint) {
               const k = 1 - clamp(this.atkT / (this.atkMax || 0.55), 0, 1);
               const reach = 40 + (60 + this.chargePower * 130) * k;
-              ctx.strokeStyle = this.color; ctx.globalAlpha = 0.35 + 0.45 * k; ctx.lineWidth = 3 + this.chargePower * 2; ctx.setLineDash([7, 5]);
+              ctx.strokeStyle = this.behavior === "rime-runner" ? "#b9f4ff" : this.color; ctx.globalAlpha = 0.35 + 0.45 * k; ctx.lineWidth = 3 + this.chargePower * 2; ctx.setLineDash([7, 5]);
               ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.atkDir * reach, this.y); ctx.stroke();
               ctx.setLineDash([]); ctx.globalAlpha = 1;
             }
@@ -111,6 +111,8 @@ export function installBaseEnemyRenderers(types: EnemyTypes, runtime: EnemyRende
               ctx.fillStyle = THEME.ink;
               ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 6, y + 6); ctx.lineTo(x, y + 10); ctx.fill();
               ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w + 6, y + 6); ctx.lineTo(x + w, y + 10); ctx.fill();
+            } else if (this.behavior === "rime-runner") {
+              ctx.fillStyle = "#b9f4ff"; ctx.fillRect(x, y + h - 7, w, 5);
             }
 
             // eye (x-ed out while stunned)
@@ -145,13 +147,16 @@ export function installBaseEnemyRenderers(types: EnemyTypes, runtime: EnemyRende
             // variant accents
             if (b === "sentinel") { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI * 2); ctx.fill(); }
             else if (b === "marksman") { ctx.fillStyle = THEME.ink; ctx.fillRect(this.x - 2, this.y - r - 4, 4, 6); }
+            else if (b === "prism-seer") {
+              ctx.strokeStyle = "#b9f4ff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x, this.y, r * 0.62, 0, Math.PI * 2); ctx.stroke();
+            }
 
             // aim telegraph during wind-up
             if (this.state === "windup" && player) {
               const k = 1 - clamp(this.windT / (this.windMax || this.cfg.windup), 0, 1);
               const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
               const sentinel = b === "sentinel", marksman = b === "marksman";
-              ctx.strokeStyle = THEME.ink; ctx.globalAlpha = sentinel ? 0.5 + 0.4 * k : 0.7;
+              ctx.strokeStyle = b === "prism-seer" ? "#b9f4ff" : THEME.ink; ctx.globalAlpha = sentinel ? 0.5 + 0.4 * k : 0.7;
               if (sentinel) ctx.setLineDash([]); else ctx.setLineDash([5, 6]);
               ctx.lineWidth = sentinel ? 1.2 : 1.5;
               ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + (dx / m) * 620, this.y + (dy / m) * 620); ctx.stroke();

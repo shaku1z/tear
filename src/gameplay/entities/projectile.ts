@@ -10,6 +10,7 @@ export interface ProjectileOwnerPort {
   dying?: boolean;
   onShieldEmbedded?(projectile: ProjectileEntity): void;
   onProjectileGroundImpact?(projectile: ProjectileEntity): void;
+  onProjectileDeflected?(projectile: ProjectileEntity, perfect: boolean): void;
 }
 
 export interface ProjectileDependencies {
@@ -335,6 +336,7 @@ class Projectile {
     const orig = this.dmg ?? CONFIG.proj.dmg;
     const speedF = clamp(inSpeed / 600, 0.6, 2.2);
     this.deflectDmg = Math.round((orig * (perfect ? 2.6 : 1.8) + (perfect ? 10 : 8)) * (0.7 + 0.3 * speedF));
+    this.owner?.onProjectileDeflected?.(this, perfect);
     this.life = 6;
   }
 
