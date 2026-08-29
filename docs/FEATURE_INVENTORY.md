@@ -478,6 +478,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   codecs, hashes, and observations are now covered by VS3-C3; Bloom Wells and
   Rootbinder relationship behavior are covered by VS3-C5/C6, while Rootbound
   encounter behavior remains later work.
+  PT3-C2 composes Aurora Track movement through that same environment owner and
+  fixed 120 Hz phase. One narrow actor port projects the live and detached
+  player, canonical thrown blade, light/heavy enemies, bosses, explicit boss
+  charges, and deflected projectiles without copying their mutable velocity.
+  Warning/active/cooldown timing, direction, intentional-movement eligibility,
+  heavy influence, bounded exit carry, fixed speed caps, boss-wake expiry,
+  restore/hash continuity, stale-actor pruning, and every generic environment
+  clear path remain source-owned. Ghost Tracks are still data-only until the
+  White Hart checkpoint, and Pale presentation is intentionally not claimed.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference

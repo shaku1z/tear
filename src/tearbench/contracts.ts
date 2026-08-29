@@ -143,6 +143,7 @@ export interface TearObservedEnvironmentFieldV1 {
   readonly transportEligibility?: Readonly<Record<string, boolean>>;
   readonly momentum?: Readonly<{ accelerationMultiplier: number; velocityRetention: number; exitCarryTicks: number; heavyInfluenceScale: number }>;
   readonly maximumConcurrent?: number;
+  readonly carryStates?: readonly Readonly<{ actorId: string; direction: -1 | 1; remainingTicks: number }>[];
 }
 
 export interface TearObservedEnvironmentCombatObjectV1 {

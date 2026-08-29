@@ -243,6 +243,8 @@ export function projectEnvironmentHash(value: unknown): unknown {
     if (key === "fields" && entry.kind === "aurora-track") Object.assign(commonValue, {
       trackId: entry.trackId, direction: entry.direction, lifecycle: entry.lifecycle,
       transportEligibility: entry.transportEligibility, momentum: entry.momentum, maximumConcurrent: entry.maximumConcurrent,
+      carryStates: Array.isArray(entry.carryStates) ? entry.carryStates.map((carry) => record(carry) ? Object.freeze({ actorId: carry.actorId,
+        direction: carry.direction, remainingTicks: carry.remainingTicks }) : null) : entry.carryStates,
     });
     if (key === "combatObjects") {
       Object.assign(commonValue, { targetId: portableEnvironmentId(entry.targetId ?? null, remapping), ...(Array.isArray(entry.targetIds) ? { targetIds: entry.targetIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), ...(Array.isArray(entry.linkedActorIds) ? { linkedActorIds: entry.linkedActorIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), integrity: entry.integrity, maxIntegrity: entry.maxIntegrity, counterplayTags: entry.counterplayTags ?? [], procEligible: entry.procEligible, damageDedupeId: entry.damageDedupeId, patternId: entry.patternId ?? null });
@@ -292,7 +294,7 @@ export function environmentSnapshotToObservation(value: unknown): TearEnvironmen
     fields: (projection.fields as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, bounds: bounds(entry.geometry), state: entry.state, active: entry.state === "active", ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), eligibility: entry.eligibility,
       ...(entry.kind === "aurora-track" ? { variant: entry.variant, direction: entry.direction, trackId: entry.trackId,
         lifecycle: entry.lifecycle, transportEligibility: entry.transportEligibility, momentum: entry.momentum,
-        maximumConcurrent: entry.maximumConcurrent } : {}) })),
+        maximumConcurrent: entry.maximumConcurrent, carryStates: entry.carryStates } : {}) })),
     combatObjects: (projection.combatObjects as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), ...(typeof entry.targetId === "string" ? { targetId: entry.targetId } : {}), bounds: bounds(entry.geometry), integrityRatio: Number(entry.maxIntegrity) > 0 ? Number(entry.integrity) / Number(entry.maxIntegrity) : 0, state: entry.state, counterplayTags: entry.counterplayTags, procEligible: entry.procEligible,
       ...(typeof entry.graftType === "string" ? { graftType: entry.graftType } : {}), ...(typeof entry.effect === "string" ? { effect: entry.effect } : {}),
       ...(typeof entry.recoverySpentHealthFraction === "number" ? { recoverySpentHealthFraction: entry.recoverySpentHealthFraction } : {}),

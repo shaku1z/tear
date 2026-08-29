@@ -79,6 +79,12 @@ export interface AuroraTrackMomentumPolicy {
   readonly heavyInfluenceScale: number;
 }
 
+export interface AuroraTrackCarryState {
+  readonly actorId: string;
+  readonly direction: EnvironmentTrackDirection;
+  readonly remainingTicks: number;
+}
+
 export interface EnvironmentForcePolicy {
   readonly x: number;
   readonly y: number;
@@ -106,6 +112,7 @@ export interface EnvironmentFieldState {
   readonly transportEligibility?: AuroraTrackTransportEligibility;
   readonly momentum?: AuroraTrackMomentumPolicy;
   readonly maximumConcurrent?: number;
+  readonly carryStates?: readonly AuroraTrackCarryState[];
 }
 
 export interface EnvironmentCombatObjectState {

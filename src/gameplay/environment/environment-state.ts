@@ -25,6 +25,7 @@ function copyField(value: EnvironmentFieldState): EnvironmentFieldState {
     ...(value.lifecycle === undefined ? {} : { lifecycle: Object.freeze({ ...value.lifecycle }) }),
     ...(value.transportEligibility === undefined ? {} : { transportEligibility: Object.freeze({ ...value.transportEligibility }) }),
     ...(value.momentum === undefined ? {} : { momentum: Object.freeze({ ...value.momentum }) }),
+    ...(value.carryStates === undefined ? {} : { carryStates: Object.freeze(value.carryStates.map((carry) => Object.freeze({ ...carry }))) }),
   });
 }
 

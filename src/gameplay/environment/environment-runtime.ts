@@ -11,6 +11,8 @@ import { applyElasticLeashForce, createElasticLeash, createRootNetwork, installR
 import { advanceGraftAnchor, installGraftAnchor, isGraftAnchorState, resolveRootboundGraftEffects, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "./graft-anchor";
 import { advanceRootCage, installRootCage, isRootCageState, type RootCagePlacementRequest } from "./root-cage";
 import { createRootboundRegrowthConnections, type RootboundRegrowthState } from "./regrowth-link";
+import { assertAuroraTrackFieldState } from "./aurora-track";
+import { advanceAuroraTrack, type AuroraTransportActor } from "./aurora-track-runtime";
 
 /** The only phases an environment may own inside one authoritative tick. */
 export type EnvironmentStepPhase = "pre-step" | "active-fields" | "collision-resolution" | "post-commit";
@@ -82,6 +84,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   #events: TearGameplayEventPort | undefined;
   #availableActorIds: (() => ReadonlySet<string>) | undefined;
   #bloomWellActors: (() => readonly BloomWellActor[]) | undefined;
+  #auroraTrackActors: (() => readonly AuroraTransportActor[]) | undefined;
   #rootbinderActors: (() => readonly RootbinderEnvironmentActor[]) | undefined;
   #rootboundActors: (() => readonly RootboundEnvironmentActor[]) | undefined;
   readonly #combatKernels = new Map<string, EnvironmentCombatObjectRuntime>();
@@ -93,8 +96,8 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   readonly #rootlineHitFields = new Set<string>();
   #phaseLog: EnvironmentStepPhase[] = [];
 
-  constructor(stageId = "unknown", worldId: string, configuration?: Partial<EnvironmentRuntimeConfiguration>, hooks: EnvironmentStepHooks = {}, options: Readonly<{ events?: TearGameplayEventPort; availableActorIds?: () => ReadonlySet<string>; bloomWellActors?: () => readonly BloomWellActor[] }> = {}) {
-    super(stageId, worldId, configuration); this.#hooks = hooks; this.#events = options.events; this.#availableActorIds = options.availableActorIds; this.#bloomWellActors = options.bloomWellActors;
+  constructor(stageId = "unknown", worldId: string, configuration?: Partial<EnvironmentRuntimeConfiguration>, hooks: EnvironmentStepHooks = {}, options: Readonly<{ events?: TearGameplayEventPort; availableActorIds?: () => ReadonlySet<string>; bloomWellActors?: () => readonly BloomWellActor[]; auroraTrackActors?: () => readonly AuroraTransportActor[] }> = {}) {
+    super(stageId, worldId, configuration); this.#hooks = hooks; this.#events = options.events; this.#availableActorIds = options.availableActorIds; this.#bloomWellActors = options.bloomWellActors; this.#auroraTrackActors = options.auroraTrackActors;
   }
 
   get phaseLog(): readonly EnvironmentStepPhase[] { return this.#phaseLog; }
@@ -151,6 +154,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   setEventPort(events: TearGameplayEventPort | undefined): void { this.#events = events; }
   setAvailableActorIdsSource(source: (() => ReadonlySet<string>) | undefined): void { this.#availableActorIds = source; }
   setBloomWellActorsSource(source: (() => readonly BloomWellActor[]) | undefined): void { this.#bloomWellActors = source; }
+  setAuroraTrackActorsSource(source: (() => readonly AuroraTransportActor[]) | undefined): void { this.#auroraTrackActors = source; }
   setRootbinderActorsSource(source: (() => readonly RootbinderEnvironmentActor[]) | undefined): void { this.#rootbinderActors = source; }
   setRootboundActorsSource(source: (() => readonly RootboundEnvironmentActor[]) | undefined): void { this.#rootboundActors = source; }
 
@@ -497,14 +501,21 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
         if (result.state === "active") for (const actor of this.#bloomWellActors?.() ?? []) applyBloomWellForce(result, actor, seconds);
         continue;
       }
+      if (field.kind === "aurora-track") {
+        assertAuroraTrackFieldState(field);
+        const result = advanceAuroraTrack(field, tick, seconds, this.#auroraTrackActors?.() ?? [], this.#events);
+        if (result.field !== field) this.updateField(field.id, result.field);
+        continue;
+      }
       const result = advanceEnvironmentField(field, tick, seconds, "natural-expiry", this.#events);
       if (result.field !== field) this.updateField(field.id, { ...result.field, stateTick: result.transition === undefined ? field.stateTick : tick });
     }
   }
 
   #cleanupOrphans(tick: number, availableActorIds?: ReadonlySet<string>): void {
-    const ids = availableActorIds ?? this.#availableActorIds?.();
-    if (ids === undefined) return;
+    const sourceIds = availableActorIds ?? this.#availableActorIds?.();
+    if (sourceIds === undefined) return;
+    const ids = new Set(sourceIds); ids.add(this.stageId);
     const before = this.snapshot();
     const after = cleanupOrphanedEnvironmentReferences(before, ids, "stage-transition");
     if (this.#events !== undefined) {
@@ -515,8 +526,16 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
         }
       }
     }
-    for (const entry of after.fields) if (entry.state !== before.fields.find((candidate) => candidate.id === entry.id)?.state
-      || entry.cleanupReason !== before.fields.find((candidate) => candidate.id === entry.id)?.cleanupReason) this.updateField(entry.id, entry);
+    for (const entry of after.fields) {
+      const prior = before.fields.find((candidate) => candidate.id === entry.id);
+      const carryStates = entry.carryStates === undefined ? undefined : entry.carryStates.filter((carry) => ids.has(carry.actorId));
+      const carryChanged = entry.carryStates !== undefined && carryStates !== undefined
+        && carryStates.length !== entry.carryStates.length;
+      if (entry.state !== prior?.state || entry.cleanupReason !== prior.cleanupReason
+        || carryChanged) this.updateField(entry.id, {
+        ...entry, ...(carryStates === undefined ? {} : { carryStates: Object.freeze(carryStates) }),
+      });
+    }
     for (const entry of after.combatObjects) if (entry.state !== before.combatObjects.find((candidate) => candidate.id === entry.id)?.state
       || entry.cleanupReason !== before.combatObjects.find((candidate) => candidate.id === entry.id)?.cleanupReason) {
       this.updateCombatObject(entry.id, entry); this.#combatKernels.delete(entry.id);
@@ -542,6 +561,7 @@ export function createEnvironmentRuntime(options: Readonly<{
   readonly events?: TearGameplayEventPort;
   readonly availableActorIds?: () => ReadonlySet<string>;
   readonly bloomWellActors?: () => readonly BloomWellActor[];
+  readonly auroraTrackActors?: () => readonly AuroraTransportActor[];
 }> = {}): EnvironmentRuntime {
   if (options.worldId === undefined) throw new TypeError("environment world identity is required");
   return new EnvironmentRuntime(options.stageId ?? "unknown", options.worldId, options.configuration, options.hooks, options);
