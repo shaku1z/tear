@@ -3,6 +3,7 @@ import { DIFFICULTY_CATALOG } from "../gameplay/run/difficulty-catalog";
 import { describeWave } from "../gameplay/run/wave-rules";
 import { calculateCoinAward } from "../gameplay/scoring/coin-awards";
 import { stableVerificationHash } from "../replay/hash";
+import { CAMPAIGN_STAGE_IDS } from "../gameplay/stages";
 import type { TearDifficultyId, TearRunModeId, TearWeaponId } from "./registries";
 import {
   draftCandidates,
@@ -177,7 +178,7 @@ export function buildCanonicalProgressionLedger(request: TearProgressionRequest)
     const description = describeWave({
       mode: request.mode,
       wave,
-      configuredWaves: request.configuredCampaignWaves ?? 50,
+      configuredWaves: request.configuredCampaignWaves ?? CAMPAIGN_STAGE_IDS.length * 10,
     });
     const stage = description.campaignStage ?? description.endlessBiome ?? 0;
     if (stage !== previousStage) {
@@ -368,7 +369,7 @@ export function synthesizeProgression(request: TearProgressionRequest): TearSynt
     const description = describeWave({
       mode: request.mode,
       wave,
-      configuredWaves: request.configuredCampaignWaves ?? 50,
+      configuredWaves: request.configuredCampaignWaves ?? CAMPAIGN_STAGE_IDS.length * 10,
     });
     const stage = description.campaignStage ?? description.endlessBiome ?? 0;
     if (stage !== previousStage) {

@@ -6,7 +6,9 @@ import type {
 } from "./progression-ledger";
 import { reconstructProgression, synthesizeProgression } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
-import { BOSS_IDS, type TearBossId } from "./registries";
+import { BOSS_FACTORY_IDS, type TearBossId } from "./registries";
+import { bossPhaseAttackAvailable } from "../gameplay/run/boss-definitions";
+import { STAGES } from "../gameplay/stages";
 import {
   DECLARED_ONE_FRAME_BOUNDARIES,
   type TearOneFrameBoundaryDefinition,
@@ -22,7 +24,7 @@ export interface StateForgeBossPhaseLaunch {
   readonly kind: "boss-phase";
   readonly boss: TearBossId;
   readonly phase: TearBossPhase;
-  readonly attack: "opening-commit";
+  readonly attack: "opening-commit" | "unavailable";
   readonly attackFrame: 0;
 }
 
@@ -170,12 +172,12 @@ export function createWave99HistoricalRunState(certificate: Wave99HammerExitCert
 }
 
 export function createBossPhaseLaunchMatrix(): readonly StateForgeBossPhaseLaunch[] {
-  return Object.freeze(BOSS_IDS.flatMap((boss) => TEAR_BOSS_PHASES.map((phase) => Object.freeze({
+  return Object.freeze(BOSS_FACTORY_IDS.flatMap((boss) => TEAR_BOSS_PHASES.map((phase) => Object.freeze({
     id: `boss-${boss}-phase-${String(phase)}`,
     kind: "boss-phase" as const,
     boss,
     phase,
-    attack: "opening-commit" as const,
+    attack: bossPhaseAttackAvailable(boss, phase) ? "opening-commit" as const : "unavailable" as const,
     attackFrame: 0 as const,
   }))));
 }
@@ -240,8 +242,9 @@ function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinis
     || !Array.isArray(run.spawnQueue) || run.spawnQueue.length !== 0) {
     throw new TypeError(`${launch.id} requires an active, unobstructed production boss frontier`);
   }
-  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 50 || run.stage !== 4
-    || run._biomeIdx !== 4 || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 50)) {
+  const finalStageIndex = STAGES.length - 1;
+  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 60 || run.stage !== finalStageIndex
+    || run._biomeIdx !== finalStageIndex || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 60)) {
     throw new TypeError(`${launch.id} requires the final campaign Source frontier`);
   }
   if (typeof boss.hpDisplay !== "number" || !Number.isFinite(boss.hpDisplay)) {

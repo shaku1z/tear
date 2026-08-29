@@ -177,12 +177,12 @@ describe("legacy world presentation renderers", () => {
     });
     renderers.waveBanner({ remainingFraction: 0.5, bossWave: false, wave: 8, waveTag: "HORDE", horde: true, hordeColor: "#e44", normalColor: "#3df" });
     const screen: WorldRect = { x: 0, y: 0, w: 1600, h: 900 };
-    renderers.bossIntro({ screen, bossName: "THE SOURCE", epithet: "BELOW ALL THINGS", color: "#93f", elapsed: 0.5, duration: 2 });
+    renderers.bossIntro({ screen, bossName: "THE SOURCE", epithet: "BELOW ALL THINGS", openingLine: "LOOK BENEATH.", color: "#93f", elapsed: 0.5, duration: 2 });
     renderers.stageBanner({ elapsed: 1, mode: "campaign", stageIndex: 2, stageName: "THE DEEP", blurb: "DESCEND.", accent: "#3df" });
     renderers.reticle({ x: 900, y: 300, power: "slam", slamColor: "#f73", updraftColor: "#3df" });
     const uiLabels = ui.calls.flatMap((call) => call.arguments.filter((value): value is string => typeof value === "string"));
     expect(uiLabels).toEqual(expect.arrayContaining(["WAVE 8", "HORDE", "STAGE 3", "THE DEEP", "DESCEND."]));
-    expect(ui.calls.find((call) => call.name === "bossIntro")?.arguments[0]).toMatchObject({ bossName: "THE SOURCE", epithet: "BELOW ALL THINGS" });
+    expect(ui.calls.find((call) => call.name === "bossIntro")?.arguments[0]).toMatchObject({ bossName: "THE SOURCE", epithet: "BELOW ALL THINGS", openingLine: "LOOK BENEATH." });
     expect(canvasCalls.some((call) => call.name === "fillText" && call.arguments[0] === "⇊")).toBe(true);
   });
 
@@ -247,6 +247,7 @@ describe("legacy world presentation renderers", () => {
     expect(callbackCalls).toEqual(["rear", "rear", "draw", "draw", "transform", "status"]);
     expect(formatEnemyLabel({ kind: "support", supportType: "priest", affixCount: 2 })).toBe("War Priest +2");
     expect(formatEnemyLabel({ kind: "armored", enraged: true })).toBe("Armored*");
+    expect(formatEnemyLabel({ kind: "armored", enraged: true, variantName: "Bark Sentinel" })).toBe("Bark Sentinel");
     expect(canvasCalls.some((call) => call.name === "fillText" && call.arguments[0] === "War Priest +2")).toBe(true);
     expect(canvasCalls.some((call) => call.name === "fillText" && call.arguments[0] === "+100")).toBe(true);
     expect(canvasCalls.filter((call) => call.name === "strokeRect").length).toBeGreaterThanOrEqual(3);

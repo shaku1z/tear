@@ -9,6 +9,7 @@ import {
   type LiveWaveRun,
 } from "../../src/gameplay/run/live-wave-controller";
 import { STAGES } from "../../src/gameplay/stages";
+import type { WavePlanIntent } from "../../src/gameplay/run/wave-planner";
 
 function runState(overrides: Partial<LiveWaveRun> = {}): LiveWaveRun {
   return {
@@ -38,8 +39,9 @@ function runState(overrides: Partial<LiveWaveRun> = {}): LiveWaveRun {
   };
 }
 
-function harness(initial: LiveWaveRun) {
+function harness(initial: LiveWaveRun, options: Readonly<{ currentStageIndex?: number; chapterStageIndex?: number }> = {}) {
   const planIntents: string[] = [];
+  const planIntentRecords: WavePlanIntent[] = [];
   const clearIntents: string[] = [];
   const spawns: string[] = [];
   let prepared = false;
@@ -52,15 +54,18 @@ function harness(initial: LiveWaveRun) {
     presets: PRESETS,
     random: new SeededRandom("live-wave"),
     modeDefinition: () => ({}),
-    currentStage: () => ({ index: 0, accent: "#fff" }),
-    stageHasChapter: () => false,
-    chapterFlowActive: () => false,
+    currentStage: () => ({ index: options.currentStageIndex ?? 0, accent: "#fff" }),
+    stageHasChapter: (index) => index === options.chapterStageIndex,
+    chapterFlowActive: () => options.chapterStageIndex !== undefined,
     lifecycle: {
       hasPreparedWave: () => prepared,
       isWaveActive: () => active,
       pendingReward: () => null,
     },
-    executePlanIntents: (intents) => planIntents.push(...intents.map((intent) => intent.type)),
+    executePlanIntents: (intents) => {
+      planIntents.push(...intents.map((intent) => intent.type));
+      planIntentRecords.push(...intents);
+    },
     executeClearIntents: (intents) => clearIntents.push(...intents.map((intent) => intent.type)),
     spawn: (spec) => { spawns.push(spec.type); enemies += 1; },
     enemyCount: () => enemies,
@@ -72,6 +77,7 @@ function harness(initial: LiveWaveRun) {
   return {
     controller: new LiveWaveController(port),
     planIntents,
+    planIntentRecords,
     clearIntents,
     spawns,
     setPrepared(value: boolean) { prepared = value; },
@@ -116,5 +122,49 @@ describe("LiveWaveController", () => {
     live.controller.startNextWave();
     expect(run.stage).toBe(0);
     expect(run.spawnQueue).toHaveLength(CONFIG.run.firstWaveCount);
+  });
+
+  it("enters Verdant naturally at campaign wave 31 through the chapter boundary", () => {
+    const priorBossOutro = { label: "THE CROWN", text: "The prior chapter is complete." };
+    const run = runState({
+      mode: "campaign",
+      wave: 30,
+      stage: 2,
+      _biomeIdx: 2,
+      pendingBossOutro: priorBossOutro,
+    });
+    const live = harness(run, { currentStageIndex: 2, chapterStageIndex: 3 });
+
+    live.controller.startNextWave();
+
+    expect(run).toMatchObject({ wave: 31, stage: 3, _biomeIdx: 3, pendingBossOutro: null });
+    expect(run.spawnQueue.every((entry) => ["flyer", "ranged", "charger"].includes(entry.type))).toBe(true);
+    expect(run.spawnQueue.some((entry) => ["rootbinder", "mender", "anchor", "armored", "chimera"].includes(entry.type))).toBe(false);
+    expect(live.planIntentRecords).toEqual([
+      { type: "begin-wipe" },
+      { type: "load-stage", stageIndex: 3 },
+      { type: "set-stage-banner", duration: 0, name: "The Verdant Sanctum" },
+      { type: "begin-campaign-chapter", stageIndex: 3, priorBossOutro },
+      { type: "ghost-wave", wave: 31, marker: "start" },
+      { type: "prepare-wave", wave: 31, boss: false, deferred: true },
+    ]);
+    expect(live.planIntents).not.toContain("activate-wave");
+  });
+
+  it("transitions directly from Verdant into Voidspire at campaign wave 41", () => {
+    const priorBossOutro = { label: "THE NAMEPLATES", text: "The garden finally let go." };
+    const run = runState({ mode: "campaign", wave: 40, stage: 3, _biomeIdx: 3, pendingBossOutro: priorBossOutro });
+    const live = harness(run, { currentStageIndex: 3, chapterStageIndex: 4 });
+    live.controller.startNextWave();
+    expect(run).toMatchObject({ wave: 41, stage: 4, _biomeIdx: 4, pendingBossOutro: null });
+    expect(run.spawnQueue.every((entry) => ["wraith", "flyer", "ranged"].includes(entry.type))).toBe(true);
+    expect(run.spawnQueue.some((entry) => ["rimehound", "priest", "chimera", "mender"].includes(entry.type))).toBe(false);
+    expect(live.planIntentRecords).toEqual([
+      { type: "begin-wipe" }, { type: "load-stage", stageIndex: 4 },
+      { type: "set-stage-banner", duration: 0, name: "The Voidspire" },
+      { type: "begin-campaign-chapter", stageIndex: 4, priorBossOutro },
+      { type: "ghost-wave", wave: 41, marker: "start" },
+      { type: "prepare-wave", wave: 41, boss: false, deferred: true },
+    ]);
   });
 });

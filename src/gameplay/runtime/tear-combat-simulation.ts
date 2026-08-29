@@ -9,6 +9,7 @@ import {
   TearSimulationRuntime,
   type TearSimulationActionPort,
 } from "./tear-simulation-runtime";
+import type { EnvironmentStepPort } from "../environment/environment-runtime";
 
 type CombatRuntimeLifecycleOptions = Omit<LiveCombatRuntimeOptions, "opening" | "collision">;
 
@@ -28,6 +29,7 @@ export interface TearCombatSimulation<State> {
 
 export interface TearCombatSimulationOptions<State> {
   readonly gameplayEvents?: TearGameplayEventPort;
+  readonly environment?: EnvironmentStepPort;
   readonly combatEntities: ConstructorParameters<typeof CombatEntityRuntime>[0];
   readonly kill: LiveKillHost;
   readonly createCombat: (api: Readonly<{
@@ -60,6 +62,7 @@ export function createTearCombatSimulation<State>(
     step: (seconds) => { combatRuntime.step(seconds); },
     snapshot: (tick, input) => options.authoritative.snapshot(tick, input),
     ...(options.gameplayEvents === undefined ? {} : { events: options.gameplayEvents }),
+    ...(options.environment === undefined ? {} : { environment: options.environment }),
     ticksPerSecond: 120,
     maxCatchUpSteps: 12,
   });

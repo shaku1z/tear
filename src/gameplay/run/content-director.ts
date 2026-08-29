@@ -1,5 +1,6 @@
 import type { RandomSource } from "../../domain/random";
-import { BOSS_DEFINITIONS, type BossDefinition } from "./boss-definitions";
+import { BOSS_DEFINITIONS, type BOSS_IDENTITY_IDS, type BossDefinition } from "./boss-definitions";
+import { bossIdsAvailableOn, STAGE_CONTENT_AVAILABILITY, type ContentAvailabilitySurface, type StageId } from "../stages";
 
 type BossRosterProjection<T extends readonly BossDefinition[]> = {
   readonly [K in keyof T]: T[K] extends BossDefinition
@@ -11,16 +12,43 @@ function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T):
   return definitions.map(({ id, name }) => Object.freeze({ id, name })) as BossRosterProjection<T>;
 }
 
-/** Compatibility roster view; identity and order are authored in BOSS_DEFINITIONS. */
-export const BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
+/** Ordinary production roster; preview bosses remain authored but require an explicit Playground path. */
+const PUBLISHED_BOSS_IDS = new Set(bossIdsAvailableOn("published"));
+type PublishedBossDefinitions = readonly [
+  typeof BOSS_DEFINITIONS[0], typeof BOSS_DEFINITIONS[1], typeof BOSS_DEFINITIONS[2],
+  typeof BOSS_DEFINITIONS[3], typeof BOSS_DEFINITIONS[5], typeof BOSS_DEFINITIONS[6],
+];
+const publishedBossDefinitions = BOSS_DEFINITIONS.filter(({ id }) => PUBLISHED_BOSS_IDS.has(id)) as unknown as PublishedBossDefinitions;
+export const BOSS_ROSTER = Object.freeze(projectBossRoster(
+  publishedBossDefinitions,
+));
+export const AUTHORED_BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
 
-export type BossId = typeof BOSS_DEFINITIONS[number]["id"];
-export type MiniBossId = Exclude<BossId, "source">;
+export type BossId = typeof BOSS_IDENTITY_IDS[number];
+/** Campaign-only or factory-unavailable bosses cannot enter the mini-boss selector. */
+export type MiniBossId = Exclude<BossId, "source" | "rootbound" | "white-hart">;
 export const ENEMY_KIND_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",
   "priest", "mender", "herald", "anchor", "wraith", "chimera",
 ] as const);
-export type EnemyKind = typeof ENEMY_KIND_IDS[number];
+export const ENEMY_IDENTITY_IDS = Object.freeze([...ENEMY_KIND_IDS, "rootbinder", "rimehound"] as const);
+export type ActiveEnemyKind = typeof ENEMY_KIND_IDS[number];
+export type EnemyKind = typeof ENEMY_IDENTITY_IDS[number];
+
+/** Stage-native families inherit availability from their home; legacy families are universal. */
+export const ENEMY_HOME_STAGE = Object.freeze({
+  rootbinder: "verdant-sanctum",
+  rimehound: "pale-traverse",
+} as const satisfies Readonly<Partial<Record<EnemyKind, StageId>>>);
+
+export function enemyIdsAvailableOn(surface: ContentAvailabilitySurface): readonly EnemyKind[] {
+  return Object.freeze(ENEMY_IDENTITY_IDS.filter((id) => {
+    const home = (ENEMY_HOME_STAGE as Readonly<Partial<Record<EnemyKind, StageId>>>)[id];
+    return home === undefined || STAGE_CONTENT_AVAILABILITY[home][surface];
+  }));
+}
+
+export const PUBLISHED_ENEMY_IDENTITY_IDS = enemyIdsAvailableOn("published");
 
 export interface CampaignPoolEntry {
   readonly kind: EnemyKind;
@@ -67,10 +95,13 @@ export function pickEnemyKind(
   wave: number,
   random: RandomSource,
   campaignPool: readonly CampaignPoolEntry[] | null = null,
+  localWave?: number,
 ): EnemyKind {
   if (!Number.isSafeInteger(wave) || wave < 1) throw new RangeError("wave must be a positive integer");
   if (campaignPool !== null && campaignPool.length > 0) {
-    const localWave = (wave - 1) % 10 + 1;
+    if (typeof localWave !== "number" || !Number.isSafeInteger(localWave) || localWave < 1 || localWave > 10) {
+      throw new RangeError("campaign pool selection requires an explicit localWave from 1 through 10");
+    }
     const unlocked = campaignPool.filter((entry) => localWave >= entry.unlockWave);
     const candidates = unlocked.length > 0 ? unlocked : campaignPool;
     return weightedPick(candidates.map((entry) => [entry.kind, entry.weight] as const), random);
@@ -88,5 +119,5 @@ export function pickEnemyKind(
 }
 
 export function bossName(id: string): string {
-  return BOSS_ROSTER.find((boss) => boss.id === id)?.name ?? "";
+  return AUTHORED_BOSS_ROSTER.find((boss) => boss.id === id)?.name ?? "";
 }

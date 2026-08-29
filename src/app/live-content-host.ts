@@ -5,7 +5,8 @@ import type { EnemyPreset } from "../gameplay/affixes";
 import type { RandomSource } from "../domain/random";
 import type { LiveSpawnEnemy, LiveSpawnRun } from "../gameplay/run/live-enemy-spawn";
 import type { ArenaPlatform } from "../gameplay/training/arena-rules";
-import type { EnemyVariant } from "../gameplay/variants";
+import type { EnemyVariant, VariantSelectionContext } from "../gameplay/variants";
+import type { StageId } from "../gameplay/stages";
 
 export interface ContentHostEnemy extends LiveSpawnEnemy { introT?: number }
 
@@ -27,16 +28,18 @@ export interface LiveContentHostContext<TEnemy extends ContentHostEnemy> {
   readonly run: () => ContentHostRun;
   readonly modes: () => readonly ContentMode[];
   readonly stages: readonly ContentStage[];
+  readonly bossBiomeStages?: readonly ContentStage[];
   readonly stageIndex: () => number;
+  readonly stageId?: () => StageId;
   readonly platforms: () => ArenaPlatform[];
   readonly setPlatforms: (platforms: ArenaPlatform[]) => void;
-  readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera") => TEnemy;
+  readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera" | "rimehound") => TEnemy;
   readonly createAir: (kind: "flyer" | "wraith", x: number, y: number) => TEnemy;
-  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor") => TEnemy;
+  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor" | "rootbinder") => TEnemy;
   readonly createDefaultBoss: () => TEnemy;
   readonly createBoss: (id: string) => TEnemy;
   readonly applyPreset: (enemy: TEnemy, preset: EnemyPreset) => void;
-  readonly rollVariant: (kind: string, wave: number) => EnemyVariant | null;
+  readonly rollVariant: (kind: string, wave: number, context?: VariantSelectionContext) => EnemyVariant | null;
   readonly applyVariant: (enemy: TEnemy, variant: EnemyVariant | null) => void;
   readonly rollAffixes: (enemy: TEnemy, wave: number) => void;
   readonly arrivalEffect: (enemy: TEnemy, boss: boolean) => void;
@@ -80,6 +83,7 @@ export function createLiveContentHost<TEnemy extends ContentHostEnemy>(
     random: context.random,
     run,
     campaignStage: context.stageIndex,
+    ...(context.stageId === undefined ? {} : { stageId: context.stageId }),
     contentWave: () => 0,
     groundSpawn: () => ({ x: 0, y: 0 }),
     applyPreset: context.applyPreset,
@@ -96,10 +100,12 @@ export function createLiveContentHost<TEnemy extends ContentHostEnemy>(
     run: () => {
       const active = run();
       return { mode: active.mode, wave: active.wave,
-        ...(active.curBoss === null || active.curBoss === undefined ? {} : { curBoss: active.curBoss }) };
+        ...(active.curBoss === null || active.curBoss === undefined ? {} : { curBoss: active.curBoss }),
+        ...(active.variantDiscovery === undefined ? {} : { variantDiscovery: active.variantDiscovery }) };
     },
     modes: context.modes,
     stages: context.stages,
+    ...(context.bossBiomeStages === undefined ? {} : { bossBiomeStages: context.bossBiomeStages }),
     platforms: context.platforms,
     groundY: () => context.groundY,
     construction,

@@ -10,6 +10,7 @@ import type {
   TearWeaponId,
   TearWithinTickPhase,
 } from "./registries";
+import type { EnvironmentObjectKind } from "../gameplay/environment/environment-contracts";
 
 export const TEAR_CONTRACT_FORMAT = "tear-contract";
 export const TEAR_CONTRACT_VERSION = 1;
@@ -67,6 +68,9 @@ export interface TearHashSetV1 {
 export interface TearObservedActorV1 {
   readonly id: string;
   readonly kind: TearEntityKindId;
+  /** Public-safe authored identity; executable variant callbacks never cross this boundary. */
+  readonly variantId?: string;
+  readonly variantName?: string;
   readonly x: number;
   readonly y: number;
   readonly vx: number;
@@ -124,6 +128,65 @@ export interface TearNavigationObservationV1 {
   readonly hazards: readonly TearObservedHazardV1[];
 }
 
+export interface TearObservedEnvironmentFieldV1 {
+  readonly id: string;
+  readonly kind: EnvironmentObjectKind;
+  readonly bounds: TearObservedBoundsV1;
+  readonly state: string;
+  readonly active: boolean;
+  readonly ownerId?: string;
+  readonly eligibility?: Readonly<{ player: boolean; enemies: boolean; bosses: boolean }>;
+  readonly variant?: string;
+  readonly direction?: -1 | 1;
+  readonly trackId?: string;
+  readonly lifecycle?: Readonly<{ warningTicks: number; activeTicks: number; cooldownTicks: number }>;
+  readonly transportEligibility?: Readonly<Record<string, boolean>>;
+  readonly momentum?: Readonly<{ accelerationMultiplier: number; velocityRetention: number; exitCarryTicks: number; heavyInfluenceScale: number }>;
+  readonly maximumConcurrent?: number;
+  readonly carryStates?: readonly Readonly<{ actorId: string; direction: -1 | 1; remainingTicks: number }>[];
+}
+
+export interface TearObservedEnvironmentCombatObjectV1 {
+  readonly id: string;
+  readonly kind: EnvironmentObjectKind;
+  readonly ownerId?: string;
+  readonly targetId?: string;
+  readonly bounds: TearObservedBoundsV1;
+  readonly integrityRatio: number;
+  readonly state: string;
+  readonly counterplayTags: readonly string[];
+  readonly procEligible: boolean;
+  readonly graftType?: string;
+  readonly effect?: string;
+  readonly recoverySpentHealthFraction?: number;
+  readonly rootCageId?: string;
+  readonly boundarySide?: "left" | "right";
+  readonly response?: "sever-either-boundary";
+}
+
+export interface TearObservedEnvironmentRouteV1 {
+  readonly id: string;
+  readonly kind: EnvironmentObjectKind;
+  readonly points: readonly Readonly<{ x: number; y: number }>[];
+  readonly state: string;
+  readonly ownerId?: string;
+  readonly variant?: string;
+  readonly direction?: -1 | 1;
+  readonly width?: number;
+  readonly lifecycle?: Readonly<{ warningTicks: number; activeTicks: number; cooldownTicks: number }>;
+  readonly sourceTrackId?: string | null;
+  readonly maximumConcurrent?: number;
+  readonly damage?: number;
+  readonly threatening?: boolean;
+  readonly hitActorIds?: readonly string[];
+}
+
+export interface TearEnvironmentObservationV1 {
+  readonly fields: readonly TearObservedEnvironmentFieldV1[];
+  readonly combatObjects: readonly TearObservedEnvironmentCombatObjectV1[];
+  readonly routes: readonly TearObservedEnvironmentRouteV1[];
+}
+
 export interface TearObservationV1 {
   readonly format: typeof TEAR_CONTRACT_FORMAT;
   readonly kind: "observation";
@@ -144,6 +207,8 @@ export interface TearObservationV1 {
   readonly entities: readonly TearObservedActorV1[];
   /** Structured world geometry available to Class A and Class B observers; never a Class C affordance. */
   readonly navigation?: TearNavigationObservationV1;
+  /** Additive gameplay environment facts; unavailable to Class-C pixel observers. */
+  readonly environment?: TearEnvironmentObservationV1;
   readonly run: Readonly<{
     mode: TearRunModeId; difficulty: TearDifficultyId; weapon: TearWeaponId;
     stage: string; wave: number; score: number; elapsedTicks: number;
@@ -153,7 +218,7 @@ export interface TearObservationV1 {
     waveComplete?: boolean;
     livingWaveEnemies?: number;
     waveOwnership?: "source-events" | "unavailable";
-    boss?: Readonly<{ id: string; phase: string; validPhases: readonly string[] }>;
+    boss?: Readonly<{ id: string; phase: string; validPhases: readonly string[]; homeStage: string }>;
     ui?: Readonly<{ focusedId?: string; focusableIds: readonly string[] }>;
     paused?: boolean;
     lifecyclePhase?: string;
@@ -186,6 +251,8 @@ export type TearScenarioSubjectV1 = Readonly<
   | { kind: "gameplay"; id: string }
   | { kind: "weapon"; id: TearWeaponId }
   | { kind: "boss"; id: TearBossId }
+  | { kind: "environment-field"; id: string }
+  | { kind: "environment-combat-object"; id: string }
 >;
 
 export interface TearScenarioV1 {

@@ -37,7 +37,7 @@ function input(overrides: Partial<WaveClearInput> = {}): WaveClearInput {
     playerOneHit: false,
     ownedAbilityCount: 7,
     stageIndex: 0,
-    stageCount: 5,
+    stageCount: 6,
     currentStageAccent: "#e23b3b",
     healEachWave: 12,
     waveHealBonus: 3,
@@ -89,8 +89,8 @@ describe("wave-clear and reward conformance", () => {
 
   it("starts the finale directly after the final campaign boss", () => {
     const result = planWaveClear(input({
-      state: state({ mode: "campaign", wave: 50, isBossWave: true }),
-      stageIndex: 4,
+      state: state({ mode: "campaign", wave: 60, isBossWave: true }),
+      stageIndex: 5,
     }));
     expect(result.terminal).toBe(true);
     expect(result.intents.at(-1)).toEqual({ type: "start-adventure-finale" });

@@ -6,7 +6,7 @@ import { planGroundSpawn, planSideSpawn, type GroundPlatform } from "./spawn-sch
 
 export interface ContentMode { readonly id: string; readonly waves?: number }
 export interface ContentStage { readonly boss?: string }
-export interface ContentRun { readonly mode: string; readonly wave: number; readonly curBoss?: string }
+export interface ContentRun { readonly mode: string; readonly wave: number; readonly curBoss?: string; readonly variantDiscovery?: readonly string[] }
 
 export interface LiveContentRuntimeOptions<TEnemy extends LiveSpawnEnemy> {
   readonly width: number;
@@ -14,6 +14,8 @@ export interface LiveContentRuntimeOptions<TEnemy extends LiveSpawnEnemy> {
   readonly run: () => ContentRun | null;
   readonly modes: () => readonly ContentMode[];
   readonly stages: readonly ContentStage[];
+  /** Authored biome homes used by explicit engineering boss launches. Ordinary rosters remain source-policy filtered. */
+  readonly bossBiomeStages?: readonly ContentStage[];
   readonly platforms: () => readonly GroundPlatform[];
   readonly groundY: () => number;
   readonly construction: LiveEnemyConstructionPort<TEnemy>;
@@ -60,7 +62,8 @@ export function createLiveContentRuntime<TEnemy extends LiveSpawnEnemy>(
       halfHeight, options.platforms(), options.groundY(), options.width, options.random,
     ),
     bossById,
-    bossBiome: (id: string) => Math.max(0, options.stages.findIndex((stage) => stage.boss === id)),
+    bossBiome: (id: string) => Math.max(0, (options.bossBiomeStages ?? options.stages)
+      .findIndex((stage) => stage.boss === id)),
     makeBoss,
     spawn: (spec: LiveWaveSpawnSpec) => { completeEnemySpawn(
       constructLiveEnemy(spec, { ...options.construction, sideSpawn: api.sideSpawn,

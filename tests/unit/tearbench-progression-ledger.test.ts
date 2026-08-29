@@ -177,7 +177,7 @@ describe("production progression ledger", () => {
         }
       }
     }
-    const artifactDirectory = resolve("artifacts", "tearbench", "c23");
+    const artifactDirectory = resolve("artifacts", "tearbench", "checkpoints", "core", "C23", "state-forge");
     mkdirSync(artifactDirectory, { recursive: true });
     writeFileSync(resolve(artifactDirectory, "progression-10000.json"), JSON.stringify({
       generatedTargets: 10_000,

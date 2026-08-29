@@ -9,7 +9,7 @@ import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
 import { refuseGhostTheater, type GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 type Dependencies = Pick<GameRuntimeDependencies, "APP" | "Armored" | "Backdrop" | "Bomber" | "Charger" | "Chimera" |
-  "CONFIG" | "FX" | "Flyer" | "GFX" | "GHOST" | "Input" | "Ranged" | "SAFE" | "STAGES" | "Support" | "THEME" |
+  "CONFIG" | "FX" | "Flyer" | "GFX" | "GHOST" | "Input" | "Ranged" | "Rootbinder" | "SAFE" | "STAGES" | "Support" | "THEME" |
   "UI" | "UPGRADES" | "VARIANTS" | "Wraith" | "applyVariant" | "stageAt" | "stagePlatforms">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 

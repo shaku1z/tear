@@ -1,0 +1,46 @@
+import type { EnvironmentSnapshot, EnvironmentObjectState } from "./environment-contracts";
+
+export interface EnvironmentPresentationSnapshot {
+  readonly stageId: string;
+  readonly fields: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; active: boolean; bounds: Readonly<{ minX: number; maxX: number; minY: number; maxY: number }>; direction?: -1 | 1; variant?: "stage" | "boss-wake" }>[];
+  readonly combatObjects: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"]; integrityRatio: number; counterplayTags: readonly string[]; graftType?: string; effect?: string; connectionGeometry?: EnvironmentSnapshot["combatObjects"][number]["geometry"]; rootCageId?: string; boundarySide?: string; response?: string }>[];
+  readonly routes: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState;
+    points: readonly Readonly<{ x: number; y: number }>[]; direction?: -1 | 1; width?: number; threatening?: boolean }>[];
+}
+
+function bounds(geometry: Readonly<{ x: number; y: number; w?: number; h?: number }>) {
+  return Object.freeze({ minX: geometry.x, maxX: geometry.x + (geometry.w ?? 0), minY: geometry.y, maxY: geometry.y + (geometry.h ?? 0) });
+}
+
+/** Data-only environment view. It has no renderer, audio, DOM, or mutable runtime handles. */
+export function buildEnvironmentPresentationSnapshot(snapshot: EnvironmentSnapshot): EnvironmentPresentationSnapshot {
+  return Object.freeze({
+    stageId: snapshot.stageId,
+    fields: Object.freeze(snapshot.fields.map((field) => Object.freeze({
+      id: field.id, kind: field.kind, state: field.state, active: field.state === "active", bounds: bounds(field.geometry),
+      ...(field.direction !== undefined && field.variant !== undefined ? {
+        direction: field.direction,
+        variant: field.variant === "boss-wake" ? "boss-wake" as const : "stage" as const,
+      } : {}),
+    }))),
+    combatObjects: Object.freeze(snapshot.combatObjects.map((object) => {
+      const extension = object as unknown as Readonly<Record<string, unknown>>;
+      return Object.freeze({ id: object.id, kind: object.kind, state: object.state, geometry: structuredClone(object.geometry), integrityRatio: object.maxIntegrity > 0 ? object.integrity / object.maxIntegrity : 0, counterplayTags: Object.freeze([...object.counterplayTags]),
+      ...(typeof extension.graftType === "string" ? {
+        graftType: extension.graftType,
+        effect: extension.effect as string,
+        connectionGeometry: structuredClone(extension.connectionGeometry as EnvironmentSnapshot["combatObjects"][number]["geometry"]),
+      } : {}),
+      ...(typeof extension.rootCageId === "string" ? {
+        rootCageId: extension.rootCageId,
+        boundarySide: extension.boundarySide as string,
+        response: extension.response as string,
+      } : {}),
+    }); })),
+    routes: Object.freeze(snapshot.routes.map((route) => Object.freeze({ id: route.id, kind: route.kind,
+      state: route.state, points: Object.freeze(route.points.map((point) => Object.freeze({ x: point.x, y: point.y }))),
+      ...(route.direction !== undefined && route.width !== undefined ? { direction: route.direction, width: route.width,
+        threatening: route.threatening } : {}),
+    }))),
+  });
+}

@@ -1,0 +1,38 @@
+{
+  "format": "tear-artifact-layout",
+  "version": 1,
+  "tracked": {
+    "checkpointReports": "docs/checkpoints",
+    "retentionRecords": "preservation"
+  },
+  "generated": {
+    "root": "artifacts",
+    "tearbench": "artifacts/tearbench",
+    "checkpointEvidence": "artifacts/tearbench/checkpoints",
+    "currentGenerated": "artifacts/tearbench/generated",
+    "ciReceipts": "artifacts/tearbench/receipts",
+    "adHocRuns": "artifacts/tearbench/runs",
+    "buildCache": "artifacts/build-cache",
+    "packages": "artifacts/packages",
+    "scratch": "artifacts/scratch",
+    "localArchive": "artifacts/archive"
+  },
+  "checkpointConvention": "artifacts/tearbench/checkpoints/<program>/<checkpoint>/<subsystem>/<descriptive-artifact>.<ext>",
+  "naming": {
+    "program": "lowercase-kebab-case",
+    "checkpoint": "canonical plan identifier such as C23 or VS3-C12",
+    "artifact": "lowercase-kebab-case; include scenario or evidence kind; add a date only when historical ordering matters"
+  },
+  "legacyCompatibility": {
+    "policy": "preservation/artifact-retention-disposition.json",
+    "prefixes": [
+      "artifacts/tearbench/c3-",
+      "artifacts/tearbench/c20-",
+      "artifacts/tearbench/c21-",
+      "artifacts/tearbench/c24/",
+      "artifacts/tearbench/c6-wave99.json",
+      "artifacts/tearbench/non-lossy-annex-plan-selection.json",
+      "artifacts/t26w/"
+    ]
+  }
+}

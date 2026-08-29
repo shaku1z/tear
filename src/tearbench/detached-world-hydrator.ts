@@ -1,5 +1,6 @@
 import type { TearCodecValue, TearCodecWorld } from "./state-codecs";
 import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
+import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 
 /**
  * The identity graph is validated before construction. Hydration only needs
@@ -71,6 +72,7 @@ export interface TearStagedWorld<
   readonly identityState: IdentityState;
   readonly identityBindings: readonly TearStagedIdentityBinding[];
   readonly runtime: Readonly<Record<string, unknown>>;
+  readonly environment: EnvironmentSnapshot;
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -113,6 +115,10 @@ export function applyTearCodecPayload(
   if (!record(value)) throw new TypeError("live instance payload must be an object");
   for (const [key, entry] of Object.entries(value)) {
     if (key === "id" || key === "factoryId" || key === "ownerId" || transientInputProjectionKeys.has(key)) continue;
+    if (key === "variantId") {
+      Reflect.set(target, "variant", decodeTearCodecValue(entry, identities));
+      continue;
+    }
     Reflect.set(target, key, decodeTearCodecValue(entry, identities));
   }
 }
@@ -274,6 +280,16 @@ export function hydrateTearCodecWorld<
       ...(decodeTearCodecValue(record(worldPayload) && record(worldPayload.runtime)
         ? worldPayload.runtime : {}, identities) as Readonly<Record<string, unknown>>),
       cinema: decodeTearCodecValue(component(world, "tear.cinematic.v1"), identities),
+    }),
+    environment: Object.freeze({
+      ...(record(hazards) && typeof hazards.worldId === "string" ? { worldId: hazards.worldId } : {}),
+      stageId: record(hazards) && typeof hazards.stageId === "string" ? hazards.stageId : "unknown",
+      fields: record(hazards) && Array.isArray(hazards.fields)
+        ? decodeTearCodecValue(hazards.fields, identities) as EnvironmentSnapshot["fields"] : [],
+      combatObjects: record(hazards) && Array.isArray(hazards.combatObjects)
+        ? decodeTearCodecValue(hazards.combatObjects, identities) as EnvironmentSnapshot["combatObjects"] : [],
+      routes: record(hazards) && Array.isArray(hazards.routes)
+        ? decodeTearCodecValue(hazards.routes, identities) as EnvironmentSnapshot["routes"] : [],
     }),
   });
 }

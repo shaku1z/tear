@@ -4,6 +4,7 @@ import { CONFIG } from "../../src/config/game-config";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
 import { BOSS_DEFINITIONS, bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
+import { projectLiveBossObservation } from "../../src/tearbench/live-observation-actors";
 
 function liveBossRuntime() {
   const harness = createEnemyHarness([0.25, 0.75, 0.4]);
@@ -11,6 +12,8 @@ function liveBossRuntime() {
     warden: harness.types.Warden,
     colossus: harness.types.Colossus,
     aldric: harness.types.Aldric,
+    rootbound: harness.types.Rootbound,
+    "white-hart": harness.types.WhiteHart,
     echo: harness.types.Echo,
     source: harness.types.Source,
   } as const;
@@ -24,6 +27,7 @@ function liveBossRuntime() {
   const noop = () => undefined;
   const runtime = createLiveContentRuntime({
     width: CONFIG.view.w, random, run: () => run, modes: () => [], stages: [{ boss: "warden" }],
+    bossBiomeStages: [{ boss: "warden" }, { boss: "white-hart" }],
     platforms: () => harness.platforms, groundY: () => CONFIG.world.groundY, createBoss,
     construction: {
       sideSpawn: () => 0,
@@ -50,6 +54,12 @@ describe("current boss observation authority", () => {
     for (const boss of BOSS_DEFINITIONS) expect(runtime.bossById(boss.id).bossId, boss.id).toBe(boss.id);
   });
 
+  it("keeps preview boss biome lookup separate from the published campaign stages", () => {
+    const { runtime } = liveBossRuntime();
+    expect(runtime.bossBiome("warden")).toBe(0);
+    expect(runtime.bossBiome("white-hart")).toBe(1);
+  });
+
   it("exposes Aldric's authored ordinal phases across fire, kneel, and frenzy", () => {
     const harness = createEnemyHarness([0.25, 0.75, 0.4]);
     const boss = new harness.types.Aldric(CONFIG.view.w / 2, CONFIG.world.groundY - 180) as BehaviorActor & {
@@ -67,5 +77,17 @@ describe("current boss observation authority", () => {
     expect(boss.mode).toBe("downed");
     boss.revive(false);
     expect(boss.phase).toBe(3);
+  });
+
+  it("projects Rootbound's valid ordinals and Verdant home stage from production authorities", () => {
+    const harness = createEnemyHarness();
+    const boss = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
+    expect(projectLiveBossObservation(boss)).toEqual({
+      id: "rootbound", phase: "1", validPhases: ["1", "2", "3"], homeStage: "verdant-sanctum",
+    });
+    boss.hp = boss.maxHp * 0.5;
+    expect(projectLiveBossObservation(boss)?.phase).toBe("2");
+    boss.hp = boss.maxHp * 0.2;
+    expect(projectLiveBossObservation(boss)?.phase).toBe("3");
   });
 });

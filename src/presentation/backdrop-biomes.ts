@@ -1,9 +1,30 @@
-import type { BiomeArt } from "./backdrop";
+import type { BiomeArt, Stage } from "./backdrop";
 
 // ------- per-biome art direction (lush atmosphere, layered on the engine) -------
 // Each biome keeps its stage.bg luminance polarity so THEME ink stays readable: the four
 // surface biomes are light (warm/cool atmospheres), only The Tear is a dark void.
-const BIOME_ART: Record<string, BiomeArt> = {
+type BiomeArtCatalog = Readonly<Partial<Record<Stage["id"], BiomeArt>>> & Readonly<{ _default: BiomeArt }>;
+
+export const VERDANT_BACKDROP_LIMITS = Object.freeze({
+  reflectionBands: 5,
+  lowGraphicsReflectionBands: 2,
+  sanctuaryArches: 10,
+  floodedCloisters: 6,
+  framingRootPairs: 3,
+});
+
+export const PALE_BACKDROP_LIMITS = Object.freeze({
+  auroraBands: 3,
+  lowGraphicsAuroraBands: 1,
+  mountainLayers: 2,
+  pinePairs: 5,
+  lowGraphicsPinePairs: 2,
+  villageLights: 7,
+  reflectionBands: 4,
+  lowGraphicsReflectionBands: 2,
+});
+
+const BIOME_ART: BiomeArtCatalog = {
   _default: {
     sky(B, ctx, stage, c, _t, gy, view) { B.baseSky(ctx, stage, c, gy, undefined, view); },
     far(B, ctx, stage, c, _t, px, gy, view) {
@@ -14,7 +35,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Grounds — clean dawn, disciplined order: warm light, a colonnade, light shafts
-  "The Grounds": {
+  grounds: {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.10, view);
       const g = ctx.createLinearGradient(0, 0, 0, gy);
@@ -43,7 +64,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Undercroft — gray steel industry: furnace glow, girders, a slow-turning gear, embers
-  "The Undercroft": {
+  undercroft: {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.08, view);
       const fx = B.W * 0.16, fy = gy - 40;
@@ -88,7 +109,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Crimson Fields — golden-hour battlefield: warm sky, hills, burning banners, ash
-  "The Crimson Fields": {
+  "crimson-fields": {
     sky(B, ctx, stage, c, _t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.0, view);
       const g = ctx.createLinearGradient(0, 0, 0, gy);
@@ -118,8 +139,226 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "255,140,70", dir: -1, glow: true, drift: 30, aMul: 1.1 }, view); },
   },
 
+  // Verdant Sanctum — a flooded sanctuary-city held beneath one ancient healing tree.
+  "verdant-sanctum": {
+    sky(B, ctx, stage, c, _t, gy, view) {
+      B.baseSky(ctx, stage, c, gy, 0.08, view);
+      const vl = view ? view.left : -B.PX, vt = view ? view.top : -B.PY;
+      const vr = view ? view.right : B.W + B.PX;
+      const jade = ctx.createLinearGradient(0, vt, 0, gy);
+      jade.addColorStop(0, "rgba(159,216,189,0.22)");
+      jade.addColorStop(0.68, "rgba(134,205,178,0.08)");
+      jade.addColorStop(1, "rgba(134,205,178,0)");
+      ctx.fillStyle = jade; ctx.fillRect(vl, vt, vr - vl, Math.max(0, gy - vt));
+      const openingX = B.W * 0.52, openingY = B.H * 0.10;
+      const opening = ctx.createRadialGradient(openingX, openingY, 18, openingX, openingY, B.W * 0.42);
+      opening.addColorStop(0, "rgba(255,244,184,0.34)");
+      opening.addColorStop(0.46, "rgba(228,201,90,0.10)");
+      opening.addColorStop(1, "rgba(228,201,90,0)");
+      ctx.fillStyle = opening; B.fillFull(ctx, view);
+    },
+    far(B, ctx, _stage, _c, _t, px, gy, view) {
+      const vl = view ? view.left : -B.PX, vr = view ? view.right : B.W + B.PX;
+      const farDrift = -px * 12, middleDrift = -px * 24;
+
+      // Far sanctuary terraces and arches remain low-frequency behind combat.
+      ctx.save(); ctx.globalAlpha = 0.34; ctx.fillStyle = "#9fd8bd";
+      ctx.fillRect(vl, gy - 112, vr - vl, 112);
+      const archStep = 230;
+      const archStart = Math.floor((vl - farDrift - 120) / archStep) * archStep;
+      for (let index = 0; index < VERDANT_BACKDROP_LIMITS.sanctuaryArches; index += 1) {
+        const x = archStart + index * archStep + farDrift;
+        if (x > vr + archStep) break;
+        const h = 118 + (index % 3) * 28;
+        ctx.fillRect(x, gy - h, 24, h);
+        ctx.fillRect(x + 142, gy - h, 24, h);
+        ctx.beginPath(); ctx.arc(x + 83, gy - h, 71, Math.PI, 0); ctx.lineWidth = 22; ctx.strokeStyle = "#9fd8bd"; ctx.stroke();
+      }
+      ctx.restore();
+
+      // The ancient tree is a single calm landmark, with major roots embracing the city.
+      const trunkX = B.W * 0.54 + farDrift;
+      ctx.save(); ctx.globalAlpha = 0.48; ctx.fillStyle = "#3f765b";
+      ctx.beginPath();
+      ctx.moveTo(trunkX - 76, gy); ctx.bezierCurveTo(trunkX - 92, gy - 190, trunkX - 54, gy - 390, trunkX - 128, view ? view.top - 80 : -B.PY - 80);
+      ctx.lineTo(trunkX + 132, view ? view.top - 80 : -B.PY - 80);
+      ctx.bezierCurveTo(trunkX + 62, gy - 390, trunkX + 102, gy - 190, trunkX + 84, gy); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#6f9f72"; ctx.lineWidth = 34; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(trunkX - 42, gy - 250); ctx.bezierCurveTo(trunkX - 260, gy - 350, vl + 230, gy - 420, vl - 60, gy - 360);
+      ctx.moveTo(trunkX + 48, gy - 300); ctx.bezierCurveTo(trunkX + 270, gy - 390, vr - 210, gy - 430, vr + 70, gy - 350); ctx.stroke();
+      ctx.restore();
+
+      // Flooded cloisters and hanging gardens occupy the middle depth.
+      ctx.save(); ctx.globalAlpha = 0.48; ctx.fillStyle = "#5f9475"; ctx.strokeStyle = "#47775f";
+      for (let index = 0; index < VERDANT_BACKDROP_LIMITS.floodedCloisters; index += 1) {
+        const span = 270, x = vl + 70 + index * span + middleDrift;
+        if (x > vr + span) break;
+        const top = gy - 190 - (index % 2) * 46;
+        ctx.fillRect(x, top, 190, 18);
+        ctx.fillRect(x + 12, top, 18, gy - top);
+        ctx.fillRect(x + 154, top, 18, gy - top);
+        ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(x + 92, top + 80, 62, Math.PI, 0); ctx.stroke();
+        ctx.strokeStyle = "#7fa96a"; ctx.lineWidth = 5; ctx.beginPath();
+        ctx.moveTo(x + 18, top + 4); ctx.bezierCurveTo(x + 42, top + 54, x + 18, top + 98, x + 52, top + 138); ctx.stroke();
+        ctx.strokeStyle = "#47775f";
+      }
+      ctx.restore();
+
+      // A bounded lower-field wash suggests water without mirroring the live scene.
+      const waterTop = gy - 142, waterBottom = view ? Math.max(gy, view.bottom) : B.H + B.PY;
+      const water = ctx.createLinearGradient(0, waterTop, 0, waterBottom);
+      water.addColorStop(0, "rgba(134,205,178,0.10)");
+      water.addColorStop(0.42, "rgba(67,170,155,0.22)");
+      water.addColorStop(1, "rgba(16,59,54,0.30)");
+      ctx.fillStyle = water; ctx.fillRect(vl, waterTop, vr - vl, waterBottom - waterTop);
+      const reflectionBands = B.lowGraphics()
+        ? VERDANT_BACKDROP_LIMITS.lowGraphicsReflectionBands
+        : VERDANT_BACKDROP_LIMITS.reflectionBands;
+      ctx.save(); ctx.strokeStyle = "#bce7c9"; ctx.lineCap = "round";
+      for (let index = 0; index < reflectionBands; index += 1) {
+        const y = waterTop + 22 + index * 24;
+        const width = 210 + index * 68;
+        const center = B.W * 0.52 - px * (10 + index * 3);
+        ctx.globalAlpha = 0.16 - index * 0.018;
+        ctx.lineWidth = index === 0 ? 3 : 2;
+        ctx.beginPath(); ctx.moveTo(center - width, y); ctx.lineTo(center - 28, y);
+        ctx.moveTo(center + 34, y); ctx.lineTo(center + width * 0.86, y); ctx.stroke();
+      }
+      ctx.restore();
+
+      // Near roots frame the arena edges without crossing the central silhouette lane.
+      ctx.save(); ctx.globalAlpha = 0.72; ctx.strokeStyle = "#103b36"; ctx.lineCap = "round";
+      for (let index = 0; index < VERDANT_BACKDROP_LIMITS.framingRootPairs; index += 1) {
+        const inset = index * 42;
+        ctx.lineWidth = 34 - index * 7;
+        ctx.beginPath(); ctx.moveTo(vl - 28, gy - 24 - inset); ctx.bezierCurveTo(vl + 110, gy - 150 - inset, vl + 118, gy - 300, vl + 22, gy - 390 - inset); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(vr + 28, gy - 18 - inset); ctx.bezierCurveTo(vr - 108, gy - 145 - inset, vr - 112, gy - 292, vr - 18, gy - 388 - inset); ctx.stroke();
+      }
+      ctx.restore();
+    },
+    motes(B, ctx, _stage, c, t, px, view) {
+      B.motes(ctx, c, B.reducedMotion() ? 0 : t, px, {
+        rgb: "228,201,90", dir: -1, twinkle: !B.reducedMotion(),
+        drift: B.reducedMotion() ? 0 : 8, aMul: 0.62, sizeMul: 0.72,
+      }, view);
+    },
+  },
+
+  // The Pale Traverse — coral dusk over a frozen road beneath restrained aurora.
+  "pale-traverse": {
+    sky(B, ctx, stage, c, t, gy, view) {
+      B.baseSky(ctx, stage, c, gy, 0.05, view);
+      const vl = view ? view.left : -B.PX, vt = view ? view.top : -B.PY;
+      const vr = view ? view.right : B.W + B.PX;
+      const dusk = ctx.createLinearGradient(0, vt, 0, gy);
+      dusk.addColorStop(0, "rgba(105,213,159,0.10)");
+      dusk.addColorStop(0.54, "rgba(239,141,168,0.24)");
+      dusk.addColorStop(1, "rgba(115,168,207,0.08)");
+      ctx.fillStyle = dusk; ctx.fillRect(vl, vt, vr - vl, Math.max(0, gy - vt));
+
+      const bands = B.lowGraphics()
+        ? PALE_BACKDROP_LIMITS.lowGraphicsAuroraBands
+        : PALE_BACKDROP_LIMITS.auroraBands;
+      const motionTime = B.reducedMotion() ? 0 : t;
+      ctx.save(); ctx.lineCap = "round";
+      for (let band = 0; band < bands; band += 1) {
+        ctx.globalAlpha = 0.13 - band * 0.025;
+        ctx.strokeStyle = band === 1 ? "#78c4df" : "#69d59f";
+        ctx.lineWidth = 24 - band * 5;
+        ctx.beginPath();
+        const start = Math.floor((vl - 120) / 100) * 100;
+        for (let x = start; x <= vr + 120; x += 100) {
+          const y = B.H * (0.12 + band * 0.1)
+            + Math.sin(x * (0.0027 + band * 0.0004) + motionTime * 0.09 + band) * (34 + band * 8);
+          if (x === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+    far(B, ctx, _stage, _c, _t, px, gy, view) {
+      const vl = view ? view.left : -B.PX, vr = view ? view.right : B.W + B.PX;
+      const farDrift = -px * 12, nearDrift = -px * 24;
+
+      // A jagged central mountain provides the stable landmark and leaves the combat band quiet.
+      for (let layer = 0; layer < PALE_BACKDROP_LIMITS.mountainLayers; layer += 1) {
+        const baseY = gy - 116 + layer * 54;
+        const peakX = B.W * 0.52 + farDrift * (1 + layer * 0.5);
+        ctx.save(); ctx.globalAlpha = 0.46 + layer * 0.16;
+        ctx.fillStyle = layer === 0 ? "#35567a" : "#233d62";
+        ctx.beginPath(); ctx.moveTo(vl - 80, baseY);
+        ctx.lineTo(peakX - 360, baseY - 80); ctx.lineTo(peakX - 190, baseY - 245);
+        ctx.lineTo(peakX - 72, baseY - 165); ctx.lineTo(peakX, baseY - 390 + layer * 80);
+        ctx.lineTo(peakX + 122, baseY - 205); ctx.lineTo(peakX + 260, baseY - 288);
+        ctx.lineTo(peakX + 430, baseY - 90); ctx.lineTo(vr + 80, baseY);
+        ctx.lineTo(vr + 80, gy); ctx.lineTo(vl - 80, gy); ctx.closePath(); ctx.fill();
+        if (layer === 0) {
+          ctx.globalAlpha = 0.42; ctx.fillStyle = "#d8eaff";
+          ctx.beginPath(); ctx.moveTo(peakX - 72, baseY - 165); ctx.lineTo(peakX, baseY - 390);
+          ctx.lineTo(peakX + 68, baseY - 286); ctx.lineTo(peakX + 16, baseY - 306);
+          ctx.lineTo(peakX - 18, baseY - 246); ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Sparse pines frame the outer thirds; the central arena remains readable.
+      const pinePairs = B.lowGraphics()
+        ? PALE_BACKDROP_LIMITS.lowGraphicsPinePairs
+        : PALE_BACKDROP_LIMITS.pinePairs;
+      ctx.save(); ctx.fillStyle = "#12213b"; ctx.globalAlpha = 0.78;
+      for (let index = 0; index < pinePairs; index += 1) {
+        const inset = 28 + index * 52;
+        const height = 108 + (index % 3) * 34;
+        for (const x of [vl + inset + nearDrift, vr - inset + nearDrift]) {
+          ctx.fillRect(x - 3, gy - height, 6, height);
+          for (let tier = 0; tier < 3; tier += 1) {
+            const y = gy - height + 24 + tier * 30, half = 26 + tier * 10;
+            ctx.beginPath(); ctx.moveTo(x, y - 26); ctx.lineTo(x - half, y + 22);
+            ctx.lineTo(x + half, y + 22); ctx.closePath(); ctx.fill();
+          }
+        }
+      }
+      ctx.restore();
+
+      // Tiny village windows provide scale without adding silhouettes to combat space.
+      ctx.save(); ctx.fillStyle = "#ffe1aa"; ctx.globalAlpha = B.highContrast() ? 0.92 : 0.68;
+      for (let index = 0; index < PALE_BACKDROP_LIMITS.villageLights; index += 1) {
+        const x = B.W * 0.35 + index * 54 + farDrift;
+        const y = gy - 72 - (index % 2) * 10;
+        ctx.fillRect(x, y, 5, 4);
+      }
+      ctx.restore();
+
+      // Frozen lower field uses a bounded abstract reflection budget, never a live-scene mirror.
+      const iceTop = gy - 72, iceBottom = view ? Math.max(gy, view.bottom) : B.H + B.PY;
+      const ice = ctx.createLinearGradient(0, iceTop, 0, iceBottom);
+      ice.addColorStop(0, "rgba(216,234,255,0.20)");
+      ice.addColorStop(0.5, "rgba(120,196,223,0.28)");
+      ice.addColorStop(1, "rgba(31,53,87,0.34)");
+      ctx.fillStyle = ice; ctx.fillRect(vl, iceTop, vr - vl, iceBottom - iceTop);
+      const reflections = B.lowGraphics()
+        ? PALE_BACKDROP_LIMITS.lowGraphicsReflectionBands
+        : PALE_BACKDROP_LIMITS.reflectionBands;
+      ctx.save(); ctx.strokeStyle = "#ef8da8"; ctx.lineCap = "round";
+      for (let index = 0; index < reflections; index += 1) {
+        const y = iceTop + 20 + index * 24, width = 170 + index * 86;
+        const center = B.W * 0.52 - px * (9 + index * 3);
+        ctx.globalAlpha = 0.18 - index * 0.025; ctx.lineWidth = index === 0 ? 3 : 2;
+        ctx.beginPath(); ctx.moveTo(center - width, y); ctx.lineTo(center - 24, y);
+        ctx.moveTo(center + 34, y); ctx.lineTo(center + width * 0.86, y); ctx.stroke();
+      }
+      ctx.restore();
+    },
+    motes(B, ctx, _stage, c, t, px, view) {
+      B.motes(ctx, c, B.reducedMotion() ? 0 : t, px, {
+        rgb: "216,234,255", dir: 1, twinkle: false,
+        drift: B.reducedMotion() ? 0 : 5, aMul: 0.48, sizeMul: 0.66,
+      }, view);
+    },
+  },
+
   // The Voidspire — surreal violet: aurora bands, floating broken geometry, drifting shards
-  "The Voidspire": {
+  voidspire: {
     sky(B, ctx, stage, c, t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.14, view);
       ctx.save();
@@ -153,7 +392,7 @@ const BIOME_ART: Record<string, BiomeArt> = {
   },
 
   // The Tear — the void: a central glowing rift that pulses and lights the scene, a starfield
-  "The Tear": {
+  tear: {
     sky(B, ctx, stage, c, t, gy, view) {
       B.baseSky(ctx, stage, c, gy, 0.10, view);
       const vl = view ? view.left : -B.PX, vr = view ? view.right : B.W + B.PX;
@@ -241,5 +480,9 @@ const BIOME_ART: Record<string, BiomeArt> = {
     motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "190,230,255", twinkle: true, drift: 6, aMul: 1.1 }, view); },
   },
 };
+
+export function biomeArtForStage(stage: Pick<Stage, "id">): BiomeArt {
+  return BIOME_ART[stage.id] ?? BIOME_ART._default;
+}
 
 export { BIOME_ART };

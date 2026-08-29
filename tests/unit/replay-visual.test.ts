@@ -86,6 +86,12 @@ describe("visual replay migration", () => {
   it("rejects malformed tracks before playback", () => {
     expect(migrateVisualRecording({ v: 2, px: [1, 2], py: [1] })).toMatchObject({ ok: false });
   });
+
+  it("rejects malformed optional variant identities in visual spawn packets", () => {
+    const packet = visualFixture();
+    const malformed = { ...packet, spawns: [{ t: 0, id: 1, k: "charger", x: 0, y: 0, vid: 7 }] };
+    expect(migrateVisualRecording(malformed)).toMatchObject({ ok: false, error: "Replay event tracks are malformed." });
+  });
 });
 
 describe("LegacyGhostEngine", () => {

@@ -54,6 +54,7 @@ export interface LegacyWorldFramePorts<Platform extends WorldPlatform = WorldPla
   readonly drawPlayer: () => void;
   readonly drawBlade: () => void;
   readonly drawEffects: () => void;
+  readonly drawEnvironment?: () => void;
   readonly drawDebug: (visible: WorldBounds, painted: WorldBounds) => void;
 }
 
@@ -93,6 +94,7 @@ export function renderLegacyWorldFrame<Platform extends WorldPlatform>(ports: Le
   ports.drawFinale("front");
   renderGroundHazards(canvas, ports.sceneEffects);
   renderBossZoneEffects(canvas, ports.sceneEffects);
+  ports.drawEnvironment?.();
   renderEntityLayer(canvas, ports.enemies, ports.player, ports.entityOptions);
   for (const projectile of ports.projectiles) projectile.draw(canvas);
   if (ports.tutorialActive) ports.drawTutorialGhost();

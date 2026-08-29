@@ -21,4 +21,18 @@ describe("canonical gameplay state", () => {
     expect(first.enemies.map((enemy) => enemy.id)).toEqual([1, 2]);
     expect(stableVerificationHash(first)).toBe(stableVerificationHash(second));
   });
+
+  it("hashes every behavior-critical Rimehound arbitration and pounce field", () => {
+    const input = { tick: 4, moveX: 0, moveY: 0, aimTurn: 0, primaryHeld: false } as const;
+    const base = { _gid: 1, kind: "rimehound", x: 100, y: 200, vx: 300, vy: -50, hp: 72, dead: false,
+      atk: "pounce", atkT: 0.4, atkCd: 0.2, packRole: "flank", packFlank: 1, packLockT: 0.8,
+      packAttackAuthorized: true, pounceTargetX: 900, pounceAirborne: true, auroraDirection: 1,
+      auroraResponseT: 0.1, auroraPounceExtended: false };
+    const first = projectCanonicalGameplayState(4, input, null, null, null, [base]);
+    const changed = projectCanonicalGameplayState(4, input, null, null, null,
+      [{ ...base, packAttackAuthorized: false, pounceTargetX: 901, auroraPounceExtended: true }]);
+    expect(first.enemies[0]?.rimehound).toMatchObject({ atk: "pounce", packRole: "flank",
+      packAttackAuthorized: true, pounceTargetX: 900_000, auroraDirection: 1 });
+    expect(stableVerificationHash(changed)).not.toBe(stableVerificationHash(first));
+  });
 });

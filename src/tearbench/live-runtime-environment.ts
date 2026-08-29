@@ -3,7 +3,7 @@ import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
+import type { RunRandomStreamsSnapshot } from "../simulation/run-random"; import { STAGES } from "../gameplay/stages";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1,
   TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
@@ -18,11 +18,19 @@ import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
 import { projectLiveProjectiles } from "./live-observation-projectiles"; import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
-import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
+import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLiveBossObservation, projectLivePlayerMechanics } from "./live-observation-actors";
 import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
   forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
-import { createCampaignVictoryOrigin, createCampaignWave49RewardFrontier } from "./campaign-victory-origin";
+import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
+import { environmentSnapshotToObservation } from "./environment-codec";
+import { forgeBloomWellCycleState, forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
+import { forgeRootbinderNetworkEnvironment } from "./rootbinder-network-forge";
+import { forgeRootboundGraftAnchorEnvironment } from "./rootbound-graft-anchor-forge";
+import { createBloomWellState, isBloomWellState } from "../gameplay/environment/bloom-well";
+import { projectBloomWellPresentation, type BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
+import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
+import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
   TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
@@ -36,12 +44,57 @@ function numericSeed(seed: string): number {
   }
   return (hash >>> 0) || 1;
 }
+function genericEnvironmentForge(
+  kind: "field" | "combat-object",
+  environment: TearStructuredRuntimeEnvironment,
+  snapshots: ReturnType<typeof createLiveRuntimeSnapshotController>,
+  context: LiveTearRuntimeEnvironmentContext,
+): TearLiveRestoreResult {
+  const base: TearSdlDocumentV1 = {
+    format: "tearsdl", schemaVersion: 1, id: `generic-environment-${kind}`, stateClass: "surgical-valid",
+    seed: `generic-environment-${kind}`, start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+  };
+  const field = {
+    id: "generic-field-state", factoryId: "environment-field", kind: "bloom-well" as const,
+    geometry: { x: 40, y: 40, radius: 12 }, state: "scheduled" as const, stateTick: 0, timer: 0, ownerId: null,
+    schedule: { startTick: 1, endTick: 3 }, eligibility: { player: true, enemies: false, bosses: false }, force: null, cleanupReason: null,
+  };
+  const combatObject = {
+    id: "generic-combat-object-state", factoryId: "environment-combat-object", kind: "root-link" as const,
+    ownerId: null, targetId: "player", geometry: { x: 50, y: 50, w: 8, h: 8 }, integrity: 2, maxIntegrity: 2,
+    counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "generic-combat-object-state-hit",
+    state: "active" as const, stateTick: 0, cleanupReason: null,
+  };
+  const forged = kind === "field" ? forgeEnvironmentFieldState(base, field) : forgeEnvironmentCombatObjectState(base, combatObject);
+  return launchResolvedLiveState(resolveTearSdl(forged), environment, snapshots, context);
+}
+function bloomWellEnvironmentForge(
+  environment: TearStructuredRuntimeEnvironment,
+  snapshots: ReturnType<typeof createLiveRuntimeSnapshotController>,
+  context: LiveTearRuntimeEnvironmentContext,
+): TearLiveRestoreResult {
+  const base: TearSdlDocumentV1 = {
+    format: "tearsdl", schemaVersion: 1, id: "verdant-bloom-well-cycle", stateClass: "surgical-valid",
+    seed: "verdant-bloom-well-cycle", start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+  };
+  const field = createBloomWellState({ id: "verdant-bloom-well", ownerId: "player", variant: "stage",
+    geometry: { x: 40, y: 40, radius: 32 }, patternId: "cycle" }, 0);
+  return launchResolvedLiveState(resolveTearSdl(forgeBloomWellCycleState(base, field)), environment, snapshots, context);
+}
+
+function bloomWellPresentation(
+  environment: TearStructuredRuntimeEnvironment,
+  options?: BloomWellPresentationOptions,
+) {
+  return Object.freeze(environment.environment().fields().filter(isBloomWellState)
+    .map((field) => projectBloomWellPresentation(field, options)));
+}
 
 /** Canonical live projection over the same host-owned actors consumed by gameplay;
  * callers cannot supply transition fixtures. */
 export function projectLiveTearObservation(
   context: Pick<LiveTearRuntimeEnvironmentContext, "state" | "stage" | "lifecycle" | "screen" |
-    "width" | "height" | "actorId" | "choiceIds" | "platforms" | "availableGameActions" | "focusedControlId">,
+    "width" | "height" | "actorId" | "choiceIds" | "platforms" | "availableGameActions" | "focusedControlId" | "environment">,
   tick: number,
   accessClass: Exclude<TearRuntimeAccessClass, "C">,
   lastProgressTick?: number,
@@ -55,6 +108,7 @@ export function projectLiveTearObservation(
   }
   const livingEnemies = context.state.enemies().filter((enemy) => !enemy.dead);
   const boss = livingEnemies.find((enemy) => enemy.isBoss);
+  const bossObservation = boss === undefined ? undefined : projectLiveBossObservation(boss);
   const stage = canonicalObservationStage(context.stage().index);
   const lifecycle = context.lifecycle();
   const focusedId = context.focusedControlId?.();
@@ -83,8 +137,8 @@ export function projectLiveTearObservation(
         id: context.actorId(enemy), kind: canonicalObservationEnemyKind(enemy), x: enemy.x, y: enemy.y,
         vx: enemy.vx, vy: enemy.vy, hpRatio: enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0,
         state: authoredState ?? attackState ?? behaviorState ?? "idle",
-        ...(behaviorMode === undefined ? {} : { behaviorMode }),
-        ...projectLiveActorMechanics(enemy, accessClass),
+        ...(typeof enemy.variant === "string" && enemy.variant.length > 0 ? { variantId: enemy.variant } : {}), ...(typeof enemy.variantName === "string" && enemy.variantName.length > 0 ? { variantName: enemy.variantName } : {}),
+        ...(behaviorMode === undefined ? {} : { behaviorMode }), ...projectLiveActorMechanics(enemy, accessClass),
         threat: enemy.isBoss ? 1 : Math.min(1, Math.max(0, enemy.contactDmg / Math.max(1, player.maxHp))),
       });
     }), ...projectLiveProjectiles(context.state.projectiles(), player, accessClass, (projectile) => {
@@ -96,6 +150,7 @@ export function projectLiveTearObservation(
       return source === undefined ? undefined : context.actorId(source);
     })]),
     navigation: projectLiveNavigationObservation(context.platforms(), stage),
+    ...(context.environment === undefined ? {} : { environment: environmentSnapshotToObservation(context.environment().snapshot()) }),
     run: Object.freeze({
       mode: RUN_MODE_REGISTRY.assert(run.mode),
       difficulty: DIFFICULTY_REGISTRY.assert(run.diff),
@@ -110,15 +165,7 @@ export function projectLiveTearObservation(
           ? { waveOwnership: "unavailable" as const }
           : { waveOwnership: "source-events" as const,
             livingWaveEnemies: livingEnemies.filter((enemy) => waveActorIds.has(context.actorId(enemy))).length }),
-        ...(boss === undefined ? {} : {
-          boss: Object.freeze({
-            id: boss.bossId ?? boss.kind,
-            phase: "phase" in boss && (typeof boss.phase === "string" || typeof boss.phase === "number")
-              ? String(boss.phase)
-              : ("state" in boss && typeof boss.state === "string" ? boss.state : "active"),
-            validPhases: Object.freeze(Array.from({ length: boss.phaseMarks.length + 1 }, (_, index) => String(index + 1))),
-          }),
-        }),
+        ...(bossObservation === undefined ? {} : { boss: bossObservation }),
         paused: context.screen() === "paused",
         ui: Object.freeze({ focusableIds: Object.freeze([...context.choiceIds()]),
           ...(focusedId === undefined ? {} : { focusedId }) }),
@@ -220,6 +267,10 @@ export function createLiveTearRuntimeEnvironment(
   });
   const snapshots = createLiveRuntimeSnapshotController(context, accessClass, (snapshot, result) => {
     waveOwnership.invalidate();
+    const restoredRun = context.state.run();
+    if (restoredRun !== null && context.state.enemies().every((enemy) => enemy.dead)) {
+      waveOwnership.restoreEmptyWave(restoredRun.wave);
+    }
     lastCallerEnvelopeId = 0;
     context.resetSemanticInput();
     context.drainConsumedActions();
@@ -465,7 +516,16 @@ export function createLiveTearRuntimeEnvironment(
       const value = observe();
       return stableVerificationHash({
         tick: value.tick, player: value.player, blade: value.blade, entities: value.entities, run: value.run,
+        ...(value.environment === undefined ? {} : { environment: value.environment }),
       });
+    },
+    environment() {
+      requireStructured(accessClass, "structured environment");
+      if (context.environment === undefined) throw new Error("structured environment is unavailable");
+      return context.environment();
+    },
+    bloomWellPresentation(options?: BloomWellPresentationOptions) {
+      return bloomWellPresentation(environment, options);
     },
     screenshot() {
       screenshotCount += 1;
@@ -566,13 +626,13 @@ export function createLiveTearRuntimeEnvironment(
     },
     forgeCampaignFinalWave: () => {
       const certificate = createCampaignVictoryOrigin();
-      const original = snapshots.capture("campaign-wave-49-original");
+      const original = snapshots.capture("campaign-wave-59-original");
       const originalProgressionRuntime = context.captureProgressionRuntime();
       try {
         const replay = context.replayProgression(certificate.ledger);
-        context.loadStage(4);
-        const frontier = createCampaignWave49RewardFrontier(
-          snapshots.capture("campaign-wave-49-source", "reconstructed-reachable"), certificate,
+        context.loadStage(STAGES.length - 1);
+        const frontier = createCampaignWave59RewardFrontier(
+          snapshots.capture("campaign-wave-59-source", "reconstructed-reachable"), certificate,
           context.platformsForStage,
         );
         const progressionRuntime = context.captureProgressionRuntime();
@@ -594,7 +654,7 @@ export function createLiveTearRuntimeEnvironment(
         }));
         context.startNextWave();
         context.setScreen("playing");
-        const started = snapshots.capture("campaign-wave-50-start", "reconstructed-reachable");
+        const started = snapshots.capture("campaign-wave-60-start", "reconstructed-reachable");
         return Object.freeze({ ok: true as const, exactHash: started.hashes.exact, semanticHash: started.hashes.semantic });
       } catch (error) {
         const rollback = snapshots.restore(original);
@@ -604,6 +664,11 @@ export function createLiveTearRuntimeEnvironment(
       }
     },
     forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) => launchResolvedLiveState(resolved, environment, snapshots, context),
+    forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
+    forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
+    forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
+    forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
+    forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
   });
   return Object.freeze({
     accessClass: "B" as const,
@@ -622,6 +687,13 @@ export function createLiveTearRuntimeEnvironment(
     metrics: () => environment.metrics(),
     events: () => environment.events(),
     stateHash: () => environment.stateHash(),
+    environment: () => environment.environment(),
+    bloomWellPresentation: (options?: BloomWellPresentationOptions) => bloomWellPresentation(environment, options),
+    forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
+    forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
+    forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
+    forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
+    forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
     screenshot: () => environment.screenshot(),
   });
 }

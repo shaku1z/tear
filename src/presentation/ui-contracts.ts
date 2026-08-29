@@ -79,6 +79,7 @@ export interface UiOptions {
     index?: number;
     label?: string;
     line?: string;
+    openingLine?: string;
     lowGraphics?: boolean;
     maxWidth?: number;
     morphK?: number;

@@ -221,7 +221,7 @@ function normalizeReplayV1(value: Record<string, unknown>): ReplayEnvelopeV1 | n
 }
 
 /** Parses serialized or unknown replay data, migrating recognized older schemas. */
-export function parseReplayEnvelope(value: unknown): ReplayValidationResult {
+export function parseReplayEnvelope(value: unknown, expectedRulesetVersion?: string): ReplayValidationResult {
   let parsed: unknown = value;
   if (typeof value === "string") {
     try {
@@ -242,7 +242,14 @@ export function parseReplayEnvelope(value: unknown): ReplayValidationResult {
       });
     }
   }
-  return validateReplayEnvelope(parsed);
+  const validated = validateReplayEnvelope(parsed);
+  if (validated.ok && expectedRulesetVersion !== undefined && validated.replay.rulesetVersion !== expectedRulesetVersion) {
+    return Object.freeze({ ok: false, issues: [Object.freeze({
+      path: "rulesetVersion",
+      message: `must match deterministic runtime ruleset ${expectedRulesetVersion}`,
+    })] });
+  }
+  return validated;
 }
 
 export function verifyReplayFinalState(replay: ReplayEnvelopeV2, finalState: unknown): boolean {

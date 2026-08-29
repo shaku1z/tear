@@ -10,6 +10,7 @@ export interface LiveStageRunState {
   bossAdds?: unknown;
   _preBossPlatforms?: unknown;
   _brokenPlats?: unknown;
+  _arenaBroken?: unknown;
 }
 
 export interface LiveStageBlade {
@@ -55,6 +56,7 @@ export class LiveStageController<
       run.bossAdds = null;
       run._preBossPlatforms = null;
       run._brokenPlats = null;
+      run._arenaBroken = null;
     }
     const blade = this.#port.blade();
     if (blade?.stolenBy) {

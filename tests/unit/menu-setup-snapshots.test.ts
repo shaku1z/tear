@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMenuSnapshot, buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
+import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 
 const modes = [{ id: "endless", label: "Endless", blurb: "forever" }];
 const difficulties = [{ id: "normal", label: "Normal", desc: "fair", mods: { score: 1, coin: 1 } }];
@@ -16,5 +17,14 @@ describe("menu/setup snapshots", () => {
     expect(view.startSummary).toBe("ENDLESS · NORMAL · BLADE");
     expect(view.startGlyph).toBe("▢");
     expect(view.weapons[0]?.detail).toBe("H 5 · I 3 · R 4 · D 2     WEAK: armor");
+  });
+  it("offers Rootbound through the canonical Boss Test roster", () => {
+    const view = buildSetupSnapshot({ selectedMode: "bossonly", selectedDifficulty: "normal", selectedWeapon: "blade", selectedBoss: "rootbound",
+      startGlyph: "▢", modes: [{ id: "bossonly", label: "Boss Test", blurb: "bosses" }], difficulties,
+      weapons: [{ id: "blade", name: "Blade", blurb: "cut", tags: ["fast"], throwIdentity: "return" }],
+      bosses: BOSS_ROSTER, livePlatform: false, best: { wave: 0, score: 0 }, formatTime: String });
+    expect(view.bossChoices?.find((choice) => choice.id === "rootbound")).toEqual({
+      id: "rootbound", label: "THE ROOTBOUND", selected: true,
+    });
   });
 });

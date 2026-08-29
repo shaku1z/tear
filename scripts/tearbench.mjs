@@ -73,17 +73,35 @@ function currentWeaponThrowIdentities() {
 }
 
 function currentStageBossPairs() {
-  const stageIdsSource = stageSource.match(/export const STAGE_IDS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const\)/u);
-  if (stageIdsSource === null) throw new TypeError("could not read the production stage catalog for evidence coverage");
-  const stageIds = [...stageIdsSource[1].matchAll(/"([a-z][a-z0-9-]*)"/gu)].map((entry) => entry[1]);
-  const pairs = [...stageSource.matchAll(
+  const authoredPairs = [...stageSource.matchAll(
     /^\s{4}id:\s*"([a-z][a-z0-9-]*)",[\s\S]*?^\s{4}boss:\s*"([a-z][a-z0-9-]*)"/gmu,
   )].map((entry) => Object.freeze({ stage: entry[1], boss: entry[2] }));
-  const bossIds = [...bossDefinitionSource.matchAll(/Object\.freeze\(\{\s*id:\s*"([a-z][a-z0-9-]*)"/gu)]
-    .map((entry) => entry[1]);
-  if (stageIds.length === 0 || pairs.length !== stageIds.length || bossIds.length !== pairs.length
-    || pairs.some((pair, index) => pair.stage !== stageIds[index])
-    || new Set(stageIds).size !== stageIds.length || new Set(bossIds).size !== bossIds.length
+  const availability = stageSource.match(
+    /export const STAGE_CONTENT_AVAILABILITY\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\s*as const satisfies/u,
+  );
+  if (availability === null) throw new TypeError("could not read the source-owned stage availability policy");
+  const unpublishedStageIds = new Set([...availability[1].matchAll(
+    /^\s*(?:"([a-z][a-z0-9-]*)"|([a-z][a-z0-9-]*)):\s*Object\.freeze\(\{[\s\S]*?published:\s*false[\s\S]*?\}\),/gmu,
+  )].map((entry) => entry[1] ?? entry[2]));
+  const pairs = authoredPairs.filter((pair) => !unpublishedStageIds.has(pair.stage));
+  const stageIds = pairs.map((pair) => pair.stage);
+  const definitions = bossDefinitionSource.match(
+    /export const BOSS_DEFINITIONS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const satisfies readonly BossDefinition\[\]\)/u,
+  );
+  if (definitions === null) throw new TypeError("could not read the production boss definition catalog");
+  const bossIds = [...definitions[1].matchAll(
+    /Object\.freeze\(\{\s*id:\s*"([a-z][a-z0-9-]*)"|([A-Z][A-Z0-9_]*_DEFINITION)/gu,
+  )].map((entry) => {
+    if (entry[1] !== undefined) return entry[1];
+    const reference = entry[2];
+    const resolved = bossDefinitionSource.match(new RegExp(
+      `export const ${reference}\\s*=\\s*Object\\.freeze\\(\\{\\s*id:\\s*"([a-z][a-z0-9-]*)"`, "u",
+    ));
+    if (resolved === null) throw new TypeError(`could not resolve production boss definition ${String(reference)}`);
+    return resolved[1];
+  });
+  if (stageIds.length === 0 || new Set(stageIds).size !== stageIds.length
+    || new Set(bossIds).size !== bossIds.length
     || pairs.some((pair) => !bossIds.includes(pair.boss))) {
     throw new RangeError("production stage/boss ownership has missing, retired, duplicated, or mismatched definitions");
   }
@@ -97,7 +115,8 @@ function sharedBossProofIds(source) {
     || !source.includes(".engineEventProjection()")) {
     throw new TypeError("shared production boss proof has no inspectable source-derived encounter and biome evidence");
   }
-  const ids = catalog.filter((entry) => entry.subject?.kind === "boss").map((entry) => entry.subject.id);
+  const ids = catalog.filter((entry) => entry.subject?.kind === "boss"
+    && !(entry.tags ?? []).includes("unpublished-preview")).map((entry) => entry.subject.id);
   const production = currentStageBossPairs().map((pair) => pair.boss);
   if (ids.length !== production.length || ids.some((id, index) => id !== production[index])) {
     throw new RangeError("shared production boss proof does not exactly cover the current authored boss catalog");
@@ -155,11 +174,13 @@ function validateScenarioMetadata(scenario) {
   }
   const subject = scenario.subject;
   if (subject === undefined) return;
-  if (subject === null || typeof subject !== "object" || !["gameplay", "weapon", "boss"].includes(subject.kind)
+  if (subject === null || typeof subject !== "object" || !["gameplay", "weapon", "boss", "environment-field", "environment-combat-object"].includes(subject.kind)
     || typeof subject.id !== "string" || subject.id.trim() === "") {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
-  if (scenario.start?.boss !== undefined && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
+  const isRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor"
+    && scenario.start?.boss === "rootbound";
+  if (scenario.start?.boss !== undefined && !isRootboundGraft && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
     throw new TypeError(`scenario ${scenario.id} boss start requires its matching authoritative boss subject`);
   }
   if (subject.kind === "gameplay") {
@@ -188,6 +209,19 @@ function validateScenarioMetadata(scenario) {
       || !Array.isArray(scenario.backends) || scenario.backends.length !== 1 || scenario.backends[0] !== "live") {
       throw new TypeError(`scenario ${scenario.id} boss subject requires live-only bossonly evidence`);
     }
+  } else if (subject.kind === "environment-field" || subject.kind === "environment-combat-object") {
+    const expected = subject.kind === "environment-field" ? "generic-field" : "generic-combat-object";
+    const isSupportedBloomWell = subject.kind === "environment-field" && subject.id === "verdant-bloom-well";
+    const isSupportedRootNetwork = subject.kind === "environment-combat-object" && subject.id === "verdant-root-network";
+    const isSupportedRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor";
+    const supportedBackends = isSupportedBloomWell
+      ? Array.isArray(scenario.backends) && scenario.backends.length === 2 && scenario.backends.includes("live") && scenario.backends.includes("headless")
+      : isSupportedRootNetwork
+        ? Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live"
+      : Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live";
+    if ((subject.id !== expected && !isSupportedBloomWell && !isSupportedRootNetwork && !isSupportedRootboundGraft) || !supportedBackends) {
+      throw new TypeError(`scenario ${scenario.id} environment subject requires a supported environment evidence backend`);
+    }
   }
   const command = scenario.evidence?.command;
   if (typeof command !== "string") return;
@@ -200,6 +234,15 @@ function validateScenarioMetadata(scenario) {
       || !source.includes("entry.subject.kind === \"gameplay\"")
       || !source.includes("environment.reset(scenario)") || !source.includes(`case "${subject.id}":`)) {
       throw new RangeError(`scenario ${scenario.id} shared browser evidence does not exercise its ${subject.id} subject`);
+    }
+    return;
+  }
+  if ((subject.kind === "environment-field" || subject.kind === "environment-combat-object")
+    && relative(root, proof.file).replaceAll("\\", "/") === "tests/browser-current-gameplay-scenarios.js") {
+    if (!source.includes("entry.subject.kind === \"environment-field\"")
+      || !source.includes("entry.subject.kind === \"environment-combat-object\"")
+      || !source.includes("environment.environment()")) {
+      throw new RangeError(`scenario ${scenario.id} shared browser evidence does not exercise its environment subject`);
     }
     return;
   }
@@ -272,7 +315,8 @@ function routeScenarioIds(route) {
       }
     } else if (subject === "current-stage-bosses") {
       const pairs = currentStageBossPairs();
-      const encounters = catalog.filter((scenario) => scenario.subject?.kind === "boss");
+      const encounters = catalog.filter((scenario) => scenario.subject?.kind === "boss"
+        && !(scenario.tags ?? []).includes("unpublished-preview"));
       for (const scenario of encounters) {
         if (!pairs.some((pair) => pair.boss === scenario.subject.id)) {
           throw new RangeError(`scenario ${scenario.id} references a retired or unknown production boss`);
@@ -564,7 +608,7 @@ function executeCurrentWeaponParity() {
 }
 
 async function writeSelection(selection) {
-  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "evidence-selection.json")));
+  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "evidence-selection.json")));
   await mkdir(dirname(artifactPath), { recursive: true });
   await writeFile(artifactPath, `${JSON.stringify(selection, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(selection, null, 2));
@@ -1007,7 +1051,7 @@ async function graveyardReopen() {
  */
 async function executeSelectedGraveyardCases(selectors, options = {}) {
   const registryPath = resolve(options.registryPath ?? resolve(root, "artifacts", "tearbench", "graveyard-registry.json"));
-  const outputPath = resolve(options.artifactPath ?? resolve(root, "artifacts", "tearbench", "graveyard-rerun.json"));
+  const outputPath = resolve(options.artifactPath ?? resolve(root, "artifacts", "tearbench", "generated", "graveyard-rerun.json"));
   const result = await withTearbenchModule(async (graveyard) => {
     const registry = await readGraveyardRegistry(registryPath, graveyard);
     const artifacts = await artifactStoreForRegistry(registry);
@@ -1087,7 +1131,7 @@ async function graveyardRun() {
   if (cases.length === 0) throw new TypeError(usage);
   const report = await executeSelectedGraveyardCases(cases, {
     registryPath: option("--registry", resolve(root, "artifacts", "tearbench", "graveyard-registry.json")),
-    artifactPath: option("--artifact", resolve(root, "artifacts", "tearbench", "graveyard-rerun.json")),
+    artifactPath: option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "graveyard-rerun.json")),
   });
   if (report.status !== "passed") process.exitCode = 1;
 }
@@ -1204,7 +1248,7 @@ try {
     const graveyardReport = !docsOnly && evidence.status === 0 && evidenceExecution.status === "passed"
       ? await executeSelectedGraveyardCases(selection.graveyardCases, {
         registryPath: option("--registry", resolve(root, "artifacts", "tearbench", "graveyard-registry.json")),
-        artifactPath: resolve(root, "artifacts", "tearbench", "graveyard-rerun.json"),
+        artifactPath: resolve(root, "artifacts", "tearbench", "generated", "graveyard-rerun.json"),
       })
       : undefined;
     console.log(`selection: ${artifactPath}`);

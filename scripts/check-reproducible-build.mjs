@@ -8,7 +8,7 @@ const projectRoot = resolve(import.meta.dirname, "..");
 const temporaryRoot = await mkdtemp(join(tmpdir(), "tear-repro-"));
 const buildTarget = resolve(projectRoot, "scripts", "build-target.mjs");
 const crazyGamesPackager = resolve(projectRoot, "scripts", "package-crazygames.mjs");
-const crazyGamesArchive = resolve(projectRoot, "artifacts", "tear-crazygames.zip");
+const crazyGamesArchive = resolve(projectRoot, "artifacts", "packages", "tear-crazygames.zip");
 
 async function fileHashes(root) {
   const hashes = new Map();

@@ -12,6 +12,7 @@ import type { CampaignCinematicBeat, CampaignCinematicDirector, CampaignCinemati
 import type { CinematicBeat, CinematicScript } from "../presentation/cinematics";
 import type { ArenaPlatform } from "../gameplay/training/arena-rules";
 import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
+import { stageIdAtRuntimeIndex } from "../gameplay/stages";
 import {
   observeFinaleOutwardCall,
   type FinaleMaximumFeelReceipt,
@@ -74,7 +75,10 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     rememberBiome: (name) => { services.rememberBiome(name); },
     resetStageAchievements: () => { services.resetStageAchievements(); },
     resetPlayerStagePassives: () => { state.player()?.resetStagePassives(); },
-    recordReplayStage: (index) => { d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index }); },
+    recordReplayStage: (index) => {
+      const stageId = stageIdAtRuntimeIndex(index);
+      d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index, ...(stageId === null ? {} : { stageId }), transition: "entered" });
+    },
   }));
   const runtime = createLiveCampaignRuntime({ runtime: story,
     cinema: {

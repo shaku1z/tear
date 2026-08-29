@@ -260,7 +260,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page }) => {
     "tear.hazard.v1", "tear.platform.v1", "tear.player.v1", "tear.projectile.v1",
     "tear.reward.v1", "tear.rng.v1", "tear.run.v1", "tear.ui.v1", "tear.world.v1",
   ]);
-  const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c23");
+  const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints", "core", "C23", "state-forge");
   fs.mkdirSync(artifactDirectory, { recursive: true });
   fs.writeFileSync(path.join(artifactDirectory, "live-restore-600.json"), JSON.stringify({
     scenario: scenario.id,

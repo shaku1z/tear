@@ -91,6 +91,19 @@
       "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
+    "id": "verdant-variant-selection",
+    "description": "Explicitly select a Verdant enemy variant through the Playground training spawn path.",
+    "subject": { "kind": "gameplay", "id": "variant-selection" },
+    "start": { "mode": "playground", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["variants", "training", "explicit-selection", "variant-selection"],
+    "maxTicks": 120,
+    "testFiles": ["tests/unit/verdant-variant-selection.test.ts", "tests/unit/live-enemy-spawn.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "The shared browser journey invokes the source-owned Playground explicit variant training spawn and observes the selected identity.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
     "id": "warden-grounds-live-encounter",
     "description": "Launch the production Warden encounter in its authored Grounds biome and prove its live combat simulation advances.",
     "subject": { "kind": "boss", "id": "warden" },
@@ -142,6 +155,40 @@
     }
   },
   {
+    "id": "rootbound-verdant-sanctum-live-encounter",
+    "description": "Launch the production Rootbound encounter in Verdant Sanctum and prove its live simulation reaches the first authored Phase I attack transition.",
+    "subject": { "kind": "boss", "id": "rootbound" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "rootbound" },
+    "backends": ["live"],
+    "tags": ["rootbound", "verdant-sanctum", "boss", "stage", "encounter"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts", "tests/unit/rootbound-phase-one.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
+      "artifact": "The shared production boss journey starts Rootbound through Boss Test in its source-owned Verdant Sanctum stage and observes its first authored Phase I attack transition.",
+      "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
+    "id": "white-hart-pale-traverse-foundation-live-encounter",
+    "description": "Launch the unpublished White Hart engineering encounter in Pale Traverse and prove its deterministic route-first phases, direct projectiles, true/decoy route language, accessibility profile, canonical observation, restore, and cleanup paths.",
+    "subject": { "kind": "boss", "id": "white-hart" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "white-hart" },
+    "backends": ["live"],
+    "tags": ["white-hart", "pale-traverse", "boss", "stage", "route-first", "three-phase", "pt3-c7", "unpublished-preview", "engineering-only"],
+    "maxTicks": 1440,
+    "testFiles": ["tests/unit/white-hart-foundation.test.ts", "tests/unit/white-hart-phases.test.ts", "tests/unit/white-hart-route-runtime.test.ts", "tests/unit/white-hart-state-forge.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-pale-white-hart-phases.js",
+      "artifact": "The dedicated engineering journey captures authored route facts for Antler Run, Aurora Volley, Ghost Tracks, and an accessible Endless Return; fixed-step and State Forge tests cover all twelve attacks and phase/environment restoration without publishing White Hart into ordinary Boss Test.",
+      "artifactRetention": "Regenerable local engineering screenshots and a source/build-bound evidence manifest are retained outside version control.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
     "id": "echo-voidspire-live-encounter",
     "description": "Launch the production Echo encounter in its authored Voidspire biome and prove its live combat simulation advances.",
     "subject": { "kind": "boss", "id": "echo" },
@@ -157,6 +204,71 @@
       "executionClass": "engineering",
       "certification": "non-certifying"
     }
+  },
+  {
+    "id": "generic-environment-field-transition",
+    "description": "Launch a generic environment field through the source-owned scheduled, active, and resolved lifecycle.",
+    "subject": { "kind": "environment-field", "id": "generic-field" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["environment", "field", "generic-field", "fixed-step", "c4"],
+    "maxTicks": 8,
+    "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved field, and observes its real fixed-step lifecycle transitions.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
+    "id": "generic-environment-combat-object-transition",
+    "description": "Launch a generic environment combat object through source-owned damage, dedupe, destruction, and cleanup transitions.",
+    "subject": { "kind": "environment-combat-object", "id": "generic-combat-object" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["environment", "combat-object", "generic-combat-object", "damage", "c4"],
+    "maxTicks": 8,
+    "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-combat-object-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved combat object, and observes source-owned damage/dedupe/destruction facts.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
+    "id": "verdant-bloom-well-cycle",
+    "description": "Restore one authored Bloom Well through State Forge and prove deterministic warning, active lift, cooldown, and dormant boundaries without stage insertion.",
+    "subject": { "kind": "environment-field", "id": "verdant-bloom-well" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live", "headless"],
+    "tags": ["environment", "field", "bloom-well", "verdant-bloom-well", "movement", "c5"],
+    "maxTicks": 760,
+    "testFiles": ["tests/unit/bloom-well-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared current-game browser proof restores the Bloom Well through State Forge and records state/hash/observation boundaries; detached parity is covered by the production environment unit harness.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
+    "id": "verdant-root-network-sever",
+    "description": "Restore one Rootbinder and two ordinary allies through State Forge, prove source-owned root-link segments are severable and cleaned without proc or reward leakage.",
+    "subject": { "kind": "environment-combat-object", "id": "verdant-root-network" },
+    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
+    "backends": ["live"],
+    "tags": ["environment", "combat-object", "rootbinder", "root-network", "verdant-root-network", "sever", "c6"],
+    "maxTicks": 24,
+    "testFiles": ["tests/unit/rootbinder-network.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared Class-A browser proof restores Rootbinder relationship state through State Forge, observes non-proc root-link segments, severs one segment, and verifies cleanup of the remaining links.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+  },
+  {
+    "id": "rootbound-graft-anchor-destruction",
+    "description": "Restore Rootbound with one canonical active Graft Anchor through State Forge, destroy it through the environment combat kernel, and prove valid ownership plus reward/proc exclusion.",
+    "subject": { "kind": "environment-combat-object", "id": "rootbound-graft-anchor" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "rootbound" },
+    "backends": ["live"],
+    "tags": ["environment", "combat-object", "rootbound", "rootbound-graft-anchor", "graft-anchor", "destruction", "phase-two", "c12"],
+    "maxTicks": 24,
+    "testFiles": ["tests/unit/graft-anchor.test.ts", "tests/unit/rootbound-phase-two.test.ts"],
+    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared Class-A browser proof launches the real Rootbound encounter, restores one specialized Graft through State Forge, observes stable owner/target references, destroys it through the canonical combat-object kernel, and proves no enemy reward/proc leakage.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "source-void-low-hp-rescue-seek",

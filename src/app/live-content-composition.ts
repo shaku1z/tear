@@ -59,7 +59,12 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
     run: options.run,
     modes: () => d.CONFIG.modes,
     stages: d.STAGES,
+    // The public Boss Test roster is filtered elsewhere. This authored map is
+    // retained solely so explicit Playground/TearBench preview launches load
+    // their own biome instead of falling back to Grounds.
+    bossBiomeStages: d.PLAYGROUND_STAGES,
     stageIndex: () => options.stage.index,
+    stageId: () => options.stage.current.id,
     platforms: () => options.stage.platforms,
     setPlatforms: (value) => { options.stage.platforms = value; },
     createGround: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
@@ -77,7 +82,9 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
       return options.entities.createEnemy(placement.factoryId, placement.x, placement.y, options.run());
     },
     applyPreset: (enemy, preset) => { d.applyPreset(enemy, preset); },
-    rollVariant: (kind, wave) => d.rollVariant(kind, wave, options.worldServices.random.stream("spawn")),
+    rollVariant: (kind, wave, context) => context === undefined
+      ? d.rollVariant(kind, wave, options.worldServices.random.stream("spawn"))
+      : d.rollVariant(kind, context),
     applyVariant: (enemy, variant) => { d.applyVariant(enemy, variant); },
     rollAffixes: (enemy, wave) => { d.rollAffixes(enemy, wave, options.worldServices.random.stream("spawn")); },
     arrivalEffect(enemy, boss) {

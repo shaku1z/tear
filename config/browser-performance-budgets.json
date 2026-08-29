@@ -31,6 +31,42 @@
     "frameP95Ms": 20,
     "newLongTasksMax": 0
   },
+  "verdantGameplay": {
+    "mode": "boss-test",
+    "durationMs": 8000,
+    "minimumSamples": 300,
+    "minimumCollectionRateFps": 8,
+    "simulationP95Ms": 6,
+    "renderP95Ms": 14,
+    "frameP95Ms": 16.67,
+    "newLongTasksMax": 0,
+    "ceilings": {
+      "enemies": 8,
+      "projectiles": 128,
+      "effects": 320,
+      "fields": 6,
+      "combatObjects": 12,
+      "routes": 4
+    }
+  },
+  "paleGameplay": {
+    "mode": "boss-test",
+    "durationMs": 8000,
+    "minimumSamples": 300,
+    "minimumCollectionRateFps": 8,
+    "simulationP95Ms": 6,
+    "renderP95Ms": 14,
+    "frameP95Ms": 16.67,
+    "newLongTasksMax": 0,
+    "ceilings": {
+      "enemies": 8,
+      "projectiles": 128,
+      "effects": 320,
+      "fields": 6,
+      "combatObjects": 12,
+      "routes": 4
+    }
+  },
   "runCycles": {
     "count": 5,
     "maxHeapGrowthBytes": 16777216,

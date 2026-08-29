@@ -6,6 +6,7 @@ import type { LiveKillHost } from "../gameplay/combat/live-kill-runtime";
 import type { KillEnemy, KillPlayer, KillProjectile, KillRun } from "../gameplay/combat/kill-runtime";
 import type { MirrorBladePort, MirrorPlayerPort } from "../gameplay/entities/mirror-contracts";
 import type { UpgradeMods } from "../gameplay/upgrades";
+import type { EnvironmentRuntime } from "../gameplay/environment/environment-runtime";
 
 type Opening = LiveOpeningPhaseHost;
 type Collision = LiveCollisionPhaseHost;
@@ -99,6 +100,7 @@ export interface LiveCombatActionContext<
   readonly canvas: HTMLCanvasElement;
   readonly width: number;
   readonly bossRosterSize: number;
+  readonly environment: EnvironmentRuntime;
   readonly combatRuntime: () => CombatEntityRuntime;
   readonly live: LiveCombatMutableState<Enemy, Projectile, Floater>;
   readonly ports: LiveCombatLocalPorts<Enemy>;

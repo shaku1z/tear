@@ -24,7 +24,7 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     breakT: number; driveT: number; boundT: number; severT: number; severMult: number;
     severTier: number; phaseDamageMult: number;
     isBoss?: boolean; isMiniBoss?: boolean; _noBar?: boolean;
-    declare bossName: string; declare bossId: string; declare presentationId: string; declare epithet: string;
+    declare bossName: string; declare bossId: string; declare presentationId: string; declare epithet: string; declare openingLine: string;
     declare phaseMarks: number[]; declare phaseTag: string; declare facing: number;
     declare batonA: number; declare batonAV: number; declare weaponAV: number;
     declare cinematicRequest: BossPresentationActor["cinematicRequest"];

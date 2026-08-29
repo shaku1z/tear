@@ -35,7 +35,7 @@ try {
   const weaponTuningModule = await server.ssrLoadModule("/src/gameplay/weapon-tuning.ts");
   const difficultyModule = await server.ssrLoadModule("/src/gameplay/run/difficulty-catalog.ts");
   const repository = option("--repository") ?? process.env.TEAR_BUILD_REPOSITORY ?? referenceModule.GAME_REFERENCE_REPOSITORY;
-  const enemyFamilies = enemyKindModule.ENEMY_KIND_IDS.map((id) => ({ id, variants: variantModule.VARIANTS[id] ?? [] }));
+  const enemyFamilies = enemyKindModule.ENEMY_IDENTITY_IDS.map((id) => ({ id, variants: variantModule.VARIANTS[id] ?? [] }));
   const reference = referenceModule.buildGameReferenceV1({
     repository,
     sourceSha,

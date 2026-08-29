@@ -57,3 +57,12 @@ This includes strict type checking, lint, unit/contract/determinism and weapon t
 - Add characterization before refactoring behavior and update `docs/FEATURE_INVENTORY.md` with the evidence.
 
 See `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/PERFORMANCE_BUDGETS.md`, `docs/RELEASE_MATRIX.md`, and `DEPLOYMENT.md` for subsystem and release guidance.
+
+## Evidence and generated output
+
+Keep source and package roots free of logs, screenshots, traces, reports, and
+compiler caches. Follow `docs/ARTIFACTS.md`, use the checkpoint-scoped paths in
+`config/artifact-layout.json`, and run `pnpm check:artifacts` after changing an
+artifact generator or evidence reference. Raw output under `artifacts/` is
+ignored; only deliberately promoted checkpoint manifests and preservation
+records are committed.

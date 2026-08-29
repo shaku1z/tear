@@ -31,6 +31,35 @@ const c27aPortableCoreRoots = Object.freeze([
 ]);
 const forbiddenDependencyRules = Object.freeze([
   Object.freeze({
+    roots: Object.freeze([
+      "src/gameplay/environment/aurora-track", "src/gameplay/environment/white-hart-route-runtime.ts",
+      "src/gameplay/environment/pale-environment-feature.ts", "src/gameplay/entities/enemy-types/rimehound.ts",
+      "src/gameplay/entities/enemy-types/white-hart.ts",
+    ]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:bloom-well|verdant-environment-feature|rootbinder-runtime|enemy-types\/rootbound|graft-anchor|root-cage|regrowth-link)[^"']*["']/u,
+    message: "Pale biome source cannot depend on Verdant-specific implementation",
+  }),
+  Object.freeze({
+    roots: Object.freeze([
+      "src/gameplay/environment/bloom-well.ts", "src/gameplay/environment/verdant-environment-feature.ts",
+      "src/gameplay/environment/graft-anchor.ts", "src/gameplay/environment/root-cage.ts",
+      "src/gameplay/environment/regrowth-link.ts", "src/gameplay/entities/rootbinder-runtime.ts",
+      "src/gameplay/entities/enemy-types/rootbound.ts",
+    ]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:aurora-track|pale-environment-feature|white-hart-route-runtime|enemy-types\/(?:white-hart|rimehound))[^"']*["']/u,
+    message: "Verdant biome source cannot depend on Pale-specific implementation",
+  }),
+  Object.freeze({
+    roots: Object.freeze([
+      "src/gameplay/environment/environment-runtime.ts", "src/gameplay/environment/environment-state.ts",
+      "src/gameplay/environment/environment-contracts.ts", "src/gameplay/environment/environment-feature-ports.ts",
+      "src/gameplay/environment/field-runtime.ts", "src/gameplay/environment/environment-events.ts",
+      "src/gameplay/environment/presentation-snapshot.ts", "src/tearbench/environment-codec.ts",
+    ]),
+    pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:bloom-well|aurora-track|verdant-environment-feature|pale-environment-feature|rootbinder-runtime|white-hart-route-runtime|graft-anchor|root-cage|regrowth-link|enemy-types\/(?:rootbound|white-hart|rimehound))[^"']*["']/u,
+    message: "biome-neutral environment foundation cannot import a biome implementation",
+  }),
+  Object.freeze({
     roots: Object.freeze(["src/game-reference/"]),
     pattern: /(?:from\s+|import\s*\()\s*["'][^"']*(?:config\/game-config|app\/|platform\/|presentation\/|entrypoints\/|browser\/|remote(?:\/|-))[^"']*["']/u,
     message: "game-reference projections must remain pure authored data and cannot depend on runtime, browser, or remote adapters",
@@ -435,6 +464,26 @@ if (dependencyErrors("src/tearbench/__planted-violation.ts",
 if (dependencyErrors("src/tearbench/__planted-world-violation.ts",
   'import type { GameEnemy } from "../app/game-runtime-state";').length !== 1) {
   throw new Error("source architecture world-port rule self-test failed");
+}
+if (dependencyErrors("src/gameplay/environment/pale-environment-feature.ts",
+  'import { installGraftAnchor } from "./graft-anchor";').length !== 1) {
+  throw new Error("source architecture Pale-to-Verdant dependency self-test failed");
+}
+if (dependencyErrors("src/gameplay/environment/verdant-environment-feature.ts",
+  'import { advanceAuroraTrack } from "./aurora-track-runtime";').length !== 1) {
+  throw new Error("source architecture Verdant-to-Pale dependency self-test failed");
+}
+if (dependencyErrors("src/gameplay/environment/environment-runtime.ts",
+  'import { createPaleEnvironmentFeature } from "./pale-environment-feature";').length !== 1) {
+  throw new Error("source architecture neutral-environment dependency self-test failed");
+}
+if (dependencyErrors("src/tearbench/environment-codec.ts",
+  'import { assertAuroraTrackFieldState } from "../gameplay/environment/aurora-track";').length !== 1) {
+  throw new Error("source architecture neutral-codec dependency self-test failed");
+}
+if (dependencyErrors("src/gameplay/environment/presentation-snapshot.ts",
+  'import { isGraftAnchorState } from "./graft-anchor";').length !== 1) {
+  throw new Error("source architecture neutral-observation dependency self-test failed");
 }
 for (const forbiddenGameReferenceImport of [
   "../config/game-config",

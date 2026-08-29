@@ -2,6 +2,7 @@ import type { EnemyPreset } from "../affixes";
 import type { RandomSource } from "../../domain/random";
 import {
   bossName,
+  PUBLISHED_ENEMY_IDENTITY_IDS,
   pickEnemyKind,
   pickMiniBoss,
   shuffledBossRoster,
@@ -11,6 +12,13 @@ import {
   type MiniBossId,
 } from "./content-director";
 import type { RunMode } from "./session";
+import type { StageId } from "../stages";
+import { campaignStageCurve } from "./campaign-stage-curve";
+import {
+  eligibleCompositionPool,
+  emptyCompositionBudgetState,
+  recordCompositionKind,
+} from "./composition-budget";
 import { describeWave } from "./wave-rules";
 
 export interface WaveTuning {
@@ -25,6 +33,7 @@ export interface WaveTuning {
 }
 
 export interface WaveStage {
+  readonly id: StageId;
   readonly name: string;
   readonly boss: BossId;
   readonly pool: readonly CampaignPoolEntry[];
@@ -79,6 +88,8 @@ export interface PlanNextWaveOptions {
   readonly state: WavePlanningState;
   readonly tuning: WaveTuning;
   readonly stages: readonly WaveStage[];
+  /** Authored homes available only to an explicitly selected engineering boss launch. */
+  readonly bossOnlyStages?: readonly WaveStage[];
   readonly presets: readonly EnemyPreset[];
   readonly random: RandomSource;
   readonly configuredWaves?: number;
@@ -98,7 +109,7 @@ export interface PlannedWave {
   readonly intents: readonly WavePlanIntent[];
 }
 
-function stageAt(stages: readonly WaveStage[], index: number): WaveStage {
+export function stageAt(stages: readonly WaveStage[], index: number): WaveStage {
   if (stages.length === 0) throw new RangeError("at least one stage is required");
   const stage = stages[((index % stages.length) + stages.length) % stages.length];
   if (stage === undefined) throw new RangeError("stage index escaped configured stages");
@@ -120,15 +131,18 @@ function regularWaveQueue(
   options: PlanNextWaveOptions,
 ): readonly WaveSpawnSpec[] {
   const tuning = options.tuning;
+  const localWave = state.mode === "endless" || state.mode === "gauntlet"
+    ? (wave - 1) % 5 + 1
+    : (wave - 1) % 10 + 1;
   let count: number;
   let hpScale: number;
   let dmgScale = 1;
   if (state.mode === "campaign") {
-    const stage = Math.floor((wave - 1) / 10);
-    const localWave = (wave - 1) % 10 + 1;
-    count = tuning.firstWaveCount + Math.floor((localWave - 1) * tuning.countPerWave) + stage * tuning.stageCountStep;
-    hpScale = (1 + stage * tuning.stageHpStep) * (1 + (localWave - 1) * tuning.inStageHp);
-    dmgScale = (1 + stage * tuning.stageDmgStep) * (1 + (localWave - 1) * tuning.inStageDmg);
+    if (stageIndex === null) throw new Error("campaign wave is missing its stage curve identity");
+    const curve = campaignStageCurve(stageAt(options.stages, stageIndex).id);
+    count = tuning.firstWaveCount + Math.floor((localWave - 1) * tuning.countPerWave) + curve.countAdd;
+    hpScale = curve.health * (1 + (localWave - 1) * tuning.inStageHp);
+    dmgScale = curve.damage * (1 + (localWave - 1) * tuning.inStageDmg);
   } else {
     count = tuning.firstWaveCount + Math.floor((wave - 1) * tuning.countPerWave);
     hpScale = 1 + (wave - 1) * tuning.hpScalePerWave;
@@ -147,9 +161,26 @@ function regularWaveQueue(
 
   const queue: WaveSpawnSpec[] = [];
   if (miniBoss !== null) queue.push({ type: "miniboss", bossId: miniBoss });
-  const campaignStage = state.mode === "campaign" && stageIndex !== null ? stageAt(options.stages, stageIndex) : null;
-  const stageTypes = campaignStage?.pool.map((entry) => entry.kind) ?? null;
+  const stageOwnsPool = state.mode === "campaign" || state.mode === "endless" || state.mode === "gauntlet";
+  const contentStage = stageOwnsPool && stageIndex !== null ? stageAt(options.stages, stageIndex) : null;
+  const composition = contentStage === null ? undefined : campaignStageCurve(contentStage.id).composition;
+  const sandboxPool: readonly CampaignPoolEntry[] | null = state.mode === "sandbox"
+    ? PUBLISHED_ENEMY_IDENTITY_IDS.map((kind) => ({ kind, weight: 1, unlockWave: 1 }))
+    : null;
+  const authoredPool = contentStage?.pool ?? sandboxPool;
+  const unlockedAuthoredPool = authoredPool?.filter((entry) => localWave >= entry.unlockWave) ?? null;
+  const availableAuthoredPool = authoredPool === null
+    ? null
+    : unlockedAuthoredPool !== null && unlockedAuthoredPool.length > 0 ? unlockedAuthoredPool : authoredPool;
+  let compositionState = emptyCompositionBudgetState();
   for (let index = 0; index < count; index += 1) {
+    const eligiblePool = contentStage === null || composition === undefined
+      ? availableAuthoredPool
+      : eligibleCompositionPool(availableAuthoredPool ?? [], composition, localWave, compositionState);
+    if (contentStage !== null && (eligiblePool?.length ?? 0) === 0) {
+      throw new RangeError(`${contentStage.id} composition budget excludes every available enemy`);
+    }
+    const stageTypes = eligiblePool?.map((entry) => entry.kind) ?? null;
     if (wave >= 4 && options.random.next() < 0.15) {
       const candidates = stageTypes === null
         ? options.presets
@@ -158,13 +189,17 @@ function regularWaveQueue(
         const preset = candidates[Math.floor(options.random.next() * candidates.length)];
         if (preset !== undefined) {
           queue.push({ type: preset.type as EnemyKind, hpScale, dmgScale, preset });
+          if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, preset.type as EnemyKind);
           continue;
         }
       }
     }
     const contentWave = state.mode === "sandbox" ? 99 : wave;
-    const kind = pickEnemyKind(contentWave, options.random, campaignStage?.pool ?? null);
+    const kind = eligiblePool === null
+      ? pickEnemyKind(contentWave, options.random)
+      : pickEnemyKind(contentWave, options.random, eligiblePool, localWave);
     queue.push({ type: kind, hpScale, dmgScale });
+    if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, kind);
   }
   return queue;
 }
@@ -234,7 +269,7 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
     curBoss = bossOrder[bossIdx] ?? null;
     if (curBoss === null) throw new Error("boss roster must not be empty");
     bossIdx += 1;
-    const homeBiome = options.stages.findIndex((candidate) => candidate.boss === curBoss);
+    const homeBiome = (options.bossOnlyStages ?? options.stages).findIndex((candidate) => candidate.boss === curBoss);
     stage = homeBiome < 0 ? 0 : homeBiome;
     if (wave > 1) intents.push({ type: "begin-wipe" });
     intents.push(

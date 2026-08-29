@@ -6,6 +6,8 @@ import { LiveRunStartController } from "../gameplay/run/live-run-start-controlle
 import { planRunStart, type RunStartPlan } from "../gameplay/run/run-start-plan";
 import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
+import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
+import { tracksModeProgress } from "../gameplay/run/mode-catalog";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
 import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
@@ -13,6 +15,10 @@ import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, migrateWeaponSelection } from "../gam
 import type { RandomSource } from "../domain/random";
 import type { TearWorldServices } from "../gameplay/runtime/tear-world-context";
 import type { RunRandomStreamName, RunRandomStreamsSnapshot } from "../simulation/run-random";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
+import { resolveDiscoveredVariantIds } from "../gameplay/variants";
+import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
 
 interface MutableWorldState {
   resetTransient(): void;
@@ -62,6 +68,7 @@ interface RunStartHostContext {
   readonly installRun: (run: GameRun) => void;
   readonly world: MutableWorldState;
   readonly services: WorldServices;
+  readonly environment: EnvironmentRuntimeState;
   readonly resetAuthoritativeClocks: () => void;
   readonly resetCombatIdentity: () => void;
   readonly createRunSeed?: () => number;
@@ -118,8 +125,10 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       try { replacement.sealActiveRecording(); }
       finally { Input.stopSemanticRecording(); }
     },
-    initializeWorld: (_mode, difficulty) => {
+    initializeWorld: (mode, difficulty) => {
       context.clearPracticeSession?.();
+      cleanupBossEncounterActors(state.enemies(), "reset");
+      context.environment.clear("new-run");
       context.prepareWorld();
       context.resetCombatIdentity();
       context.lifecycle.reset();
@@ -148,8 +157,10 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       context.world.resetTransient();
       context.services.effects.resetWorld();
       context.services.clock.reset();
+      const biomeTracker = PROFILE.data.stats._biomes;
+      const discoveredBiomes = Object.keys((biomeTracker ?? {}) as Record<string, unknown>);
       return { weaponId, mods: newMods(), scaling: startingPlan.scaling,
-        achievementSnapshot: Object.keys(PROFILE.data.ach) };
+        achievementSnapshot: Object.keys(PROFILE.data.ach), variantDiscovery: [...resolveDiscoveredVariantIds(mode, discoveredBiomes)] };
     },
     resetAuthoritativeClocks: context.resetAuthoritativeClocks,
     finishWorldReset: () => {
@@ -186,18 +197,41 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
             actionRange: Number.isFinite(blade.actionRange()) ? blade.actionRange() : null,
             actionDistance: blade.actionDistance(player) },
           enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => {
-            const authored = enemy as typeof enemy & { state?: string; stateT?: number; atkT?: number; phase?: number;
+            const authored = enemy as typeof enemy & { state?: string; stateT?: number; atk?: string; atkT?: number; phase?: number;
               phaseMarker?: number; mode?: string; cinematicT?: number; cinematicRequest?: unknown;
-              requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean };
-            return { x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
+              requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean;
+              packRole?: string; packFlank?: number; packAttackAuthorized?: boolean; pounceTargetX?: number;
+              variant?: string; variantName?: string; behavior?: string; rimeRebounds?: number;
+              snowWakeT?: number; glacierCracked?: boolean; attackCursor?: number; attackStep?: number;
+              attackSequence?: number; environmentSequence?: number; routeProgress?: number; trueRouteIndex?: number;
+              batonStrike?: number; auroraBossChargeActive?: boolean; parryOutcome?: string;
+              routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
+              candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[])[] };
+            return { kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
               stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
               boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
-              atkT: authored.atkT, phase: authored.isMirrorBoss === true ? dependencies.Mirror.phase : authored.phase,
+              atk: authored.atk, atkT: authored.atkT,
+              phase: authored.isMirrorBoss === true ? dependencies.Mirror.phase : authored.phase,
               phaseMarker: authored.phaseMarker, mode: authored.mode,
               cinematicT: authored.cinematicT, cinematicPending: authored.cinematicRequest != null,
               voidPending: authored.requestVoidCinematic === true, mirrorBoss: authored.isMirrorBoss,
-              live: authored._live, bound: enemy.boundT || 0 };
+              live: authored._live, bound: enemy.boundT || 0,
+              variant: authored.variant, variantName: authored.variantName, behavior: authored.behavior,
+              rimeRebounds: authored.rimeRebounds, snowWakeT: authored.snowWakeT,
+              glacierCracked: authored.glacierCracked, enraged: enemy.enraged,
+              attackCursor: authored.attackCursor, attackStep: authored.attackStep,
+              attackSequence: authored.attackSequence, environmentSequence: authored.environmentSequence,
+              routeProgress: authored.routeProgress, trueRouteIndex: authored.trueRouteIndex,
+              batonStrike: authored.batonStrike, auroraBossChargeActive: authored.auroraBossChargeActive,
+              parryOutcome: authored.parryOutcome, routeTelegraph: authored.routeTelegraph,
+              candidateRoutes: authored.candidateRoutes,
+              packRole: authored.packRole, packFlank: authored.packFlank,
+              packAttackAuthorized: authored.packAttackAuthorized, pounceTargetX: authored.pounceTargetX };
           }),
+          projectiles: state.projectiles().filter((projectile) => !projectile.dead).slice(0, 48).map((projectile) => ({
+            kind: projectile.kind, x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy,
+            deflected: projectile.deflected, perfect: projectile.perfect, counterplay: projectile.counterplay,
+          })),
           lifecycle: context.lifecycle.snapshot(),
         };
       };
@@ -205,7 +239,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     updateProgressionTracking: (mode) => {
       if (context.achievementTracking() && META.level("reach") > 0 && META.level("throwarm") > 0
         && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
-      if (mode !== "bossonly" && mode !== "sandbox") { PROFILE.markMode(mode); context.achievementCheck(); }
+      if (tracksModeProgress(mode)) { PROFILE.markMode(mode); context.achievementCheck(); }
     },
     startRecording: (runId, seed) => {
       // Canonical device input is the live simulation's normal route, not a
@@ -227,10 +261,18 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       if (mode === "bossonly") {
         const order = context.shuffledRoster();
         const selected = context.selectedBoss();
-        if (selected !== "shuffle" && isBossId(selected)) { const index = order.indexOf(selected); if (index >= 0) order.splice(index, 1); order.unshift(selected); }
+        if (selected !== "shuffle" && isBossId(selected)) {
+          // The production selector can only supply policy-published IDs. A
+          // test-build engineering launch may explicitly supply an authored
+          // preview boss, which remains absent from every ordinary roster.
+          const index = order.indexOf(selected); if (index >= 0) order.splice(index, 1); order.unshift(selected);
+        }
         const first = order[0];
         if (first === undefined) throw new Error("Boss-only mode requires a boss roster");
         run.bossOrder = order; run.bossIdx = 0; run.bossesBeaten = 0; run.curBoss = first;
+        // Remove the reset stage before activating the selected boss biome so
+        // its authored environment fields survive the replacement boundary.
+        context.environment.clear("boss-encounter-replacement");
         context.loadStage(context.bossBiome(first));
       } else if (mode === "gauntlet") {
         run.bossOrder = context.shuffledRoster(); run.bossIdx = 0; run.bossesBeaten = 0;
@@ -254,7 +296,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       } else context.tutorial.start();
     },
     enterPlayingState: (sessionId) => { context.setScreen("playing", { runId: sessionId }); },
-    beginMusic: (runId, seed) => { context.music.begin({ runId, runSeed: String(seed), rulesetVersion: "tear-rules-2026.07",
+    beginMusic: (runId, seed) => { context.music.begin({ runId, runSeed: String(seed), rulesetVersion: CURRENT_RULESET_VERSION,
       gameVersion: "0.1.0", scoreVersion: SFX.musicScoreVersion() }); },
     requestPointerLock: context.requestPointerLock,
   });
@@ -289,6 +331,4 @@ function isRunDifficulty(value: string): value is RunDifficulty {
   return value === "easy" || value === "normal" || value === "hard" || value === "extreme" || value === "onehit";
 }
 
-function isBossId(value: string): value is BossId {
-  return value === "warden" || value === "colossus" || value === "aldric" || value === "echo" || value === "source";
-}
+const isBossId = isBossDefinitionId satisfies (value: string) => value is BossId;

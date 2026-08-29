@@ -107,6 +107,57 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
     previous === undefined || observation.tick > previous.tick
       ? null
       : failure("replay.monotonic-time", observation, `tick ${String(observation.tick)} did not advance`, "fatal"),
+  "environment.finite-state": (observation) => {
+    const environment = observation.environment;
+    if (environment === undefined) throw new Error("environment finite-state requires structured environment observation");
+    const values = environment.fields.flatMap((entry) => [entry.bounds.minX, entry.bounds.maxX, entry.bounds.minY, entry.bounds.maxY])
+      .concat(environment.combatObjects.flatMap((entry) => [entry.bounds.minX, entry.bounds.maxX, entry.bounds.minY, entry.bounds.maxY, entry.integrityRatio]))
+      .concat(environment.routes.flatMap((entry) => entry.points.flatMap((point) => [point.x, point.y])));
+    return finite(values) ? null : failure("environment.finite-state", observation, "environment observation contains a non-finite value", "fatal");
+  },
+  "environment.unique-id": (observation) => {
+    const environment = observation.environment;
+    if (environment === undefined) throw new Error("environment unique-id requires structured environment observation");
+    const ids = [...environment.fields, ...environment.combatObjects, ...environment.routes].map((entry) => entry.id);
+    return new Set(ids).size === ids.length ? null : failure("environment.unique-id", observation, "environment object IDs are not unique", "fatal");
+  },
+  "environment.valid-references": (observation) => {
+    const environment = observation.environment;
+    if (environment === undefined) throw new Error("environment reference invariant requires structured environment observation");
+    const ids = new Set(["player", "blade", ...observation.entities.map((entry) => entry.id),
+      ...environment.fields.map((entry) => entry.id), ...environment.combatObjects.map((entry) => entry.id), ...environment.routes.map((entry) => entry.id)]);
+    const invalid = environment.fields.find((entry) => entry.ownerId !== undefined && !ids.has(entry.ownerId))
+      ?? environment.combatObjects.find((entry) => (entry.ownerId !== undefined && !ids.has(entry.ownerId)) || (entry.targetId !== undefined && !ids.has(entry.targetId)))
+      ?? environment.routes.find((entry) => entry.ownerId !== undefined && !ids.has(entry.ownerId));
+    return invalid === undefined ? null : failure("environment.valid-references", observation, "environment object refers to a missing owner or target", "fatal");
+  },
+  "environment.no-orphan-link": (observation) => {
+    const environment = observation.environment;
+    if (environment === undefined) throw new Error("environment orphan invariant requires structured environment observation");
+    const ids = new Set(["player", "blade", ...observation.entities.map((entry) => entry.id),
+      ...environment.fields.map((entry) => entry.id), ...environment.combatObjects.map((entry) => entry.id), ...environment.routes.map((entry) => entry.id)]);
+    const orphan = environment.combatObjects.find((entry) => entry.state !== "destroyed" && entry.state !== "expired"
+      && ((entry.ownerId !== undefined && !ids.has(entry.ownerId)) || (entry.targetId !== undefined && !ids.has(entry.targetId))));
+    return orphan === undefined ? null : failure("environment.no-orphan-link", observation, `environment relationship ${orphan.id} has an orphan owner or target`, "fatal");
+  },
+  "environment.legal-transition": (observation, previous) => {
+    if (previous === undefined || observation.environment === undefined || previous.environment === undefined) return null;
+    const prior = new Map([...previous.environment.fields, ...previous.environment.combatObjects, ...previous.environment.routes].map((entry) => [entry.id, entry.state]));
+    const allowed: Readonly<Record<string, readonly string[]>> = {
+      scheduled: ["scheduled", "warning", "active", "destroyed", "expired"], warning: ["warning", "active", "cooldown", "destroyed", "expired"],
+      active: ["active", "cooldown", "destroyed", "expired"], cooldown: ["cooldown", "active", "dormant", "destroyed", "expired"],
+      dormant: ["dormant", "warning"], destroyed: ["destroyed"], expired: ["expired"],
+    };
+    const current = [...observation.environment.fields, ...observation.environment.combatObjects, ...observation.environment.routes]
+      .find((entry) => prior.has(entry.id) && !(allowed[prior.get(entry.id) ?? ""] ?? []).includes(entry.state));
+    return current === undefined ? null : failure("environment.legal-transition", observation, `environment object ${current.id} made an illegal state transition`, "fatal");
+  },
+  "environment.bounded": (observation) => {
+    const environment = observation.environment;
+    if (environment === undefined) throw new Error("environment bounds invariant requires structured environment observation");
+    return environment.fields.length <= 64 && environment.combatObjects.length <= 128 && environment.routes.length <= 64
+      ? null : failure("environment.bounded", observation, "environment population exceeds the declared cap", "fatal");
+  },
 });
 
 export function runInvariantChecks(
@@ -121,6 +172,9 @@ export function runInvariantChecks(
       "runtime.pause-freezes-simulation", "runtime.no-softlock"].includes(id)
       && observation.diagnostics === undefined) {
       throw new Error(`requested invariant ${id} requires privileged diagnostic observation`);
+    }
+    if (id.startsWith("environment.") && observation.environment === undefined) {
+      throw new Error(`requested invariant ${id} requires structured environment observation`);
     }
     const check = checks[id];
     if (check === undefined) {

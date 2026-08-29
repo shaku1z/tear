@@ -10,6 +10,7 @@ import {
 import type { CampaignChapterTiming, CampaignStage } from
   "../../src/gameplay/campaign/chapter-controller";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
+import { STAGES } from "../../src/gameplay/stages";
 
 const timing: CampaignChapterTiming = Object.freeze({
   loreReveal: 0.1, chapterIn: 0.2, loreExit: 0.3, biomeRevealBrief: 0.4,
@@ -32,6 +33,52 @@ function spec() {
 }
 
 describe("portable campaign chapter binding", () => {
+  it("carries the supported Verdant bloom identity through the current director script", () => {
+    const verdant = STAGES.find((candidate) => candidate.id === "verdant-sanctum");
+    if (verdant === undefined) throw new Error("Verdant stage fixture is missing");
+    const staged = stageCampaignChapterBinding(createCampaignChapterBindingSpec({
+      stageIndex: 3, priorOutro: null, brief: false, prologueShownBefore: true, timing,
+    }), verdant, {
+      dispatch: vi.fn(), preparedWave: () => true, activationDeferred: () => true, clear: vi.fn(),
+    });
+
+    expect(staged.binding.script.beats.filter((beat) => beat.view === "page")
+      .every((beat) => beat.transition === "bloom")).toBe(true);
+  });
+
+  it("preserves Aldric's outro across Verdant advance, skip, and restore", () => {
+    const crimson = STAGES.find((candidate) => candidate.id === "crimson-fields");
+    const verdant = STAGES.find((candidate) => candidate.id === "verdant-sanctum");
+    if (crimson === undefined || verdant === undefined) throw new Error("campaign stage fixtures are missing");
+    const dispatch = vi.fn(); const clear = vi.fn();
+    const verdantSpec = createCampaignChapterBindingSpec({
+      stageIndex: 3, priorOutro: crimson.chapter.bossOutro, brief: false, prologueShownBefore: true, timing,
+    });
+    const staged = stageCampaignChapterBinding(verdantSpec, verdant, {
+      dispatch, preparedWave: () => true, activationDeferred: () => true, clear,
+    });
+    expect(staged.flow.pages).toEqual([crimson.chapter.bossOutro, ...verdant.chapter.pages]);
+
+    const source = new CinematicTimeline.Director(CONFIG);
+    source.start(staged.binding.script, staged.binding.context);
+    source.advance();
+    expect(source.beat).toMatchObject({ id: "page-0", label: "PAINTED PORTRAIT", transition: "bloom" });
+    const captured = source.captureState();
+    const reconstructed = stageCampaignChapterBinding(
+      captureCampaignChapterBindingSpec(staged.spec, staged.flow), verdant,
+      { dispatch, preparedWave: () => true, activationDeferred: () => true, clear },
+    );
+    const restored = new CinematicTimeline.Director(CONFIG);
+    restored.restoreState(captured, reconstructed.binding);
+    restored.requestSkip();
+    expect(restored.beat).toMatchObject({ id: "reveal", number: "IV", name: "The Verdant Sanctum" });
+    restored.complete();
+    expect(dispatch).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ type: "activate-prepared-wave" }),
+    ]));
+    expect(clear).toHaveBeenCalledOnce();
+  });
+
   it("rebuilds the same script and silently restores an active director position", () => {
     const dispatch = vi.fn();
     const staged = stageCampaignChapterBinding(spec(), stage, {

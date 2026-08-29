@@ -1,6 +1,6 @@
-import { ENEMY_KIND_IDS, type EnemyKind } from "../gameplay/run/content-director";
+import { ENEMY_IDENTITY_IDS, type EnemyKind } from "../gameplay/run/content-director";
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
-import type { EnemyVariant } from "../gameplay/variants";
+import { PALE_VARIANT_IDS, type EnemyVariant } from "../gameplay/variants";
 
 /** The structural enemy catalog handoff; runtime behavior remains out of scope. */
 export interface GameReferenceEnemyVariantV1 {
@@ -43,24 +43,38 @@ export interface EnemyReferenceProjectionInput {
 }
 
 /** Explicit contract signatures keep source reordering fail-closed. */
-export const CANONICAL_ENEMY_KIND_IDS = Object.freeze([
+export const CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",
   "priest", "mender", "herald", "anchor", "wraith", "chimera",
+  "rootbinder", "rimehound",
 ] as const);
 
+/** Public game-reference authority excludes the Playground-only Pale family. */
+export const PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze(
+  CANONICAL_ENEMY_IDENTITY_IDS.filter((id) => id !== "rimehound"),
+);
+
 export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze({
-  charger: Object.freeze(["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist"]),
-  ranged: Object.freeze(["sentinel", "rifleman", "marksman", "warlock", "chain"]),
-  flyer: Object.freeze(["swooper", "divebomber", "highdiver"]),
-  bomber: Object.freeze(["lobber", "juggler", "trapper", "sludge", "geomancer"]),
-  armored: Object.freeze([]),
+  charger: Object.freeze(["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker", "rime-runner"]),
+  ranged: Object.freeze(["sentinel", "rifleman", "marksman", "warlock", "chain", "seedcaster", "prism-seer"]),
+  flyer: Object.freeze(["swooper", "divebomber", "highdiver", "canopy-diver", "snowfall-kite"]),
+  bomber: Object.freeze(["lobber", "juggler", "trapper", "sludge", "geomancer", "hailcaster"]),
+  armored: Object.freeze(["bark-sentinel", "glacier-guard"]),
   priest: Object.freeze([]),
   mender: Object.freeze([]),
   herald: Object.freeze([]),
   anchor: Object.freeze([]),
   wraith: Object.freeze([]),
   chimera: Object.freeze([]),
+  rootbinder: Object.freeze([]),
+  rimehound: Object.freeze([]),
 });
+const PALE_VARIANT_ID_SET: ReadonlySet<string> = new Set(PALE_VARIANT_IDS);
+export const PUBLIC_CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze(
+  Object.fromEntries(Object.entries(CANONICAL_ENEMY_VARIANT_IDS).map(([id, variants]) => [
+    id, Object.freeze(variants.filter((variant) => !PALE_VARIANT_ID_SET.has(variant))),
+  ])) as Record<EnemyKind, readonly string[]>,
+);
 
 export const CANONICAL_ENEMY_AFFIX_IDS = Object.freeze([
   "tank", "swift", "rapid", "volley", "armed", "warded",
@@ -141,7 +155,7 @@ function expectedAt<T>(values: readonly T[], index: number, path: string): T {
 }
 
 function assertEnemyKindContract(): void {
-  assertCanonicalOrderedIds(ENEMY_KIND_IDS, CANONICAL_ENEMY_KIND_IDS, "ENEMY_KIND_IDS");
+  assertCanonicalOrderedIds(ENEMY_IDENTITY_IDS, CANONICAL_ENEMY_IDENTITY_IDS, "ENEMY_IDENTITY_IDS");
 }
 
 assertEnemyKindContract();
@@ -172,10 +186,11 @@ function projectFamily(sourceValue: unknown, expectedId: EnemyKind, path: string
   const id = text(source.id, `${path}.id`);
   if (id !== expectedId) throw new TypeError(`${path}.id must use the exact canonical enemy-family order`);
   if (!Array.isArray(source.variants)) throw new TypeError(`${path}.variants must be an array`);
-  const expectedVariantIds = CANONICAL_ENEMY_VARIANT_IDS[expectedId];
-  const variantIds = source.variants.map((variant, index) => text(record(variant, `${path}.variants[${String(index)}]`).id, `${path}.variants[${String(index)}].id`));
-  assertCanonicalOrderedIds(variantIds, expectedVariantIds, `${path}.variants`);
-  const variants = Object.freeze(source.variants.map((variant, index) => validateSourceVariant(variant, expectedAt(expectedVariantIds, index, `${path}.variants`), `${path}.variants[${String(index)}]`)));
+  const expectedVariantIds = PUBLIC_CANONICAL_ENEMY_VARIANT_IDS[expectedId];
+  const publicVariants = source.variants.filter((variant) => !PALE_VARIANT_ID_SET.has(text(record(variant, `${path}.variants`).id, `${path}.variants.id`)));
+  const publicVariantIds = publicVariants.map((variant, index) => text(record(variant, `${path}.variants[${String(index)}]`).id, `${path}.variants[${String(index)}].id`));
+  assertCanonicalOrderedIds(publicVariantIds, expectedVariantIds, `${path}.variants.public`);
+  const variants = Object.freeze(publicVariants.map((variant, index) => validateSourceVariant(variant, expectedAt(expectedVariantIds, index, `${path}.variants.public`), `${path}.variants[${String(index)}]`)));
   return Object.freeze({ id: expectedId, variants });
 }
 
@@ -204,8 +219,13 @@ export function projectEnemyReference(input: EnemyReferenceProjectionInput): Gam
   assertEnemyKindContract();
   if (!Array.isArray(input.enemyFamilies)) throw new TypeError("enemyFamilies must be an array");
   const familyIds = input.enemyFamilies.map((family, index) => text(record(family, `enemyFamilies[${String(index)}]`).id, `enemyFamilies[${String(index)}].id`));
-  assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_KIND_IDS, "enemyFamilies");
-  const families = Object.freeze(input.enemyFamilies.map((family, index) => projectFamily(family, expectedAt(CANONICAL_ENEMY_KIND_IDS, index, "enemyFamilies"), `enemyFamilies[${String(index)}]`)));
+  assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_IDENTITY_IDS, "enemyFamilies");
+  const families = Object.freeze(PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS.map((id) => {
+    const index = familyIds.indexOf(id);
+    const family = input.enemyFamilies[index];
+    if (family === undefined) throw new TypeError(`enemyFamilies is missing public family ${id}`);
+    return projectFamily(family, id, `enemyFamilies[${String(index)}]`);
+  }));
 
   if (!Array.isArray(input.enemyAffixes)) throw new TypeError("enemyAffixes must be an array");
   const affixIds = input.enemyAffixes.map((affix, index) => text(record(affix, `enemyAffixes[${String(index)}]`).id, `enemyAffixes[${String(index)}].id`));
@@ -227,13 +247,13 @@ export function validateProjectedEnemies(value: unknown, path: string): GameRefe
 
   if (!Array.isArray(source.families)) throw new TypeError(`${path}.families must be an array`);
   const familyIds = source.families.map((family, index) => text(record(family, `${path}.families[${String(index)}]`).id, `${path}.families[${String(index)}].id`));
-  assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_KIND_IDS, `${path}.families`);
+  assertCanonicalOrderedIds(familyIds, PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS, `${path}.families`);
   const families = Object.freeze(source.families.map((family, index) => {
     const item = record(family, `${path}.families[${String(index)}]`);
     exactKeys(item, `${path}.families[${String(index)}]`, ["id", "variants"]);
-    const id = expectedAt(CANONICAL_ENEMY_KIND_IDS, index, `${path}.families`);
+    const id = expectedAt(PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS, index, `${path}.families`);
     if (!Array.isArray(item.variants)) throw new TypeError(`${path}.families[${String(index)}].variants must be an array`);
-    const expectedVariantIds = CANONICAL_ENEMY_VARIANT_IDS[id];
+    const expectedVariantIds = PUBLIC_CANONICAL_ENEMY_VARIANT_IDS[id];
     const variantIds = item.variants.map((variant, variantIndex) => text(record(variant, `${path}.families[${String(index)}].variants[${String(variantIndex)}]`).id, `${path}.families[${String(index)}].variants[${String(variantIndex)}].id`));
     assertCanonicalOrderedIds(variantIds, expectedVariantIds, `${path}.families[${String(index)}].variants`);
     const variants = Object.freeze(item.variants.map((variant, variantIndex) => validateProjectedVariant(variant, expectedAt(expectedVariantIds, variantIndex, `${path}.families[${String(index)}].variants`), `${path}.families[${String(index)}].variants[${String(variantIndex)}]`)));

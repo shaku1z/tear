@@ -49,6 +49,9 @@ export interface TearSimulationEnemyView {
   maxHp: number;
   dead: boolean;
   kind: string;
+  /** Optional authored variant identity exposed to structured observers. */
+  variant?: string;
+  variantName?: string;
   bossId?: string;
   isBoss?: boolean;
   isVoidWisp?: boolean;
@@ -106,10 +109,23 @@ export interface TearSimulationRunView {
   mult: number;
 }
 
+/** Detached-safe environment projection; no constructors, callbacks, or presentation values. */
+export interface TearSimulationEnvironmentView {
+  readonly stageId: string;
+  readonly worldId: string;
+  readonly revision: number;
+  readonly fields: readonly Readonly<Record<string, unknown>>[];
+  readonly combatObjects: readonly Readonly<Record<string, unknown>>[];
+  readonly routes: readonly Readonly<Record<string, unknown>>[];
+  readonly lastClearReason: string | null;
+}
+
 export interface TearSimulationWorldView {
   run(): TearSimulationRunView | null;
   player(): TearSimulationPlayerView | undefined;
   blade(): TearSimulationBladeView | undefined;
   enemies(): TearSimulationEnemyView[];
   projectiles(): TearSimulationProjectileView[];
+  /** Optional on legacy observers until their environment capability is wired. */
+  environment?(): TearSimulationEnvironmentView;
 }

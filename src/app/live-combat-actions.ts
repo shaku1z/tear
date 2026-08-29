@@ -203,6 +203,8 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
   };
   return {
     config: d.CONFIG,
+    environment: context.environment,
+    environmentTick: () => Math.max(0, Math.round(d.CLOCK.sim * 120)),
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
     weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
     throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, secondary, throwId }),

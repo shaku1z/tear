@@ -17,4 +17,15 @@ describe("replay puppet factory", () => {
     expect(apply).toHaveBeenCalledOnce();
     expect(result).toMatchObject({ spawnT: 0, hpDisplay: 7 });
   });
+
+  it("fails closed for unknown or cross-family stable variant identities", () => {
+    const factories = {
+      boss: () => puppet("charger"), charger: () => puppet("charger"), ranged: () => puppet("ranged"),
+      flyer: () => puppet("flyer"), bomber: () => puppet("bomber"), armored: () => puppet("armored"),
+      support: () => puppet("support"), wraith: () => puppet("wraith"), chimera: () => puppet("chimera"),
+    };
+    expect(createReplayPuppet({ k: "ranged", vid: "does-not-exist" }, factories, { ranged: [] }, vi.fn())).toBeNull();
+    expect(createReplayPuppet({ k: "ranged", vid: "briar-stalker" }, factories,
+      { ranged: [], charger: [{ id: "briar-stalker", name: "Briar Stalker" }] }, vi.fn())).toBeNull();
+  });
 });

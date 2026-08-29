@@ -157,7 +157,7 @@ describe("C26 planted live gameplay regression", () => {
     // A later gameplay change is routed through TearBench CI, which selects
     // the retained case by the durable movement selector without naming it.
     tearbench(["ci", "--files", "src/gameplay/entities/player.ts", "--registry", registry]);
-    const selectedByFutureChange = JSON.parse(readFileSync(resolve(root, "artifacts", "tearbench", "graveyard-rerun.json"), "utf8"));
+    const selectedByFutureChange = JSON.parse(readFileSync(resolve(root, "artifacts", "tearbench", "generated", "graveyard-rerun.json"), "utf8"));
     assert.equal(selectedByFutureChange.status, "passed");
     assert.deepEqual(selectedByFutureChange.selectedCaseIds, ["c26-planted-dash-distance"]);
   });

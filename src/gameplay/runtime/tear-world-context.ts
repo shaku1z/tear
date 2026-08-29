@@ -1,4 +1,6 @@
 import type { TearWorldConfiguration } from "./tear-world-configuration";
+import { createEnvironmentRuntime } from "../environment/environment-runtime";
+import type { EnvironmentRuntimeState } from "../environment/environment-contracts";
 
 /**
  * Portable mutable world state. Hosts may replace a whole entity collection,
@@ -125,22 +127,24 @@ export interface TearWorldServices<RandomSnapshot, RandomStreamName extends stri
  * transient per-step records to the shared runtime. It is intentionally not a
  * replacement for app-level UI or storage.
  */
-export interface TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema> {
+export interface TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema, Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState> {
   readonly state: State;
   readonly entities: Entities;
   readonly lifecycle: Lifecycle;
   readonly services: Services;
   readonly transient: Transient;
   readonly cinema: Cinema;
+  readonly environment: Environment;
 }
 
-export function createTearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema>(
+export function createTearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema, Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState>(
   state: State,
   entities: Entities,
   lifecycle: Lifecycle,
   services: Services,
   transient: Transient,
   cinema: Cinema,
-): TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema> {
-  return Object.freeze({ state, entities, lifecycle, services, transient, cinema });
+    environment: Environment = createEnvironmentRuntime({ stageId: "unknown", worldId: "context" }) as unknown as Environment,
+): TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema, Environment> {
+  return Object.freeze({ state, entities, lifecycle, services, transient, cinema, environment });
 }

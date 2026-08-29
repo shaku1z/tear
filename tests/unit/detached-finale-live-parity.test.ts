@@ -31,7 +31,7 @@ import {
   restoreDetachedTransientRuntime,
 } from "./detached-world-harness";
 
-const ARTIFACT = resolve("artifacts/tearbench/c27a/campaign-source-victory.json");
+const ARTIFACT = resolve("artifacts/tearbench/checkpoints/core/C27A/live-parity/campaign-source-victory.json");
 interface RuntimeSnapshot {
   readonly tick: number;
   readonly state: Record<string, TearCodecValue>;
@@ -246,7 +246,7 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
       .map((call) => ({ type: call.type, receipt: call.receipt })))
       .toEqual([
         { type: "world-zoom", receipt: { requested: 0.84, immediate: true,
-          before: { current: 0.8000000001419295, target: 1 }, after: { current: 0.84, target: 0.84 } } },
+          before: { current: 0.8100000020438322, target: 1 }, after: { current: 0.84, target: 0.84 } } },
         { type: "flash", receipt: { requested: 0.135, before: 0, after: 0.135, aggregation: "maximum" } },
         { type: "shake", receipt: { requested: 5, before: 16.125, after: 16.125, aggregation: "maximum" } },
         { type: "flash", receipt: { requested: 0.17, before: 0.135, after: 0.17, aggregation: "maximum" } },
@@ -275,13 +275,13 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
       .toEqual(liveAfterBoundary);
 
     const run = detached.world.state.run() as never as Record<string, unknown>;
-    expect(detached.world.lifecycle.snapshot()).toMatchObject({ phase: "terminated", outcome: "victory", wave: 50 });
+    expect(detached.world.lifecycle.snapshot()).toMatchObject({ phase: "terminated", outcome: "victory", wave: artifact.terminalRun.wave });
     expect(detached.world.context.cinema.active).toBe(false);
     expect(finale.snapshot()).toBeNull();
     expect(finale.outcome.pendingFinale()).toBeNull();
     const presented = finale.outcome.presented();
     expect(presented?.outcome).toBe("victory");
-    expect(presented?.result).toMatchObject({ win: true, campaign: true, wave: 50 });
+    expect(presented?.result).toMatchObject({ win: true, campaign: true, wave: artifact.terminalRun.wave });
     expect(run).toMatchObject({
       mode: artifact.terminalRun.mode,
       diff: artifact.terminalRun.diff,

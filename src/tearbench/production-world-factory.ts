@@ -20,15 +20,23 @@ import type { RunDifficulty } from "../gameplay/run/session";
 import { stagePlatforms } from "../gameplay/stages";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
+import { createEnvironmentRuntime } from "../gameplay/environment/environment-runtime";
+import { BLOOM_WELL_VALIDATION } from "../gameplay/environment/bloom-well";
+import { PALE_TRACK_VALIDATION } from "../gameplay/environment/aurora-track";
+import { createVerdantEnvironmentFeature } from "../gameplay/environment/verdant-environment-feature";
+import { createPaleEnvironmentFeature } from "../gameplay/environment/pale-environment-feature";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
 export interface ProductionReplayWorldOptions {
+  readonly worldId?: string;
   readonly seed: string;
   readonly enemies?: readonly Readonly<{ id: string; x: number; y: number }>[];
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  /** Source-owned persisted discovery projection for detached Endless/Gauntlet runs. */
+  readonly discoveredVariantIds?: readonly string[];
 }
 
 /** Ground plus a one-way ledge, owned by each detached production world. */
@@ -126,7 +134,10 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
     Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
     Chimera: factories.enemyTypes.Chimera, Warden: factories.enemyTypes.Warden, Colossus: factories.enemyTypes.Colossus,
-    Aldric: factories.enemyTypes.Aldric, Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
+    Aldric: factories.enemyTypes.Aldric, Rootbound: factories.enemyTypes.Rootbound,
+    WhiteHart: factories.enemyTypes.WhiteHart,
+    Rimehound: factories.enemyTypes.Rimehound,
+    Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
     VoidWisp: factories.enemyTypes.VoidWisp, Boss: factories.enemyTypes.Boss,
     MirrorHost: factories.mirrorTypes.MirrorHost, ReflectionEnemy: factories.mirrorTypes.ReflectionEnemy,
   } as unknown as GameRuntimeDependencies;
@@ -139,14 +150,22 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   };
   const state = createLiveWorldState(session);
   const entities = createLiveWorldEntityFactory(dependencies);
+  const worldId = options.worldId ?? `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`;
+  const environment = createEnvironmentRuntime({
+    worldId,
+    features: [createVerdantEnvironmentFeature(), createPaleEnvironmentFeature()],
+    validators: [BLOOM_WELL_VALIDATION, PALE_TRACK_VALIDATION],
+  });
   const world = createTearWorldComposition({
     state, entities, services: createLiveWorldServices({ dependencies, configuration }),
     cinema: new CinematicTimeline.Director(config),
+    worldId, environment,
   });
   world.context.services.random.resetRun(runSeed);
   const difficulty = options.difficulty ?? "normal";
   const difficultyPlan = productionDifficultyPlan(difficulty);
-  const run = createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty);
+  const run = { ...createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty),
+    variantDiscovery: [...(options.discoveredVariantIds ?? [])] };
   world.state.setRun(run as never);
   configuration.resetToBase();
   config.player.dmgTakenMult *= difficultyPlan.playerDamageMultiplier;

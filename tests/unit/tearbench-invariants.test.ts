@@ -13,7 +13,7 @@ function observation(patch: Partial<TearObservationV1> = {}): TearObservationV1 
     run: { mode: "campaign", difficulty: "normal", weapon: "sword", stage: "grounds", wave: 1,
       score: 0, elapsedTicks: 10 },
     diagnostics: { worldBounds: { minX: 0, maxX: 100, minY: 0, maxY: 100 }, waveComplete: false,
-      livingWaveEnemies: 1, boss: { id: "warden", phase: "1", validPhases: ["1", "2", "3"] },
+      livingWaveEnemies: 1, boss: { id: "warden", phase: "1", validPhases: ["1", "2", "3"], homeStage: "grounds" },
       ui: { focusedId: "resume", focusableIds: ["resume"] }, progressTick: 9, softlockLimitTicks: 5 },
     availableActions: ["move", "weapon"], ...patch,
   };
@@ -34,7 +34,7 @@ describe("TearBench current-game invariants", () => {
     expect(runInvariantChecks(observation(), ["boss.valid-phase"])).toEqual([]);
     const current = observation();
     expect(runInvariantChecks({ ...current, diagnostics: { ...current.diagnostics,
-      boss: { id: "warden", phase: "0.65", validPhases: ["1", "2", "3"] } } },
+      boss: { id: "warden", phase: "0.65", validPhases: ["1", "2", "3"], homeStage: "grounds" } } },
     ["boss.valid-phase"])).toHaveLength(1);
   });
 
@@ -88,5 +88,10 @@ describe("TearBench current-game invariants", () => {
     expect([...ownership.actors(2) ?? []]).toEqual([]);
     ownership.invalidate();
     expect(ownership.actors(2)).toBeUndefined();
+    ownership.restoreEmptyWave(2);
+    expect([...ownership.actors(2) ?? []]).toEqual([]);
+    ownership.consume({ kind: "spawn", tick: 6, actorId: "enemy:restored", actorKind: "charger", x: 5, y: 6 });
+    expect([...ownership.actors(2) ?? []]).toEqual(["enemy:restored"]);
+    expect(() => { ownership.restoreEmptyWave(-1); }).toThrow(/non-negative safe integer/u);
   });
 });

@@ -60,9 +60,9 @@ export function buildWaveBannerSnapshot(input: Omit<WaveBannerSnapshot, "remaini
   return Object.freeze({ remainingFraction: input.remainingSeconds / input.duration, bossWave: input.bossWave,
     wave: input.wave, waveTag: input.waveTag, horde: input.horde, hordeColor: input.hordeColor, normalColor: input.normalColor });
 }
-export function buildBossIntroSnapshot(screen: WorldRect, boss: Readonly<{ bossName?: string; epithet?: string; color?: string }>,
+export function buildBossIntroSnapshot(screen: WorldRect, boss: Readonly<{ bossName?: string; epithet?: string; openingLine?: string; color?: string }>,
   elapsed: number, duration: number, fallbackColor: string): BossIntroSnapshot {
-  return Object.freeze({ screen, bossName: boss.bossName ?? "BOSS", epithet: boss.epithet ?? "",
+  return Object.freeze({ screen, bossName: boss.bossName ?? "BOSS", epithet: boss.epithet ?? "", openingLine: boss.openingLine ?? "",
     color: boss.color ?? fallbackColor, elapsed, duration });
 }
 export function buildStageBannerSnapshot(input: StageBannerSnapshot): StageBannerSnapshot { return Object.freeze({ ...input }); }

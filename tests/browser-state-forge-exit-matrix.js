@@ -142,7 +142,7 @@ withJourney({ name: "C23 State Forge exit matrix", port: 8144 }, async ({ page }
     assert.match(launched.screenshot, /^data:image\/png;base64,/u);
     assert.equal(launched.metrics.resets, 1, `${launched.id} did not use a clean runtime`);
   }
-  const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c23");
+  const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints", "core", "C23", "state-forge");
   fs.mkdirSync(artifactDirectory, { recursive: true });
   const wavePng = result.wave.screenshot.replace(/^data:image\/png;base64,/u, "");
   fs.writeFileSync(path.join(artifactDirectory, "wave99-hard-endless-hammer.png"), Buffer.from(wavePng, "base64"));

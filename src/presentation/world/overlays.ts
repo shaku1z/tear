@@ -48,7 +48,7 @@ export function createOverlayRenderers(context: LegacyWorldRenderContext) {
 
   function bossIntro(snapshot: BossIntroSnapshot): void {
     ui.bossIntro(canvas, { screen: snapshot.screen, bossName: snapshot.bossName || "BOSS",
-      epithet: snapshot.epithet, color: snapshot.color, t: snapshot.elapsed, dur: snapshot.duration });
+      epithet: snapshot.epithet, openingLine: snapshot.openingLine, color: snapshot.color, t: snapshot.elapsed, dur: snapshot.duration });
   }
 
   function stageBanner(snapshot: StageBannerSnapshot): void {

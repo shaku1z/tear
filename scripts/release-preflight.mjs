@@ -4,6 +4,7 @@ import process from "node:process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RELEASE_REPOSITORY } from "./release-artifact.mjs";
+import { assertCampaignPublicationAllowed, readCampaignPublicationPolicy } from "./campaign-publication-boundary.mjs";
 
 function runGit(root, args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" });
@@ -47,6 +48,7 @@ export async function validateReleaseRepository({
   if (evidence.validationConclusion !== "success") evidenceErrors.push("validation conclusion is not success");
   if (!/^[1-9][0-9]*$/u.test(String(evidence.validationRunId))) evidenceErrors.push("validation run ID is missing");
   if (evidenceErrors.length > 0) throw new Error(`release evidence rejected:\n- ${evidenceErrors.join("\n- ")}`);
+  assertCampaignPublicationAllowed(await readCampaignPublicationPolicy(repositoryRoot));
   return Object.freeze({ repository: expectedRepository, sha: head, validationRunId: String(evidence.validationRunId) });
 }
 

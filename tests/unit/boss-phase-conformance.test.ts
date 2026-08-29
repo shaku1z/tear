@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import type { ArenaZone, EnemyPlatform, EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
-import { BOSS_ROSTER, pickMiniBoss, type BossId } from "../../src/gameplay/run/content-director";
+import { BOSS_ROSTER, pickMiniBoss } from "../../src/gameplay/run/content-director";
 import { bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
 import { STAGES } from "../../src/gameplay/stages";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
@@ -33,12 +33,16 @@ type BossActor = BehaviorActor & {
   siphon: unknown;
 };
 
-function createBoss(id: BossId): ReturnType<typeof createEnemyHarness> & { boss: BossActor } {
+type FactoryBossId = typeof BOSS_ROSTER[number]["id"];
+
+function createBoss(id: FactoryBossId): ReturnType<typeof createEnemyHarness> & { boss: BossActor } {
   const harness = createEnemyHarness([0.25, 0.75, 0.4]);
   const constructors = {
     warden: harness.types.Warden,
     colossus: harness.types.Colossus,
     aldric: harness.types.Aldric,
+    rootbound: harness.types.Rootbound,
+    "white-hart": harness.types.WhiteHart,
     echo: harness.types.Echo,
     source: harness.types.Source,
   } as const;
@@ -65,7 +69,9 @@ describe("boss phase conformance", () => {
       expect(boss.presentationId, entry.id).toBe(entry.id);
     }
     const campaignOrder = STAGES.map((stage) => stage.boss);
-    expect(campaignOrder).toEqual(BOSS_ROSTER.map((boss) => boss.id));
+    expect(campaignOrder).toEqual(["warden", "colossus", "aldric", "rootbound", "echo", "source"]);
+    expect(campaignOrder.filter((id) => BOSS_ROSTER.some((boss) => boss.id === id)))
+      .toEqual(BOSS_ROSTER.map((boss) => boss.id));
     expect(campaignOrder.at(-1)).toBe("source");
     for (const draw of [0, 0.249, 0.5, 0.999]) expect(pickMiniBoss({ next: () => draw })).not.toBe("source");
   });

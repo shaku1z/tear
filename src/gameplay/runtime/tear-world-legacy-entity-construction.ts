@@ -3,7 +3,7 @@ import {
   type TearWorldEntityConstructionPort,
 } from "./tear-world-entity-construction";
 
-type SupportKind = "priest" | "herald" | "mender" | "anchor";
+type SupportKind = "priest" | "herald" | "mender" | "anchor" | "rootbinder";
 
 /**
  * Constructor ports for the production actor families. The stable factory-ID
@@ -32,6 +32,9 @@ export interface TearWorldLegacyEntityConstructorPorts<
     warden: (x: number, y: number) => Enemy;
     colossus: (x: number, y: number) => Enemy;
     aldric: (x: number, y: number) => Enemy;
+    rootbound: (x: number, y: number) => Enemy;
+    whiteHart: (x: number, y: number) => Enemy;
+    rimehound: (x: number, y: number) => Enemy;
     echo: (x: number, y: number, mods: EchoMods) => Enemy;
     source: (x: number, y: number) => Enemy;
     voidWisp: (x: number, y: number) => Enemy;
@@ -64,6 +67,9 @@ export function createTearWorldLegacyEntityConstruction<
       armored: { create: ports.enemy.armored }, wraith: { create: ports.enemy.wraith },
       chimera: { create: ports.enemy.chimera }, warden: { create: ports.enemy.warden },
       colossus: { create: ports.enemy.colossus }, aldric: { create: ports.enemy.aldric },
+      rootbound: { create: ports.enemy.rootbound },
+      "white-hart": { create: ports.enemy.whiteHart },
+      rimehound: { create: ports.enemy.rimehound },
       echo: { create: (x, y, run) => ports.enemy.echo(x, y, ports.echoMods(run)) },
       source: { create: ports.enemy.source }, "void-wisp": { create: ports.enemy.voidWisp },
       reflection: { create: ports.enemy.reflection },
@@ -71,6 +77,7 @@ export function createTearWorldLegacyEntityConstruction<
       herald: { create: (x, y) => ports.enemy.support(x, y, "herald") },
       mender: { create: (x, y) => ports.enemy.support(x, y, "mender") },
       anchor: { create: (x, y) => ports.enemy.support(x, y, "anchor") },
+      rootbinder: { create: (x, y) => ports.enemy.support(x, y, "rootbinder") },
       boss: { create: ports.enemy.boss },
     },
     ...(ports.rebindEchoMods === undefined ? {} : {

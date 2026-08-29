@@ -40,4 +40,15 @@ describe("run session factory", () => {
       mods: {}, scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 }, achievementSnapshot: [],
     })).toThrow(RangeError);
   });
+
+  it("copies the source-owned variant discovery authority into the run", () => {
+    const discovered = ["briar-stalker"];
+    const session = createRunSession({
+      mode: "endless", difficulty: "normal", weaponId: "sword", runSeed: 1, voidSeed: 2,
+      mods: {}, scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 }, achievementSnapshot: [],
+      variantDiscovery: discovered,
+    });
+    discovered.push("seedcaster");
+    expect(session.variantDiscovery).toEqual(["briar-stalker"]);
+  });
 });

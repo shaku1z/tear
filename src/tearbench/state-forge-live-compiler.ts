@@ -1,6 +1,8 @@
 import { stableVerificationHash } from "../replay/hash";
+import { stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
 import type { TearSnapshotV1 } from "./contracts";
 import type { TearSdlResolved } from "./tearsdl";
+import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
 
 type MutableRecord = Record<string, unknown>;
 
@@ -60,6 +62,36 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
   (snapshot.state as MutableRecord)["tear.enemy.v1"] = Object.freeze(payloads);
 }
 
+function patchEnvironment(snapshot: TearSnapshotV1, environment: unknown, expectedStageId?: string): void {
+  if (environment === undefined) return;
+  const value = record(environment, "environment forge payload");
+  const issues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...value });
+  const firstIssue = issues[0];
+  if (firstIssue !== undefined) throw new TypeError(`environment forge payload is invalid: ${firstIssue.path} ${firstIssue.message}`);
+  const hazard = record(snapshot.state["tear.hazard.v1"], "hazard codec");
+  if (expectedStageId !== undefined && value.stageId !== undefined && value.stageId !== expectedStageId) {
+    throw new RangeError("environment forge stage does not match the resolved scenario stage");
+  }
+  if (typeof hazard.worldId === "string" && typeof value.worldId === "string" && hazard.worldId !== value.worldId) {
+    throw new RangeError("environment forge world identity does not match the source snapshot");
+  }
+  hazard.fields = structuredClone(value.fields);
+  hazard.combatObjects = structuredClone(value.combatObjects);
+  hazard.routes = structuredClone(value.routes);
+}
+
+function patchExactStage(run: MutableRecord, stageId: string | undefined, wave: number): void {
+  if (stageId === undefined) return;
+  const surface = run.mode === "playground" ? "playground" : "adventure";
+  const stageIndex = stageRuntimeIndexForSurface(stageId as StageId, surface);
+  if (stageIndex < 0) throw new RangeError(`resolved scenario stage does not exist: ${stageId}`);
+  if (run.mode === "campaign" && Math.floor((wave - 1) / 10) !== stageIndex) {
+    throw new RangeError("campaign wave does not belong to the resolved scenario stage");
+  }
+  run.stage = stageIndex;
+  run._biomeIdx = stageIndex;
+}
+
 /** Compiles resolved TearSDL into a detached live-codec snapshot. */
 export function compileResolvedTearSdlSnapshot(
   source: TearSnapshotV1,
@@ -81,7 +113,9 @@ export function compileResolvedTearSdlSnapshot(
   run.difficulty = resolved.scenario.start.difficulty;
   run.diff = resolved.scenario.start.difficulty;
   run.weaponId = resolved.scenario.start.weapon;
-  run.wave = resolved.scenario.start.wave ?? 1;
+  const wave = resolved.scenario.start.wave ?? 1;
+  run.wave = wave;
+  patchExactStage(run, resolved.scenario.start.stage, wave);
   if (typeof state.playerHp === "number") player.hp = state.playerHp;
   if (typeof state.playerMaxHp === "number") player.maxHp = state.playerMaxHp;
   if (typeof state.playerHpRatio === "number") player.hp = Number(player.maxHp) * state.playerHpRatio;
@@ -96,6 +130,7 @@ export function compileResolvedTearSdlSnapshot(
     patchRecord(record(bosses[0], "boss codec"), state.boss, "boss patch");
   }
   patchEnemyComposition(forged, state.enemyComposition);
+  patchEnvironment(forged, state.environment, resolved.document.start.stage);
   for (const [key, value] of Object.entries(state)) {
     if (key.startsWith("tear.") && key.endsWith(".v1")) {
       patchRecord(record(forged.state[key], `${key} codec`), value, `${key} patch`);

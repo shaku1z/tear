@@ -14,7 +14,7 @@ import { UPGRADES, type UpgradeDefinition } from "../../src/gameplay/upgrades";
 import { WEAPONS, type WeaponDefinition } from "../../src/gameplay/weapons";
 import { STAGES } from "../../src/gameplay/stages";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
-import { ENEMY_KIND_IDS } from "../../src/gameplay/run/content-director";
+import { ENEMY_IDENTITY_IDS } from "../../src/gameplay/run/content-director";
 import { BOSS_DEFINITIONS } from "../../src/gameplay/run/boss-definitions";
 import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
 import { FINAL_FIVE_WEAPON_TUNING } from "../../src/gameplay/weapon-tuning";
@@ -25,7 +25,7 @@ const tuningByWeapon = FINAL_FIVE_WEAPON_TUNING;
 const firstWeapon = WEAPONS.at(0);
 if (firstWeapon === undefined) throw new Error("Final Five source is empty");
 const achievementSource = ACHIEVEMENT_CATALOG;
-const enemyFamilySource = ENEMY_KIND_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
+const enemyFamilySource = ENEMY_IDENTITY_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
 
 function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
   upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
@@ -99,16 +99,21 @@ describe("game-reference.v1", () => {
     expect(result.collections.upgrades.status).toBe("complete");
     expect(result.collections.upgrades.items).toHaveLength(60);
     expect(result.collections.achievements.status).toBe("complete");
-    expect(result.collections.achievements.items).toHaveLength(98);
+    expect(result.collections.achievements.items).toHaveLength(100);
     expect(result.collections.stages.status).toBe("complete");
-    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "voidspire", "tear"]);
+    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"]);
     expect(result.collections.modes.status).toBe("complete");
     expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
     expect(result.collections.enemies.status).toBe("complete");
     expect(result.collections.enemies.items.families.map((family) => family.id)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
     ]);
-    expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([]);
+    expect(result.collections.enemies.items.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
+    expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([
+      { id: "bark-sentinel", name: "Bark Sentinel", weight: 0.45, minWave: 5 },
+    ]);
+    expect(JSON.stringify(result.collections.enemies.items)).not.toContain("pale-traverse");
+    expect(JSON.stringify(result.collections.enemies.items)).not.toContain("rimehound");
     expect(result.collections.enemies.items.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
     expect(result.collections.enemies.items.presets).toEqual([
       { familyId: "ranged", affixIds: ["rapid", "volley"] },
@@ -120,6 +125,7 @@ describe("game-reference.v1", () => {
       { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.30] },
       { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
       { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
+      { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
       { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
       { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
     ]);
@@ -138,7 +144,7 @@ describe("game-reference.v1", () => {
     expect(upgrades.filter((upgrade) => upgrade.rule.kind === "tiered")).toHaveLength(18);
     expect(upgrades.every((upgrade) => upgrade.tiers.every((tier) => tier.description.length > 0))).toBe(true);
     const achievements = result.collections.achievements.items;
-    expect(new Set(achievements.map((achievement) => achievement.id)).size).toBe(98);
+    expect(new Set(achievements.map((achievement) => achievement.id)).size).toBe(100);
     expect(new Set(achievements.map((achievement) => achievement.category))).toEqual(new Set(["combat", "skill", "progress", "boss", "survival", "mastery"]));
     expect(new Set(achievements.map((achievement) => achievement.rarity))).toEqual(new Set(["common", "uncommon", "rare", "epic", "legendary"]));
     expect(achievements.some((achievement) => achievement.rule.kind === "manual")).toBe(true);
@@ -151,7 +157,7 @@ describe("game-reference.v1", () => {
   it("projects only stable stage data and cross-reference IDs", () => {
     const result = reference();
     const stages = result.collections.stages.items;
-    expect(stages).toHaveLength(5);
+    expect(stages).toHaveLength(6);
     expect(stages[0]).toMatchObject({
       id: "grounds", name: "The Grounds", musicId: "grounds", boss: "warden",
       theme: { background: "#ffffff", platform: "#111111", accent: "#e23b3b", dark: false },
@@ -160,7 +166,11 @@ describe("game-reference.v1", () => {
     expect(stages[0]?.layout[0]).toEqual({ x: 230, y: 650, w: 280, h: 24, oneway: true });
     expect(stages[0]?.narrative.chapter.pages).toHaveLength(2);
     expect(stages[0]?.narrative.art).toEqual({ composition: "left", wash: "light" });
-    expect(stages[4]?.theme.dark).toBe(true);
+    expect(stages[3]).toMatchObject({
+      id: "verdant-sanctum", name: "The Verdant Sanctum", musicId: "verdant-sanctum", boss: "rootbound",
+      theme: { background: "#dff2d6", platform: "#234a36", accent: "#e4c95a", dark: false },
+    });
+    expect(stages[5]?.theme.dark).toBe(true);
     expect(Object.keys(stages[0] ?? {})).not.toContain("stagePlatforms");
     expect(Object.keys(stages[0] ?? {})).not.toContain("hazards");
     expect(Object.values(stages).every((stage) => stage.pool.every((entry) => entry.weight > 0 && entry.unlockWave > 0))).toBe(true);
@@ -406,7 +416,7 @@ describe("game-reference.v1", () => {
     const mismatchedStage = mismatchedBoss.collections.stages.items.at(0);
     if (mismatchedStage === undefined) throw new Error("missing stage fixture");
     mismatchedStage.boss = "source";
-    expect(() => { assertValidGameReferenceV1(mismatchedBoss); }).toThrow(/boss\/stage reference mismatch|five-way bijection/u);
+    expect(() => { assertValidGameReferenceV1(mismatchedBoss); }).toThrow(/boss\/stage reference mismatch|(?:5|five)-way bijection/u);
 
     const wrongEnemy = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { kind: string }[] }[] } } };
     const enemyStage = wrongEnemy.collections.stages.items.at(0);
@@ -514,7 +524,7 @@ describe("game-reference.v1", () => {
     const duplicateUpgrade = [...UPGRADES.slice(0, -1), firstUpgrade];
     expect(() => reference("a".repeat(40), WEAPONS, duplicateUpgrade)).toThrow(/duplicate IDs/u);
 
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(/exactly 98/u);
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(/exactly 100/u);
     const lastAchievement = ACHIEVEMENT_CATALOG.at(-1);
     if (lastAchievement === undefined) throw new Error("missing achievement source fixture");
     const firstAchievement = ACHIEVEMENT_CATALOG.at(0);

@@ -32,6 +32,14 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
       platformBreak: { shake: 4, cue: "aldricCleaver", priority: 3 }, platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
       death: { shake: 10, flash: 0.36, slowmo: 0.72, zoom: 0.05, hitstop: 0.09, cue: "bossDeathAldric", priority: 10 },
     },
+    "white-hart": {
+      windup: { shake: 1, priority: 2 }, launch: { shake: 3, priority: 3 },
+      contact: { shake: 7, hitstop: 0.045, priority: 6 }, counter: { shake: 5, flash: 0.12, hitstop: 0.04, priority: 7 },
+      stagger: { shake: 8, flash: 0.2, slowmo: 0.32, priority: 8 },
+      phaseTransition: { shake: 7, flash: 0.28, slowmo: 0.4, zoom: 0.04, priority: 9 },
+      platformBreak: { shake: 3, priority: 3 }, platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+      death: { shake: 10, flash: 0.4, slowmo: 0.75, zoom: 0.055, hitstop: 0.09, priority: 10 },
+    },
     echo: {
       windup: { shake: 0, cue: "echoResonance", priority: 2 }, launch: { shake: 2, cue: "echoResonance", priority: 3 },
       contact: { shake: 4, hitstop: 0.035, cue: "echoResonance", priority: 5 }, counter: { shake: 3, flash: 0.1, cue: "echoResonance", priority: 6 },

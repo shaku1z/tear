@@ -30,6 +30,6 @@ describe("runtime mode configuration projection", () => {
       ["id", "label", "blurb", "enabled", "sandbox", "debug"],
     ]);
     expect(CONFIG.modes.every((mode) => !("order" in mode) && !("classification" in mode))).toBe(true);
-    expect(stableVerificationHash(CONFIG.modes)).toBe("95a53580dcf17ade");
+    expect(stableVerificationHash(CONFIG.modes)).toBe("d8ff7113c5aa6bac");
   });
 });

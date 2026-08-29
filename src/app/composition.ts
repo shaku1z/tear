@@ -8,7 +8,7 @@ import { createDailyChallenges, localCalendarClock } from "../gameplay/progressi
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";
 import { createTearWorldBootstrap } from "../gameplay/runtime/tear-world-bootstrap";
 import { createMetaProgression, type ProgressionApplyContext } from "../gameplay/progression/meta";
-import { STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
+import { PLAYGROUND_STAGES, STAGES, stageAt, stagePlatforms } from "../gameplay/stages";
 import {
   UPGRADES, applyUpgrade, newMods, nextTierDesc, rollUpgrades, tierUp,
   type UpgradeApplyContext, type UpgradeDefinition,
@@ -32,6 +32,7 @@ import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
+import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
 import { PerformanceMonitor } from "../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../tearbench/test-support";
 import { LegacyAppStateController } from "./legacy-state-controller";
@@ -128,7 +129,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   });
   const {
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo,
-    Flyer, Ranged, Source, Support, VoidWisp, Warden, Wraith,
+    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, WhiteHart, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
@@ -150,6 +151,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getAchievements: () => ACH,
     getMeta: () => META,
     writerId: () => CG.live ? "crazygames" : "browser",
+    countedBiomeNames: STAGES.map(({ name }) => name),
     log: (message) => { console.log(message); },
   });
   const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
@@ -164,7 +166,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     captureSemanticActions: false,
     gameplayEvents: GAMEPLAY_EVENTS,
     defaults: {
-      rulesetVersion: "tear-rules-2026.07",
+      rulesetVersion: CURRENT_RULESET_VERSION,
       build: { version: "0.1.0", revision: __TEAR_BUILD_REVISION__, target },
       ticksPerSecond: 120,
       weaponId: "sword",
@@ -201,8 +203,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
-    Ranged, ReflectionEnemy, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
-    VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
+    Ranged, ReflectionEnemy, Rimehound, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, PLAYGROUND_STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
+    VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, WhiteHart, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,
     clamp, cosmeticRandom, createRunSeed, drawBossTransformationWorld, len, lerp,
     newMods, nextTierDesc, rollAffixes, rollUpgrades, rollVariant, segCircle,

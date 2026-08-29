@@ -7,10 +7,13 @@
 // per-biome art (silhouettes, biome particles, set dressing) on top of this engine.
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type { STAGES as StageValues } from "../gameplay/stages";
-import { BIOME_ART } from "./backdrop-biomes";
+import { biomeArtForStage } from "./backdrop-biomes";
 import { clamp, lerp } from "../domain/geometry";
 import { VoidGen } from "../gameplay/voidgen";
 import type { VoidPlatform } from "../gameplay/voidgen";
+import { stagePresentationDefinition } from "./stage-presentation-definitions";
+import { drawVerdantRootstone } from "./platform-materials/verdant-rootstone";
+import { drawPaleIce } from "./platform-materials/pale-ice";
 
 function truthyString(value: string | undefined, fallback: string): string {
   if (value) return value;
@@ -47,10 +50,20 @@ interface PlatformPort {
 interface LocalFlare { screen: false; x: number; y: number; col: string; r: number; life: number; end: number }
 interface ScreenBloom { screen: true; col: string; strength: number; life: number; end: number }
 type BackdropEffect = LocalFlare | ScreenBloom;
+export const BACKDROP_RESOURCE_LIMITS = Object.freeze({ motesPerStage: 40, transientLights: 16 });
+export interface BackdropPresentationMetrics {
+  readonly cachedStages: number;
+  readonly cachedMotes: number;
+  readonly transientLights: number;
+}
 export interface BackdropController {
   readonly W: number; readonly H: number; readonly PX: number; readonly PY: number;
   lowGraphics(): boolean;
-  _cache: Record<string, BackdropCache>; _fx: BackdropEffect[];
+  highContrast(): boolean;
+  reducedMotion(): boolean;
+  flashScale(): number;
+  metrics(): BackdropPresentationMetrics;
+  _cache: Partial<Record<Stage["id"], BackdropCache>>; _fx: BackdropEffect[];
   fillFull(context: CanvasRenderingContext2D, view?: ViewRect): void; resetFx(): void;
   _rgb(hex?: string): [number, number, number]; _mix(a: string, b: string, amount: number): string;
   _lighten(color: string, amount: number): string; _darken(color: string, amount: number): string;
@@ -85,7 +98,7 @@ export interface BackdropPolicy {
     }>;
   }>;
   readonly graphics: Readonly<{ low: boolean }>;
-  readonly accessibility: Readonly<{ highContrast: boolean; flashScale: number }>;
+  readonly accessibility: Readonly<{ highContrast: boolean; flashScale: number; reducedMotion: boolean }>;
   readonly overscan: Readonly<{ x: number; y: number }>;
   readonly theme: Readonly<{ dark: boolean }>;
   readonly createCanvas: () => HTMLCanvasElement;
@@ -112,6 +125,17 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
   get PX() { return overscan.x; },
   get PY() { return overscan.y; },
   lowGraphics() { return graphics.low; },
+  highContrast() { return accessibility.highContrast; },
+  reducedMotion() { return accessibility.reducedMotion; },
+  flashScale() { return accessibility.flashScale; },
+  metrics() {
+    const caches = Object.values(this._cache);
+    return Object.freeze({
+      cachedStages: caches.length,
+      cachedMotes: caches.reduce((total, entry) => total + entry.parts.length, 0),
+      transientLights: this._fx.length,
+    });
+  },
   // World-camera draws may reveal more than fullscreen OVERSCAN when the camera
   // pulls out.  Callers pass that inverse-camera rectangle through `view`; screen-
   // space callers (post/Fx/replays) keep the original fullscreen bounds.
@@ -120,7 +144,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     const r = view ? view.right : this.W + this.PX, b = view ? view.bottom : this.H + this.PY;
     ctx.fillRect(l, t, r - l, b - t);
   },
-  _cache: {},                 // stage.name -> baked + spec
+  _cache: {},                 // stable stage ID -> baked + spec
   _fx: [],                    // transient reactive lights (combat -> backdrop)
   resetFx() { this._fx.length = 0; },
 
@@ -149,28 +173,31 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     const vg = v.createRadialGradient(lw / 2, lh * 0.46, lh * 0.32, lw / 2, lh * 0.5, lw * 0.72);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, dark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.20)");
     v.fillStyle = vg; v.fillRect(0, 0, lw, lh);
-    const r = this._rng(stage.name.length * 131 + 7);
+    let identitySeed = 2166136261;
+    for (let index = 0; index < stage.id.length; index += 1) {
+      identitySeed = Math.imul(identitySeed ^ stage.id.charCodeAt(index), 16777619);
+    }
+    const r = this._rng(identitySeed);
     v.globalAlpha = dark ? 0.05 : 0.035;
     for (let i = 0; i < 1500; i++) { const x = r() * lw, y = r() * lh, sz = r() * 1.4; v.fillStyle = r() > 0.5 ? "#fff" : "#000"; v.fillRect(x, y, sz, sz); }
     v.globalAlpha = 1;
 
     // ambient motes (generic dust; Phase 3 swaps per biome)
     const parts = [];
-    for (let i = 0; i < 40; i++) parts.push({ x: r() * this.W, y: r() * this.H, z: 0.3 + r() * 0.9, r: 0.6 + r() * 2.0, ph: r() * 6.28, sp: 5 + r() * 14 });
+    for (let i = 0; i < BACKDROP_RESOURCE_LIMITS.motesPerStage; i++) parts.push({ x: r() * this.W, y: r() * this.H, z: 0.3 + r() * 0.9, r: 0.6 + r() * 2.0, ph: r() * 6.28, sp: 5 + r() * 14 });
 
     const cache = { vign, dark, parts, accent: stage.accent, _vw: this.W, _vh: this.H };
-    this._cache[stage.name] = cache;
+    this._cache[stage.id] = cache;
     return cache;
   },
-  _get(stage) { const c = this._cache[stage.name]; if (c?._vw === this.W && c._vh === this.H) return c; return this._build(stage); },
+  _get(stage) { const c = this._cache[stage.id]; if (c?._vw === this.W && c._vh === this.H) return c; return this._build(stage); },
 
   // === sky + parallax + motes (inside world camera, before platforms) ===
   // dispatches to per-biome art (BIOME_ART), falling back to the generic treatment.
   draw(ctx, stage, t, playerX, view) {
     const c = this._get(stage), gy = config.world.groundY;
     const px = (playerX - this.W / 2) / (this.W / 2);   // -1..1, drives parallax
-    const art = BIOME_ART[stage.name] ?? BIOME_ART._default;
-    if (!art) throw new Error("Backdrop default biome art is unavailable");
+    const art = biomeArtForStage(stage);
     art.sky(this, ctx, stage, c, t, gy, view);
     art.far(this, ctx, stage, c, t, px, gy, view);
     art.motes(this, ctx, stage, c, t, px, view);
@@ -416,6 +443,31 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
 
   platform(ctx, p, stage, isFloor, view) {
     if (p.void) { this.voidPlatform(ctx, p, stage); return; }
+    const stageMaterial = stagePresentationDefinition(stage.id)?.platformMaterialId;
+    const material = p.arenaMaterial ?? p.material ?? stageMaterial;
+    if (material === "verdant-rootstone" || material === "pale-ice") {
+      let platform = p;
+      if (isFloor) {
+        const left = view ? Math.min(p.x - this.PX, view.left) : p.x - this.PX;
+        const right = view ? Math.max(p.x + p.w + this.PX, view.right) : p.x + p.w + this.PX;
+        const bottom = view ? Math.max(p.y + p.h + this.PY, view.bottom) : p.y + p.h + this.PY;
+        platform = { ...p, x: left, w: right - left, h: bottom - p.y };
+      }
+      const state = truthyString(p.arenaState, "stable");
+      const materialPolicy = {
+        timeSeconds: clock.sim,
+        lowGraphics: graphics.low,
+        highContrast: accessibility.highContrast,
+        reducedMotion: accessibility.reducedMotion,
+        flashScale: accessibility.flashScale,
+        stressRatio: clamp(p.stress ?? 0, 0, 1),
+        warningRatio: state === "warning" ? 1 - clamp((p.crackWarn ?? 0) / config.bossArena.crackWarn, 0, 1) : 0,
+        reformRatio: state === "reforming" ? 1 - clamp((p.respawnIn ?? 0) / truthyNumber(p.respawnWarn, config.bossArena.reformWarn), 0, 1) : 0,
+      };
+      if (material === "verdant-rootstone") drawVerdantRootstone(ctx, platform, materialPolicy);
+      else drawPaleIce(ctx, platform, materialPolicy);
+      return;
+    }
     if (p.arenaPlatId && !isFloor) { this.arenaPlatform(ctx, p); return; }
     const c = this._get(stage), plat = stage.plat;
     if (isFloor) {
@@ -449,10 +501,10 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
 
   // === reactive lighting: combat events bleed light into the backdrop ===
   // time-based so undrawn events (arcade modes / paused) simply expire, never pile up.
-  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: clock.sim + life, screen: false }); if (this._fx.length > 16) this._fx.shift(); },
+  flare(x, y, col, r, life) { this._fx.push({ x, y, col, r, life, end: clock.sim + life, screen: false }); if (this._fx.length > BACKDROP_RESOURCE_LIMITS.transientLights) this._fx.shift(); },
   // A bloom is screen chrome rather than world geometry, so it deliberately
   // keeps UI wall time while local flares freeze with hit-stop simulation time.
-  bloom(col, strength, life) { this._fx.push({ col, strength, life, end: performance.now() / 1000 + life, screen: true }); if (this._fx.length > 16) this._fx.shift(); },
+  bloom(col, strength, life) { this._fx.push({ col, strength, life, end: performance.now() / 1000 + life, screen: true }); if (this._fx.length > BACKDROP_RESOURCE_LIMITS.transientLights) this._fx.shift(); },
   drawFx(ctx, camera) {
     if (!this._fx.length) return;
     const simNow = clock.sim, uiNow = performance.now() / 1000;

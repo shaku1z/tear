@@ -74,6 +74,8 @@ export interface LegacyProfileOptions {
   readonly getMeta: () => MetaPort | undefined;
   readonly writerId: () => string;
   readonly log?: (message: string) => void;
+  /** Published biome display names whose discovery counts toward progression. */
+  readonly countedBiomeNames?: readonly string[];
 }
 
 function record(value: unknown): Tracker | null {
@@ -99,6 +101,9 @@ function numberMap(value: unknown): Record<string, number> {
 }
 
 export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfile {
+  const countedBiomeNames = options.countedBiomeNames === undefined ? null : new Set(options.countedBiomeNames);
+  const countBiomes = (value: unknown): number => Object.keys(record(value) ?? {})
+    .filter((name) => countedBiomeNames === null || countedBiomeNames.has(name)).length;
   const now = options.now ?? Date.now;
   let envelope: ProfileEnvelopeV2 | null = null;
   let envelopeWritable = true;
@@ -180,7 +185,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
       const seen = record(this.data.stats._biomes) ?? {};
       seen[name] = 1;
       this.data.stats._biomes = seen;
-      return Object.keys(seen).length;
+      return countBiomes(seen);
     },
     markMode(id) {
       if (!this.data.modes[id]) { this.data.modes[id] = true; this.addStat("modesPlayed", 1); }
@@ -235,7 +240,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
       };
       mergeSet("weaponsWon");
       mergeSet("advDiffs");
-      this.data.stats.biomesSeen = Math.max(finite(this.data.stats.biomesSeen), Object.keys(record(this.data.stats._biomes) ?? {}).length);
+      this.data.stats.biomesSeen = Math.max(finite(this.data.stats.biomesSeen), countBiomes(this.data.stats._biomes));
       this.data.stats.modesPlayed = Math.max(finite(this.data.stats.modesPlayed), Object.keys(this.data.modes).length);
       if (this.data.weaponsWon) this.data.stats.distinctWeaponsWon = Math.max(finite(this.data.stats.distinctWeaponsWon), Object.keys(this.data.weaponsWon).length);
       if (this.data.advDiffs) this.data.stats.clearAdvAll = Math.max(finite(this.data.stats.clearAdvAll), Object.keys(this.data.advDiffs).length);

@@ -1,4 +1,6 @@
 export * from "./lifecycle";
+export * from "./campaign-stage-curve";
+export * from "./composition-budget";
 export * from "./live-outcome-controller";
 export * from "./live-recording-controller";
 export * from "./live-run-start-controller";

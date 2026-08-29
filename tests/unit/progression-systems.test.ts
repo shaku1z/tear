@@ -99,9 +99,9 @@ describe("achievements", () => {
       meta: { level: () => 0 }, profile, audio: { rankup() { return; } }, shop: [],
       clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
     });
-    expect(achievements._all).toHaveLength(98);
-    expect(new Set(achievements._all.map((achievement) => achievement.id)).size).toBe(98);
-    expect(achievements._all.reduce((total, achievement) => total + achievements.coinsFor(achievement), 0)).toBe(70_100);
+    expect(achievements._all).toHaveLength(100);
+    expect(new Set(achievements._all.map((achievement) => achievement.id)).size).toBe(100);
+    expect(achievements._all.reduce((total, achievement) => total + achievements.coinsFor(achievement), 0)).toBe(73_000);
   });
 
   it("makes scripted rewards and audio idempotent", () => {

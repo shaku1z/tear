@@ -1,4 +1,5 @@
 import type { BossId } from "../gameplay/run/content-director";
+import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
@@ -17,8 +18,7 @@ type Content = ReturnType<typeof createLiveContentComposition>;
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
 function bossId(value: string): BossId {
-  if (value === "source" || value === "echo" || value === "aldric" || value === "colossus") return value;
-  return "warden";
+  return isBossDefinitionId(value) ? value : "warden";
 }
 
 export interface LiveWaveCompositionOptions {
@@ -59,6 +59,9 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     run: options.run,
     tuning: () => d.CONFIG.run,
     stages: d.STAGES.map((stage) => ({ ...stage, boss: bossId(stage.boss) })),
+    // Ordinary mode rosters remain published-only; this lookup lets a
+    // test-build engineering selection materialize Pale in its authored home.
+    bossOnlyStages: d.PLAYGROUND_STAGES.map((stage) => ({ ...stage, boss: bossId(stage.boss) })),
     presets: d.PRESETS,
     random: options.worldServices.random.stream("world"),
     modeDefinition: (mode) => d.CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},

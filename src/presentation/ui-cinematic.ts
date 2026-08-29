@@ -184,6 +184,13 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             ctx.font = this.font(t.type.display, true);
             ctx.textAlign = "center";
             ctx.textBaseline = "alphabetic";
+            if (o.openingLine) {
+                ctx.globalAlpha = alpha * a.cinemaSubtitle;
+                ctx.font = this.font(t.type.caption, true);
+                ctx.fillText(o.openingLine, cx, vh - m.bossIntroOpeningBottom);
+                ctx.globalAlpha = alpha;
+                ctx.font = this.font(t.type.display, true);
+            }
             ctx.fillText(truthyOr(o.bossName, () => "BOSS"), cx, vh - m.bossIntroTitleBottom);
             const accentK = easeOut((elapsed - motion.bossIntroAccentDelay) / motion.bossIntroAccentGrow);
             const accentW = m.bossIntroAccentHalfW * accentK;

@@ -1,6 +1,75 @@
 import type { TearSdlDocumentV1 } from "./tearsdl";
+import type { EnvironmentCombatObjectState, EnvironmentFieldState, EnvironmentRouteState } from "../gameplay/environment/environment-contracts";
+import { createStableRegistry } from "./registries";
+import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "../gameplay/environment/environment-definitions";
+import type { BloomWellState } from "../gameplay/environment/bloom-well";
+import { createGraftAnchorState } from "../gameplay/environment/graft-anchor";
 
 type Patch = Readonly<Record<string, unknown>>;
+
+/** State Forge factories are generic capability fixtures, not a Verdant roster. */
+export const ENVIRONMENT_STATE_FORGE_FACTORY_IDS = Object.freeze([
+  "environment-field", "environment-combat-object", "environment-route",
+] as const);
+export const ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY = createStableRegistry(
+  "environment State Forge factory", ENVIRONMENT_STATE_FORGE_FACTORY_IDS,
+);
+
+export function forgeEnvironmentFieldState(
+  base: TearSdlDocumentV1,
+  field: Omit<EnvironmentFieldState, "id"> & { readonly id: string },
+): TearSdlDocumentV1 {
+  assertEnvironmentObjectCategory("field", field.kind);
+  return patch(base, `${base.id}-${field.id}`, { environment: { fields: [{ factoryId: "environment-field", ...structuredClone(field) }], combatObjects: [], routes: [] } });
+}
+
+/** Surgical C5 journey: a Bloom Well is restored as a forged field, never inserted into a stage roster. */
+export function forgeBloomWellCycleState(base: TearSdlDocumentV1, field: BloomWellState): TearSdlDocumentV1 {
+  return forgeEnvironmentFieldState(base, field);
+}
+
+export function forgeEnvironmentCombatObjectState(
+  base: TearSdlDocumentV1,
+  object: Omit<EnvironmentCombatObjectState, "id"> & { readonly id: string },
+): TearSdlDocumentV1 {
+  assertEnvironmentCombatCapabilities(object.kind, object.counterplayTags, object.procEligible);
+  return patch(base, `${base.id}-${object.id}`, { environment: { fields: [], combatObjects: [{ factoryId: "environment-combat-object", ...structuredClone(object) }], routes: [] } });
+}
+
+/** C6 relationship fixture: State Forge restores one Rootbinder and two ordinary allies,
+ * then restores their source-owned severable root-link segments using stable actor IDs. */
+export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
+  const links = ["enemy:2", "enemy:3"].map((targetId, index) => ({
+    id: `root-network:${String(index + 1)}`, factoryId: "environment-combat-object", kind: "root-link" as const,
+    ownerId: "enemy:1", targetId, geometry: { x: 260, y: 600, points: [{ x: 260, y: 600 }, { x: 420 + index * 120, y: 600 }] },
+    integrity: 2, maxIntegrity: 2, counterplayTags: ["cut", "break"] as const, procEligible: false,
+    damageDedupeId: `root-network:${String(index + 1)}:damage`, state: "active" as const, stateTick: 0, cleanupReason: null,
+  }));
+  links.forEach((link) => { assertEnvironmentCombatCapabilities(link.kind, link.counterplayTags, link.procEligible); });
+  return patch(base, `${base.id}-root-network`, {
+    enemyComposition: [{ kind: "rootbinder", count: 1 }, { kind: "charger", count: 2 }],
+    environment: { fields: [], combatObjects: links, routes: [] },
+  });
+}
+
+/** C12 surgical fixture: one active production Graft retains the live Rootbound owner/target identity. */
+export function forgeRootboundGraftAnchorState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
+  const warning = createGraftAnchorState({
+    ownerId: "enemy:1", ownerPosition: { x: 800, y: 620 }, graftType: "bastion",
+    geometry: { x: 280, y: 610, w: 54, h: 90 }, createdTick: 0,
+  });
+  const active = Object.freeze({ ...warning, state: "active" as const, stateTick: warning.activationTick });
+  const forged = forgeEnvironmentCombatObjectState(base, active);
+  return Object.freeze({ ...forged, id: `${base.id}-graft-bastion` });
+}
+
+export function forgeEnvironmentRouteState(
+  base: TearSdlDocumentV1,
+  route: Omit<EnvironmentRouteState, "id"> & { readonly id: string },
+): TearSdlDocumentV1 {
+  assertEnvironmentObjectCategory("route", route.kind);
+  return patch(base, `${base.id}-${route.id}`, { environment: { fields: [], combatObjects: [], routes: [{ factoryId: "environment-route", ...structuredClone(route) }] } });
+}
 
 function patch(base: TearSdlDocumentV1, id: string, state: Patch): TearSdlDocumentV1 {
   return Object.freeze({

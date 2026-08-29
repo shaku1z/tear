@@ -52,7 +52,7 @@ export function createCinematics(policy: CinematicPresentationPolicy): Cinematic
           // and chapter label while only the lore fragment softens away.
           const inK = b.exit ? 1 : Math.min(1, this.elapsed / (mo.chapterPageCross ?? 0.26));
           const loreK = b.exit ? Math.max(0, 1 - this.progress) : inK;
-          const art = { color: b.color ?? S.color, composition: b.composition, wash: b.wash };
+          const art = { color: b.color ?? S.color, composition: b.composition, wash: b.wash, transition: b.transition };
           ui.chapterHeader(ctx, Object.assign({ label: b.label, title: b.title, amount: inK }, art));
           ui.chapterProgress(ctx, Object.assign({ index: b.pageIndex, count: b.pageCount, amount: inK }, art));
           ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: b.exit ? 1 : this.revealProgress, amount: loreK }, art));
