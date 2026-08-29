@@ -2090,7 +2090,7 @@
         "Replay/State Forge evidence",
         "Rootbound engineering-complete record"
       ],
-      "status": "complete",
+      "status": "green",
       "sourceBaseline": "6b0a5e6e0309d6004d09947b352837601fca069a",
       "completionIdentity": "0baeca907e1cdea9b82d4bda730649d305844276",
       "commandsRun": [
@@ -2234,7 +2234,7 @@
         "Updated implementation documentation",
         "Checkpoint handoff"
       ],
-      "status": "complete",
+      "status": "green",
       "sourceBaseline": "0baeca907e1cdea9b82d4bda730649d305844276",
       "completionIdentity": "df0412381728ae71c18b2259790bf8308de0a0ab",
       "commandsRun": [
@@ -2404,7 +2404,7 @@
         "TearBench progression comparison",
         "Balance decision backlog"
       ],
-      "status": "complete",
+      "status": "green",
       "sourceBaseline": "7d53946d20d65c16114d485262381f5907242fea",
       "completionIdentity": "c019a42efc246e35827dd4014f2ccaac6fe3e794",
       "commandsRun": [
@@ -2585,7 +2585,7 @@
         "Reset lifecycle evidence",
         "Player-facing journey evidence where applicable"
       ],
-      "status": "complete",
+      "status": "green",
       "sourceBaseline": "998b85291d4122428ee996f8cc3e0391162653f9",
       "completionIdentity": "c7976332bf34bf06ff628d3e13b307fce2bd9a5d",
       "commandsRun": [

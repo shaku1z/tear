@@ -28,7 +28,7 @@
 
 - **Owner:** Verdant biome and campaign owner
 - **Status:** Active
-- **Closure condition:** VS3-C0 through VS3-C21 are green at one reconciled feature identity, the Pale shared-dependency handoff is complete, and VS3-C22 remains explicitly blocked until Pale completion and separately authorized joint promotion.
+- **Closure condition:** VS3-C0 through VS3-C21 have green or explicitly authorized dispositions at one reconciled feature identity, the Pale shared-dependency handoff is complete, and VS3-C22 remains explicitly blocked until Pale completion and separately authorized joint promotion.
 
 ### VS3-C0 baseline and authority record
 
@@ -3046,14 +3046,14 @@ This block is updated after each accepted checkpoint.
 
 ```text
 PROGRAM: Verdant Sanctum Revision 3
-STATUS: ACTIVE — VS3-C2 GREEN
-CURRENT CHECKPOINT: VS3-C3
-CURRENT SUB-GOAL: VS3-C3-S1
+STATUS: ACTIVE — VS3-C20 GREEN
+CURRENT CHECKPOINT: VS3-C21
+CURRENT SUB-GOAL: VS3-C21-S1
 BASELINE: origin/main@91706363b80fb56a18df4d973b424bbce94a279e
-LAST GREEN CHECKPOINT: VS3-C2
-LAST EVIDENCE: C2 environment runtime contract is green at 5d608edf920c58dfc7b57681a7112b09aeadda65; per-world ownership, deterministic IDs, lifecycle resets, fixed-step ordering, detached execution, docs, and TearBench selection gates pass; runtime campaign remains five stages
+LAST GREEN CHECKPOINT: VS3-C20
+LAST EVIDENCE: C20 accessibility, responsive, input, integrated performance, object/heap, exact-build, platform, package, isolation, bundle, and reproducibility gates are green at implementation/package source 751f6c47f722e6fe10dceb6438e4155b8e3b5f56; durable closure is 9ba821c75f00decb2deaf97d7149e155ff59235f
 BLOCKERS: none recorded
-NEXT ACTION: execute VS3-C3 environment codec, canonical hash, State Forge, replay, and TearBench observation
+NEXT ACTION: execute VS3-C21 engineering freeze and Pale shared-dependency handoff
 PUBLICATION: prohibited until joint Verdant/Pale promotion
 C40: no certification claim
 ```
@@ -4438,7 +4438,7 @@ Create a lawful production Rootbound encounter that can spawn, introduce, simula
 
 | Field | Value |
 | --- | --- |
-| Status | `complete` |
+| Status | `green` |
 | Owner | Boss combat owner |
 | Dependencies | VS3-C10 |
 | Release boundary | Phase I engineering completion |
@@ -4532,7 +4532,7 @@ Implement and prove the complete Phase I attack grammar, punish windows, environ
 
 | Field | Value |
 | --- | --- |
-| Status | `complete` |
+| Status | `green` |
 | Owner | Boss/environment combat owner |
 | Dependencies | VS3-C11 |
 | Release boundary | Phase II engineering completion |
@@ -4631,7 +4631,7 @@ Implement bounded Graft play, boss-owned Bloom patterns, Memory Choir, Root Cage
 
 | Field | Value |
 | --- | --- |
-| Status | `complete` |
+| Status | `green` |
 | Owner | Boss terminal / replay integration owner |
 | Dependencies | VS3-C12 |
 | Release boundary | Complete Rootbound encounter engineering claim; still non-certifying |
@@ -5162,7 +5162,7 @@ Select, release, vendor, route, and verify a canonical Verdant/Rootbound soundtr
 
 | Field | Value |
 | --- | --- |
-| Status | `GREEN` |
+| Status | `green` |
 | Owner | Reference publication / cross-repository owner |
 | Dependencies | VS3-C16, VS3-C17 |
 | Release boundary | No publication until protected joint seven-stage source exists |
@@ -5383,7 +5383,7 @@ Close every Verdant-specific evidence gap, make future drift fail the focused ga
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | QA / performance / platform owner |
 | Dependencies | VS3-C9, VS3-C13, VS3-C17, VS3-C19 |
 | Release boundary | Release-candidate engineering gate; no deployment |
@@ -5415,16 +5415,16 @@ Validate the complete Verdant feature across supported presentation, input, targ
 
 ## Sub-goals
 
-- [ ] **VS3-C20-S1** — Run high-contrast, reduced-motion, flash-scale, low-graphics, and audio-independent manual/automated review.
-- [ ] **VS3-C20-S2** — Run responsive/overscan matrix and confirm gameplay geometry is unchanged.
-- [ ] **VS3-C20-S3** — Run keyboard/mouse, controller, and touch input matrices through Verdant/Rootbound paths where relevant.
-- [ ] **VS3-C20-S4** — Add/execute a bounded Verdant performance workload with Bloom, Rootbinder network, Grafts, enemies, and combat activity.
-- [ ] **VS3-C20-S5** — Validate object/particle/effect population ceilings.
-- [ ] **VS3-C20-S6** — Validate repeated start/quit/retry/stage transitions for retained objects and heap growth.
-- [ ] **VS3-C20-S7** — Build standalone, PWA, CrazyGames, and test targets from exact source.
-- [ ] **VS3-C20-S8** — Validate offline/PWA asset behavior, CrazyGames iframe lifecycle, package contents, and no source/test leakage.
-- [ ] **VS3-C20-S9** — Validate bundle budgets and reproducibility.
-- [ ] **VS3-C20-S10** — Record controlled-host performance results without changing thresholds to silence contention.
+- [x] **VS3-C20-S1** — Run high-contrast, reduced-motion, flash-scale, low-graphics, and audio-independent manual/automated review.
+- [x] **VS3-C20-S2** — Run responsive/overscan matrix and confirm gameplay geometry is unchanged.
+- [x] **VS3-C20-S3** — Run keyboard/mouse, controller, and touch input matrices through Verdant/Rootbound paths where relevant.
+- [x] **VS3-C20-S4** — Add/execute a bounded Verdant performance workload with Bloom, Rootbinder network, Grafts, enemies, and combat activity.
+- [x] **VS3-C20-S5** — Validate object/particle/effect population ceilings.
+- [x] **VS3-C20-S6** — Validate repeated start/quit/retry/stage transitions for retained objects and heap growth.
+- [x] **VS3-C20-S7** — Build standalone, PWA, CrazyGames, and test targets from exact source.
+- [x] **VS3-C20-S8** — Validate offline/PWA asset behavior, CrazyGames iframe lifecycle, package contents, and no source/test leakage.
+- [x] **VS3-C20-S9** — Validate bundle budgets and reproducibility.
+- [x] **VS3-C20-S10** — Record controlled-host performance results without changing thresholds to silence contention.
 
 ## Agent implementation procedure
 
@@ -5486,6 +5486,8 @@ Validate the complete Verdant feature across supported presentation, input, targ
 ## Required handoff sentence
 
 > `VS3-C20 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
+
+> `VS3-C20 is GREEN at 751f6c47f722e6fe10dceb6438e4155b8e3b5f56, with durable closure at 9ba821c75f00decb2deaf97d7149e155ff59235f. The next authorized action is VS3-C21-S1, reconciling the complete checkpoint, ledger, and documentation record. Verdant publication remains prohibited, and C40 status is unchanged.`
 
 ---
 
@@ -6267,12 +6269,12 @@ Verdant can freeze before Pale. Verdant and Pale enter the public campaign toget
 # 34. Revision 3 starting position
 
 ```text
-STATUS: ACTIVE — VS3-C2 GREEN
-CURRENT CHECKPOINT: VS3-C3
-CURRENT SUB-GOAL: VS3-C3-S1
-LAST GREEN CHECKPOINT: VS3-C2
-LAST EVIDENCE: C2 environment runtime contract is green at 5d608edf920c58dfc7b57681a7112b09aeadda65; per-world ownership, deterministic IDs, lifecycle resets, fixed-step ordering, detached execution, docs, and TearBench selection gates pass; runtime and exported reference catalogs remain factory-ready five-stage/five-boss/eleven-enemy sets until later checkpoints
-NEXT ACTION: execute VS3-C3 environment codec, canonical hash, State Forge, replay, and TearBench observation
+STATUS: ACTIVE — VS3-C20 GREEN
+CURRENT CHECKPOINT: VS3-C21
+CURRENT SUB-GOAL: VS3-C21-S1
+LAST GREEN CHECKPOINT: VS3-C20
+LAST EVIDENCE: C20 is green at implementation/package source 751f6c47f722e6fe10dceb6438e4155b8e3b5f56 with durable closure at 9ba821c75f00decb2deaf97d7149e155ff59235f
+NEXT ACTION: execute VS3-C21 engineering freeze and Pale shared-dependency handoff
 PUBLICATION: prohibited
 WIKI DISPATCH: prohibited
 MUSIC RE-VENDORING: not authorized by this document alone
