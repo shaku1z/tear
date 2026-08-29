@@ -32,7 +32,7 @@
         { "id": "PT3-C0-S7", "description": "Keep production evidence routes absent until real subjects exist.", "status": "green" }
       ],
       "sourceBaseline": "25c589844ec2cfe85a8a6deead881ebb3d699198",
-      "completionIdentity": null,
+      "completionIdentity": "a6980a3f7c08d592c6779eb482488293a877f2c6",
       "commandsRun": [
         "pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-publication-boundary.test.ts",
         "pnpm check:docs",
@@ -41,9 +41,9 @@
       ],
       "evidence": ["docs/checkpoints/pale-traverse/PT3-C0_EVIDENCE.md"],
       "blockers": [],
-      "notes": ["Completion identity is recorded immediately after the implementation commit is created."]
+      "notes": ["Stable identities are visible to derived registries but remain absent from executable stage, enemy, boss, and scenario authorities."]
     },
-    { "id": "PT3-C1", "title": "Aurora definitions", "dependencies": ["PT3-C0"], "status": "in-progress", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C1", "title": "Aurora definitions", "dependencies": ["PT3-C0"], "status": "in-progress", "subgoals": [], "sourceBaseline": "a6980a3f7c08d592c6779eb482488293a877f2c6", "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
     { "id": "PT3-C2", "title": "Aurora runtime", "dependencies": ["PT3-C1"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
     { "id": "PT3-C3", "title": "Rimehound", "dependencies": ["PT3-C2"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
     { "id": "PT3-C4", "title": "Pale-native variants", "dependencies": ["PT3-C3"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
