@@ -17,3 +17,4 @@ ignored unless deliberately promoted into a small canonical proof.
 | PT3-C7 White Hart phases | [PT3-C7_EVIDENCE.md](PT3-C7_EVIDENCE.md) |
 | PT3-C8 campaign integration | [PT3-C8_EVIDENCE.md](PT3-C8_EVIDENCE.md) ([owner tuning](PT3-C8_OWNER_TUNING.md)) |
 | PT3-C9 modes, lifecycle, and persistence | [PT3-C9_EVIDENCE.md](PT3-C9_EVIDENCE.md) |
+| PT3-C10 reference and TearBench completion | [PT3-C10_EVIDENCE.md](PT3-C10_EVIDENCE.md) |

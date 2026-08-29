@@ -550,6 +550,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   Aurora facts use the existing telemetry mapper. White Hart continues through
   generic boss/no-hit achievement accounting; bespoke achievements remain a
   deferred C22 decision. Publication remains fail-closed.
+  PT3-C10 closes Pale reference and source-derived TearBench coverage without
+  creating a second evidence registry. Production-owned surgical documents now
+  cover Aurora, Rimehound, every Pale variant, and three representative White
+  Hart phases; four diff-aware routes select those authorities plus the natural
+  White Hart encounter. The clean source selection executes 23 scenarios, five
+  Pale browser journeys, 13 authority commands, shared-runtime/current-weapon
+  adjacency, graveyard checks, and an attributed standalone build. Reference
+  generation passes while publication and reference/wiki dispatch remain
+  fail-closed. Cross-target qualification and final freeze remain PT3-C11.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference

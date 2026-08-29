@@ -271,12 +271,12 @@ public migration or hidden lifecycle leak.
 
 ## Subgoals
 
-- [ ] Extend exact stage/boss/enemy/variant/achievement/tuning projections only from production authorities.
-- [ ] Update terminology and documentation with current-facing Pale copy.
-- [ ] Add natural White Hart and surgical Aurora/Rimehound/variant/phase State Forge scenarios.
-- [ ] Complete observation, invariant, native-event order, backend capability, codec/restore/hash, source-derived route, and anti-drift evidence.
-- [ ] Execute selected commands and persist source/build-bound checkpoint evidence.
-- [ ] Prove game-reference/wiki dispatch remains blocked from the feature branch.
+- [x] Extend exact stage/boss/enemy/variant/achievement/tuning projections only from production authorities.
+- [x] Update terminology and documentation with current-facing Pale copy.
+- [x] Add natural White Hart and surgical Aurora/Rimehound/variant/phase State Forge scenarios.
+- [x] Complete observation, invariant, native-event order, backend capability, codec/restore/hash, source-derived route, and anti-drift evidence.
+- [x] Execute selected commands and persist source/build-bound checkpoint evidence.
+- [x] Prove game-reference/wiki dispatch remains blocked from the feature branch.
 
 ## Exit
 
@@ -305,14 +305,14 @@ dispatch, deployment, or C40 claim has occurred.
 
 ```text
 PROGRAM: Pale Traverse Revision 3
-STATUS: ACTIVE — PT3-C10 IN PROGRESS
-CURRENT CHECKPOINT: PT3-C10
-CURRENT SUBGOAL: PT3-C10-S1
+STATUS: ACTIVE — PT3-C11 IN PROGRESS
+CURRENT CHECKPOINT: PT3-C11
+CURRENT SUBGOAL: PT3-C11-S1
 SOURCE FOUNDATION: Verdant C21 freeze 25c589844ec2cfe85a8a6deead881ebb3d699198
-LAST GREEN CHECKPOINT: PT3-C9 at 11e7f88b9002f76314a2b433808831825c582abc
-LAST EVIDENCE: all current modes, nine lifecycle boundaries, authoritative Pale telemetry, seven-stage replay identity, schema-v2 retention, and publication isolation pass 17 focused files / 92 tests plus clean reference/build/browser gates
+LAST GREEN CHECKPOINT: PT3-C10 at 86eb200d37751e34fdb2108d2e236e3d5d32be01
+LAST EVIDENCE: source-derived Pale routes select 23 scenarios, five browser journeys, 13 authority commands, graveyard checks, and one clean attributed standalone build; all executions and reference/publication boundaries pass
 BLOCKERS: none
-NEXT ACTION: complete exact source-derived Pale reference projections and TearBench scenario/evidence closure without dispatch or certification overclaim
+NEXT ACTION: run the cross-target, accessibility, performance, package, reproducibility, full-gate, and frozen-handoff qualification without integration or publication
 PUBLICATION: prohibited
 JOINT INTEGRATION: not authorized
 MUSIC/WIKI/DEPLOYMENT: not authorized
