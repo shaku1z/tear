@@ -69,7 +69,7 @@ jobs:
           name: tear-release-targets-${{ github.sha }}
           path: |
             dist
-            artifacts/tear-crazygames.zip
+            artifacts/packages/tear-crazygames.zip
             artifacts/tearbench
           if-no-files-found: error
           retention-days: 14

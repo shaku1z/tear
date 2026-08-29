@@ -4,7 +4,7 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const input = path.join(root, "dist", "crazygames");
-const output = path.join(root, "artifacts", "tear-crazygames.zip");
+const output = path.join(root, "artifacts", "packages", "tear-crazygames.zip");
 
 const crcTable = Array.from({ length: 256 }, (_, value) => {
   let crc = value;

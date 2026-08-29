@@ -27,7 +27,7 @@ Thumbs.db
 .env.*.local
 
 # CrazyGames submission package (regenerate with `pnpm package:crazygames`)
-tear-crazygames.zip
+artifacts/packages/tear-crazygames.zip
 
 # build scratch
 .tmp-tone-host-esm/

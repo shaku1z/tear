@@ -52,6 +52,15 @@ if (trackedArtifacts !== "") errors.push(`generated artifacts are tracked:\n${tr
 const rootCacheFiles = fs.readdirSync(root).filter((name) => name.endsWith(".tsbuildinfo"));
 if (rootCacheFiles.length > 0) errors.push(`TypeScript build caches pollute the repository root: ${rootCacheFiles.join(", ")}`);
 
+for (const [relativePath, needle] of [
+  ["scripts/package-crazygames.mjs", "\"artifacts\", \"tear-crazygames.zip\""],
+  ["scripts/check-reproducible-build.mjs", "\"artifacts\", \"tear-crazygames.zip\""],
+  [".github/workflows/ci.yml", "artifacts/tear-crazygames.zip"],
+]) {
+  const source = fs.readFileSync(path.join(root, relativePath), "utf8");
+  if (source.includes(needle)) errors.push(`${relativePath} still uses the pre-policy package path`);
+}
+
 const requiredDocs = [
   "docs/ARTIFACTS.md",
   "docs/checkpoints/ARTIFACT_HYGIENE.md",
