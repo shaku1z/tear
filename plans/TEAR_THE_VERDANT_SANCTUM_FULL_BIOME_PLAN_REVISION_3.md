@@ -3046,14 +3046,14 @@ This block is updated after each accepted checkpoint.
 
 ```text
 PROGRAM: Verdant Sanctum Revision 3
-STATUS: ACTIVE — VS3-C20 GREEN
-CURRENT CHECKPOINT: VS3-C21
-CURRENT SUB-GOAL: VS3-C21-S1
+STATUS: FROZEN — VS3-C21 GREEN; VS3-C22 BLOCKED
+CURRENT CHECKPOINT: VS3-C22
+CURRENT SUB-GOAL: none; entry gate blocked
 BASELINE: origin/main@91706363b80fb56a18df4d973b424bbce94a279e
-LAST GREEN CHECKPOINT: VS3-C20
-LAST EVIDENCE: C20 accessibility, responsive, input, integrated performance, object/heap, exact-build, platform, package, isolation, bundle, and reproducibility gates are green at implementation/package source 751f6c47f722e6fe10dceb6438e4155b8e3b5f56; durable closure is 9ba821c75f00decb2deaf97d7149e155ff59235f
-BLOCKERS: none recorded
-NEXT ACTION: execute VS3-C21 engineering freeze and Pale shared-dependency handoff
+LAST GREEN CHECKPOINT: VS3-C21
+LAST EVIDENCE: C21 freeze manifest and Pale Revision 3 delta are green at c3c59fac6aef59476ec109e33975dca748b27516; source-derived selection and both publication barriers pass
+BLOCKERS: Pale Revision 3 implementation/freeze and separate joint-promotion authorization are absent
+NEXT ACTION: execute the first Pale Revision 3 authority/negative-baseline checkpoint in an isolated Pale worktree; do not start C22
 PUBLICATION: prohibited until joint Verdant/Pale promotion
 C40: no certification claim
 ```
@@ -5495,7 +5495,7 @@ Validate the complete Verdant feature across supported presentation, input, targ
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `green` |
 | Owner | Verdant program / Pale integration owner |
 | Dependencies | VS3-C20 |
 | Release boundary | Freeze only; protected promotion remains prohibited |
@@ -5506,9 +5506,9 @@ Freeze Verdant as an internally complete, reviewable slice and transfer the shar
 
 ## Entry conditions
 
-- [ ] VS3-C20 is green or has explicit authorized limitations.
-- [ ] Verdant checkpoints C0-C20 are reconciled in plan and ledger.
-- [ ] No hidden feature-branch publication has occurred.
+- [x] VS3-C20 is green or has explicit authorized limitations.
+- [x] Verdant checkpoints C0-C20 are reconciled in plan and ledger.
+- [x] No hidden feature-branch publication has occurred.
 
 ## Primary files and authorities
 
@@ -5523,15 +5523,15 @@ Freeze Verdant as an internally complete, reviewable slice and transfer the shar
 
 ## Sub-goals
 
-- [ ] **VS3-C21-S1** — Run a complete checkpoint/ledger/doc reconciliation and resolve every status mismatch.
-- [ ] **VS3-C21-S2** — Record exact Verdant feature HEAD, build identities, tests, evidence, and known limitations.
-- [ ] **VS3-C21-S3** — Freeze creative and technical contracts that Pale must reuse: environment state, field kernel, route type, codec, observations, events, invariants, evidence routes, and platform bounds.
-- [ ] **VS3-C21-S4** — List every shared file Pale may extend and every Verdant file Pale must not fork.
-- [ ] **VS3-C21-S5** — Create the Pale Revision 3 delta requirements from its old plan without implementing Pale inside this checkpoint.
-- [ ] **VS3-C21-S6** — Record provisional seven-stage balance/music/reference decisions that remain blocked on Pale.
-- [ ] **VS3-C21-S7** — Prove the Verdant branch cannot be mistaken for publishable campaign main.
-- [ ] **VS3-C21-S8** — Prepare one owner-readable walkthrough of Bloom, Rootbinder, Rootbound, State Forge, and TearBench evidence.
-- [ ] **VS3-C21-S9** — Mark VS3-C22 blocked on Pale completion and joint promotion authorization.
+- [x] **VS3-C21-S1** — Run a complete checkpoint/ledger/doc reconciliation and resolve every status mismatch.
+- [x] **VS3-C21-S2** — Record exact Verdant feature HEAD, build identities, tests, evidence, and known limitations.
+- [x] **VS3-C21-S3** — Freeze creative and technical contracts that Pale must reuse: environment state, field kernel, route type, codec, observations, events, invariants, evidence routes, and platform bounds.
+- [x] **VS3-C21-S4** — List every shared file Pale may extend and every Verdant file Pale must not fork.
+- [x] **VS3-C21-S5** — Create the Pale Revision 3 delta requirements from its old plan without implementing Pale inside this checkpoint.
+- [x] **VS3-C21-S6** — Record provisional seven-stage balance/music/reference decisions that remain blocked on Pale.
+- [x] **VS3-C21-S7** — Prove the Verdant branch cannot be mistaken for publishable campaign main.
+- [x] **VS3-C21-S8** — Prepare one owner-readable walkthrough of Bloom, Rootbinder, Rootbound, State Forge, and TearBench evidence.
+- [x] **VS3-C21-S9** — Mark VS3-C22 blocked on Pale completion and joint promotion authorization.
 
 ## Agent implementation procedure
 
@@ -5544,11 +5544,11 @@ Freeze Verdant as an internally complete, reviewable slice and transfer the shar
 
 ## TearBench same-change response
 
-- [ ] Run final Verdant source-to-TearBench completeness guard.
-- [ ] Record all scenarios, routes, hashes, build identities, and non-certifying limitations.
-- [ ] Preserve existing current-game alignment and C40 status exactly.
-- [ ] Add Pale future prefixes/subjects only when Pale production files exist; do not predeclare fake passing evidence.
-- [ ] Ensure the handoff names the first Pale checkpoint and required failing baseline.
+- [x] Run final Verdant source-to-TearBench completeness guard.
+- [x] Record all scenarios, routes, hashes, build identities, and non-certifying limitations.
+- [x] Preserve existing current-game alignment and C40 status exactly.
+- [x] Add Pale future prefixes/subjects only when Pale production files exist; do not predeclare fake passing evidence.
+- [x] Ensure the handoff names the first Pale checkpoint and required failing baseline.
 
 ## Minimum focused proof
 
@@ -5564,11 +5564,11 @@ Freeze Verdant as an internally complete, reviewable slice and transfer the shar
 
 ## Exit conditions
 
-- [ ] Verdant implementation and evidence are frozen at one exact identity.
-- [ ] Pale receives one reusable foundation and no duplicate runtime plan.
-- [ ] Every limitation and deferred cross-repository action is explicit.
-- [ ] VS3-C22 is the only remaining Verdant checkpoint and is blocked lawfully.
-- [ ] No public release or C40 claim is made.
+- [x] Verdant implementation and evidence are frozen at one exact identity.
+- [x] Pale receives one reusable foundation and no duplicate runtime plan.
+- [x] Every limitation and deferred cross-repository action is explicit.
+- [x] VS3-C22 is the only remaining Verdant checkpoint and is blocked lawfully.
+- [x] No public release or C40 claim is made.
 
 ## Stop and escalate conditions
 
@@ -5589,13 +5589,15 @@ Freeze Verdant as an internally complete, reviewable slice and transfer the shar
 
 > `VS3-C21 is [GREEN/RED/BLOCKED] at <source identity>. The next authorized action is <exact next sub-goal or checkpoint>. Verdant publication remains <allowed/prohibited>, and C40 status is <unchanged/explicitly stated>.`
 
+> `VS3-C21 is GREEN at c3c59fac6aef59476ec109e33975dca748b27516. The next authorized action is the first Pale Revision 3 authority/negative-baseline checkpoint described by the C21 delta; VS3-C22 remains blocked until Pale freezes and joint promotion is separately authorized. Verdant publication remains prohibited, and C40 status is unchanged.`
+
 ---
 
 # VS3-C22 — Joint Verdant + Pale seven-stage promotion and release-candidate gate
 
 | Field | Value |
 | --- | --- |
-| Status | `not-started` |
+| Status | `blocked` |
 | Owner | Campaign release / protected integration owner |
 | Dependencies | VS3-C21, Pale Revision 3 completion |
 | Release boundary | Requires explicit merge, publication, and later deployment authorization |
@@ -6269,12 +6271,12 @@ Verdant can freeze before Pale. Verdant and Pale enter the public campaign toget
 # 34. Revision 3 starting position
 
 ```text
-STATUS: ACTIVE — VS3-C20 GREEN
-CURRENT CHECKPOINT: VS3-C21
-CURRENT SUB-GOAL: VS3-C21-S1
-LAST GREEN CHECKPOINT: VS3-C20
-LAST EVIDENCE: C20 is green at implementation/package source 751f6c47f722e6fe10dceb6438e4155b8e3b5f56 with durable closure at 9ba821c75f00decb2deaf97d7149e155ff59235f
-NEXT ACTION: execute VS3-C21 engineering freeze and Pale shared-dependency handoff
+STATUS: FROZEN — VS3-C21 GREEN; VS3-C22 BLOCKED
+CURRENT CHECKPOINT: VS3-C22
+CURRENT SUB-GOAL: none; entry gate blocked
+LAST GREEN CHECKPOINT: VS3-C21
+LAST EVIDENCE: C21 freeze manifest and Pale Revision 3 delta are green at c3c59fac6aef59476ec109e33975dca748b27516
+NEXT ACTION: execute the first Pale Revision 3 authority/negative-baseline checkpoint in an isolated Pale worktree; do not start C22
 PUBLICATION: prohibited
 WIKI DISPATCH: prohibited
 MUSIC RE-VENDORING: not authorized by this document alone

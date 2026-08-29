@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "revision": "3.0",
   "status": "active",
-  "currentCheckpoint": "VS3-C21",
-  "currentSubgoal": "VS3-C21-S1",
+  "currentCheckpoint": "VS3-C22",
+  "currentSubgoal": null,
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
@@ -30,9 +30,10 @@
     "VS3-C17",
     "VS3-C18",
     "VS3-C19",
-    "VS3-C20"
+    "VS3-C20",
+    "VS3-C21"
   ],
-  "lastGreenCheckpoint": "VS3-C20",
+  "lastGreenCheckpoint": "VS3-C21",
   "lastEvidence": [
     "VS3-C9 player-visible Verdant presentation is green at c14988f380b3fbd9bfd59820d1adeaac27c7ba81; stable stage-ID backdrop dispatch, layered sanctuary art, bounded water/motes/lights, rootstone and immutable environment renderers, accessibility variants, exact four-viewport browser evidence, and all checkpoint gates pass.",
     "VS3-C10-S6 Rootbound presentation identity is green: the existing enemy renderer composition installs its root-throne, branching mantle, plural-mask, gold-graft silhouette and intro rise pose; the shared boss-intro snapshot/UI path preserves THE ROOTBOUND, KEEPER OF THE LAST MERCY, and YOU DO NOT HAVE TO DIE HERE.; focused and adjacent presentation/factory/reference tests, typecheck, architecture, targeted lint, and docs gates pass.",
@@ -72,10 +73,14 @@
     "VS3-C17 is AUTHORIZED-DEFERRED at fa1cc9735281eae0ab07541f242d665e1d942e5d: Static Bloom was auditioned and rejected; no replacement, route, release, vendor byte, or rights claim was invented. Current vendor provenance, engineering-only Verdant fallback, one-context/exclusive-backend lifecycle, standalone audio, PWA, and CrazyGames test iframe gates pass. Replacement selection through exact re-vendoring is deferred to VS3-C22-S5; lastGreenCheckpoint remains VS3-C16.",
     "VS3-C18 is GREEN at 2bdb30e8a678cb4c7a217f5f0dbfd3dddc2fb3a4: game-reference schema 2 now projects Rootbinder from the complete production enemy identity authority; exact export, 40 focused projection tests, 10 artifact/publication tests, 24 evidence-selection tests, terminology/docs gates, and the protected wiki's 50-test full snapshot/build gate pass. Wiki promotion remains blocked pending joint Verdant/Pale main; the historical game-dev-tooling adapter is explicitly deferred under that repository's Tear prohibition.",
     "VS3-C19 is GREEN at 98c4134f6fd0bcbc670315ff62dc80b805efb1ca: exact source-derived Verdant selection executes 12 routes and 24 scenarios; 203 selected authority tests, 24 anti-drift tests, 41 focused tests, current gameplay/boss/State Forge/live-detached browser gates, and a persisted 720-tick Bloom Well run/rerun pass. C30 terminal provenance was corrected and empty-wave State Forge replay ownership now rebuilds only from native facts. Evidence remains Class-A engineering/non-certifying; publication is prohibited and C40 is unchanged.",
-    "VS3-C20 is GREEN at 751f6c47f722e6fe10dceb6438e4155b8e3b5f56: accessibility/responsive/input matrices, an integrated Bloom/Rootbinder/Graft/Rootbound workload, object/effect and five-cycle heap bounds, exact standalone/CrazyGames/test builds, production isolation, platform/PWA/iframe/package gates, bundle budgets, and byte-identical reproducibility pass. The workload found and fixed expired Rootbinder generation retention. Static Bloom remains rejected, publication is prohibited, and C40 is unchanged."
+    "VS3-C20 is GREEN at 751f6c47f722e6fe10dceb6438e4155b8e3b5f56: accessibility/responsive/input matrices, an integrated Bloom/Rootbinder/Graft/Rootbound workload, object/effect and five-cycle heap bounds, exact standalone/CrazyGames/test builds, production isolation, platform/PWA/iframe/package gates, bundle budgets, and byte-identical reproducibility pass. The workload found and fixed expired Rootbinder generation retention. Static Bloom remains rejected, publication is prohibited, and C40 is unchanged.",
+    "VS3-C21 is GREEN at c3c59fac6aef59476ec109e33975dca748b27516: checkpoints C0-C20 reconcile; exact feature/build/package identities and limitations are frozen; Pale receives the singular shared environment/codec/observation/State Forge/evidence contracts plus typed Revision 3 delta requirements; source-derived selection and both publication barriers pass. C22 is blocked on Pale completion and separate joint-promotion authorization; publication is prohibited and C40 is unchanged."
   ],
-  "blockers": [],
-  "nextAction": "Execute VS3-C21-S1 by reconciling every Verdant checkpoint, plan, ledger, and durable evidence status before freezing the slice for Pale handoff.",
+  "blockers": [
+    "Pale Revision 3 production implementation and equivalent freeze do not yet exist.",
+    "Atomic protected integration and cross-repository promotion have not been separately authorized."
+  ],
+  "nextAction": "Execute the first Pale Revision 3 authority/negative-baseline checkpoint from the VS3-C21 delta in an isolated Pale worktree; do not begin VS3-C22 until Pale freezes and joint promotion is separately authorized.",
   "checkpoints": [
     {
       "id": "VS3-C0",
@@ -3294,47 +3299,47 @@
         {
           "id": "VS3-C21-S1",
           "description": "Run a complete checkpoint/ledger/doc reconciliation and resolve every status mismatch.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S2",
           "description": "Record exact Verdant feature HEAD, build identities, tests, evidence, and known limitations.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S3",
           "description": "Freeze creative and technical contracts that Pale must reuse: environment state, field kernel, route type, codec, observations, events, invariants, evidence routes, and platform bounds.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S4",
           "description": "List every shared file Pale may extend and every Verdant file Pale must not fork.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S5",
           "description": "Create the Pale Revision 3 delta requirements from its old plan without implementing Pale inside this checkpoint.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S6",
           "description": "Record provisional seven-stage balance/music/reference decisions that remain blocked on Pale.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S7",
           "description": "Prove the Verdant branch cannot be mistaken for publishable campaign main.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S8",
           "description": "Prepare one owner-readable walkthrough of Bloom, Rootbinder, Rootbound, State Forge, and TearBench evidence.",
-          "status": "not-started"
+          "status": "green"
         },
         {
           "id": "VS3-C21-S9",
           "description": "Mark VS3-C22 blocked on Pale completion and joint promotion authorization.",
-          "status": "not-started"
+          "status": "green"
         }
       ],
       "agentProcedure": [
@@ -3383,13 +3388,34 @@
         "Owner walkthrough",
         "VS3-C22 blocked record"
       ],
-      "status": "not-started",
-      "sourceBaseline": null,
-      "completionIdentity": null,
-      "commandsRun": [],
-      "evidence": [],
+      "status": "green",
+      "sourceBaseline": "9ba821c75f00decb2deaf97d7149e155ff59235f",
+      "completionIdentity": "c3c59fac6aef59476ec109e33975dca748b27516",
+      "commandsRun": [
+        "pnpm check:docs",
+        "pnpm test:docs",
+        "pnpm check:terminology",
+        "pnpm test:terminology",
+        "pnpm requirements:check",
+        "pnpm test:tearbench-selection",
+        "pnpm check:active-roster",
+        "pnpm check:publication-boundary",
+        "pnpm test:game-reference-artifact"
+      ],
+      "evidence": [
+        "All C0-C20 checkpoint dispositions and completion identities reconcile in the freeze manifest; historical abbreviated identities remain truthfully abbreviated.",
+        "Exact C20 feature/build/package/reproducibility identities and non-certifying limitations are frozen.",
+        "Pale must reuse one environment state, field/combat-object/route kernel, event family, codec/hash/restore path, observation/invariant model, State Forge representation, evidence selection, presentation port, and platform contract.",
+        "The legacy Pale plan was recovered from the user's downloaded package, fingerprinted, and translated into typed Revision 3 delta requirements without implementing or activating Pale identities.",
+        "Source-derived TearBench selection, active roster, documentation, terminology, requirements, release-preflight, campaign-publication, and reference-publication gates pass.",
+        "Durable manifest: docs/checkpoints/verdant-sanctum/VS3-C21_FREEZE_MANIFEST.md; Pale delta: docs/checkpoints/verdant-sanctum/VS3-C21_PALE_REVISION_3_DELTA.md"
+      ],
       "blockers": [],
-      "notes": []
+      "notes": [
+        "Static Bloom remains rejected; replacement selection, rights, routing, release, and exact re-vendoring remain deferred to VS3-C22-S5.",
+        "No Pale production identity, scenario, evidence route, registry, or runtime was predeclared.",
+        "No deployment, protected integration, cross-repository dispatch, publication, or C40 claim occurred."
+      ]
     },
     {
       "id": "VS3-C22",
@@ -3528,13 +3554,20 @@
         "Final Verdant and Pale plan/ledger closure records",
         "Explicit deployment and C40 disposition"
       ],
-      "status": "not-started",
+      "status": "blocked",
       "sourceBaseline": null,
       "completionIdentity": null,
       "commandsRun": [],
       "evidence": [],
-      "blockers": [],
-      "notes": []
+      "blockers": [
+        "Pale Revision 3 implementation and equivalent freeze gate are incomplete.",
+        "Explicit authorization for atomic protected integration and required cross-repository promotion is absent."
+      ],
+      "notes": [
+        "All VS3-C22 subgoals remain not-started; blocked status records the lawful entry-gate disposition and does not claim partial integration.",
+        "The current six-stage campaign remains engineering-only and non-publishable.",
+        "Static Bloom is rejected; joint Verdant/Pale music selection and provenance remain unresolved for VS3-C22-S5."
+      ]
     }
   ]
 }
