@@ -48,7 +48,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   await clickAndWait(260, 360, "setup");
   await page.mouse.click(430, 509); // BOSS ONLY (first compact DEV row)
   await settleInput();
-  await page.mouse.click(870, 683); // THE WARDEN (first boss after SHUFFLE)
+  await page.mouse.click(829, 683); // THE WARDEN (first boss after SHUFFLE in the seven-boss row)
   await settleInput();
   assert.deepEqual(await setupSnapshot(), {
     mode: "bossonly", difficulty: "hard", weapon: "chainblade", boss: "warden",
