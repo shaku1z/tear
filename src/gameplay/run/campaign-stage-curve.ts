@@ -28,6 +28,7 @@ export const CAMPAIGN_STAGE_CURVES = Object.freeze({
   undercroft: Object.freeze({ health: 1.28, damage: 1.12, countAdd: 2, concurrentAdd: 1, disposition: "authored-prototype" }),
   "crimson-fields": Object.freeze({ health: 1.56, damage: 1.24, countAdd: 4, concurrentAdd: 2, disposition: "authored-prototype" }),
   "verdant-sanctum": Object.freeze({ health: 1.82, damage: 1.34, countAdd: 5, concurrentAdd: 2, disposition: "authored-prototype", composition: VERDANT_COMPOSITION }),
+  "pale-traverse": Object.freeze({ health: 2.08, damage: 1.44, countAdd: 6, concurrentAdd: 3, disposition: "authored-prototype" }),
   voidspire: Object.freeze({ health: 2.36, damage: 1.56, countAdd: 8, concurrentAdd: 4, disposition: "legacy-position-placeholder" }),
   tear: Object.freeze({ health: 2.7, damage: 1.7, countAdd: 10, concurrentAdd: 4, disposition: "legacy-position-placeholder" }),
 } as const satisfies Readonly<Partial<Record<StageId, CampaignStageCurve>>>);
@@ -50,10 +51,10 @@ const prototypeCurve = (
   concurrentAdd: number,
 ): CampaignStageCurve => Object.freeze({ health, damage, countAdd, concurrentAdd, disposition: "authored-prototype" });
 
-/** Inactive balance seed for joint Verdant + Pale reconciliation; never live campaign authority by itself. */
+/** Seven-stage comparison seed. Pale's basic curve is live; C8 still owns composition and joint late-stage retuning. */
 export const SEVEN_STAGE_CURVE_PROTOTYPE = Object.freeze({
   status: "engineering-prototype",
-  activation: "inactive-pending-pale",
+  activation: "pale-stage-active-balance-provisional",
   stages: Object.freeze({
     grounds: prototypeCurve(1, 1, 0, 0),
     undercroft: prototypeCurve(1.28, 1.12, 2, 1),

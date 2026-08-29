@@ -22,6 +22,7 @@ import { projectBloomWellPresentation } from "../gameplay/environment/bloom-well
 import { buildEnvironmentPresentationSnapshot } from "../gameplay/environment/presentation-snapshot";
 import { renderBloomWellPresentation } from "../presentation/environment/bloom-well-presentation";
 import { renderVerdantEnvironmentPresentation } from "../presentation/environment/verdant-environment-presentation";
+import { renderPaleEnvironmentPresentation } from "../presentation/environment/pale-environment-presentation";
 
 type Dependencies = Pick<GameRuntimeDependencies,
   "A11Y" | "ACH" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "Input" | "PAD" |
@@ -164,7 +165,11 @@ export function createLiveWorldPresentationAdapters(
         ...presentationOptions, audioEnabled: true,
       }), d.CLOCK.sim);
     }
-    renderVerdantEnvironmentPresentation(canvas, buildEnvironmentPresentationSnapshot(snapshot), {
+    const environmentPresentation = buildEnvironmentPresentationSnapshot(snapshot);
+    renderVerdantEnvironmentPresentation(canvas, environmentPresentation, {
+      ...presentationOptions, timeSeconds: d.CLOCK.sim,
+    });
+    renderPaleEnvironmentPresentation(canvas, environmentPresentation, {
       ...presentationOptions, timeSeconds: d.CLOCK.sim,
     });
     for (const enemy of state.enemies()) {

@@ -13,6 +13,7 @@ import { VoidGen } from "../gameplay/voidgen";
 import type { VoidPlatform } from "../gameplay/voidgen";
 import { stagePresentationDefinition } from "./stage-presentation-definitions";
 import { drawVerdantRootstone } from "./platform-materials/verdant-rootstone";
+import { drawPaleIce } from "./platform-materials/pale-ice";
 
 function truthyString(value: string | undefined, fallback: string): string {
   if (value) return value;
@@ -444,7 +445,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     if (p.void) { this.voidPlatform(ctx, p, stage); return; }
     const stageMaterial = stagePresentationDefinition(stage.id)?.platformMaterialId;
     const material = p.arenaMaterial ?? p.material ?? stageMaterial;
-    if (material === "verdant-rootstone") {
+    if (material === "verdant-rootstone" || material === "pale-ice") {
       let platform = p;
       if (isFloor) {
         const left = view ? Math.min(p.x - this.PX, view.left) : p.x - this.PX;
@@ -453,7 +454,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
         platform = { ...p, x: left, w: right - left, h: bottom - p.y };
       }
       const state = truthyString(p.arenaState, "stable");
-      drawVerdantRootstone(ctx, platform, {
+      const materialPolicy = {
         timeSeconds: clock.sim,
         lowGraphics: graphics.low,
         highContrast: accessibility.highContrast,
@@ -462,7 +463,9 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
         stressRatio: clamp(p.stress ?? 0, 0, 1),
         warningRatio: state === "warning" ? 1 - clamp((p.crackWarn ?? 0) / config.bossArena.crackWarn, 0, 1) : 0,
         reformRatio: state === "reforming" ? 1 - clamp((p.respawnIn ?? 0) / truthyNumber(p.respawnWarn, config.bossArena.reformWarn), 0, 1) : 0,
-      });
+      };
+      if (material === "verdant-rootstone") drawVerdantRootstone(ctx, platform, materialPolicy);
+      else drawPaleIce(ctx, platform, materialPolicy);
       return;
     }
     if (p.arenaPlatId && !isFloor) { this.arenaPlatform(ctx, p); return; }

@@ -4,6 +4,7 @@ import { CODEC_REGISTRY, type TearCodecId } from "./registries";
 import { validateLiveCodecPayload } from "./live-codec-validation";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
 import { validateEnvironmentCodecPayload, projectEnvironmentHash } from "./environment-codec";
+import { STAGE_IDS } from "../gameplay/stages";
 
 export type TearCodecValue =
   | null | boolean | number | string
@@ -74,6 +75,16 @@ export const TEAR_REFERENCE_KEYS = Object.freeze([
   "ownerId", "targetId", "summonerId", "platformId", "projectileId", "stolenBladeId", "sourceTrackId",
 ] as const);
 const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
+
+function isCanonicalReferenceTarget(source: string, target: string): boolean {
+  if (target === "player" || target === "blade") return true;
+  // Environment fields can be owned by their canonical stage rather than a
+  // transient actor. Keep this narrow: only hazard owner edges receive stage
+  // authority, while target/source links must still resolve to live objects.
+  return source.startsWith("tear.hazard.v1:")
+    && source.endsWith(".ownerId")
+    && STAGE_IDS.includes(target as typeof STAGE_IDS[number]);
+}
 
 function declaresIdentity(codecId: TearCodecId, key: string, ownerPath: string): boolean {
   // Stable identities are declared only by the root actor records that the
@@ -153,7 +164,7 @@ export function createDataOnlyCodec(id: TearCodecId): TearStateCodec {
     resolveReferences(world) {
       const issues: TearCodecIssue[] = [];
       for (const [source, target] of world.references) {
-        if (source.startsWith(`${id}:`) && !world.entityIds.has(target) && target !== "player" && target !== "blade") {
+        if (source.startsWith(`${id}:`) && !world.entityIds.has(target) && !isCanonicalReferenceTarget(source, target)) {
           issues.push({ codecId: id, path: `references.${source}`, message: `reference target ${target} does not exist` });
         }
       }
@@ -280,7 +291,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
     if (value !== undefined) visit(codecId, value, "$");
   }
   for (const [source, target] of references) {
-    if (target === "player" || target === "blade" || identities.has(target) || world.entityIds.has(target)) continue;
+    if (isCanonicalReferenceTarget(source, target) || identities.has(target) || world.entityIds.has(target)) continue;
     const separator = source.indexOf(":");
     const codecId = source.slice(0, separator) as TearCodecId;
     issues.push({ codecId, path: source.slice(separator + 1), message: `reference target ${target} does not exist` });

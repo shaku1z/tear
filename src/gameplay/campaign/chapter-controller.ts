@@ -5,7 +5,7 @@ export const CAMPAIGN_INTRO = Object.freeze([
 ] as const);
 
 export interface ChapterPage { readonly label: string; readonly text: string }
-export const CHAPTER_TRANSITION_IDS = Object.freeze(["ash", "steel", "ember", "bloom", "mirror", "void"] as const);
+export const CHAPTER_TRANSITION_IDS = Object.freeze(["ash", "steel", "ember", "bloom", "aurora", "mirror", "void"] as const);
 export type ChapterTransitionId = typeof CHAPTER_TRANSITION_IDS[number];
 export interface CampaignChapter {
   readonly number: string | number; readonly symbol: string; readonly title: string; readonly intro: string;

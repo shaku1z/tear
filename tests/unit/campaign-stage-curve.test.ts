@@ -35,10 +35,10 @@ describe("campaign stage curve authority", () => {
     expect(campaignStageCurve("tear").disposition).toBe("legacy-position-placeholder");
   });
 
-  it("records the complete inactive seven-stage seed without promoting Pale", () => {
+  it("activates Pale's provisional curve while retaining late-stage comparison data for C8", () => {
     expect(SEVEN_STAGE_CURVE_PROTOTYPE).toMatchObject({
       status: "engineering-prototype",
-      activation: "inactive-pending-pale",
+      activation: "pale-stage-active-balance-provisional",
     });
     expect(Object.keys(SEVEN_STAGE_CURVE_PROTOTYPE.stages)).toEqual(SEVEN_STAGE_CURVE_IDS);
     expect(SEVEN_STAGE_CURVE_PROTOTYPE.stages).toMatchObject({
@@ -47,9 +47,9 @@ describe("campaign stage curve authority", () => {
       tear: { health: 2.72, damage: 1.6, countAdd: 8, concurrentAdd: 4 },
     });
     expect(STAGE_IDS).toContain("pale-traverse");
-    expect(CAMPAIGN_STAGE_IDS).not.toContain("pale-traverse");
-    expect(CAMPAIGN_STAGE_CURVES).not.toHaveProperty("pale-traverse");
-    expect(() => campaignStageCurve("pale-traverse")).toThrow(/no active campaign curve/u);
+    expect(CAMPAIGN_STAGE_IDS).toContain("pale-traverse");
+    expect(CAMPAIGN_STAGE_CURVES).toHaveProperty("pale-traverse");
+    expect(campaignStageCurve("pale-traverse")).toMatchObject(SEVEN_STAGE_CURVE_PROTOTYPE.stages["pale-traverse"]);
     expect(campaignStageCurve("voidspire")).not.toEqual(SEVEN_STAGE_CURVE_PROTOTYPE.stages.voidspire);
   });
 

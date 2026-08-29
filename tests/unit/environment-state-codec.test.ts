@@ -82,6 +82,35 @@ describe("Verdant C3 environment codec contract", () => {
     expect(buildTearIdentityGraph(duplicate).issues.some((entry) => entry.message.includes("duplicate entity id field-1"))).toBe(true);
   });
 
+  it("accepts canonical stage ownership only on hazard owner edges", () => {
+    const stageOwned = world();
+    stageOwned.components.set("tear.hazard.v1", {
+      ...hazard,
+      fields: [{ ...hazard.fields[0], ownerId: "pale-traverse" }],
+    });
+    expect(buildTearIdentityGraph(stageOwned).issues).toEqual([]);
+
+    const invalidTarget = world();
+    invalidTarget.components.set("tear.hazard.v1", {
+      ...hazard,
+      combatObjects: [{ ...hazard.combatObjects[0], targetId: "pale-traverse" }],
+    });
+    const invalidTargetIssues = buildTearIdentityGraph(invalidTarget).issues;
+    expect(invalidTargetIssues).toHaveLength(1);
+    expect(invalidTargetIssues[0]?.path).toBe("$.combatObjects[0].targetId");
+    expect(invalidTargetIssues[0]?.message).toContain("pale-traverse");
+
+    const inventedStage = world();
+    inventedStage.components.set("tear.hazard.v1", {
+      ...hazard,
+      fields: [{ ...hazard.fields[0], ownerId: "pale-traverse-copy" }],
+    });
+    const inventedStageIssues = buildTearIdentityGraph(inventedStage).issues;
+    expect(inventedStageIssues).toHaveLength(1);
+    expect(inventedStageIssues[0]?.path).toBe("$.fields[0].ownerId");
+    expect(inventedStageIssues[0]?.message).toContain("pale-traverse-copy");
+  });
+
   it("hashes gameplay environment state while excluding presentation-only fields", () => {
     const first = { ...hazard, fields: [{ ...hazard.fields[0], cosmeticPetalSeed: 1 }] };
     const second = { ...hazard, fields: [{ ...hazard.fields[0], cosmeticPetalSeed: 99 }] };

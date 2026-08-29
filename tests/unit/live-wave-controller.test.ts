@@ -150,4 +150,21 @@ describe("LiveWaveController", () => {
     ]);
     expect(live.planIntents).not.toContain("activate-wave");
   });
+
+  it("enters Pale naturally at campaign wave 41 without resolving the C6 boss", () => {
+    const priorBossOutro = { label: "THE NAMEPLATES", text: "The garden finally let go." };
+    const run = runState({ mode: "campaign", wave: 40, stage: 3, _biomeIdx: 3, pendingBossOutro: priorBossOutro });
+    const live = harness(run, { currentStageIndex: 3, chapterStageIndex: 4 });
+    live.controller.startNextWave();
+    expect(run).toMatchObject({ wave: 41, stage: 4, _biomeIdx: 4, pendingBossOutro: null });
+    expect(run.spawnQueue.every((entry) => ["rimehound", "ranged", "flyer", "armored"].includes(entry.type))).toBe(true);
+    expect(run.spawnQueue.some((entry) => ["bomber", "wraith", "anchor", "chimera"].includes(entry.type))).toBe(false);
+    expect(live.planIntentRecords).toEqual([
+      { type: "begin-wipe" }, { type: "load-stage", stageIndex: 4 },
+      { type: "set-stage-banner", duration: 0, name: "The Pale Traverse" },
+      { type: "begin-campaign-chapter", stageIndex: 4, priorBossOutro },
+      { type: "ghost-wave", wave: 41, marker: "start" },
+      { type: "prepare-wave", wave: 41, boss: false, deferred: true },
+    ]);
+  });
 });

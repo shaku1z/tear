@@ -90,6 +90,7 @@ describe("advanced loadout", () => {
   it("maps stage names onto biome slots", () => {
     expect(slotForBiome("The Crimson Fields")).toBe("the-crimson-fields");
     expect(slotForBiome("The Verdant Sanctum")).toBe("the-verdant-sanctum");
+    expect(slotForBiome("The Pale Traverse")).toBe("the-pale-traverse");
     expect(slotForBiome("menu")).toBeNull();
   });
 });

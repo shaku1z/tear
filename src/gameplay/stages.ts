@@ -174,11 +174,37 @@ const STAGES: readonly StageDefinition[] = [
     ],
   },
   {
+    id: "pale-traverse",
+    name: "The Pale Traverse", blurb: "Where every road returns.",
+    musicId: "pale-traverse",
+    boss: "white-hart",
+    chapter: { number: "V", title: "THE ROAD THAT RETURNED", symbol: "♢", intro: "EVERY ROAD RETURNS. NONE ARRIVE.", transition: "aurora",
+      pages: [
+        { label: "THE TRAVERSE", text: "The Council marked one safe passage through the mountains. When the Spire bent the road, every marker began pointing home." },
+        { label: "THE LAST CARAVAN", text: "A guide kept ringing the route bell. The White Hart kept leading them from danger. The same frozen evening received them every time." },
+      ],
+      bossOutro: { label: "THE ROUTE LEDGER", text: "Thirty-seven travelers. Every name marked ‘Returned.’ The final line, in a child’s hand: ‘If the road disappears, ring twice. He knows the way home.’ Beyond the marker, the snow has no tracks." } },
+    chapterArt: { composition: "left", wash: "light" },
+    bg: "#dfe8f7", plat: "#1f3557", accent: "#ef8da8",
+    pool: enemyPool(
+      ["rimehound", 0.85, 1], ["ranged", 0.75, 1], ["flyer", 0.60, 1], ["armored", 0.55, 1],
+      ["bomber", 0.40, 2], ["wraith", 0.35, 3], ["anchor", 0.22, 4], ["chimera", 0.30, 6],
+    ),
+    layout: [
+      { x: 140, y: 640, w: 400, h: 24, oneway: true },
+      { x: 1060, y: 640, w: 400, h: 24, oneway: true },
+      { x: 560, y: 510, w: 480, h: 24, oneway: true },
+      { x: 190, y: 350, w: 300, h: 24, oneway: true },
+      { x: 1110, y: 350, w: 300, h: 24, oneway: true },
+      { x: 700, y: 255, w: 200, h: 24, oneway: true },
+    ],
+  },
+  {
     id: "voidspire",
     name: "The Voidspire", blurb: "Where the rules thin out.",
     musicId: "voidspire",
     boss: "echo",
-    chapter: { number: "V", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
+    chapter: { number: "VI", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
       pages: [
         { label: "THE VOIDSPIRE", text: "Here distance repeats itself and every motion leaves behind a version that believes it moved first." },
         { label: "THE REFLECTION", text: "Something in the Spire has practiced your shape for years. It remembers a journey you have only just begun." },
@@ -204,7 +230,7 @@ const STAGES: readonly StageDefinition[] = [
     musicId: "tear",
     dark: true,   // the void at the end of everything — HUD + player flip to light here
     boss: "source",
-    chapter: { number: "VI", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
+    chapter: { number: "VII", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
       pages: [
         { label: "THE TEAR", text: "There is no fortress at the bottom of the world—only the wound every fortress was built to misunderstand." },
         { label: "THE SOURCE", text: "It has worn every guardian sent to close it. Now it waits to learn whether your blade is another memory or an ending." },
@@ -225,7 +251,7 @@ const STAGES: readonly StageDefinition[] = [
   },
 ];
 
-/** Runtime campaign roster, including the engineering-only Verdant insertion. */
+/** Runtime campaign roster, including the engineering-only Verdant and Pale insertions. */
 export const CAMPAIGN_STAGE_IDS = Object.freeze(STAGES.map((stage) => stage.id));
 
 // build a fresh platforms array (floor + the stage's one-way platforms, cloned so

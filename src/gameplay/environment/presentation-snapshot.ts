@@ -1,10 +1,11 @@
 import type { EnvironmentSnapshot, EnvironmentObjectState } from "./environment-contracts";
 import { isGraftAnchorState, type GraftAnchorType } from "./graft-anchor";
 import { isRootCageState, type RootCageBoundarySide, type RootCageResponse } from "./root-cage";
+import type { AuroraTrackFieldState } from "./aurora-track";
 
 export interface EnvironmentPresentationSnapshot {
   readonly stageId: string;
-  readonly fields: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; active: boolean; bounds: Readonly<{ minX: number; maxX: number; minY: number; maxY: number }> }>[];
+  readonly fields: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; active: boolean; bounds: Readonly<{ minX: number; maxX: number; minY: number; maxY: number }>; direction?: -1 | 1; variant?: "stage" | "boss-wake" }>[];
   readonly combatObjects: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"]; integrityRatio: number; counterplayTags: readonly string[]; graftType?: GraftAnchorType; effect?: string; connectionGeometry?: EnvironmentSnapshot["combatObjects"][number]["geometry"]; rootCageId?: string; boundarySide?: RootCageBoundarySide; response?: RootCageResponse }>[];
   readonly routes: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; points: readonly Readonly<{ x: number; y: number }>[] }>[];
 }
@@ -17,7 +18,13 @@ function bounds(geometry: Readonly<{ x: number; y: number; w?: number; h?: numbe
 export function buildEnvironmentPresentationSnapshot(snapshot: EnvironmentSnapshot): EnvironmentPresentationSnapshot {
   return Object.freeze({
     stageId: snapshot.stageId,
-    fields: Object.freeze(snapshot.fields.map((field) => Object.freeze({ id: field.id, kind: field.kind, state: field.state, active: field.state === "active", bounds: bounds(field.geometry) }))),
+    fields: Object.freeze(snapshot.fields.map((field) => Object.freeze({
+      id: field.id, kind: field.kind, state: field.state, active: field.state === "active", bounds: bounds(field.geometry),
+      ...(field.kind === "aurora-track" ? {
+        direction: (field as AuroraTrackFieldState).direction,
+        variant: (field as AuroraTrackFieldState).variant,
+      } : {}),
+    }))),
     combatObjects: Object.freeze(snapshot.combatObjects.map((object) => Object.freeze({ id: object.id, kind: object.kind, state: object.state, geometry: structuredClone(object.geometry), integrityRatio: object.maxIntegrity > 0 ? object.integrity / object.maxIntegrity : 0, counterplayTags: Object.freeze([...object.counterplayTags]),
       ...(isGraftAnchorState(object) ? { graftType: object.graftType, effect: object.effect, connectionGeometry: structuredClone(object.connectionGeometry) } : {}),
       ...(isRootCageState(object) ? { rootCageId: object.rootCageId, boundarySide: object.boundarySide, response: object.response } : {}),

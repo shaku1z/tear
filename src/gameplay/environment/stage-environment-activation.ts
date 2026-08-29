@@ -1,5 +1,6 @@
 import type { StageId } from "../stages";
 import { createBloomWellState } from "./bloom-well";
+import { createAuroraTrackFieldState } from "./aurora-track";
 import type { EnvironmentClearReason, EnvironmentRuntimeState } from "./environment-contracts";
 import { stageEnvironmentDefinition } from "./stage-environment-definitions";
 
@@ -18,12 +19,14 @@ export function activateStageEnvironment(
     throw new RangeError(`stage environment ${definition.id} exceeds its field bound`);
   }
   for (const field of definition.initialFields) {
-    environment.addField(createBloomWellState({
-      id: `${stageId}:${field.kind}:${field.slot}`,
-      ownerId: stageId,
-      variant: "stage",
-      geometry: field.geometry,
-      patternId: field.slot,
-    }, startTick));
+    const id = `${stageId}:${field.kind}:${field.slot}`;
+    if (field.kind === "bloom-well") {
+      environment.addField(createBloomWellState({ id, ownerId: stageId, variant: "stage",
+        geometry: field.geometry, patternId: field.slot }, startTick));
+    } else {
+      if (field.direction !== -1 && field.direction !== 1) throw new RangeError(`stage Aurora Track ${field.slot} requires a direction`);
+      environment.addField(createAuroraTrackFieldState({ id, ownerId: stageId, variant: "stage",
+        direction: field.direction, geometry: field.geometry, startTick, patternId: field.slot }));
+    }
   }
 }

@@ -13,6 +13,17 @@ export const VERDANT_BACKDROP_LIMITS = Object.freeze({
   framingRootPairs: 3,
 });
 
+export const PALE_BACKDROP_LIMITS = Object.freeze({
+  auroraBands: 3,
+  lowGraphicsAuroraBands: 1,
+  mountainLayers: 2,
+  pinePairs: 5,
+  lowGraphicsPinePairs: 2,
+  villageLights: 7,
+  reflectionBands: 4,
+  lowGraphicsReflectionBands: 2,
+});
+
 const BIOME_ART: BiomeArtCatalog = {
   _default: {
     sky(B, ctx, stage, c, _t, gy, view) { B.baseSky(ctx, stage, c, gy, undefined, view); },
@@ -229,6 +240,119 @@ const BIOME_ART: BiomeArtCatalog = {
       B.motes(ctx, c, B.reducedMotion() ? 0 : t, px, {
         rgb: "228,201,90", dir: -1, twinkle: !B.reducedMotion(),
         drift: B.reducedMotion() ? 0 : 8, aMul: 0.62, sizeMul: 0.72,
+      }, view);
+    },
+  },
+
+  // The Pale Traverse — coral dusk over a frozen road beneath restrained aurora.
+  "pale-traverse": {
+    sky(B, ctx, stage, c, t, gy, view) {
+      B.baseSky(ctx, stage, c, gy, 0.05, view);
+      const vl = view ? view.left : -B.PX, vt = view ? view.top : -B.PY;
+      const vr = view ? view.right : B.W + B.PX;
+      const dusk = ctx.createLinearGradient(0, vt, 0, gy);
+      dusk.addColorStop(0, "rgba(105,213,159,0.10)");
+      dusk.addColorStop(0.54, "rgba(239,141,168,0.24)");
+      dusk.addColorStop(1, "rgba(115,168,207,0.08)");
+      ctx.fillStyle = dusk; ctx.fillRect(vl, vt, vr - vl, Math.max(0, gy - vt));
+
+      const bands = B.lowGraphics()
+        ? PALE_BACKDROP_LIMITS.lowGraphicsAuroraBands
+        : PALE_BACKDROP_LIMITS.auroraBands;
+      const motionTime = B.reducedMotion() ? 0 : t;
+      ctx.save(); ctx.lineCap = "round";
+      for (let band = 0; band < bands; band += 1) {
+        ctx.globalAlpha = 0.13 - band * 0.025;
+        ctx.strokeStyle = band === 1 ? "#78c4df" : "#69d59f";
+        ctx.lineWidth = 24 - band * 5;
+        ctx.beginPath();
+        const start = Math.floor((vl - 120) / 100) * 100;
+        for (let x = start; x <= vr + 120; x += 100) {
+          const y = B.H * (0.12 + band * 0.1)
+            + Math.sin(x * (0.0027 + band * 0.0004) + motionTime * 0.09 + band) * (34 + band * 8);
+          if (x === start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+    far(B, ctx, _stage, _c, _t, px, gy, view) {
+      const vl = view ? view.left : -B.PX, vr = view ? view.right : B.W + B.PX;
+      const farDrift = -px * 12, nearDrift = -px * 24;
+
+      // A jagged central mountain provides the stable landmark and leaves the combat band quiet.
+      for (let layer = 0; layer < PALE_BACKDROP_LIMITS.mountainLayers; layer += 1) {
+        const baseY = gy - 116 + layer * 54;
+        const peakX = B.W * 0.52 + farDrift * (1 + layer * 0.5);
+        ctx.save(); ctx.globalAlpha = 0.46 + layer * 0.16;
+        ctx.fillStyle = layer === 0 ? "#35567a" : "#233d62";
+        ctx.beginPath(); ctx.moveTo(vl - 80, baseY);
+        ctx.lineTo(peakX - 360, baseY - 80); ctx.lineTo(peakX - 190, baseY - 245);
+        ctx.lineTo(peakX - 72, baseY - 165); ctx.lineTo(peakX, baseY - 390 + layer * 80);
+        ctx.lineTo(peakX + 122, baseY - 205); ctx.lineTo(peakX + 260, baseY - 288);
+        ctx.lineTo(peakX + 430, baseY - 90); ctx.lineTo(vr + 80, baseY);
+        ctx.lineTo(vr + 80, gy); ctx.lineTo(vl - 80, gy); ctx.closePath(); ctx.fill();
+        if (layer === 0) {
+          ctx.globalAlpha = 0.42; ctx.fillStyle = "#d8eaff";
+          ctx.beginPath(); ctx.moveTo(peakX - 72, baseY - 165); ctx.lineTo(peakX, baseY - 390);
+          ctx.lineTo(peakX + 68, baseY - 286); ctx.lineTo(peakX + 16, baseY - 306);
+          ctx.lineTo(peakX - 18, baseY - 246); ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Sparse pines frame the outer thirds; the central arena remains readable.
+      const pinePairs = B.lowGraphics()
+        ? PALE_BACKDROP_LIMITS.lowGraphicsPinePairs
+        : PALE_BACKDROP_LIMITS.pinePairs;
+      ctx.save(); ctx.fillStyle = "#12213b"; ctx.globalAlpha = 0.78;
+      for (let index = 0; index < pinePairs; index += 1) {
+        const inset = 28 + index * 52;
+        const height = 108 + (index % 3) * 34;
+        for (const x of [vl + inset + nearDrift, vr - inset + nearDrift]) {
+          ctx.fillRect(x - 3, gy - height, 6, height);
+          for (let tier = 0; tier < 3; tier += 1) {
+            const y = gy - height + 24 + tier * 30, half = 26 + tier * 10;
+            ctx.beginPath(); ctx.moveTo(x, y - 26); ctx.lineTo(x - half, y + 22);
+            ctx.lineTo(x + half, y + 22); ctx.closePath(); ctx.fill();
+          }
+        }
+      }
+      ctx.restore();
+
+      // Tiny village windows provide scale without adding silhouettes to combat space.
+      ctx.save(); ctx.fillStyle = "#ffe1aa"; ctx.globalAlpha = B.highContrast() ? 0.92 : 0.68;
+      for (let index = 0; index < PALE_BACKDROP_LIMITS.villageLights; index += 1) {
+        const x = B.W * 0.35 + index * 54 + farDrift;
+        const y = gy - 72 - (index % 2) * 10;
+        ctx.fillRect(x, y, 5, 4);
+      }
+      ctx.restore();
+
+      // Frozen lower field uses a bounded abstract reflection budget, never a live-scene mirror.
+      const iceTop = gy - 72, iceBottom = view ? Math.max(gy, view.bottom) : B.H + B.PY;
+      const ice = ctx.createLinearGradient(0, iceTop, 0, iceBottom);
+      ice.addColorStop(0, "rgba(216,234,255,0.20)");
+      ice.addColorStop(0.5, "rgba(120,196,223,0.28)");
+      ice.addColorStop(1, "rgba(31,53,87,0.34)");
+      ctx.fillStyle = ice; ctx.fillRect(vl, iceTop, vr - vl, iceBottom - iceTop);
+      const reflections = B.lowGraphics()
+        ? PALE_BACKDROP_LIMITS.lowGraphicsReflectionBands
+        : PALE_BACKDROP_LIMITS.reflectionBands;
+      ctx.save(); ctx.strokeStyle = "#ef8da8"; ctx.lineCap = "round";
+      for (let index = 0; index < reflections; index += 1) {
+        const y = iceTop + 20 + index * 24, width = 170 + index * 86;
+        const center = B.W * 0.52 - px * (9 + index * 3);
+        ctx.globalAlpha = 0.18 - index * 0.025; ctx.lineWidth = index === 0 ? 3 : 2;
+        ctx.beginPath(); ctx.moveTo(center - width, y); ctx.lineTo(center - 24, y);
+        ctx.moveTo(center + 34, y); ctx.lineTo(center + width * 0.86, y); ctx.stroke();
+      }
+      ctx.restore();
+    },
+    motes(B, ctx, _stage, c, t, px, view) {
+      B.motes(ctx, c, B.reducedMotion() ? 0 : t, px, {
+        rgb: "216,234,255", dir: 1, twinkle: false,
+        drift: B.reducedMotion() ? 0 : 5, aMul: 0.48, sizeMul: 0.66,
       }, view);
     },
   },

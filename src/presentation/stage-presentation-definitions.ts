@@ -4,8 +4,8 @@ export interface StagePresentationDefinition {
   readonly backdropId: StageId;
   readonly platformMaterialId: string;
   readonly environmentPresentationId: StageId;
-  readonly reflectionPolicy: "lower-field-restrained";
-  readonly particlePolicy: "sparse-petals-pollen";
+  readonly reflectionPolicy: "lower-field-restrained" | "frozen-lower-field";
+  readonly particlePolicy: "sparse-petals-pollen" | "sparse-snow";
   readonly lowGraphicsPolicy: "silhouette-and-telegraph-only";
 }
 
@@ -17,6 +17,14 @@ export const STAGE_PRESENTATION_DEFINITIONS = Object.freeze({
     environmentPresentationId: "verdant-sanctum",
     reflectionPolicy: "lower-field-restrained",
     particlePolicy: "sparse-petals-pollen",
+    lowGraphicsPolicy: "silhouette-and-telegraph-only",
+  }),
+  "pale-traverse": Object.freeze({
+    backdropId: "pale-traverse",
+    platformMaterialId: "pale-ice",
+    environmentPresentationId: "pale-traverse",
+    reflectionPolicy: "frozen-lower-field",
+    particlePolicy: "sparse-snow",
     lowGraphicsPolicy: "silhouette-and-telegraph-only",
   }),
 } as const satisfies Readonly<Partial<Record<StageId, StagePresentationDefinition>>>);

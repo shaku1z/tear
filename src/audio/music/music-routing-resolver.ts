@@ -12,6 +12,7 @@ import type {
  */
 export const ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS: Readonly<Record<string, string>> = Object.freeze({
   "the-verdant-sanctum": "fillet",
+  "the-pale-traverse": "fillet",
 });
 
 function normalizeBiome(value: string): string {
@@ -23,6 +24,9 @@ function normalizeBiome(value: string): string {
     "the-undercroft": "the-undercroft",
     crimson: "the-crimson-fields",
     "the-crimson-fields": "the-crimson-fields",
+    pale: "the-pale-traverse",
+    "pale-traverse": "the-pale-traverse",
+    "the-pale-traverse": "the-pale-traverse",
     void: "the-voidspire",
     voidspire: "the-voidspire",
     "the-voidspire": "the-voidspire",

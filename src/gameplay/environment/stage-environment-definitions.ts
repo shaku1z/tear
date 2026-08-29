@@ -3,9 +3,10 @@ import type { EnvironmentObjectKind } from "./environment-contracts";
 import type { EnvironmentGeometry } from "./environment-contracts";
 
 export interface StageInitialFieldDefinition {
-  readonly kind: Extract<EnvironmentObjectKind, "bloom-well">;
+  readonly kind: Extract<EnvironmentObjectKind, "bloom-well" | "aurora-track">;
   readonly slot: string;
   readonly geometry: EnvironmentGeometry;
+  readonly direction?: -1 | 1;
 }
 
 export interface StageEnvironmentDefinition {
@@ -30,6 +31,22 @@ export const STAGE_ENVIRONMENT_DEFINITIONS = Object.freeze({
     maximumFields: 3,
     maximumCombatObjects: 8,
     maximumRoutes: 0,
+    cleanup: "stage-owned",
+  }),
+  "pale-traverse": Object.freeze({
+    id: "pale-traverse-environment",
+    stageId: "pale-traverse",
+    initialFields: Object.freeze([
+      Object.freeze({ kind: "aurora-track", slot: "lower-east", direction: 1 as const,
+        geometry: Object.freeze({ x: 120, y: 625, w: 560, h: 72 }) }),
+      Object.freeze({ kind: "aurora-track", slot: "crossing-west", direction: -1 as const,
+        geometry: Object.freeze({ x: 540, y: 495, w: 520, h: 66 }) }),
+      Object.freeze({ kind: "aurora-track", slot: "upper-east", direction: 1 as const,
+        geometry: Object.freeze({ x: 680, y: 240, w: 240, h: 62 }) }),
+    ]),
+    maximumFields: 4,
+    maximumCombatObjects: 8,
+    maximumRoutes: 3,
     cleanup: "stage-owned",
   }),
 } as const satisfies Readonly<Partial<Record<StageId, StageEnvironmentDefinition>>>);

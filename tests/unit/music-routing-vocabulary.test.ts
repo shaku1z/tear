@@ -22,6 +22,7 @@ describe("music routing vocabulary parity", () => {
       ["the-undercroft", "colossus"],
       ["the-crimson-fields", "aldric"],
       ["the-verdant-sanctum", "rootbound"],
+      ["the-pale-traverse", "white-hart"],
       ["the-voidspire", "echo"],
       ["the-tear", "source"],
     ]);
