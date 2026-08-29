@@ -32,7 +32,8 @@ describe("native gameplay event bus", () => {
     bus.subscribe(listener);
     bus.publish({ kind: "stage", tick: 1, stage: 3 });
     bus.publish({ kind: "stage", tick: 2, stage: 3, stageId: "verdant-sanctum", transition: "entered" });
-    expect(listener).toHaveBeenCalledTimes(2);
+    bus.publish({ kind: "stage", tick: 3, stage: 4, stageId: "pale-traverse", transition: "entered" });
+    expect(listener).toHaveBeenCalledTimes(3);
     expect(() => { bus.publish({ kind: "stage", tick: 3, stage: 3, stageId: "grounds" }); })
       .toThrow(/does not match index/u);
   });
@@ -109,6 +110,7 @@ describe("native gameplay event bus", () => {
       weaponId: "sword", wave: 0, score: 0, runTimeSeconds: 0,
     });
     gameplayEvents.emit({ kind: "stage", stage: 2, stageId: "crimson-fields", transition: "entered" });
+    gameplayEvents.emit({ kind: "stage", stage: 4, stageId: "pale-traverse", transition: "entered" });
     tick += 1;
     gameplayEvents.emit({ kind: "wave", wave: 4, event: "start" });
     gameplayEvents.emit({ kind: "effect", effect: "revive", x: 10, y: 20 });
@@ -118,7 +120,7 @@ describe("native gameplay event bus", () => {
     }
     const packet = ghost2.stopRec();
 
-    expect(packet?.stages).toEqual([{ t: 0, s: 2 }]);
+    expect(packet?.stages).toEqual([{ t: 0, s: 2 }, { t: 0, s: 4 }]);
     expect(packet?.waves).toEqual([{ t: 0, w: 4, e: "start" }]);
     expect(packet?.events).toEqual([{ t: 0, k: "revive", x: 10, y: 20 }]);
     expect(packet?.loadout).toEqual([{ t: 0, id: "tempo", tier: 2, w: 4 }]);

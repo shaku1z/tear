@@ -99,4 +99,23 @@ describe("enemy kill transaction", () => {
     expect(clear.intents).toContainEqual({ type: "prepare-reward", reward: "boss" });
     expect(clear.intents.some((intent) => intent.type === "stage-done" || intent.type === "start-adventure-finale")).toBe(false);
   });
+
+  it("routes White Hart defeat through existing authoritative boss and no-hit statistics", () => {
+    const cleanupEncounter = vi.fn();
+    const target = enemy({ kind: "white-hart", isBoss: true, bossId: "white-hart", cleanupEncounter });
+    const input = options(target);
+    input.stageIndex = 4;
+    input.finalStageIndex = 6;
+    const addStat = vi.fn(); const maxStat = vi.fn(); const bossKillAchievement = vi.fn();
+    input.addStat = addStat; input.maxStat = maxStat; input.bossKillAchievement = bossKillAchievement;
+
+    resolveEnemyKill(input);
+
+    expect(cleanupEncounter).toHaveBeenCalledWith("death");
+    expect(addStat).toHaveBeenCalledWith("bossKills", 1);
+    expect(addStat).toHaveBeenCalledWith("bossNoHit", 1);
+    expect(maxStat).toHaveBeenCalledWith("killWhite-hart", 1);
+    expect(bossKillAchievement).toHaveBeenCalledWith(target);
+    expect(input.run.finalBossDeath).toBeUndefined();
+  });
 });

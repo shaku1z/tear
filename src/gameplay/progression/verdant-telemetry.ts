@@ -6,12 +6,20 @@ export type VerdantTelemetryIntent =
 
 /** Maps only authoritative gameplay facts; presentation state never contributes telemetry. */
 export function verdantTelemetryIntents(event: TearGameplayEvent): readonly VerdantTelemetryIntent[] {
-  if (event.kind === "stage" && event.transition === "entered" && event.stageId === "verdant-sanctum") {
-    return Object.freeze([{ type: "profile-max", stat: "verdantEntered", value: 1 }]);
+  if (event.kind === "stage" && event.transition === "entered") {
+    if (event.stageId === "verdant-sanctum") {
+      return Object.freeze([{ type: "profile-max", stat: "verdantEntered", value: 1 }]);
+    }
+    if (event.stageId === "pale-traverse") {
+      return Object.freeze([{ type: "profile-max", stat: "paleEntered", value: 1 }]);
+    }
   }
   if (event.kind !== "environment") return Object.freeze([]);
   if (event.event === "field-started" && event.objectKind === "bloom-well") {
     return Object.freeze([{ type: "profile-add", stat: "bloomWellsActivated", amount: 1 }]);
+  }
+  if (event.event === "field-started" && event.objectKind === "aurora-track") {
+    return Object.freeze([{ type: "profile-add", stat: "auroraTracksActivated", amount: 1 }]);
   }
   if (event.event !== "combat-object-destroyed") return Object.freeze([]);
   if (event.objectKind === "root-link") {

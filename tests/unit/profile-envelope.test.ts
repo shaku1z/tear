@@ -11,9 +11,13 @@ const verdantStats = Object.freeze({
   rootboundNoHitKills: 1,
   regrowthFullInterrupts: 1,
   regrowthPartialInterrupts: 1,
+  paleEntered: 1,
+  auroraTracksActivated: 9,
+  bossKills: 7,
+  bossNoHit: 1,
 });
 
-describe("Verdant profile envelope compatibility", () => {
+describe("Verdant/Pale profile envelope compatibility", () => {
   it("keeps the current profile schema because source-owned statistics need no structural migration", () => {
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
@@ -35,7 +39,7 @@ describe("Verdant profile envelope compatibility", () => {
     });
   });
 
-  it("preserves Verdant statistics in legacy data without publishing a new schema", () => {
+  it("preserves Verdant/Pale statistics and unknown legacy data without publishing a new schema", () => {
     const result = migrateProfileEnvelope({ stats: verdantStats, unknownFutureValue: "kept" }, 500);
     expect(result).toMatchObject({
       ok: true,
