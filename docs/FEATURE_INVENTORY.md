@@ -478,6 +478,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   waves safely rebuild ownership from native spawn/death facts, while non-empty
   ambiguous restores still fail closed. This is Class-A engineering evidence,
   not Class-C certification or public-release approval.
+  VS3-C20 closes the release-candidate engineering matrix: combined
+  accessibility settings, six responsive profiles, current input routes,
+  standalone/PWA/CrazyGames targets, isolation, packages, bundle budgets, and
+  reproducibility are green. A new controlled workload measures real
+  Rootbound phase two with Bloom, three Grafts, a Rootbinder network, ordinary
+  enemies, and combat together. It exposed and fixed unbounded retention of
+  expired Rootbinder generations; replacement generations now prune only
+  terminal relationships. The accepted controlled profile stays within timing,
+  population, and five-cycle heap budgets. This remains non-public engineering
+  evidence and does not resolve the deferred Verdant music replacement.
   Boss-intro and boss-beat state also flow directly from world state through
   live music, frame, State Forge, and presentation paths. This preserves the
   existing live path through focused and rebuilt campaign evidence, but leaves
