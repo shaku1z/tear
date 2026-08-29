@@ -35,7 +35,7 @@ withJourney({ name: "Pale PT3-C6 White Hart foundation", port: 8356 }, async ({ 
 
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
   await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies
-    .find((enemy) => enemy.bossId === "white-hart")?.phase === 2, undefined, { timeout: 5_000 });
+    .find((enemy) => enemy.bossId === "white-hart")?.phaseMarker === 2, undefined, { timeout: 5_000 });
   const phaseTwo = await bossSnapshot(page);
   assert.equal(phaseTwo.phaseMarker, 2);
   assert.equal(phaseTwo.atk, "unavailable");
@@ -47,7 +47,7 @@ withJourney({ name: "Pale PT3-C6 White Hart foundation", port: 8356 }, async ({ 
   }));
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.2));
   await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies
-    .find((enemy) => enemy.bossId === "white-hart")?.phase === 3, undefined, { timeout: 5_000 });
+    .find((enemy) => enemy.bossId === "white-hart")?.phaseMarker === 3, undefined, { timeout: 5_000 });
   const phaseThree = await bossSnapshot(page);
   assert.equal(phaseThree.phaseMarker, 3);
   assert.equal(phaseThree.atk, "unavailable");
