@@ -8,8 +8,8 @@
 | --- | --- |
 | Document | `TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — PT3-C0 in progress** |
-| Current checkpoint | `PT3-C0` |
+| Status | **Active implementation authority — PT3-C4 in progress** |
+| Current checkpoint | `PT3-C4` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -305,17 +305,16 @@ dispatch, deployment, or C40 claim has occurred.
 
 ```text
 PROGRAM: Pale Traverse Revision 3
-STATUS: ACTIVE — PT3-C0 IN PROGRESS
-CURRENT CHECKPOINT: PT3-C0
-CURRENT SUBGOAL: PT3-C0-S1
+STATUS: ACTIVE — PT3-C4 IN PROGRESS
+CURRENT CHECKPOINT: PT3-C4
+CURRENT SUBGOAL: PT3-C4-S1
 SOURCE FOUNDATION: Verdant C21 freeze 25c589844ec2cfe85a8a6deead881ebb3d699198
-LAST GREEN CHECKPOINT: none
-LAST EVIDENCE: pre-change negative authority/curve/publication suites pass (17 tests); docs, terminology, and requirements baseline gates pass
+LAST GREEN CHECKPOINT: PT3-C3 at 5103cc6a3fc4100e64eb88763347d612ddbd9ac7
+LAST EVIDENCE: Rimehound factory/controller/presentation, production State Forge restore, canonical semantic hash, 15 focused files / 81 tests, and clean built Playground browser captures pass
 BLOCKERS: none
-NEXT ACTION: register plan/ledger, then add stable Pale identities through current catalogs
+NEXT ACTION: author Pale-native variants through the existing stage-aware selector and mode projections
 PUBLICATION: prohibited
 JOINT INTEGRATION: not authorized
 MUSIC/WIKI/DEPLOYMENT: not authorized
 C40: unchanged; no certification claim
 ```
-
