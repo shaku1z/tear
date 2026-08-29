@@ -8,8 +8,8 @@
 | --- | --- |
 | Document | `TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — PT3-C5 in progress** |
-| Current checkpoint | `PT3-C5` |
+| Status | **Engineering implementation complete — PT3-C11 frozen** |
+| Current checkpoint | `PT3-C11` frozen handoff |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -287,13 +287,13 @@ reference projection, with no dispatch or certification overclaim.
 
 ## Subgoals
 
-- [ ] Run accessibility, responsive/overscan, keyboard/mouse, controller, and touch matrices.
-- [ ] Run a bounded integrated Pale/White Hart/Rimehound/Aurora/variant workload and validate object/effect/heap ceilings.
-- [ ] Build standalone, PWA, CrazyGames, and test targets from exact source.
-- [ ] Validate offline/PWA, iframe lifecycle, package contents, isolation, bundle budgets, and reproducibility.
-- [ ] Run the required full repository gate from final intended source.
-- [ ] Record exact source/build/package identities, tests, visual evidence, limitations, and owner walkthrough.
-- [ ] Freeze shared contracts and mark joint integration blocked pending separate authorization.
+- [x] Run accessibility, responsive/overscan, keyboard/mouse, controller, and touch matrices.
+- [x] Run a bounded integrated Pale/White Hart/Rimehound/Aurora/variant workload and validate object/effect/heap ceilings.
+- [x] Build standalone, PWA, CrazyGames, and test targets from exact source.
+- [x] Validate offline/PWA, iframe lifecycle, package contents, isolation, bundle budgets, and reproducibility.
+- [x] Run the required full repository gate from final intended source.
+- [x] Record exact source/build/package identities, tests, visual evidence, limitations, and owner walkthrough.
+- [x] Freeze shared contracts and mark joint integration blocked pending separate authorization.
 
 ## Exit
 
@@ -305,14 +305,14 @@ dispatch, deployment, or C40 claim has occurred.
 
 ```text
 PROGRAM: Pale Traverse Revision 3
-STATUS: ACTIVE — PT3-C11 IN PROGRESS
-CURRENT CHECKPOINT: PT3-C11
-CURRENT SUBGOAL: PT3-C11-S1
+STATUS: ENGINEERING IMPLEMENTATION COMPLETE — PT3-C11 FROZEN
+CURRENT CHECKPOINT: PT3-C11 GREEN
+CURRENT SUBGOAL: none
 SOURCE FOUNDATION: Verdant C21 freeze 25c589844ec2cfe85a8a6deead881ebb3d699198
-LAST GREEN CHECKPOINT: PT3-C10 at 86eb200d37751e34fdb2108d2e236e3d5d32be01
-LAST EVIDENCE: source-derived Pale routes select 23 scenarios, five browser journeys, 13 authority commands, graveyard checks, and one clean attributed standalone build; all executions and reference/publication boundaries pass
+LAST GREEN CHECKPOINT: PT3-C11 at b8ddb454ece2d85f9293134a44e5a7f5aa18df19
+LAST EVIDENCE: full functional, browser, target, package, reproducibility, accessibility, and controlled integrated performance qualification passed; exact builds and visual evidence are frozen in PT3-C11
 BLOCKERS: none
-NEXT ACTION: run the cross-target, accessibility, performance, package, reproducibility, full-gate, and frozen-handoff qualification without integration or publication
+NEXT ACTION: preserve the frozen worktree; joint integration requires separate authorization
 PUBLICATION: prohibited
 JOINT INTEGRATION: not authorized
 MUSIC/WIKI/DEPLOYMENT: not authorized

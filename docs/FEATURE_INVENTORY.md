@@ -558,7 +558,17 @@ This is the migration checklist for the architectural redesign. A checked featur
   Pale browser journeys, 13 authority commands, shared-runtime/current-weapon
   adjacency, graveyard checks, and an attributed standalone build. Reference
   generation passes while publication and reference/wiki dispatch remain
-  fail-closed. Cross-target qualification and final freeze remain PT3-C11.
+  fail-closed. PT3-C11 completes the cross-target engineering freeze at
+  `b8ddb454ece2d85f9293134a44e5a7f5aa18df19`: the full functional corpus,
+  dedicated Pale browser captures, responsive/accessibility/input matrices,
+  standalone/PWA/CrazyGames builds, isolation, package, bundle,
+  reproducibility, dry-run, and offline gates pass. The shared performance
+  harness now measures White Hart phase two, two Rimehounds, all five Pale
+  variants, Aurora Tracks, and Ghost Tracks together; Pale records 2.5 ms
+  simulation, 2.0 ms render, and 4.1 ms frame-work p95 with zero long tasks and
+  bounded heap growth. The worktree is frozen for later separately authorized
+  joint integration; publication, dispatch, deployment, final music, and C40
+  remain outside this plan.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference

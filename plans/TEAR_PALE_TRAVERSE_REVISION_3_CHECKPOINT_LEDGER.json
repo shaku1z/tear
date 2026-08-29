@@ -2,14 +2,14 @@
   "format": "tear-pale-traverse-revision-3-checkpoint-ledger",
   "schemaVersion": 1,
   "revision": "3.0",
-  "status": "active",
+  "status": "frozen",
   "currentCheckpoint": "PT3-C11",
-  "currentSubgoal": "PT3-C11-S1",
+  "currentSubgoal": null,
   "sourceFoundation": "25c589844ec2cfe85a8a6deead881ebb3d699198",
   "sourceFoundationRule": "Pale is rooted at the frozen Verdant C21 identity and must reuse its shared contracts. Re-resolve protected origin/main only for drift awareness; do not discard the required Verdant foundation.",
   "publicationBoundary": "No joint integration, reference/wiki dispatch, publication, deployment, or C40 claim is authorized.",
-  "completedCheckpoints": ["PT3-C0", "PT3-C1", "PT3-C2", "PT3-C3", "PT3-C4", "PT3-C5", "PT3-C6", "PT3-C7", "PT3-C8", "PT3-C9", "PT3-C10"],
-  "lastGreenCheckpoint": "PT3-C10",
+  "completedCheckpoints": ["PT3-C0", "PT3-C1", "PT3-C2", "PT3-C3", "PT3-C4", "PT3-C5", "PT3-C6", "PT3-C7", "PT3-C8", "PT3-C9", "PT3-C10", "PT3-C11"],
+  "lastGreenCheckpoint": "PT3-C11",
   "lastEvidence": [
     "PT3-C0 pre-change baseline at 25c589844ec2cfe85a8a6deead881ebb3d699198: 17 focused tests prove pale-traverse, white-hart, and rimehound are absent from current production authorities; inactive seven-stage curve data remains provisional; docs, terminology, and requirements baselines pass.",
     "PT3-C0 post-change: typecheck, 28 focused tests, architecture, and active-roster gates pass; stable Pale identities are reserved while executable factories, campaign activation, and scenarios remain absent.",
@@ -22,10 +22,11 @@
     "PT3-C7: all twelve deterministic route-first White Hart attacks, bounded Ghost Tracks/wakes, direct counterplay, phase cleanup, accessibility presentation, three-phase State Forge restoration, canonical TearBench scenario, clean game-reference export, 14 focused files / 79 tests, and clean built Boss Test evidence pass at 44f199278be774e0bbbfdf6178eec207814259d1.",
     "PT3-C8: Pale waves 41–49 use one source-owned curve and bounded composition; Charger makes Rime Runner naturally reachable, White Hart owns wave 50, rewards/healing/difficulty/concurrency/environment bounds are exact, Echo/Source tuning remains provisional, and 12 focused files / 65 tests plus clean reference/build/browser gates pass at 9fa3ea8009c9ccc4b1e22f6617e089db676916a2.",
     "PT3-C9: all current modes and nine replacement boundaries handle Pale/White Hart through existing authorities; authoritative Pale telemetry, seven-stage engineering replay identity, stable stage events, schema-v2 unknown-data retention, and fail-closed publication pass 17 focused files / 92 tests plus clean reference/build/browser gates at 11e7f88b9002f76314a2b433808831825c582abc.",
-    "PT3-C10: four Pale-specific source-derived routes select 23 scenarios, five browser journeys, 13 authority commands, graveyard checks, and one clean attributed standalone build; all executions plus game-reference and publication/dispatch boundaries pass at 86eb200d37751e34fdb2108d2e236e3d5d32be01."
+    "PT3-C10: four Pale-specific source-derived routes select 23 scenarios, five browser journeys, 13 authority commands, graveyard checks, and one clean attributed standalone build; all executions plus game-reference and publication/dispatch boundaries pass at 86eb200d37751e34fdb2108d2e236e3d5d32be01.",
+    "PT3-C11: the full functional corpus, browser/input/responsive/accessibility, standalone/PWA/CrazyGames targets, isolation, package, bundle, reproducibility, dry-run, offline, and dedicated Pale visual gates pass at b8ddb454ece2d85f9293134a44e5a7f5aa18df19; the integrated Pale profile records 2.5/2.0/4.1 ms simulation/render/frame-work p95, zero long tasks, exact bounded roster/routes, and 834212 bytes retained heap growth."
   ],
   "blockers": [],
-  "nextAction": "Run the cross-target, accessibility, performance, package, reproducibility, full-gate, and frozen-handoff qualification without integration or publication.",
+  "nextAction": "Preserve the frozen Pale worktree. Joint integration is a later, separately authorized operation.",
   "checkpoints": [
     {
       "id": "PT3-C0",
@@ -68,6 +69,14 @@
       { "id": "PT3-C10-S3", "description": "Close observation, invariant, event-order, codec, restore, hash, route, and anti-drift evidence.", "status": "green" },
       { "id": "PT3-C10-S4", "description": "Execute and persist source/build-bound selected evidence while proving dispatch remains blocked.", "status": "green" }
     ], "sourceBaseline": "11e7f88b9002f76314a2b433808831825c582abc", "completionIdentity": "86eb200d37751e34fdb2108d2e236e3d5d32be01", "commandsRun": ["pnpm exec vitest run 6 focused source-forge/selection files (51 tests)", "pnpm test:tearbench-selection (25 tests)", "pnpm typecheck", "pnpm exec vitest run 22 focused/adjacent Pale authority files (162 tests)", "pnpm lint", "pnpm check:architecture", "pnpm check:active-roster", "pnpm tearbench ci --files-from artifacts/tearbench/checkpoints/pale-traverse/PT3-C10/changed-files.txt --artifact artifacts/tearbench/checkpoints/pale-traverse/PT3-C10/current-capability.json", "pnpm check:game-reference", "pnpm check:publication-boundary", "pnpm test:game-reference-artifact", "git diff --check"], "evidence": ["docs/checkpoints/pale-traverse/PT3-C10_EVIDENCE.md", "artifacts/tearbench/checkpoints/pale-traverse/PT3-C10/current-capability.json"], "blockers": [], "notes": ["Source-derived selection executed 23 scenarios, five Pale browser journeys, 13 authority commands, shared-runtime/current-weapon adjacency, graveyard checks, and a clean attributed standalone build. Joint integration, dispatch, publication, deployment, final music selection, and C40 certification remain prohibited."] },
-    { "id": "PT3-C11", "title": "Validation and freeze", "dependencies": ["PT3-C10"], "status": "in-progress", "subgoals": [], "sourceBaseline": "86eb200d37751e34fdb2108d2e236e3d5d32be01", "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] }
+    { "id": "PT3-C11", "title": "Validation and freeze", "dependencies": ["PT3-C10"], "status": "green", "subgoals": [
+      { "id": "PT3-C11-S1", "description": "Run accessibility, responsive, keyboard/mouse, controller, and touch matrices.", "status": "green" },
+      { "id": "PT3-C11-S2", "description": "Measure one bounded integrated Pale, White Hart, Rimehound, Aurora, and variant workload.", "status": "green" },
+      { "id": "PT3-C11-S3", "description": "Build standalone, PWA, CrazyGames, and test targets from exact source.", "status": "green" },
+      { "id": "PT3-C11-S4", "description": "Validate offline, iframe, package, isolation, bundle, and reproducibility boundaries.", "status": "green" },
+      { "id": "PT3-C11-S5", "description": "Run the full repository gate from final intended source.", "status": "green" },
+      { "id": "PT3-C11-S6", "description": "Record exact identities, visual evidence, limitations, and owner walkthrough.", "status": "green" },
+      { "id": "PT3-C11-S7", "description": "Freeze shared contracts while preserving the separate joint-integration authorization boundary.", "status": "green" }
+    ], "sourceBaseline": "86eb200d37751e34fdb2108d2e236e3d5d32be01", "completionIdentity": "b8ddb454ece2d85f9293134a44e5a7f5aa18df19", "commandsRun": ["pnpm check (all functional gates passed; first aggregate performance tail later rerun after one bounded constrained-profile fluctuation)", "TEAR_PERF_SCENARIO=all TEAR_PERF_OUTPUT=artifacts/tearbench/checkpoints/pale-traverse/PT3-C11/performance/controlled-full-profile.json pnpm test:browser:performance", "pnpm test:browser:pale-presentation", "pnpm test:browser:pale-rimehound", "pnpm test:browser:pale-variants", "pnpm test:browser:pale-white-hart-phases", "pnpm check:publication-boundary", "pnpm test:game-reference-artifact", "git diff --check"], "evidence": ["docs/checkpoints/pale-traverse/PT3-C11_EVIDENCE.md", "docs/checkpoints/pale-traverse/PT3-C11_FREEZE_MANIFEST.md", "artifacts/tearbench/checkpoints/pale-traverse/PT3-C11/performance/controlled-full-profile.json"], "blockers": [], "notes": ["The performance harness now activates browser audio before programmatic debug workload setup, removing an audio-context race without relaxing budgets.", "Joint integration, protected merge, publication, reference/wiki dispatch, deployment, final music selection, public ruleset migration, and C40 certification remain prohibited pending separate authorization."] }
   ]
 }
