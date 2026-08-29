@@ -17,3 +17,5 @@ and may be recreated by the commands recorded in each manifest.
 | VS3-C18 reference/tooling compatibility | [VS3-C18_EVIDENCE.md](VS3-C18_EVIDENCE.md) |
 | VS3-C19 TearBench completion/anti-drift | [VS3-C19_EVIDENCE.md](VS3-C19_EVIDENCE.md) |
 | VS3-C20 accessibility/performance/platform/package | [VS3-C20_EVIDENCE.md](VS3-C20_EVIDENCE.md) |
+| VS3-C21 engineering freeze/shared-contract handoff | [VS3-C21_FREEZE_MANIFEST.md](VS3-C21_FREEZE_MANIFEST.md) |
+| VS3-C21 Pale Revision 3 delta requirements | [VS3-C21_PALE_REVISION_3_DELTA.md](VS3-C21_PALE_REVISION_3_DELTA.md) |

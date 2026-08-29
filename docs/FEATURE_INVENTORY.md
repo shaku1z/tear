@@ -399,6 +399,15 @@ This is the migration checklist for the architectural redesign. A checked featur
   deferred because that repository prohibits new Tear use and remains pinned to
   a pre-Verdant five-boss origin. See
   `docs/checkpoints/verdant-sanctum/VS3-C18_EVIDENCE.md`.
+- [x] Verdant C21 engineering freeze handoff — checkpoints C0–C20 reconcile to
+  one exact record, with C17 retained as the owner-authorized music deferral;
+  the shared environment/codec/observation/State Forge/evidence contracts and
+  their Pale extension boundaries are frozen in
+  `docs/checkpoints/verdant-sanctum/VS3-C21_FREEZE_MANIFEST.md`. The legacy Pale
+  creative plan is translated into typed Revision 3 delta requirements without
+  adding Pale production identities or another runtime registry. The current
+  six-stage ruleset remains engineering-only and C22 remains blocked on an
+  equivalent Pale freeze plus separate joint-promotion authorization.
 - [x] Authored base difficulty public tuning — the complete `public-tuning`
   envelope contains schema-versioned, canonical five-difficulty values from
   `src/gameplay/run/difficulty-catalog.ts`; the mutable `CONFIG.difficulties`
