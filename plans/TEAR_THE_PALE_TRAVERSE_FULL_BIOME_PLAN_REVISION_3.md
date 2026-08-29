@@ -225,12 +225,12 @@ boss registry or placeholder damage.
 
 ## Subgoals
 
-- [ ] Implement route-first Antler Run, Snowbound Leap, Aurora Volley, and Backtrail Kick with readable counterplay.
-- [ ] Implement bounded Ghost Tracks, Waystone Turn, Frozen Wake, and Hushed Crossing through shared routes/fields.
-- [ ] Implement Fracture Step, authored Crossing Storm, interruptible Endless Return, and Last Crossing.
-- [ ] Preserve boss direct damage, parry response, player-usable wakes, deterministic selection/cadence, and phase cleanup.
-- [ ] Prove no invulnerability, regeneration, clone army, hidden/off-screen charge, permanent floor destruction, global ice, or unavoidable contact damage.
-- [ ] Add accessibility presentation and natural/State Forge/TearBench evidence for every phase.
+- [x] Implement route-first Antler Run, Snowbound Leap, Aurora Volley, and Backtrail Kick with readable counterplay.
+- [x] Implement bounded Ghost Tracks, Waystone Turn, Frozen Wake, and Hushed Crossing through shared routes/fields.
+- [x] Implement Fracture Step, authored Crossing Storm, interruptible Endless Return, and Last Crossing.
+- [x] Preserve boss direct damage, parry response, player-usable wakes, deterministic selection/cadence, and phase cleanup.
+- [x] Prove no invulnerability, regeneration, clone army, hidden/off-screen charge, permanent floor destruction, global ice, or unavoidable contact damage.
+- [x] Add accessibility presentation and natural/State Forge/TearBench evidence for every phase.
 
 ## Exit
 
@@ -241,10 +241,10 @@ complete through the current boss/environment/projectile contracts.
 
 ## Subgoals
 
-- [ ] Activate the Pale StageId curve and source-owned composition budget for local waves 1–9 and White Hart wave 10.
-- [ ] Validate enemy unlocks, Rimehound/variant budgets, concurrency, environment caps, difficulties, player damage, rewards, draft, and healing through wave 50.
-- [ ] Retain the complete seven-stage curve and relocated Echo/Source tuning as provisional engineering data.
-- [ ] Record owner-tuning decisions separately from correctness evidence.
+- [x] Activate the Pale StageId curve and source-owned composition budget for local waves 1–9 and White Hart wave 10.
+- [x] Validate enemy unlocks, Rimehound/variant budgets, concurrency, environment caps, difficulties, player damage, rewards, draft, and healing through wave 50.
+- [x] Retain the complete seven-stage curve and relocated Echo/Source tuning as provisional engineering data.
+- [x] Record owner-tuning decisions separately from correctness evidence.
 
 ## Exit
 
@@ -305,14 +305,14 @@ dispatch, deployment, or C40 claim has occurred.
 
 ```text
 PROGRAM: Pale Traverse Revision 3
-STATUS: ACTIVE — PT3-C8 IN PROGRESS
-CURRENT CHECKPOINT: PT3-C8
-CURRENT SUBGOAL: PT3-C8-S1
+STATUS: ACTIVE — PT3-C9 IN PROGRESS
+CURRENT CHECKPOINT: PT3-C9
+CURRENT SUBGOAL: PT3-C9-S1
 SOURCE FOUNDATION: Verdant C21 freeze 25c589844ec2cfe85a8a6deead881ebb3d699198
-LAST GREEN CHECKPOINT: PT3-C7 at 44f199278be774e0bbbfdf6178eec207814259d1
-LAST EVIDENCE: all twelve deterministic White Hart attacks, bounded route/wake runtime, three-phase State Forge restoration, 14 focused files / 79 tests, clean game-reference export, and clean built Boss Test captures pass
+LAST GREEN CHECKPOINT: PT3-C8 at 9fa3ea8009c9ccc4b1e22f6617e089db676916a2
+LAST EVIDENCE: the source-owned Pale curve and bounded composition cover waves 41–49, Charger makes Rime Runner naturally reachable, White Hart owns wave 50, and 12 focused files / 65 tests plus clean reference/build/browser gates pass
 BLOCKERS: none
-NEXT ACTION: validate the source-owned Pale local-wave 1–10 campaign budget and seven-stage provisional curve through wave 50
+NEXT ACTION: prove every current run mode, lifecycle cleanup path, and v2 durable-data boundary with Pale present while keeping feature-branch state non-publishable
 PUBLICATION: prohibited
 JOINT INTEGRATION: not authorized
 MUSIC/WIKI/DEPLOYMENT: not authorized

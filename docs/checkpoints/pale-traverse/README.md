@@ -15,3 +15,4 @@ ignored unless deliberately promoted into a small canonical proof.
 | PT3-C5 stage and presentation | [PT3-C5_EVIDENCE.md](PT3-C5_EVIDENCE.md) |
 | PT3-C6 White Hart foundation | [PT3-C6_EVIDENCE.md](PT3-C6_EVIDENCE.md) |
 | PT3-C7 White Hart phases | [PT3-C7_EVIDENCE.md](PT3-C7_EVIDENCE.md) |
+| PT3-C8 campaign integration | [PT3-C8_EVIDENCE.md](PT3-C8_EVIDENCE.md) ([owner tuning](PT3-C8_OWNER_TUNING.md)) |
