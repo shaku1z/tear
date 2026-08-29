@@ -71,7 +71,13 @@ export function projectProductionReplayCanonicalState(
         x: number; y: number; vx: number; vy: number; hp: number; dead: boolean;
         atk?: string; atkT?: number; atkCd?: number; packRole?: string; packFlank?: number;
         packLockT?: number; packAttackAuthorized?: boolean; pounceTargetX?: number; pounceAirborne?: boolean;
-        auroraDirection?: number; auroraResponseT?: number; auroraPounceExtended?: boolean };
+        auroraDirection?: number; auroraResponseT?: number; auroraPounceExtended?: boolean;
+        state?: string; stateT?: number; stateMax?: number; phaseMarker?: number; attackCursor?: number;
+        attackStep?: number; attackSequence?: number; environmentSequence?: number; routeProgress?: number;
+        trueRouteIndex?: number; fracturePlatformId?: string | null; fractureWindow?: boolean; batonStrike?: number;
+        auroraBossChargeActive?: boolean; parryOutcome?: string;
+        routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
+        candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[])[] };
       return {
         ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind,
         ...(typeof enemy.bossId === "string" ? { bossId: enemy.bossId } : {}),
@@ -82,6 +88,16 @@ export function projectProductionReplayCanonicalState(
           packAttackAuthorized: enemy.packAttackAuthorized, pounceTargetX: enemy.pounceTargetX,
           pounceAirborne: enemy.pounceAirborne, auroraDirection: enemy.auroraDirection,
           auroraResponseT: enemy.auroraResponseT, auroraPounceExtended: enemy.auroraPounceExtended,
+        } : {}),
+        ...(enemy.kind === "white-hart" ? {
+          state: enemy.state, atk: enemy.atk, stateT: enemy.stateT, stateMax: enemy.stateMax,
+          phaseMarker: enemy.phaseMarker, attackCursor: enemy.attackCursor, attackStep: enemy.attackStep,
+          attackSequence: enemy.attackSequence, environmentSequence: enemy.environmentSequence,
+          routeProgress: enemy.routeProgress, trueRouteIndex: enemy.trueRouteIndex,
+          fracturePlatformId: enemy.fracturePlatformId, fractureWindow: enemy.fractureWindow,
+          batonStrike: enemy.batonStrike, auroraBossChargeActive: enemy.auroraBossChargeActive,
+          parryOutcome: enemy.parryOutcome, routeTelegraph: enemy.routeTelegraph,
+          candidateRoutes: enemy.candidateRoutes,
         } : {}),
       };
     }),

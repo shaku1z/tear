@@ -61,7 +61,8 @@ export type AuroraTrackFieldState = EnvironmentFieldState & Readonly<{
 }>;
 export type GhostTrackRouteState = EnvironmentRouteState & Readonly<{
   kind: "ghost-track"; variant: "ghost"; direction: EnvironmentTrackDirection; width: number;
-  lifecycle: EnvironmentTrackLifecycle; maximumConcurrent: 3;
+  lifecycle: EnvironmentTrackLifecycle; maximumConcurrent: 3; damage: number; threatening: boolean;
+  hitActorIds: readonly string[];
 }>;
 
 function isUnknownArray(value: unknown): value is readonly unknown[] {
@@ -117,6 +118,11 @@ export function assertGhostTrackRouteState(value: EnvironmentRouteState): assert
   if (value.lifecycle === undefined) throw new TypeError("Ghost Track lifecycle is required");
   assertLifecycle(value.lifecycle);
   if (value.maximumConcurrent !== 3) throw new RangeError("Ghost Track maximumConcurrent must remain three");
+  const damage = value.damage;
+  if (!(typeof damage === "number" && Number.isFinite(damage) && damage >= 0)) throw new RangeError("Ghost Track damage must be finite and non-negative");
+  if (typeof value.threatening !== "boolean") throw new TypeError("Ghost Track threatening state is required");
+  if (!Array.isArray(value.hitActorIds) || value.hitActorIds.some((id) => typeof id !== "string" || id.length === 0)
+    || new Set(value.hitActorIds).size !== value.hitActorIds.length) throw new TypeError("Ghost Track hit actor IDs must be unique stable IDs");
 }
 
 export function createAuroraTrackFieldState(input: Readonly<{ id: string; ownerId: string;
@@ -138,11 +144,12 @@ export function createAuroraTrackFieldState(input: Readonly<{ id: string; ownerI
 
 export function createGhostTrackRouteState(input: Readonly<{ id: string; ownerId: string;
   direction: EnvironmentTrackDirection; width: number; points: readonly EnvironmentPoint[];
-  startTick: number; sourceTrackId?: string | null }>): GhostTrackRouteState {
+  startTick: number; sourceTrackId?: string | null; damage?: number; threatening?: boolean }>): GhostTrackRouteState {
   const value = Object.freeze({ id: input.id, factoryId: "ghost-track", kind: "ghost-track",
     points: Object.freeze(input.points.map((point) => Object.freeze({ ...point }))), state: "warning", stateTick: input.startTick,
     ownerId: input.ownerId, cleanupReason: null, variant: "ghost", direction: input.direction, width: input.width,
     lifecycle: GHOST_TRACK_DEFINITION.lifecycle, sourceTrackId: input.sourceTrackId ?? null, maximumConcurrent: 3,
+    damage: input.damage ?? 16, threatening: input.threatening ?? true, hitActorIds: Object.freeze([]),
   } as const satisfies GhostTrackRouteState);
   assertGhostTrackRouteState(value);
   return value;

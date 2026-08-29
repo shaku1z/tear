@@ -59,5 +59,26 @@ export function renderPaleEnvironmentPresentation(
       canvas.stroke();
     }
   }
+  for (const route of snapshot.routes) {
+    if (route.kind !== "ghost-track" || route.points.length < 2) continue;
+    const warning = route.state === "warning" || route.state === "scheduled";
+    const dormant = route.state === "expired" || route.state === "destroyed";
+    canvas.globalAlpha = dormant ? 0.18 : route.threatening === false ? 0.34 : warning ? 0.68 : 0.82;
+    canvas.strokeStyle = options.highContrast
+      ? route.threatening === false ? "#ffffff" : "#fff36b"
+      : route.threatening === false ? "#7a91a2" : warning ? "#ef8da8" : "#b9f4ff";
+    canvas.lineWidth = options.highContrast ? Math.max(7, route.width ?? 5) : Math.max(4, (route.width ?? 16) * 0.18);
+    canvas.setLineDash(warning || route.threatening === false ? [18, 12] : []);
+    canvas.beginPath();
+    route.points.forEach((point, index) => { if (index === 0) canvas.moveTo(point.x, point.y); else canvas.lineTo(point.x, point.y); });
+    canvas.stroke(); canvas.setLineDash([]);
+    const first = route.points[0], last = route.points.at(-1);
+    if (first !== undefined && last !== undefined && route.direction !== undefined) {
+      const x = (first.x + last.x) / 2, y = (first.y + last.y) / 2, direction = route.direction;
+      canvas.lineWidth = options.highContrast ? 6 : 3; canvas.beginPath();
+      canvas.moveTo(x - direction * 16, y - 12); canvas.lineTo(x + direction * 16, y);
+      canvas.lineTo(x - direction * 16, y + 12); canvas.stroke();
+    }
+  }
   canvas.restore();
 }

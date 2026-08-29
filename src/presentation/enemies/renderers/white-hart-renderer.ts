@@ -15,8 +15,30 @@ export function installWhiteHartRenderer(types: EnemyTypes, runtime: EnemyRender
       const iceEdge = A11Y.highContrast ? "#000000" : "#4d839c";
       const aurora = A11Y.highContrast ? "#fff36b" : "#72dec1";
       const core = A11Y.highContrast ? "#ff5a3d" : "#ef9d69";
-      const phase = Math.max(1, Math.min(3, this.phase || 1));
+      const phase = Math.max(1, Math.min(3, this.phase));
       const footY = this.y + this.hh;
+
+      // Attack routes are authored simulation facts. Draw them before the local
+      // body transform so every charge remains on-screen and route-first.
+      const candidates = this.candidateRoutes;
+      const primary = this.routeTelegraph;
+      if ((this.state === "windup" || this.state === "commit") && (primary.length > 1 || candidates.length > 0)) {
+        ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+        const routes = candidates.length > 0 ? candidates : [primary];
+        routes.forEach((route, index) => {
+          if (route.length < 2) return;
+          const trueRoute = candidates.length === 0 || index === this.trueRouteIndex;
+          ctx.globalAlpha = trueRoute ? (A11Y.highContrast ? 0.95 : 0.68) : 0.3;
+          ctx.strokeStyle = A11Y.highContrast ? (trueRoute ? "#fff36b" : "#ffffff")
+            : trueRoute ? "#ef8da8" : "#7a91a2";
+          ctx.lineWidth = A11Y.highContrast ? (trueRoute ? 8 : 5) : trueRoute ? 6 : 3;
+          ctx.setLineDash(this.state === "windup" || !trueRoute ? [18, 12] : []);
+          ctx.beginPath(); route.forEach((point, pointIndex) => {
+            if (pointIndex === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y);
+          }); ctx.stroke();
+        });
+        ctx.setLineDash([]); ctx.restore();
+      }
 
       ctx.save();
       ctx.translate(this.x, footY);

@@ -202,7 +202,11 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
               requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean;
               packRole?: string; packFlank?: number; packAttackAuthorized?: boolean; pounceTargetX?: number;
               variant?: string; variantName?: string; behavior?: string; rimeRebounds?: number;
-              snowWakeT?: number; glacierCracked?: boolean };
+              snowWakeT?: number; glacierCracked?: boolean; attackCursor?: number; attackStep?: number;
+              attackSequence?: number; environmentSequence?: number; routeProgress?: number; trueRouteIndex?: number;
+              batonStrike?: number; auroraBossChargeActive?: boolean; parryOutcome?: string;
+              routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
+              candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[])[] };
             return { kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
               stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
               boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
@@ -215,6 +219,12 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
               variant: authored.variant, variantName: authored.variantName, behavior: authored.behavior,
               rimeRebounds: authored.rimeRebounds, snowWakeT: authored.snowWakeT,
               glacierCracked: authored.glacierCracked, enraged: enemy.enraged,
+              attackCursor: authored.attackCursor, attackStep: authored.attackStep,
+              attackSequence: authored.attackSequence, environmentSequence: authored.environmentSequence,
+              routeProgress: authored.routeProgress, trueRouteIndex: authored.trueRouteIndex,
+              batonStrike: authored.batonStrike, auroraBossChargeActive: authored.auroraBossChargeActive,
+              parryOutcome: authored.parryOutcome, routeTelegraph: authored.routeTelegraph,
+              candidateRoutes: authored.candidateRoutes,
               packRole: authored.packRole, packFlank: authored.packFlank,
               packAttackAuthorized: authored.packAttackAuthorized, pounceTargetX: authored.pounceTargetX };
           }),

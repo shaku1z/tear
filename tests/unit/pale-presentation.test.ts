@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createAuroraTrackFieldState } from "../../src/gameplay/environment/aurora-track";
+import { createAuroraTrackFieldState, createGhostTrackRouteState } from "../../src/gameplay/environment/aurora-track";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { buildEnvironmentPresentationSnapshot } from "../../src/gameplay/environment/presentation-snapshot";
 import {
@@ -54,6 +54,32 @@ describe("Pale environment presentation", () => {
     expect(value.calls.filter((call) => call === "stroke")).toHaveLength(
       PALE_TRACK_PRESENTATION_LIMITS.lowGraphicsChevronsPerTrack,
     );
+  });
+
+  it("renders true and decoy Ghost Tracks with distinct accessible route language", () => {
+    const runtime = environment();
+    runtime.addRoute(createGhostTrackRouteState({
+      id: "true-route", ownerId: "white-hart", direction: 1, width: 54,
+      points: [{ x: 120, y: 700 }, { x: 1_420, y: 700 }], startTick: 0,
+      damage: 16, threatening: true,
+    }));
+    runtime.addRoute(createGhostTrackRouteState({
+      id: "decoy-route", ownerId: "white-hart", direction: -1, width: 54,
+      points: [{ x: 120, y: 620 }, { x: 1_420, y: 620 }], startTick: 0,
+      damage: 0, threatening: false,
+    }));
+    const snapshot = buildEnvironmentPresentationSnapshot(runtime.snapshot());
+    expect(snapshot.routes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "ghost-track", direction: 1, width: 54, threatening: true }),
+      expect.objectContaining({ kind: "ghost-track", direction: -1, width: 54, threatening: false }),
+    ]));
+    const value = recorder();
+    renderPaleEnvironmentPresentation(value.context, snapshot, {
+      highContrast: true, reducedMotion: true, lowGraphics: true, timeSeconds: 5, flashScale: 0,
+    });
+    expect(value.calls).toEqual(expect.arrayContaining([
+      "strokeStyle:#fff36b", "strokeStyle:#ffffff", "setLineDash", "moveTo", "lineTo", "stroke",
+    ]));
   });
 
   it("does not draw in another stage or mutate canonical environment state", () => {

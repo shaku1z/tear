@@ -148,6 +148,9 @@ export interface EnvironmentRouteState {
   readonly lifecycle?: EnvironmentTrackLifecycle;
   readonly sourceTrackId?: string | null;
   readonly maximumConcurrent?: number;
+  readonly damage?: number;
+  readonly threatening?: boolean;
+  readonly hitActorIds?: readonly string[];
 }
 
 export interface EnvironmentSnapshot {

@@ -34,6 +34,23 @@ export interface RuntimeEnemyState extends RuntimeBodyState {
   readonly auroraDirection?: number;
   readonly auroraResponseT?: number;
   readonly auroraPounceExtended?: boolean;
+  readonly state?: string;
+  readonly stateT?: number;
+  readonly stateMax?: number;
+  readonly phaseMarker?: number;
+  readonly attackCursor?: number;
+  readonly attackStep?: number;
+  readonly attackSequence?: number;
+  readonly environmentSequence?: number;
+  readonly routeProgress?: number;
+  readonly trueRouteIndex?: number;
+  readonly fracturePlatformId?: string | null;
+  readonly fractureWindow?: boolean;
+  readonly batonStrike?: number;
+  readonly auroraBossChargeActive?: boolean;
+  readonly parryOutcome?: string;
+  readonly routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
+  readonly candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[] )[];
 }
 
 export interface CanonicalRimehoundState {
@@ -51,6 +68,16 @@ export interface CanonicalRimehoundState {
   readonly auroraPounceExtended: boolean;
 }
 
+export interface CanonicalWhiteHartState {
+  readonly state: string; readonly atk: string; readonly stateT: number; readonly stateMax: number;
+  readonly phaseMarker: number; readonly attackCursor: number; readonly attackStep: number;
+  readonly attackSequence: number; readonly environmentSequence: number; readonly routeProgress: number;
+  readonly trueRouteIndex: number; readonly fracturePlatformId: string | null; readonly fractureWindow: boolean;
+  readonly batonStrike: number; readonly auroraBossChargeActive: boolean; readonly parryOutcome: string;
+  readonly routeTelegraph: readonly Readonly<{ x: number; y: number }>[];
+  readonly candidateRoutes: readonly (readonly Readonly<{ x: number; y: number }>[])[];
+}
+
 export interface CanonicalGameplayState {
   readonly tick: number;
   readonly input: AuthoritativeInputSnapshot;
@@ -60,6 +87,7 @@ export interface CanonicalGameplayState {
   readonly enemies: readonly Readonly<{
     id: number; kind: string; bossId: string; x: number; y: number; vx: number; vy: number; hp: number; dead: boolean;
     rimehound?: Readonly<CanonicalRimehoundState>;
+    whiteHart?: Readonly<CanonicalWhiteHartState>;
   }>[];
   /** Optional world-owned environment projection; absent on legacy hosts. */
   readonly environment?: EnvironmentSnapshot;
@@ -100,6 +128,22 @@ export function projectCanonicalGameplayState(
         pounceTargetX: fixed(enemy.pounceTargetX ?? 0), pounceAirborne: enemy.pounceAirborne ?? false,
         auroraDirection: enemy.auroraDirection ?? 0, auroraResponseT: fixed(enemy.auroraResponseT ?? 0),
         auroraPounceExtended: enemy.auroraPounceExtended ?? false,
+      }) } : {}),
+      ...(enemy.kind === "white-hart" ? { whiteHart: Object.freeze({
+        state: enemy.state ?? "", atk: enemy.atk ?? "", stateT: fixed(enemy.stateT ?? 0),
+        stateMax: fixed(enemy.stateMax ?? 0), phaseMarker: enemy.phaseMarker ?? 1,
+        attackCursor: enemy.attackCursor ?? 0, attackStep: enemy.attackStep ?? 0,
+        attackSequence: enemy.attackSequence ?? 0, environmentSequence: enemy.environmentSequence ?? 0,
+        routeProgress: fixed(enemy.routeProgress ?? 0), trueRouteIndex: enemy.trueRouteIndex ?? -1,
+        fracturePlatformId: enemy.fracturePlatformId ?? null, fractureWindow: enemy.fractureWindow ?? false,
+        batonStrike: fixed(enemy.batonStrike ?? 0), auroraBossChargeActive: enemy.auroraBossChargeActive ?? false,
+        parryOutcome: enemy.parryOutcome ?? "none",
+        routeTelegraph: Object.freeze((enemy.routeTelegraph ?? []).map((point) => Object.freeze({
+          x: fixed(point.x), y: fixed(point.y),
+        }))),
+        candidateRoutes: Object.freeze((enemy.candidateRoutes ?? []).map((route) => Object.freeze(route.map((point) => Object.freeze({
+          x: fixed(point.x), y: fixed(point.y),
+        }))))),
       }) } : {}),
     })).sort((left, right) => left.id - right.id || left.kind.localeCompare(right.kind))),
     ...(environment === undefined ? {} : { environment: projectEnvironmentSemanticSnapshot(environment) }),

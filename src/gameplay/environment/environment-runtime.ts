@@ -13,6 +13,11 @@ import { advanceRootCage, installRootCage, isRootCageState, type RootCagePlaceme
 import { createRootboundRegrowthConnections, type RootboundRegrowthState } from "./regrowth-link";
 import { assertAuroraTrackFieldState } from "./aurora-track";
 import { advanceAuroraTrack, type AuroraTransportActor } from "./aurora-track-runtime";
+import { assertGhostTrackRouteState } from "./aurora-track";
+import {
+  advanceGhostTrackRoute, installWhiteHartEnvironmentRequest,
+  type WhiteHartEnvironmentRequest, type WhiteHartRouteTarget,
+} from "./white-hart-route-runtime";
 
 /** The only phases an environment may own inside one authoritative tick. */
 export type EnvironmentStepPhase = "pre-step" | "active-fields" | "collision-resolution" | "post-commit";
@@ -78,6 +83,17 @@ export interface RootboundEnvironmentActor {
   }>;
 }
 
+export interface WhiteHartEnvironmentActor {
+  readonly id: string;
+  readonly source: unknown;
+  readonly state: Readonly<{
+    phase: 1 | 2 | 3;
+    requests: readonly WhiteHartEnvironmentRequest[];
+  }>;
+  readonly acknowledgeRequests: (throughSequence: number) => void;
+  readonly player?: WhiteHartRouteTarget;
+}
+
 /** Collection owner plus the bounded fixed-step phase seam. */
 export class EnvironmentRuntime extends EnvironmentState implements EnvironmentStepPort {
   readonly #hooks: EnvironmentStepHooks;
@@ -87,6 +103,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   #auroraTrackActors: (() => readonly AuroraTransportActor[]) | undefined;
   #rootbinderActors: (() => readonly RootbinderEnvironmentActor[]) | undefined;
   #rootboundActors: (() => readonly RootboundEnvironmentActor[]) | undefined;
+  #whiteHartActors: (() => readonly WhiteHartEnvironmentActor[]) | undefined;
   readonly #combatKernels = new Map<string, EnvironmentCombatObjectRuntime>();
   readonly #rootbinderNetworks = new Map<string, readonly string[]>();
   readonly #rootbinderLeashes = new Map<string, string>();
@@ -157,6 +174,41 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   setAuroraTrackActorsSource(source: (() => readonly AuroraTransportActor[]) | undefined): void { this.#auroraTrackActors = source; }
   setRootbinderActorsSource(source: (() => readonly RootbinderEnvironmentActor[]) | undefined): void { this.#rootbinderActors = source; }
   setRootboundActorsSource(source: (() => readonly RootboundEnvironmentActor[]) | undefined): void { this.#rootboundActors = source; }
+  setWhiteHartActorsSource(source: (() => readonly WhiteHartEnvironmentActor[]) | undefined): void { this.#whiteHartActors = source; }
+
+  #advanceWhiteHartRoutes(tick: number): void {
+    const actors = this.#whiteHartActors?.() ?? [];
+    const byId = new Map(actors.map((actor) => [actor.id, actor]));
+    for (const actor of actors) {
+      const phaseToken = `:p${String(actor.state.phase)}:`;
+      for (const field of this.fields()) if (field.ownerId === actor.id && field.variant === "boss-wake"
+        && !field.id.includes(phaseToken) && field.state !== "expired" && field.state !== "destroyed") {
+        this.updateField(field.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+      }
+      for (const route of this.routes()) if (route.ownerId === actor.id && route.kind === "ghost-track"
+        && !route.id.includes(phaseToken) && route.state !== "expired" && route.state !== "destroyed") {
+        this.updateRoute(route.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+      }
+      let acknowledged = 0;
+      for (const request of actor.state.requests) {
+        installWhiteHartEnvironmentRequest(this, actor.id, request, tick);
+        acknowledged = Math.max(acknowledged, request.sequence);
+      }
+      if (acknowledged > 0) actor.acknowledgeRequests(acknowledged);
+    }
+    for (const route of this.routes()) {
+      if (route.kind !== "ghost-track" || route.ownerId === null) continue;
+      assertGhostTrackRouteState(route);
+      const actor = byId.get(route.ownerId);
+      const result = advanceGhostTrackRoute(route, tick, actor?.player);
+      if (result.route !== route) this.updateRoute(route.id, result.route);
+      if (result.hit && actor?.player !== undefined) actor.player.takeDamage(
+        route.damage * actor.player.hazardDamageMultiplier,
+        route.points[0]?.x ?? 0,
+        actor.source,
+      );
+    }
+  }
 
   #advanceRootboundRootlines(tick: number): void {
     const present = new Set<string>();
@@ -547,7 +599,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   step(tick: number, seconds: number, gameplayStep: () => void, availableActorIds?: ReadonlySet<string>): void {
     if (typeof gameplayStep !== "function") throw new TypeError("environment gameplay step is required");
     this.clearPhaseLog(); this.#run("pre-step", tick, seconds, this.#hooks.preStep); gameplayStep();
-    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#advanceRootboundRegrowth(tick); this.#advanceRootboundBloom(tick); this.#advanceRootboundCages(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
+    this.#run("active-fields", tick, seconds, () => { this.#advanceFields(tick, seconds); this.#advanceRootbinderNetworks(tick, seconds); this.#advanceRootboundRootlines(tick); this.#advanceRootboundGrafts(tick); this.#advanceRootboundRegrowth(tick); this.#advanceRootboundBloom(tick); this.#advanceRootboundCages(tick); this.#advanceWhiteHartRoutes(tick); this.#hooks.activeFields?.({ tick, seconds, phase: "active-fields", environment: this }); });
     this.#run("collision-resolution", tick, seconds, () => { this.#resolveRootboundCages(); this.#hooks.resolveCollisions?.({ tick, seconds, phase: "collision-resolution", environment: this }); });
     this.#run("post-commit", tick, seconds, () => { this.#cleanupOrphans(tick, availableActorIds); this.#hooks.postCommit?.({ tick, seconds, phase: "post-commit", environment: this }); });
   }

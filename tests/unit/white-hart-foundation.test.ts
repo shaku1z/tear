@@ -21,6 +21,7 @@ import { createLegacyEnemyPresentation } from "../../src/presentation/enemies/le
 import { buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
 import { projectLiveBossObservation } from "../../src/tearbench/live-observation-actors";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { WHITE_HART_ATTACK_IDS } from "../../src/gameplay/entities/enemy-types/white-hart";
 
 function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
   const values = new Map<PropertyKey, unknown>();
@@ -38,7 +39,7 @@ describe("White Hart production foundation", () => {
     expect(BOSS_DEFINITIONS.find(({ id }) => id === "white-hart")).toBe(WHITE_HART_PROVISIONAL_DEFINITION);
     expect(BOSS_ROSTER.find(({ id }) => id === "white-hart")).toEqual({ id: "white-hart", name: "The White Hart" });
     expect(STAGE_BOSS_HOME["pale-traverse"]).toBe("white-hart");
-    expect([1, 2, 3].map((phase) => bossPhaseAttackAvailable("white-hart", phase))).toEqual([false, false, false]);
+    expect([1, 2, 3].map((phase) => bossPhaseAttackAvailable("white-hart", phase))).toEqual([true, true, true]);
   });
 
   it("constructs a damageable low body with monotonic phases and no placeholder attacks", () => {
@@ -57,7 +58,7 @@ describe("White Hart production foundation", () => {
       presentationId: "white-hart", isBoss: true, hw: CONFIG.whiteHart.w / 2,
       hh: CONFIG.whiteHart.h / 2, hp: CONFIG.whiteHart.hp, maxHp: CONFIG.whiteHart.hp,
       contactDmg: CONFIG.whiteHart.contactDmg, phase: 1, phaseMarker: 1,
-      phaseTag: "KEEPER OF THE PASS", state: "idle", atk: "unavailable", availableAttacks: [],
+      phaseTag: "KEEPER OF THE PASS", state: "idle", atk: "idle", availableAttacks: WHITE_HART_ATTACK_IDS,
     });
 
     boss.introT = 0.5;
@@ -69,7 +70,7 @@ describe("White Hart production foundation", () => {
     boss.introT = 0;
     boss.update(1 / 120, harness.platforms, harness.player, []);
     expect(boss.hit(100, 1, 0)).toBe(100);
-    expect(boss.atk).toBe("unavailable");
+    expect(boss.atk).toBe("idle");
     boss.hp = boss.maxHp * boss.phaseMarks[0];
     boss.update(1 / 120, harness.platforms, harness.player, []);
     expect(boss).toMatchObject({ phase: 2, phaseMarker: 2, phaseTag: "THE ROAD REMEMBERS", state: "recover" });
@@ -77,7 +78,7 @@ describe("White Hart production foundation", () => {
     expect(boss.phase).toBe(2);
     boss.hp = boss.maxHp * boss.phaseMarks[1];
     boss.update(1 / 120, harness.platforms, harness.player, []);
-    expect(boss).toMatchObject({ phase: 3, phaseMarker: 3, phaseTag: "DAWN WILL NOT COME", atk: "unavailable" });
+    expect(boss).toMatchObject({ phase: 3, phaseMarker: 3, phaseTag: "DAWN WILL NOT COME", atk: "idle" });
   });
 
   it("starts through the shared encounter and Pale living-arena path", () => {
@@ -153,7 +154,7 @@ describe("White Hart production foundation", () => {
     } | undefined;
     expect(actor).toMatchObject({
       kind: "white-hart", bossId: "white-hart", presentationId: "white-hart",
-      hp: CONFIG.whiteHart.hp, maxHp: CONFIG.whiteHart.hp, availableAttacks: [],
+      hp: CONFIG.whiteHart.hp, maxHp: CONFIG.whiteHart.hp, availableAttacks: WHITE_HART_ATTACK_IDS,
     });
 
     const second = createProductionReplayWorld({
@@ -179,7 +180,7 @@ describe("White Hart production foundation", () => {
       cleanupBossEncounterActors([boss], reason);
       cleanupBossEncounterActors([boss], reason === "death" ? "reset" : "death");
       expect(boss).toMatchObject({ cleanupReason: reason, introT: 0, state: "recover", stateT: 0,
-        vx: 0, vy: 0, atk: "unavailable", cinematicPose: "", cinematicT: 0, cinematicRequest: null });
+        vx: 0, vy: 0, atk: "idle", cinematicPose: "", cinematicT: 0, cinematicRequest: null });
       expect(boss.contactDamageEnabled()).toBe(false);
     }
   });

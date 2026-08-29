@@ -8,6 +8,7 @@ import type { RunPhase } from "../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
+import { WHITE_HART_PHASE_ATTACKS, type WhiteHartAttackId } from "../gameplay/entities/enemy-types/white-hart";
 
 export interface DebugLifecycle {
   readonly phase: RunPhase;
@@ -299,6 +300,24 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       if (boss === undefined) throw new Error("No live boss to damage");
       boss.hp = Math.max(1, Math.round(boss.maxHp * fraction));
       boss.hpDisplay = boss.hp;
+    },
+    /** PT3-C7 evidence fixture: chooses a real phase-local attack, then lets the ordinary live update author the result. */
+    prepareWhiteHartAttack(attack: WhiteHartAttackId) {
+      const boss = context.state.enemies().find((enemy) => enemy.bossId === "white-hart" && !enemy.dead) as
+        GameEnemy & { phase: 1 | 2 | 3; state: string; stateT: number; stateMax: number; attackCursor: number;
+          pendingEnvironmentRequests: unknown[]; routeTelegraph: readonly unknown[];
+          candidateRoutes: readonly (readonly unknown[])[] } | undefined;
+      const player = context.state.player();
+      if (boss === undefined || player === undefined) throw new Error("White Hart evidence requires its live encounter");
+      const phaseAttacks = WHITE_HART_PHASE_ATTACKS[boss.phase];
+      const cursor = phaseAttacks.indexOf(attack as never);
+      if (cursor < 0) throw new RangeError(`${attack} is not available in White Hart phase ${String(boss.phase)}`);
+      Object.assign(player, { x: context.width * 0.72, y: d.CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true, hp: Math.max(player.hp, 1_000) });
+      Object.assign(boss, { spawnT: 0, introT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        state: "idle", stateT: 0, stateMax: 0, atk: "idle", attackCursor: cursor,
+        pendingEnvironmentRequests: [], routeTelegraph: Object.freeze([]), candidateRoutes: Object.freeze([]) });
+      context.state.setProjectiles([]);
     },
     /** Journey-only: enter the normal player-death/outcome path on the next simulation tail. */
     defeatPlayer() {

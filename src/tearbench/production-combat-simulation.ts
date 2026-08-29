@@ -3,6 +3,7 @@ import { createTearCombatSimulation } from "../gameplay/runtime/tear-combat-simu
 import type { ProductionReplayWorld } from "./production-world-factory";
 import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
 import { bindLiveAuroraTrackActors } from "../app/live-aurora-track-wiring";
+import { bindLiveWhiteHartActors } from "../app/live-white-hart-wiring";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
   snapshot(tick: number, input: AuthoritativeInputState): State;
@@ -49,6 +50,10 @@ export function createProductionCombatSimulation<State>(
     { playerAcceleration: config.player.groundAccel, playerMaximumSpeed: config.player.moveSpeed,
       bladeAcceleration: config.blade.throw.speed, bladeMaximumSpeed: config.blade.throw.maxSpeed,
       projectileAcceleration: config.proj.speed, projectileMaximumSpeed: config.chargedShot.speed });
+  bindLiveWhiteHartActors(replay.world.context.environment,
+    () => replay.world.state.player() as never,
+    () => replay.world.state.enemies(),
+    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"));
   replay.world.context.environment.setAvailableActorIdsSource(() => new Set(["player", "blade",
     ...replay.world.state.enemies().map((enemy) => core.combatEntityRuntime.id(enemy, "enemy")),
     ...replay.world.state.projectiles().map((projectile) => core.combatEntityRuntime.id(projectile, "projectile"))]));

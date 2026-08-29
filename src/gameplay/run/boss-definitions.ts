@@ -58,7 +58,7 @@ export function bossPhaseMark(id: BossDefinitionId, index: 0 | 1): number {
 
 /** Transitional production authority: authored phase work removes ordinals as attacks become real. */
 export const ROOTBOUND_UNAVAILABLE_PHASE_ORDINALS = Object.freeze([2, 3] as const);
-export const WHITE_HART_UNAVAILABLE_PHASE_ORDINALS = Object.freeze([1, 2, 3] as const);
+export const WHITE_HART_UNAVAILABLE_PHASE_ORDINALS = Object.freeze([] as const);
 export function bossPhaseAttackAvailable(id: BossDefinitionId, phase: number): boolean {
   if (id === "rootbound") return !ROOTBOUND_UNAVAILABLE_PHASE_ORDINALS.some((ordinal) => ordinal === phase);
   if (id === "white-hart") return !WHITE_HART_UNAVAILABLE_PHASE_ORDINALS.some((ordinal) => ordinal === phase);

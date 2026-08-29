@@ -7,7 +7,8 @@ export interface EnvironmentPresentationSnapshot {
   readonly stageId: string;
   readonly fields: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; active: boolean; bounds: Readonly<{ minX: number; maxX: number; minY: number; maxY: number }>; direction?: -1 | 1; variant?: "stage" | "boss-wake" }>[];
   readonly combatObjects: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"]; integrityRatio: number; counterplayTags: readonly string[]; graftType?: GraftAnchorType; effect?: string; connectionGeometry?: EnvironmentSnapshot["combatObjects"][number]["geometry"]; rootCageId?: string; boundarySide?: RootCageBoundarySide; response?: RootCageResponse }>[];
-  readonly routes: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState; points: readonly Readonly<{ x: number; y: number }>[] }>[];
+  readonly routes: readonly Readonly<{ id: string; kind: string; state: EnvironmentObjectState;
+    points: readonly Readonly<{ x: number; y: number }>[]; direction?: -1 | 1; width?: number; threatening?: boolean }>[];
 }
 
 function bounds(geometry: Readonly<{ x: number; y: number; w?: number; h?: number }>) {
@@ -29,6 +30,10 @@ export function buildEnvironmentPresentationSnapshot(snapshot: EnvironmentSnapsh
       ...(isGraftAnchorState(object) ? { graftType: object.graftType, effect: object.effect, connectionGeometry: structuredClone(object.connectionGeometry) } : {}),
       ...(isRootCageState(object) ? { rootCageId: object.rootCageId, boundarySide: object.boundarySide, response: object.response } : {}),
     }))),
-    routes: Object.freeze(snapshot.routes.map((route) => Object.freeze({ id: route.id, kind: route.kind, state: route.state, points: Object.freeze(route.points.map((point) => Object.freeze({ x: point.x, y: point.y }))) }))),
+    routes: Object.freeze(snapshot.routes.map((route) => Object.freeze({ id: route.id, kind: route.kind,
+      state: route.state, points: Object.freeze(route.points.map((point) => Object.freeze({ x: point.x, y: point.y }))),
+      ...(route.kind === "ghost-track" ? { direction: route.direction, width: route.width,
+        threatening: route.threatening } : {}),
+    }))),
   });
 }

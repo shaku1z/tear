@@ -176,6 +176,9 @@ export interface TearObservedEnvironmentRouteV1 {
   readonly lifecycle?: Readonly<{ warningTicks: number; activeTicks: number; cooldownTicks: number }>;
   readonly sourceTrackId?: string | null;
   readonly maximumConcurrent?: number;
+  readonly damage?: number;
+  readonly threatening?: boolean;
+  readonly hitActorIds?: readonly string[];
 }
 
 export interface TearEnvironmentObservationV1 {

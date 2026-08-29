@@ -75,7 +75,7 @@ describe("C23 State Forge exit matrix", () => {
     expect(bosses.filter((entry) => entry.phase === 3)).toHaveLength(7);
     expect(bosses.filter((entry) => entry.boss === "rootbound").map((entry) => entry.phase)).toEqual([1, 2, 3]);
     expect(bosses.filter((entry) => entry.boss === "rootbound").map((entry) => entry.attack)).toEqual(["opening-commit", "unavailable", "unavailable"]);
-    expect(bosses.filter((entry) => entry.boss === "white-hart").map((entry) => entry.attack)).toEqual(["unavailable", "unavailable", "unavailable"]);
+    expect(bosses.filter((entry) => entry.boss === "white-hart").map((entry) => entry.attack)).toEqual(["opening-commit", "opening-commit", "opening-commit"]);
     expect(bosses.filter((entry) => entry.boss !== "rootbound" && entry.boss !== "white-hart")
       .every((entry) => entry.attack === "opening-commit")).toBe(true);
     expect(boundaries).toHaveLength(39);

@@ -268,7 +268,8 @@ export function projectEnvironmentHash(value: unknown): unknown {
       commonValue.points = Array.isArray(entry.points) ? entry.points.map((point) => ({ x: rounded(Number((point as Record<string, unknown>).x)), y: rounded(Number((point as Record<string, unknown>).y)) })) : [];
       if (entry.kind === "ghost-track") Object.assign(commonValue, { variant: entry.variant, direction: entry.direction,
         width: entry.width, lifecycle: entry.lifecycle, sourceTrackId: portableEnvironmentId(entry.sourceTrackId ?? null, remapping),
-        maximumConcurrent: entry.maximumConcurrent });
+        maximumConcurrent: entry.maximumConcurrent, damage: entry.damage, threatening: entry.threatening,
+        hitActorIds: Array.isArray(entry.hitActorIds) ? entry.hitActorIds.map((id) => portableEnvironmentId(id, remapping)) : [] });
     }
     return Object.freeze(commonValue);
     });
@@ -302,7 +303,8 @@ export function environmentSnapshotToObservation(value: unknown): TearEnvironmen
     })),
     routes: (projection.routes as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, points: entry.points, state: entry.state, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}),
       ...(entry.kind === "ghost-track" ? { variant: entry.variant, direction: entry.direction, width: entry.width,
-        lifecycle: entry.lifecycle, sourceTrackId: entry.sourceTrackId, maximumConcurrent: entry.maximumConcurrent } : {}) })),
+        lifecycle: entry.lifecycle, sourceTrackId: entry.sourceTrackId, maximumConcurrent: entry.maximumConcurrent,
+        damage: entry.damage, threatening: entry.threatening, hitActorIds: entry.hitActorIds } : {}) })),
   }) as TearEnvironmentObservationV1;
 }
 

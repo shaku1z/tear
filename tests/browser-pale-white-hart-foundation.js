@@ -8,7 +8,7 @@ function bossSnapshot(page) {
     .find((enemy) => enemy.bossId === "white-hart"));
 }
 
-withJourney({ name: "Pale PT3-C6 White Hart foundation", port: 8356 }, async ({ page, buildInfo }) => {
+withJourney({ name: "Pale PT3-C7 White Hart foundation regression", port: 8356 }, async ({ page, buildInfo }) => {
   await page.evaluate(() => window.__PANTHEON_TEST.startBoss("white-hart", "normal"));
   await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
     .some((enemy) => enemy.bossId === "white-hart"), undefined, { timeout: 10_000 });
@@ -25,10 +25,10 @@ withJourney({ name: "Pale PT3-C6 White Hart foundation", port: 8356 }, async ({ 
   const initial = await bossSnapshot(page);
   assert.equal(initial.kind, "white-hart");
   assert.equal(initial.phase, 1);
-  assert.equal(initial.atk, "unavailable");
+  assert.notEqual(initial.atk, "unavailable");
 
   const directory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints",
-    "pale-traverse", "PT3-C6", "white-hart-foundation");
+    "pale-traverse", "PT3-C7", "white-hart-foundation-regression");
   fs.mkdirSync(directory, { recursive: true });
   const phaseOneFile = "phase-1-intro-released-1600x900.png";
   await page.screenshot({ path: path.join(directory, phaseOneFile) });
@@ -38,7 +38,7 @@ withJourney({ name: "Pale PT3-C6 White Hart foundation", port: 8356 }, async ({ 
     .find((enemy) => enemy.bossId === "white-hart")?.phaseMarker === 2, undefined, { timeout: 5_000 });
   const phaseTwo = await bossSnapshot(page);
   assert.equal(phaseTwo.phaseMarker, 2);
-  assert.equal(phaseTwo.atk, "unavailable");
+  assert.notEqual(phaseTwo.atk, "unavailable");
   const phaseTwoFile = "phase-2-foundation-1600x900.png";
   await page.screenshot({ path: path.join(directory, phaseTwoFile) });
 
@@ -50,7 +50,7 @@ withJourney({ name: "Pale PT3-C6 White Hart foundation", port: 8356 }, async ({ 
     .find((enemy) => enemy.bossId === "white-hart")?.phaseMarker === 3, undefined, { timeout: 5_000 });
   const phaseThree = await bossSnapshot(page);
   assert.equal(phaseThree.phaseMarker, 3);
-  assert.equal(phaseThree.atk, "unavailable");
+  assert.notEqual(phaseThree.atk, "unavailable");
   const phaseThreeFile = "phase-3-accessible-foundation-1600x900.png";
   await page.screenshot({ path: path.join(directory, phaseThreeFile) });
 
@@ -68,10 +68,10 @@ withJourney({ name: "Pale PT3-C6 White Hart foundation", port: 8356 }, async ({ 
     format: "tear-pale-pt3-c6-white-hart-foundation-browser-evidence", schemaVersion: 1,
     engineeringOnly: true, certifying: false, build: buildInfo,
     mode: "bossonly", bossId: "white-hart", stageId: "pale-traverse",
-    factoryKind: initial.kind, observedPhases: [1, 2, 3], attacksAvailable: false,
+    factoryKind: initial.kind, observedPhases: [1, 2, 3], attacksAvailable: true,
     resultPath: "defeat", retryRestoredBoss: true,
     screenshots: [phaseOneFile, phaseTwoFile, phaseThreeFile],
     accessibilityProfile: { highContrast: true, reducedMotion: true, lowGraphics: true, flashScale: 0, audioEnabled: false },
   }, null, 2)}\n`);
-  console.log(`Pale PT3-C6 White Hart foundation passed at ${buildInfo.sha}`);
+  console.log(`Pale PT3-C7 White Hart foundation regression passed at ${buildInfo.sha}`);
 }).catch((error) => { console.error(error); process.exit(1); });

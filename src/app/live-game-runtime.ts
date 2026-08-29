@@ -40,6 +40,7 @@ import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-ses
 import { createLiveHumanCalibrationCaptureComposition } from "./live-human-calibration-capture-composition";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller";
 import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch"; import { bindLiveBloomWellActors } from "./live-bloom-well-wiring"; import { bindLiveAuroraTrackActors } from "./live-aurora-track-wiring";
+import { bindLiveWhiteHartActors } from "./live-white-hart-wiring"; import { projectLiveCanonicalEnemy } from "./live-canonical-enemy-projection";
 import { LiveGhostPublicationController } from "./live-ghost-publication-controller"; import { LiveGhostSupportController } from "./live-ghost-support-controller";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, ghostPublication, lerp, weaponCapsuleIntersectsSegment } = dependencies;
@@ -202,7 +203,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   // player, blade, actors, and run while the session retains menu-time state.
   const productionWorld = createLiveProductionWorld({ dependencies, configuration, worldId: "live-production" });
   const { session, world } = productionWorld;
-  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector, environment } = world; browserWindow.addEventListener("pagehide", (event) => { if (!event.persisted) world.dispose(); }); bindLiveBloomWellActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveAuroraTrackActors(environment, livePlayer, liveBlade, () => hostState.enemies(), () => hostState.projectiles(), (enemy) => combatRuntime.id(enemy, "enemy"), (projectile) => combatRuntime.id(projectile, "projectile"), { playerAcceleration: CONFIG.player.groundAccel, playerMaximumSpeed: CONFIG.player.moveSpeed, bladeAcceleration: CONFIG.blade.throw.speed, bladeMaximumSpeed: CONFIG.blade.throw.maxSpeed, projectileAcceleration: CONFIG.proj.speed, projectileMaximumSpeed: CONFIG.chargedShot.speed }); bindLiveRootbinderActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveRootboundActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy"));
+  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector, environment } = world; browserWindow.addEventListener("pagehide", (event) => { if (!event.persisted) world.dispose(); }); bindLiveBloomWellActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveAuroraTrackActors(environment, livePlayer, liveBlade, () => hostState.enemies(), () => hostState.projectiles(), (enemy) => combatRuntime.id(enemy, "enemy"), (projectile) => combatRuntime.id(projectile, "projectile"), { playerAcceleration: CONFIG.player.groundAccel, playerMaximumSpeed: CONFIG.player.moveSpeed, bladeAcceleration: CONFIG.blade.throw.speed, bladeMaximumSpeed: CONFIG.blade.throw.maxSpeed, projectileAcceleration: CONFIG.proj.speed, projectileMaximumSpeed: CONFIG.chargedShot.speed }); bindLiveRootbinderActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveRootboundActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveWhiteHartActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy"));
   // One world owns the transient records read by combat, State Forge, and diagnostics.
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening; const ghostPracticeSession = createLiveGhostPracticeSessionState();
   const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];
@@ -537,10 +538,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     authoritative: {
       actionPort: liveInputAdapter.actionPort,
       snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
-        hostState.enemies().map((enemy) => ({
-          ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId,
-          x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
-        })), environment.snapshot()),
+        hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot()),
     },
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
@@ -550,7 +548,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const captureGhostAuthoritativeReceipt = (tick: number): void => {
     if (ghostV3?.active !== true) return;
     const result = authoritativeStep.lastResult;
-    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map((enemy) => ({ ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead })), environment.snapshot()));
+    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(
+      tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(),
+      hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot()));
     ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot()));
   };
   GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick); environment.setAvailableActorIdsSource(() => new Set([stageRuntime.current.id, "player", "blade", ...hostState.enemies().map((enemy) => combatRuntime.id(enemy, "enemy")), ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile"))]));

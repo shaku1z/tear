@@ -38,6 +38,7 @@ function copyCombatObject(value: EnvironmentCombatObjectState): EnvironmentComba
 function copyRoute(value: EnvironmentRouteState): EnvironmentRouteState {
   return Object.freeze({ ...value, points: Object.freeze(value.points.map((point) => Object.freeze({ ...point }))),
     ...(value.lifecycle === undefined ? {} : { lifecycle: Object.freeze({ ...value.lifecycle }) }),
+    ...(value.hitActorIds === undefined ? {} : { hitActorIds: Object.freeze([...value.hitActorIds]) }),
   });
 }
 

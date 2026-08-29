@@ -97,8 +97,9 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
       assert.equal(attacking.phase, 1, "Rootbound must begin in its authored first phase");
       assert.match(attacking.atk, /^vine-sweep:/u, "Rootbound must reach its first authored attack transition");
     } else if (bossId === "white-hart") {
-      assert.equal(after.phase, 1, "White Hart foundation must begin in phase one");
-      assert.equal(after.atk, "unavailable", "White Hart attacks remain explicit until PT3-C7");
+      assert.equal(after.phase, 1, "White Hart must begin in phase one");
+      assert.ok(["antler-run", "snowbound-leap", "aurora-volley", "backtrail-kick", "idle"]
+        .includes(after.atk), "White Hart must remain inside its authored Phase I attack set");
     } else assert.ok(distance(before, after) > 1, `${bossId} must leave its arrival pose after its intro`);
     if (bossId === "echo") assert.equal(after.live, true, "the Echo mirror brain must be live");
   }
