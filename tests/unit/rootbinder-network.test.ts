@@ -149,7 +149,24 @@ describe("Rootbinder shared environment network", () => {
     const secondIds = runtime.combatObjects().filter((object) => object.state === "active").map((object) => object.id);
     expect(firstIds).toHaveLength(2);
     expect(secondIds).toHaveLength(2);
+    expect(runtime.combatObjects()).toHaveLength(2);
     expect(new Set([...firstIds, ...secondIds]).size).toBe(4);
+  });
+
+  it("bounds retained terminal relationships when targets churn during one linked phase", () => {
+    const runtime = createEnvironmentRuntime({ worldId: "world-a", stageId: "stage-1" });
+    let targetGeneration = 0;
+    const rootState = createRootbinderState({ id: "rootbinder-churn", worldId: "world-a", stageId: "stage-1", x: 0, y: 0 });
+    runtime.setRootbinderActorsSource(() => [{
+      id: rootState.id,
+      state: { ...rootState, state: "linked" as const, transitionTick: 1_000 },
+      candidates: [candidate(`ally-a-${String(targetGeneration)}`), candidate(`ally-b-${String(targetGeneration)}`)],
+    }]);
+    for (let tick = 1; tick <= 40; tick += 1) {
+      runtime.step(tick, 1 / 120, () => undefined);
+      targetGeneration += 1;
+      expect(runtime.combatObjects().length).toBeLessThanOrEqual(4);
+    }
   });
 
   it("rebinds retained restore relationships without duplicating them and resets generation on clear", () => {

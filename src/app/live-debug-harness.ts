@@ -118,6 +118,26 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       Object.assign(boss, { spawnT: 0, introT: 0,
         ...(id === "echo" ? { _live: true, spawnClone: true } : { spawnAdds: true }) });
     },
+    /** Bounded performance fixture composed through the production entity factory and live environment bindings. */
+    prepareVerdantPerformanceScenario() {
+      prepareCurrentGameplay();
+      const run = runOf(context.state);
+      const player = context.state.player();
+      const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === "rootbound" && !enemy.dead);
+      if (player === undefined || boss === undefined) throw new Error("Verdant performance requires the live Rootbound encounter");
+      const phase = (boss as GameEnemy & { readonly phase?: number }).phase;
+      if (phase !== 2) throw new Error(`Verdant performance requires Rootbound phase two, received ${String(phase)}`);
+      const groundY = d.CONFIG.world.groundY;
+      const additions = [
+        context.entities.createEnemy("rootbinder", 520, groundY - d.CONFIG.rootbinder.h / 2, run),
+        context.entities.createEnemy("charger", 760, groundY - d.CONFIG.enemy.h / 2, run),
+        context.entities.createEnemy("ranged", 940, groundY - d.CONFIG.ranged.h / 2, run),
+      ];
+      for (const enemy of additions) Object.assign(enemy, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0 });
+      player.hp = Math.max(player.hp, 1_000);
+      context.state.setEnemies([boss, ...additions]);
+      context.state.setProjectiles([]);
+    },
     /** Exact-tick parity fixture: author one Charger after the run exists, before its next step. */
     prepareEnemyParityScenario() {
       const player = context.state.player();

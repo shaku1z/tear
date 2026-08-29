@@ -336,6 +336,11 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     return `${ownerId}:${kind}:g${String(generation)}`;
   }
 
+  #pruneTerminalRootbinderRelationships(ownerId: string): void {
+    for (const object of [...this.combatObjects()]) if (object.kind === "root-link" && object.ownerId === ownerId
+      && (object.state === "destroyed" || object.state === "expired")) this.removeCombatObject(object.id);
+  }
+
   #refreshNetworkSegment(segment: EnvironmentCombatObjectState, actor: RootbinderEnvironmentActor, candidate: RootbinderCandidate, tick: number, seconds: number): boolean {
     if (segment.state === "destroyed" || segment.state === "expired") return false;
     const valid = isRootbinderLineValid({ worldId: this.worldId, stageId: this.stageId, targetWorldId: candidate.worldId, targetStageId: candidate.stageId,
@@ -367,6 +372,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       present.add(actor.id);
       const existing = this.#rootbinderNetworks.get(actor.id);
       if (actor.state.state === "linked" && existing === undefined) {
+        this.#pruneTerminalRootbinderRelationships(actor.id);
         const segments = installRootNetwork(this, {
           id: this.#nextRootbinderId(actor.id, "network"), worldId: this.worldId, stageId: this.stageId,
           ownerId: actor.id, sourceX: actor.state.x, sourceY: actor.state.y,
@@ -403,6 +409,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       }, actor.candidates).length > 0;
       if (!usefulNetwork && player !== undefined && player.alive && (actor.state.state === "link-warning" || actor.state.state === "linked")) {
         if (leashId === undefined && this.#rootbinderLeashes.size < actor.state.tuning.maxPlayerLeashes) {
+          this.#pruneTerminalRootbinderRelationships(actor.id);
           const leash = createElasticLeash({ id: this.#nextRootbinderId(actor.id, "leash"), worldId: this.worldId, stageId: this.stageId,
             sourceId: actor.id, playerId: player.id, sourceX: actor.state.x, sourceY: actor.state.y,
             playerX: player.x, playerY: player.y, radius: actor.state.tuning.leashRadius, tuning: actor.state.tuning });
