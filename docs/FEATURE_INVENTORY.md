@@ -539,7 +539,17 @@ This is the migration checklist for the architectural redesign. A checked featur
   caps, difficulty scaling, player damage, concurrency, environment bounds,
   wave-49 draft/heal flow, and the White Hart wave-50 boss reward. Echo and
   Source relocation values remain unchanged comparison data for C22; full-mode
-  and durable-data integration remains PT3-C9.
+  and durable-data integration remains PT3-C9. PT3-C9 proves Campaign,
+  Endless, Gauntlet, Boss Test, Playground, and Enemy Test through the existing
+  planner/catalog paths while Tutorial remains Charger/Ranged-only. Pale and
+  White Hart ownership clears across reset, retry, quit, defeat, victory,
+  stage transition, mode change, restore failure, and disposal. The exact
+  seven-stage engineering ruleset is now distinct from the retained six-stage
+  identity; stable Pale stage facts preserve legacy numeric events, profile v2
+  retains Pale and unknown data without migration, and authoritative stage/
+  Aurora facts use the existing telemetry mapper. White Hart continues through
+  generic boss/no-hit achievement accounting; bespoke achievements remain a
+  deferred C22 decision. Publication remains fail-closed.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference

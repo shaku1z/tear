@@ -255,12 +255,12 @@ stage balance decisions reserved for later integration authorization.
 
 ## Subgoals
 
-- [ ] Prove Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test paths; preserve Tutorial isolation.
-- [ ] Add only approved White Hart/Pale achievements and authoritative telemetry facts; leave unmeasurable ideas deferred.
-- [ ] Define the seven-stage engineering replay/ruleset identity and stable stage-event compatibility.
-- [ ] Add profile migration only if durable schema change is required; otherwise prove v2 compatibility and unknown-data retention.
-- [ ] Prove reset, retry, quit, defeat, victory, stage transition, mode change, restore failure, and disposal cleanup.
-- [ ] Keep feature-branch profile/reference state non-publishable.
+- [x] Prove Campaign, Endless, Gauntlet, Boss Test, Playground, and Enemy Test paths; preserve Tutorial isolation.
+- [x] Add only approved White Hart/Pale achievements and authoritative telemetry facts; leave unmeasurable ideas deferred.
+- [x] Define the seven-stage engineering replay/ruleset identity and stable stage-event compatibility.
+- [x] Add profile migration only if durable schema change is required; otherwise prove v2 compatibility and unknown-data retention.
+- [x] Prove reset, retry, quit, defeat, victory, stage transition, mode change, restore failure, and disposal cleanup.
+- [x] Keep feature-branch profile/reference state non-publishable.
 
 ## Exit
 
@@ -305,14 +305,14 @@ dispatch, deployment, or C40 claim has occurred.
 
 ```text
 PROGRAM: Pale Traverse Revision 3
-STATUS: ACTIVE — PT3-C9 IN PROGRESS
-CURRENT CHECKPOINT: PT3-C9
-CURRENT SUBGOAL: PT3-C9-S1
+STATUS: ACTIVE — PT3-C10 IN PROGRESS
+CURRENT CHECKPOINT: PT3-C10
+CURRENT SUBGOAL: PT3-C10-S1
 SOURCE FOUNDATION: Verdant C21 freeze 25c589844ec2cfe85a8a6deead881ebb3d699198
-LAST GREEN CHECKPOINT: PT3-C8 at 9fa3ea8009c9ccc4b1e22f6617e089db676916a2
-LAST EVIDENCE: the source-owned Pale curve and bounded composition cover waves 41–49, Charger makes Rime Runner naturally reachable, White Hart owns wave 50, and 12 focused files / 65 tests plus clean reference/build/browser gates pass
+LAST GREEN CHECKPOINT: PT3-C9 at 11e7f88b9002f76314a2b433808831825c582abc
+LAST EVIDENCE: all current modes, nine lifecycle boundaries, authoritative Pale telemetry, seven-stage replay identity, schema-v2 retention, and publication isolation pass 17 focused files / 92 tests plus clean reference/build/browser gates
 BLOCKERS: none
-NEXT ACTION: prove every current run mode, lifecycle cleanup path, and v2 durable-data boundary with Pale present while keeping feature-branch state non-publishable
+NEXT ACTION: complete exact source-derived Pale reference projections and TearBench scenario/evidence closure without dispatch or certification overclaim
 PUBLICATION: prohibited
 JOINT INTEGRATION: not authorized
 MUSIC/WIKI/DEPLOYMENT: not authorized
