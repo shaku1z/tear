@@ -13,6 +13,7 @@ function liveBossRuntime() {
     colossus: harness.types.Colossus,
     aldric: harness.types.Aldric,
     rootbound: harness.types.Rootbound,
+    "white-hart": harness.types.WhiteHart,
     echo: harness.types.Echo,
     source: harness.types.Source,
   } as const;

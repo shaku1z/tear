@@ -13,12 +13,13 @@ const expected = [
   { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
   { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
   { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
+  { id: "white-hart", name: "The White Hart", stageId: "pale-traverse", phaseMarks: [0.65, 0.28] },
   { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
   { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
 ] as const;
 
 describe("authored boss reference", () => {
-  it("is the frozen six-entry identity and phase authority", () => {
+  it("is the frozen seven-entry identity and phase authority", () => {
     expect(BOSS_DEFINITIONS).toEqual(expected.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks })));
     expect(Object.isFrozen(BOSS_DEFINITIONS)).toBe(true);
     for (const definition of BOSS_DEFINITIONS) expect(Object.isFrozen(definition.phaseMarks)).toBe(true);
@@ -68,6 +69,7 @@ describe("authored boss reference", () => {
       colossus: harness.types.Colossus,
       aldric: harness.types.Aldric,
       rootbound: harness.types.Rootbound,
+      "white-hart": harness.types.WhiteHart,
       echo: harness.types.Echo,
       source: harness.types.Source,
     } as const;

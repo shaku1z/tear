@@ -37,7 +37,7 @@ export interface EnemyPresentationDependencies {
   lerp: (from: number, to: number, amount: number) => number;
 }
 
-export type EnemyClassName = "Enemy" | "Charger" | "Ranged" | "Flyer" | "Bomber" | "Armored" | "Boss" | "Support" | "Wraith" | "Chimera" | "Rimehound" | "Warden" | "Colossus" | "Aldric" | "Echo" | "VoidWisp" | "Source" | "Rootbound";
+export type EnemyClassName = "Enemy" | "Charger" | "Ranged" | "Flyer" | "Bomber" | "Armored" | "Boss" | "Support" | "Wraith" | "Chimera" | "Rimehound" | "Warden" | "Colossus" | "Aldric" | "Echo" | "VoidWisp" | "Source" | "Rootbound" | "WhiteHart";
 type EnemyInstance<K extends EnemyClassName> = InstanceType<EnemyTypes[K]>;
 interface RenderMethods {
   drawHpBar(context: CanvasRenderingContext2D): void;

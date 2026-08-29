@@ -42,6 +42,7 @@ function createBoss(id: FactoryBossId): ReturnType<typeof createEnemyHarness> & 
     colossus: harness.types.Colossus,
     aldric: harness.types.Aldric,
     rootbound: harness.types.Rootbound,
+    "white-hart": harness.types.WhiteHart,
     echo: harness.types.Echo,
     source: harness.types.Source,
   } as const;
@@ -68,7 +69,7 @@ describe("boss phase conformance", () => {
       expect(boss.presentationId, entry.id).toBe(entry.id);
     }
     const campaignOrder = STAGES.map((stage) => stage.boss);
-    expect(campaignOrder).toEqual(["warden", "colossus", "aldric", "rootbound", "echo", "source"]);
+    expect(campaignOrder).toEqual(["warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source"]);
     expect(campaignOrder.filter((id) => BOSS_ROSTER.some((boss) => boss.id === id)))
       .toEqual(BOSS_ROSTER.map((boss) => boss.id));
     expect(campaignOrder.at(-1)).toBe("source");

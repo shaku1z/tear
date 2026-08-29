@@ -33,6 +33,7 @@ export interface TearWorldLegacyEntityConstructorPorts<
     colossus: (x: number, y: number) => Enemy;
     aldric: (x: number, y: number) => Enemy;
     rootbound: (x: number, y: number) => Enemy;
+    whiteHart: (x: number, y: number) => Enemy;
     rimehound: (x: number, y: number) => Enemy;
     echo: (x: number, y: number, mods: EchoMods) => Enemy;
     source: (x: number, y: number) => Enemy;
@@ -67,6 +68,7 @@ export function createTearWorldLegacyEntityConstruction<
       chimera: { create: ports.enemy.chimera }, warden: { create: ports.enemy.warden },
       colossus: { create: ports.enemy.colossus }, aldric: { create: ports.enemy.aldric },
       rootbound: { create: ports.enemy.rootbound },
+      "white-hart": { create: ports.enemy.whiteHart },
       rimehound: { create: ports.enemy.rimehound },
       echo: { create: (x, y, run) => ports.enemy.echo(x, y, ports.echoMods(run)) },
       source: { create: ports.enemy.source }, "void-wisp": { create: ports.enemy.voidWisp },

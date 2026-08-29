@@ -12,6 +12,7 @@ import { createRimehoundType } from "./enemy-types/rimehound";
 import { createSpecialEnemyTypes } from "./enemy-types/special-enemies";
 import { createThroneFireRuntime } from "./enemy-types/throne-fire";
 import { createWardenType } from "./enemy-types/warden";
+import { createWhiteHartType } from "./enemy-types/white-hart";
 import type { EnemyDependencies } from "./enemy-contracts";
 
 function createEnemyTypes(dependencies: EnemyDependencies) {
@@ -30,10 +31,11 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const Source = createSourceType(dependencies, Enemy, bossRuntime, throneFireRuntime);
   const Rootbound = createRootboundType(dependencies, Enemy, bossRuntime);
   const Rimehound = createRimehoundType(dependencies, Enemy);
+  const WhiteHart = createWhiteHartType(dependencies, Enemy);
 
   return Object.freeze({
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,
-    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, Wraith,
+    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, WhiteHart, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   });
 }

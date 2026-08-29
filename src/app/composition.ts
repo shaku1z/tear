@@ -129,7 +129,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   });
   const {
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo,
-    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, Wraith,
+    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, WhiteHart, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
@@ -203,7 +203,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, Rimehound, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
-    VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, Wraith,
+    VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, WhiteHart, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,
     clamp, cosmeticRandom, createRunSeed, drawBossTransformationWorld, len, lerp,
     newMods, nextTierDesc, rollAffixes, rollUpgrades, rollVariant, segCircle,

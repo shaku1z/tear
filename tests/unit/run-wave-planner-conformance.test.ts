@@ -64,13 +64,14 @@ function options(overrides: Partial<PlanNextWaveOptions> = {}): PlanNextWaveOpti
 describe("wave planning conformance", () => {
   it("maps every campaign stage to its canonical boss and complete local pool", () => {
     expect(STAGE_INPUT.map((stage) => stage.boss)).toEqual([
-      "warden", "colossus", "aldric", "rootbound", "echo", "source",
+      "warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source",
     ]);
     expect(STAGE_INPUT.map((stage) => stage.pool.map((entry) => entry.kind))).toEqual([
       ["charger", "ranged", "bomber", "armored"],
       ["armored", "bomber", "charger", "ranged", "anchor"],
       ["charger", "flyer", "bomber", "herald", "chimera"],
       ["flyer", "ranged", "charger", "rootbinder", "mender", "anchor", "armored", "chimera"],
+      ["rimehound", "ranged", "flyer", "armored", "bomber", "wraith", "anchor", "chimera"],
       ["wraith", "flyer", "ranged", "priest", "chimera", "mender"],
       ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "herald", "anchor", "priest", "mender"],
     ]);
@@ -175,17 +176,17 @@ describe("wave planning conformance", () => {
 
   it("preserves gauntlet boss cadence and boss roster wrapping", () => {
     const boss = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 7, biomeIdx: 1, bossIdx: 5 }),
+      state: state({ mode: "gauntlet", wave: 7, biomeIdx: 1, bossIdx: 6 }),
     }));
-    expect(boss.state).toMatchObject({ wave: 8, isBossWave: true, curBoss: "source", bossIdx: 6, waveTag: "The Source" });
+    expect(boss.state).toMatchObject({ wave: 8, isBossWave: true, curBoss: "source", bossIdx: 7, waveTag: "The Source" });
     expect(boss.state.spawnQueue).toEqual([{ type: "boss" }]);
 
     const wrappedA = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 6 }),
+      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 7 }),
       random: new SeededRandom("wrap"),
     }));
     const wrappedB = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 6 }),
+      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 7 }),
       random: new SeededRandom("wrap"),
     }));
     expect(wrappedA.state.bossOrder).toEqual(wrappedB.state.bossOrder);
@@ -259,7 +260,7 @@ describe("wave planning conformance", () => {
       }
     }
     expect(kinds).toEqual(new Set([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder", "rimehound",
     ]));
   });
 });

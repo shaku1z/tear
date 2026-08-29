@@ -33,7 +33,7 @@ function fixtureDependencies(calls: ConstructorCall[]): LiveWorldEntityDependenc
     Player: FixturePlayer, Blade: FixtureBlade, Projectile: FixtureProjectile,
     Charger: enemy("charger"), Ranged: enemy("ranged"), Flyer: enemy("flyer"), Bomber: enemy("bomber"),
     Armored: enemy("armored"), Wraith: enemy("wraith"), Chimera: enemy("chimera"), Warden: enemy("warden"),
-    Colossus: enemy("colossus"), Aldric: enemy("aldric"), Rootbound: enemy("rootbound"), Rimehound: enemy("rimehound"), MirrorHost: enemy("echo"), Source: enemy("source"),
+    Colossus: enemy("colossus"), Aldric: enemy("aldric"), Rootbound: enemy("rootbound"), WhiteHart: enemy("white-hart"), Rimehound: enemy("rimehound"), MirrorHost: enemy("echo"), Source: enemy("source"),
     VoidWisp: enemy("void-wisp"), ReflectionEnemy: enemy("reflection"), Support: enemy("support"), Rootbinder: enemy("rootbinder"), Boss: enemy("boss"),
   } as unknown as LiveWorldEntityDependencies;
 }
@@ -55,7 +55,7 @@ describe("live world entity factory", () => {
 
     expect(calls.map((call) => call.kind)).toEqual([
       "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera",
-      "warden", "colossus", "aldric", "rootbound", "echo", "source", "void-wisp", "reflection",
+      "warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source", "void-wisp", "reflection",
       "support", "support", "support", "support", "rootbinder", "rimehound", "boss",
     ]);
     expect(calls.every((call) => call.x === 40 && call.y === 50)).toBe(true);

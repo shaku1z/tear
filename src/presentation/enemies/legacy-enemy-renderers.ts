@@ -6,6 +6,7 @@ import type { EnemyPresentationDependencies } from "./renderers/enemy-renderer-t
 import { installSourceRenderer } from "./renderers/source-renderer";
 import { installRootboundRenderer } from "./renderers/rootbound-renderer";
 import { installRimehoundRenderer } from "./renderers/rimehound-renderer";
+import { installWhiteHartRenderer } from "./renderers/white-hart-renderer";
 import { installStandardEnemyRenderers } from "./renderers/standard-renderers";
 import { installWardenColossusRenderers } from "./renderers/warden-colossus-renderers";
 
@@ -21,6 +22,7 @@ export function createLegacyEnemyPresentation(dependencies: EnemyPresentationDep
     installSourceRenderer(types, runtime);
     installRootboundRenderer(types, runtime);
     installRimehoundRenderer(types, runtime);
+    installWhiteHartRenderer(types, runtime);
   }
   return Object.freeze({ install, drawBossTransformationWorld: runtime.drawBossTransformationWorld });
 }

@@ -102,6 +102,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     activateStageEnvironment(options.environment, stageId, options.authoritativeResult()?.tick ?? 0, reason);
   };
   const loadTransitionStage = (index: number): void => {
+    cleanupBossEncounterActors(options.enemies(), "stage-transition");
     options.controllers.api.loadStage(index);
     setEnvironmentStage(index, "stage-transition");
   };
@@ -166,7 +167,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
     environment: options.environment,
     run: options.run, player: options.player, stageIndex: () => stage.index,
-    loadStage: (index) => { stage.load(index); setEnvironmentStage(index, "stage-transition"); }, authoritativeResult: options.authoritativeResult,
+    loadStage: (index) => { cleanupBossEncounterActors(options.enemies(), "stage-transition"); stage.load(index); setEnvironmentStage(index, "stage-transition"); }, authoritativeResult: options.authoritativeResult,
     setLastRecording: options.setLastRecording, setLastVaultId: options.setLastVaultId,
     setOutcome: options.setOutcome, selectedWeapon: () => options.state.selectedWeapon(),
     selectWeapon: (weapon) => { options.state.setSelectedWeapon(weapon); },

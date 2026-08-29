@@ -23,7 +23,7 @@ export interface BossEncounterEnemy {
   bossId?: string | null;
 }
 
-export type BossEncounterCleanupReason = "death" | "reset" | "retry" | "exit" | "restore";
+export type BossEncounterCleanupReason = "death" | "reset" | "retry" | "exit" | "stage-transition" | "restore";
 export interface BossEncounterCleanupActor {
   readonly isBoss?: boolean;
   cleanupEncounter?(reason: BossEncounterCleanupReason): void;

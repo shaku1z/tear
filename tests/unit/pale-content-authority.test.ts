@@ -24,14 +24,15 @@ describe("Pale Revision 3 content authority", () => {
     expect(WHITE_HART_PROVISIONAL_DEFINITION).toMatchObject({ id: "white-hart", name: "The White Hart" });
   });
 
-  it("promotes only the completed Rimehound subject while stage and boss remain unavailable", () => {
-    expect(CAMPAIGN_STAGE_IDS).not.toContain("pale-traverse");
-    expect(STAGES.some((stage) => stage.id === "pale-traverse")).toBe(false);
+  it("promotes the completed stage, enemy, and White Hart foundation through existing catalogs", () => {
+    expect(CAMPAIGN_STAGE_IDS).toContain("pale-traverse");
+    expect(STAGES.some((stage) => stage.id === "pale-traverse")).toBe(true);
     expect(ENEMY_KIND_IDS).not.toContain("rimehound");
     expect(TEAR_WORLD_ENTITY_FACTORY_IDS).toContain("rimehound");
-    expect(BOSS_DEFINITIONS.map((boss) => boss.id)).not.toContain("white-hart");
-    expect(BOSS_ROSTER.map((boss) => boss.id)).not.toContain("white-hart");
-    expect(BOSS_FACTORY_IDS).not.toContain("white-hart");
+    expect(BOSS_DEFINITIONS.map((boss) => boss.id)).toContain("white-hart");
+    expect(BOSS_ROSTER.map((boss) => boss.id)).toContain("white-hart");
+    expect(BOSS_FACTORY_IDS).toContain("white-hart");
+    expect(TEAR_WORLD_ENTITY_FACTORY_IDS).toContain("white-hart");
   });
 
   it("keeps production evidence routes absent until their subjects exist", () => {

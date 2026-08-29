@@ -222,6 +222,8 @@ const CONFIG = {
     stompCd: 3.2, stompWindup: 0.55, stompRange: 400, shockSpeed: 560, shockDmg: 16, shockR: 15 },
   // boss: large, multi-phase (very heavy -> barely flinchable)
   boss: { w: 118, h: 118, hp: 2500, speed: 70, contactDmg: 20, knockbackTaken: 0.6, weight: 6, fireBase: 2.0 },
+  // White Hart: low quadruped foundation; PT3-C7 owns its route-first attack tuning.
+  whiteHart: { w: 190, h: 104, hp: 2500, speed: 190, contactDmg: 20, knockbackTaken: 0.6, weight: 6 },
 
   // LIVING ARENAS: elevated boss terrain is temporary movement opportunity,
   // never permanent shelter. Collision is removed while broken/reforming and

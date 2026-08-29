@@ -131,6 +131,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
     Chimera: factories.enemyTypes.Chimera, Warden: factories.enemyTypes.Warden, Colossus: factories.enemyTypes.Colossus,
     Aldric: factories.enemyTypes.Aldric, Rootbound: factories.enemyTypes.Rootbound,
+    WhiteHart: factories.enemyTypes.WhiteHart,
     Rimehound: factories.enemyTypes.Rimehound,
     Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
     VoidWisp: factories.enemyTypes.VoidWisp, Boss: factories.enemyTypes.Boss,

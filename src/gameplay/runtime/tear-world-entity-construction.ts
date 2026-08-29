@@ -5,7 +5,7 @@
  */
 export const TEAR_WORLD_ENTITY_FACTORY_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera",
-  "warden", "colossus", "aldric", "rootbound", "echo", "source", "void-wisp", "reflection",
+  "warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source", "void-wisp", "reflection",
   "priest", "herald", "mender", "anchor", "rootbinder", "rimehound", "boss",
 ] as const);
 
