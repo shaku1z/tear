@@ -5,6 +5,7 @@ import { applyVariant, findVariant, PALE_VARIANT_IDS, resolveDiscoveredVariantId
   type VariantEnemy, type VariantSelectionContext } from "../../src/gameplay/variants";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
+import { PALE_VARIANT_STATE_FORGE_SCENARIOS } from "../../src/tearbench/pale-state-forge-scenarios";
 import { createEnemyHarness, createStandardActor, updateActor } from "./enemy-test-harness";
 
 const random = { next: () => 0.999 };
@@ -82,8 +83,8 @@ describe("Pale variant selection contract", () => {
   });
 
   it("round-trips every Pale identity through the production State Forge boundary", () => {
-    for (const [kind, id] of PALE_FAMILIES) {
-      const composition = createProductionGhostReplayComposition({ seed: `pale-${id}-restore`, mode: "endless" });
+    for (const { family: kind, variantId: id, seed } of PALE_VARIANT_STATE_FORGE_SCENARIOS) {
+      const composition = createProductionGhostReplayComposition({ seed, mode: "endless" });
       const source = composition.create(undefined);
       const actor = source.replay.world.entities.createEnemy(kind, 360, 700,
         source.replay.world.state.run() as never) as never as VariantEnemy;

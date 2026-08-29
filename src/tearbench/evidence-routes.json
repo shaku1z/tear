@@ -204,6 +204,58 @@
     "journeyCommands": ["node tests/browser-progression-journeys.js"]
   },
   {
+    "id": "pale-aurora-rimehound",
+    "prefixes": ["src/gameplay/environment/aurora-track", "src/gameplay/environment/white-hart-route-runtime.ts", "src/gameplay/entities/enemy-types/rimehound.ts", "src/app/live-aurora-track-wiring.ts", "src/app/live-white-hart-wiring.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/pale-aurora-definitions.test.ts", "tests/unit/pale-aurora-runtime.test.ts", "tests/unit/rimehound.test.ts", "tests/unit/pale-state-forge-scenarios.test.ts"],
+    "scenarios": [],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "pale-aurora-rimehound-state-forge-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["fixed-step", "movement", "combat", "restore", "isolation", "accessibility"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/pale-aurora-definitions.test.ts tests/unit/pale-aurora-runtime.test.ts tests/unit/rimehound.test.ts tests/unit/pale-state-forge-scenarios.test.ts"],
+    "journeyCommands": ["node tests/browser-pale-rimehound.js", "node tests/browser-pale-presentation.js"]
+  },
+  {
+    "id": "pale-variant-selection",
+    "prefixes": ["src/gameplay/variants.ts", "src/gameplay/entities/enemy-types/ground-enemies.ts", "src/gameplay/entities/enemy-types/air-enemies.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/pale-variant-selection.test.ts", "tests/browser-pale-variants.js"],
+    "scenarios": [],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "pale-variant-state-forge-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["selection", "combat", "restore", "stage-gating", "accessibility"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/pale-variant-selection.test.ts tests/unit/pale-state-forge-scenarios.test.ts tests/unit/live-codec-validation.test.ts tests/unit/game-reference.test.ts"],
+    "journeyCommands": ["node tests/browser-pale-variants.js"]
+  },
+  {
+    "id": "pale-white-hart",
+    "prefixes": ["src/gameplay/entities/enemy-types/white-hart.ts", "src/gameplay/environment/white-hart-route-runtime.ts", "src/app/live-white-hart-wiring.ts", "src/presentation/enemies/renderers/white-hart-renderer.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/white-hart-foundation.test.ts", "tests/unit/white-hart-phases.test.ts", "tests/unit/white-hart-route-runtime.test.ts", "tests/unit/white-hart-state-forge.test.ts", "tests/browser-pale-white-hart-phases.js"],
+    "scenarios": ["white-hart-pale-traverse-foundation-live-encounter"],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "pale-white-hart-natural-and-surgical-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["fixed-step", "combat", "events", "restore", "browser", "accessibility"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/white-hart-foundation.test.ts tests/unit/white-hart-phases.test.ts tests/unit/white-hart-route-runtime.test.ts tests/unit/white-hart-state-forge.test.ts tests/unit/pale-state-forge-scenarios.test.ts"],
+    "journeyCommands": ["node tests/browser-pale-white-hart-phases.js"]
+  },
+  {
+    "id": "pale-wave-reference",
+    "prefixes": ["src/gameplay/run/campaign-stage-curve.ts", "src/gameplay/run/composition-budget.ts", "src/gameplay/run/wave-planner.ts", "src/tearbench/pale-stage-engineering-scenario.ts", "src/game-reference/", "tests/unit/pale-wave-composition.test.ts", "tests/unit/pale-stage-state-forge.test.ts", "tests/unit/game-reference.test.ts"],
+    "scenarios": ["white-hart-pale-traverse-foundation-live-encounter", "wave-clear-to-draft", "draft-selection-to-gameplay"],
+    "scenarioSubjects": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "pale-reference-and-wave-authority-engineering",
+    "baseComparison": "main-base",
+    "interactionMatrices": ["progression", "difficulty", "composition", "reference", "browser"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/game-reference.test.ts tests/unit/enemy-reference.test.ts tests/unit/boss-reference.test.ts tests/unit/pale-wave-composition.test.ts tests/unit/pale-stage-state-forge.test.ts tests/unit/tearbench-current-game-authority.test.ts"],
+    "journeyCommands": ["node tests/browser-pale-presentation.js", "node tests/browser-pale-white-hart-phases.js"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],

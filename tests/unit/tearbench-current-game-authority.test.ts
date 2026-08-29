@@ -114,8 +114,8 @@ describe("TearBench current-game catalog authority", () => {
   });
 
   it("retains numeric stage compatibility while accepting stable authored stage identity", () => {
-    const event: TearGameplayEvent = { kind: "stage", tick: 12, stage: 3, stageId: "verdant-sanctum", transition: "entered" };
-    expect(event).toMatchObject({ stage: 3, stageId: "verdant-sanctum", transition: "entered" });
+    const event: TearGameplayEvent = { kind: "stage", tick: 12, stage: 4, stageId: "pale-traverse", transition: "entered" };
+    expect(event).toMatchObject({ stage: 4, stageId: "pale-traverse", transition: "entered" });
   });
 
   it("covers every production stage, authored boss, upgrade, and native event family", () => {

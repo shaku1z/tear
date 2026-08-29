@@ -144,12 +144,40 @@ test("production stages select their exact authored live boss encounters", () =>
   const selection = select(["src/gameplay/stages.ts"]);
   for (const id of ["warden-grounds-live-encounter", "colossus-undercroft-live-encounter",
     "aldric-crimson-fields-live-encounter", "rootbound-verdant-sanctum-live-encounter",
+    "white-hart-pale-traverse-foundation-live-encounter",
     "echo-voidspire-live-encounter", "source-void-low-hp-rescue-seek"]) {
     assert.ok(selection.scenarios.includes(id), id);
   }
   const shared = selection.evidenceCommands.filter((entry) => entry.command ===
     "pnpm build:test:standalone && node tests/browser-boss-parity.js");
   assert.equal(shared.length, 5);
+  assert.ok(selection.evidenceCommands.some((entry) => entry.id === "white-hart-pale-traverse-foundation-live-encounter"
+    && entry.command === "pnpm build:test:standalone && node tests/browser-pale-white-hart-phases.js"));
+});
+
+test("Pale authorities select natural White Hart plus surgical and browser evidence", () => {
+  const aurora = select(["src/gameplay/environment/aurora-track-runtime.ts"]);
+  assert.ok(aurora.routes.includes("pale-aurora-rimehound"));
+  assert.ok(aurora.authorityCommands.some((command) => command.includes("pale-state-forge-scenarios.test.ts")));
+  assert.ok(aurora.journeyCommands.includes("node tests/browser-pale-presentation.js"));
+
+  const rimehound = select(["src/gameplay/entities/enemy-types/rimehound.ts"]);
+  assert.ok(rimehound.routes.includes("pale-aurora-rimehound"));
+  assert.ok(rimehound.journeyCommands.includes("node tests/browser-pale-rimehound.js"));
+
+  const variants = select(["tests/unit/pale-variant-selection.test.ts"]);
+  assert.ok(variants.routes.includes("pale-variant-selection"));
+  assert.ok(variants.journeyCommands.includes("node tests/browser-pale-variants.js"));
+
+  const hart = select(["src/gameplay/entities/enemy-types/white-hart.ts"]);
+  assert.ok(hart.routes.includes("pale-white-hart"));
+  assert.ok(hart.scenarios.includes("white-hart-pale-traverse-foundation-live-encounter"));
+  assert.ok(hart.journeyCommands.includes("node tests/browser-pale-white-hart-phases.js"));
+
+  const reference = select(["src/game-reference/game-reference.ts"]);
+  assert.ok(reference.routes.includes("pale-wave-reference"));
+  assert.ok(reference.authorityCommands.some((command) => command.includes("tests/unit/game-reference.test.ts")));
+  assert.ok(reference.scenarios.includes("white-hart-pale-traverse-foundation-live-encounter"));
 });
 
 test("missing, duplicate, retired, or mismatched production stage/boss evidence fails closed", () => {
