@@ -512,6 +512,19 @@ This is the migration checklist for the architectural redesign. A checked featur
   break entry points. All five survive the production State Forge/hash boundary
   and have clean built Playground captures. The stage itself remains inactive
   until PT3-C5.
+  PT3-C5 activates the engineering-only Pale stage as campaign stage V at
+  waves 41–50. Natural wave-41 progression now loads its horizontal platform
+  layout, chapter transition, provisional stage curve, local-wave enemy pool,
+  and three stage-owned directional Aurora Tracks through the existing owners.
+  The presentation route adds the coral-dusk mountain passage, bounded aurora,
+  frozen lower field, edge pines, village lights, sparse snow, snow-capped ice
+  platforms, and direction-readable Track lanes. Desktop, laptop, alternate
+  shape, touch-landscape, and combined accessibility captures come from a clean
+  attributed State Forge build. Pale uses `fillet` only as an engineering music
+  fallback; no public route or final selection exists. The seven-stage
+  publication boundary remains engineering-only, and the exact reference
+  exporter deliberately stays fail-closed until White Hart and PT3-C11 provide
+  the seventh boss/stage pair.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference
