@@ -54,6 +54,12 @@ async function openInstrumentedPage(browser, pageErrors) {
   });
   await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__ && window.__PANTHEON_TEST);
+  // Programmatic debug starts can dispatch wave audio before the first combat
+  // pointer input. Give every measured page the same user activation required
+  // by production so audio initialization cannot race the workload setup.
+  await page.keyboard.press("Shift");
+  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
+    undefined, { timeout: 20000 });
   return page;
 }
 
