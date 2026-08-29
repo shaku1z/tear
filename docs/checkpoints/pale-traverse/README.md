@@ -11,3 +11,4 @@ ignored unless deliberately promoted into a small canonical proof.
 | PT3-C1 Aurora definitions | [PT3-C1_EVIDENCE.md](PT3-C1_EVIDENCE.md) |
 | PT3-C2 Aurora runtime | [PT3-C2_EVIDENCE.md](PT3-C2_EVIDENCE.md) |
 | PT3-C3 Rimehound | [PT3-C3_EVIDENCE.md](PT3-C3_EVIDENCE.md) |
+| PT3-C4 Pale-native variants | [PT3-C4_EVIDENCE.md](PT3-C4_EVIDENCE.md) |

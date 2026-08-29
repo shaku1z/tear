@@ -8,8 +8,8 @@
 | --- | --- |
 | Document | `TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md` |
 | Revision | 3.0 |
-| Status | **Active implementation authority — PT3-C4 in progress** |
-| Current checkpoint | `PT3-C4` |
+| Status | **Active implementation authority — PT3-C5 in progress** |
+| Current checkpoint | `PT3-C5` |
 | Product owner | Tear biome and campaign owner |
 | Implementation owner | Assigned per checkpoint |
 | TearBench owner | TearBench/current-game integration owner |
@@ -178,11 +178,11 @@ roster, with deterministic browser-visible counterplay.
 
 ## Subgoals
 
-- [ ] Author Rime Runner, Prism Seer, Snowfall Kite, Hailcaster, and Glacier Guard through current variant definitions.
-- [ ] Gate every Pale variant by stable stage ID and local wave using `VariantSelectionContext`.
-- [ ] Preserve existing variant behavior in every other stage and mode.
-- [ ] Prove Campaign, Endless/Gauntlet discovery, Playground/Enemy Test explicit selection, capture/restore, and negative leakage matrices.
-- [ ] Project public-safe variant metadata only from canonical definitions.
+- [x] Author Rime Runner, Prism Seer, Snowfall Kite, Hailcaster, and Glacier Guard through current variant definitions.
+- [x] Gate every Pale variant by stable stage ID and local wave using `VariantSelectionContext`.
+- [x] Preserve existing variant behavior in every other stage and mode.
+- [x] Prove Campaign, Endless/Gauntlet discovery, Playground/Enemy Test explicit selection, capture/restore, and negative leakage matrices.
+- [x] Project public-safe variant metadata only from canonical definitions.
 
 ## Exit
 
@@ -305,14 +305,14 @@ dispatch, deployment, or C40 claim has occurred.
 
 ```text
 PROGRAM: Pale Traverse Revision 3
-STATUS: ACTIVE — PT3-C4 IN PROGRESS
-CURRENT CHECKPOINT: PT3-C4
-CURRENT SUBGOAL: PT3-C4-S1
+STATUS: ACTIVE — PT3-C5 IN PROGRESS
+CURRENT CHECKPOINT: PT3-C5
+CURRENT SUBGOAL: PT3-C5-S1
 SOURCE FOUNDATION: Verdant C21 freeze 25c589844ec2cfe85a8a6deead881ebb3d699198
-LAST GREEN CHECKPOINT: PT3-C3 at 5103cc6a3fc4100e64eb88763347d612ddbd9ac7
-LAST EVIDENCE: Rimehound factory/controller/presentation, production State Forge restore, canonical semantic hash, 15 focused files / 81 tests, and clean built Playground browser captures pass
+LAST GREEN CHECKPOINT: PT3-C4 at a167e9ce7748c15a10d90dedcd43dfec0fa51968
+LAST EVIDENCE: five stage-gated Pale variants, all-five production restore/hash and leakage matrices, clean game-reference export, 11 focused files / 70 tests, and clean built live-counterplay Playground captures pass
 BLOCKERS: none
-NEXT ACTION: author Pale-native variants through the existing stage-aware selector and mode projections
+NEXT ACTION: assemble the Pale stage and presentation through the existing stage, environment, chapter, and backdrop authorities
 PUBLICATION: prohibited
 JOINT INTEGRATION: not authorized
 MUSIC/WIKI/DEPLOYMENT: not authorized

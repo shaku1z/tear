@@ -502,6 +502,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   out of production stage pools until Pale activation. An exact attributed
   test build captures normal, committed-pounce, and high-contrast/reduced-motion
   browser evidence under the PT3-C3 checkpoint path.
+  PT3-C4 adds Rime Runner, Prism Seer, Snowfall Kite, Hailcaster, and Glacier
+  Guard through the same stage-aware variant authority and existing five enemy
+  families. Campaign selection is limited to the stable Pale stage ID and local
+  wave; Endless/Gauntlet require persisted discovery; legacy rolls and every
+  unrelated stage/mode remain fail-closed. Their authored rebound, perfect
+  prism recombination, vertical recovery wake, hail ground break, and
+  launch/Power-break shell counterplay use ordinary family, projectile, and
+  break entry points. All five survive the production State Forge/hash boundary
+  and have clean built Playground captures. The stage itself remains inactive
+  until PT3-C5.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference
