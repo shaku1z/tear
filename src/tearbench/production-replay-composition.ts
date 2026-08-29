@@ -68,11 +68,21 @@ export function projectProductionReplayCanonicalState(
     replay.world.state.blade() as never,
     replay.world.state.enemies().map((entity) => {
       const enemy = entity as never as { _gid?: number; kind: string; bossId?: string;
-        x: number; y: number; vx: number; vy: number; hp: number; dead: boolean };
+        x: number; y: number; vx: number; vy: number; hp: number; dead: boolean;
+        atk?: string; atkT?: number; atkCd?: number; packRole?: string; packFlank?: number;
+        packLockT?: number; packAttackAuthorized?: boolean; pounceTargetX?: number; pounceAirborne?: boolean;
+        auroraDirection?: number; auroraResponseT?: number; auroraPounceExtended?: boolean };
       return {
         ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind,
         ...(typeof enemy.bossId === "string" ? { bossId: enemy.bossId } : {}),
         x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
+        ...(enemy.kind === "rimehound" ? {
+          atk: enemy.atk, atkT: enemy.atkT, atkCd: enemy.atkCd,
+          packRole: enemy.packRole, packFlank: enemy.packFlank, packLockT: enemy.packLockT,
+          packAttackAuthorized: enemy.packAttackAuthorized, pounceTargetX: enemy.pounceTargetX,
+          pounceAirborne: enemy.pounceAirborne, auroraDirection: enemy.auroraDirection,
+          auroraResponseT: enemy.auroraResponseT, auroraPounceExtended: enemy.auroraPounceExtended,
+        } : {}),
       };
     }),
     replay.world.context.environment.snapshot(),

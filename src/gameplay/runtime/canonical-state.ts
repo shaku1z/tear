@@ -22,6 +22,33 @@ export interface RuntimeEnemyState extends RuntimeBodyState {
   readonly bossId?: string;
   readonly hp: number;
   readonly dead: boolean;
+  readonly atk?: string;
+  readonly atkT?: number;
+  readonly atkCd?: number;
+  readonly packRole?: string;
+  readonly packFlank?: number;
+  readonly packLockT?: number;
+  readonly packAttackAuthorized?: boolean;
+  readonly pounceTargetX?: number;
+  readonly pounceAirborne?: boolean;
+  readonly auroraDirection?: number;
+  readonly auroraResponseT?: number;
+  readonly auroraPounceExtended?: boolean;
+}
+
+export interface CanonicalRimehoundState {
+  readonly atk: string;
+  readonly atkT: number;
+  readonly atkCd: number;
+  readonly packRole: string;
+  readonly packFlank: number;
+  readonly packLockT: number;
+  readonly packAttackAuthorized: boolean;
+  readonly pounceTargetX: number;
+  readonly pounceAirborne: boolean;
+  readonly auroraDirection: number;
+  readonly auroraResponseT: number;
+  readonly auroraPounceExtended: boolean;
 }
 
 export interface CanonicalGameplayState {
@@ -32,6 +59,7 @@ export interface CanonicalGameplayState {
   readonly blade: Readonly<{ state: string; x: number; y: number; vx: number; vy: number }> | null;
   readonly enemies: readonly Readonly<{
     id: number; kind: string; bossId: string; x: number; y: number; vx: number; vy: number; hp: number; dead: boolean;
+    rimehound?: Readonly<CanonicalRimehoundState>;
   }>[];
   /** Optional world-owned environment projection; absent on legacy hosts. */
   readonly environment?: EnvironmentSnapshot;
@@ -65,6 +93,14 @@ export function projectCanonicalGameplayState(
       id: enemy._gid ?? 0, kind: enemy.kind ?? "", bossId: enemy.bossId ?? "",
       x: fixed(enemy.x), y: fixed(enemy.y), vx: fixed(enemy.vx), vy: fixed(enemy.vy),
       hp: fixed(enemy.hp), dead: enemy.dead,
+      ...(enemy.kind === "rimehound" ? { rimehound: Object.freeze({
+        atk: enemy.atk ?? "", atkT: fixed(enemy.atkT ?? 0), atkCd: fixed(enemy.atkCd ?? 0),
+        packRole: enemy.packRole ?? "", packFlank: enemy.packFlank ?? 0,
+        packLockT: fixed(enemy.packLockT ?? 0), packAttackAuthorized: enemy.packAttackAuthorized ?? false,
+        pounceTargetX: fixed(enemy.pounceTargetX ?? 0), pounceAirborne: enemy.pounceAirborne ?? false,
+        auroraDirection: enemy.auroraDirection ?? 0, auroraResponseT: fixed(enemy.auroraResponseT ?? 0),
+        auroraPounceExtended: enemy.auroraPounceExtended ?? false,
+      }) } : {}),
     })).sort((left, right) => left.id - right.id || left.kind.localeCompare(right.kind))),
     ...(environment === undefined ? {} : { environment: projectEnvironmentSemanticSnapshot(environment) }),
   });

@@ -151,7 +151,8 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
     Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
     Chimera: factories.enemyTypes.Chimera, Warden: factories.enemyTypes.Warden, Colossus: factories.enemyTypes.Colossus,
-    Aldric: factories.enemyTypes.Aldric, Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
+    Aldric: factories.enemyTypes.Aldric, Rimehound: factories.enemyTypes.Rimehound,
+    Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
     VoidWisp: factories.enemyTypes.VoidWisp, Boss: factories.enemyTypes.Boss,
     MirrorHost: factories.mirrorTypes.MirrorHost, ReflectionEnemy: factories.mirrorTypes.ReflectionEnemy,
   } as unknown as GameRuntimeDependencies;

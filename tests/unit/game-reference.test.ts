@@ -106,7 +106,7 @@ describe("game-reference.v1", () => {
     expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
     expect(result.collections.enemies.status).toBe("complete");
     expect(result.collections.enemies.items.families.map((family) => family.id)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder", "rimehound",
     ]);
     expect(result.collections.enemies.items.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
     expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([

@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { aabbOverlap, clamp, len, lerp, segPointDist, segSegmentDist } from "../../src/domain/geometry";
 import { resolveEnemyContact } from "../../src/gameplay/combat/contact-runtime";
+import { stepEnemyActors } from "../../src/gameplay/combat/enemy-step-runtime";
 import { createEnemyTypes } from "../../src/gameplay/entities/enemies";
 import { coordinateRimehoundPack, RIMEHOUND_TUNING } from "../../src/gameplay/entities/enemy-types/rimehound";
 import { createProjectile } from "../../src/gameplay/entities/projectile";
 import { createAuroraTrackFieldState } from "../../src/gameplay/environment/aurora-track";
 import { advanceAuroraTrack } from "../../src/gameplay/environment/aurora-track-runtime";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
+import { stableVerificationHash } from "../../src/replay/hash";
+import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
 
 function fixture() {
   const CLOCK = createTearWorldClock();
@@ -51,6 +54,24 @@ describe("Rimehound", () => {
     first.atk = "recover"; first.atkCd = 0.5;
     coordinateRimehoundPack([first, second]);
     expect([first.packAttackAuthorized, second.packAttackAuthorized]).toEqual([false, true]);
+  });
+
+  it("coordinates through the shared fixed-step controller without mutating pack state while frozen", () => {
+    const { types } = fixture();
+    const first = new types.Rimehound(300, CONFIG.world.groundY - RIMEHOUND_TUNING.body.h / 2);
+    const second = new types.Rimehound(500, CONFIG.world.groundY - RIMEHOUND_TUNING.body.h / 2);
+    first.onGround = true; second.onGround = true;
+    const options = { dt: 1 / 120, enemies: [first, second], platforms: [], player: player(700), projectiles: [],
+      freeze: false, gravity: CONFIG.world.gravity, groundY: CONFIG.world.groundY, viewportWidth: CONFIG.view.w,
+      onKill() { return; }, startTransformation() { return false; } };
+    stepEnemyActors(options);
+    expect([first.atk, second.atk]).toEqual(["windup", "flank"]);
+    expect([first.packAttackAuthorized, second.packAttackAuthorized]).toEqual([true, false]);
+    const frozen = { firstLock: first.packLockT, secondLock: second.packLockT,
+      firstAuthorized: first.packAttackAuthorized, secondAuthorized: second.packAttackAuthorized };
+    stepEnemyActors({ ...options, freeze: true });
+    expect({ firstLock: first.packLockT, secondLock: second.packLockT,
+      firstAuthorized: first.packAttackAuthorized, secondAuthorized: second.packAttackAuthorized }).toEqual(frozen);
   });
 
   it("locks a predicted pounce target, exposes damage only while pouncing, and recovers on landing", () => {
@@ -172,6 +193,39 @@ describe("Rimehound", () => {
     source.update(1 / 120, [], hero, []); restored.update(1 / 120, [], hero, []);
     expect({ x: restored.x, y: restored.y, vx: restored.vx, vy: restored.vy, atk: restored.atk, atkT: restored.atkT })
       .toEqual({ x: source.x, y: source.y, vx: source.vx, vy: source.vy, atk: source.atk, atkT: source.atkT });
+  });
+
+  it("round-trips committed Rimehound state through the production State Forge transaction", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "pale-rimehound-restore", mode: "endless" });
+    const source = composition.create(undefined);
+    const hound = source.replay.world.entities.createEnemy("rimehound", 360, 700,
+      source.replay.world.state.run() as never) as never as {
+        kind: string; packRole: string; packFlank: number; packLockT: number; packAttackAuthorized: boolean;
+        atk: string; atkT: number; atkCd: number; pounceTargetX: number; pounceAirborne: boolean;
+        auroraDirection: number; auroraResponseT: number; auroraPounceExtended: boolean; vx: number; vy: number;
+      };
+    Object.assign(hound, { packRole: "flank", packFlank: 1, packLockT: 0.75, packAttackAuthorized: true,
+      atk: "pounce", atkT: 0.31, atkCd: 0.2, pounceTargetX: 980, pounceAirborne: true,
+      auroraDirection: 1, auroraResponseT: 0.12, auroraPounceExtended: true, vx: 740, vy: -180 });
+    source.replay.world.state.setEnemies([hound] as never);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward,
+      "pale-rimehound-restore-source");
+    hound.packAttackAuthorized = false;
+    const changedBehavior = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward,
+      "pale-rimehound-restore-changed-behavior");
+    expect(changedBehavior.semanticHash).not.toBe(checkpoint.semanticHash);
+    hound.packAttackAuthorized = true;
+    const restored = composition.create(checkpoint.snapshot);
+    const restoredHound = restored.replay.world.state.enemies()[0] as never as typeof hound;
+    expect(restoredHound).toMatchObject({ kind: "rimehound", packRole: "flank", packFlank: 1,
+      packLockT: 0.75, packAttackAuthorized: true, atk: "pounce", atkT: 0.31, atkCd: 0.2,
+      pounceTargetX: 980, pounceAirborne: true, auroraDirection: 1, auroraResponseT: 0.12,
+      auroraPounceExtended: true, vx: 740, vy: -180 });
+    const roundTrip = captureProductionReplayCheckpoint(restored.replay, restored.combat, restored.waveReward,
+      "pale-rimehound-restore-round-trip");
+    expect(stableVerificationHash(roundTrip.snapshot.state["tear.enemy.v1"]))
+      .toBe(stableVerificationHash(checkpoint.snapshot.state["tear.enemy.v1"]));
+    expect(roundTrip.snapshot.hashes.semantic).toBe(checkpoint.snapshot.hashes.semantic);
   });
 
   it("resets all pack coordination and attack state through ordinary reconstruction", () => {

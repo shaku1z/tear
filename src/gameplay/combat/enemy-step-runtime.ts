@@ -22,7 +22,7 @@ export interface EnemyActorStepOptions {
 }
 
 export function stepEnemyActors(options: EnemyActorStepOptions): boolean {
-  coordinateRimehoundPack(options.enemies);
+  if (!options.freeze) coordinateRimehoundPack(options.enemies);
   for (const enemy of options.enemies) {
     if (enemy.dying) {
       enemy.tickTimers(options.dt); if (enemy.updateDeath(options.dt)) options.onKill(enemy, enemy._deathCause ?? ""); continue;
