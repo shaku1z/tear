@@ -1,0 +1,58 @@
+{
+  "format": "tear-pale-traverse-revision-3-checkpoint-ledger",
+  "schemaVersion": 1,
+  "revision": "3.0",
+  "status": "active",
+  "currentCheckpoint": "PT3-C0",
+  "currentSubgoal": "PT3-C0-S1",
+  "sourceFoundation": "25c589844ec2cfe85a8a6deead881ebb3d699198",
+  "sourceFoundationRule": "Pale is rooted at the frozen Verdant C21 identity and must reuse its shared contracts. Re-resolve protected origin/main only for drift awareness; do not discard the required Verdant foundation.",
+  "publicationBoundary": "No joint integration, reference/wiki dispatch, publication, deployment, or C40 claim is authorized.",
+  "completedCheckpoints": [],
+  "lastGreenCheckpoint": null,
+  "lastEvidence": [
+    "PT3-C0 pre-change baseline at 25c589844ec2cfe85a8a6deead881ebb3d699198: 17 focused tests prove pale-traverse, white-hart, and rimehound are absent from current production authorities; inactive seven-stage curve data remains provisional; docs, terminology, and requirements baselines pass."
+  ],
+  "blockers": [],
+  "nextAction": "Register the Pale Revision 3 plan and ledger, then add stable Pale identities only through current source-owned catalogs.",
+  "checkpoints": [
+    {
+      "id": "PT3-C0",
+      "title": "Authority and negative baseline",
+      "dependencies": ["VS3-C21"],
+      "status": "in-progress",
+      "subgoals": [
+        { "id": "PT3-C0-S1", "description": "Register plan and ledger atomically.", "status": "in-progress" },
+        { "id": "PT3-C0-S2", "description": "Record exact source/worktree/publication boundary.", "status": "green" },
+        { "id": "PT3-C0-S3", "description": "Preserve negative identity baseline evidence.", "status": "green" },
+        { "id": "PT3-C0-S4", "description": "Add stable Pale identities through existing catalogs.", "status": "not-started" },
+        { "id": "PT3-C0-S5", "description": "Add stage-to-boss home identity without incomplete launchability.", "status": "not-started" },
+        { "id": "PT3-C0-S6", "description": "Reconcile type-derived registry/factory/reference expectations.", "status": "not-started" },
+        { "id": "PT3-C0-S7", "description": "Keep production evidence routes absent until real subjects exist.", "status": "not-started" }
+      ],
+      "sourceBaseline": "25c589844ec2cfe85a8a6deead881ebb3d699198",
+      "completionIdentity": null,
+      "commandsRun": [
+        "pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-publication-boundary.test.ts",
+        "pnpm check:docs",
+        "pnpm check:terminology",
+        "pnpm requirements:check"
+      ],
+      "evidence": ["Pre-change negative baseline: 3 files / 17 tests pass."],
+      "blockers": [],
+      "notes": []
+    },
+    { "id": "PT3-C1", "title": "Aurora definitions", "dependencies": ["PT3-C0"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C2", "title": "Aurora runtime", "dependencies": ["PT3-C1"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C3", "title": "Rimehound", "dependencies": ["PT3-C2"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C4", "title": "Pale-native variants", "dependencies": ["PT3-C3"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C5", "title": "Stage and presentation", "dependencies": ["PT3-C1", "PT3-C2", "PT3-C3", "PT3-C4"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C6", "title": "White Hart foundation", "dependencies": ["PT3-C5"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C7", "title": "White Hart phases", "dependencies": ["PT3-C6"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C8", "title": "Campaign integration", "dependencies": ["PT3-C5", "PT3-C6", "PT3-C7"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C9", "title": "Modes, lifecycle, and persistence", "dependencies": ["PT3-C8"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C10", "title": "Reference and TearBench completion", "dependencies": ["PT3-C0", "PT3-C1", "PT3-C2", "PT3-C3", "PT3-C4", "PT3-C5", "PT3-C6", "PT3-C7", "PT3-C8", "PT3-C9"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] },
+    { "id": "PT3-C11", "title": "Validation and freeze", "dependencies": ["PT3-C10"], "status": "not-started", "subgoals": [], "sourceBaseline": null, "completionIdentity": null, "commandsRun": [], "evidence": [], "blockers": [], "notes": [] }
+  ]
+}
+
