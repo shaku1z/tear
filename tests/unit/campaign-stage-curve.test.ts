@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STAGE_BOSS_HOME, STAGE_IDS } from "../../src/gameplay/stages";
+import { CAMPAIGN_STAGE_IDS, STAGE_BOSS_HOME, STAGE_IDS } from "../../src/gameplay/stages";
 import {
   CAMPAIGN_STAGE_CURVES,
   SEVEN_STAGE_CURVE_IDS,
@@ -10,9 +10,9 @@ import {
 import { bossDefinition } from "../../src/gameplay/run/boss-definitions";
 
 describe("campaign stage curve authority", () => {
-  it("covers every current source-owned StageId exactly once", () => {
-    expect(Object.keys(CAMPAIGN_STAGE_CURVES)).toEqual(STAGE_IDS);
-    for (const stageId of STAGE_IDS) expect(campaignStageCurve(stageId)).toBe(CAMPAIGN_STAGE_CURVES[stageId]);
+  it("covers every executable campaign stage exactly once", () => {
+    expect(Object.keys(CAMPAIGN_STAGE_CURVES)).toEqual(CAMPAIGN_STAGE_IDS);
+    for (const stageId of CAMPAIGN_STAGE_IDS) expect(campaignStageCurve(stageId)).toBeDefined();
   });
 
   it("owns the authored Verdant prototype without compounding its array index", () => {
@@ -46,8 +46,10 @@ describe("campaign stage curve authority", () => {
       voidspire: { health: 2.38, damage: 1.52, countAdd: 7, concurrentAdd: 3 },
       tear: { health: 2.72, damage: 1.6, countAdd: 8, concurrentAdd: 4 },
     });
-    expect(STAGE_IDS).not.toContain("pale-traverse");
+    expect(STAGE_IDS).toContain("pale-traverse");
+    expect(CAMPAIGN_STAGE_IDS).not.toContain("pale-traverse");
     expect(CAMPAIGN_STAGE_CURVES).not.toHaveProperty("pale-traverse");
+    expect(() => campaignStageCurve("pale-traverse")).toThrow(/no active campaign curve/u);
     expect(campaignStageCurve("voidspire")).not.toEqual(SEVEN_STAGE_CURVE_PROTOTYPE.stages.voidspire);
   });
 

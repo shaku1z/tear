@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+
+import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
+import {
+  BOSS_DEFINITIONS,
+  BOSS_IDENTITY_IDS,
+  WHITE_HART_PROVISIONAL_DEFINITION,
+} from "../../src/gameplay/run/boss-definitions";
+import {
+  BOSS_ROSTER,
+  ENEMY_IDENTITY_IDS,
+  ENEMY_KIND_IDS,
+} from "../../src/gameplay/run/content-director";
+import { CAMPAIGN_STAGE_IDS, STAGES, STAGE_BOSS_HOME, STAGE_IDS } from "../../src/gameplay/stages";
+import { BOSS_FACTORY_IDS } from "../../src/tearbench/registries";
+
+describe("Pale Revision 3 content authority", () => {
+  it("reserves each Pale identity exactly once through existing source-owned catalogs", () => {
+    expect(STAGE_IDS.filter((id) => id === "pale-traverse")).toHaveLength(1);
+    expect(BOSS_IDENTITY_IDS.filter((id) => id === "white-hart")).toHaveLength(1);
+    expect(ENEMY_IDENTITY_IDS.filter((id) => id === "rimehound")).toHaveLength(1);
+    expect(STAGE_BOSS_HOME["pale-traverse"]).toBe("white-hart");
+    expect(WHITE_HART_PROVISIONAL_DEFINITION).toMatchObject({ id: "white-hart", name: "The White Hart" });
+  });
+
+  it("does not advertise incomplete Pale subjects as executable content", () => {
+    expect(CAMPAIGN_STAGE_IDS).not.toContain("pale-traverse");
+    expect(STAGES.some((stage) => stage.id === "pale-traverse")).toBe(false);
+    expect(ENEMY_KIND_IDS).not.toContain("rimehound");
+    expect(BOSS_DEFINITIONS.map((boss) => String(boss.id))).not.toContain("white-hart");
+    expect(BOSS_ROSTER.map((boss) => String(boss.id))).not.toContain("white-hart");
+    expect(BOSS_FACTORY_IDS).not.toContain("white-hart");
+  });
+
+  it("keeps production evidence routes absent until their subjects exist", () => {
+    const serialized = JSON.stringify(scenarioCatalog);
+    expect(serialized).not.toContain("pale-traverse");
+    expect(serialized).not.toContain("white-hart");
+    expect(serialized).not.toContain("rimehound");
+  });
+});

@@ -7,5 +7,4 @@ ignored unless deliberately promoted into a small canonical proof.
 
 | Checkpoint | Evidence manifest |
 | --- | --- |
-| PT3-C0 authority/negative baseline | pending C0 closure |
-
+| PT3-C0 authority/negative baseline | [PT3-C0_EVIDENCE.md](PT3-C0_EVIDENCE.md) |

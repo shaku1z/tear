@@ -31,11 +31,12 @@ describe("enemy reference catalog", () => {
   it("projects the exact structural catalog and deep-freezes copied data", () => {
     const result = project();
     expect(result.families.map((family) => family.id)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder", "rimehound",
     ]);
-    expect(result.families).toHaveLength(12);
-    expect(result.families.filter((family) => family.variants.length === 0)).toHaveLength(7);
+    expect(result.families).toHaveLength(13);
+    expect(result.families.filter((family) => family.variants.length === 0)).toHaveLength(8);
     expect(result.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
+    expect(result.families.find((family) => family.id === "rimehound")?.variants).toEqual([]);
     expect(result.families.find((family) => family.id === "charger")?.variants.map((variant) => variant.id)).toEqual([
       "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker",
     ]);

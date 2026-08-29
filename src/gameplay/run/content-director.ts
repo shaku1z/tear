@@ -15,13 +15,13 @@ function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T):
 export const BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
 
 export type BossId = typeof BOSS_IDENTITY_IDS[number];
-/** Rootbound is a campaign boss identity, not a mini-boss until its factory exists. */
-export type MiniBossId = Exclude<BossId, "source" | "rootbound">;
+/** Campaign-only or factory-unavailable bosses cannot enter the mini-boss selector. */
+export type MiniBossId = Exclude<BossId, "source" | "rootbound" | "white-hart">;
 export const ENEMY_KIND_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",
   "priest", "mender", "herald", "anchor", "wraith", "chimera",
 ] as const);
-export const ENEMY_IDENTITY_IDS = Object.freeze([...ENEMY_KIND_IDS, "rootbinder"] as const);
+export const ENEMY_IDENTITY_IDS = Object.freeze([...ENEMY_KIND_IDS, "rootbinder", "rimehound"] as const);
 export type ActiveEnemyKind = typeof ENEMY_KIND_IDS[number];
 export type EnemyKind = typeof ENEMY_IDENTITY_IDS[number];
 

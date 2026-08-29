@@ -1,6 +1,6 @@
 /** Pure authored boss identity authority. */
 export const BOSS_IDENTITY_IDS = Object.freeze([
-  "warden", "colossus", "aldric", "rootbound", "echo", "source",
+  "warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source",
 ] as const);
 export type BossDefinitionId = typeof BOSS_IDENTITY_IDS[number];
 
@@ -22,6 +22,13 @@ export interface BossDefinition {
 export const ROOTBOUND_PROVISIONAL_DEFINITION = Object.freeze({
   id: "rootbound",
   name: "The Rootbound",
+  phaseMarks: Object.freeze([0.65, 0.28] as const),
+} as const satisfies BossDefinition);
+
+/** Reserved Pale identity; it does not enter the executable boss roster before PT3-C6. */
+export const WHITE_HART_PROVISIONAL_DEFINITION = Object.freeze({
+  id: "white-hart",
+  name: "The White Hart",
   phaseMarks: Object.freeze([0.65, 0.28] as const),
 } as const satisfies BossDefinition);
 

@@ -30,10 +30,12 @@ export const CAMPAIGN_STAGE_CURVES = Object.freeze({
   "verdant-sanctum": Object.freeze({ health: 1.82, damage: 1.34, countAdd: 5, concurrentAdd: 2, disposition: "authored-prototype", composition: VERDANT_COMPOSITION }),
   voidspire: Object.freeze({ health: 2.36, damage: 1.56, countAdd: 8, concurrentAdd: 4, disposition: "legacy-position-placeholder" }),
   tear: Object.freeze({ health: 2.7, damage: 1.7, countAdd: 10, concurrentAdd: 4, disposition: "legacy-position-placeholder" }),
-} as const satisfies Readonly<Record<StageId, CampaignStageCurve>>);
+} as const satisfies Readonly<Partial<Record<StageId, CampaignStageCurve>>>);
 
 export function campaignStageCurve(stageId: StageId): CampaignStageCurve {
-  return CAMPAIGN_STAGE_CURVES[stageId];
+  const curve = (CAMPAIGN_STAGE_CURVES as Readonly<Partial<Record<StageId, CampaignStageCurve>>>)[stageId];
+  if (curve === undefined) throw new Error(`stage ${stageId} has no active campaign curve`);
+  return curve;
 }
 
 export const SEVEN_STAGE_CURVE_IDS = Object.freeze([

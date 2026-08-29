@@ -46,7 +46,7 @@ export interface EnemyReferenceProjectionInput {
 export const CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored",
   "priest", "mender", "herald", "anchor", "wraith", "chimera",
-  "rootbinder",
+  "rootbinder", "rimehound",
 ] as const);
 
 export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze({
@@ -62,6 +62,7 @@ export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly st
   wraith: Object.freeze([]),
   chimera: Object.freeze([]),
   rootbinder: Object.freeze([]),
+  rimehound: Object.freeze([]),
 });
 
 export const CANONICAL_ENEMY_AFFIX_IDS = Object.freeze([

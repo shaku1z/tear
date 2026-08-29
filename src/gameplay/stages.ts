@@ -13,16 +13,17 @@ import type { BossId, EnemyKind } from "./run/content-director";
 
 /** Stable authored stage identifiers used by the game-reference projection. */
 export const STAGE_IDS = Object.freeze([
-  "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear",
+  "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "pale-traverse", "voidspire", "tear",
 ] as const);
 export type StageId = typeof STAGE_IDS[number];
 
-/** Stable identity mapping; Verdant remains unavailable in runtime STAGES until VS3-C8. */
+/** Stable identity mapping; reserved identities may precede their runtime STAGES entry. */
 export const STAGE_BOSS_HOME = Object.freeze({
   grounds: "warden",
   undercroft: "colossus",
   "crimson-fields": "aldric",
   "verdant-sanctum": "rootbound",
+  "pale-traverse": "white-hart",
   voidspire: "echo",
   tear: "source",
 } as const satisfies Readonly<Record<StageId, BossId>>);
