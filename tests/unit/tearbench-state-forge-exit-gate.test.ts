@@ -13,7 +13,7 @@ import {
 function bossSnapshot(bosses: readonly Record<string, unknown>[]): TearSnapshotV1 {
   const state = {
     "tear.boss.v1": bosses,
-    "tear.run.v1": { mode: "campaign", wave: 60, stage: 5, _biomeIdx: 5,
+    "tear.run.v1": { mode: "campaign", wave: 60, stage: 6, _biomeIdx: 6,
       chapterState: "WAVE_LIVE", spawnQueue: [] },
     "tear.world.v1": { runtime: { lifecycle: {
       phase: "wave-active", wave: 60, bossWave: true, reward: null,

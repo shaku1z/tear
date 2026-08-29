@@ -64,7 +64,7 @@ function fixture(options: Readonly<{
   let stageIndex = options.bossFinisherMismatch === true ? 4 : 0;
   if (options.bossFinisherMismatch === true) {
     Object.assign(active.components.get("tear.run.v1") as Record<string, unknown>, {
-      wave: 60, stage: 5, _biomeIdx: 5, chapterState: "WAVE_LIVE", spawnQueue: [],
+      wave: 60, stage: 6, _biomeIdx: 6, chapterState: "WAVE_LIVE", spawnQueue: [],
     });
     const world = active.components.get("tear.world.v1") as {
       runtime: { lifecycle: Record<string, unknown> };
@@ -230,7 +230,7 @@ function fixture(options: Readonly<{
 }
 
 describe("live runtime campaign victory State Forge origin", () => {
-  it("crosses the six-stage wave-59 reward frontier in the required production order", () => {
+  it("crosses the seven-stage wave-59 reward frontier in the required production order", () => {
     const unit = fixture();
     const environment = createLiveTearRuntimeEnvironment(unit.context, "A");
 
@@ -242,15 +242,15 @@ describe("live runtime campaign victory State Forge origin", () => {
     expect(unit.replayed[0]?.events.some((event) => event.type === "run.completed")).toBe(false);
     expect(unit.replayed[0]?.events.at(-1)).toMatchObject({ type: "reward.granted", wave: 59 });
     expect(unit.calls.filter((call) => [
-      "replay", "loadStage:5", "captureProgressionRuntime", "restore:59",
+      "replay", "loadStage:6", "captureProgressionRuntime", "restore:59",
       "restoreProgressionRuntime", "startNextWave", "screen:playing",
     ].includes(call))).toEqual([
-      "captureProgressionRuntime", "replay", "loadStage:5", "captureProgressionRuntime", "restore:59",
+      "captureProgressionRuntime", "replay", "loadStage:6", "captureProgressionRuntime", "restore:59",
       "restoreProgressionRuntime", "startNextWave", "screen:playing",
     ]);
     expect(unit.boundary()).toMatchObject({
       wave: 59,
-      stage: 5,
+      stage: 6,
       screen: "draft",
       reward: { phase: "complete", mode: "campaign", wave: 59 },
       lifecycle: { phase: "reward-pending", wave: 59 },
@@ -260,7 +260,7 @@ describe("live runtime campaign victory State Forge origin", () => {
     });
     expect(unit.restoredRuntime()).toBe(unit.sentinelMods);
     expect(unit.screen()).toBe("playing");
-    expect(unit.active().components.get("tear.run.v1")).toMatchObject({ wave: 60, stage: 5 });
+    expect(unit.active().components.get("tear.run.v1")).toMatchObject({ wave: 60, stage: 6 });
   });
 
   it("keeps the forge out of Class B and propagates restoration failure before wave start", () => {
@@ -275,7 +275,7 @@ describe("live runtime campaign victory State Forge origin", () => {
 
     expect(result).toMatchObject({ ok: false, phase: "validate", rolledBack: true });
     expect(unit.calls).toEqual([
-      "captureProgressionRuntime", "replay", "loadStage:5", "captureProgressionRuntime",
+      "captureProgressionRuntime", "replay", "loadStage:6", "captureProgressionRuntime",
       "restoreProgressionRuntime", "restore:1", "restoreProgressionRuntime",
     ]);
     expect(unit.restoredRuntime()).toBe(unit.sentinelMods);

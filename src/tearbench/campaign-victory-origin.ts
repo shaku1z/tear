@@ -13,7 +13,7 @@ import {
   type TearSynthesizedProgression,
 } from "./progression-ledger";
 
-/** Six-stage engineering-branch finale boundary; not publishable campaign truth. */
+/** Engineering-branch finale boundary; not publishable campaign truth. */
 export const CAMPAIGN_VICTORY_ORIGIN_WAVE = 59 as const;
 export const CAMPAIGN_VICTORY_FINAL_WAVE = 60 as const;
 

@@ -7,8 +7,8 @@
       "revision": "working-tree",
       "target": "production-headless",
       "rulesetVersion": "live",
-      "contentHash": "71f9375068ae3613",
-      "configHash": "0a7c515bc16e0f5b"
+      "contentHash": "c823f6249ab3ef05",
+      "configHash": "d0dd79ca88f2cf24"
     },
     "rng": {
       "legacy": { "algorithm": "mulberry32", "seed": 596074587, "state": 596074587, "cursor": 0 },

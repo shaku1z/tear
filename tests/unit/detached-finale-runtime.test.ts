@@ -16,7 +16,7 @@ describe("detached portable finale runtime", () => {
       seed: "detached-source-native-facts", mode: "campaign",
       enemies: [{ id: "source", x: 810, y: 330 }],
     });
-    detached.stage.index = 5;
+    detached.stage.index = 6;
     const run = detached.world.state.run() as never as Record<string, unknown>;
     Object.assign(run, {
       mode: "campaign", diff: "normal", wave: 60, score: 0, runTime: 0,
@@ -70,7 +70,7 @@ describe("detached portable finale runtime", () => {
       pendingReward: null, _dmgThisWave: false, _dmgThisStage: false, _dmgThisRun: false,
       chapterState: "WAVE_LIVE", finalBossDeath: { x: 800, y: 320 },
     });
-    detached.stage.index = 5;
+    detached.stage.index = 6;
     detached.world.state.setEnemies([]);
     detached.world.state.setBossIntro({ id: "stale-intro" } as never);
     detached.world.state.setBossBeat({ id: "stale-beat" } as never);

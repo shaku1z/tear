@@ -63,9 +63,10 @@ export function createEnemyHarness(randomValues: readonly number[] = [0.5]) {
 }
 
 type ActorFactory = (types: EnemyTypes) => BehaviorActor;
-type FactoryEnemyKind = Exclude<EnemyKind, "rimehound">;
+type FactoryEnemyKind = EnemyKind;
 
 export const STANDARD_ACTOR_FACTORIES: Readonly<Record<FactoryEnemyKind, ActorFactory>> = Object.freeze({
+  rimehound: (types) => new types.Rimehound(360, CONFIG.world.groundY - 17) as BehaviorActor,
   charger: (types) => new types.Charger(360, CONFIG.world.groundY - CONFIG.enemy.h / 2) as BehaviorActor,
   ranged: (types) => new types.Ranged(360, CONFIG.world.groundY - CONFIG.ranged.h / 2) as BehaviorActor,
   flyer: (types) => new types.Flyer(360, 300) as BehaviorActor,

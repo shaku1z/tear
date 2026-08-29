@@ -8,6 +8,7 @@ import { reconstructProgression, synthesizeProgression } from "./progression-led
 import type { TearProgressionReplayResult } from "./progression-replay";
 import { BOSS_FACTORY_IDS, type TearBossId } from "./registries";
 import { bossPhaseAttackAvailable } from "../gameplay/run/boss-definitions";
+import { STAGES } from "../gameplay/stages";
 import {
   DECLARED_ONE_FRAME_BOUNDARIES,
   type TearOneFrameBoundaryDefinition,
@@ -241,8 +242,9 @@ function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinis
     || !Array.isArray(run.spawnQueue) || run.spawnQueue.length !== 0) {
     throw new TypeError(`${launch.id} requires an active, unobstructed production boss frontier`);
   }
-  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 60 || run.stage !== 5
-    || run._biomeIdx !== 5 || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 60)) {
+  const finalStageIndex = STAGES.length - 1;
+  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 60 || run.stage !== finalStageIndex
+    || run._biomeIdx !== finalStageIndex || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 60)) {
     throw new TypeError(`${launch.id} requires the final campaign Source frontier`);
   }
   if (typeof boss.hpDisplay !== "number" || !Number.isFinite(boss.hpDisplay)) {

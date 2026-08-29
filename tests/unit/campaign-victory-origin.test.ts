@@ -140,7 +140,7 @@ describe("campaign victory State Forge origin", () => {
     });
     expect(run).toMatchObject({
       mode: "campaign", difficulty: "normal", diff: "normal", weaponId: "sword",
-      wave: 59, stage: 5, _biomeIdx: 5, spawnQueue: [], chapterState: "WAVE_LIVE",
+      wave: 59, stage: 6, _biomeIdx: 6, spawnQueue: [], chapterState: "WAVE_LIVE",
       score: certificate.statistics.score,
     });
     expect(waveLog).toHaveLength(59);
@@ -152,7 +152,7 @@ describe("campaign victory State Forge origin", () => {
     expect(frontier.state["tear.enemy.v1"]).toEqual([]);
     expect(frontier.state["tear.boss.v1"]).toEqual([]);
     expect(frontier.state["tear.projectile.v1"]).toEqual([]);
-    expect(frontier.state["tear.platform.v1"]).toEqual(stagePlatforms(5, CONFIG));
+    expect(frontier.state["tear.platform.v1"]).toEqual(stagePlatforms(6, CONFIG));
     expect(frontier.state["tear.cinematic.v1"]).toEqual(INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
     expect(codec(frontier, "tear.player.v1")).toMatchObject({
       cinematicProtected: false, cinematicGraceT: 0,

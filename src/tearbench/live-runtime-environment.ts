@@ -3,7 +3,7 @@ import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
+import type { RunRandomStreamsSnapshot } from "../simulation/run-random"; import { STAGES } from "../gameplay/stages";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1,
   TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
@@ -630,7 +630,7 @@ export function createLiveTearRuntimeEnvironment(
       const originalProgressionRuntime = context.captureProgressionRuntime();
       try {
         const replay = context.replayProgression(certificate.ledger);
-        context.loadStage(5);
+        context.loadStage(STAGES.length - 1);
         const frontier = createCampaignWave59RewardFrontier(
           snapshots.capture("campaign-wave-59-source", "reconstructed-reachable"), certificate,
           context.platformsForStage,
