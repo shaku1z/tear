@@ -35,7 +35,7 @@ describe("campaign stage curve authority", () => {
     expect(campaignStageCurve("tear").disposition).toBe("legacy-position-placeholder");
   });
 
-  it("activates Pale's provisional curve while retaining late-stage comparison data for C8", () => {
+  it("activates Pale's provisional curve and composition while retaining late-stage comparison data for C22", () => {
     expect(SEVEN_STAGE_CURVE_PROTOTYPE).toMatchObject({
       status: "engineering-prototype",
       activation: "pale-stage-active-balance-provisional",
@@ -49,6 +49,23 @@ describe("campaign stage curve authority", () => {
     expect(STAGE_IDS).toContain("pale-traverse");
     expect(CAMPAIGN_STAGE_IDS).toContain("pale-traverse");
     expect(CAMPAIGN_STAGE_CURVES).toHaveProperty("pale-traverse");
+    expect(campaignStageCurve("pale-traverse")).toEqual({
+      health: 2.08,
+      damage: 1.44,
+      countAdd: 6,
+      concurrentAdd: 3,
+      disposition: "authored-prototype",
+      composition: {
+        localWaveBudgets: [3, 4, 5, 6, 7, 8, 9, 10, 11, 0],
+        costs: { rimehound: 1, charger: 1, wraith: 2, anchor: 3, chimera: 2, armored: 1 },
+        maximumPerWave: {
+          rimehound: [2, 2, 3, 3, 4, 4, 4, 5, 5, 0],
+          charger: [1, 1, 2, 2, 2, 3, 3, 3, 4, 0],
+          wraith: [0, 0, 1, 1, 2, 2, 2, 3, 3, 0],
+          anchor: [0, 0, 0, 1, 1, 1, 1, 2, 2, 0],
+        },
+      },
+    });
     expect(campaignStageCurve("pale-traverse")).toMatchObject(SEVEN_STAGE_CURVE_PROTOTYPE.stages["pale-traverse"]);
     expect(campaignStageCurve("voidspire")).not.toEqual(SEVEN_STAGE_CURVE_PROTOTYPE.stages.voidspire);
   });

@@ -157,7 +157,7 @@ describe("LiveWaveController", () => {
     const live = harness(run, { currentStageIndex: 3, chapterStageIndex: 4 });
     live.controller.startNextWave();
     expect(run).toMatchObject({ wave: 41, stage: 4, _biomeIdx: 4, pendingBossOutro: null });
-    expect(run.spawnQueue.every((entry) => ["rimehound", "ranged", "flyer", "armored"].includes(entry.type))).toBe(true);
+    expect(run.spawnQueue.every((entry) => ["rimehound", "ranged", "charger", "flyer", "armored"].includes(entry.type))).toBe(true);
     expect(run.spawnQueue.some((entry) => ["bomber", "wraith", "anchor", "chimera"].includes(entry.type))).toBe(false);
     expect(live.planIntentRecords).toEqual([
       { type: "begin-wipe" }, { type: "load-stage", stageIndex: 4 },

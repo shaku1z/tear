@@ -19,6 +19,23 @@ const VERDANT_COMPOSITION = Object.freeze({
 } as const satisfies CompositionBudgetDefinition);
 
 /**
+ * Provisional Pale-owned pressure budget. The total budget controls the stage's
+ * route/pack/control families while the per-family caps prevent one seeded roll
+ * from turning the Traverse into an unreadable wall of overlapping threats.
+ * Joint seven-stage balance remains deferred to C22.
+ */
+const PALE_COMPOSITION = Object.freeze({
+  localWaveBudgets: Object.freeze([3, 4, 5, 6, 7, 8, 9, 10, 11, 0]),
+  costs: Object.freeze({ rimehound: 1, charger: 1, wraith: 2, anchor: 3, chimera: 2, armored: 1 }),
+  maximumPerWave: Object.freeze({
+    rimehound: Object.freeze([2, 2, 3, 3, 4, 4, 4, 5, 5, 0]),
+    charger: Object.freeze([1, 1, 2, 2, 2, 3, 3, 3, 4, 0]),
+    wraith: Object.freeze([0, 0, 1, 1, 2, 2, 2, 3, 3, 0]),
+    anchor: Object.freeze([0, 0, 0, 1, 1, 1, 1, 2, 2, 0]),
+  }),
+} as const satisfies CompositionBudgetDefinition);
+
+/**
  * Engineering-only campaign pressure authority. Verdant and earlier stages use
  * the authored seven-stage prototype; later current stages retain their
  * six-stage position pressure until VS3-C15-S8 evaluates their relocated slots.
@@ -28,7 +45,7 @@ export const CAMPAIGN_STAGE_CURVES = Object.freeze({
   undercroft: Object.freeze({ health: 1.28, damage: 1.12, countAdd: 2, concurrentAdd: 1, disposition: "authored-prototype" }),
   "crimson-fields": Object.freeze({ health: 1.56, damage: 1.24, countAdd: 4, concurrentAdd: 2, disposition: "authored-prototype" }),
   "verdant-sanctum": Object.freeze({ health: 1.82, damage: 1.34, countAdd: 5, concurrentAdd: 2, disposition: "authored-prototype", composition: VERDANT_COMPOSITION }),
-  "pale-traverse": Object.freeze({ health: 2.08, damage: 1.44, countAdd: 6, concurrentAdd: 3, disposition: "authored-prototype" }),
+  "pale-traverse": Object.freeze({ health: 2.08, damage: 1.44, countAdd: 6, concurrentAdd: 3, disposition: "authored-prototype", composition: PALE_COMPOSITION }),
   voidspire: Object.freeze({ health: 2.36, damage: 1.56, countAdd: 8, concurrentAdd: 4, disposition: "legacy-position-placeholder" }),
   tear: Object.freeze({ health: 2.7, damage: 1.7, countAdd: 10, concurrentAdd: 4, disposition: "legacy-position-placeholder" }),
 } as const satisfies Readonly<Partial<Record<StageId, CampaignStageCurve>>>);
@@ -51,7 +68,7 @@ const prototypeCurve = (
   concurrentAdd: number,
 ): CampaignStageCurve => Object.freeze({ health, damage, countAdd, concurrentAdd, disposition: "authored-prototype" });
 
-/** Seven-stage comparison seed. Pale's basic curve is live; C8 still owns composition and joint late-stage retuning. */
+/** Seven-stage comparison seed. Pale is live; joint late-stage retuning remains deferred to C22. */
 export const SEVEN_STAGE_CURVE_PROTOTYPE = Object.freeze({
   status: "engineering-prototype",
   activation: "pale-stage-active-balance-provisional",

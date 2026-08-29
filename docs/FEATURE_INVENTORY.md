@@ -510,8 +510,8 @@ This is the migration checklist for the architectural redesign. A checked featur
   prism recombination, vertical recovery wake, hail ground break, and
   launch/Power-break shell counterplay use ordinary family, projectile, and
   break entry points. All five survive the production State Forge/hash boundary
-  and have clean built Playground captures. The stage itself remains inactive
-  until PT3-C5.
+  and have clean built Playground captures. At that checkpoint the stage itself
+  remained inactive until PT3-C5.
   PT3-C5 activates the engineering-only Pale stage as campaign stage V at
   waves 41–50. Natural wave-41 progression now loads its horizontal platform
   layout, chapter transition, provisional stage curve, local-wave enemy pool,
@@ -533,8 +533,13 @@ This is the migration checklist for the architectural redesign. A checked featur
   interruptible pursuit routes, and the exhausted Last Crossing. Phase and
   encounter cleanup retire all owned projectiles and prior-phase route objects.
   Clean Boss Test captures now show representative attacks in normal and
-  combined accessibility profiles; campaign balance and full-mode integration
-  remain PT3-C8/C9.
+  combined accessibility profiles. PT3-C8 now gives waves 41–49 a bounded
+  source-owned composition budget and adds Charger to the Pale pool so Rime
+  Runner can occur naturally. Exact seeded tests cover local unlocks, counts,
+  caps, difficulty scaling, player damage, concurrency, environment bounds,
+  wave-49 draft/heal flow, and the White Hart wave-50 boss reward. Echo and
+  Source relocation values remain unchanged comparison data for C22; full-mode
+  and durable-data integration remains PT3-C9.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference

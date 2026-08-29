@@ -187,7 +187,7 @@ const STAGES: readonly StageDefinition[] = [
     chapterArt: { composition: "left", wash: "light" },
     bg: "#dfe8f7", plat: "#1f3557", accent: "#ef8da8",
     pool: enemyPool(
-      ["rimehound", 0.85, 1], ["ranged", 0.75, 1], ["flyer", 0.60, 1], ["armored", 0.55, 1],
+      ["rimehound", 0.85, 1], ["ranged", 0.75, 1], ["charger", 0.65, 1], ["flyer", 0.60, 1], ["armored", 0.55, 1],
       ["bomber", 0.40, 2], ["wraith", 0.35, 3], ["anchor", 0.22, 4], ["chimera", 0.30, 6],
     ),
     layout: [

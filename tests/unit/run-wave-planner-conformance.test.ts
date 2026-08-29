@@ -71,7 +71,7 @@ describe("wave planning conformance", () => {
       ["armored", "bomber", "charger", "ranged", "anchor"],
       ["charger", "flyer", "bomber", "herald", "chimera"],
       ["flyer", "ranged", "charger", "rootbinder", "mender", "anchor", "armored", "chimera"],
-      ["rimehound", "ranged", "flyer", "armored", "bomber", "wraith", "anchor", "chimera"],
+      ["rimehound", "ranged", "charger", "flyer", "armored", "bomber", "wraith", "anchor", "chimera"],
       ["wraith", "flyer", "ranged", "priest", "chimera", "mender"],
       ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "herald", "anchor", "priest", "mender"],
     ]);
