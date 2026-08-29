@@ -205,6 +205,35 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       context.state.setEnemies([enemy]);
       context.state.setProjectiles([]);
     },
+    /** Bounded PT3-C11 workload composed through the production boss, enemy, variant, and environment paths. */
+    preparePalePerformanceScenario() {
+      prepareCurrentGameplay();
+      const run = runOf(context.state);
+      const player = context.state.player();
+      const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === "white-hart" && !enemy.dead);
+      if (player === undefined || boss === undefined) throw new Error("Pale performance requires the live White Hart encounter");
+      const phase = (boss as GameEnemy & { readonly phase?: number }).phase;
+      if (phase !== 2) throw new Error(`Pale performance requires White Hart phase two, received ${String(phase)}`);
+      if (context.spawnExplicitVariant === undefined) throw new Error("Pale performance requires the explicit production variant seam");
+      const groundY = d.CONFIG.world.groundY;
+      const hounds = [430, 620].map((x) => context.entities.createEnemy("rimehound", x, groundY - 17, run));
+      for (const hound of hounds) Object.assign(hound, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        atk: "flank", atkT: 0, atkCd: 0, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies([boss, ...hounds]);
+      for (const [kind, variantId] of [
+        ["charger", "rime-runner"], ["ranged", "prism-seer"], ["flyer", "snowfall-kite"],
+        ["bomber", "hailcaster"], ["armored", "glacier-guard"],
+      ] as const) context.spawnExplicitVariant(kind, variantId);
+      for (const enemy of context.state.enemies()) {
+        Object.assign(enemy, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0 });
+        enemy.hp = Math.max(enemy.hp, 1_000); enemy.hpDisplay = enemy.hp;
+      }
+      player.hp = Math.max(player.hp, 1_000);
+      context.state.setProjectiles([]);
+    },
     /** PT3-C3 browser fixture: compose two real Rimehounds through the live factory. */
     prepareRimehoundScenario() {
       const player = context.state.player(), run = runOf(context.state);
