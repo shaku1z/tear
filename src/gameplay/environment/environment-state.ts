@@ -10,6 +10,7 @@ import type {
 } from "./environment-contracts";
 import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "./environment-definitions";
 import { assertBloomWellForcePolicy } from "./bloom-well";
+import { assertAuroraTrackFieldState, assertGhostTrackRouteState } from "./aurora-track";
 
 const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
   maxFields: 64, maxCombatObjects: 128, maxRoutes: 64,
@@ -21,6 +22,9 @@ function copyField(value: EnvironmentFieldState): EnvironmentFieldState {
   }), eligibility: Object.freeze({ ...value.eligibility }),
     ...(value.schedule === null ? {} : { schedule: Object.freeze({ ...value.schedule }) }),
     ...(value.force === null ? {} : { force: Object.freeze({ ...value.force }) }),
+    ...(value.lifecycle === undefined ? {} : { lifecycle: Object.freeze({ ...value.lifecycle }) }),
+    ...(value.transportEligibility === undefined ? {} : { transportEligibility: Object.freeze({ ...value.transportEligibility }) }),
+    ...(value.momentum === undefined ? {} : { momentum: Object.freeze({ ...value.momentum }) }),
   });
 }
 
@@ -31,7 +35,9 @@ function copyCombatObject(value: EnvironmentCombatObjectState): EnvironmentComba
 }
 
 function copyRoute(value: EnvironmentRouteState): EnvironmentRouteState {
-  return Object.freeze({ ...value, points: Object.freeze(value.points.map((point) => Object.freeze({ ...point }))) });
+  return Object.freeze({ ...value, points: Object.freeze(value.points.map((point) => Object.freeze({ ...point }))),
+    ...(value.lifecycle === undefined ? {} : { lifecycle: Object.freeze({ ...value.lifecycle }) }),
+  });
 }
 
 function assertUnique(ids: readonly string[], category: string): void {
@@ -103,9 +109,10 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     snapshot.fields.forEach((field) => {
       assertEnvironmentObjectCategory("field", field.kind);
       if (field.kind === "bloom-well" && "bloomWellId" in field) assertBloomWellForcePolicy(field.force);
+      assertAuroraTrackFieldState(field);
     });
     snapshot.combatObjects.forEach((object) => { assertEnvironmentCombatCapabilities(object.kind, object.counterplayTags, object.procEligible); });
-    snapshot.routes.forEach((route) => { assertEnvironmentObjectCategory("route", route.kind); });
+    snapshot.routes.forEach((route) => { assertEnvironmentObjectCategory("route", route.kind); assertGhostTrackRouteState(route); });
     this.#fields.splice(0, this.#fields.length, ...snapshot.fields.map(copyField));
     this.#combatObjects.splice(0, this.#combatObjects.length, ...snapshot.combatObjects.map(copyCombatObject));
     this.#routes.splice(0, this.#routes.length, ...snapshot.routes.map(copyRoute));
@@ -136,6 +143,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     if (this.#fields.length >= this.configuration.maxFields) throw new RangeError("environment field population bound exceeded");
     assertEnvironmentObjectCategory("field", value.kind);
     if (value.kind === "bloom-well" && "bloomWellId" in value) assertBloomWellForcePolicy(value.force);
+    assertAuroraTrackFieldState(value as EnvironmentFieldState);
     const id = this.#claim(value.id, "field"); this.#fields.push(copyField({ ...value, id })); this.#revision += 1; return id;
   }
   addCombatObject(value: Omit<EnvironmentCombatObjectState, "id"> & { readonly id?: string }): string {
@@ -146,6 +154,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   addRoute(value: Omit<EnvironmentRouteState, "id"> & { readonly id?: string }): string {
     if (this.#routes.length >= this.configuration.maxRoutes) throw new RangeError("environment route population bound exceeded");
     assertEnvironmentObjectCategory("route", value.kind);
+    assertGhostTrackRouteState(value as EnvironmentRouteState);
     const id = this.#claim(value.id, "route"); this.#routes.push(copyRoute({ ...value, id })); this.#revision += 1; return id;
   }
 

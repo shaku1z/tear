@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../replay/hash";
 import { ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
 import { isValidBloomWellForcePolicy } from "../gameplay/environment/bloom-well";
+import { assertAuroraTrackFieldState, assertGhostTrackRouteState } from "../gameplay/environment/aurora-track";
 import { GRAFT_ANCHOR_TYPES, graftAnchorDefinition } from "../gameplay/environment/graft-anchor";
 import type { TearEnvironmentObservationV1 } from "./contracts";
 import { ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY } from "./state-forge-factories";
@@ -60,7 +61,7 @@ export function rebaseEnvironmentSnapshot(value: unknown, destinationWorldId: st
   }
   const rewrite = (entry: unknown): unknown => {
     if (!record(entry)) return entry;
-    const references = ["ownerId", "targetId", "sourceId"] as const;
+    const references = ["ownerId", "targetId", "sourceId", "sourceTrackId"] as const;
     const result: Record<string, unknown> = { ...entry, id: portableEnvironmentId(entry.id, remapping) };
     for (const key of references) if (key in entry) result[key] = portableEnvironmentId(entry[key], remapping);
     for (const key of ["targetIds", "linkedActorIds"] as const) {
@@ -163,6 +164,10 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
         if (record(entry.schedule)) for (const name of ["startTick", "endTick", "intervalTicks"] as const) { const scheduleValue = entry.schedule[name]; if (scheduleValue !== undefined && (typeof scheduleValue !== "number" || !Number.isSafeInteger(scheduleValue) || scheduleValue < 0)) issues.push(issue(`${path}.schedule.${name}`, `${name} must be a non-negative safe integer`)); }
         if (entry.force !== null && entry.force !== undefined && (!record(entry.force) || !finite(entry.force.x) || !finite(entry.force.y) || !finite(entry.force.magnitude) || entry.force.magnitude < 0)) issues.push(issue(`${path}.force`, "force must contain finite x, y, and non-negative magnitude"));
         if (entry.kind === "bloom-well" && text(entry.bloomWellId) && !isValidBloomWellForcePolicy(entry.force)) issues.push(issue(`${path}.force`, "Bloom Well force must fit its bounded declared magnitude"));
+        if (entry.kind === "aurora-track") {
+          try { assertAuroraTrackFieldState(entry as never); }
+          catch (error) { issues.push(issue(path, error instanceof Error ? error.message : "Aurora Track data is invalid")); }
+        }
       } else if (key === "combatObjects") {
         if (entry.targetId !== null && !text(entry.targetId)) issues.push(issue(`${path}.targetId`, "targetId must be null or a stable ID"));
         if (!finite(entry.integrity) || !finite(entry.maxIntegrity) || entry.maxIntegrity <= 0 || entry.integrity < 0 || entry.integrity > entry.maxIntegrity) issues.push(issue(`${path}.integrity`, "integrity must be finite and within maxIntegrity"));
@@ -204,6 +209,10 @@ export function validateEnvironmentCodecPayload(payload: unknown): readonly Envi
       } else {
         if (!Array.isArray(entry.points) || entry.points.length < 2 || entry.points.length > MAX_POINTS) issues.push(issue(`${path}.points`, "route points must be a bounded array with at least two points"));
         else entry.points.forEach((point, pointIndex) => { if (!record(point) || !finite(point.x) || !finite(point.y)) issues.push(issue(`${path}.points[${String(pointIndex)}]`, "route point must contain finite x and y")); });
+        if (entry.kind === "ghost-track") {
+          try { assertGhostTrackRouteState(entry as never); }
+          catch (error) { issues.push(issue(path, error instanceof Error ? error.message : "Ghost Track data is invalid")); }
+        }
       }
     });
   }
@@ -231,6 +240,10 @@ export function projectEnvironmentHash(value: unknown): unknown {
     if (key === "fields") Object.assign(commonValue, { timer: finite(entry.timer) ? rounded(entry.timer) : entry.timer, eligibility: entry.eligibility ?? null, force: entry.force ?? null, schedule: entry.schedule ?? null, patternId: entry.patternId ?? null,
       variant: entry.variant ?? null, bloomWellId: entry.bloomWellId ?? null, stageOwnerId: entry.stageOwnerId ?? null,
       bossOwnerId: portableEnvironmentId(entry.bossOwnerId ?? null, remapping), startTick: entry.startTick ?? null, transitionTick: entry.transitionTick ?? null });
+    if (key === "fields" && entry.kind === "aurora-track") Object.assign(commonValue, {
+      trackId: entry.trackId, direction: entry.direction, lifecycle: entry.lifecycle,
+      transportEligibility: entry.transportEligibility, momentum: entry.momentum, maximumConcurrent: entry.maximumConcurrent,
+    });
     if (key === "combatObjects") {
       Object.assign(commonValue, { targetId: portableEnvironmentId(entry.targetId ?? null, remapping), ...(Array.isArray(entry.targetIds) ? { targetIds: entry.targetIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), ...(Array.isArray(entry.linkedActorIds) ? { linkedActorIds: entry.linkedActorIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), integrity: entry.integrity, maxIntegrity: entry.maxIntegrity, counterplayTags: entry.counterplayTags ?? [], procEligible: entry.procEligible, damageDedupeId: entry.damageDedupeId, patternId: entry.patternId ?? null });
       if (entry.factoryId === "graft-anchor") Object.assign(commonValue, {
@@ -249,7 +262,12 @@ export function projectEnvironmentHash(value: unknown): unknown {
         response: entry.response, createdTick: entry.createdTick, activationTick: entry.activationTick, expiryTick: entry.expiryTick,
       });
     }
-    if (key === "routes") commonValue.points = Array.isArray(entry.points) ? entry.points.map((point) => ({ x: rounded(Number((point as Record<string, unknown>).x)), y: rounded(Number((point as Record<string, unknown>).y)) })) : [];
+    if (key === "routes") {
+      commonValue.points = Array.isArray(entry.points) ? entry.points.map((point) => ({ x: rounded(Number((point as Record<string, unknown>).x)), y: rounded(Number((point as Record<string, unknown>).y)) })) : [];
+      if (entry.kind === "ghost-track") Object.assign(commonValue, { variant: entry.variant, direction: entry.direction,
+        width: entry.width, lifecycle: entry.lifecycle, sourceTrackId: portableEnvironmentId(entry.sourceTrackId ?? null, remapping),
+        maximumConcurrent: entry.maximumConcurrent });
+    }
     return Object.freeze(commonValue);
     });
   };
@@ -271,13 +289,18 @@ export function environmentSnapshotToObservation(value: unknown): TearEnvironmen
     return Object.freeze({ minX: x, maxX: x + w, minY: y, maxY: y + h });
   };
   return Object.freeze({
-    fields: (projection.fields as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, bounds: bounds(entry.geometry), state: entry.state, active: entry.state === "active", ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), eligibility: entry.eligibility })),
+    fields: (projection.fields as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, bounds: bounds(entry.geometry), state: entry.state, active: entry.state === "active", ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), eligibility: entry.eligibility,
+      ...(entry.kind === "aurora-track" ? { variant: entry.variant, direction: entry.direction, trackId: entry.trackId,
+        lifecycle: entry.lifecycle, transportEligibility: entry.transportEligibility, momentum: entry.momentum,
+        maximumConcurrent: entry.maximumConcurrent } : {}) })),
     combatObjects: (projection.combatObjects as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), ...(typeof entry.targetId === "string" ? { targetId: entry.targetId } : {}), bounds: bounds(entry.geometry), integrityRatio: Number(entry.maxIntegrity) > 0 ? Number(entry.integrity) / Number(entry.maxIntegrity) : 0, state: entry.state, counterplayTags: entry.counterplayTags, procEligible: entry.procEligible,
       ...(typeof entry.graftType === "string" ? { graftType: entry.graftType } : {}), ...(typeof entry.effect === "string" ? { effect: entry.effect } : {}),
       ...(typeof entry.recoverySpentHealthFraction === "number" ? { recoverySpentHealthFraction: entry.recoverySpentHealthFraction } : {}),
       ...(typeof entry.rootCageId === "string" ? { rootCageId: entry.rootCageId, boundarySide: entry.boundarySide, response: entry.response } : {}),
     })),
-    routes: (projection.routes as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, points: entry.points, state: entry.state, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}) })),
+    routes: (projection.routes as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, points: entry.points, state: entry.state, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}),
+      ...(entry.kind === "ghost-track" ? { variant: entry.variant, direction: entry.direction, width: entry.width,
+        lifecycle: entry.lifecycle, sourceTrackId: entry.sourceTrackId, maximumConcurrent: entry.maximumConcurrent } : {}) })),
   }) as TearEnvironmentObservationV1;
 }
 

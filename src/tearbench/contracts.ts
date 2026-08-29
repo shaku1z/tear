@@ -136,6 +136,13 @@ export interface TearObservedEnvironmentFieldV1 {
   readonly active: boolean;
   readonly ownerId?: string;
   readonly eligibility?: Readonly<{ player: boolean; enemies: boolean; bosses: boolean }>;
+  readonly variant?: string;
+  readonly direction?: -1 | 1;
+  readonly trackId?: string;
+  readonly lifecycle?: Readonly<{ warningTicks: number; activeTicks: number; cooldownTicks: number }>;
+  readonly transportEligibility?: Readonly<Record<string, boolean>>;
+  readonly momentum?: Readonly<{ accelerationMultiplier: number; velocityRetention: number; exitCarryTicks: number; heavyInfluenceScale: number }>;
+  readonly maximumConcurrent?: number;
 }
 
 export interface TearObservedEnvironmentCombatObjectV1 {
@@ -162,6 +169,12 @@ export interface TearObservedEnvironmentRouteV1 {
   readonly points: readonly Readonly<{ x: number; y: number }>[];
   readonly state: string;
   readonly ownerId?: string;
+  readonly variant?: string;
+  readonly direction?: -1 | 1;
+  readonly width?: number;
+  readonly lifecycle?: Readonly<{ warningTicks: number; activeTicks: number; cooldownTicks: number }>;
+  readonly sourceTrackId?: string | null;
+  readonly maximumConcurrent?: number;
 }
 
 export interface TearEnvironmentObservationV1 {

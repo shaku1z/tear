@@ -18,10 +18,12 @@ export function isEnvironmentObjectKind(value: unknown): value is EnvironmentObj
 /** Source-owned environment metadata. It declares capabilities, not biome behavior. */
 export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKind, EnvironmentObjectDefinition>> = Object.freeze({
   "bloom-well": Object.freeze({ kind: "bloom-well", category: "field", behavior: "generic-field", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
+  "aurora-track": Object.freeze({ kind: "aurora-track", category: "field", behavior: "generic-field", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
   "rootline": Object.freeze({ kind: "rootline", category: "field", behavior: "generic-field", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
   "root-link": Object.freeze({ kind: "root-link", category: "combat-object", behavior: "generic-combat-object", counterplayTags: ["cut", "break", "projectile-cut"] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
   "graft-anchor": Object.freeze({ kind: "graft-anchor", category: "combat-object", behavior: "generic-combat-object", counterplayTags: ["cut", "break", "projectile-cut"] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
   "regrowth-link": Object.freeze({ kind: "regrowth-link", category: "route", behavior: "data-only-route", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
+  "ghost-track": Object.freeze({ kind: "ghost-track", category: "route", behavior: "data-only-route", counterplayTags: [] as const, grantsEnemyRewards: false, ordinaryEnemyProcEligible: false }),
 });
 
 export const ENVIRONMENT_FIELD_KIND_IDS = Object.freeze(

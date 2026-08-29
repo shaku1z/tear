@@ -6,7 +6,7 @@
  * import these IDs rather than maintaining a second registry.
  */
 export const ENVIRONMENT_OBJECT_KIND_IDS = Object.freeze([
-  "bloom-well", "rootline", "root-link", "graft-anchor", "regrowth-link",
+  "bloom-well", "aurora-track", "rootline", "root-link", "graft-anchor", "regrowth-link", "ghost-track",
 ] as const);
 
 export type EnvironmentObjectKind = typeof ENVIRONMENT_OBJECT_KIND_IDS[number];
@@ -54,6 +54,31 @@ export interface EnvironmentEligibility {
   readonly bosses: boolean;
 }
 
+export type EnvironmentTrackDirection = -1 | 1;
+export type AuroraTrackVariant = "stage" | "boss-wake";
+export type GhostTrackVariant = "ghost";
+
+export interface EnvironmentTrackLifecycle {
+  readonly warningTicks: number;
+  readonly activeTicks: number;
+  readonly cooldownTicks: number;
+}
+
+export interface AuroraTrackTransportEligibility extends EnvironmentEligibility {
+  readonly lightEnemies: boolean;
+  readonly heavyEnemies: boolean;
+  readonly thrownBlade: boolean;
+  readonly deflectedProjectiles: boolean;
+  readonly bossCharges: boolean;
+}
+
+export interface AuroraTrackMomentumPolicy {
+  readonly accelerationMultiplier: number;
+  readonly velocityRetention: number;
+  readonly exitCarryTicks: number;
+  readonly heavyInfluenceScale: number;
+}
+
 export interface EnvironmentForcePolicy {
   readonly x: number;
   readonly y: number;
@@ -74,6 +99,13 @@ export interface EnvironmentFieldState {
   readonly force: EnvironmentForcePolicy | null;
   readonly cleanupReason: EnvironmentClearReason | null;
   readonly patternId?: string;
+  readonly trackId?: string;
+  readonly variant?: string;
+  readonly direction?: EnvironmentTrackDirection;
+  readonly lifecycle?: EnvironmentTrackLifecycle;
+  readonly transportEligibility?: AuroraTrackTransportEligibility;
+  readonly momentum?: AuroraTrackMomentumPolicy;
+  readonly maximumConcurrent?: number;
 }
 
 export interface EnvironmentCombatObjectState {
@@ -103,6 +135,12 @@ export interface EnvironmentRouteState {
   readonly stateTick: number;
   readonly ownerId: string | null;
   readonly cleanupReason: EnvironmentClearReason | null;
+  readonly variant?: GhostTrackVariant;
+  readonly direction?: EnvironmentTrackDirection;
+  readonly width?: number;
+  readonly lifecycle?: EnvironmentTrackLifecycle;
+  readonly sourceTrackId?: string | null;
+  readonly maximumConcurrent?: number;
 }
 
 export interface EnvironmentSnapshot {

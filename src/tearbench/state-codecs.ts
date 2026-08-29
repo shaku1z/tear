@@ -71,7 +71,7 @@ function cloneData<T extends TearCodecValue>(value: T): T {
 }
 
 export const TEAR_REFERENCE_KEYS = Object.freeze([
-  "ownerId", "targetId", "summonerId", "platformId", "projectileId", "stolenBladeId",
+  "ownerId", "targetId", "summonerId", "platformId", "projectileId", "stolenBladeId", "sourceTrackId",
 ] as const);
 const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
 
