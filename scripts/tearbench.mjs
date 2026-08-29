@@ -77,8 +77,21 @@ function currentStageBossPairs() {
     /^\s{4}id:\s*"([a-z][a-z0-9-]*)",[\s\S]*?^\s{4}boss:\s*"([a-z][a-z0-9-]*)"/gmu,
   )].map((entry) => Object.freeze({ stage: entry[1], boss: entry[2] }));
   const stageIds = pairs.map((pair) => pair.stage);
-  const bossIds = [...bossDefinitionSource.matchAll(/Object\.freeze\(\{\s*id:\s*"([a-z][a-z0-9-]*)"/gu)]
-    .map((entry) => entry[1]);
+  const definitions = bossDefinitionSource.match(
+    /export const BOSS_DEFINITIONS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const satisfies readonly BossDefinition\[\]\)/u,
+  );
+  if (definitions === null) throw new TypeError("could not read the production boss definition catalog");
+  const bossIds = [...definitions[1].matchAll(
+    /Object\.freeze\(\{\s*id:\s*"([a-z][a-z0-9-]*)"|([A-Z][A-Z0-9_]*_DEFINITION)/gu,
+  )].map((entry) => {
+    if (entry[1] !== undefined) return entry[1];
+    const reference = entry[2];
+    const resolved = bossDefinitionSource.match(new RegExp(
+      `export const ${reference}\\s*=\\s*Object\\.freeze\\(\\{\\s*id:\\s*"([a-z][a-z0-9-]*)"`, "u",
+    ));
+    if (resolved === null) throw new TypeError(`could not resolve production boss definition ${String(reference)}`);
+    return resolved[1];
+  });
   if (stageIds.length === 0 || bossIds.length !== pairs.length
     || new Set(stageIds).size !== stageIds.length || new Set(bossIds).size !== bossIds.length
     || pairs.some((pair) => !bossIds.includes(pair.boss))) {

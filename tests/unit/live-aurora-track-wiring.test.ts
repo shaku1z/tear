@@ -10,7 +10,9 @@ describe("live Aurora Track actor wiring", () => {
     const input = { right: () => true, left: () => false };
     const player = { x: 10, y: 20, vx: 30, aiInput: input };
     const blade = { x: 30, y: 20, vx: 500, state: "flying" };
-    const light = { x: 40, y: 20, vx: 50, weight: 1, cfg: { speed: 100 } };
+    const influence: unknown[] = [];
+    const light = { x: 40, y: 20, vx: 50, weight: 1, cfg: { speed: 100 },
+      onAuroraTrackInfluence(direction: -1 | 1, onTrack: boolean) { influence.push([direction, onTrack]); } };
     const heavy = { x: 50, y: 20, vx: 30, weight: 2, cfg: { speed: 80 } };
     const boss = { x: 60, y: 20, vx: 200, weight: 6, isBoss: true, auroraBossChargeActive: true, cfg: { speed: 70 } };
     const deflected = { x: 70, y: 20, vx: 600, dead: false, deflected: true };
@@ -29,9 +31,11 @@ describe("live Aurora Track actor wiring", () => {
     expect(actors[0]?.intentX).toBe(1);
     if (actors[0] === undefined || actors[1] === undefined || actors[5] === undefined) throw new Error("missing Aurora adapters");
     actors[0].vx = 77; actors[1].vx = 888; actors[5].vx = 999;
+    actors[2]?.onInfluenced?.(1, true);
     expect(player.vx).toBe(77);
     expect(blade.vx).toBe(888);
     expect(deflected.vx).toBe(999);
+    expect(influence).toEqual([[1, true]]);
   });
 
   it("does not infer player intent from residual velocity or expose held blades", () => {

@@ -13,6 +13,7 @@ import {
 } from "../../src/gameplay/run/content-director";
 import { CAMPAIGN_STAGE_IDS, STAGES, STAGE_BOSS_HOME, STAGE_IDS } from "../../src/gameplay/stages";
 import { BOSS_FACTORY_IDS } from "../../src/tearbench/registries";
+import { TEAR_WORLD_ENTITY_FACTORY_IDS } from "../../src/gameplay/runtime/tear-world-entity-construction";
 
 describe("Pale Revision 3 content authority", () => {
   it("reserves each Pale identity exactly once through existing source-owned catalogs", () => {
@@ -23,12 +24,13 @@ describe("Pale Revision 3 content authority", () => {
     expect(WHITE_HART_PROVISIONAL_DEFINITION).toMatchObject({ id: "white-hart", name: "The White Hart" });
   });
 
-  it("does not advertise incomplete Pale subjects as executable content", () => {
+  it("promotes only the completed Rimehound subject while stage and boss remain unavailable", () => {
     expect(CAMPAIGN_STAGE_IDS).not.toContain("pale-traverse");
     expect(STAGES.some((stage) => stage.id === "pale-traverse")).toBe(false);
     expect(ENEMY_KIND_IDS).not.toContain("rimehound");
-    expect(BOSS_DEFINITIONS.map((boss) => String(boss.id))).not.toContain("white-hart");
-    expect(BOSS_ROSTER.map((boss) => String(boss.id))).not.toContain("white-hart");
+    expect(TEAR_WORLD_ENTITY_FACTORY_IDS).toContain("rimehound");
+    expect(BOSS_DEFINITIONS.map((boss) => boss.id)).not.toContain("white-hart");
+    expect(BOSS_ROSTER.map((boss) => boss.id)).not.toContain("white-hart");
     expect(BOSS_FACTORY_IDS).not.toContain("white-hart");
   });
 

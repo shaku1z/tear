@@ -15,6 +15,7 @@ export interface AuroraTransportActor {
   readonly normalAcceleration: number;
   readonly maximumSpeed: number;
   vx: number;
+  onInfluenced?(direction: EnvironmentTrackDirection, onTrack: boolean): void;
 }
 
 export interface AuroraTrackStepResult {
@@ -100,6 +101,7 @@ export function advanceAuroraTrack(
       * influenceScale * carryScale * seconds;
     const cap = actor.maximumSpeed * field.momentum.accelerationMultiplier;
     if (Math.abs(actor.vx) < cap) actor.vx = Math.max(-cap, Math.min(cap, actor.vx + delta));
+    actor.onInfluenced?.(field.direction, onTrack);
     influenced.push(actor.id);
     const remainingTicks = onTrack ? field.momentum.exitCarryTicks : Math.max(0, (carry?.remainingTicks ?? 0) - 1);
     if (remainingTicks > 0) nextCarry.push(Object.freeze({ actorId: actor.id, direction: field.direction, remainingTicks }));

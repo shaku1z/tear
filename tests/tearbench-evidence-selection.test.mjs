@@ -143,7 +143,8 @@ test("boss, stage, progression, event, and player owners receive current mapped 
 test("production stages select their exact authored live boss encounters", () => {
   const selection = select(["src/gameplay/stages.ts"]);
   for (const id of ["warden-grounds-live-encounter", "colossus-undercroft-live-encounter",
-    "aldric-crimson-fields-live-encounter", "echo-voidspire-live-encounter", "source-void-low-hp-rescue-seek"]) {
+    "aldric-crimson-fields-live-encounter", "rootbound-verdant-sanctum-live-encounter",
+    "echo-voidspire-live-encounter", "source-void-low-hp-rescue-seek"]) {
     assert.ok(selection.scenarios.includes(id), id);
   }
   const shared = selection.evidenceCommands.filter((entry) => entry.command ===

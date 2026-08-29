@@ -60,6 +60,7 @@
     "test:browser:ghost-v3-live-capture": "node tests/browser-ghost-v3-live-capture.js",
     "test:browser:c29-active-campaign-cinematic": "node tests/browser-c29-active-campaign-cinematic.js",
     "test:browser:verdant-presentation": "node tests/browser-verdant-presentation.js",
+    "test:browser:pale-rimehound": "node tests/browser-pale-rimehound.js",
     "test:browser:ghost-v3-physical-capture": "node tests/browser-ghost-v3-physical-capture.js",
     "test:browser:ghost-v3-dynamic-config": "node tests/browser-ghost-v3-dynamic-config.js",
     "test:browser:c27a-physical-canonical-input": "node tests/browser-c27a-physical-canonical-input.js",

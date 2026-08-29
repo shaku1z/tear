@@ -199,8 +199,9 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
           enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => {
             const authored = enemy as typeof enemy & { state?: string; stateT?: number; atk?: string; atkT?: number; phase?: number;
               phaseMarker?: number; mode?: string; cinematicT?: number; cinematicRequest?: unknown;
-              requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean };
-            return { x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
+              requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean;
+              packRole?: string; packFlank?: number; packAttackAuthorized?: boolean; pounceTargetX?: number };
+            return { kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
               stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
               boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
               atk: authored.atk, atkT: authored.atkT,
@@ -208,7 +209,9 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
               phaseMarker: authored.phaseMarker, mode: authored.mode,
               cinematicT: authored.cinematicT, cinematicPending: authored.cinematicRequest != null,
               voidPending: authored.requestVoidCinematic === true, mirrorBoss: authored.isMirrorBoss,
-              live: authored._live, bound: enemy.boundT || 0 };
+              live: authored._live, bound: enemy.boundT || 0,
+              packRole: authored.packRole, packFlank: authored.packFlank,
+              packAttackAuthorized: authored.packAttackAuthorized, pounceTargetX: authored.pounceTargetX };
           }),
           lifecycle: context.lifecycle.snapshot(),
         };

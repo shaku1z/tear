@@ -6,6 +6,7 @@ interface LiveAuroraBlade { x: number; y: number; vx: number; state: string }
 interface LiveAuroraEnemy {
   x: number; y: number; vx: number; weight?: number; isBoss?: boolean; auroraBossChargeActive?: boolean;
   cfg?: Readonly<{ speed?: number }>;
+  onAuroraTrackInfluence?(direction: -1 | 1, onTrack: boolean): void;
 }
 interface LiveAuroraProjectile { x: number; y: number; vx: number; dead: boolean; deflected: boolean }
 interface AuroraEnvironment { setAuroraTrackActorsSource(source: () => readonly AuroraTransportActor[]): void }
@@ -56,7 +57,8 @@ export function bindLiveAuroraTrackActors(
         : (enemy.weight ?? 1) >= 1.75 ? "heavy-enemy" : "light-enemy";
       actors.push({ id: actorId(enemy), kind, get x() { return enemy.x; }, get y() { return enemy.y; },
         get intentX() { return velocityIntent(enemy.vx); }, normalAcceleration: speed * 4, maximumSpeed: speed * 4,
-        get vx() { return enemy.vx; }, set vx(value: number) { enemy.vx = value; } });
+        get vx() { return enemy.vx; }, set vx(value: number) { enemy.vx = value; },
+        onInfluenced: (direction, onTrack) => enemy.onAuroraTrackInfluence?.(direction, onTrack) });
     }
 
     projectiles().forEach((projectile) => {

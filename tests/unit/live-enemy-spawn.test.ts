@@ -47,6 +47,7 @@ describe("live enemy spawn", () => {
     expect(constructLiveEnemy({ type: "wraith" }, construction)).toMatchObject({ kind: "wraith", x: 42, y: 220 });
     expect(constructLiveEnemy({ type: "mender" }, construction).kind).toBe("mender");
     expect(constructLiveEnemy({ type: "rootbinder" }, construction).kind).toBe("rootbinder");
+    expect(constructLiveEnemy({ type: "rimehound" }, construction).kind).toBe("rimehound");
     const boss = constructLiveEnemy({ type: "boss" }, construction);
     expect(boss._live).toBe(true);
     expect(beginBossPresentation).toHaveBeenCalledWith(boss);

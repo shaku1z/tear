@@ -72,7 +72,7 @@ export interface LiveEnemySpawnPort<TEnemy extends LiveSpawnEnemy> {
 
 export interface LiveEnemyConstructionPort<TEnemy extends LiveSpawnEnemy> {
   readonly sideSpawn: () => number;
-  readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera") => TEnemy;
+  readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera" | "rimehound") => TEnemy;
   readonly createAir: (kind: "flyer" | "wraith", x: number, y: number) => TEnemy;
   readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor" | "rootbinder") => TEnemy;
   readonly createBoss: (bossId?: string) => TEnemy;
@@ -86,7 +86,7 @@ export function constructLiveEnemy<TEnemy extends LiveSpawnEnemy>(
 ): TEnemy {
   let enemy: TEnemy;
   switch (spec.type) {
-    case "ranged": case "bomber": case "armored": case "chimera":
+    case "ranged": case "bomber": case "armored": case "chimera": case "rimehound":
       enemy = port.createGround(spec.type); break;
     case "flyer": case "wraith":
       enemy = port.createAir(spec.type, port.sideSpawn(), spec.type === "flyer" ? 200 : 220); break;

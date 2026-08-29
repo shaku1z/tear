@@ -1,3 +1,5 @@
+import { coordinateRimehoundPack } from "../entities/enemy-types/rimehound";
+
 export interface EnemyStepActor {
   x: number; y: number; vx: number; vy: number; hw: number; hh: number;
   hp: number; maxHp: number; dead: boolean; dying?: boolean; spawnT: number; stun: number; hitCd: number;
@@ -5,6 +7,8 @@ export interface EnemyStepActor {
   tutDummy?: boolean; cinematicRequest?: unknown; kind?: string; enraged?: boolean; isBoss?: boolean;
   bleedStacks: number; burnT: number; markT: number; slowStatus: number; _stFx: number; color?: string;
   _deathCause?: string; behavior?: string;
+  packFlank?: -1 | 1; packRole?: "line" | "flank"; packLockT?: number; packAttackAuthorized?: boolean;
+  lockPackAssignment?(role: "line" | "flank", flank: -1 | 1, duration: number): void;
   tickTimers(dt: number): void; updateDeath(dt: number): boolean; tickStatus(dt: number): void;
   update(dt: number, platforms: readonly unknown[], player: unknown, projectiles: unknown[]): void;
 }
@@ -18,6 +22,7 @@ export interface EnemyActorStepOptions {
 }
 
 export function stepEnemyActors(options: EnemyActorStepOptions): boolean {
+  coordinateRimehoundPack(options.enemies);
   for (const enemy of options.enemies) {
     if (enemy.dying) {
       enemy.tickTimers(options.dt); if (enemy.updateDeath(options.dt)) options.onKill(enemy, enemy._deathCause ?? ""); continue;

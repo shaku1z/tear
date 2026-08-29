@@ -487,6 +487,21 @@ This is the migration checklist for the architectural redesign. A checked featur
   restore/hash continuity, stale-actor pruning, and every generic environment
   clear path remain source-owned. Ghost Tracks are still data-only until the
   White Hart checkpoint, and Pale presentation is intentionally not claimed.
+  PT3-C3 composes Rimehound as a distinct low quadruped through the existing
+  enemy base, world factory, live spawn, fixed-step controller, collision,
+  State Forge payload, and enemy-presentation paths. The owning world's enemy
+  array supplies deterministic line/flank and single-attacker arbitration;
+  there is no process-global pack state or second roster. Its warned target,
+  decreasing pounce steering, contact-only pounce damage, wall/ledge/arena
+  miss skid, punish recovery, player-owned launch interruption, death, reset,
+  stage replacement, restore, and two-world isolation have permanent tests.
+  The shared Aurora actor port now provides an optional influence fact so the
+  same live Rimehound can follow Track direction and extend one aligned pounce
+  once without copying environment state. Playground and Enemy Test derive the
+  factory-ready identity from the canonical identity authority; Rimehound stays
+  out of production stage pools until Pale activation. An exact attributed
+  test build captures normal, committed-pounce, and high-contrast/reduced-motion
+  browser evidence under the PT3-C3 checkpoint path.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference

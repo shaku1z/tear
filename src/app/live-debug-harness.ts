@@ -155,6 +155,23 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       context.state.setEnemies([enemy]);
       context.state.setProjectiles([]);
     },
+    /** PT3-C3 browser fixture: compose two real Rimehounds through the live factory. */
+    prepareRimehoundScenario() {
+      const player = context.state.player(), run = runOf(context.state);
+      if (player === undefined) throw new Error("Rimehound scenario requires a live player");
+      Object.assign(player, { x: 900, y: d.CONFIG.world.groundY - player.hh,
+        vx: 0, vy: 0, onGround: true, hp: Math.max(player.hp, 1_000) });
+      const hounds = [430, 620].map((x) => context.entities.createEnemy(
+        "rimehound", x, d.CONFIG.world.groundY - 17, run,
+      ));
+      for (const hound of hounds) Object.assign(hound, {
+        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
+        atk: "flank", atkT: 0, atkCd: 0, canClimb: false, climber: false,
+        variant: "", variantName: "", affixes: [], affixCount: 0,
+      });
+      context.state.setEnemies(hounds);
+      context.state.setProjectiles([]);
+    },
     /** Exact-tick parity fixture: enter the real Ranged telegraph, fire, and kite loop. */
     prepareRangedParityScenario() {
       const player = context.state.player();
