@@ -305,14 +305,14 @@ dispatch, deployment, or C40 claim has occurred.
 
 ```text
 PROGRAM: Pale Traverse Revision 3
-STATUS: ACTIVE — PT3-C5 IN PROGRESS
-CURRENT CHECKPOINT: PT3-C5
-CURRENT SUBGOAL: PT3-C5-S1
+STATUS: ACTIVE — PT3-C8 IN PROGRESS
+CURRENT CHECKPOINT: PT3-C8
+CURRENT SUBGOAL: PT3-C8-S1
 SOURCE FOUNDATION: Verdant C21 freeze 25c589844ec2cfe85a8a6deead881ebb3d699198
-LAST GREEN CHECKPOINT: PT3-C4 at a167e9ce7748c15a10d90dedcd43dfec0fa51968
-LAST EVIDENCE: five stage-gated Pale variants, all-five production restore/hash and leakage matrices, clean game-reference export, 11 focused files / 70 tests, and clean built live-counterplay Playground captures pass
+LAST GREEN CHECKPOINT: PT3-C7 at 44f199278be774e0bbbfdf6178eec207814259d1
+LAST EVIDENCE: all twelve deterministic White Hart attacks, bounded route/wake runtime, three-phase State Forge restoration, 14 focused files / 79 tests, clean game-reference export, and clean built Boss Test captures pass
 BLOCKERS: none
-NEXT ACTION: assemble the Pale stage and presentation through the existing stage, environment, chapter, and backdrop authorities
+NEXT ACTION: validate the source-owned Pale local-wave 1–10 campaign budget and seven-stage provisional curve through wave 50
 PUBLICATION: prohibited
 JOINT INTEGRATION: not authorized
 MUSIC/WIKI/DEPLOYMENT: not authorized

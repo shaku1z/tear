@@ -525,6 +525,16 @@ This is the migration checklist for the architectural redesign. A checked featur
   publication boundary remains engineering-only, and the exact reference
   exporter deliberately stays fail-closed until White Hart and PT3-C11 provide
   the seventh boss/stage pair.
+  PT3-C7 completes the White Hart as a deterministic route-first three-phase
+  boss through the existing enemy type, environment, projectile, arena,
+  canonical observation, and State Forge paths. Its twelve attacks cover
+  warned direct charges, jumpable/deflectable waves, returnable shards,
+  true/decoy Ghost Tracks, player-usable Frozen Wake, temporary arena fracture,
+  interruptible pursuit routes, and the exhausted Last Crossing. Phase and
+  encounter cleanup retire all owned projectiles and prior-phase route objects.
+  Clean Boss Test captures now show representative attacks in normal and
+  combined accessibility profiles; campaign balance and full-mode integration
+  remain PT3-C8/C9.
   VS3-C19 closes the Verdant TearBench integration boundary: source-derived
   authority and diff-aware routes cover the stage, Rootbinder, Rootbound,
   environment kinds, variants, achievements, audio disposition, and reference

@@ -13,3 +13,5 @@ ignored unless deliberately promoted into a small canonical proof.
 | PT3-C3 Rimehound | [PT3-C3_EVIDENCE.md](PT3-C3_EVIDENCE.md) |
 | PT3-C4 Pale-native variants | [PT3-C4_EVIDENCE.md](PT3-C4_EVIDENCE.md) |
 | PT3-C5 stage and presentation | [PT3-C5_EVIDENCE.md](PT3-C5_EVIDENCE.md) |
+| PT3-C6 White Hart foundation | [PT3-C6_EVIDENCE.md](PT3-C6_EVIDENCE.md) |
+| PT3-C7 White Hart phases | [PT3-C7_EVIDENCE.md](PT3-C7_EVIDENCE.md) |
