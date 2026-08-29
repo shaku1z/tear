@@ -35,10 +35,10 @@ describe("Pale Revision 3 content authority", () => {
     expect(TEAR_WORLD_ENTITY_FACTORY_IDS).toContain("white-hart");
   });
 
-  it("keeps production evidence routes absent until their subjects exist", () => {
+  it("promotes only the approved White Hart foundation route and defers later natural/phase routes", () => {
     const serialized = JSON.stringify(scenarioCatalog);
-    expect(serialized).not.toContain("pale-traverse");
-    expect(serialized).not.toContain("white-hart");
+    expect(serialized).toContain("pale-traverse");
+    expect(serialized).toContain("white-hart");
     expect(serialized).not.toContain("rimehound");
   });
 });

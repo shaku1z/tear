@@ -86,7 +86,7 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
   for (const bossId of BOSSES) {
     await startReadyBoss(page, bossId);
     const before = await bossSnapshot(page, bossId);
-    const after = bossId === "rootbound"
+    const after = bossId === "rootbound" || bossId === "white-hart"
       ? await waitForBossSimulationAdvance(page, bossId, before.aliveT, 0.8)
       : await waitForBossCombatProgress(page, bossId, before, 0.8, bossId === "echo" ? 7000 : 5000);
     assert.ok(after.aliveT > before.aliveT + 0.8, `${bossId} AI must keep receiving fixed ticks after its intro`);
@@ -96,6 +96,9 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
       const attacking = await bossSnapshot(page, bossId);
       assert.equal(attacking.phase, 1, "Rootbound must begin in its authored first phase");
       assert.match(attacking.atk, /^vine-sweep:/u, "Rootbound must reach its first authored attack transition");
+    } else if (bossId === "white-hart") {
+      assert.equal(after.phase, 1, "White Hart foundation must begin in phase one");
+      assert.equal(after.atk, "unavailable", "White Hart attacks remain explicit until PT3-C7");
     } else assert.ok(distance(before, after) > 1, `${bossId} must leave its arrival pose after its intro`);
     if (bossId === "echo") assert.equal(after.live, true, "the Echo mirror brain must be live");
   }

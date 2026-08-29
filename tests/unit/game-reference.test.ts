@@ -101,7 +101,7 @@ describe("game-reference.v1", () => {
     expect(result.collections.achievements.status).toBe("complete");
     expect(result.collections.achievements.items).toHaveLength(100);
     expect(result.collections.stages.status).toBe("complete");
-    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"]);
+    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "pale-traverse", "voidspire", "tear"]);
     expect(result.collections.modes.status).toBe("complete");
     expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
     expect(result.collections.enemies.status).toBe("complete");
@@ -125,6 +125,7 @@ describe("game-reference.v1", () => {
       { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
       { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
       { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
+      { id: "white-hart", name: "The White Hart", stageId: "pale-traverse", phaseMarks: [0.65, 0.28] },
       { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
       { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
     ]);
@@ -156,7 +157,7 @@ describe("game-reference.v1", () => {
   it("projects only stable stage data and cross-reference IDs", () => {
     const result = reference();
     const stages = result.collections.stages.items;
-    expect(stages).toHaveLength(6);
+    expect(stages).toHaveLength(7);
     expect(stages[0]).toMatchObject({
       id: "grounds", name: "The Grounds", musicId: "grounds", boss: "warden",
       theme: { background: "#ffffff", platform: "#111111", accent: "#e23b3b", dark: false },
@@ -169,7 +170,7 @@ describe("game-reference.v1", () => {
       id: "verdant-sanctum", name: "The Verdant Sanctum", musicId: "verdant-sanctum", boss: "rootbound",
       theme: { background: "#dff2d6", platform: "#234a36", accent: "#e4c95a", dark: false },
     });
-    expect(stages[5]?.theme.dark).toBe(true);
+    expect(stages[6]?.theme.dark).toBe(true);
     expect(Object.keys(stages[0] ?? {})).not.toContain("stagePlatforms");
     expect(Object.keys(stages[0] ?? {})).not.toContain("hazards");
     expect(Object.values(stages).every((stage) => stage.pool.every((entry) => entry.weight > 0 && entry.unlockWave > 0))).toBe(true);

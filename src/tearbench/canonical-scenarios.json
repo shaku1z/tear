@@ -172,6 +172,23 @@
     }
   },
   {
+    "id": "white-hart-pale-traverse-foundation-live-encounter",
+    "description": "Launch the production White Hart foundation in Pale Traverse and prove its real factory, phase, observation, result, retry, and cleanup path before attacks become available in PT3-C7.",
+    "subject": { "kind": "boss", "id": "white-hart" },
+    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "white-hart" },
+    "backends": ["live"],
+    "tags": ["white-hart", "pale-traverse", "boss", "stage", "foundation", "pt3-c6"],
+    "maxTicks": 720,
+    "testFiles": ["tests/unit/white-hart-foundation.test.ts"],
+    "evidence": {
+      "command": "pnpm build:test:standalone && pnpm test:browser:pale-white-hart-foundation",
+      "artifact": "The dedicated production Boss Test journey starts White Hart through its source-owned Pale Traverse stage, observes three attack-unavailable phase ordinals, then proves defeat and retry with the same factory.",
+      "artifactRetention": "Regenerable local engineering screenshots and a source/build-bound evidence manifest are retained outside version control.",
+      "executionClass": "engineering",
+      "certification": "non-certifying"
+    }
+  },
+  {
     "id": "echo-voidspire-live-encounter",
     "description": "Launch the production Echo encounter in its authored Voidspire biome and prove its live combat simulation advances.",
     "subject": { "kind": "boss", "id": "echo" },

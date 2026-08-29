@@ -146,7 +146,7 @@ describe("TearBench current-game catalog authority", () => {
 
   it("maps every executable authored boss to one live scenario in its production home stage", () => {
     const encounters = currentCatalog.filter((entry) => entry.subject.kind === "boss");
-    const executableBossIds = BOSS_IDS.filter((id) => id !== "white-hart");
+    const executableBossIds = BOSS_IDS;
     assertProductionOwnerCoverage("boss scenario", executableBossIds, encounters.map((entry) => entry.subject.id));
     for (const stage of STAGES) {
       const matching = encounters.filter((entry) => entry.subject.id === stage.boss && entry.tags.includes(stage.id));
@@ -159,7 +159,7 @@ describe("TearBench current-game catalog authority", () => {
       encounters.filter((entry) => entry.subject.id !== "warden").map((entry) => entry.subject.id)); })
       .toThrow(/missing warden/u);
     expect(encounters.filter((entry) => entry.subject.id === "rootbound")).toHaveLength(1);
-    expect(encounters.filter((entry) => entry.subject.id === "white-hart")).toHaveLength(0);
+    expect(encounters.filter((entry) => entry.subject.id === "white-hart")).toHaveLength(1);
     expect(encounters.filter((entry) => entry.subject.id === "warden" && entry.tags.includes("undercroft")))
       .toHaveLength(0);
   });
