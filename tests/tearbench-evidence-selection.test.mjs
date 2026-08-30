@@ -528,7 +528,8 @@ test("served build identity refuses stale revision and source fingerprint", asyn
     console.log = previousLog;
     process.argv = previousArgv;
   }
-  const source = { revision: "a".repeat(40), state: "dirty", fingerprint: "b".repeat(64) };
+  const source = { revision: "a".repeat(40), state: "dirty", fingerprint: "b".repeat(64),
+    worktreeFingerprint: "c".repeat(64) };
   const build = { target: "standalone", sha: source.revision, sourceRevision: source.revision,
     sourceState: source.state, sourceFingerprint: source.fingerprint, artifactHash: "c".repeat(64) };
   assert.equal(validateServedBuildIdentity(build, source), build);
@@ -559,7 +560,7 @@ test("served build identity refuses stale revision and source fingerprint", asyn
 
   const scope = { kind: "diff", changedFiles: ["src/gameplay/weapon-selection.ts"], routes: ["current-game-authority"],
     scenarios: ["sword-reversal-threadcut-catch-seek"], journeyCheckpoints: ["current-game-authority"],
-    buildTargets: ["test-standalone"], journeyCommands: [], authorityCommands: [] };
+    buildTargets: ["test-standalone"], journeyCommands: [], authorityCommands: [], backendDispositions: [] };
   const reusableSelection = { source, scope, scopeDigest: "d".repeat(64), routeDefinitionDigest: "f".repeat(64) };
   const report = { format: "tearbench-diff-capability", schemaVersion: 2, kind: "last-run-diff", cumulative: false,
     status: "passed", source, scope, scopeDigest: reusableSelection.scopeDigest,
@@ -569,4 +570,13 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   assert.equal(canReuseDiffCapabilityReport(reusableSelection, { ...report, scope: { ...scope, scenarios: [] } }), false);
   assert.equal(canReuseDiffCapabilityReport(reusableSelection, { ...report, scopeDigest: "e".repeat(64) }), false);
   assert.equal(canReuseDiffCapabilityReport({ ...reusableSelection, source: { ...source, state: "clean" } }, report), false);
+  assert.equal(canReuseDiffCapabilityReport({ ...reusableSelection,
+    source: { ...source, worktreeFingerprint: "0".repeat(64) } }, report), false);
+  assert.equal(canReuseDiffCapabilityReport({ ...reusableSelection,
+    routeDefinitionDigest: "1".repeat(64) }, report), false);
+
+  const broaderRequestedScope = { ...scope,
+    scenarios: [...scope.scenarios, "hammer-meteor-terrain-catch-seek"] };
+  assert.equal(canReuseDiffCapabilityReport({ ...reusableSelection,
+    scope: broaderRequestedScope }, report), false);
 });
