@@ -28,6 +28,23 @@ function assertSubjectTransition(subject: string, initial: TearObservationV1,
 }
 
 describe("source-owned current headless gameplay scenario subjects", () => {
+  it("fails first when generic headless reset/move/tick is asked to stand in for Bloom Well", () => {
+    const bloom = CANONICAL_ENGINEERING_SCENARIOS.find((entry) => entry.id === "verdant-bloom-well-cycle");
+    if (bloom === undefined) throw new Error("the canonical Bloom Well scenario is missing");
+    const environment = createProductionHeadlessEnvironment();
+    try {
+      const falselyDeclared = { ...bloom, backends: ["live", "headless"] as const };
+      const opening = environment.reset(falselyDeclared);
+      const transition = environment.step([{ type: "move", x: 1_000, y: 0 }]);
+      expect(opening.environment?.fields).toEqual([]);
+      expect(opening.environment?.routes).toEqual([]);
+      expect(transition.events?.some((event) => event.type.startsWith("world.environment-"))).toBe(false);
+      expect(() => environment.reset(bloom)).toThrow(/does not support headless/u);
+    } finally {
+      environment.dispose();
+    }
+  });
+
   it("narrows unsupported natural-headless progression and projectile injection to the live backend", () => {
     for (const subject of ["blade", "parry", "wave", "draft"]) {
       const scenario = CANONICAL_ENGINEERING_SCENARIOS.find((entry) => entry.subject.kind === "gameplay"

@@ -132,6 +132,7 @@
     "id": "verdant-c5-bloom-well",
     "prefixes": ["src/gameplay/environment/bloom-well.ts", "src/gameplay/environment/environment-runtime.ts", "src/presentation/environment/", "src/tearbench/state-forge-factories.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/canonical-scenarios.json", "tests/browser-current-gameplay-scenarios.js", "tests/unit/bloom-well-runtime.test.ts"],
     "scenarios": ["verdant-bloom-well-cycle"],
+    "backend": "live-only",
     "scenarioSubjects": [],
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c5-bloom-well-cycle-engineering",

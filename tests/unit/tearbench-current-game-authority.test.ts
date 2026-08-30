@@ -19,6 +19,7 @@ import { ENVIRONMENT_OBJECT_KIND_IDS as GAME_ENVIRONMENT_OBJECT_KIND_IDS } from 
 import { CANONICAL_UPGRADE_IDS as GAME_UPGRADE_IDS } from "../../src/gameplay/upgrades";
 import { isRetiredWeaponSelection, WEAPON_IDS as GAME_WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { getWeapon } from "../../src/gameplay/weapons";
+import { BLOOM_WELL_TIMING } from "../../src/gameplay/environment/bloom-well";
 import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalObservationStage } from
   "../../src/tearbench/observation-identity";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
@@ -217,6 +218,10 @@ describe("TearBench current-game catalog authority", () => {
         expect(BOSS_REGISTRY.has(entry.subject.id), entry.id).toBe(true);
         expect(entry.backends, entry.id).toEqual(["live"]);
       }
+      if (entry.id === "verdant-bloom-well-cycle") {
+        expect(entry.backends).toEqual(["live"]);
+        expect(entry.maxTicks).toBe(BLOOM_WELL_TIMING.totalTicks);
+      }
     }
   });
 
@@ -268,6 +273,12 @@ describe("TearBench current-game catalog authority", () => {
     if (unsupported === undefined) throw new Error("current live-only parry scenario is unavailable");
     expect(() => { materializeCanonicalScenario({ ...unsupported, backends: ["live", "headless"] }); })
       .toThrow(/no supported headless subject transition/u);
+    const bloom = scenarioCatalog.find((candidate) => candidate.id === "verdant-bloom-well-cycle");
+    if (bloom === undefined) throw new Error("current live-only Bloom Well scenario is unavailable");
+    expect(() => materializeCanonicalScenario({ ...bloom, backends: ["live", "headless"] }))
+      .toThrow(/Bloom Well evidence is live-only/u);
+    expect(() => materializeCanonicalScenario({ ...bloom, maxTicks: BLOOM_WELL_TIMING.totalTicks - 1 }))
+      .toThrow(/Bloom Well lifecycle horizon/u);
   });
 
   it("really resets and advances every declared current headless scenario", () => {

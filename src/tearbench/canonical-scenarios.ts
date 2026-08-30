@@ -10,6 +10,7 @@ import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
   ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY, ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY } from "./registries";
 import { TearScenarioRegistry } from "./scenario-registry";
 import scenarioCatalog from "./canonical-scenarios.json";
+import { BLOOM_WELL_TIMING } from "../gameplay/environment/bloom-well";
 
 type CanonicalCatalogEntry = (typeof scenarioCatalog)[number];
 
@@ -44,6 +45,14 @@ export function materializeCanonicalScenario(
   }
   if (entry.subject.kind === "environment-field") ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
   if (entry.subject.kind === "environment-combat-object") ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
+  if (entry.subject.kind === "environment-field" && entry.subject.id === "verdant-bloom-well") {
+    if (entry.backends.length !== 1 || entry.backends[0] !== "live") {
+      throw new RangeError(`canonical scenario ${entry.id} Bloom Well evidence is live-only; headless execution is unsupported`);
+    }
+    if (entry.maxTicks !== BLOOM_WELL_TIMING.totalTicks) {
+      throw new RangeError(`canonical scenario ${entry.id} must use the Bloom Well lifecycle horizon of ${String(BLOOM_WELL_TIMING.totalTicks)} ticks`);
+    }
+  }
   const environmentBossContext = entry.subject.kind === "environment-field"
     || entry.subject.kind === "environment-combat-object";
   if (boss !== undefined && !environmentBossContext && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {

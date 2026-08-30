@@ -16,6 +16,8 @@ const { withJourney } = require("./browser-journey-harness");
 
 const root = path.resolve(__dirname, "..");
 const catalog = JSON.parse(fs.readFileSync(path.join(root, "src", "tearbench", "canonical-scenarios.json"), "utf8"));
+const BLOOM_WELL_SCENARIO_ID = "verdant-bloom-well-cycle";
+const BLOOM_WELL_LIFECYCLE_TICKS = 744;
 
 function option(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -43,10 +45,10 @@ function gitRevision() {
   }
 }
 
-function parseMaxTicks(value) {
+function parseMaxTicks(value, maximum) {
   const ticks = Number.parseInt(value, 10);
-  if (!Number.isSafeInteger(ticks) || ticks < 1 || ticks > 720) {
-    throw new RangeError("--max-ticks must be an integer from 1 through 720");
+  if (!Number.isSafeInteger(ticks) || ticks < 1 || ticks > maximum) {
+    throw new RangeError(`--max-ticks must be an integer from 1 through the selected scenario horizon ${String(maximum)}`);
   }
   return ticks;
 }
@@ -199,7 +201,11 @@ if (!scenarioId) throw new TypeError("usage: node tests/browser-tearbench-live-m
 const catalogEntry = catalog.find((entry) => entry.id === scenarioId);
 if (!catalogEntry) throw new RangeError(`unknown canonical TearBench scenario: ${scenarioId}`);
 const seed = headlessTerminal?.scenario.seed ?? option("--seed", "1001");
-const maxTicks = headlessTerminal?.scenario.maxTicks ?? parseMaxTicks(option("--max-ticks", String(Math.min(catalogEntry.maxTicks, 120))));
+const maxTicks = headlessTerminal?.scenario.maxTicks
+  ?? parseMaxTicks(option("--max-ticks", String(Math.min(catalogEntry.maxTicks, 120))), catalogEntry.maxTicks);
+if (catalogEntry.id === BLOOM_WELL_SCENARIO_ID && maxTicks !== BLOOM_WELL_LIFECYCLE_TICKS) {
+  throw new RangeError(`${BLOOM_WELL_SCENARIO_ID} requires its complete ${String(BLOOM_WELL_LIFECYCLE_TICKS)}-tick live lifecycle`);
+}
 const submittedActions = headlessTerminal?.actions ?? readActionTrace(option("--actions"), maxTicks);
 const replayContextArtifact = readJsonOption("--replay-context");
 if (replayContextArtifact !== undefined && (replayContextArtifact.format !== "tearbench-run" || replayContextArtifact.replayContext === undefined)) {

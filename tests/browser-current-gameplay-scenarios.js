@@ -158,6 +158,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           break;
         }
         case "verdant-bloom-well": {
+          if (scenario.maxTicks !== 744) throw new Error("Bloom Well browser proof must use BLOOM_WELL_TIMING.totalTicks");
           const forge = environment.forgeBloomWellCycle();
           if (!forge.ok) throw new Error("Bloom Well must launch through State Forge restore");
           const env = environment.environment();
@@ -179,7 +180,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           capture();
           for (let tick = 84; tick < 264; tick += 1) step();
           capture();
-          for (let tick = 264; tick < 744; tick += 1) step();
+          for (let tick = 264; tick < scenario.maxTicks; tick += 1) step();
           const finalField = capture();
           const finalObservation = environment.observe();
           const presentation = environment.bloomWellPresentation({ highContrast: true, reducedMotion: true, lowGraphics: true, audioEnabled: false })[0];

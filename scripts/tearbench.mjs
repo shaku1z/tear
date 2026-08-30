@@ -8,6 +8,7 @@ import { readSourceIdentitySync } from "./release-artifact.mjs";
 import { createReleaseCertificate, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const BLOOM_WELL_LIFECYCLE_TICKS = 744;
 function option(name, fallback) {
   const index = process.argv.indexOf(name);
   return index < 0 ? fallback : process.argv[index + 1];
@@ -17,6 +18,7 @@ const catalogPath = resolve(option("--catalog", resolve(root, "src", "tearbench"
 const evidenceRoutesPath = resolve(option("--routes", resolve(root, "src", "tearbench", "evidence-routes.json")));
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
+const publicationBoundary = JSON.parse(await readFile(resolve(root, "config", "campaign-publication-boundary.json"), "utf8"));
 
 function fail(message) {
   console.error(message);
@@ -76,14 +78,28 @@ function currentStageBossPairs() {
   const authoredPairs = [...stageSource.matchAll(
     /^\s{4}id:\s*"([a-z][a-z0-9-]*)",[\s\S]*?^\s{4}boss:\s*"([a-z][a-z0-9-]*)"/gmu,
   )].map((entry) => Object.freeze({ stage: entry[1], boss: entry[2] }));
-  const availability = stageSource.match(
-    /export const STAGE_CONTENT_AVAILABILITY\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\s*as const satisfies/u,
-  );
-  if (availability === null) throw new TypeError("could not read the source-owned stage availability policy");
-  const unpublishedStageIds = new Set([...availability[1].matchAll(
-    /^\s*(?:"([a-z][a-z0-9-]*)"|([a-z][a-z0-9-]*)):\s*Object\.freeze\(\{[\s\S]*?published:\s*false[\s\S]*?\}\),/gmu,
-  )].map((entry) => entry[1] ?? entry[2]));
-  const pairs = authoredPairs.filter((pair) => !unpublishedStageIds.has(pair.stage));
+  if (publicationBoundary?.status !== "public" || !Array.isArray(publicationBoundary.activeStageIds)
+    || !Array.isArray(publicationBoundary.previewStageIds)) {
+    throw new TypeError("could not read the current source-owned stage publication boundary");
+  }
+  const publishedStageIds = new Set(publicationBoundary.activeStageIds);
+  const unpublishedStageIds = new Set(publicationBoundary.previewStageIds);
+  if (publishedStageIds.size !== publicationBoundary.activeStageIds.length
+    || unpublishedStageIds.size !== publicationBoundary.previewStageIds.length
+    || [...publishedStageIds].some((id) => unpublishedStageIds.has(id))) {
+    throw new TypeError("current source-owned stage publication boundary overlaps or duplicates stage IDs");
+  }
+  const authoredByStage = new Map(authoredPairs.map((pair) => [pair.stage, pair]));
+  const governedStageIds = new Set([...publishedStageIds, ...unpublishedStageIds]);
+  if (authoredByStage.size !== authoredPairs.length || authoredPairs.length !== governedStageIds.size
+    || authoredPairs.some((pair) => !governedStageIds.has(pair.stage))) {
+    throw new RangeError("production stage ownership and the publication boundary do not cover the same authored stages");
+  }
+  const pairs = publicationBoundary.activeStageIds.map((stage) => {
+    const pair = authoredByStage.get(stage);
+    if (pair === undefined) throw new RangeError(`published stage ${String(stage)} has no production boss ownership`);
+    return pair;
+  });
   const stageIds = pairs.map((pair) => pair.stage);
   const definitions = bossDefinitionSource.match(
     /export const BOSS_DEFINITIONS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const satisfies readonly BossDefinition\[\]\)/u,
@@ -169,7 +185,8 @@ function validateScenarioMetadata(scenario) {
     throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
   }
   if (Object.hasOwn(scenario, "backends") && (!Array.isArray(scenario.backends) || scenario.backends.length === 0
-    || scenario.backends.some((backend) => !["live", "headless"].includes(backend)))) {
+    || scenario.backends.some((backend) => !["live", "headless"].includes(backend))
+    || new Set(scenario.backends).size !== scenario.backends.length)) {
     throw new TypeError(`scenario ${scenario.id} has invalid evidence backends`);
   }
   const subject = scenario.subject;
@@ -215,12 +232,15 @@ function validateScenarioMetadata(scenario) {
     const isSupportedRootNetwork = subject.kind === "environment-combat-object" && subject.id === "verdant-root-network";
     const isSupportedRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor";
     const supportedBackends = isSupportedBloomWell
-      ? Array.isArray(scenario.backends) && scenario.backends.length === 2 && scenario.backends.includes("live") && scenario.backends.includes("headless")
+      ? Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live"
       : isSupportedRootNetwork
         ? Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live"
       : Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live";
     if ((subject.id !== expected && !isSupportedBloomWell && !isSupportedRootNetwork && !isSupportedRootboundGraft) || !supportedBackends) {
       throw new TypeError(`scenario ${scenario.id} environment subject requires a supported environment evidence backend`);
+    }
+    if (isSupportedBloomWell && scenario.maxTicks !== BLOOM_WELL_LIFECYCLE_TICKS) {
+      throw new RangeError(`scenario ${scenario.id} must use the Bloom Well lifecycle horizon of ${String(BLOOM_WELL_LIFECYCLE_TICKS)} ticks`);
     }
   }
   const command = scenario.evidence?.command;
@@ -263,19 +283,33 @@ function validateScenarioMetadata(scenario) {
   }
 }
 
-function evidenceCommandForScenario(scenario) {
+function evidenceCommandsForScenario(scenario) {
+  validateScenarioMetadata(scenario);
+  const declaredBackends = scenario.backends;
+  if (!Array.isArray(declaredBackends) || declaredBackends.length === 0) {
+    throw new RangeError(`scenario ${scenario.id} has no executable evidence backend declaration`);
+  }
   const command = scenario.evidence?.command;
-  if (typeof command === "string" && command.trim() !== "") {
-    parseApprovedEvidenceCommand(command);
-    return { backend: "catalog-command", command };
-  }
-  if (Array.isArray(scenario.testFiles) && scenario.testFiles.length > 0
-    && scenario.testFiles.every((file) => typeof file === "string" && file.trim() !== "")) {
-    const derivedCommand = `pnpm exec vitest run ${scenario.testFiles.join(" ")}`;
-    parseApprovedEvidenceCommand(derivedCommand);
-    return { backend: "catalog-test-files", command: derivedCommand };
-  }
-  throw new RangeError(`scenario ${scenario.id} has no executable evidence backend`);
+  const testFiles = scenario.testFiles;
+  return declaredBackends.map((backend) => {
+    if (backend === "live" && typeof command === "string" && command.trim() !== "") {
+      parseApprovedEvidenceCommand(command);
+      return Object.freeze({ backend, command });
+    }
+    if (backend === "headless" && Array.isArray(testFiles) && testFiles.length > 0
+      && testFiles.every((file) => typeof file === "string" && file.trim() !== "")) {
+      const derivedCommand = `pnpm exec vitest run ${testFiles.join(" ")}`;
+      parseApprovedEvidenceCommand(derivedCommand);
+      return Object.freeze({ backend, command: derivedCommand });
+    }
+    throw new RangeError(`scenario ${scenario.id} has no executable ${String(backend)} evidence backend`);
+  });
+}
+
+function evidenceCommandForScenario(scenario, backend = "live") {
+  const evidence = evidenceCommandsForScenario(scenario).find((entry) => entry.backend === backend);
+  if (evidence === undefined) throw new RangeError(`scenario ${scenario.id} does not declare the ${backend} evidence backend`);
+  return evidence;
 }
 
 function validateScenarioSubject(scenario) {
@@ -338,6 +372,14 @@ function routeScenarioIds(route) {
     }
   }
   for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
+  if (route.backend !== undefined) {
+    if (route.backend !== "live-only") throw new TypeError(`route ${route.id} has an unsupported backend disposition`);
+    const nonLiveScenario = [...ids].map((id) => scenarioById(id))
+      .find((scenario) => scenario.backends.length !== 1 || scenario.backends[0] !== "live");
+    if (nonLiveScenario !== undefined) {
+      throw new TypeError(`route ${route.id} is live-only but scenario ${nonLiveScenario.id} declares another backend`);
+    }
+  }
   return [...ids];
 }
 
@@ -367,7 +409,7 @@ function runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePa
   const invocations = [];
   for (let index = 0; index < repeat; index += 1) {
     const attemptArtifact = index === repeat - 1 ? artifactPath : artifactPath.replace(/\.json$/u, `.attempt-${String(index + 1)}.json`);
-    const result = materializeLiveRun(scenario, seed, attemptArtifact, actionTracePath, Math.min(720, scenario.maxTicks), {}, replayContextPath);
+    const result = materializeLiveRun(scenario, seed, attemptArtifact, actionTracePath, scenario.maxTicks, {}, replayContextPath);
     invocations.push({ index, status: result.status, stdout: result.stdout, stderr: result.stderr, artifact: attemptArtifact });
     if (result.status !== 0) break;
   }
@@ -456,7 +498,8 @@ function evidenceForDiff(files) {
     routes: selected.map((route) => route.id).sort(),
     scenarios,
     currentWeaponParity,
-    evidenceCommands: scenarios.map((id) => ({ id, ...evidenceCommandForScenario(scenarioById(id)) })),
+    evidenceCommands: scenarios.flatMap((id) => evidenceCommandsForScenario(scenarioById(id))
+      .map((evidence) => ({ id, ...evidence }))),
     graveyardCases: collect("graveyardCases"),
     journeyCheckpoints: [...new Set(selected.map((route) => route.journeyCheckpoint))].sort(),
     baseComparisons: [...new Set(selected.map((route) => route.baseComparison))].sort(),
@@ -527,7 +570,7 @@ function writeCurrentCapabilityReport(scope, state, executions) {
 function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets = [], authorityCommands = [], scope = {}) {
   const state = { testStandaloneBuilt: false, source: readSourceIdentity() }, executions = [], completedCommands = new Map();
   const executionScope = { scenarios: [...scenarios], journeyCommands: [...journeyCommands], buildTargets: [...buildTargets], ...scope };
-  const runOne = (id, command, backend = "catalog-command") => {
+  const runOne = (id, command, backend = "explicit-command") => {
     const completed = completedCommands.get(command);
     if (completed !== undefined) {
       executions.push({ ...completed, id, backend, reusedExecutionId: completed.id });
@@ -544,8 +587,10 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
     return { status: "failed", executions };
   }
   for (const id of scenarios) {
-    const evidence = evidenceCommandForScenario(scenarioById(id));
-    if (!runOne(id, evidence.command, evidence.backend)) break;
+    for (const evidence of evidenceCommandsForScenario(scenarioById(id))) {
+      if (!runOne(id, evidence.command, evidence.backend)) break;
+    }
+    if (!executions.every((entry) => entry.status === "passed")) break;
   }
   if (executions.every((entry) => entry.status === "passed")) {
     for (const command of journeyCommands) if (!runOne(`journey:${command}`, command)) break;
@@ -610,8 +655,9 @@ function executeCurrentWeaponParity() {
   const scenarios = [...selected.currentWeaponParity.scenarios];
   const scope = { ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
     buildTargets: ["test-standalone"] };
-  const selection = { ...selected, scenarios, evidenceCommands: scenarios.map((id) =>
-    ({ id, ...evidenceCommandForScenario(scenarioById(id)) })), journeyCommands: [], authorityCommands: [], scope };
+  const selection = { ...selected, scenarios, evidenceCommands: scenarios.flatMap((id) =>
+    evidenceCommandsForScenario(scenarioById(id)).map((evidence) => ({ id, ...evidence }))),
+  journeyCommands: [], authorityCommands: [], scope };
   const existingPath = resolve(root, "artifacts", "tearbench", "generated", "current-capability.json");
   if (existsSync(existingPath)) {
     try {
@@ -803,7 +849,7 @@ async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath,
       status: "failed",
       source: readSourceIdentity(),
       requested: Object.freeze({ scenarioId: scenario.id, seed, repeat }),
-      declaredEvidence: evidenceCommandForScenario(scenario),
+      declaredEvidence: evidenceCommandsForScenario(scenario),
       rerunSupported: false,
       reason: "the live materializer exited before producing a replayable tearbench-run artifact",
       invocations: invocations.map((entry) => Object.freeze({

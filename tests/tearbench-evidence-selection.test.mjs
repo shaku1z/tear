@@ -75,6 +75,49 @@ test("production weapon authority covers every actual current weapon mechanic", 
     "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts"));
 });
 
+test("Bloom Well selection reports the declared live-only backend and complete lifecycle horizon", () => {
+  const selection = select(["src/gameplay/environment/bloom-well.ts"]);
+  assert.ok(selection.routes.includes("verdant-c5-bloom-well"));
+  const bloom = selection.evidenceCommands.filter((entry) => entry.id === "verdant-bloom-well-cycle");
+  assert.deepEqual(bloom.map((entry) => entry.backend), ["live"]);
+  assert.equal(select(["src/gameplay/environment/bloom-well.ts"]).scenarios.includes("verdant-bloom-well-cycle"), true);
+});
+
+test("multi-backend scenarios materialize one backend-specific evidence command per declaration", () => {
+  const selection = select(["src/app/replay-hub.ts"]);
+  const boot = selection.evidenceCommands.filter((entry) => entry.id === "boot-start-run");
+  assert.deepEqual(boot.map((entry) => entry.backend), ["live", "headless"]);
+  assert.match(boot[0].command, /browser-current-gameplay-scenarios/u);
+  assert.match(boot[1].command, /vitest run tests\/unit\/run-lifecycle\.test\.ts/u);
+  assert.notEqual(boot[0].command, boot[1].command);
+});
+
+test("Bloom Well selection rejects detached claims and truncated lifecycle metadata", () => {
+  const detached = mutatedCatalog("bloom-detached-backend", (entries) => {
+    const bloom = entries.find((entry) => entry.id === "verdant-bloom-well-cycle");
+    bloom.backends = ["live", "headless"];
+  });
+  const detachedResult = rejected(["src/gameplay/environment/bloom-well.ts"], { catalog: detached });
+  assert.notEqual(detachedResult.status, 0);
+  assert.match(`${detachedResult.stderr}\n${detachedResult.stdout}`, /environment subject requires a supported environment evidence backend|Bloom Well evidence is live-only/u);
+
+  const truncated = mutatedCatalog("bloom-truncated-horizon", (entries) => {
+    const bloom = entries.find((entry) => entry.id === "verdant-bloom-well-cycle");
+    bloom.maxTicks = 720;
+  });
+  const truncatedResult = rejected(["src/gameplay/environment/bloom-well.ts"], { catalog: truncated });
+  assert.notEqual(truncatedResult.status, 0);
+  assert.match(`${truncatedResult.stderr}\n${truncatedResult.stdout}`, /Bloom Well lifecycle horizon/u);
+
+  const routes = JSON.parse(readFileSync(routesPath, "utf8"));
+  routes.find((entry) => entry.id === "verdant-c5-bloom-well").backend = "headless";
+  const routePath = join(temporaryRoot, "bloom-invalid-backend-route.json");
+  writeFileSync(routePath, JSON.stringify(routes), "utf8");
+  const routeResult = rejected(["src/gameplay/environment/bloom-well.ts"], { routes: routePath });
+  assert.notEqual(routeResult.status, 0);
+  assert.match(`${routeResult.stderr}\n${routeResult.stdout}`, /unsupported backend disposition/u);
+});
+
 test("current weapon parity rejects a unit-only downgrade or unsupported detached backend", () => {
   const unitOnly = mutatedCatalog("unit-only-weapon-parity", (entries) => {
     entries.find((entry) => entry.subject?.id === "riftlock").evidence.command =
@@ -303,7 +346,7 @@ test("wrong subject, retired content, missing backend, and impossible boss start
       const scenario = entries.find((entry) => entry.id === "boot-start-run");
       scenario.testFiles = []; delete scenario.evidence;
     },
-      /boot-start-run has no executable evidence backend/u],
+      /boot-start-run has no executable (?:live )?evidence backend/u],
     ["wrong-boss", (entries) => {
       entries.find((entry) => entry.id === "source-void-low-hp-rescue-seek").start.boss = "warden";
     }, /boss start requires its matching authoritative boss subject/u],

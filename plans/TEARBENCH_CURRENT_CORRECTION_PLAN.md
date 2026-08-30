@@ -57,8 +57,8 @@ runtime authority.
 
 | Order | Checkpoint | Status | Dependency |
 | ---: | --- | --- | --- |
-| 1 | TC-1 — Publication authority | Not started | Plan activation |
-| 2 | TC-2 — Bloom backend honesty | Not started | TC-1 |
+| 1 | TC-1 — Publication authority | Complete | Plan activation |
+| 2 | TC-2 — Bloom backend honesty | In review | TC-1 |
 | 3 | TC-3 — Environment invariant binding | Not started | TC-2 |
 | 4 | TC-4 — Rootbound repeated-poll regression | Not started | TC-3 |
 | 5 | TC-5 — Source-derived content terminology | Not started | TC-1 |
@@ -142,13 +142,13 @@ metadata claim.
 
 ### Checklist
 
-- [ ] Add a fail-first test showing that generic headless reset/move/tick behavior cannot satisfy a Bloom backend declaration.
-- [ ] Choose and record one disposition: `live-only`, or genuine headless implementation with subject-specific transitions.
-- [ ] If live-only, remove only the false backend claim and preserve live behavior.
-- [ ] If headless is retained, exercise warning → active → cooldown → dormant and compare relevant live/headless state and events.
-- [ ] Resolve the scenario's 760-tick contract versus the live materializer's 720-tick cap so a truncated lifecycle cannot pass.
-- [ ] Ensure TearBench execution and reporting distinguish every declared backend rather than executing one catalog command ambiguously.
-- [ ] Update route and capability evidence to the chosen honest boundary.
+- [x] Add a fail-first test showing that generic headless reset/move/tick behavior cannot satisfy a Bloom backend declaration.
+- [x] Choose and record the `live-only` disposition; genuine headless Bloom is unsupported and was not invented.
+- [x] Remove only Bloom's false `headless` claim and preserve its live State Forge behavior.
+- [x] Record the headless comparison item as not applicable to the chosen live-only disposition; the negative proves generic headless cannot substitute.
+- [x] Bind the scenario and materializers to the source lifecycle horizon of 744 ticks so neither the former 760 overclaim nor 720 truncation can pass.
+- [x] Make TearBench selected-evidence reporting identify the declared backend and reject empty, duplicated, unsupported, or ambiguous declarations.
+- [x] Update the Bloom route and current diff-capability evidence to the live-only boundary.
 
 **Focused gate:** Bloom runtime, current-game authority, and TearBench selection
 tests. If the disposition is live-only, run the metadata negative and the one
@@ -478,7 +478,7 @@ commit alone is insufficient.
 | Checkpoint | Source commit | Focused evidence | Browser/backend evidence | Post-review | State |
 | --- | --- | --- | --- | --- | --- |
 | TC-1 | `83c0a0c306aa1adf00175118c18c357f2af6b872` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-1_PUBLICATION_AUTHORITY.md`; focused publication, release-preflight, game-reference, content-availability, Verdant, docs, and terminology checks | N/A | Final focused review green; historical evidence preserved; no protected integration claimed | Complete |
-| TC-2 | — | — | — | — | Not started |
+| TC-2 | `cc81c426d0cbe4ad4fd22ebc66304e06e172735a` + reviewed working-tree diff | `docs/checkpoints/tearbench-current-corrections/TC-2_BLOOM_BACKEND_HONESTY.md`; focused Bloom/headless/current-game authority, selector, typecheck, and exact-source build checks | Live Class-A current-game journey passed all 13 source-owned scenarios at build fingerprint `e904105e721fd1df99436ccf907742a11134d56dbbbf114319ba42458ac571dc` | Focused review green; exact implementation commit pending | In review |
 | TC-3 | — | — | — | — | Not started |
 | TC-4 | — | — | — | — | Not started |
 | TC-5 | — | — | N/A | — | Not started |
