@@ -15,6 +15,13 @@ const CURRENT_AUTHORITIES_HEADING = "## Current authorities";
 const SCOPED_MARKDOWN_ROOTS = Object.freeze(["docs/", "plans/", "tear-wiki/"]);
 const INDEX_PATH = "docs/README.md";
 const PLANS_INDEX_PATH = "plans/README.md";
+const CURRENT_PROGRAM_STATE_PATH = "config/tearbench-current-program-state.json";
+const CURRENT_PROGRAM_STATE_AUTHORITIES = Object.freeze([
+  "plans/TEARBENCH_MASTER_HANDOFF.md",
+  "docs/TEARBENCH_GHOST3_PROGRAM.md",
+  "docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md",
+  "plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md",
+]);
 
 export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/CONTROLLER_QA.md",
@@ -37,6 +44,15 @@ export const ACTIVE_PLAN_METADATA_PATHS = CANONICAL_ACTIVE_PLAN_PATHS;
 export const TEMPORARY_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md",
 ]);
+
+const CURRENT_PROGRAM_CHECKPOINTS = Object.freeze({
+  C25: "open", C27: "open", C28: "complete", C29: "narrow-complete", C30: "active", C31: "active",
+  C32: "foundation-only", C33: "active", C34: "active", C35: "active", C36: "open",
+  C37: "partial", C38: "bounded-partial", C39: "local-only", C40: "incomplete",
+});
+const CURRENT_PROGRAM_SOURCE_SHA = /^[0-9a-f]{40}$/u;
+const CURRENT_PROGRAM_HASH = /^[0-9a-f]{64}$/u;
+const CURRENT_PROGRAM_RUN_ID = /^[0-9]+$/u;
 
 const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
@@ -503,6 +519,103 @@ export function checkPathBoundArtifacts(root) {
   return { errors, artifacts: PATH_BOUND_TEARBENCH_ARTIFACTS };
 }
 
+export function checkCurrentProgramState(root) {
+  const errors = [];
+  const absolutePath = path.join(root, CURRENT_PROGRAM_STATE_PATH);
+  if (!fs.existsSync(absolutePath)) return { errors: [`current program-state authority is missing: ${CURRENT_PROGRAM_STATE_PATH}`] };
+  let state;
+  try {
+    state = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
+  } catch (error) {
+    return { errors: [`current program-state authority is invalid JSON: ${error.message}`] };
+  }
+  const expect = (condition, message) => { if (!condition) errors.push(message); };
+  expect(state.format === "tearbench-current-program-state" && state.schemaVersion === 1,
+    `${CURRENT_PROGRAM_STATE_PATH} must use the supported format and schema`);
+  expect(typeof state.stateId === "string" && /^[a-z0-9-]+$/u.test(state.stateId),
+    `${CURRENT_PROGRAM_STATE_PATH} stateId is invalid`);
+  const expectedMarker = `<!-- tearbench-current-program-state: ${state.stateId} -->`;
+  expect(state.marker === expectedMarker, `${CURRENT_PROGRAM_STATE_PATH} marker does not match stateId`);
+  const source = state.source ?? {};
+  expect(source.repository === "shaku1z/tear", `${CURRENT_PROGRAM_STATE_PATH} source repository is invalid`);
+  expect(CURRENT_PROGRAM_SOURCE_SHA.test(source.revision ?? ""), `${CURRENT_PROGRAM_STATE_PATH} source revision must be a full SHA-1`);
+  expect(source.state === "protected-clean", `${CURRENT_PROGRAM_STATE_PATH} source state must be protected-clean`);
+  expect(CURRENT_PROGRAM_HASH.test(source.fingerprint ?? ""), `${CURRENT_PROGRAM_STATE_PATH} source fingerprint must be a full SHA-256`);
+
+  const receipts = state.receipts ?? {};
+  const validateReceipt = (name, receipt, requireFingerprint = false) => {
+    expect(receipt !== null && typeof receipt === "object", `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} is missing`);
+    expect(CURRENT_PROGRAM_RUN_ID.test(receipt?.runId ?? ""), `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} run ID is invalid`);
+    expect(receipt?.status === "success", `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} is not successful`);
+    expect(receipt?.sourceSha === source.revision, `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} source SHA diverges`);
+    if (requireFingerprint) expect(receipt?.sourceFingerprint === source.fingerprint && CURRENT_PROGRAM_HASH.test(receipt?.sourceFingerprint ?? ""),
+      `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} source fingerprint diverges`);
+  };
+  validateReceipt("gameValidate", receipts.gameValidate);
+  validateReceipt("gameProduction", receipts.gameProduction, true);
+  validateReceipt("wikiSync", receipts.wikiSync);
+  validateReceipt("wikiProduction", receipts.wikiProduction);
+  expect(CURRENT_PROGRAM_HASH.test(receipts.gameProduction?.artifactHash ?? ""), `${CURRENT_PROGRAM_STATE_PATH} artifact hash is invalid`);
+  expect(receipts.wikiSync?.validationRunId === receipts.gameValidate?.runId,
+    `${CURRENT_PROGRAM_STATE_PATH} wiki validation receipt diverges from game Validate`);
+  expect(CURRENT_PROGRAM_SOURCE_SHA.test(receipts.wikiSync?.wikiMainSha ?? ""), `${CURRENT_PROGRAM_STATE_PATH} wiki main SHA is invalid`);
+  expect(receipts.wikiProduction?.wikiMainSha === receipts.wikiSync?.wikiMainSha,
+    `${CURRENT_PROGRAM_STATE_PATH} wiki production SHA diverges from wiki sync`);
+  expect(CURRENT_PROGRAM_HASH.test(receipts.wikiSync?.manifestSha256 ?? ""), `${CURRENT_PROGRAM_STATE_PATH} manifest hash is invalid`);
+
+  for (const [checkpoint, status] of Object.entries(CURRENT_PROGRAM_CHECKPOINTS)) {
+    expect(state.checkpoints?.[checkpoint] === status, `${CURRENT_PROGRAM_STATE_PATH} ${checkpoint} state is not conservative`);
+  }
+  expect(state.g7?.status === "open" && state.g7?.certificate === "absent" && state.g7?.production === "attributable",
+    `${CURRENT_PROGRAM_STATE_PATH} G7 state must remain open with no certificate and attributable production`);
+  expect(state.diffCapability?.path === "artifacts/tearbench/generated/diff-capability.json"
+    && state.diffCapability?.format === "tearbench-diff-capability"
+    && state.diffCapability?.status === "last-run" && state.diffCapability?.cumulative === false,
+  `${CURRENT_PROGRAM_STATE_PATH} diff capability must be last-run and non-cumulative`);
+  expect(state.dashboard?.certifiedCount === 0 && state.dashboard?.promote === false,
+    `${CURRENT_PROGRAM_STATE_PATH} dashboard promotion state is not conservative`);
+  const dashboardPath = path.join(root, "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md");
+  if (fs.existsSync(dashboardPath)) {
+    const dashboard = fs.readFileSync(dashboardPath, "utf8");
+    expect(/\|\s*certified\s*\|\s*0\s*\|/iu.test(dashboard),
+      "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md must retain certified count zero");
+  } else errors.push("docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md is missing");
+  const catalogPath = path.join(root, "docs/tearbench-ghost3-evidence-catalog.json");
+  if (fs.existsSync(catalogPath)) {
+    try {
+      const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+      expect(catalog.defaultNormativeState === "missing" && Array.isArray(catalog.rules)
+        && !catalog.rules.some((rule) => rule?.state === "certified"),
+      "docs/tearbench-ghost3-evidence-catalog.json must remain unpromoted");
+    } catch (error) {
+      errors.push(`docs/tearbench-ghost3-evidence-catalog.json is invalid JSON: ${error.message}`);
+    }
+  } else errors.push("docs/tearbench-ghost3-evidence-catalog.json is missing");
+  expect(CURRENT_PROGRAM_SOURCE_SHA.test(state.historical?.oldBaselineSha ?? "")
+    && /historical/u.test(state.historical?.context ?? ""), `${CURRENT_PROGRAM_STATE_PATH} historical baseline context is invalid`);
+
+  for (const relativePath of CURRENT_PROGRAM_STATE_AUTHORITIES) {
+    const documentPath = path.join(root, relativePath);
+    if (!fs.existsSync(documentPath)) { errors.push(`current program-state authority document is missing: ${relativePath}`); continue; }
+    const markdown = fs.readFileSync(documentPath, "utf8");
+    const markers = [...markdown.matchAll(/<!--\s*tearbench-current-program-state:\s*([^>]+?)\s*-->/gu)];
+    expect(markers.length === 1 && markers[0][0] === state.marker,
+      `${relativePath} must contain exactly the current program-state marker`);
+    expect(markdown.includes(source.revision), `${relativePath} must state the current protected source revision`);
+    expect(markdown.includes("artifacts/tearbench/generated/diff-capability.json")
+      && /last-run/u.test(markdown) && /non-cumulative/u.test(markdown), `${relativePath} must state non-cumulative diff capability`);
+    for (const [checkpoint, status] of Object.entries(CURRENT_PROGRAM_CHECKPOINTS)) {
+      expect(new RegExp(`${checkpoint}\\s+${status}`, "u").test(markdown),
+        `${relativePath} must state conservative ${checkpoint} status ${status}`);
+    }
+    expect(/G7 (?:eligible\/open|open)/u.test(markdown) && /certificate absent/u.test(markdown),
+      `${relativePath} must state open G7 and absent certificate`);
+    expect(/production (?:is )?attributable/u.test(markdown),
+      `${relativePath} must state attributable current production`);
+  }
+  return { errors, state };
+}
+
 export function runDocsCheck({ root = process.cwd() } = {}) {
   const absoluteRoot = path.resolve(root);
   const trackedFiles = collectTrackedMarkdownFiles(absoluteRoot);
@@ -512,7 +625,8 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
   const authorities = checkCurrentAuthorityTable(absoluteRoot);
   const plansIndex = checkPlansAuthorityIndex(absoluteRoot);
   const activePlans = checkActivePlanMetadata(absoluteRoot, plansIndex);
-  const errors = [...links.errors, ...policy.errors, ...artifacts.errors, ...authorities.errors, ...activePlans.errors, ...plansIndex.errors];
+  const currentProgram = checkCurrentProgramState(absoluteRoot);
+  const errors = [...links.errors, ...policy.errors, ...artifacts.errors, ...authorities.errors, ...activePlans.errors, ...plansIndex.errors, ...currentProgram.errors];
   return {
     ok: errors.length === 0,
     errors,
@@ -522,6 +636,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
     currentAuthorities: authorities.rows.length,
     pathBoundArtifacts: artifacts.artifacts.length,
     activePlans: activePlans.activePlanPaths.length,
+    currentProgramState: currentProgram.state,
   };
 }
 

@@ -1,5 +1,17 @@
 # TearBench and Ghost 3.0 Program Charter
 
+<!-- tearbench-current-program-state: tc8-current-program-state-2026-08-30 -->
+
+**Current program-state authority:** `../config/tearbench-current-program-state.json`.
+Its successful receipt chain is provenance evidence, not C40 certification.
+**Current program-state summary:** Source `9e7d6a701ca0b992c8d78cccc2af329d698778c0`;
+C25 open; C27 open; C28 complete; C29 narrow-complete; C30 active; C31 active;
+C32 foundation-only; C33 active; C34 active; C35 active; C36 open; C37 partial;
+C38 bounded-partial; C39 local-only; C40 incomplete; production attributable;
+G7 eligible/open; certificate absent; dashboard certified count 0.
+Capability evidence is `artifacts/tearbench/generated/diff-capability.json`,
+last-run and non-cumulative.
+
 This document is the repository entry point for the TearBench, Scenario Console,
 Game Agent, and Ghost 3.0 program. Historical State Forge, TearBot, and Ghost
 Lab names remain readable only where they identify preserved compatibility or source evidence.
@@ -28,14 +40,17 @@ Atomic requirement truth and current evidence state live in:
 - `docs/tearbench-ghost3-requirements.json`
 - `docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`
 - `docs/tearbench-ghost3-evidence-catalog.json`
+- `config/tearbench-current-program-state.json`
 
 The evidence catalog is an active, scanned requirements-generator input. Source-era
 labels are preserved only as evidence notes, not current player-facing terminology.
 
-The last locally reconciled protected source baseline is
-`a8a476c6171d913581c01bb0e4432f53cf44f9e4` (2026-08-25). This identifies protected
-source, not an independently reverified public deployment or an uncommitted
-development build. Last-run selected capability evidence is generated under
+The last reconciled protected source baseline is
+`9e7d6a701ca0b992c8d78cccc2af329d698778c0`, with successful Validate run
+`33316839231` and game production run `33317506163`. This identifies protected
+source and its recorded release chain, not C40 certification or an uncommitted
+development build. Wiki synchronization run `33317579723` and wiki production
+run `33317775693` are recorded in the current program-state authority. Last-run selected capability evidence is generated under
 `artifacts/tearbench/generated/diff-capability.json` as a non-cumulative,
 diff-scoped report. It carries its execution timestamp, canonical changed scope,
 source SHA/dirty state/fingerprint, and, when applicable, the actual standalone
