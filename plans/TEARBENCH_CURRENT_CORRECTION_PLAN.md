@@ -108,7 +108,7 @@ ledgers, `plans/README.md`, `docs/README.md`,
 - [x] Prove the two-view authority matrix: seven authored stages, exactly six published stages, and Pale as the one preview derive from the source-owned availability policy.
 - [x] Add small negative tests for a dropped/reordered published stage, accidental Pale publication, and restoration of the obsolete “joint publication only” policy.
 - [x] Confirm release preflight and game-reference publication use the same current policy.
-- [ ] Record the protected source identity that changed or affirmed the policy after the implementation commit exists.
+- [x] Record implementation commit `83c0a0c306aa1adf00175118c18c357f2af6b872`; protected integration remains separately gated.
 
 **Focused gate:** Run the existing campaign-publication, release-preflight,
 game-reference publication, content-availability, and documentation-authority
@@ -477,7 +477,7 @@ commit alone is insufficient.
 
 | Checkpoint | Source commit | Focused evidence | Browser/backend evidence | Post-review | State |
 | --- | --- | --- | --- | --- | --- |
-| TC-1 | `1bc797bce8cab0fde420eea4a9e8519dc7aae9c7` + reviewed working-tree diff | `docs/checkpoints/tearbench-current-corrections/TC-1_PUBLICATION_AUTHORITY.md`; focused publication, release-preflight, game-reference, content-availability, Verdant, docs, and terminology checks | N/A | Focused review green; exact implementation commit pending | In review |
+| TC-1 | `83c0a0c306aa1adf00175118c18c357f2af6b872` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-1_PUBLICATION_AUTHORITY.md`; focused publication, release-preflight, game-reference, content-availability, Verdant, docs, and terminology checks | N/A | Final focused review green; historical evidence preserved; no protected integration claimed | Complete |
 | TC-2 | — | — | — | — | Not started |
 | TC-3 | — | — | — | — | Not started |
 | TC-4 | — | — | — | — | Not started |

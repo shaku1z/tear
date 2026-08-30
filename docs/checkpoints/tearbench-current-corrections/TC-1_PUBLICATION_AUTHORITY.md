@@ -2,9 +2,11 @@
 
 ## Current disposition
 
-TC-1 implementation is green and in review on
-`codex/tc1-publication-authority` (baseline `1bc797bce8cab0fde420eea4a9e8519dc7aae9c7`);
-the exact implementation commit is intentionally recorded only after it exists.
+TC-1 implementation is green at local implementation commit
+`83c0a0c306aa1adf00175118c18c357f2af6b872` on
+`codex/tc1-publication-authority` (baseline
+`1bc797bce8cab0fde420eea4a9e8519dc7aae9c7`). Protected integration remains
+separately gated and is not claimed by this checkpoint.
 The tracked policy and typed source agree on seven authored stages, six
 published stages in order, 60 published waves, and `pale-traverse` as the sole
 Playground preview.
@@ -45,5 +47,9 @@ Focused evidence on the final reviewed working-tree state:
 - TypeScript project typecheck passed;
 - documentation authority check and all 13 documentation tests passed;
 - terminology check and all 11 terminology tests passed.
+
+The final documentation-only closure changed no runtime or publication logic;
+the affected documentation and terminology gates were rerun after the last
+content patch and remained green.
 
 No deployment, publication, wiki dispatch, merge, or C40 claim is made here.
