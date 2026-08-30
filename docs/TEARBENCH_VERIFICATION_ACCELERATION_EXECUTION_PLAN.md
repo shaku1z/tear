@@ -248,7 +248,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 
 | Checkpoint | Purpose | Entry gate | State |
 | --- | --- | --- | --- |
-| VAP-0 | Baseline and authority | Gate A | Not started |
+| VAP-0 | Baseline and authority | Gate A | Complete at local authority `b15fb19`; protected integration not claimed |
 | VAP-1 | Correct route/matrix/certification semantics | Gate A | Not started |
 | VAP-2 | Atomic task registry | Gate B | Not started |
 | VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Not started |
@@ -266,14 +266,16 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 
 ### Checklist
 
-- [ ] Re-resolve protected `origin/main`, worktree state, branch, package-manager version, Node version, Playwright version, and workflow definitions.
-- [ ] Confirm the correction plan is committed, indexed, machine-checked, temporary, and has a retirement condition. If not, stop VAP implementation at this checkpoint.
-- [ ] Expand `pnpm check`, TearBench-selected evidence, game deployment, game-reference dispatch, and wiki workflows into an atomic candidate inventory.
-- [ ] Distinguish exact duplicates, semantic overlaps, intentional A/B/backend repetitions, and unique obligations.
-- [ ] Record build count, browser-process count, fixed-port collisions, package-script process count, and wiki full-build count.
-- [ ] Capture at least several representative protected runs and calculate p50/p95 for candidate certification, certificate-to-game-live, and game-live-to-wiki-live.
-- [ ] Record repair/investigation time separately from release-candidate time.
-- [ ] Fix no behavior and alter no required check in this checkpoint.
+- [x] Re-resolve protected `origin/main`, worktree state, branch, package-manager version, Node version, Playwright version, and workflow definitions.
+- [x] Confirm the correction plan is committed, indexed, machine-checked, temporary, and has a retirement condition. If not, stop VAP implementation at this checkpoint.
+- [x] Expand `pnpm check`, TearBench-selected evidence, game deployment, game-reference dispatch, and wiki workflows into an atomic candidate inventory.
+- [x] Distinguish exact duplicates, semantic overlaps, intentional A/B/backend repetitions, and unique obligations.
+- [x] Record build count, browser-process count, fixed-port collisions, package-script process count, and wiki full-build count.
+- [x] Capture at least several representative protected runs and calculate p50/p95 for candidate certification, certificate-to-game-live, and game-live-to-wiki-live.
+- [x] Record repair/investigation time separately from release-candidate time.
+- [x] Fix no behavior and alter no required check in this checkpoint.
+
+**Recorded evidence:** [`VAP-0_BASELINE.md`](checkpoints/tearbench-verification-acceleration/VAP-0_BASELINE.md) binds the graph, duplicate classification, input hashes, exact workflow runs, percentile method, and separate clock definitions to the audited source. Gate A is committed and machine-visible on the focused local branch; protected integration remains a later, separately authorized action.
 
 **Focused proof:** A report-only graph/duplicate report whose source identity and parsing inputs are recorded and which can be regenerated without executing the release gate.
 
