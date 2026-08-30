@@ -79,9 +79,41 @@ test("specialized route ownership fails closed when its owner or scenario proof 
       delete route.reducedDisposition;
     }, /no specialized scenario or reduced disposition/u],
     ["invalid-prefix", (routes) => { routes.find((route) => route.id === "verdant-c6-rootbinder-network").prefixes.push("src/not-a-real-route/"); }, /no tracked repository match/u],
+    ["production-missing-reduced-disposition", (routes) => {
+      delete routes.find((route) => route.id === "production-replay-headless-composition").reducedDisposition;
+    }, /no specialized scenario or reduced disposition/u],
   ];
   for (const [name, mutate, expected] of mutations) {
     const result = rejected(["src/gameplay/environment/environment-runtime.ts"], { routes: mutatedRoutes(name, mutate) });
+    assert.notEqual(result.status, 0, name);
+    assert.match(`${result.stderr}\n${result.stdout}`, expected, name);
+  }
+});
+
+test("production composition exposes all required hook-family dispositions", () => {
+  const selection = select(["src/tearbench/production-replay-composition.ts"]);
+  assert.deepEqual(selection.backendDispositions.map((entry) => entry.family), [
+    "area-damage", "blade-contact", "boss-add-clone", "hazards-support", "source-void", "weapon-abilities", "weapon-world-contact",
+  ]);
+  assert.equal(selection.backendDispositions.find((entry) => entry.family === "source-void").disposition, "unsupported");
+  assert.ok(selection.backendDispositions.every((entry) => entry.evidenceRoute === "production-replay-headless-composition"));
+});
+
+test("production hook-family coverage and evidence ownership fail closed", () => {
+  const mutations = [
+    ["missing-family", (routes) => {
+      const route = routes.find((entry) => entry.id === "production-replay-headless-composition");
+      route.backendDispositions = route.backendDispositions.filter((entry) => entry.family !== "area-damage");
+    }, /hook-family coverage is incomplete/u],
+    ["invalid-disposition", (routes) => {
+      routes.find((entry) => entry.id === "production-replay-headless-composition").backendDispositions[0].disposition = "unknown";
+    }, /invalid disposition or evidence owner/u],
+    ["invalid-evidence-command", (routes) => {
+      routes.find((entry) => entry.id === "production-replay-headless-composition").backendDispositions[0].authorityCommands = ["node -e \\\"process.exit(0)\\\""];
+    }, /unsupported TearBench evidence command|unowned authority command/u],
+  ];
+  for (const [name, mutate, expected] of mutations) {
+    const result = rejected(["src/tearbench/production-replay-composition.ts"], { routes: mutatedRoutes(name, mutate) });
     assert.notEqual(result.status, 0, name);
     assert.match(`${result.stderr}\n${result.stdout}`, expected, name);
   }

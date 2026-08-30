@@ -285,7 +285,16 @@
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": ["headless", "replay", "combat", "events"],
     "buildTargets": ["test-standalone"],
-    "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"]
+    "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"],
+    "backendDispositions": [
+      { "family": "weapon-abilities", "backend": "production-headless", "disposition": "supported", "evidenceRoute": "production-replay-headless-composition", "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"] },
+      { "family": "hazards-support", "backend": "production-headless", "disposition": "supported", "evidenceRoute": "production-replay-headless-composition", "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"] },
+      { "family": "weapon-world-contact", "backend": "production-headless", "disposition": "supported", "evidenceRoute": "production-replay-headless-composition", "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"] },
+      { "family": "source-void", "backend": "production-headless", "disposition": "unsupported", "evidenceRoute": "production-replay-headless-composition", "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"] },
+      { "family": "boss-add-clone", "backend": "production-headless", "disposition": "supported", "evidenceRoute": "production-replay-headless-composition", "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"] },
+      { "family": "blade-contact", "backend": "production-headless", "disposition": "supported", "evidenceRoute": "production-replay-headless-composition", "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"] },
+      { "family": "area-damage", "backend": "production-headless", "disposition": "supported", "evidenceRoute": "production-replay-headless-composition", "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"] }
+    ]
   },
   {
     "id": "current-player-surfaces",

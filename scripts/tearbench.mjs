@@ -23,6 +23,11 @@ const trackedPathsResult = spawnSync("git", ["ls-files", "-z"], { cwd: root, enc
 if (trackedPathsResult.status !== 0) throw new Error(`unable to validate evidence prefixes: ${trackedPathsResult.stderr || trackedPathsResult.stdout}`);
 const trackedRepositoryPaths = trackedPathsResult.stdout.split("\0").filter(Boolean)
   .map((value) => value.replaceAll("\\", "/"));
+const REQUIRED_PRODUCTION_HOOK_FAMILIES = Object.freeze([
+  "weapon-abilities", "hazards-support", "weapon-world-contact", "source-void",
+  "boss-add-clone", "blade-contact", "area-damage",
+]);
+const KNOWN_BACKEND_DISPOSITIONS = new Set(["supported", "reduced", "unsupported"]);
 
 function fail(message) {
   console.error(message);
@@ -361,12 +366,38 @@ function validateRouteDisposition(route) {
       throw new RangeError(`specialized route ${route.id} required scenario is not routed: ${id}`);
     }
     const disposition = route.reducedDisposition;
-    if (route.scenarios.length === 0 && route.scenarioSubjects?.length === 0
+    if (route.scenarios.length === 0 && (route.scenarioSubjects?.length ?? 0) === 0
       && (typeof disposition !== "string" || disposition.trim() === "")) {
       throw new RangeError(`specialized route ${route.id} has no specialized scenario or reduced disposition`);
     }
     if (disposition !== undefined && (typeof disposition !== "string" || disposition.trim() === "")) {
       throw new TypeError(`specialized route ${route.id} has an invalid reduced disposition`);
+    }
+  }
+  if (route.id !== "production-replay-headless-composition") return;
+  const families = route.backendDispositions;
+  if (!Array.isArray(families)) throw new TypeError("production composition route is missing hook-family dispositions");
+  const familyIds = families.map((entry) => entry?.family);
+  if (familyIds.some((id) => typeof id !== "string" || id.trim() === "")
+    || new Set(familyIds).size !== familyIds.length) {
+    throw new TypeError("production composition hook-family IDs must be unique and nonempty");
+  }
+  if (REQUIRED_PRODUCTION_HOOK_FAMILIES.some((id) => !familyIds.includes(id))
+    || familyIds.some((id) => !REQUIRED_PRODUCTION_HOOK_FAMILIES.includes(id))) {
+    throw new RangeError("production composition hook-family coverage is incomplete");
+  }
+  for (const family of families) {
+    if (typeof family.backend !== "string" || family.backend.trim() === ""
+      || !KNOWN_BACKEND_DISPOSITIONS.has(family.disposition)
+      || family.evidenceRoute !== route.id
+      || !Array.isArray(family.authorityCommands) || family.authorityCommands.length === 0) {
+      throw new TypeError(`production hook family ${String(family.family)} has an invalid disposition or evidence owner`);
+    }
+    for (const command of family.authorityCommands) {
+      parseApprovedEvidenceCommand(command);
+      if (!route.authorityCommands?.includes(command)) {
+        throw new RangeError(`production hook family ${family.family} references an unowned authority command`);
+      }
     }
   }
 }
@@ -479,6 +510,20 @@ function canonicalList(values, normalize = (value) => value) {
   return [...new Set(values.map(normalize))].sort();
 }
 
+function canonicalBackendDispositions(values) {
+  const normalized = values.map((value) => ({
+    family: String(value.family).trim(), backend: String(value.backend).trim(),
+    disposition: String(value.disposition).trim(), evidenceRoute: String(value.evidenceRoute).trim(),
+    authorityCommands: canonicalList(value.authorityCommands ?? []),
+  }));
+  return [...new Map(normalized.map((value) => [canonicalJson(value), value])).values()]
+    .sort((left, right) => {
+      if (left.family !== right.family) return left.family < right.family ? -1 : 1;
+      if (left.backend !== right.backend) return left.backend < right.backend ? -1 : 1;
+      return left.disposition < right.disposition ? -1 : left.disposition > right.disposition ? 1 : 0;
+    });
+}
+
 function canonicalDiffScope(scope) {
   const normalizePath = (value) => {
     const normalized = String(value).replaceAll("\\", "/").trim();
@@ -496,6 +541,7 @@ function canonicalDiffScope(scope) {
     buildTargets: Object.freeze(canonicalList(scope.buildTargets ?? [])),
     journeyCommands: Object.freeze(canonicalList(scope.journeyCommands ?? [])),
     authorityCommands: Object.freeze(canonicalList(scope.authorityCommands ?? [])),
+    backendDispositions: Object.freeze(canonicalBackendDispositions(scope.backendDispositions ?? [])),
   });
 }
 
@@ -558,6 +604,7 @@ function evidenceForDiff(files) {
   const scenarios = [...new Set(selected.flatMap((route) => routeScenarioIds(route)))].sort();
   const currentWeaponParity = currentWeaponParityPlan(selected, scenarios);
   const authorityCommands = collect("authorityCommands");
+  const backendDispositions = canonicalBackendDispositions(selected.flatMap((route) => route.backendDispositions ?? []));
   if (currentWeaponParity.required) {
     const command = "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts";
     parseApprovedEvidenceCommand(command);
@@ -582,6 +629,7 @@ function evidenceForDiff(files) {
     buildTargets: collect("buildTargets"),
     journeyCommands: collect("journeyCommands"),
     authorityCommands,
+    backendDispositions,
     scope: canonicalDiffScope({
       changedFiles: normalized,
       routes: selected.map((route) => route.id),
@@ -590,6 +638,7 @@ function evidenceForDiff(files) {
       buildTargets: collect("buildTargets"),
       journeyCommands: collect("journeyCommands"),
       authorityCommands,
+      backendDispositions,
     }),
     unrelatedUnitTestsAreGameplayEvidence: false,
     scopeDigest: diffScopeDigest({
@@ -600,6 +649,7 @@ function evidenceForDiff(files) {
       buildTargets: collect("buildTargets"),
       journeyCommands: collect("journeyCommands"),
       authorityCommands,
+      backendDispositions,
     }),
     routeDefinitionDigest: routeDefinitionDigest(),
   };

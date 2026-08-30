@@ -179,6 +179,9 @@ export interface EvidenceSelection {
   readonly unrelatedUnitTestsAreGameplayEvidence: false;
 }
 
+/** The executable Node selector remains the sole route/policy authority. */
+export const TEAR_EVIDENCE_SELECTOR_AUTHORITY = "scripts/tearbench.mjs" as const;
+
 export function selectDiffAwareEvidence(
   changedFiles: readonly string[],
   routes: readonly EvidenceRoute[],
