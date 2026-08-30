@@ -204,10 +204,10 @@ export function installGraftAnchor(
   environment: Pick<EnvironmentRuntimeState, "addCombatObject" | "combatObjects">,
   input: GraftAnchorFactoryInput,
 ): GraftAnchorState {
-  const active = environment.combatObjects().filter(isGraftAnchorState).filter((object) => object.ownerId === input.ownerId
-    && object.state !== "destroyed" && object.state !== "expired");
-  const existing = active.find((object) => object.graftType === input.graftType);
+  const owned = environment.combatObjects().filter(isGraftAnchorState).filter((object) => object.ownerId === input.ownerId);
+  const existing = owned.find((object) => object.graftType === input.graftType);
   if (existing !== undefined) return existing;
+  const active = owned.filter((object) => object.state !== "destroyed" && object.state !== "expired");
   if (active.length >= MAX_ACTIVE_GRAFT_ANCHORS) throw new RangeError("Rootbound Graft Anchor population bound exceeded");
   const created = createGraftAnchorState(input);
   const id = environment.addCombatObject(created);

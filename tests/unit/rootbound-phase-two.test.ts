@@ -74,6 +74,29 @@ describe("Rootbound Phase II Graft creation", () => {
     expect(grafts.every((graft) => graft.ownerId === "enemy:rootbound-live" && graft.targetId === "enemy:rootbound-live")).toBe(true);
   });
 
+  it("keeps a player-destroyed Graft terminal across subsequent live Phase II environment steps", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-destroyed-graft" });
+    bindVerdantEnvironmentActors(environment, "rootbound", () => [Object.freeze({
+      id: "enemy:1",
+      source: actor,
+      state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+        graftPlacements: actor.graftAnchorPlacements(), ownerPosition: Object.freeze({ x: actor.x, y: actor.y }) }),
+    })]);
+    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:1"]));
+    const mercy = environment.combatObjects().filter(isGraftAnchorState).find((graft) => graft.graftType === "mercy");
+    if (mercy === undefined) throw new TypeError("expected Mercy Graft");
+    expect(environment.damageCombatObject(mercy.id, mercy.integrity, "player-destroyed-mercy", 360).destroyed).toBe(true);
+
+    expect(() => { environment.step(361, 1 / 120, () => undefined, new Set(["enemy:1"])); }).not.toThrow();
+    expect(environment.combatObjects().filter((object) => object.id === "enemy:1:graft:mercy")).toEqual([
+      expect.objectContaining({ state: "destroyed", stateTick: 360 }),
+    ]);
+  });
+
   it("keeps Rootbound directly damageable while all three canonical Grafts exist and are active", () => {
     const harness = createEnemyHarness();
     const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;

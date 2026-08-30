@@ -138,6 +138,24 @@ describe("Rootbound Graft Anchor definitions", () => {
     expect(environment.combatObjects().every((object) => object.factoryId === "graft-anchor")).toBe(true);
   });
 
+  it("does not reinstall a terminal Graft while Rootbound still advertises its Phase II placement", () => {
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-terminal-idempotency" });
+    const input = {
+      ownerId: "enemy:1",
+      ownerPosition: { x: 800, y: 520 },
+      graftType: "mercy",
+      geometry: { x: 773, y: 610, w: 54, h: 90 },
+      createdTick: 240,
+    } as const;
+    const installed = installGraftAnchor(environment, input);
+    expect(environment.damageCombatObject(installed.id, installed.integrity, "player-destroyed-mercy", 360).destroyed).toBe(true);
+
+    const repeated = installGraftAnchor(environment, { ...input, createdTick: 361 });
+
+    expect(repeated).toMatchObject({ id: "enemy:1:graft:mercy", state: "destroyed" });
+    expect(environment.combatObjects().filter((object) => object.id === installed.id)).toHaveLength(1);
+  });
+
   it("accepts the specialized source-owned factory in the existing codec and rejects invalid inputs", () => {
     const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 1 });
     expect(validateEnvironmentCodecPayload({ slowZones: [], walls: [], fields: [], combatObjects: [state], routes: [] })).toEqual([]);
