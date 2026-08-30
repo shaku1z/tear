@@ -58,7 +58,7 @@ runtime authority.
 | Order | Checkpoint | Status | Dependency |
 | ---: | --- | --- | --- |
 | 1 | TC-1 — Publication authority | Complete | Plan activation |
-| 2 | TC-2 — Bloom backend honesty | In review | TC-1 |
+| 2 | TC-2 — Bloom backend honesty | Complete | TC-1 |
 | 3 | TC-3 — Environment invariant binding | Not started | TC-2 |
 | 4 | TC-4 — Rootbound repeated-poll regression | Not started | TC-3 |
 | 5 | TC-5 — Source-derived content terminology | Not started | TC-1 |
@@ -478,7 +478,7 @@ commit alone is insufficient.
 | Checkpoint | Source commit | Focused evidence | Browser/backend evidence | Post-review | State |
 | --- | --- | --- | --- | --- | --- |
 | TC-1 | `83c0a0c306aa1adf00175118c18c357f2af6b872` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-1_PUBLICATION_AUTHORITY.md`; focused publication, release-preflight, game-reference, content-availability, Verdant, docs, and terminology checks | N/A | Final focused review green; historical evidence preserved; no protected integration claimed | Complete |
-| TC-2 | `cc81c426d0cbe4ad4fd22ebc66304e06e172735a` + reviewed working-tree diff | `docs/checkpoints/tearbench-current-corrections/TC-2_BLOOM_BACKEND_HONESTY.md`; focused Bloom/headless/current-game authority, selector, typecheck, and exact-source build checks | Live Class-A current-game journey passed all 13 source-owned scenarios at build fingerprint `e904105e721fd1df99436ccf907742a11134d56dbbbf114319ba42458ac571dc` | Focused review green; exact implementation commit pending | In review |
+| TC-2 | `29a2460be71003416a8a73ad4e36b4ad2e617309` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-2_BLOOM_BACKEND_HONESTY.md`; 36 focused typed tests, 28 selector tests, typecheck, docs, and terminology gates | Clean-commit Class-A journey passed all 13 source-owned scenarios at build fingerprint `9d9bffd9b423d3a5d3cb4e11b34f328a9aa1d7daf45d0c333d9ce37d1585d2c4` | Final focused review green; no headless Bloom or protected integration claimed | Complete |
 | TC-3 | — | — | — | — | Not started |
 | TC-4 | — | — | — | — | Not started |
 | TC-5 | — | — | N/A | — | Not started |

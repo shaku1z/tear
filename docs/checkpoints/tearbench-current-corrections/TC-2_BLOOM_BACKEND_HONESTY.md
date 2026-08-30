@@ -2,9 +2,11 @@
 
 ## Current disposition
 
-TC-2 is green and in review on `codex/tc2-bloom-backend-honesty` from baseline
-`cc81c426d0cbe4ad4fd22ebc66304e06e172735a`. The exact implementation commit
-will be recorded only after it exists. `verdant-bloom-well-cycle` is live-only:
+TC-2 is green at local implementation commit
+`29a2460be71003416a8a73ad4e36b4ad2e617309` on
+`codex/tc2-bloom-backend-honesty`, from baseline
+`cc81c426d0cbe4ad4fd22ebc66304e06e172735a`.
+`verdant-bloom-well-cycle` is live-only:
 the production headless environment cannot restore or observe Bloom's authored
 State Forge field, so generic reset/move/tick behavior is explicitly rejected
 as Bloom evidence.
@@ -24,12 +26,13 @@ as Bloom evidence.
 
 - Four focused Vitest files passed all 36 Bloom runtime, environment-field,
   current-headless, and current-game-authority tests.
-- `tests/tearbench-evidence-selection.test.mjs` passed all 27 selector tests,
-  including detached-backend and truncated-horizon negatives; it is rerun after
-  the final selector review before the checkpoint commit.
+- `tests/tearbench-evidence-selection.test.mjs` passed all 28 selector tests on
+  the clean implementation commit, including backend-split, detached-backend,
+  route-disposition, and truncated-horizon negatives.
 - TypeScript project typecheck passed.
-- A fresh `test-standalone` build recorded source fingerprint
-  `e904105e721fd1df99436ccf907742a11134d56dbbbf114319ba42458ac571dc`.
+- A clean-commit `test-standalone` build recorded source revision
+  `29a2460be71003416a8a73ad4e36b4ad2e617309` and fingerprint
+  `9d9bffd9b423d3a5d3cb4e11b34f328a9aa1d7daf45d0c333d9ce37d1585d2c4`.
 - The Class-A current-game browser journey passed all 13 source-owned scenarios.
   Bloom traversed `warning → active → cooldown → dormant` through tick 744 using
   the live production bridge and State Forge restore.
