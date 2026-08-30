@@ -558,6 +558,29 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
   return { status, executions, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
 }
 
+export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8_000) {
+  if (evidenceExecution?.status !== "failed" || !Array.isArray(evidenceExecution.executions)) return "";
+  const failures = evidenceExecution.executions.filter((entry) => entry?.status === "failed");
+  const lines = [];
+  const appendOutput = (label, value) => {
+    const output = typeof value === "string" ? value.trim() : "";
+    if (output === "") return;
+    const bounded = output.length > outputLimit ? `${output.slice(0, outputLimit)}\n...[truncated]` : output;
+    lines.push(`${label}:\n${bounded}`);
+  };
+  for (const failure of failures) {
+    lines.push(`TearBench selected evidence failed: ${String(failure.id ?? "<unknown>")}`);
+    if (typeof failure.command === "string") lines.push(`command: ${failure.command}`);
+    for (const receipt of Array.isArray(failure.receipts) ? failure.receipts : []) {
+      if (receipt?.status !== "failed") continue;
+      lines.push(`step: ${String(receipt.kind ?? "<unknown>")} exit=${String(receipt.exitCode ?? 1)}`);
+      appendOutput("stdout", receipt.stdout);
+      appendOutput("stderr", receipt.stderr);
+    }
+  }
+  return lines.join("\n");
+}
+
 export function verifyCurrentWeaponParityExecution(selection, evidence) {
   if (selection.currentWeaponParity.required !== true) return evidence;
   for (const [index, id] of selection.currentWeaponParity.scenarios.entries()) {
@@ -1245,6 +1268,8 @@ try {
           selection.buildTargets, selection.authorityCommands, selection.scope))
       : { status: "skipped", reason: "selected unit evidence failed", executions: [] };
     await writeFile(artifactPath, `${JSON.stringify({ ...selection, evidenceExecution }, null, 2)}\n`, "utf8");
+    const failureDiagnostics = formatFailedEvidenceExecution(evidenceExecution);
+    if (failureDiagnostics !== "") process.stderr.write(`${failureDiagnostics}\n`);
     const graveyardReport = !docsOnly && evidence.status === 0 && evidenceExecution.status === "passed"
       ? await executeSelectedGraveyardCases(selection.graveyardCases, {
         registryPath: option("--registry", resolve(root, "artifacts", "tearbench", "graveyard-registry.json")),

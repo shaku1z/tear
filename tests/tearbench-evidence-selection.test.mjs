@@ -392,9 +392,9 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   const previousArgv = process.argv, previousLog = console.log;
   process.argv = [process.execPath, script, "identity-test-import"];
   console.log = () => {};
-  let validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
+  let formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
   try {
-    ({ validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));
+    ({ formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));
   } finally {
     console.log = previousLog;
     process.argv = previousArgv;
@@ -417,4 +417,14 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   assert.throws(() => verifyCurrentWeaponParityExecution(selection, { status: "passed",
     executions: [{ ...execution, receipts: [{ ...receipt, source: { ...source, fingerprint: "e".repeat(64) } }] }] }),
   /stale source identity/u);
+
+  const diagnostic = formatFailedEvidenceExecution({ status: "failed", executions: [{
+    id: "linux-browser-proof", command: "node tests/browser-proof.js", status: "failed",
+    receipts: [{ kind: "node", status: "failed", exitCode: 1, stdout: "captured stdout", stderr: "captured stderr" }],
+  }] }, 80);
+  assert.match(diagnostic, /linux-browser-proof/u);
+  assert.match(diagnostic, /node tests\/browser-proof\.js/u);
+  assert.match(diagnostic, /captured stdout/u);
+  assert.match(diagnostic, /captured stderr/u);
+  assert.equal(formatFailedEvidenceExecution({ status: "passed", executions: [] }), "");
 });
