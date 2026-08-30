@@ -78,6 +78,12 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
       assert.equal(orb.counterplay, "deflect/detonate or ground shatter");
       const orbFile = "hailcaster-hail-orb-1600x900.png";
       await page.screenshot({ path: path.join(directory, orbFile) }); screenshots.push(orbFile);
+      // Screenshot capture can outlive the short-lived shard burst on slower CI
+      // runners. Recompose the same canonical Hailcaster scenario so the ground
+      // shatter is observed independently from the orb presentation capture.
+      await page.evaluate(() => window.__PANTHEON_TEST.preparePaleVariantEvidenceScenario("bomber", "hailcaster"));
+      await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().projectiles
+        .some((projectile) => projectile.kind === "hail-orb"), undefined, { timeout: 10_000 });
       await page.evaluate(() => window.__PANTHEON_TEST.positionDebugPlayer(1_450));
       await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().projectiles
         .filter((projectile) => projectile.kind === "hail-shard").length === 6, undefined, { timeout: 10_000 });
