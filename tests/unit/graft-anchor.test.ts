@@ -109,13 +109,13 @@ describe("Rootbound Graft Anchor definitions", () => {
       start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
     };
     const forged = forgeRootboundGraftAnchorState(base);
-    expect(forged.id).toBe("rootbound-graft-anchor-destruction-graft-bastion");
+    expect(forged.id).toBe("rootbound-graft-anchor-destruction-graft-mercy");
     expect(forged.start).toEqual(base.start);
     expect(forged.state?.environment).toMatchObject({
       fields: [], routes: [],
       combatObjects: [expect.objectContaining({
-        id: "enemy:1:graft:bastion", factoryId: "graft-anchor", kind: "graft-anchor",
-        ownerId: "enemy:1", targetId: "enemy:1", graftType: "bastion", state: "active",
+        id: "enemy:1:graft:mercy", factoryId: "graft-anchor", kind: "graft-anchor",
+        ownerId: "enemy:1", targetId: "enemy:1", graftType: "mercy", state: "active",
       })],
     });
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"]).toMatchObject({

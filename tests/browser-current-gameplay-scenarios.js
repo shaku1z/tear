@@ -261,25 +261,57 @@ async function main() {
           const env = environment.environment();
           const beforeObservation = environment.observe();
           const boss = beforeObservation.entities.find((actor) => actor.kind === "rootbound");
-          const graft = env.snapshot().combatObjects.find((object) => object.factoryId === "graft-anchor");
+          const graft = env.snapshot().combatObjects.find((object) => object.factoryId === "graft-anchor" && object.graftType === "mercy");
           if (boss === undefined || graft === undefined) throw new Error("Rootbound Graft restore did not retain its live boss owner");
           const scoreBefore = beforeObservation.run.score;
+          const eventCountBeforeDamage = environment.events().length;
           const damage = env.damageCombatObject(graft.id, graft.integrity, "rootbound-graft-browser-cut", beforeObservation.tick + 1);
-          const transition = step();
-          env.cleanupCombatObject(graft.id, "boss-terminal", transition.observation.tick);
+          const polls = [];
+          const pollSnapshots = [];
+          for (let poll = 0; poll < 2; poll += 1) {
+            polls.push(step());
+            pollSnapshots.push(env.snapshot());
+          }
+          const pollOwnerGrafts = pollSnapshots.map((snapshot) => snapshot.combatObjects
+            .filter((object) => object.ownerId === boss.id && object.factoryId === "graft-anchor"));
+          const pollGrafts = pollOwnerGrafts.map((entries) => entries
+            .filter((object) => object.ownerId === boss.id && object.graftType === "mercy"));
+          const postDestructionEvents = environment.events().slice(eventCountBeforeDamage);
+          const eventTypes = postDestructionEvents.map((event) => event.type);
+          const graftEvents = postDestructionEvents.filter((event) =>
+            event.type.startsWith("world.environment-") && event.actorId === graft.id);
+          const unexpectedGraftEvents = graftEvents.filter((event) => ![
+            "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed",
+          ].includes(event.type));
+          const repeatedEnemyDefeats = postDestructionEvents.filter((event) => event.type === "enemy.defeated");
+          const cleanupTick = environment.observe().tick;
+          env.cleanupCombatObject(graft.id, "boss-terminal", cleanupTick);
           step();
           const after = env.snapshot().combatObjects.find((object) => object.id === graft.id);
-          const eventTypes = environment.events().map((event) => event.type);
-          const damagedIndex = eventTypes.indexOf("world.environment-combat-object-damaged");
-          const destroyedIndex = eventTypes.indexOf("world.environment-combat-object-destroyed");
-          const cleanedIndex = eventTypes.indexOf("world.environment-object-cleaned");
+          const cleanupEvents = environment.events().slice(eventCountBeforeDamage).filter((event) =>
+            event.type === "world.environment-object-cleaned" && event.actorId === graft.id);
           const finalObservation = environment.observe();
-          evidence = { forge, graft, damage, after, bossId: boss.id, eventTypes,
+          const expectedOwnerGraftIds = ["enemy:1:graft:bastion", "enemy:1:graft:mercy", "enemy:1:graft:haste"];
+          const oneStableOwnerGraftSet = pollOwnerGrafts.every((entries) => entries.length === expectedOwnerGraftIds.length
+            && entries.map((entry) => entry.id).sort().join(",") === expectedOwnerGraftIds.slice().sort().join(","));
+          const oneStableTerminalGraft = pollGrafts.every((entries) => entries.length === 1)
+            && pollGrafts.every(([entry]) => entry?.id === graft.id && entry.state === "destroyed"
+              && entry.stateTick === beforeObservation.tick + 1
+              && entry.recoverySpentHealthFraction === graft.recoverySpentHealthFraction);
+          const mercyEffectProjection = pollGrafts.map(([entry]) => entry?.state === "active");
+          evidence = { forge, graft, damage, polls: pollGrafts, after, bossId: boss.id, eventTypes,
+            ownerGrafts: pollOwnerGrafts, graftEvents, unexpectedGraftEvents, mercyEffectProjection,
+            repeatedEnemyDefeats, cleanupEvents,
             bossDamageableContract: "production-path-unit", scoreBefore, scoreAfter: finalObservation.run.score };
           proved = graft.ownerId === boss.id && graft.targetId === boss.id && graft.procEligible === false
             && graft.counterplayTags.includes("cut") && damage.accepted && damage.destroyed
+            && oneStableOwnerGraftSet && oneStableTerminalGraft && unexpectedGraftEvents.length === 0
+            && mercyEffectProjection.every((active) => active === false)
+            && repeatedEnemyDefeats.length === 0
             && after?.state === "expired" && after.cleanupReason === "boss-terminal"
-            && damagedIndex >= 0 && destroyedIndex > damagedIndex && cleanedIndex > destroyedIndex
+            && graftEvents.filter((event) => event.type === "world.environment-combat-object-damaged").length === 1
+            && graftEvents.filter((event) => event.type === "world.environment-combat-object-destroyed").length === 1
+            && cleanupEvents.length === 1
             && finalObservation.run.score === scoreBefore
             && !environment.events().some((event) => event.type === "enemy.defeated");
           break;
