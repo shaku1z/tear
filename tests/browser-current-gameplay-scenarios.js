@@ -1,11 +1,27 @@
 const assert = require("node:assert/strict");
+const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
+
+const root = path.resolve(__dirname, "..");
+
+async function loadCanonicalAssertions() {
+  const { createServer } = await import("vite");
+  const server = await createServer({ root, server: { middlewareMode: true } });
+  try {
+    const { CANONICAL_ENGINEERING_SCENARIOS } = await server.ssrLoadModule("/src/tearbench/canonical-scenarios.ts");
+    return new Map(CANONICAL_ENGINEERING_SCENARIOS.map((scenario) => [scenario.id, scenario.assertions]));
+  } finally {
+    await server.close();
+  }
+}
 
 const scenarios = canonicalScenarios.filter((entry) =>
   entry.subject.kind === "gameplay" || entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object");
 
-withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
+async function main() {
+  const assertionsByScenario = await loadCanonicalAssertions();
+  await withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST);
   for (const entry of scenarios) {
     assert.ok(entry.backends.includes("live"), `${entry.id} must honestly declare its live evidence backend`);
@@ -15,7 +31,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
         id: source.id, version: 1, description: source.description,
         stateClass: "recorded-canonical", executionClass: "engineering",
         subject: source.subject, backends: source.backends, seed: `current-live-${source.subject.id}`,
-        start: source.start, maxTicks: source.maxTicks, assertions: ["runtime.finite-state"], tags: source.tags,
+        start: source.start, maxTicks: source.maxTicks, assertions: source.assertions, tags: source.tags,
       };
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
       let initial = environment.reset(scenario);
@@ -274,10 +290,16 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
       return { id: scenario.id, subject: scenario.subject.id, mode: final.run.mode, proved, evidence,
         initial: { x: initial.player.x, y: initial.player.y, grounded: initial.player.grounded },
         final: { x: final.player.x, y: final.player.y, grounded: final.player.grounded }, tick: final.tick };
-    }, entry);
+    }, { ...entry, assertions: assertionsByScenario.get(entry.id) });
     assert.equal(receipt.mode, entry.start.mode, `${entry.id} must preserve its declared current run mode`);
     assert.equal(receipt.proved, true,
       `${entry.id} must execute its actual declared ${entry.subject.id} subject: ${JSON.stringify(receipt)}`);
   }
   console.log(`current live gameplay subjects passed (${scenarios.length} source-owned scenarios)`);
+  });
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.stack || error.message : String(error));
+  process.exitCode = 1;
 });

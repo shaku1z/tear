@@ -184,6 +184,19 @@ async function validateLiveObservations(observations, assertions) {
   }
 }
 
+/** Resolve the source-owned canonical scenario so browser artifacts carry the
+ * same effective assertions as the typed runner. */
+async function loadCanonicalScenario(entry) {
+  const { createServer } = await import("vite");
+  const server = await createServer({ root, server: { middlewareMode: true } });
+  try {
+    const { materializeCanonicalScenario } = await server.ssrLoadModule("/src/tearbench/canonical-scenarios.ts");
+    return materializeCanonicalScenario(entry);
+  } finally {
+    await server.close();
+  }
+}
+
 const requestedDirectory = process.env.TEAR_BROWSER_BUILD_DIR;
 if (requestedDirectory !== undefined && requestedDirectory !== "test-standalone") {
   throw new Error("C26 live materialization only accepts dist/test-standalone; production and non-test builds are forbidden");
@@ -239,15 +252,22 @@ const runtimeScenario = {
   seed,
   start: scenarioStart,
   maxTicks,
-  assertions: [
-    "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
-    "entity.unique-id", "entity.valid-owner", "player.valid-health", "world.legal-bounds",
-    "wave.valid-completion", "boss.valid-phase", "ui.valid-focus",
-  ],
+  assertions: [],
   tags: [...catalogEntry.tags, ...(headlessTerminal === undefined ? ["c26"] : ["c30", "headless-terminal-rerun"]), "live-runtime-materialized"],
 };
 
 async function main() {
+const canonicalScenario = await loadCanonicalScenario(catalogEntry);
+Object.assign(runtimeScenario, {
+  subject: canonicalScenario.subject,
+  backends: canonicalScenario.backends,
+  // Preserve browser-only diagnostic checks while sourcing the base and
+  // subject-required set from canonical-scenarios.ts.
+  assertions: Object.freeze([...new Set([
+    ...canonicalScenario.assertions,
+    "world.legal-bounds", "wave.valid-completion", "boss.valid-phase", "ui.valid-focus",
+  ])]),
+});
 let materialized;
 await withJourney({
   name: `C26 live TearBench materialization (${scenarioId})`, port: 8166,

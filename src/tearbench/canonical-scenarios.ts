@@ -11,6 +11,7 @@ import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
 import { TearScenarioRegistry } from "./scenario-registry";
 import scenarioCatalog from "./canonical-scenarios.json";
 import { BLOOM_WELL_TIMING } from "../gameplay/environment/bloom-well";
+import { effectiveInvariantIdsForScenario } from "./invariants";
 
 type CanonicalCatalogEntry = (typeof scenarioCatalog)[number];
 
@@ -74,6 +75,13 @@ export function materializeCanonicalScenario(
           ? Object.freeze({ kind: "environment-field", id: ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) })
           : Object.freeze({ kind: "environment-combat-object", id: ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) });
   const backends = Object.freeze([...entry.backends]) as readonly [TearScenarioBackendV1, ...TearScenarioBackendV1[]];
+  const assertions = effectiveInvariantIdsForScenario({
+    subject,
+    assertions: [
+      "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
+      "entity.unique-id", "entity.valid-owner", "player.valid-health", "replay.monotonic-time",
+    ],
+  });
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT,
     kind: "scenario",
@@ -89,10 +97,7 @@ export function materializeCanonicalScenario(
     start: Object.freeze({ mode, difficulty, weapon, ...(boss === undefined ? {} : { boss }) }),
     maxTicks: entry.maxTicks,
     // Only advertise assertions whose inputs exist in every declared backend.
-    assertions: Object.freeze([
-      "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
-      "entity.unique-id", "entity.valid-owner", "player.valid-health", "replay.monotonic-time",
-    ] as const),
+    assertions,
     tags: Object.freeze(entry.tags),
   });
 }

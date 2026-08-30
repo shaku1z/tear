@@ -14,6 +14,7 @@ import {
   type TearScenarioRuntime,
   type TearScenarioV1,
 } from "../../src/tearbench";
+import type { TearScenarioTransition } from "../../src/tearbench/runner";
 
 function observation(tick: number, hp = 100, scenario?: TearScenarioV1): TearObservationV1 {
   return {
@@ -57,6 +58,63 @@ class FixtureRuntime implements TearScenarioRuntime {
   }
 
   metrics() { return { steps: this.#tick }; }
+}
+
+type EnvironmentObservation = NonNullable<TearObservationV1["environment"]>;
+
+function environmentObservation(
+  tick: number,
+  scenario: TearScenarioV1,
+  environment: EnvironmentObservation,
+): TearObservationV1 {
+  return { ...observation(tick, 100, scenario), environment };
+}
+
+function environmentField(id: string, state = "active") {
+  return {
+    id, kind: "bloom-well" as const,
+    bounds: { minX: 0, maxX: 10, minY: 0, maxY: 10 }, state, active: state === "active",
+  };
+}
+
+function environmentCombatObject(overrides: Partial<EnvironmentObservation["combatObjects"][number]> = {}) {
+  return {
+    id: "combat:1", kind: "root-link" as const, ownerId: "player", targetId: "player",
+    bounds: { minX: 0, maxX: 10, minY: 0, maxY: 10 }, integrityRatio: 1, state: "active",
+    counterplayTags: [], procEligible: false, ...overrides,
+  };
+}
+
+function environment(fields: EnvironmentObservation["fields"] = [], combatObjects: EnvironmentObservation["combatObjects"] = []): EnvironmentObservation {
+  return { fields, combatObjects, routes: [] };
+}
+
+class SequenceEnvironmentRuntime implements TearScenarioRuntime {
+  #index = 0;
+
+  constructor(readonly observations: readonly TearObservationV1[]) {}
+
+  reset(): TearObservationV1 {
+    this.#index = 0;
+    return this.observations[0]!;
+  }
+
+  step(actions: Parameters<TearScenarioRuntime["step"]>[0]): TearScenarioTransition {
+    this.#index = Math.min(this.#index + 1, this.observations.length - 1);
+    return { observation: this.observations[this.#index]!, events: [], actions,
+      terminated: true, truncated: false, info: {} };
+  }
+
+  metrics() { return { steps: this.#index }; }
+}
+
+function environmentScenario(): TearScenarioV1 {
+  const scenario = createCanonicalScenarioRegistry().get("generic-environment-field-transition");
+  return { ...scenario, assertions: ["runtime.finite-state"] };
+}
+
+function runEnvironmentSequence(observations: readonly TearObservationV1[]) {
+  return new TearBenchRunner(new SequenceEnvironmentRuntime(observations)).run(environmentScenario());
 }
 
 describe("TearBench engineering runner", () => {
@@ -127,6 +185,28 @@ describe("TearBench engineering runner", () => {
     });
     expect(artifact.firstFailureTick).toBe(3);
     expect(artifact.invariantId).toBe("player.valid-health");
+  });
+
+  it.each([
+    ["duplicate environment IDs", (scenario: TearScenarioV1) => environmentObservation(0, scenario,
+      environment([environmentField("duplicate"), environmentField("duplicate")])), "environment.unique-id"],
+    ["missing environment owner/target", (scenario: TearScenarioV1) => environmentObservation(0, scenario,
+      environment([], [environmentCombatObject({ ownerId: "missing-owner", targetId: "missing-target" })])), "environment.valid-references"],
+    ["illegal environment transition", (scenario: TearScenarioV1) => environmentObservation(1, scenario,
+      environment([environmentField("transition", "active")])), "environment.legal-transition"],
+    ["environment population bound", (scenario: TearScenarioV1) => environmentObservation(0, scenario,
+      environment(Array.from({ length: 65 }, (_, index) => environmentField(`field:${String(index)}`)))), "environment.bounded"],
+  ] as const)("automatically fails on %s even when the caller supplies only base assertions", (name, makeObservation, failureId) => {
+    const scenario = environmentScenario();
+    const initial = name === "illegal environment transition"
+      ? environmentObservation(0, scenario, environment([environmentField("transition", "destroyed")]))
+      : makeObservation(scenario);
+    const observations = name === "illegal environment transition"
+      ? [initial, makeObservation(scenario)]
+      : [initial];
+    const result = runEnvironmentSequence(observations);
+    expect(result.status, name).toBe("failed");
+    expect(result.failures.some((failure) => failure.id === failureId), name).toBe(true);
   });
 
   it("pauses without advancing simulation and resumes deterministically", () => {

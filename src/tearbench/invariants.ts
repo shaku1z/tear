@@ -1,5 +1,5 @@
 import type { TearInvariantId } from "./registries";
-import type { TearObservationV1 } from "./contracts";
+import type { TearObservationV1, TearScenarioSubjectV1, TearScenarioV1 } from "./contracts";
 import { modeOwnsWaveActors } from "../gameplay/run/mode-catalog";
 
 export interface TearInvariantFailure {
@@ -13,6 +13,41 @@ export type TearInvariantCheck = (
   observation: TearObservationV1,
   previous?: TearObservationV1,
 ) => TearInvariantFailure | null;
+
+/**
+ * Invariants that are inseparable from an environment subject.  Keep this
+ * binding next to the check implementations so callers cannot accidentally
+ * grow a second subject-to-invariant registry.
+ */
+export const ENVIRONMENT_REQUIRED_INVARIANT_IDS = Object.freeze([
+  "runtime.finite-state",
+  "environment.finite-state",
+  "environment.unique-id",
+  "environment.valid-references",
+  "environment.no-orphan-link",
+  "environment.legal-transition",
+  "environment.bounded",
+] as const satisfies readonly TearInvariantId[]);
+
+const NO_REQUIRED_INVARIANTS: readonly TearInvariantId[] = Object.freeze([]);
+
+export function requiredInvariantIdsForSubject(
+  subject: Pick<TearScenarioSubjectV1, "kind"> | undefined,
+): readonly TearInvariantId[] {
+  return subject?.kind === "environment-field" || subject?.kind === "environment-combat-object"
+    ? ENVIRONMENT_REQUIRED_INVARIANT_IDS
+    : NO_REQUIRED_INVARIANTS;
+}
+
+/** Merge caller assertions with source-owned subject requirements exactly once. */
+export function effectiveInvariantIdsForScenario(
+  scenario: Pick<TearScenarioV1, "subject" | "assertions">,
+): readonly TearInvariantId[] {
+  return Object.freeze([...new Set([
+    ...scenario.assertions,
+    ...requiredInvariantIdsForSubject(scenario.subject),
+  ])]);
+}
 
 const failure = (
   id: TearInvariantId,

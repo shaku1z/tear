@@ -25,6 +25,7 @@ import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalOb
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { CANONICAL_ENGINEERING_SCENARIOS, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
+import { ENVIRONMENT_REQUIRED_INVARIANT_IDS } from "../../src/tearbench/invariants";
 import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
 import { PRODUCTION_UPGRADE_BY_ID } from "../../src/tearbench/progression-synthesis-policy";
 import { validateTearContract } from "../../src/tearbench/validation";
@@ -55,7 +56,10 @@ import {
 interface CurrentCatalogEntry {
   readonly id: string;
   readonly description: string;
-  readonly subject: Readonly<{ kind: "gameplay" | "weapon" | "boss"; id: string }>;
+  readonly subject: Readonly<{
+    kind: "gameplay" | "weapon" | "boss" | "environment-field" | "environment-combat-object";
+    id: string;
+  }>;
   readonly start: Readonly<{ mode: string; difficulty: string; weapon: string; boss?: string }>;
   readonly backends: readonly ("live" | "headless")[];
   readonly tags: readonly string[];
@@ -200,6 +204,9 @@ describe("TearBench current-game catalog authority", () => {
       expect(materializeCurrentScenario(entry).subject, entry.id).toEqual(entry.subject);
       expect(materializeCurrentScenario(entry).backends, entry.id).toEqual(entry.backends);
       expect(validateTearContract(materializeCurrentScenario(entry)).ok, entry.id).toBe(true);
+      if (entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object") {
+        expect(materialized?.assertions, entry.id).toEqual(expect.arrayContaining([...ENVIRONMENT_REQUIRED_INVARIANT_IDS]));
+      }
       expect(entry.tags, entry.id).toContain(entry.subject.id);
       expect(RUN_MODE_REGISTRY.has(entry.start.mode), entry.id).toBe(true);
       expect(DIFFICULTY_REGISTRY.has(entry.start.difficulty), entry.id).toBe(true);

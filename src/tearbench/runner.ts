@@ -11,7 +11,8 @@ import type {
 } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import type { TearInvariantFailure } from "./invariants";
-import { runInvariantChecks } from "./invariants";
+import type { TearInvariantId } from "./registries";
+import { effectiveInvariantIdsForScenario, runInvariantChecks } from "./invariants";
 
 export interface TearActionBatchEntry {
   readonly actions: readonly CommandEnvelope<GameAction>[];
@@ -61,6 +62,7 @@ export interface TearBenchSessionSnapshot {
 export class TearBenchSession {
   readonly #runtime: TearScenarioRuntime;
   readonly #scenario: TearScenarioV1;
+  readonly #assertions: readonly TearInvariantId[];
   readonly #observations: TearObservationV1[];
   readonly #events: TearCausalEventV1[] = [];
   readonly #actions: CommandEnvelope<GameAction>[] = [];
@@ -70,9 +72,10 @@ export class TearBenchSession {
   constructor(runtime: TearScenarioRuntime, scenario: TearScenarioV1) {
     this.#runtime = runtime;
     this.#scenario = scenario;
+    this.#assertions = effectiveInvariantIdsForScenario(scenario);
     const initial = runtime.reset(scenario);
     this.#observations = [initial];
-    this.#failures = [...runInvariantChecks(initial, scenario.assertions)];
+    this.#failures = [...runInvariantChecks(initial, this.#assertions)];
     this.#status = this.#failures.length > 0 ? "failed" : "ready";
   }
 
@@ -112,7 +115,7 @@ export class TearBenchSession {
     this.#observations.push(transition.observation);
     this.#events.push(...transition.events);
     const previous = this.#observations[this.#observations.length - 2];
-    this.#failures.push(...runInvariantChecks(transition.observation, this.#scenario.assertions, undefined, previous));
+    this.#failures.push(...runInvariantChecks(transition.observation, this.#assertions, undefined, previous));
     if (this.#failures.length > 0) this.#status = "failed";
     else if (transition.terminated) this.#status = "passed";
     else if (transition.truncated || transition.observation.tick >= this.#scenario.maxTicks) this.#status = "truncated";

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { TEAR_CONTRACT_FORMAT, type TearObservationV1 } from "../../src/tearbench/contracts";
-import { runInvariantChecks } from "../../src/tearbench/invariants";
+import {
+  ENVIRONMENT_REQUIRED_INVARIANT_IDS,
+  effectiveInvariantIdsForScenario,
+  requiredInvariantIdsForSubject,
+  runInvariantChecks,
+} from "../../src/tearbench/invariants";
 import { createSourceWaveOwnershipTracker } from "../../src/tearbench/observation-identity";
 
 function observation(patch: Partial<TearObservationV1> = {}): TearObservationV1 {
@@ -20,6 +25,16 @@ function observation(patch: Partial<TearObservationV1> = {}): TearObservationV1 
 }
 
 describe("TearBench current-game invariants", () => {
+  it("binds the complete environment requirement set and leaves ordinary subjects unchanged", () => {
+    const explicit = ["runtime.finite-state", "player.valid-health"] as const;
+    expect(requiredInvariantIdsForSubject({ kind: "environment-field" })).toEqual(ENVIRONMENT_REQUIRED_INVARIANT_IDS);
+    expect(requiredInvariantIdsForSubject({ kind: "environment-combat-object" })).toEqual(ENVIRONMENT_REQUIRED_INVARIANT_IDS);
+    expect(effectiveInvariantIdsForScenario({ subject: { kind: "environment-field", id: "generic-field" }, assertions: explicit }))
+      .toEqual([...explicit, ...ENVIRONMENT_REQUIRED_INVARIANT_IDS.slice(1)]);
+    expect(effectiveInvariantIdsForScenario({ subject: { kind: "gameplay", id: "movement" }, assertions: explicit }))
+      .toEqual(explicit);
+  });
+
   it("fails closed for assertions without an applicable real implementation", () => {
     expect(() => runInvariantChecks(observation(), ["replay.branch-equivalence"])).toThrow(/comparison inputs/u);
     expect(() => runInvariantChecks(observation(), ["test.production-isolation"])).toThrow(/implementation/u);
