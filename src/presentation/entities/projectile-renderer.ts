@@ -14,6 +14,7 @@ export interface ProjectileRendererDependencies {
   readonly graphics: { readonly low: boolean };
   readonly theme: { readonly dark: boolean; readonly ink: string };
   readonly clamp: (value: number, min: number, max: number) => number;
+  readonly accessibility: Readonly<{ highContrast: boolean; reducedMotion: boolean }>;
 }
 
 function drawTrail(context: CanvasRenderingContext2D, projectile: ProjectileRenderSnapshot, color: string, dark: boolean): void {
@@ -35,7 +36,7 @@ function drawTrail(context: CanvasRenderingContext2D, projectile: ProjectileRend
 }
 
 export function createProjectileRenderer({
-  clock, policy, graphics, theme, clamp,
+  clock, policy, graphics, theme, clamp, accessibility,
 }: ProjectileRendererDependencies): ProjectilePresentationPort {
   return {
     draw(surface: unknown, projectile: ProjectileRenderSnapshot): void {
@@ -46,6 +47,19 @@ export function createProjectileRenderer({
       const dark = theme.dark;
       const lowGraphics = graphics.low;
       const time = clock.sim * 1000;
+
+      if (projectile.bossAttack === "seed-arc" && projectile.landingX != null && projectile.landingY != null) {
+        const pulse = accessibility.reducedMotion ? 1 : 0.88 + Math.sin(time / 90) * 0.12;
+        context.save();
+        context.globalAlpha = 0.82;
+        context.strokeStyle = accessibility.highContrast ? "#fff36b" : (projectile.tint ?? colors.enemyShot);
+        context.lineWidth = accessibility.highContrast ? 5 : 3;
+        context.setLineDash([10, 7]);
+        context.beginPath(); context.ellipse(projectile.landingX, projectile.landingY - 4, 28 * pulse, 9 * pulse, 0, 0, Math.PI * 2); context.stroke();
+        context.setLineDash([]);
+        context.beginPath(); context.moveTo(projectile.landingX - 8, projectile.landingY - 18); context.lineTo(projectile.landingX, projectile.landingY - 8); context.lineTo(projectile.landingX + 8, projectile.landingY - 18); context.stroke();
+        context.restore();
+      }
 
       if (!(projectile.mine && projectile.armed) && !projectile.embedded && !lowGraphics) {
         const trailColor = projectile.deflected
@@ -261,7 +275,9 @@ export function createProjectileRenderer({
         context.restore(); return;
       }
 
-      const color = projectile.deflected ? (projectile.perfect ? colors.perfect : colors.deflected) : (projectile.tint ?? (projectile.bomb ? colors.bomber : colors.enemyShot));
+      const color = projectile.deflected ? (projectile.perfect ? colors.perfect : colors.deflected)
+        : accessibility.highContrast && projectile.bossAttack === "seed-arc" ? "#fff36b"
+        : (projectile.tint ?? (projectile.bomb ? colors.bomber : colors.enemyShot));
       const angle = Math.atan2(projectile.vy, projectile.vx);
       const radius = projectile.r;
       context.save(); context.translate(projectile.x, projectile.y);

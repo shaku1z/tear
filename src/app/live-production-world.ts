@@ -11,6 +11,8 @@ export interface LiveProductionWorldOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
   readonly mirrors?: LiveWorldMirrors;
+  /** Stable owner identity for deterministic environment object IDs. */
+  readonly worldId?: string;
 }
 
 export interface LiveProductionWorld {
@@ -30,6 +32,7 @@ export function createLiveProductionWorld(options: LiveProductionWorldOptions): 
   const session = createLiveWorldSessionState();
   const world = createLiveWorldComposition({
     dependencies: options.dependencies, configuration: options.configuration, session,
+    worldId: options.worldId ?? "live-production",
     ...(options.mirrors === undefined ? {} : { mirrors: options.mirrors }),
   });
   return Object.freeze({ session, world });

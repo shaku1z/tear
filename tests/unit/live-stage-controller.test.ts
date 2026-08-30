@@ -8,7 +8,7 @@ describe("live stage controller", () => {
       (index: number) => ({ name: index === 2 ? "Ash Vault" : "Origin", dark: false }),
       (index: number) => [`platform-${String(index)}`],
     );
-    const run = { voidScroll: {}, bossAdds: {}, _preBossPlatforms: [], _brokenPlats: [] };
+    const run = { voidScroll: {}, bossAdds: {}, _preBossPlatforms: [], _brokenPlats: [], _arenaBroken: [] };
     const blade = { stolenBy: {}, hostile: true, state: "stolen" };
     const order: string[] = [];
     const controller = new LiveStageController(state, {
@@ -26,7 +26,7 @@ describe("live stage controller", () => {
     controller.load(2);
 
     expect(state).toMatchObject({ index: 2, current: { name: "Ash Vault" }, platforms: ["platform-2"] });
-    expect(run).toEqual({ voidScroll: null, bossAdds: null, _preBossPlatforms: null, _brokenPlats: null });
+    expect(run).toEqual({ voidScroll: null, bossAdds: null, _preBossPlatforms: null, _brokenPlats: null, _arenaBroken: null });
     expect(blade).toEqual({ stolenBy: null, hostile: false, state: "returning" });
     expect(order).toEqual(["cancel", "hazards", "biome:Ash Vault", "achievements", "player", "replay:2"]);
   });

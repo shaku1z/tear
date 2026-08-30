@@ -12,12 +12,18 @@ import { finalizeCombatTick, markFallenEnemies, resolvePlayerDeath, runTrainingT
   type TailPlayer, type TailProjectile, type TailRun } from "./combat-tail-runtime";
 import type { CombatEntityRuntime } from "./combat-entity-runtime";
 import type { BladePlayerPort } from "../entities/blade-contracts";
+import { resolveEnvironmentWeaponProjectileContacts, resolveHeldEnvironmentWeaponContacts,
+  type EnvironmentWeaponContactPort } from "./environment-weapon-contact-runtime";
 
 export type LivePlayer = HeldBladePlayer & ThrownPlayer & ParryPlayer & ContactPlayer & TailPlayer & BladePlayerPort;
 export type LiveBlade = HeldBladeWeapon & ThrownBlade & ParryBlade & HostileBlade & {
   heldCollisionSegment(player: LivePlayer): HeldBladeCollisionInput["segment"];
   aimX: number; aimY: number;
-  weapon?: Readonly<{ id?: string }> | null;
+  state: string; swingId: number;
+  weapon?: Readonly<{ id: string; environmentCounterplay?: Readonly<{
+    held?: "cut" | "break" | "projectile-cut";
+    projectile?: "cut" | "break" | "projectile-cut";
+  }> }> | null;
   refillRiftChambers(amount: number): void;
   primeReversal(target: object): boolean;
 };
@@ -37,6 +43,8 @@ export interface LiveCollisionPhaseHost {
   readonly player: LivePlayer; readonly blade: LiveBlade; readonly run: LiveRun;
   readonly combat: CombatEntityRuntime; readonly width: number;
   readonly state: LiveCollisionPhaseState;
+  readonly environment?: EnvironmentWeaponContactPort;
+  readonly environmentTick?: () => number;
   weaponHit: (enemy: LiveEnemy, quality: number, damage: number, slam: boolean, launch: boolean, empowered: boolean) => HeldWeaponEffect | null | undefined;
   throwHit: (enemy: LiveEnemy, secondary: boolean, throwId: number) => ThrowEffect | null | undefined;
   runDamageMultiplier: () => number; noteFirstDamage: (enemy: LiveEnemy, first: boolean) => void;
@@ -81,6 +89,16 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
     segmentCircle: (segment, x, y, radius) => host.segmentCircle(segment.x1, segment.y1, segment.x2, segment.y2, x, y, radius),
     segmentPointDistance: host.segmentPointDistance, weaponSegmentContact: host.weaponSegmentContact,
     distance: host.distance }).hitStop;
+  if (host.environment !== undefined) resolveHeldEnvironmentWeaponContacts({
+    environment: host.environment, blade, segment: held,
+    ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
+  });
+  if (host.environment !== undefined && blade.weapon !== null && blade.weapon !== undefined) {
+    resolveEnvironmentWeaponProjectileContacts({
+      environment: host.environment, weapon: blade.weapon, projectiles: state.projectiles,
+      ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
+    });
+  }
   runThrown(host); runParries(host, held); host.combat.resolveProjectilePhases(dt, projectileTuning(host));
   resolveEnemyContact(state.enemies, player, { overlaps: host.overlap, segmentDistance: () => Infinity,
     onHit: () => { host.loseStyle(); host.sound("hurt"); }, onAbsorbed: host.onShieldAbsorb, onHostileBladeResolved: () => undefined });

@@ -1,7 +1,8 @@
 import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { TearSimulationEnemyView } from "../simulation/runtime-world-port";
-import { ENTITY_KIND_REGISTRY, STAGE_IDS, type TearEntityKindId, type TearStageId } from "./registries";
+import { stageIdAtRuntimeIndex } from "../gameplay/stages";
+import { ENTITY_KIND_REGISTRY, type TearEntityKindId, type TearStageId } from "./registries";
 
 /** Associates actors with the current production wave using actual native lifecycle facts. */
 export function createSourceWaveOwnershipTracker() {
@@ -30,6 +31,17 @@ export function createSourceWaveOwnershipTracker() {
     actors(wave: number): ReadonlySet<string> | undefined {
       return activeWave === wave ? actorIds : undefined;
     },
+    /**
+     * Re-establishes an empty current wave after a validated State Forge
+     * restore. Callers must prove that the restored world has no living
+     * enemies; non-empty snapshots cannot reconstruct wave ownership from
+     * entity presence alone.
+     */
+    restoreEmptyWave(wave: number): void {
+      if (!Number.isSafeInteger(wave) || wave < 0) throw new RangeError("restored wave must be a non-negative safe integer");
+      activeWave = wave;
+      actorIds.clear();
+    },
     invalidate(): void {
       activeWave = undefined;
       actorIds.clear();
@@ -39,8 +51,8 @@ export function createSourceWaveOwnershipTracker() {
 
 /** One source-owned stage identity shared by live and detached observations. */
 export function canonicalObservationStage(index: number): TearStageId {
-  const stage = Number.isSafeInteger(index) ? STAGE_IDS[index] : undefined;
-  if (stage === undefined) throw new RangeError(`unregistered production stage index: ${String(index)}`);
+  const stage = stageIdAtRuntimeIndex(index);
+  if (stage === null) throw new RangeError(`unregistered runtime stage index: ${String(index)}`);
   return stage;
 }
 

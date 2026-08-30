@@ -2,7 +2,8 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
 
-const BOSSES = canonicalScenarios.filter((entry) => entry.subject.kind === "boss")
+const BOSSES = canonicalScenarios.filter((entry) => entry.subject.kind === "boss"
+    && !entry.tags?.includes("unpublished-preview"))
   .map((entry) => entry.subject.id);
 
 function distance(a, b) {
@@ -82,16 +83,37 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
   return released;
 }
 
-withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page }) => {
+withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page, waitScreen, clickAndWait }) => {
   for (const bossId of BOSSES) {
     await startReadyBoss(page, bossId);
     const before = await bossSnapshot(page, bossId);
-    const after = await waitForBossCombatProgress(page, bossId, before, 0.8,
-      bossId === "echo" ? 7000 : 5000);
+    const after = bossId === "rootbound" || bossId === "white-hart"
+      ? await waitForBossSimulationAdvance(page, bossId, before.aliveT, 0.8)
+      : await waitForBossCombatProgress(page, bossId, before, 0.8, bossId === "echo" ? 7000 : 5000);
     assert.ok(after.aliveT > before.aliveT + 0.8, `${bossId} AI must keep receiving fixed ticks after its intro`);
-    assert.ok(distance(before, after) > 1, `${bossId} must leave its arrival pose after its intro`);
+    if (bossId === "rootbound") {
+      await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
+        .find((enemy) => enemy.bossId === "rootbound")?.atk?.startsWith("vine-sweep:"), undefined, { timeout: 5000 });
+      const attacking = await bossSnapshot(page, bossId);
+      assert.equal(attacking.phase, 1, "Rootbound must begin in its authored first phase");
+      assert.match(attacking.atk, /^vine-sweep:/u, "Rootbound must reach its first authored attack transition");
+    } else if (bossId === "white-hart") {
+      assert.equal(after.phase, 1, "White Hart must begin in phase one");
+      assert.ok(["antler-run", "snowbound-leap", "aurora-volley", "backtrail-kick", "idle"]
+        .includes(after.atk), "White Hart must remain inside its authored Phase I attack set");
+    } else assert.ok(distance(before, after) > 1, `${bossId} must leave its arrival pose after its intro`);
     if (bossId === "echo") assert.equal(after.live, true, "the Echo mirror brain must be live");
   }
+
+  // Rootbound enters and retries through the same production Boss Test result
+  // route as the rest of the roster; only the test hook supplies terminal HP.
+  await startReadyBoss(page, "rootbound");
+  await page.evaluate(() => window.__PANTHEON_TEST.defeatPlayer());
+  await waitScreen("gameover");
+  await clickAndWait(220, 347, "playing");
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === "rootbound"), undefined, { timeout: 10000 });
+  const retriedStage = await page.evaluate(() => window.__PANTHEON_TEST.bossStage("rootbound"));
+  assert.equal(retriedStage.currentId, retriedStage.authoredId, "Rootbound retry must return to Verdant Sanctum");
 
   // Warden and Colossus both have two serialized transformation gates. Crossing
   // either gate used to strand cinematicRequest and freeze the boss forever.

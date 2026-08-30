@@ -14,6 +14,7 @@ export function createLiveWaveHost(options: LiveWaveHostOptions): LiveWaveContro
     run: options.run,
     tuning: options.tuning,
     stages: options.stages,
+    ...(options.bossOnlyStages === undefined ? {} : { bossOnlyStages: options.bossOnlyStages }),
     presets: options.presets,
     random: options.random,
     modeDefinition: options.modeDefinition,

@@ -15,7 +15,8 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": []
+    "types": [],
+    "tsBuildInfoFile": "./artifacts/build-cache/typescript/worker.tsbuildinfo"
   },
   "include": ["workers/**/*.ts", "workers/worker-configuration.d.ts"]
 }

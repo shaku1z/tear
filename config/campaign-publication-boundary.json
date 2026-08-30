@@ -1,0 +1,17 @@
+{
+  "format": "tear-campaign-publication-boundary",
+  "schemaVersion": 1,
+  "status": "public",
+  "rulesetVersion": "tear-rules-six-biome-verdant-r3-pale-preview-v1",
+  "activeStageIds": [
+    "grounds",
+    "undercroft",
+    "crimson-fields",
+    "verdant-sanctum",
+    "voidspire",
+    "tear"
+  ],
+  "previewStageIds": [
+    "pale-traverse"
+  ]
+}

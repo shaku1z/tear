@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { FALLBACK_MUSIC_ROUTING } from "../../src/audio/music/music-routing-loader";
-import { resolveMusicRoute } from "../../src/audio/music/music-routing-resolver";
+import {
+  ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS,
+  resolveMusicRoute,
+} from "../../src/audio/music/music-routing-resolver";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 
 describe("data-driven music routing", () => {
@@ -36,6 +39,26 @@ describe("data-driven music routing", () => {
     expect(resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
       biomeId: "Unknown", scene: "gameplay", bossId: null,
     })).toBe("fillet");
+  });
+
+  it("keeps Verdant and Pale playable on engineering fallbacks without publishing final routes", () => {
+    expect(ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS).toEqual({
+      "the-verdant-sanctum": "fillet",
+      "the-pale-traverse": "fillet",
+    });
+    expect(resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
+      biomeId: "The Verdant Sanctum", scene: "gameplay", bossId: null,
+    })).toBe("fillet");
+    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.biome === "the-verdant-sanctum")).toBe(false);
+    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.bossId === "rootbound")).toBe(false);
+    expect(resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
+      biomeId: "Pale Traverse", scene: "gameplay", bossId: null,
+    })).toBe("fillet");
+    expect(resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
+      biomeId: "The Pale Traverse", scene: "boss", bossId: "white-hart",
+    })).toBe("fillet");
+    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.biome === "the-pale-traverse")).toBe(false);
+    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.bossId === "white-hart")).toBe(false);
   });
 
   it("normalizes authored biome aliases on both sides of a route match", () => {

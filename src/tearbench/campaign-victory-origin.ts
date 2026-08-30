@@ -1,9 +1,10 @@
 import { stableVerificationHash } from "../replay/hash";
 import { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../gameplay/runtime/cinematic-director";
-import { stageAt } from "../gameplay/stages";
+import { STAGES, stageAt } from "../gameplay/stages";
 import { UPGRADES } from "../gameplay/upgrades";
 import type { TearSnapshotV1 } from "./contracts";
+import { projectEnvironmentHash } from "./environment-codec";
 import {
   reconstructProgression,
   synthesizeProgression,
@@ -12,11 +13,12 @@ import {
   type TearSynthesizedProgression,
 } from "./progression-ledger";
 
-export const CAMPAIGN_VICTORY_ORIGIN_WAVE = 49 as const;
-export const CAMPAIGN_VICTORY_FINAL_WAVE = 50 as const;
+/** Engineering-branch finale boundary; not publishable campaign truth. */
+export const CAMPAIGN_VICTORY_ORIGIN_WAVE = 59 as const;
+export const CAMPAIGN_VICTORY_FINAL_WAVE = 60 as const;
 
 export interface CampaignVictoryOriginCertificate {
-  readonly id: "campaign-wave-49-victory-origin";
+  readonly id: "campaign-wave-59-victory-origin";
   readonly legal: true;
   readonly terminal: false;
   readonly currentWave: typeof CAMPAIGN_VICTORY_ORIGIN_WAVE;
@@ -43,7 +45,7 @@ export interface CampaignVictoryOriginCertificate {
  * Creates a reachable campaign history immediately before the final wave.
  * Synthesis currently closes every requested target with `run.completed`, so
  * this helper removes that one false terminal assertion and retains every
- * canonical wave, reward, and configuration event through wave 49.
+ * canonical wave, reward, and configuration event through wave 59.
  */
 export function createCampaignVictoryOrigin(): CampaignVictoryOriginCertificate {
   const synthesized = synthesizeProgression({
@@ -81,10 +83,10 @@ export function createCampaignVictoryOrigin(): CampaignVictoryOriginCertificate 
     event.type === "draft.selected" && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE);
   if (finalOffer?.type !== "draft.offered" || finalSelection?.type !== "draft.selected"
     || !finalOffer.ids.includes(finalSelection.id)) {
-    throw new TypeError("campaign victory origin requires a selected wave-49 draft offer");
+    throw new TypeError("campaign victory origin requires a selected wave-59 draft offer");
   }
   return Object.freeze({
-    id: "campaign-wave-49-victory-origin",
+    id: "campaign-wave-59-victory-origin",
     legal: true,
     terminal: false,
     currentWave: CAMPAIGN_VICTORY_ORIGIN_WAVE,
@@ -120,7 +122,7 @@ function record(value: unknown, label: string): MutableRecord {
 function certifyFrontierInput(certificate: CampaignVictoryOriginCertificate): void {
   const canonical = createCampaignVictoryOrigin();
   if (stableVerificationHash(certificate) !== stableVerificationHash(canonical)) {
-    throw new TypeError("campaign reward frontier certificate is not the canonical wave-49 certificate");
+    throw new TypeError("campaign reward frontier certificate is not the canonical wave-59 certificate");
   }
   if (certificate.ledger.targetWave !== CAMPAIGN_VICTORY_ORIGIN_WAVE
     || certificate.ledger.events.some((event) => event.type === "run.completed")) {
@@ -179,9 +181,9 @@ function portableUpgradeChoice(id: string): Readonly<Record<string, unknown>> {
 
 /**
  * Builds the synchronous post-selection/pre-`start-next-wave` State Forge
- * position. It never executes wave 50 and never mutates the captured source.
+ * position. It never executes wave 60 and never mutates the captured source.
  */
-export function createCampaignWave49RewardFrontier(
+export function createCampaignWave59RewardFrontier(
   sourceSnapshot: TearSnapshotV1,
   certificate: CampaignVictoryOriginCertificate,
   platformsForStage: (index: number) => readonly unknown[],
@@ -197,7 +199,7 @@ export function createCampaignWave49RewardFrontier(
   }
   const forged = structuredClone(sourceSnapshot);
   const mutable = forged as unknown as MutableRecord;
-  mutable.id = "campaign-wave-49-reward-frontier";
+  mutable.id = "campaign-wave-59-reward-frontier";
   mutable.tick = certificate.statistics.elapsedTicks;
   mutable.stateClass = "reconstructed-reachable";
   mutable.lineage = Object.freeze({
@@ -233,10 +235,11 @@ export function createCampaignWave49RewardFrontier(
     lifecycle.clearWave();
     lifecycle.prepareReward(wave % 10 === 0 ? "boss" : "draft");
   }
-  const stage = stageAt(4);
+  const finalStageIndex = STAGES.length - 1;
+  const stage = stageAt(finalStageIndex);
   Object.assign(run, {
     mode: "campaign", difficulty: "normal", diff: "normal", weaponId: "sword",
-    wave: CAMPAIGN_VICTORY_ORIGIN_WAVE, stage: 4, _biomeIdx: 4,
+    wave: CAMPAIGN_VICTORY_ORIGIN_WAVE, stage: finalStageIndex, _biomeIdx: finalStageIndex,
     tick: certificate.statistics.elapsedTicks, score: certificate.statistics.score,
     runTime: certificate.statistics.elapsedTicks / 120,
     waveTime: finalWave.time, waveKills: finalWave.kills, wavePeak: finalWave.peak,
@@ -244,7 +247,7 @@ export function createCampaignWave49RewardFrontier(
     spawnQueue: [], spawnTimer: 0, clearTimer: -1,
     isBossWave: false, horde: false, miniBoss: null, waveTag: "", waveKinds: [],
     bossesBeaten: certificate.ledger.events.filter((event) => event.type === "boss.defeated").length,
-    bossIdx: 4, curBoss: null, bossAdds: null, pendingBossOutro: null,
+    bossIdx: finalStageIndex, curBoss: null, bossAdds: null, pendingBossOutro: null,
     chapterState: "WAVE_LIVE", _prologueShown: true,
   });
   Object.assign(world, { clock: certificate.statistics.elapsedTicks });
@@ -275,20 +278,20 @@ export function createCampaignWave49RewardFrontier(
   (forged.state as MutableRecord)["tear.enemy.v1"] = Object.freeze([]);
   (forged.state as MutableRecord)["tear.boss.v1"] = Object.freeze([]);
   (forged.state as MutableRecord)["tear.projectile.v1"] = Object.freeze([]);
-  (forged.state as MutableRecord)["tear.platform.v1"] = Object.freeze(platformsForStage(4));
+  (forged.state as MutableRecord)["tear.platform.v1"] = Object.freeze(platformsForStage(finalStageIndex));
   (forged.state as MutableRecord)["tear.cinematic.v1"] = INACTIVE_CINEMATIC_DIRECTOR_STATE_V1;
   run.stateForgeVictoryOrigin = Object.freeze({
     certificateId: certificate.id,
     progressionHash: certificate.ledger.progressionHash,
     finalSelectedId: certificate.finalReward.selectedId,
     synchronousBoundary: "post-selection-before-start-next-wave",
-    waveLogDerivation: "aggregate-seconds-kills-and-style-distributed-across-49-waves",
+    waveLogDerivation: "aggregate-seconds-kills-and-style-distributed-across-59-waves",
   });
   mutable.hashes = Object.freeze({
     ...forged.hashes,
     exact: stableVerificationHash(forged.state),
     progression: certificate.ledger.progressionHash,
-    environment: stableVerificationHash(forged.state["tear.world.v1"]),
+    environment: stableVerificationHash(projectEnvironmentHash(forged.state["tear.hazard.v1"])),
   });
   return Object.freeze(forged);
 }

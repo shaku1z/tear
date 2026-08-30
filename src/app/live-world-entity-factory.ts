@@ -6,8 +6,8 @@ import { makeCombatEnemy } from "./live-runtime-type-guards";
 
 export type LiveWorldEntityDependencies = Pick<GameRuntimeDependencies,
   "Player" | "Blade" | "Projectile" | "Charger" | "Ranged" | "Flyer" | "Bomber" | "Armored"
-  | "Wraith" | "Chimera" | "Warden" | "Colossus" | "Aldric" | "MirrorHost" | "Source"
-  | "VoidWisp" | "ReflectionEnemy" | "Support" | "Boss"
+  | "Wraith" | "Chimera" | "Warden" | "Colossus" | "Aldric" | "Rimehound" | "Rootbound" | "WhiteHart" | "MirrorHost" | "Source"
+  | "VoidWisp" | "ReflectionEnemy" | "Support" | "Rootbinder" | "Boss"
 >;
 
 export type LiveWorldEntityConstructionPort = TearWorldEntityConstructionPort<
@@ -37,11 +37,17 @@ export function createLiveWorldEntityFactory(
       armored: (x, y) => enemy(new dependencies.Armored(x, y)), wraith: (x, y) => enemy(new dependencies.Wraith(x, y)),
       chimera: (x, y) => enemy(new dependencies.Chimera(x, y)), warden: (x, y) => enemy(new dependencies.Warden(x, y)),
       colossus: (x, y) => enemy(new dependencies.Colossus(x, y)), aldric: (x, y) => enemy(new dependencies.Aldric(x, y)),
+      rootbound: (x, y) => enemy(new dependencies.Rootbound(x, y)),
+      whiteHart: (x, y) => enemy(new dependencies.WhiteHart(x, y)),
+      rimehound: (x, y) => enemy(new dependencies.Rimehound(x, y)),
       // Echo must use the live Mirror host, not the visual Ghost 2 Echo puppet.
       echo: (x, y, mods) => enemy(new dependencies.MirrorHost(x, y, mods)),
       source: (x, y) => enemy(new dependencies.Source(x, y)), voidWisp: (x, y) => enemy(new dependencies.VoidWisp(x, y)),
       reflection: (x, y) => enemy(new dependencies.ReflectionEnemy(x, y)),
-      support: (x, y, kind) => enemy(new dependencies.Support(x, y, kind)), boss: (x, y) => enemy(new dependencies.Boss(x, y)),
+      support: (x, y, kind) => kind === "rootbinder"
+        ? enemy(new dependencies.Rootbinder(x, y))
+        : enemy(new dependencies.Support(x, y, kind)),
+      boss: (x, y) => enemy(new dependencies.Boss(x, y)),
     },
     rebindEchoMods(actor, mods): void {
       // Codec hydration clones `_mods`; restore the Echo host's live run link

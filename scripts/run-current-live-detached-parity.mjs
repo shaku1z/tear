@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
 const scenarioId = "c27a.live-parity-trace";
-const artifact = resolve("artifacts", "tearbench", "c27a-focused", `${scenarioId}.json`);
+const artifact = resolve("artifacts", "tearbench", "checkpoints", "core", "C27A", "live-parity", `focused-${scenarioId}.json`);
 const environment = {
   ...process.env,
   TEAR_C27A_SCENARIO_ID: scenarioId,

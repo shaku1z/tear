@@ -4,6 +4,7 @@
 
 import type { CONFIG as GAME_CONFIG } from "../config/game-config";
 import { clamp, len, lerp } from "../domain/geometry";
+import type { EnvironmentCounterplayTag } from "./environment/environment-definitions";
 import { migrateWeaponSelection, type WeaponId } from "./weapon-selection";
 
 export type { WeaponId } from "./weapon-selection";
@@ -102,6 +103,12 @@ export interface WeaponDefinition {
   ratings: WeaponRatings;
   throwCollisionPad: number;
   channels: WeaponChannels;
+  /** Source-owned capabilities resolved against environment object metadata. */
+  environmentCounterplay?: Readonly<{
+    held?: EnvironmentCounterplayTag;
+    thrown?: EnvironmentCounterplayTag;
+    projectile?: EnvironmentCounterplayTag;
+  }>;
   applyPhysics(context: { config: WeaponConfiguration; weapon: WeaponDefinition }): void;
   applyPlayerChassis(context: { config: WeaponConfiguration; weapon: WeaponDefinition }): void;
   qualityMetric(context: WeaponQualityContext): number;
@@ -139,6 +146,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     tags: ["Precision", "Parry", "Recall"], weaknesses: ["Low burst", "Narrow control", "Requires timing"],
     throwIdentity: "Threadcut", ratings: { handling: 5, impact: 3, reach: 3, difficulty: 2 },
     throwCollisionPad: 4, channels: weaponChannels(),
+    environmentCounterplay: Object.freeze({ held: "cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.springStiffness *= 1.08; B.angleSmooth *= 1.1;
@@ -170,6 +178,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Meteor", ratings: { handling: 1, impact: 5, reach: 2, difficulty: 3 },
     throwCollisionPad: 13,
     channels: weaponChannels({ throwPower: 1.35, throwSpeed: 0.82, secondaryPower: 1.18, returnSpeed: 0.78 }),
+    environmentCounterplay: Object.freeze({ held: "break" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.springStiffness *= 0.62; B.damping *= 1.18; B.gravity *= 1.58;
@@ -201,6 +210,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Wheel Cut", ratings: { handling: 2, impact: 4, reach: 5, difficulty: 4 },
     throwCollisionPad: 10,
     channels: weaponChannels({ throwPower: 1.14, throwSpeed: 0.92, returnSpeed: 0.94 }),
+    environmentCounterplay: Object.freeze({ held: "cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.length += 30; B.aimRadius += 14; B.maxReach += 24;
@@ -228,6 +238,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Hook & Sling", ratings: { handling: 3, impact: 3, reach: 5, difficulty: 5 },
     throwCollisionPad: 9,
     channels: weaponChannels({ remoteRange: 1.35, controlDuration: 1.2, secondaryPower: 1.15 }),
+    environmentCounterplay: Object.freeze({ held: "cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.length -= 20; B.aimRadius += 18; B.maxReach += 40;
@@ -253,6 +264,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     throwIdentity: "Loose Cannon", ratings: { handling: 4, impact: 3, reach: 5, difficulty: 5 },
     throwCollisionPad: 7,
     channels: weaponChannels({ throwSpeed: 1.06, remoteRange: 1.35, returnSpeed: 1.15, controlDuration: 1.1 }),
+    environmentCounterplay: Object.freeze({ held: "cut", projectile: "projectile-cut" }),
     applyPhysics({ config }) {
       const B = config.blade;
       B.length += 8; B.springStiffness *= 1.12; B.damping *= 1.04; B.gravity *= 0.82; B.angleSmooth *= 1.16;

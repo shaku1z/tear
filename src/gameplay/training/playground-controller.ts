@@ -1,10 +1,11 @@
+import { ENEMY_IDENTITY_IDS } from "../run/content-director";
+
 export const PLAYGROUND_HOTKEY_KINDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "priest",
 ] as const);
 
-export const PLAYGROUND_ALL_KINDS = Object.freeze([
-  ...PLAYGROUND_HOTKEY_KINDS, "herald", "mender", "anchor",
-] as const);
+/** Menu projection of the canonical enemy identity authority; hotkeys remain the stable eight-key subset. */
+export const PLAYGROUND_ALL_KINDS = ENEMY_IDENTITY_IDS;
 
 export type PlaygroundEnemyKind = typeof PLAYGROUND_ALL_KINDS[number];
 

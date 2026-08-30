@@ -45,7 +45,7 @@ const tearArchitecture = {
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules*/**", "vendor/**", "tear-crazygames/**", "workers/worker-configuration.d.ts", "scripts/release-artifact.d.mts"],
+    ignores: ["dist/**", "node_modules*/**", "vendor/**", "tear-crazygames/**", "workers/worker-configuration.d.ts", "scripts/release-artifact.d.mts", "scripts/campaign-publication-boundary.d.mts"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

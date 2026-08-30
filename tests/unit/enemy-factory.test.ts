@@ -59,8 +59,8 @@ describe("enemy factory", () => {
     expect(Object.isFrozen(types)).toBe(true);
     expect(Object.keys(types).sort()).toEqual([
       "Aldric", "Armored", "BOSSFX", "Bomber", "Boss", "Charger", "Chimera",
-      "Colossus", "Echo", "Enemy", "Flyer", "Ranged", "Source", "Support",
-      "VoidWisp", "Warden", "Wraith", "drawBossTransformationWorld",
+      "Colossus", "Echo", "Enemy", "Flyer", "Ranged", "Rimehound", "Rootbinder", "Rootbound", "Source", "Support",
+      "VoidWisp", "Warden", "WhiteHart", "Wraith", "drawBossTransformationWorld",
       "weaponCapsuleIntersectsSegment",
     ].sort());
   });
@@ -78,10 +78,12 @@ describe("enemy factory", () => {
   it("constructs representative standard and boss actors", () => {
     const types = createTestEnemyTypes();
     const charger = new types.Charger(100, CONFIG.world.groundY - 40);
+    const rimehound = new types.Rimehound(200, CONFIG.world.groundY - 17);
     const warden = new types.Warden(300, CONFIG.world.groundY - 60);
     const source = new types.Source(500, 220);
 
     expect(charger.kind).toBe("charger");
+    expect(rimehound.kind).toBe("rimehound");
     expect(warden.bossName).toBe("THE WARDEN");
     expect(source.bossName).toBe("THE SOURCE");
   });

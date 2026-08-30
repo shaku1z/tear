@@ -15,6 +15,14 @@ import { buildBossIntroSnapshot, buildPlaygroundHelpSnapshot, buildReticleSnapsh
 import { buildEnemyStatusSnapshot, buildEntityLayerSnapshot, buildFinaleWorldSnapshot,
   buildPantheonDebugSnapshot, buildSceneEffectsSnapshot, type VisualEnemySource } from "../presentation/world/runtime-snapshots";
 import { tutorialInputPrompt } from "../presentation/world/tutorial-input-prompts";
+import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import { projectRootbinderPresentation } from "../gameplay/environment/rootbinder-presentation-facts";
+import { renderRootbinderPresentation } from "../presentation/environment/rootbinder-presentation";
+import { projectBloomWellPresentation } from "../gameplay/environment/bloom-well-presentation-facts";
+import { buildEnvironmentPresentationSnapshot } from "../gameplay/environment/presentation-snapshot";
+import { renderBloomWellPresentation } from "../presentation/environment/bloom-well-presentation";
+import { renderVerdantEnvironmentPresentation } from "../presentation/environment/verdant-environment-presentation";
+import { renderPaleEnvironmentPresentation } from "../presentation/environment/pale-environment-presentation";
 
 type Dependencies = Pick<GameRuntimeDependencies,
   "A11Y" | "ACH" | "Backdrop" | "CLOCK" | "CONFIG" | "FX" | "GFX" | "Input" | "PAD" |
@@ -29,6 +37,7 @@ type BossPresentationActor = Parameters<GameRuntimeDependencies["drawBossTransfo
 type PresentationRun = GameRun & { readonly _arenaBroken?: Platforms | null };
 type PresentationEnemy = VisualEnemySource & {
   readonly presentationId?: string; readonly facing?: number; readonly bossName?: string;
+  readonly epithet?: string; readonly openingLine?: string;
 };
 
 export interface WorldPresentationState {
@@ -40,6 +49,7 @@ export interface WorldPresentationState {
   readonly floaters: () => GameFloater[];
   readonly slowZones: () => GameSlowZone[];
   readonly temporaryWalls: () => GameTemporaryWall[];
+  readonly environment?: () => EnvironmentSnapshot;
   readonly screen: () => string;
   readonly zoom: () => number;
   readonly shake: () => number;
@@ -140,6 +150,40 @@ export function createLiveWorldPresentationAdapters(
       },
       drawStatus: drawEnemyStatus });
   };
+  const drawEnvironment = (): void => {
+    const snapshot = state.environment?.();
+    if (snapshot === undefined) return;
+    const presentationOptions = {
+      highContrast: d.A11Y.highContrast,
+      reducedMotion: d.A11Y.reducedMotion,
+      lowGraphics: d.GFX.low,
+      flashScale: d.A11Y.flashScale,
+    };
+    for (const field of snapshot.fields) {
+      if (field.kind !== "bloom-well") continue;
+      renderBloomWellPresentation(canvas, projectBloomWellPresentation(field, {
+        ...presentationOptions, audioEnabled: true,
+      }), d.CLOCK.sim);
+    }
+    const environmentPresentation = buildEnvironmentPresentationSnapshot(snapshot);
+    renderVerdantEnvironmentPresentation(canvas, environmentPresentation, {
+      ...presentationOptions, timeSeconds: d.CLOCK.sim,
+    });
+    renderPaleEnvironmentPresentation(canvas, environmentPresentation, {
+      ...presentationOptions, timeSeconds: d.CLOCK.sim,
+    });
+    for (const enemy of state.enemies()) {
+      if (enemy.kind !== "rootbinder") continue;
+      const root = enemy as GameEnemy & { rootbinderOwnerId?: string; rootbinderState?: { x: number; y: number; state: Parameters<typeof projectRootbinderPresentation>[0]["state"] } };
+      const rootState = root.rootbinderState;
+      if (rootState === undefined || root.rootbinderOwnerId === undefined) continue;
+      const owned = snapshot.combatObjects.filter((object) => object.ownerId === root.rootbinderOwnerId);
+      const generationOf = (id: string): number => Number(/:(?:network|leash):g(\d+)/u.exec(id)?.[1] ?? 0);
+      const latestGeneration = owned.reduce((latest, object) => Math.max(latest, generationOf(object.id)), 0);
+      const visible = latestGeneration === 0 ? owned : owned.filter((object) => generationOf(object.id) === latestGeneration);
+      renderRootbinderPresentation(canvas, projectRootbinderPresentation(rootState, visible, { ...presentationOptions, audioEnabled: true }));
+    }
+  };
 
   const renderWorld = (): WorldCamera => {
     const run = state.run();
@@ -163,7 +207,7 @@ export function createLiveWorldPresentationAdapters(
       drawFinale: drawFinaleWorld, tutorialActive: run.mode === "tutorial" && tutorial.active,
       drawTutorialGhost: () => { tutorial.drawGhost(); }, drawPlayer: () => { player?.draw(canvas); },
       drawBlade: () => { if (blade && player) blade.draw(canvas, player); },
-      drawEffects: () => { d.FX.draw(canvas); }, drawDebug: drawPantheonDebug });
+      drawEffects: () => { d.FX.draw(canvas); }, drawEnvironment, drawDebug: drawPantheonDebug });
   };
 
   const drawTutorialCard = (): void => {
@@ -275,7 +319,8 @@ function projectPresentationEnemy(enemy: DrawableEnemy): PresentationEnemy {
     spawnT: enemy.spawnT, flash: enemy.flash, dead: enemy.dead, buffs: enemy.buffs, kind: enemy.kind,
     enraged: enemy.enraged, variantName: enemy.variantName, affixes: enemy.affixes,
     bleedStacks: enemy.bleedStacks, burnT: enemy.burnT, markT: enemy.markT,
-    bossName: enemy.bossName, presentationId: enemy.presentationId, facing: enemy.facing,
+    bossName: enemy.bossName, epithet: enemy.epithet, openingLine: enemy.openingLine,
+    presentationId: enemy.presentationId, facing: enemy.facing,
     cinematicPose: !!enemy.cinematicPose,
     draw: (canvas, player) => { enemy.draw(canvas, player); },
     ...(enemy.drawRear === undefined ? {} : { drawRear: (canvas: CanvasRenderingContext2D) => { enemy.drawRear?.(canvas); } }),

@@ -1,5 +1,5 @@
-import { BOSS_DEFINITIONS, type BossDefinition, type BossDefinitionId } from "../gameplay/run/boss-definitions";
-import { STAGES, STAGE_IDS, type StageDefinition, type StageId } from "../gameplay/stages";
+import { BOSS_DEFINITIONS, isBossDefinitionId, type BossDefinition, type BossDefinitionId } from "../gameplay/run/boss-definitions";
+import { bossIdsAvailableOn, STAGES, type StageDefinition, type StageId } from "../gameplay/stages";
 
 export interface GameReferenceBossV1 {
   readonly id: BossDefinitionId;
@@ -13,8 +13,27 @@ export interface BossReferenceProjectionInput {
   readonly stages: readonly StageDefinition[];
 }
 
-export const CANONICAL_BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(BOSS_DEFINITIONS.map((definition) => definition.id));
-export const EXPECTED_BOSS_COUNT = 5;
+const AUTHORED_BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(BOSS_DEFINITIONS.map((definition) => definition.id));
+/** Public reference authority deliberately excludes Playground-only bosses. */
+export const CANONICAL_BOSS_IDS: readonly BossDefinitionId[] = Object.freeze(
+  bossIdsAvailableOn("published").filter((id): id is BossDefinitionId => isBossDefinitionId(id)),
+);
+const PUBLIC_BOSS_DEFINITIONS: readonly BossDefinition[] = Object.freeze(
+  CANONICAL_BOSS_IDS.map((id) => {
+    const definition = BOSS_DEFINITIONS.find((candidate) => candidate.id === id);
+    if (definition === undefined) throw new Error(`missing canonical boss definition ${id}`);
+    return definition;
+  }),
+);
+export const EXPECTED_BOSS_COUNT = CANONICAL_BOSS_IDS.length;
+const ACTIVE_STAGE_IDS = Object.freeze(STAGES.map((stage) => stage.id));
+const ACTIVE_BOSS_STAGE_IDS = Object.freeze(CANONICAL_BOSS_IDS.map((bossId) => {
+  const definition = BOSS_DEFINITIONS.find((candidate) => candidate.id === bossId);
+  if (definition === undefined) throw new Error(`missing canonical boss definition ${bossId}`);
+  const stage = STAGES.find((candidate) => candidate.boss === definition.id);
+  if (stage === undefined) throw new Error(`missing canonical stage for boss ${definition.id}`);
+  return stage.id;
+}));
 
 function record(value: unknown, path: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${path} must be an object`);
@@ -53,12 +72,8 @@ function assertCanonicalIdSet(actual: readonly string[], expected: readonly stri
   if (actual.length !== expected.length || [...actual].sort().some((id, index) => id !== [...expected].sort()[index])) throw new TypeError(`${path} must contain the exact canonical ID set`);
 }
 
-function isBossId(value: string): value is BossDefinitionId {
-  return CANONICAL_BOSS_IDS.some((id) => id === value);
-}
-
 function isStageId(value: string): value is StageId {
-  return STAGE_IDS.some((id) => id === value);
+  return ACTIVE_STAGE_IDS.some((id) => id === value);
 }
 
 function phaseMarks(value: unknown, path: string): readonly [number, number] {
@@ -78,7 +93,7 @@ function canonicalStageForBoss(id: BossDefinitionId): StageId {
 function sourceStageBossMap(stages: readonly StageDefinition[], path: string): ReadonlyMap<BossDefinitionId, StageId> {
   if (!Array.isArray(stages)) throw new TypeError(`${path} must be an array`);
   const stageIds = stages.map((stage, index) => text(record(stage, `${path}[${String(index)}]`).id, `${path}[${String(index)}].id`));
-  assertCanonicalIdSet(stageIds, STAGE_IDS, `${path} IDs`);
+  assertCanonicalIdSet(stageIds, ACTIVE_STAGE_IDS, `${path} IDs`);
   const stagesById = new Map<StageId, Record<string, unknown>>();
   stages.forEach((stage, index) => {
     const source = record(stage, `${path}[${String(index)}]`);
@@ -87,17 +102,19 @@ function sourceStageBossMap(stages: readonly StageDefinition[], path: string): R
     stagesById.set(id, source);
   });
   const result = new Map<BossDefinitionId, StageId>();
-  for (const stageId of STAGE_IDS) {
+  for (const stageId of ACTIVE_STAGE_IDS) {
     const source = stagesById.get(stageId);
     const canonical = STAGES.find((candidate) => candidate.id === stageId);
     if (source === undefined || canonical === undefined) throw new TypeError(`${path} is missing canonical stage ${stageId}`);
     const boss = text(source.boss, `${path}.${stageId}.boss`);
-    if (!isBossId(boss)) throw new TypeError(`${path}.${stageId}.boss is not canonical`);
     if (boss !== canonical.boss) throw new TypeError(`${path}.${stageId}.boss does not match the canonical stage mapping`);
+    // An engineering stage may precede its boss factory/reference definition.
+    // Validate the stage join, but do not publish that reserved boss yet.
+    if (!isBossDefinitionId(boss)) continue;
     if (result.has(boss)) throw new TypeError(`${path} must map each boss exactly once`);
     result.set(boss, stageId);
   }
-  if (result.size !== EXPECTED_BOSS_COUNT || CANONICAL_BOSS_IDS.some((id) => !result.has(id))) throw new TypeError(`${path} must form a five-way boss/stage bijection`);
+  if (result.size !== EXPECTED_BOSS_COUNT || CANONICAL_BOSS_IDS.some((id) => !result.has(id))) throw new TypeError(`${path} must form a ${String(EXPECTED_BOSS_COUNT)}-way boss/stage bijection`);
   return result;
 }
 
@@ -117,10 +134,18 @@ function projectDefinition(value: unknown, expected: BossDefinition, path: strin
 export function projectBossReference(input: BossReferenceProjectionInput): readonly GameReferenceBossV1[] {
   if (!Array.isArray(input.bossDefinitions)) throw new TypeError("bossDefinitions must be an array");
   const definitionIds = input.bossDefinitions.map((definition, index) => text(record(definition, `bossDefinitions[${String(index)}]`).id, `bossDefinitions[${String(index)}].id`));
-  assertExactOrderedIds(definitionIds, CANONICAL_BOSS_IDS, "bossDefinitions");
+  assertExactOrderedIds(definitionIds, AUTHORED_BOSS_IDS, "bossDefinitions");
+  const publicDefinitionIds = definitionIds.filter((id): id is BossDefinitionId =>
+    isBossDefinitionId(id) && CANONICAL_BOSS_IDS.includes(id));
+  assertExactOrderedIds(publicDefinitionIds, CANONICAL_BOSS_IDS, "bossDefinitions.public");
+  const publicDefinitions = publicDefinitionIds.map((id) => {
+    const definition = input.bossDefinitions[definitionIds.indexOf(id)];
+    if (definition === undefined) throw new TypeError(`missing public boss definition ${id}`);
+    return definition;
+  });
   const stageByBoss = sourceStageBossMap(input.stages, "stages");
-  const bosses = Object.freeze(input.bossDefinitions.map((definition, index) => {
-    const expected = expectedAt(BOSS_DEFINITIONS, index, "bossDefinitions");
+  const bosses = Object.freeze(publicDefinitions.map((definition, index) => {
+    const expected = expectedAt(PUBLIC_BOSS_DEFINITIONS, index, "bossDefinitions.public");
     const projected = projectDefinition(definition, expected, `bossDefinitions[${String(index)}]`);
     const stageId = stageByBoss.get(projected.id);
     if (stageId === undefined) throw new TypeError(`missing stage mapping for boss ${projected.id}`);
@@ -137,7 +162,7 @@ export function validateProjectedBosses(value: unknown, path: string): readonly 
   const bosses = Object.freeze(value.map((entry, index) => {
     const source = record(entry, `${path}[${String(index)}]`);
     exactKeys(source, `${path}[${String(index)}]`, ["id", "name", "stageId", "phaseMarks"]);
-    const expected = expectedAt(BOSS_DEFINITIONS, index, path);
+    const expected = expectedAt(PUBLIC_BOSS_DEFINITIONS, index, path);
     const id = text(source.id, `${path}[${String(index)}].id`);
     if (id !== expected.id) throw new TypeError(`${path}[${String(index)}].id must use the exact canonical authored order`);
     const name = text(source.name, `${path}[${String(index)}].name`);
@@ -149,6 +174,6 @@ export function validateProjectedBosses(value: unknown, path: string): readonly 
     return Object.freeze({ id: expected.id, name: expected.name, stageId, phaseMarks: marks });
   }));
   const stageIds = bosses.map((boss) => boss.stageId);
-  assertCanonicalIdSet(stageIds, STAGE_IDS, `${path}.stageId`);
+  assertCanonicalIdSet(stageIds, ACTIVE_BOSS_STAGE_IDS, `${path}.stageId`);
   return bosses;
 }

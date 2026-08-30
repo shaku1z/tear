@@ -40,8 +40,8 @@ withJourney({ name: "agent engineering journey", port: 8152 }, async ({ page, wa
   await transition("win");
   await page.evaluate(() => window.__PANTHEON_TEST.openReplay());
   await transition("replay");
-  await page.mouse.click(1380, 856);
-  await transition("menu");
+  await clickAndWait(1380, 840, "menu");
+  evidence.transitions.push("menu");
 
   assert.deepEqual(evidence.transitions, [
     "menu", "setup", "playing", "draft", "playing", "tierup", "playing", "win", "replay", "menu",

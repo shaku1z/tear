@@ -55,7 +55,7 @@ export function createLiveWorldSimulationPresentationAdapter(
     graphics, theme, clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
   });
   const projectilePresentation = createProjectileRenderer({
-    clock, policy: { colors, world }, graphics, theme, clamp: geometry.clamp,
+    clock, policy: { colors, world }, graphics, theme, clamp: geometry.clamp, accessibility,
   });
   const mirrorPresentation = createMirrorRenderer({
     clock, policy: { colors, world }, effects, graphics, theme, clamp: geometry.clamp, cosmeticRandom,

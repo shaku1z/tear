@@ -85,9 +85,10 @@ export interface GameRuntimeDependencies {
   readonly REMOTE: typeof REMOTE; readonly Ranged: EnemyTypes["Ranged"];
   readonly ReflectionEnemy: MirrorTypes["ReflectionEnemy"]; readonly SAFE: typeof SAFE; readonly SFX: LegacySynthFacade;
   readonly SHOP: ReturnType<typeof createMetaProgression>["SHOP"]; readonly STAGES: typeof Stages.STAGES;
+  readonly PLAYGROUND_STAGES: typeof Stages.PLAYGROUND_STAGES;
   readonly shopPurchaseProgressPersistence: ShopPurchaseProgressPersistence;
   readonly styleAchievementPersistence: StyleAchievementPersistence;
-  readonly Source: EnemyTypes["Source"]; readonly Support: EnemyTypes["Support"]; readonly THEME: typeof THEME;
+  readonly Rimehound: EnemyTypes["Rimehound"]; readonly Rootbinder: EnemyTypes["Rootbinder"]; readonly Rootbound: EnemyTypes["Rootbound"]; readonly Source: EnemyTypes["Source"]; readonly Support: EnemyTypes["Support"]; readonly THEME: typeof THEME; readonly WhiteHart: EnemyTypes["WhiteHart"];
   readonly UI: ReturnType<typeof createUi>; readonly UPGRADES: typeof Upgrades.UPGRADES;
   readonly VAULT: ReplayCompatibility["VAULT"]; readonly VARIANTS: typeof Variants.VARIANTS;
   readonly VoidGen: typeof VoidGen; readonly VoidWisp: EnemyTypes["VoidWisp"];

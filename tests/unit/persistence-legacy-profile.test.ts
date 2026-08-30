@@ -53,4 +53,19 @@ describe("legacy profile compatibility", () => {
     expect(data.modes).toEqual({});
     expect(() => { profile.markMode("campaign"); }).not.toThrow();
   });
+
+  it("does not let legacy Pale discovery inflate published biome progression", () => {
+    const published = ["The Grounds", "The Undercroft", "The Crimson Fields", "The Verdant Sanctum", "The Voidspire", "The Tear"];
+    const saved = storage({ tear_profile: JSON.stringify({
+      modes: {}, ach: {}, seen: {}, stats: { _biomes: Object.fromEntries([...published, "The Pale Traverse"].map((name) => [name, 1])) },
+    }) });
+    const profile = createLegacyProfile({
+      store: saved.store, countedBiomeNames: published,
+      getAchievements: () => undefined, getMeta: () => undefined, writerId: () => "test",
+    });
+    profile.load();
+    profile.merge({ stats: { _biomes: { "The Pale Traverse": 1 } } });
+    expect(profile.data.stats.biomesSeen).toBe(6);
+    expect(profile.markBiome("The Pale Traverse")).toBe(6);
+  });
 });

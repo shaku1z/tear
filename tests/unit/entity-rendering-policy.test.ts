@@ -41,7 +41,8 @@ function renderers(prefix: string) {
       clock, policy: { colors, world: { groundY: 700 } }, effects: { burst: () => undefined }, graphics, theme, clamp,
       cosmeticRandom: () => 0.5,
     }),
-    projectile: createProjectileRenderer({ clock, policy: { colors, world: { groundY: 700 } }, graphics, theme, clamp }),
+    projectile: createProjectileRenderer({ clock, policy: { colors, world: { groundY: 700 } }, graphics, theme, clamp,
+      accessibility: { highContrast: false, reducedMotion: true } }),
   };
 }
 
@@ -72,6 +73,30 @@ function enemyRuntime(prefix: string) {
 }
 
 describe("entity rendering policies", () => {
+  it("keeps Seed Arc landing and projectile cues visible in high contrast with reduced motion and low graphics", () => {
+    const styles: string[] = [];
+    const renderer = createProjectileRenderer({
+      clock: { sim: 2 },
+      policy: { colors: {
+        bomber: "bomber", charger: "charger", deflected: "deflected", enemyShot: "shot",
+        perfect: "perfect", slam: "slam", sludge: "sludge",
+      }, world: { groundY: 700 } },
+      graphics: { low: true }, theme: { dark: false, ink: "ink" },
+      accessibility: { highContrast: true, reducedMotion: true },
+      clamp: (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value)),
+    });
+    renderer.draw(canvas(styles), {
+      x: 100, y: 200, vx: 20, vy: 30, r: 12, histCount: 0,
+      bossAttack: "seed-arc", landingX: 300, landingY: 700, landingT: 0.8,
+      deflected: false, perfect: false, charged: false, bomb: false, mine: false, armed: false,
+      shock: false, root: 0, mud: false, tint: "green", kind: "orb", sweeper: false,
+      crownfire: false, integrity: 0, maxIntegrity: 0, sweeperState: null, spinDir: 1,
+      embedded: false, sourceStolen: null, trailPoint: () => undefined,
+    });
+    expect(styles.filter((style) => style === "#fff36b").length).toBeGreaterThanOrEqual(2);
+    expect(styles).toContain("#fff");
+  });
+
   it("keeps Blade, Mirror, and Projectile palette choices local to each renderer set", () => {
     const first = renderers("first"), second = renderers("second");
     const firstStyles: string[] = [], secondStyles: string[] = [];

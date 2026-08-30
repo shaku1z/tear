@@ -21,6 +21,7 @@ class ConstantRandom implements RandomSource {
 }
 
 const STAGE_INPUT: readonly WaveStage[] = STAGES.map((stage) => ({
+  id: stage.id,
   name: stage.name,
   boss: stage.boss,
   pool: stage.pool.map((entry) => {
@@ -62,11 +63,14 @@ function options(overrides: Partial<PlanNextWaveOptions> = {}): PlanNextWaveOpti
 
 describe("wave planning conformance", () => {
   it("maps every campaign stage to its canonical boss and complete local pool", () => {
-    expect(STAGE_INPUT.map((stage) => stage.boss)).toEqual(BOSS_ROSTER.map((boss) => boss.id));
+    expect(STAGE_INPUT.map((stage) => stage.boss)).toEqual([
+      "warden", "colossus", "aldric", "rootbound", "echo", "source",
+    ]);
     expect(STAGE_INPUT.map((stage) => stage.pool.map((entry) => entry.kind))).toEqual([
       ["charger", "ranged", "bomber", "armored"],
       ["armored", "bomber", "charger", "ranged", "anchor"],
       ["charger", "flyer", "bomber", "herald", "chimera"],
+      ["flyer", "ranged", "charger", "rootbinder", "mender", "anchor", "armored", "chimera"],
       ["wraith", "flyer", "ranged", "priest", "chimera", "mender"],
       ["charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera", "herald", "anchor", "priest", "mender"],
     ]);
@@ -94,11 +98,46 @@ describe("wave planning conformance", () => {
     }));
     expect(stageTwo.state).toMatchObject({ wave: 11, stage: 1, currentStageIndex: 1 });
     expect(stageTwo.state.spawnQueue).toHaveLength(5);
-    expect(stageTwo.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.34);
-    expect(stageTwo.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.14);
+    expect(stageTwo.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.28);
+    expect(stageTwo.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.12);
     expect(stageTwo.intents.map((intent) => intent.type).slice(0, 4)).toEqual([
       "begin-wipe", "load-stage", "set-stage-banner", "begin-campaign-chapter",
     ]);
+  });
+
+  it("uses Verdant local wave rather than global wave for pool unlocks", () => {
+    const firstVerdant = planNextWave(options({
+      state: state({ mode: "campaign", wave: 30, currentStageIndex: 2 }),
+      random: new ConstantRandom(0.999),
+    }));
+    expect(firstVerdant.state).toMatchObject({ wave: 31, stage: 3 });
+    expect(new Set(firstVerdant.state.spawnQueue.map((spawn) => spawn.type)))
+      .toEqual(new Set(["charger"]));
+
+    const matureVerdant = planNextWave(options({
+      state: state({ mode: "campaign", wave: 35, currentStageIndex: 3 }),
+      random: new ConstantRandom(0.999),
+    }));
+    expect(matureVerdant.state).toMatchObject({ wave: 36, stage: 3 });
+    expect(matureVerdant.state.spawnQueue.some((spawn) => spawn.type === "chimera")).toBe(true);
+  });
+
+  it("preserves the existing local-wave ramp on the StageId-owned Verdant base", () => {
+    expect(CONFIG.run).toMatchObject({ countPerWave: 1.4, inStageHp: 0.06, inStageDmg: 0.02 });
+    const opening = planNextWave(options({
+      state: state({ mode: "campaign", wave: 30, currentStageIndex: 2 }),
+      random: new ConstantRandom(0.999),
+    }));
+    const mastery = planNextWave(options({
+      state: state({ mode: "campaign", wave: 38, currentStageIndex: 3 }),
+      random: new ConstantRandom(0.999),
+    }));
+
+    expect(opening.state.spawnQueue).toHaveLength(8);
+    expect(opening.state.spawnQueue[0]).toMatchObject({ hpScale: 1.82, dmgScale: 1.34 });
+    expect(mastery.state.spawnQueue).toHaveLength(19);
+    expect(mastery.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.82 * (1 + 8 * 0.06));
+    expect(mastery.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.34 * (1 + 8 * 0.02));
   });
 
   it("defers campaign activation without overwriting live timers", () => {
@@ -136,17 +175,17 @@ describe("wave planning conformance", () => {
 
   it("preserves gauntlet boss cadence and boss roster wrapping", () => {
     const boss = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 7, biomeIdx: 1, bossIdx: 4 }),
+      state: state({ mode: "gauntlet", wave: 7, biomeIdx: 1, bossIdx: 5 }),
     }));
-    expect(boss.state).toMatchObject({ wave: 8, isBossWave: true, curBoss: "source", bossIdx: 5, waveTag: "The Source" });
+    expect(boss.state).toMatchObject({ wave: 8, isBossWave: true, curBoss: "source", bossIdx: 6, waveTag: "The Source" });
     expect(boss.state.spawnQueue).toEqual([{ type: "boss" }]);
 
     const wrappedA = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 5 }),
+      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 7 }),
       random: new SeededRandom("wrap"),
     }));
     const wrappedB = planNextWave(options({
-      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 5 }),
+      state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 7 }),
       random: new SeededRandom("wrap"),
     }));
     expect(wrappedA.state.bossOrder).toEqual(wrappedB.state.bossOrder);
@@ -163,10 +202,25 @@ describe("wave planning conformance", () => {
         state: state({ mode: "bossonly", wave: index, bossOrder: BOSS_ROSTER.map((entry) => entry.id), bossIdx: index }),
         bossOnly: true,
       }));
-      expect(planned.state).toMatchObject({ curBoss: boss.id, stage: index, currentStageIndex: index, isBossWave: true });
-      expect(planned.intents).toContainEqual({ type: "load-stage", stageIndex: index });
+      const homeIndex = STAGE_INPUT.findIndex((stage) => stage.boss === boss.id);
+      expect(planned.state).toMatchObject({ curBoss: boss.id, stage: homeIndex, currentStageIndex: homeIndex, isBossWave: true });
+      expect(planned.intents).toContainEqual({ type: "load-stage", stageIndex: homeIndex });
       expect(planned.intents.some((intent) => intent.type === "begin-wipe")).toBe(index > 0);
     }
+  });
+
+  it("resolves an explicit preview boss against authored boss-only homes without extending campaign stages", () => {
+    const authoredBossHomes: readonly WaveStage[] = [...STAGE_INPUT, {
+      id: "pale-traverse", name: "The Pale Traverse", boss: "white-hart", pool: [],
+    }];
+    const planned = planNextWave(options({
+      state: state({ mode: "bossonly", bossOrder: ["white-hart"], bossIdx: 0 }),
+      bossOnly: true,
+      bossOnlyStages: authoredBossHomes,
+    }));
+    expect(STAGE_INPUT).toHaveLength(6);
+    expect(planned.state).toMatchObject({ curBoss: "white-hart", stage: 6, currentStageIndex: 6 });
+    expect(planned.intents).toContainEqual({ type: "load-stage", stageIndex: 6 });
   });
 
   it("keeps authored presets inside campaign biome families", () => {
@@ -206,7 +260,7 @@ describe("wave planning conformance", () => {
     expect(planned.state.spawnQueue).toEqual([{ type: "boss" }]);
   });
 
-  it("unlocks the full base roster on sandbox wave one without prematurely authoring presets", () => {
+  it("unlocks the full published enemy roster on Enemy Test wave one without preview leakage", () => {
     const kinds = new Set<EnemyKind>();
     for (let seed = 0; seed < 400; seed += 1) {
       const planned = planNextWave(options({
@@ -219,7 +273,7 @@ describe("wave planning conformance", () => {
       }
     }
     expect(kinds).toEqual(new Set([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
     ]));
   });
 });

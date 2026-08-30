@@ -1,9 +1,8 @@
-import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director";
+import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
-import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions";
+import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
 import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveTrainingOperationsScreen, createLiveReplayHub, createLiveInterfaceComposition, GameAgentEvidenceController, RunMonitorController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
-import { createLiveRunOrchestration } from "./live-run-orchestration-composition";
-import { createLiveSessionServices } from "./live-session-services-composition";
+import { createLiveRunOrchestration } from "./live-run-orchestration-composition"; import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration"; import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
@@ -29,18 +28,18 @@ import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGame
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
 import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, seekBrowserGhostCapsuleProductionReplay, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
-import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events";
+import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events"; import { verdantTelemetryIntents } from "../gameplay/progression/verdant-telemetry"; import { executeEnvironmentTelemetryIntents, paleTelemetryIntents } from "../gameplay/progression/environment-telemetry"; import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
 import { createGhostAuthoritativeReceipt } from "../ghost/authoritative-receipt";
-import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots";
-import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
+import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots"; import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash"; import { createLiveCanonicalWatchComposition } from "./live-canonical-watch-composition";
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
 import { createLiveHumanCalibrationCaptureComposition } from "./live-human-calibration-capture-composition";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller";
-import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch";
+import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch"; import { bindLiveBloomWellActors } from "./live-bloom-well-wiring"; import { bindLiveAuroraTrackActors } from "./live-aurora-track-wiring";
+import { bindLiveWhiteHartActors } from "./live-white-hart-wiring"; import { projectLiveCanonicalEnemy } from "./live-canonical-enemy-projection";
 import { LiveGhostPublicationController } from "./live-ghost-publication-controller"; import { LiveGhostSupportController } from "./live-ghost-support-controller";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
   const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, ghostPublication, lerp, weaponCapsuleIntersectsSegment } = dependencies;
@@ -116,6 +115,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   GAMEPLAY_EVENTS.subscribe((event) => {
     ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ghostV3Session.nextEventSequence()));
+    if (tracksAchievements(hostState.run())) executeEnvironmentTelemetryIntents([...verdantTelemetryIntents(event),
+      ...paleTelemetryIntents(event)], dependencies.profileStatsPersistence);
   });
   function liveRun(): GameRun {
     // Menu services intentionally ask before a run exists and treat the absent
@@ -177,7 +178,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const abandonLiveRun = (reason: string, metadata: Readonly<Record<string, unknown>> = {}): void => {
     const lifecycle = RUN_LIFECYCLE.snapshot();
     if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
-    RUN_LIFECYCLE.terminate("quit");
+    cleanupBossEncounterActors(hostState.enemies(), "exit"); environment.clear("abandon"); RUN_LIFECYCLE.terminate("quit");
     try {
       const run = liveRun();
       GAMEPLAY_EVENTS.emit({
@@ -200,9 +201,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   // One call builds this world: replaceable state, entity construction, run
   // lifecycle, services, and transient records. World state owns the active
   // player, blade, actors, and run while the session retains menu-time state.
-  const productionWorld = createLiveProductionWorld({ dependencies, configuration });
+  const productionWorld = createLiveProductionWorld({ dependencies, configuration, worldId: "live-production" });
   const { session, world } = productionWorld;
-  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector } = world;
+  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector, environment } = world; browserWindow.addEventListener("pagehide", (event) => { if (!event.persisted) world.dispose(); }); bindLiveBloomWellActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveAuroraTrackActors(environment, livePlayer, liveBlade, () => hostState.enemies(), () => hostState.projectiles(), (enemy) => combatRuntime.id(enemy, "enemy"), (projectile) => combatRuntime.id(projectile, "projectile"), { playerAcceleration: CONFIG.player.groundAccel, playerMaximumSpeed: CONFIG.player.moveSpeed, bladeAcceleration: CONFIG.blade.throw.speed, bladeMaximumSpeed: CONFIG.blade.throw.maxSpeed, projectileAcceleration: CONFIG.proj.speed, projectileMaximumSpeed: CONFIG.chargedShot.speed }); bindLiveRootbinderActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveRootboundActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveWhiteHartActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy"));
   // One world owns the transient records read by combat, State Forge, and diagnostics.
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening; const ghostPracticeSession = createLiveGhostPracticeSessionState();
   const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];
@@ -265,7 +266,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     splitProjectile: spawnSplitShards, formatTime: fmtTime,
   } = styleAchievementRuntime;
   const { modeWaves, bossById, spawn: spawnOne,
-    updateBossArenaPlatforms, lobExplode } = createLiveRunOrchestration({
+    updateBossArenaPlatforms, lobExplode, loadTransitionStage } = createLiveRunOrchestration({
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
     campaign: campaignHost, training: trainingHost, weapon: weaponRuntime, music: musicDirector,
     width: W, height: H, canvas, testMode: TEST_MODE,
@@ -273,7 +274,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
     setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
     selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
-    prepareWorld: () => { if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
+    environment, prepareWorld: () => { if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
     resetTransientWorld: () => { impact.hitStop = 0; impact.shake = 0; },
     finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
       openingCarry.dashGhostTime = 0; openingCarry.throwCooldown = 0; },
@@ -318,7 +319,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     temporaryWalls: () => hostState.temporaryWalls(), setTemporaryWalls: (value) => { hostState.setTemporaryWalls(value); },
   }, transient);
   const combatActions: ReturnType<typeof createLiveCombatActions> = createLiveCombatActions({
-    dependencies, canvas, width: W, bossRosterSize: BOSS_ROSTER.length,
+    dependencies, canvas, width: W, bossRosterSize: BOSS_ROSTER.length, environment,
     live: combatWorldState,
     ports: {
       stage: stageRuntime, story, cinema: CINEMA, tutorial: TUT,
@@ -527,7 +528,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     entityCounts: () => ({ enemies: hostState.enemies().length, projectiles: hostState.projectiles().length, effects: FX.list.length }),
   } satisfies CombatCompositionInput["coordinator"];
   const combatHost: CombatHost = createLiveCombatComposition({
-    frameDriver, gameplayEvents: GAMEPLAY_EVENTS, adapters: combatAdapterContext,
+    frameDriver, gameplayEvents: GAMEPLAY_EVENTS, environment, adapters: combatAdapterContext,
     lifecycle: {
       advanceClock: (dt) => { worldContext.services.clock.advance(dt); },
       captureProtection: () => { transient.assignProtection(story.protection()); },
@@ -537,10 +538,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     authoritative: {
       actionPort: liveInputAdapter.actionPort,
       snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
-        hostState.enemies().map((enemy) => ({
-          ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId,
-          x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
-        }))),
+        hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot()),
     },
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
@@ -550,21 +548,23 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const captureGhostAuthoritativeReceipt = (tick: number): void => {
     if (ghostV3?.active !== true) return;
     const result = authoritativeStep.lastResult;
-    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map((enemy) => ({ ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind, bossId: enemy.bossId, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead }))));
+    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(
+      tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(),
+      hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot()));
     ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot()));
   };
-  GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick);
+  GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick); environment.setAvailableActorIdsSource(() => new Set([stageRuntime.current.id, "player", "blade", ...hostState.enemies().map((enemy) => combatRuntime.id(enemy, "enemy")), ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile"))]));
   const stateForgeRuntime = createLiveStateForgeRuntimeBridge({
     captureTransient: () => ({ hitStop: impact.hitStop, shake: impact.shake, timeScale: feel.timeScale, slowmo: impact.slowMotion, zoom: feel.zoom, flash: feel.flash, bannerT: feel.bannerSeconds, dashGhostT: openingCarry.dashGhostTime, landingV: openingCarry.landingVelocity, wasDashing: openingCarry.wasDashing, wasSwinging: openingCarry.wasSwinging, wasOnGround: openingCarry.wasOnGround, worldZoom: feel.worldZoom, worldZoomTarget: feel.worldZoomTarget, throwCd: openingCarry.throwCooldown, rankPopT: feel.rankPopupSeconds, rankPopText: feel.rankPopupText }),
     restoreTransient: (snapshot) => { transient.assignImpact({ hitStop: Number(snapshot.hitStop), slowMotion: Number(snapshot.slowmo), shake: Number(snapshot.shake) }); transient.assignOpening({ throwCooldown: Number(snapshot.throwCd), dashGhostTime: Number(snapshot.dashGhostT), landingVelocity: Number(snapshot.landingV), wasDashing: Boolean(snapshot.wasDashing), wasSwinging: Boolean(snapshot.wasSwinging), wasOnGround: Boolean(snapshot.wasOnGround) }); feel.timeScale = Number(snapshot.timeScale); feel.zoom = Number(snapshot.zoom); feel.flash = Number(snapshot.flash); feel.bannerSeconds = Number(snapshot.bannerT); feel.worldZoom = Number(snapshot.worldZoom); feel.worldZoomTarget = Number(snapshot.worldZoomTarget); feel.rankPopupSeconds = Number(snapshot.rankPopT); feel.rankPopupText = String(snapshot.rankPopText); },
     captureLifecycle: RUN_LIFECYCLE.snapshot.bind(RUN_LIFECYCLE), restoreLifecycle: RUN_LIFECYCLE.restore.bind(RUN_LIFECYCLE),
     captureChapterBinding: story.captureChapterBinding.bind(story), stageChapterBinding: campaignRuntime.stageChapterBinding, installChapterBinding: campaignRuntime.installChapterBinding,
     captureCinemaProtection: story.protection.bind(story), restoreCinemaProtection: story.applyProtection.bind(story),
-    captureStageBanner: () => ({ name: stageRuntime.name, seconds: stageRuntime.bannerSeconds }), restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime), cinema: CINEMA,
+    captureStageBanner: () => ({ name: stageRuntime.name, seconds: stageRuntime.bannerSeconds }), restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime), cinema: CINEMA, clearEnvironmentRestore: () => { environment.clear("restore"); },
   });
   const liveStateForge = createLiveStateForgeAdapter({
     dependencies, entities: worldEntities, worldServices: worldContext.services, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
-    platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(),
+    platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(), environment: () => environment, clearEnvironmentRestore: () => { environment.clear("restore"); }, restoreEnvironment: (snapshot) => { environment.setStage(snapshot.stageId, "restore"); environment.replace(snapshot); },
     screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); if (screen === "playing" && ghostPracticeSession.active() !== null) return; setState(screen); }, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
     tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
     reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
@@ -629,7 +629,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     },
     frameState: { screen: () => state, previousScreen: interfaceFrame.previousScreen, setPreviousScreen: interfaceFrame.setPreviousScreen, uiZoom: interfaceFrame.uiZoom, setUiZoom: (value) => { interfaceFrame.setUiZoom(value); Input.uiZoom = value; }, deltaSeconds: interfaceFrame.deltaSeconds, enterSeconds: interfaceFrame.enterSeconds, setEnterSeconds: interfaceFrame.setEnterSeconds, enterAmount: interfaceFrame.enterAmount, setEnterAmount: interfaceFrame.setEnterAmount, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus, controls: interfaceInteraction.buttons, resetControls: interfaceInteraction.resetButtons, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: interfaceFrame.seconds },
     frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resize: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: interfaceInteraction.hoverAnimations(), trickColor },
-    worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: interfaceFrame.deltaSeconds, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => hudFeedback.snapshot(), setHud: (value) => { hudFeedback.set(value); } },
+    worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), environment: () => environment.snapshot(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: interfaceFrame.deltaSeconds, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => hudFeedback.snapshot(), setHud: (value) => { hudFeedback.set(value); } },
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
   }); const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
@@ -655,7 +655,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     };
     installLiveTearRuntimeBridge({
       width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
-      resetEntityIdentities: () => { combatRuntime.restoreIdentityState({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] }); },
+      environment: () => environment, resetEntityIdentities: () => { combatRuntime.restoreIdentityState({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] }); },
       platforms: () => stageRuntime.platforms,
       platformsForStage: (index) => dependencies.stagePlatforms(index, CONFIG),
       stage: () => ({ ...stageRuntime.current, index: stageRuntime.index }), lifecycle: () => RUN_LIFECYCLE.snapshot(), bossIntroActive: () => hostState.bossIntro() !== null,
@@ -677,12 +677,13 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
       emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window: browserWindow, canvas, width: W, height: H }); },
       setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) impact.hitStop = effects.hitStop; if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion; if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale; },
-      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: runControllers.api.loadStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = hostState.enemies().filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => liveRun().mods, restoreProgressionRuntime: (runtime) => { const run = liveRun(); run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
+      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: loadTransitionStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = hostState.enemies().filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => liveRun().mods, restoreProgressionRuntime: (runtime) => { const run = liveRun(); run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
     }, browserWindow);
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {
     installLiveGameDebug({
       enabled: PANTHEON_DEBUG, dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA, stage: stageRuntime, width: W, height: H,
+      spawnExplicitVariant: (kind, variantId) => { spawnOne({ type: kind, variantId }); },
       startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: reviveCountdown.setSeconds,
       openDraft: openRewardDraft, openTier: openRewardTier, run: liveRun, player: livePlayer, blade: liveBlade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
       beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
@@ -695,5 +696,4 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     });
   });
   frameDriver.start(({ deltaSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds); });
-})();
-}
+})(); }

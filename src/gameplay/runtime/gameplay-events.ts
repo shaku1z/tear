@@ -1,19 +1,23 @@
 /**
  * Native, presentation-independent gameplay facts emitted at authoritative
  * simulation boundaries. Replay formats consume these through outward
- * adapters; no replay version owns this contract.
+ * adapters; no replay version owns this contract. Stage facts retain the
+ * numeric index for existing replay consumers while optionally carrying the
+ * stable authored stage identity for new consumers.
  */
+import { stageIdAtRuntimeIndex, type StageId } from "../stages";
+
 export type TearGameplayEvent =
   | Readonly<{
     kind: "run"; tick: number; transition: "started" | "paused" | "resumed" | "completed" | "defeated" | "abandoned";
     runId: string; mode: string; difficulty: string; weaponId: string; wave: number; score: number; runTimeSeconds: number;
     reason?: string;
   }>
-  | Readonly<{ kind: "stage"; tick: number; stage: number }>
+  | Readonly<{ kind: "stage"; tick: number; stage: number; stageId?: StageId; transition?: "entered" | "exited" }>
   | Readonly<{ kind: "wave"; tick: number; wave: number; event: string }>
   | Readonly<{
     kind: "spawn"; tick: number; actorId: string; actorKind: string; x: number; y: number;
-    variantName?: string; bossId?: string;
+    variantName?: string; variantId?: string; bossId?: string;
   }>
   | Readonly<{ kind: "death"; tick: number; actorId: string; cause: string }>
   | Readonly<{ kind: "loadout"; tick: number; choiceId: string; tier: number; wave: number }>
@@ -34,6 +38,12 @@ export type TearGameplayEvent =
   /** A source-owned world transition.  It is intentionally separate from
    * presentation effects so replay consumers can retain causal custody. */
   | Readonly<{ kind: "world"; tick: number; event: "void-rescue"; x: number; y: number; lane: "lower" | "upper" | null; hp: number }>
+  | Readonly<{
+    kind: "environment"; tick: number;
+    event: "field-started" | "field-resolved" | "combat-object-link-created" | "combat-object-damaged" | "combat-object-destroyed" | "object-cleaned";
+    objectId: string; category: "field" | "combat-object" | "route"; objectKind: string;
+    integrity?: number; reason?: string;
+  }>
   | Readonly<{ kind: "effect"; tick: number; effect: string; x: number; y: number }>;
 
 /** Exhaustive runtime-owned event families; additions fail the typed coverage contract. */
@@ -47,6 +57,7 @@ export const GAMEPLAY_EVENT_KIND_IDS = Object.freeze(Object.keys({
   weapon: true,
   projectile: true,
   world: true,
+  environment: true,
   effect: true,
 } satisfies Readonly<Record<TearGameplayEvent["kind"], true>>) as TearGameplayEvent["kind"][]);
 
@@ -94,6 +105,13 @@ export class TearGameplayEventBus implements TearGameplayEventPort {
   publish(event: TearGameplayEvent): void {
     if (!Number.isSafeInteger(event.tick) || event.tick < 0) {
       throw new RangeError("gameplay event tick must be a non-negative safe integer");
+    }
+    if (event.kind === "stage") {
+      if (!Number.isSafeInteger(event.stage) || event.stage < 0) throw new RangeError("gameplay stage index must be a non-negative safe integer");
+      const expectedStageId = stageIdAtRuntimeIndex(event.stage) ?? undefined;
+      if (event.stageId !== undefined && event.stageId !== expectedStageId) {
+        throw new RangeError(`gameplay stage identity ${event.stageId} does not match index ${String(event.stage)}`);
+      }
     }
     const frozen = Object.freeze({ ...event }) as TearGameplayEvent;
     for (const listener of this.#listeners) listener(frozen);

@@ -133,7 +133,7 @@ withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, error
   await editor.fill(originalSource);
   await page.getByRole("button", { name: "Validate" }).evaluate((button) => button.click());
   assert.equal(await page.getByRole("button", { name: "Launch scenario" }).isEnabled(), true);
-  const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c23");
+  const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints", "core", "C23", "state-forge");
   fs.mkdirSync(artifactDirectory, { recursive: true });
   fs.writeFileSync(path.join(artifactDirectory, "state-forge-studio-journey.json"), JSON.stringify({
     launchedRecordedCanonical: true,

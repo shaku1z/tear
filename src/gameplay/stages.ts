@@ -8,13 +8,25 @@
 // readable; dramatic inversions (e.g. a true dark Voidspire) are a later polish pass.
 
 import type { CONFIG as GAME_CONFIG } from "../config/game-config";
+import type { ChapterTransitionId } from "./campaign/chapter-controller";
 import type { BossId, EnemyKind } from "./run/content-director";
 
 /** Stable authored stage identifiers used by the game-reference projection. */
 export const STAGE_IDS = Object.freeze([
-  "grounds", "undercroft", "crimson-fields", "voidspire", "tear",
+  "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "pale-traverse", "voidspire", "tear",
 ] as const);
 export type StageId = typeof STAGE_IDS[number];
+
+/** Stable identity mapping; reserved identities may precede their runtime STAGES entry. */
+export const STAGE_BOSS_HOME = Object.freeze({
+  grounds: "warden",
+  undercroft: "colossus",
+  "crimson-fields": "aldric",
+  "verdant-sanctum": "rootbound",
+  "pale-traverse": "white-hart",
+  voidspire: "echo",
+  tear: "source",
+} as const satisfies Readonly<Record<StageId, BossId>>);
 
 export interface StagePlatformDefinition {
   readonly x: number;
@@ -34,7 +46,7 @@ export interface StageChapterDefinition {
   readonly title: string;
   readonly symbol: string;
   readonly intro: string;
-  readonly transition: string;
+  readonly transition: ChapterTransitionId;
   readonly pages: readonly StageChapterPage[];
   readonly bossOutro: Readonly<StageChapterPage>;
 }
@@ -62,7 +74,7 @@ export interface StageDefinition {
 
 const enemyPool = (...entries: readonly (readonly [EnemyKind, number, number?])[]) => entries;
 
-const STAGES: readonly StageDefinition[] = [
+const AUTHORED_STAGES: readonly StageDefinition[] = [
   {
     id: "grounds",
     name: "The Grounds", blurb: "Where order is kept.",
@@ -136,11 +148,63 @@ const STAGES: readonly StageDefinition[] = [
     ],
   },
   {
+    id: "verdant-sanctum",
+    name: "The Verdant Sanctum", blurb: "Where nothing is allowed to die.",
+    musicId: "verdant-sanctum",
+    boss: "rootbound",
+    chapter: { number: "IV", title: "THE MERCY THAT WOULD NOT END", symbol: "✣", intro: "MERCY TOOK ROOT AND FORGOT TO LET GO.", transition: "bloom",
+      pages: [
+        { label: "THE SANCTUARY", text: "After the Fields burned, the wounded were carried here. The tree healed flesh first, then memory, then whatever remained." },
+        { label: "THE PRESERVATION", text: "The keeper refused the final loss. One by one, the sanctuary joined the roots until mercy and captivity became the same command." },
+      ],
+      bossOutro: { label: "THE NAMEPLATES", text: "Healers. Soldiers. Children. Every name marks the day they entered the garden. None records the day they left. At the center: ‘I kept every promise except the one that mattered. I did not let them go.’" } },
+    chapterArt: { composition: "right", wash: "light" },
+    bg: "#dff2d6", plat: "#234a36", accent: "#e4c95a",
+    pool: enemyPool(
+      ["flyer", 0.75, 1], ["ranged", 0.70, 1], ["charger", 0.55, 1], ["rootbinder", 0.50, 2],
+      ["mender", 0.32, 3], ["anchor", 0.28, 4], ["armored", 0.35, 4], ["chimera", 0.25, 6],
+    ),
+    layout: [
+      { x: 150, y: 645, w: 330, h: 24, oneway: true },
+      { x: 1120, y: 645, w: 330, h: 24, oneway: true },
+      { x: 350, y: 485, w: 280, h: 24, oneway: true },
+      { x: 970, y: 485, w: 280, h: 24, oneway: true },
+      { x: 655, y: 335, w: 290, h: 24, oneway: true },
+      { x: 1030, y: 250, w: 180, h: 24, oneway: true },
+    ],
+  },
+  {
+    id: "pale-traverse",
+    name: "The Pale Traverse", blurb: "Where every road returns.",
+    musicId: "pale-traverse",
+    boss: "white-hart",
+    chapter: { number: "V", title: "THE ROAD THAT RETURNED", symbol: "♢", intro: "EVERY ROAD RETURNS. NONE ARRIVE.", transition: "aurora",
+      pages: [
+        { label: "THE TRAVERSE", text: "The Council marked one safe passage through the mountains. When the Spire bent the road, every marker began pointing home." },
+        { label: "THE LAST CARAVAN", text: "A guide kept ringing the route bell. The White Hart kept leading them from danger. The same frozen evening received them every time." },
+      ],
+      bossOutro: { label: "THE ROUTE LEDGER", text: "Thirty-seven travelers. Every name marked ‘Returned.’ The final line, in a child’s hand: ‘If the road disappears, ring twice. He knows the way home.’ Beyond the marker, the snow has no tracks." } },
+    chapterArt: { composition: "left", wash: "light" },
+    bg: "#dfe8f7", plat: "#1f3557", accent: "#ef8da8",
+    pool: enemyPool(
+      ["rimehound", 0.85, 1], ["ranged", 0.75, 1], ["charger", 0.65, 1], ["flyer", 0.60, 1], ["armored", 0.55, 1],
+      ["bomber", 0.40, 2], ["wraith", 0.35, 3], ["anchor", 0.22, 4], ["chimera", 0.30, 6],
+    ),
+    layout: [
+      { x: 140, y: 640, w: 400, h: 24, oneway: true },
+      { x: 1060, y: 640, w: 400, h: 24, oneway: true },
+      { x: 560, y: 510, w: 480, h: 24, oneway: true },
+      { x: 190, y: 350, w: 300, h: 24, oneway: true },
+      { x: 1110, y: 350, w: 300, h: 24, oneway: true },
+      { x: 700, y: 255, w: 200, h: 24, oneway: true },
+    ],
+  },
+  {
     id: "voidspire",
     name: "The Voidspire", blurb: "Where the rules thin out.",
     musicId: "voidspire",
     boss: "echo",
-    chapter: { number: "IV", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
+    chapter: { number: "V", title: "THE NAME IN THE WALL", symbol: "◇", intro: "THE RULES THIN. THE MEMORY DOES NOT.", transition: "mirror",
       pages: [
         { label: "THE VOIDSPIRE", text: "Here distance repeats itself and every motion leaves behind a version that believes it moved first." },
         { label: "THE REFLECTION", text: "Something in the Spire has practiced your shape for years. It remembers a journey you have only just begun." },
@@ -166,7 +230,7 @@ const STAGES: readonly StageDefinition[] = [
     musicId: "tear",
     dark: true,   // the void at the end of everything — HUD + player flip to light here
     boss: "source",
-    chapter: { number: "V", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
+    chapter: { number: "VI", title: "THE WOUND THAT WATCHES", symbol: "◉", intro: "THE ABYSS LOOKS BACK.", transition: "void",
       pages: [
         { label: "THE TEAR", text: "There is no fortress at the bottom of the world—only the wound every fortress was built to misunderstand." },
         { label: "THE SOURCE", text: "It has worn every guardian sent to close it. Now it waits to learn whether your blade is another memory or an ending." },
@@ -187,6 +251,82 @@ const STAGES: readonly StageDefinition[] = [
   },
 ];
 
+export const CONTENT_AVAILABILITY_SURFACES = Object.freeze([
+  "adventure", "endless", "gauntlet", "boss-test", "enemy-test", "tutorial", "playground", "published",
+] as const);
+export type ContentAvailabilitySurface = typeof CONTENT_AVAILABILITY_SURFACES[number];
+
+export interface StageContentAvailability {
+  readonly adventure: boolean;
+  readonly endless: boolean;
+  readonly gauntlet: boolean;
+  readonly "boss-test": boolean;
+  readonly "enemy-test": boolean;
+  readonly tutorial: boolean;
+  readonly playground: boolean;
+  readonly published: boolean;
+}
+
+const PUBLISHED_AVAILABILITY: StageContentAvailability = Object.freeze({
+  adventure: true, endless: true, gauntlet: true, "boss-test": true,
+  "enemy-test": true, tutorial: true, playground: true, published: true,
+});
+
+/** Source-owned policy: ordinary surfaces derive from this table, never stage-name conditionals. */
+export const STAGE_CONTENT_AVAILABILITY = Object.freeze({
+  grounds: PUBLISHED_AVAILABILITY,
+  undercroft: PUBLISHED_AVAILABILITY,
+  "crimson-fields": PUBLISHED_AVAILABILITY,
+  "verdant-sanctum": PUBLISHED_AVAILABILITY,
+  "pale-traverse": Object.freeze({
+    adventure: false, endless: false, gauntlet: false, "boss-test": false,
+    "enemy-test": false, tutorial: false, playground: true, published: false,
+  }),
+  voidspire: PUBLISHED_AVAILABILITY,
+  tear: PUBLISHED_AVAILABILITY,
+} as const satisfies Readonly<Record<StageId, StageContentAvailability>>);
+
+export function stageIdsAvailableOn(surface: ContentAvailabilitySurface): readonly StageId[] {
+  return Object.freeze(STAGE_IDS.filter((id) => STAGE_CONTENT_AVAILABILITY[id][surface]));
+}
+
+export function bossIdsAvailableOn(surface: ContentAvailabilitySurface): readonly BossId[] {
+  return Object.freeze(stageIdsAvailableOn(surface).map((id) => STAGE_BOSS_HOME[id]));
+}
+
+export function stageDefinition(stageId: StageId): StageDefinition {
+  const stage = AUTHORED_STAGES.find(({ id }) => id === stageId);
+  if (stage === undefined) throw new RangeError(`unknown authored stage ${stageId}`);
+  return stage;
+}
+
+export const PUBLISHED_STAGE_IDS = stageIdsAvailableOn("published");
+export const PLAYGROUND_STAGE_IDS = stageIdsAvailableOn("playground");
+export const CAMPAIGN_STAGE_IDS = stageIdsAvailableOn("adventure");
+
+/** Compatibility campaign roster. Preview content requires an explicit authored lookup. */
+const STAGES: readonly StageDefinition[] = Object.freeze(CAMPAIGN_STAGE_IDS.map(stageDefinition));
+export const PREVIEW_STAGE_IDS = Object.freeze(PLAYGROUND_STAGE_IDS.filter((id) => !PUBLISHED_STAGE_IDS.includes(id)));
+export const PLAYGROUND_RUNTIME_STAGE_IDS = Object.freeze([...PUBLISHED_STAGE_IDS, ...PREVIEW_STAGE_IDS]);
+export const PLAYGROUND_STAGES: readonly StageDefinition[] = Object.freeze(PLAYGROUND_RUNTIME_STAGE_IDS.map(stageDefinition));
+
+/**
+ * Published stages retain their production indices. Preview stages live after
+ * that range so an engineering snapshot cannot masquerade as campaign state.
+ */
+export function stageRuntimeIndexForSurface(stageId: StageId, surface: ContentAvailabilitySurface): number {
+  if (!STAGE_CONTENT_AVAILABILITY[stageId][surface]) return -1;
+  const publishedIndex = PUBLISHED_STAGE_IDS.indexOf(stageId);
+  if (publishedIndex >= 0) return publishedIndex;
+  const previewIndex = PREVIEW_STAGE_IDS.indexOf(stageId);
+  return previewIndex < 0 ? -1 : STAGES.length + previewIndex;
+}
+
+export function stageIdAtRuntimeIndex(index: number): StageId | null {
+  if (!Number.isSafeInteger(index) || index < 0) return null;
+  return PLAYGROUND_RUNTIME_STAGE_IDS[index] ?? null;
+}
+
 // build a fresh platforms array (floor + the stage's one-way platforms, cloned so
 // temporary Geomancer walls never pollute the source layout)
 function stagePlatforms(i: number, config: typeof GAME_CONFIG) {
@@ -202,9 +342,11 @@ function stagePlatforms(i: number, config: typeof GAME_CONFIG) {
   return [floor, ...s.layout.map((p) => ({ ...p, x: p.x + ox, y: p.y + oy }))];
 }
 function stageAt(i: number) {
+  const preview = PREVIEW_STAGE_IDS[i - STAGES.length];
+  if (preview !== undefined) return stageDefinition(preview);
   const stage = STAGES[((i % STAGES.length) + STAGES.length) % STAGES.length];
   if (stage === undefined) throw new RangeError("No stages are configured");
   return stage;
 }
 
-export { STAGES, stageAt, stagePlatforms };
+export { AUTHORED_STAGES, STAGES, stageAt, stagePlatforms };

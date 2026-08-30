@@ -9,6 +9,7 @@ import type {
   WeaponActionResult, WeaponBladeContext, WeaponDamageContext, WeaponPlayerContext,
   WeaponQualityContext, WeaponUpdateContext,
 } from "../weapons";
+import type { EnvironmentCounterplayTag } from "../environment/environment-definitions";
 
 export type GameConfig = typeof GAME_CONFIG;
 
@@ -50,6 +51,11 @@ export interface BladeWeaponPort {
   id: string;
   channels: BladeChannels;
   throwCollisionPad: number;
+  environmentCounterplay?: Readonly<{
+    held?: EnvironmentCounterplayTag;
+    thrown?: EnvironmentCounterplayTag;
+    projectile?: EnvironmentCounterplayTag;
+  }>;
   qualityMetric(context: WeaponQualityContext): number;
   damageProfile(context: WeaponDamageContext): number;
   onHeldUpdate?(context: BladeWeaponContext): void;

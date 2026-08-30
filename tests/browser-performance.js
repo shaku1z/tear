@@ -7,6 +7,12 @@ const path = require("node:path");
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
 const budgets = JSON.parse(fs.readFileSync(path.resolve(projectRoot, "config", "browser-performance-budgets.json"), "utf8"));
+const buildInfoPath = path.resolve(buildRoot, "build-info.json");
+const buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, "utf8"));
+assert.equal(buildInfo.format, "tear-build-info", "performance evidence requires an attributed Tear build");
+assert.equal(buildInfo.schemaVersion, 1, "performance evidence requires the supported build-info schema");
+assert.equal(buildInfo.target, "standalone", "performance evidence must exercise a standalone build");
+assert.match(buildInfo.artifactHash, /^[a-f0-9]{64}$/u, "performance evidence requires the served artifact hash");
 const port = Number(process.env.TEAR_PERF_PORT || 8126);
 const baseUrl = `http://127.0.0.1:${port}`;
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";
@@ -54,6 +60,12 @@ async function openInstrumentedPage(browser, pageErrors) {
   });
   await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__ && window.__PANTHEON_TEST);
+  // Programmatic debug starts can dispatch wave audio before the first combat
+  // pointer input. Give every measured page the same user activation required
+  // by production so audio initialization cannot race the workload setup.
+  await page.keyboard.press("Shift");
+  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
+    undefined, { timeout: 20000 });
   return page;
 }
 
@@ -186,6 +198,152 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   return result;
 }
 
+async function verdantGameplayScenario(browser, pageErrors) {
+  const scenario = budgets.verdantGameplay;
+  const page = await openInstrumentedPage(browser, pageErrors);
+  await page.evaluate(() => window.__PANTHEON_TEST.startBoss("rootbound", "normal"));
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
+    .some((enemy) => enemy.bossId === "rootbound" && enemy.spawnT <= 0 && enemy.introT === 0), undefined, { timeout: 10000 });
+  await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
+    .find((enemy) => enemy.bossId === "rootbound")?.phase === 2, undefined, { timeout: 5000 });
+  await page.evaluate(() => {
+    window.__PANTHEON_TEST.prepareVerdantPerformanceScenario();
+    Object.defineProperty(window, "__VS3_PERFORMANCE_ENVIRONMENT__", {
+      configurable: true,
+      value: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A"),
+    });
+  });
+  const environmentSnapshot = () => page.evaluate(() => window.__VS3_PERFORMANCE_ENVIRONMENT__.environment().snapshot());
+  await page.waitForFunction(() => {
+    const snapshot = window.__VS3_PERFORMANCE_ENVIRONMENT__.environment().snapshot();
+    return snapshot.fields.some((entry) => entry.kind === "bloom-well")
+      && snapshot.combatObjects.some((entry) => entry.kind === "graft-anchor")
+      && snapshot.combatObjects.some((entry) => entry.kind === "root-link");
+  }, undefined, { timeout: 10000 });
+  const longTasksBefore = (await diagnostics(page)).longTasks;
+  const peakGauges = { enemies: 0, projectiles: 0, effects: 0, fields: 0, combatObjects: 0, routes: 0 };
+  const peakEnvironmentKinds = {};
+  const samplePeak = async () => {
+    const [snapshot, environment] = await Promise.all([diagnostics(page), environmentSnapshot()]);
+    peakGauges.enemies = Math.max(peakGauges.enemies, gauge(snapshot, "enemies"));
+    peakGauges.projectiles = Math.max(peakGauges.projectiles, gauge(snapshot, "projectiles"));
+    peakGauges.effects = Math.max(peakGauges.effects, gauge(snapshot, "effects"));
+    peakGauges.fields = Math.max(peakGauges.fields, environment.fields.length);
+    peakGauges.combatObjects = Math.max(peakGauges.combatObjects, environment.combatObjects.length);
+    peakGauges.routes = Math.max(peakGauges.routes, environment.routes.length);
+    for (const object of environment.combatObjects) {
+      const key = `${object.kind}:${object.state}`;
+      peakEnvironmentKinds[key] = Math.max(peakEnvironmentKinds[key] || 0,
+        environment.combatObjects.filter((candidate) => `${candidate.kind}:${candidate.state}` === key).length);
+    }
+  };
+  await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
+  const activeFrameSamples = await exerciseCombat(page, scenario.durationMs, samplePeak,
+    scenario.minimumSamples, scenario.minimumCollectionRateFps);
+  const snapshot = await diagnostics(page);
+  await samplePeak();
+  const result = { simulation: snapshot.simulation, render: snapshot.render, frame: snapshot.frame,
+    newLongTasks: snapshot.longTasks - longTasksBefore, peakGauges, peakEnvironmentKinds };
+  assert.ok(activeFrameSamples >= scenario.minimumSamples,
+    `Verdant workload produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`);
+  assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, "Verdant simulation p95 ms");
+  assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, "Verdant render p95 ms");
+  assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, "Verdant frame-work p95 ms");
+  assertAtMost(result.newLongTasks, scenario.newLongTasksMax, "Verdant new >50 ms frames");
+  for (const [name, limit] of Object.entries(scenario.ceilings)) {
+    assertAtMost(peakGauges[name], limit, `Verdant peak ${name} (${JSON.stringify(peakEnvironmentKinds)})`);
+  }
+  assert.ok(peakGauges.enemies >= 4, "Verdant workload did not retain Rootbound, Rootbinder, and ordinary enemies");
+  assert.ok(peakGauges.fields > 0 && peakGauges.combatObjects >= 4,
+    "Verdant workload did not exercise Bloom, Grafts, and Rootbinder relationships together");
+  await page.evaluate(() => { delete window.__VS3_PERFORMANCE_ENVIRONMENT__; });
+  await page.close();
+  return result;
+}
+
+async function paleGameplayScenario(browser, pageErrors) {
+  const scenario = budgets.paleGameplay;
+  const page = await openInstrumentedPage(browser, pageErrors);
+  await page.evaluate(() => window.__PANTHEON_TEST.startBoss("white-hart", "normal"));
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
+    .some((enemy) => enemy.bossId === "white-hart" && enemy.spawnT <= 0 && enemy.introT === 0), undefined,
+  { timeout: 10000 });
+  await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
+    .find((enemy) => enemy.bossId === "white-hart")?.phase === 2, undefined, { timeout: 5000 });
+  await page.evaluate(() => {
+    window.__PANTHEON_TEST.preparePalePerformanceScenario();
+    window.__PANTHEON_TEST.prepareWhiteHartAttack("ghost-tracks");
+    Object.defineProperty(window, "__PT3_PERFORMANCE_ENVIRONMENT__", {
+      configurable: true,
+      value: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A"),
+    });
+  });
+  const environmentSnapshot = () => page.evaluate(() => window.__PT3_PERFORMANCE_ENVIRONMENT__.environment().snapshot());
+  try {
+    await page.waitForFunction(() => {
+      const snapshot = window.__PT3_PERFORMANCE_ENVIRONMENT__.environment().snapshot();
+      return snapshot.fields.filter((entry) => entry.kind === "aurora-track").length >= 3
+        && snapshot.routes.some((entry) => entry.kind === "ghost-track");
+    }, undefined, { timeout: 10000 });
+  } catch (error) {
+    const snapshot = await environmentSnapshot();
+    throw new Error(`Pale performance environment did not compose: ${JSON.stringify(snapshot)}`, { cause: error });
+  }
+  const roster = await page.evaluate(() => window.TEAR_WEAPON_DEBUG().enemies.map((enemy) => ({
+    kind: enemy.kind, variant: enemy.variant, bossId: enemy.bossId,
+  })));
+  assert.equal(roster.filter((enemy) => enemy.kind === "rimehound").length, 2,
+    "Pale workload did not compose both Rimehounds");
+  assert.deepEqual(new Set(roster.map((enemy) => enemy.variant).filter(Boolean)), new Set([
+    "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard",
+  ]), "Pale workload did not compose all five native variants");
+  assert.ok(roster.some((enemy) => enemy.bossId === "white-hart"), "Pale workload did not retain White Hart");
+
+  const longTasksBefore = (await diagnostics(page)).longTasks;
+  const peakGauges = { enemies: 0, projectiles: 0, effects: 0, fields: 0, combatObjects: 0, routes: 0 };
+  const peakEnvironmentKinds = {};
+  const samplePeak = async () => {
+    const [snapshot, environment] = await Promise.all([diagnostics(page), environmentSnapshot()]);
+    peakGauges.enemies = Math.max(peakGauges.enemies, gauge(snapshot, "enemies"));
+    peakGauges.projectiles = Math.max(peakGauges.projectiles, gauge(snapshot, "projectiles"));
+    peakGauges.effects = Math.max(peakGauges.effects, gauge(snapshot, "effects"));
+    peakGauges.fields = Math.max(peakGauges.fields, environment.fields.length);
+    peakGauges.combatObjects = Math.max(peakGauges.combatObjects, environment.combatObjects.length);
+    peakGauges.routes = Math.max(peakGauges.routes, environment.routes.length);
+    for (const entry of [...environment.fields, ...environment.combatObjects, ...environment.routes]) {
+      const key = `${entry.kind}:${entry.state}`;
+      peakEnvironmentKinds[key] = Math.max(peakEnvironmentKinds[key] || 0,
+        [...environment.fields, ...environment.combatObjects, ...environment.routes]
+          .filter((candidate) => `${candidate.kind}:${candidate.state}` === key).length);
+    }
+  };
+  await samplePeak();
+  await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
+  const activeFrameSamples = await exerciseCombat(page, scenario.durationMs, samplePeak,
+    scenario.minimumSamples, scenario.minimumCollectionRateFps);
+  const snapshot = await diagnostics(page);
+  await samplePeak();
+  const result = { simulation: snapshot.simulation, render: snapshot.render, frame: snapshot.frame,
+    newLongTasks: snapshot.longTasks - longTasksBefore, peakGauges, peakEnvironmentKinds, roster };
+  assert.ok(activeFrameSamples >= scenario.minimumSamples,
+    `Pale workload produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`);
+  assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, "Pale simulation p95 ms");
+  assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, "Pale render p95 ms");
+  assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, "Pale frame-work p95 ms");
+  assertAtMost(result.newLongTasks, scenario.newLongTasksMax, "Pale new >50 ms frames");
+  for (const [name, limit] of Object.entries(scenario.ceilings)) {
+    assertAtMost(peakGauges[name], limit, `Pale peak ${name} (${JSON.stringify(peakEnvironmentKinds)})`);
+  }
+  assert.equal(peakGauges.enemies, 8, "Pale workload did not retain its exact integrated roster");
+  assert.ok(peakGauges.fields >= 3 && peakGauges.routes > 0,
+    "Pale workload did not exercise Aurora and Ghost Tracks together");
+  await page.evaluate(() => { delete window.__PT3_PERFORMANCE_ENVIRONMENT__; });
+  await page.close();
+  return result;
+}
+
 async function repeatedRunScenario(browser, pageErrors) {
   const page = await openInstrumentedPage(browser, pageErrors);
   const session = await page.context().newCDPSession(page);
@@ -237,7 +395,7 @@ async function repeatedRunScenario(browser, pageErrors) {
       ...(chromePath ? { executablePath: chromePath } : {}),
     });
     const pageErrors = [];
-    assert.ok(["all", "active", "constrained", "cycles"].includes(selectedScenario),
+    assert.ok(["all", "active", "constrained", "verdant", "pale", "cycles"].includes(selectedScenario),
       `unknown TEAR_PERF_SCENARIO: ${selectedScenario}`);
     const activeGameplay = selectedScenario === "all" || selectedScenario === "active"
       ? await activeGameplayScenario(browser, pageErrors, budgets.activeGameplay, "desktop gameplay")
@@ -245,14 +403,24 @@ async function repeatedRunScenario(browser, pageErrors) {
     const constrainedGameplay = selectedScenario === "all" || selectedScenario === "constrained"
       ? await activeGameplayScenario(browser, pageErrors, budgets.constrainedGameplay, "4x constrained gameplay")
       : undefined;
+    const verdantGameplay = selectedScenario === "all" || selectedScenario === "verdant"
+      ? await verdantGameplayScenario(browser, pageErrors)
+      : undefined;
+    const paleGameplay = selectedScenario === "all" || selectedScenario === "pale"
+      ? await paleGameplayScenario(browser, pageErrors)
+      : undefined;
     const runCycles = selectedScenario === "all" || selectedScenario === "cycles"
       ? await repeatedRunScenario(browser, pageErrors)
       : undefined;
     assert.deepEqual(pageErrors, [], `browser page errors: ${pageErrors.join("\n")}`);
     const report = { capturedAt: new Date().toISOString(), referenceProfile: budgets.referenceProfile,
+      build: buildInfo,
       browserRuntime: { version: browser.version(), executable: chromePath || "playwright-bundled-chromium" },
-      ...(activeGameplay && { activeGameplay }), ...(constrainedGameplay && { constrainedGameplay }), ...(runCycles && { runCycles }) };
-    const output = path.resolve(projectRoot, "test-results", "browser-performance.json");
+      ...(activeGameplay && { activeGameplay }), ...(constrainedGameplay && { constrainedGameplay }),
+      ...(verdantGameplay && { verdantGameplay }), ...(paleGameplay && { paleGameplay }),
+      ...(runCycles && { runCycles }) };
+    const output = path.resolve(projectRoot, process.env.TEAR_PERF_OUTPUT
+      || "artifacts/tearbench/generated/browser-performance.json");
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`);
     console.log(JSON.stringify(report, null, 2));

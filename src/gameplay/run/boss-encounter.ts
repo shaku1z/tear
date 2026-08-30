@@ -23,6 +23,20 @@ export interface BossEncounterEnemy {
   bossId?: string | null;
 }
 
+export type BossEncounterCleanupReason = "death" | "reset" | "retry" | "exit" | "stage-transition" | "restore";
+export interface BossEncounterCleanupActor {
+  readonly isBoss?: boolean;
+  cleanupEncounter?(reason: BossEncounterCleanupReason): void;
+}
+
+/** Runs opt-in boss cleanup at every world replacement boundary; actors own the idempotence. */
+export function cleanupBossEncounterActors(
+  actors: readonly BossEncounterCleanupActor[],
+  reason: BossEncounterCleanupReason,
+): void {
+  for (const actor of actors) if (actor.isBoss === true) actor.cleanupEncounter?.(reason);
+}
+
 export interface BossEncounterArena<Platform> {
   /** The current world platforms, replaced when the boss brings its own arena. */
   platforms(): Platform[];

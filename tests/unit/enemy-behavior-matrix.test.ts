@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { AFFIXES, applyAffix, type AffixEnemy } from "../../src/gameplay/affixes";
-import type { EnemyKind } from "../../src/gameplay/run/content-director";
+import { PUBLISHED_ENEMY_IDENTITY_IDS, type ActiveEnemyKind } from "../../src/gameplay/run/content-director";
 import { STAGES } from "../../src/gameplay/stages";
 import { VARIANTS, applyVariant } from "../../src/gameplay/variants";
 import {
@@ -13,8 +13,9 @@ function keysOf<T extends object>(record: T): (keyof T)[] {
   return Object.keys(record) as (keyof T)[];
 }
 
-const PUBLISHED_KINDS = keysOf(STANDARD_ACTOR_FACTORIES).sort();
-const VARIANT_KINDS: readonly EnemyKind[] = ["charger", "ranged", "flyer", "bomber"];
+const PUBLISHED_KINDS = keysOf(STANDARD_ACTOR_FACTORIES).filter((kind) =>
+  PUBLISHED_ENEMY_IDENTITY_IDS.includes(kind)).sort();
+const VARIANT_KINDS: readonly ActiveEnemyKind[] = ["charger", "ranged", "flyer", "bomber", "armored"];
 
 describe("enemy behavior preservation matrix", () => {
   it("constructs and deterministically updates every enemy family published by the stage catalogue", () => {

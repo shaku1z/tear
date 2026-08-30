@@ -10,6 +10,7 @@ export interface ProjectileOwnerPort {
   dying?: boolean;
   onShieldEmbedded?(projectile: ProjectileEntity): void;
   onProjectileGroundImpact?(projectile: ProjectileEntity): void;
+  onProjectileDeflected?(projectile: ProjectileEntity, perfect: boolean): void;
 }
 
 export interface ProjectileDependencies {
@@ -40,6 +41,8 @@ export interface ProjectileRenderSnapshot {
   readonly integrity: number; readonly maxIntegrity: number; readonly sweeperState: string | null;
   readonly spinDir: number; readonly embedded: boolean; readonly sweeperStyle?: string;
   readonly crescent?: boolean; readonly quake?: boolean; readonly sourceStolen: unknown;
+  readonly bossAttack?: string; readonly landingX?: number | null; readonly landingY?: number | null; readonly landingT?: number | null;
+  readonly counterplay?: string; readonly unparryable?: boolean;
   trailPoint(index: number): Readonly<{ x: number; y: number }> | undefined;
 }
 
@@ -333,6 +336,7 @@ class Projectile {
     const orig = this.dmg ?? CONFIG.proj.dmg;
     const speedF = clamp(inSpeed / 600, 0.6, 2.2);
     this.deflectDmg = Math.round((orig * (perfect ? 2.6 : 1.8) + (perfect ? 10 : 8)) * (0.7 + 0.3 * speedF));
+    this.owner?.onProjectileDeflected?.(this, perfect);
     this.life = 6;
   }
 

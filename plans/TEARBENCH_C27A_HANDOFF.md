@@ -146,7 +146,7 @@ Before coding, read this file, then:
   first stepped tick, drives 180 exact ticks with a sealed schedule, and
   records authoritative hashes, events, and ending RNG. Two live runs in one
   page produce one hash sequence, one event sequence, and one RNG state. The
-  artifact lands in `artifacts/tearbench/c27a/live-parity-trace.json`
+  artifact lands in `artifacts/tearbench/checkpoints/core/C27A/live-parity/c27a.live-parity-trace.json`
   (untracked; regenerate with the gate).
 - The nineteenth slice ran the comparison. `tests/unit/detached-live-parity.test.ts`
   hydrates the live origin snapshot into a production-composed world,

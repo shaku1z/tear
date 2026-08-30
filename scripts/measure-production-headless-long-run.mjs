@@ -37,8 +37,8 @@ const hardware = Object.freeze({
   physicalMemoryBytes: os.totalmem(),
 });
 const output = resolve(root, option("--output") ?? (capacityDeclarationPath === undefined
-  ? "artifacts/tearbench/c30/production-headless-long-run.json"
-  : "artifacts/tearbench/c30/production-headless-training-capacity.json"));
+  ? "artifacts/tearbench/checkpoints/core/C30/production-headless/long-run.json"
+  : "artifacts/tearbench/checkpoints/core/C30/production-headless/training-capacity.json"));
 if (typeof global.gc !== "function") {
   throw new Error("C30 long-run measurement requires node --expose-gc");
 }

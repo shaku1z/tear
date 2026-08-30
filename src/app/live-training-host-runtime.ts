@@ -10,7 +10,7 @@ import type { ArenaPlatform } from "../gameplay/training/arena-rules";
 import { createTutorialArena } from "../gameplay/training/tutorial-arenas";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { TutorialGhostSnapshot } from "../gameplay/training/tutorial-controller";
-import { BOSS_ROSTER } from "../gameplay/run/content-director";
+import { AUTHORED_BOSS_ROSTER } from "../gameplay/run/content-director";
 import type { LiveWaveSpawnSpec } from "../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../gameplay/run/session";
 
@@ -100,7 +100,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   const runtime = createPlaygroundRuntimeBridge({
     controller,
     get difficulties() { return d.CONFIG.difficulties; }, get colors() { return d.CONFIG.colors; },
-    get stageNames() { return d.STAGES.map((stage) => stage.name); }, get groundY() { return d.CONFIG.world.groundY; },
+    get stageNames() { return d.PLAYGROUND_STAGES.map((stage) => stage.name); }, get groundY() { return d.CONFIG.world.groundY; },
     get viewportWidth() { return context.width; }, get viewportHeight() { return context.height; },
     get pressed() { return d.Input.pressed; }, get player() { return player(); }, get run() { return requireRun(state); },
     get enemies() { return state.enemies(); }, scalePlayerDamage: (ratio) => { d.CONFIG.player.dmgTakenMult *= ratio; },
@@ -131,7 +131,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
 
   const presentation = createLivePlaygroundPresentation({
     run: () => requireRun(state), oneHit: () => player().oneHit, kinds: PLAYGROUND_ALL_KINDS,
-    difficulties: () => d.CONFIG.difficulties, bosses: BOSS_ROSTER,
+    difficulties: () => d.CONFIG.difficulties, bosses: AUTHORED_BOSS_ROSTER,
     weapons: () => d.WEAPONS, colors: () => d.CONFIG.colors, uiAccent: () => "#13c4d6",
     stageAccent: () => context.stage.current.accent, arenaName: () => runtime.arenaName(),
     selectedWeapon: context.selectedWeapon, upgrades: () => d.UPGRADES, abilityColors: context.abilityColors,

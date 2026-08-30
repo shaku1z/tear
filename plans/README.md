@@ -19,6 +19,8 @@ their own.
 | [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | QA owner | Active | All listed controller and navigation checks pass on the supported standalone and CrazyGames builds, with the exact pad/preset and evidence recorded. | Manual controller/navigation release checklist |
 | [FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md](FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md) | active plan | Combat/weapon owner | Active | The locked Final Five (Sword, Hammer, Greatsword, Chainblade, Riftlock) pass implementation, deterministic, browser, and release evidence gates; Spear and Ringblade remain historical/outdated roster references only. | Weapon design and implementation specification |
 | [PARITY_RESTORATION_PLAN.md](PARITY_RESTORATION_PLAN.md) | active plan | Parity owner | Active | Required oracle comparison traces and current-build parity gates pass with documented, approved divergences only. | Oracle/parity restoration and evidence plan |
+| [TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | active plan | Verdant biome and campaign owner | Active | VS3-C0 through VS3-C21 have green or explicitly authorized dispositions at one reconciled feature identity, the Pale shared-dependency handoff is complete, and VS3-C22 remains explicitly blocked until Pale completion and separately authorized joint promotion. | Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; does not authorize publication, deployment, or C40 certification. |
+| [TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md) | active plan | Pale biome and campaign owner | Active | PT3-C0 through PT3-C11 are green at one frozen Pale feature identity, all Pale implementation reuses the singular Verdant shared contracts, and joint Verdant/Pale integration remains explicitly blocked pending separate authorization. | Pale biome, Aurora route runtime, Rimehound, White Hart, TearBench, and engineering-freeze authority; does not authorize joint integration, publication, dispatch, deployment, or C40 certification. |
 | [TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md](TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md) | current authority | Release governance owner | Active | The master plan records the current G0–G8 state and the protected-main evidence for every closed goal. | Program sequencing and governance |
 | [TEARBENCH_C27A_HANDOFF.md](TEARBENCH_C27A_HANDOFF.md) | completed plan | — | Closed | — | Closed C27A continuation handoff |
 | [TEARBENCH_C40_EXECUTION_GUIDE.md](TEARBENCH_C40_EXECUTION_GUIDE.md) | active plan | TearBench release owner | Active | The required C40 certification artifact verifies the exact clean protected HEAD and every unmet requirement has an explicit authorized disposition with evidence. | Current TearBench execution discipline |
@@ -44,7 +46,7 @@ and Phase F records listed above; `archive/` remains a future G5 destination.
 Generated TearBench inputs and outputs remain at their current paths until an
 atomic scripts/tests/CI migration is authorized.
 
-The active-plan set is exactly the seven rows classified as `active plan` in
+The active-plan set is exactly the eight rows classified as `active plan` in
 this index. `check:docs` derives that set from these tables, requires each
 plan's file metadata to match its Owner/Status/Closure condition cells, and
 fails closed on duplicate, malformed, empty, or additional active rows.

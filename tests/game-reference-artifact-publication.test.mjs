@@ -27,13 +27,18 @@ const artifactName = `tear-game-reference-v1-${sourceSha}`;
 
 function validManifest(sha = sourceSha) {
   const collectionIds = ["achievements", "bosses", "enemies", "modes", "public-tuning", "stages", "upgrades", "weapons"];
+  const stageIds = ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"];
+  const bossIds = ["warden", "colossus", "aldric", "rootbound", "echo", "source"];
+  const enemyIds = ["charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder"];
   return {
     format: "game-reference.v1",
     schemaVersion: 2,
     source: { repository: "shaku1z/tear", sha },
     terminologyVersion: "g4-terminology-v1",
     roster: { id: "final-five", schemaVersion: 1, activeWeaponIds: ["sword"], retiredWeaponIds: ["spear"] },
-    collections: Object.fromEntries(collectionIds.map((id) => [id, { status: "complete", items: [] }])),
+    collections: Object.fromEntries(collectionIds.map((id) => [id, { status: "complete", items: id === "stages" ? stageIds.map((stageId) => ({ id: stageId }))
+      : id === "bosses" ? bossIds.map((bossId) => ({ id: bossId }))
+        : id === "enemies" ? { families: enemyIds.map((familyId) => ({ id: familyId, variants: [] })), affixes: [], presets: [] } : [] }])),
   };
 }
 
@@ -68,7 +73,7 @@ test("Validate publishes the exact game-reference artifact only after functional
   assert.ok(uploadIndex > publishIndex, "upload must follow manifest generation");
   const releaseArtifact = workflow.slice(releaseUploadIndex, publishIndex);
   assert.match(releaseArtifact, /name:\s*tear-release-targets-\$\{\{\s*github\.sha\s*\}\}/u);
-  assert.match(releaseArtifact, /path:\s*\|\s*dist\s+artifacts\/tear-crazygames\.zip\s+artifacts\/tearbench/us);
+  assert.match(releaseArtifact, /path:\s*\|\s*dist\s+artifacts\/packages\/tear-crazygames\.zip\s+artifacts\/tearbench/us);
   assert.match(releaseArtifact, /retention-days:\s*14/u);
   const publication = workflow.slice(publishIndex, workflow.indexOf("- uses: actions/upload-artifact@v4", uploadIndex + 1));
   assert.match(publication, /GITHUB_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/u);
@@ -157,6 +162,17 @@ test("manifest, digest, and receipt are all required and source-bound", () => {
   const missingCollection = validManifest();
   delete missingCollection.collections.weapons;
   assert.throws(() => validateManifestEnvelope(missingCollection, { sourceSha }), /unexpected or missing/u);
+
+  const sixStage = validManifest();
+  assert.equal(validateManifestEnvelope(sixStage, { sourceSha }), sourceSha);
+  sixStage.collections.stages.items[4] = { id: "pale-traverse" };
+  assert.throws(() => validateManifestEnvelope(sixStage, { sourceSha }), /exact six published stages/u);
+  sixStage.collections.stages.items[4] = { id: "voidspire" };
+  sixStage.collections.bosses.items[4] = { id: "white-hart" };
+  assert.throws(() => validateManifestEnvelope(sixStage, { sourceSha }), /exact six published bosses/u);
+  sixStage.collections.bosses.items[4] = { id: "echo" };
+  sixStage.collections.enemies.items.families[0].variants.push({ id: "rime-runner" });
+  assert.throws(() => validateManifestEnvelope(sixStage, { sourceSha }), /Playground-only identity/u);
 
   const receipt = buildReceipt({
     sourceSha,

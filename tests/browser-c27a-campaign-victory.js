@@ -43,7 +43,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
       const transition = environment.step([]);
       trace.push({ kind: "fixed", tick: transition.observation.tick, hash: transition.info.canonicalStateHash });
     }
-    if (sourceSpawn === null) throw new Error("production wave 50 did not spawn Source");
+    if (sourceSpawn === null) throw new Error("production wave 60 did not spawn Source");
 
     // Boss introductions are advanced by the real application frame prelude,
     // not by exact fixed ticks. Wait until the production actor reaches its
@@ -145,8 +145,8 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     };
   }, scenario);
 
-  assert.equal(evidence.sourceSpawn.state["tear.run.v1"].wave, 50);
-  assert.equal(evidence.sourceSpawn.state["tear.run.v1"].stage, 4);
+  assert.equal(evidence.sourceSpawn.state["tear.run.v1"].wave, 60);
+  assert.equal(evidence.sourceSpawn.state["tear.run.v1"].stage, 5);
   assert.equal(evidence.surgical.stateClass, "surgical-valid");
   assert.equal(evidence.surgical.state["tear.boss.v1"][0].hp, 1);
   assert.equal(evidence.surgical.state["tear.boss.v1"][0].hpDisplay, 1);
@@ -175,7 +175,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     call.type === "world-zoom" || call.type === "flash" || call.type === "shake");
   assert.deepEqual(feelCalls.map((call) => ({ type: call.type, receipt: call.receipt })), [
     { type: "world-zoom", receipt: { requested: 0.84, immediate: true,
-      before: { current: 0.8000000001419295, target: 1 }, after: { current: 0.84, target: 0.84 } } },
+      before: { current: 0.8100000020438322, target: 1 }, after: { current: 0.84, target: 0.84 } } },
     { type: "flash", receipt: { requested: 0.135, before: 0, after: 0.135, aggregation: "maximum" } },
     { type: "shake", receipt: { requested: 5, before: 16.125, after: 16.125, aggregation: "maximum" } },
     { type: "flash", receipt: { requested: 0.17, before: 0.135, after: 0.17, aggregation: "maximum" } },
@@ -249,7 +249,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     evidence.outcomeChronology.map((_, index) => index));
   assert.ok(evidence.events.some((event) => event.type === "enemy.spawned" && event.payload.bossId === "source"));
   assert.ok(evidence.events.some((event) => event.type === "enemy.defeated"));
-  assert.ok(evidence.events.some((event) => event.type === "wave.cleared" && event.payload.wave === 50));
+  assert.ok(evidence.events.some((event) => event.type === "wave.cleared" && event.payload.wave === 60));
   assert.ok(evidence.events.some((event) => event.type === "run.completed"));
 
   const target = path.join("artifacts", "tearbench", "c27a", "campaign-source-victory.json");

@@ -13,10 +13,10 @@ import {
 function bossSnapshot(bosses: readonly Record<string, unknown>[]): TearSnapshotV1 {
   const state = {
     "tear.boss.v1": bosses,
-    "tear.run.v1": { mode: "campaign", wave: 50, stage: 4, _biomeIdx: 4,
+    "tear.run.v1": { mode: "campaign", wave: 60, stage: 5, _biomeIdx: 5,
       chapterState: "WAVE_LIVE", spawnQueue: [] },
     "tear.world.v1": { runtime: { lifecycle: {
-      phase: "wave-active", wave: 50, bossWave: true, reward: null,
+      phase: "wave-active", wave: 60, bossWave: true, reward: null,
     } } },
     "tear.cinematic.v1": { active: false },
     "tear.ui.v1": { screen: "playing" },
@@ -67,12 +67,17 @@ describe("C23 State Forge exit matrix", () => {
     });
   });
 
-  it("declares all fifteen boss phases and all thirty-nine one-frame boundary positions", () => {
+  it("declares all twenty-one boss phases and all thirty-nine one-frame boundary positions", () => {
     const bosses = createBossPhaseLaunchMatrix();
     const boundaries = createOneFrameBoundaryLaunchMatrix();
-    expect(bosses).toHaveLength(15);
-    expect(new Set(bosses.map((entry) => entry.boss))).toHaveLength(5);
-    expect(bosses.filter((entry) => entry.phase === 3)).toHaveLength(5);
+    expect(bosses).toHaveLength(21);
+    expect(new Set(bosses.map((entry) => entry.boss))).toHaveLength(7);
+    expect(bosses.filter((entry) => entry.phase === 3)).toHaveLength(7);
+    expect(bosses.filter((entry) => entry.boss === "rootbound").map((entry) => entry.phase)).toEqual([1, 2, 3]);
+    expect(bosses.filter((entry) => entry.boss === "rootbound").map((entry) => entry.attack)).toEqual(["opening-commit", "unavailable", "unavailable"]);
+    expect(bosses.filter((entry) => entry.boss === "white-hart").map((entry) => entry.attack)).toEqual(["opening-commit", "opening-commit", "opening-commit"]);
+    expect(bosses.filter((entry) => entry.boss !== "rootbound" && entry.boss !== "white-hart")
+      .every((entry) => entry.attack === "opening-commit")).toBe(true);
     expect(boundaries).toHaveLength(39);
     expect(new Set(boundaries.map((entry) => entry.boundary))).toHaveLength(13);
     expect(boundaries.filter((entry) => entry.position === "at")).toHaveLength(13);
@@ -138,7 +143,7 @@ describe("C23 State Forge exit matrix", () => {
       },
       (state: Record<string, unknown>) => { (state["tear.run.v1"] as { spawnQueue: unknown[] }).spawnQueue = [{}]; },
       (state: Record<string, unknown>) => { (state["tear.cinematic.v1"] as { active: boolean }).active = true; },
-      (state: Record<string, unknown>) => { (state["tear.run.v1"] as { wave: number }).wave = 49; },
+      (state: Record<string, unknown>) => { (state["tear.run.v1"] as { wave: number }).wave = 59; },
     ];
     for (const corrupt of invalid) {
       const candidate = structuredClone(base);

@@ -274,6 +274,42 @@ describe("detached Tear codec world hydrator", () => {
     expect("aiInput" in staged.player).toBe(false);
   });
 
+  it("hydrates the stable variantId alias into the runtime variant identity", () => {
+    const source = completeCodecWorld();
+    const enemies = source.components.get("tear.enemy.v1");
+    if (!Array.isArray(enemies)) throw new Error("enemy fixture is missing");
+    const firstEnemy = (enemies as readonly TearCodecValue[])[0];
+    if (firstEnemy === undefined) throw new Error("enemy fixture has no actor");
+    source.components.set("tear.enemy.v1", [{
+      ...objectValue(firstEnemy, "enemy fixture is malformed"),
+      variantId: "briar-stalker",
+      behavior: "briar-stalker",
+    }]);
+
+    const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
+
+    expect(staged.enemies[0]).toMatchObject({ variant: "briar-stalker", behavior: "briar-stalker" });
+    expect(staged.enemies[0]).not.toHaveProperty("variantId");
+  });
+
+  it("hydrates a Pale variant identity without rerolling its canonical behavior", () => {
+    const source = completeCodecWorld();
+    const enemies = source.components.get("tear.enemy.v1");
+    if (!Array.isArray(enemies)) throw new Error("enemy fixture is missing");
+    const firstEnemy = (enemies as readonly TearCodecValue[])[0];
+    if (firstEnemy === undefined) throw new Error("enemy fixture has no actor");
+    source.components.set("tear.enemy.v1", [{
+      ...objectValue(firstEnemy, "enemy fixture is malformed"),
+      variantId: "rime-runner",
+      behavior: "rime-runner",
+    }]);
+
+    const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
+
+    expect(staged.enemies[0]).toMatchObject({ variant: "rime-runner", behavior: "rime-runner" });
+    expect(staged.enemies[0]).not.toHaveProperty("variantId");
+  });
+
   it("propagates an unknown constructor factory instead of silently accepting it", () => {
     const hostile = completeCodecWorld();
     const enemies = hostile.components.get("tear.enemy.v1");

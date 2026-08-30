@@ -10,7 +10,7 @@ Create the portal-ready ZIP with one command:
 pnpm package:crazygames
 ```
 
-This builds only the CrazyGames target once and writes `artifacts/tear-crazygames.zip`. Upload that file in the CrazyGames developer portal. Its entry point is `index.html` at the archive root. The build contains no service worker or standalone PWA registration, and the CrazyGames SDK is injected only into this target. If `dist/crazygames` is already current, `pnpm package:crazygames:existing` packages it without rebuilding.
+This builds only the CrazyGames target once and writes `artifacts/packages/tear-crazygames.zip`. Upload that file in the CrazyGames developer portal. Its entry point is `index.html` at the archive root. The build contains no service worker or standalone PWA registration, and the CrazyGames SDK is injected only into this target. If `dist/crazygames` is already current, `pnpm package:crazygames:existing` packages it without rebuilding.
 
 Do not use `git archive` for portal uploads after the Vite migration: it archives repository source at `HEAD`, not the generated CrazyGames application.
 
@@ -19,7 +19,7 @@ Portal game assets use relative `./assets/...` URLs because the uploaded archive
 Inspect the archive before uploading:
 
 ```powershell
-tar -tf artifacts/tear-crazygames.zip
+tar -tf artifacts/packages/tear-crazygames.zip
 ```
 
 The archive must contain generated game assets only. It must not contain `src`, legacy source files, tests, plans, Firebase configuration files, Wrangler configuration, `experiments/coop-lab.html`, or repository metadata.

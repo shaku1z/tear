@@ -2,10 +2,9 @@
 
 ## Scope and source of truth
 
-This roster is implemented only in the redesigned TypeScript architecture on
-`codex/final-five-weapon-roster`. The pre-redesign `js/` monolith is an oracle for
-comparing previously accepted behavior; it is not an implementation dependency
-and is not merged into this branch.
+This roster is implemented in the redesigned TypeScript architecture. The
+pre-redesign `js/` monolith is an oracle for comparing previously accepted
+behavior; it is not an implementation dependency.
 
 The stable roster order is:
 
@@ -29,6 +28,35 @@ consume read-only snapshots.
 - Weapon changes reset from the shared baseline before applying the selected
   weapon's modifiers, preventing cross-weapon stat leakage.
 - Removed weapon IDs migrate through the typed selection migration.
+
+## Verdant environment-object conformance
+
+Weapon definitions declare semantic environment capabilities; the live collision
+phase resolves those capabilities exactly against serialized object tags through
+the existing environment combat-object owner. There is no weapon-ID switch in a
+Rootbinder, Graft, or Regrowth implementation and no second object registry.
+
+Canonical Root links, Regrowth combat links, and Grafts expose `cut`, `break`,
+and `projectile-cut`. The active roster answers them as follows:
+
+| Weapon | Held answer | Projectile answer | Preserved boundary |
+| --- | --- | --- | --- |
+| Sword | `cut` | — | Object contacts never prime Reversal or add Threadcut waypoints. |
+| Hammer | `break` | — | Meteor flight, terrain resolution, recall, and catch are unchanged. |
+| Greatsword | broad `cut` | — | One swing may sever distinct segments once each without consuming enemy momentum/repeat state. |
+| Chainblade | head-only `cut` | — | Visible chain links do not duplicate damage; Hook & Sling remains enemy-only. |
+| Riftlock | bayonet `cut` | Razor Round `projectile-cut` | Object hits do not Capture; secondary Backblast rounds are excluded. |
+
+Environment contacts use one attack ID per held swing or player-owned projectile.
+They do not enter ordinary enemy kill, coin, score, achievement, status, upgrade
+`onHit`, or death-chain paths. Combat objects remain non-enemy, non-rewarding,
+and proc-ineligible. Universal abilities continue to evolve and execute through
+their existing ordinary-enemy paths for every weapon; Verdant adds no per-weapon
+ability fork or nerf.
+
+Bloom Wells V1 do not mutate weapon transport. Post-integration headless parity
+and the existing five browser/Ghost weapon routes pass without changing C40
+certification records.
 
 ## Sword
 
@@ -201,4 +229,9 @@ upgrade channels, and catches.
 - `tests/unit/weapon-projectile-runtime.test.ts` — player-owned Razor Round
   collision classification.
 - `tests/unit/weapon-ability-conformance.test.ts` — every weapon/upgrade pairing.
+- `tests/unit/environment-weapon-contact-runtime.test.ts` — exact Sword, Hammer,
+  Greatsword, Chainblade, and Riftlock object geometry/capability boundaries plus
+  their preserved route/catch behavior.
+- `tests/unit/verdant-final-five-conformance.test.ts` — source-derived five-weapon
+  object dedupe/policy/status isolation and Bloom transport exclusion.
 - TearBench selection and CI artifacts under `artifacts/tearbench/`.

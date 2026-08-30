@@ -7,6 +7,8 @@ import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1, TearStateClass } from "./contracts";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
+import type { BloomWellPresentationFacts, BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
 import type { TearScenarioTransition } from "./runner";
 import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
@@ -72,6 +74,10 @@ export interface TearStructuredRuntimeEnvironment {
   metrics(): TearRuntimeEnvironmentMetrics;
   events(): readonly TearCausalEventV1[];
   stateHash(): string;
+  /** Class-A/B structured access to the source-owned environment runtime; never exposed to Class C. */
+  environment(): EnvironmentRuntimeState;
+  /** Browser-executed, renderer-neutral accessibility facts from the live environment state. */
+  bloomWellPresentation(options?: BloomWellPresentationOptions): readonly BloomWellPresentationFacts[];
   screenshot(): string;
 }
 
@@ -114,9 +120,16 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
   forgeExitLaunch(launch: StateForgeExitLaunch): TearLiveRestoreResult;
   forgeWave99Hammer(): TearLiveRestoreResult;
-  /** Resumes a certified wave-49 campaign frontier through the production wave controller. */
+  /** Resumes the six-stage branch's certified wave-59 frontier through the production wave controller. */
   forgeCampaignFinalWave(): TearLiveRestoreResult;
   forgeResolvedScenario(resolved: TearSdlResolved): TearLiveRestoreResult;
+  forgeEnvironmentField(): TearLiveRestoreResult;
+  forgeEnvironmentCombatObject(): TearLiveRestoreResult;
+  forgeBloomWellCycle(): TearLiveRestoreResult;
+  /** Restores a source-owned Rootbinder relationship fixture through State Forge. */
+  forgeRootbinderNetwork(): TearLiveRestoreResult;
+  /** Restores one specialized active Graft against the real Rootbound owner. */
+  forgeRootboundGraftAnchor(): TearLiveRestoreResult;
 }
 
 export interface TearClassBRuntimeEnvironment extends Omit<TearStructuredRuntimeEnvironment, "accessClass" | "rng"> {
@@ -143,6 +156,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly height: number;
   readonly state: TearSimulationWorldView;
   readonly platforms: () => readonly LiveObservationPlatform[];
+  /** Optional structured environment source; never supplied to Class C. */
+  readonly environment?: () => EnvironmentRuntimeState;
   /** World-owned stage geometry used by the certified State Forge frontier. */
   readonly platformsForStage: (index: number) => readonly unknown[];
   readonly actorId: (enemy: TearSimulationEnemyView) => string;

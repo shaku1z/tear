@@ -1,3 +1,5 @@
+import { cleanupBossEncounterActors } from "../run/boss-encounter";
+
 export interface KillEnemy {
   readonly x: number; readonly y: number; readonly color: string; readonly noScore?: boolean;
   readonly firstPlayerDamageAt?: number | null; readonly affixCount?: number; readonly kind?: string;
@@ -5,6 +7,7 @@ export interface KillEnemy {
   readonly severT: number; readonly severTier: number; readonly bleedStacks: number; readonly burnT: number;
   readonly freezeVoid?: boolean; dead: boolean; zones?: readonly unknown[] | undefined;
   applyBleed?(stacks: number): void; applyBurn?(): void;
+  cleanupEncounter?(reason: "death"): void;
 }
 
 export interface KillRun {
@@ -73,6 +76,13 @@ function trackKillAchievements(options: KillRuntimeOptions): void {
       if (run._bossOnlyKills >= options.bossRosterSize) options.maxStat("gauntletFull", 1);
     }
     if (enemy.bossId) options.maxStat(`kill${enemy.bossId.charAt(0).toUpperCase()}${enemy.bossId.slice(1)}`, 1);
+    if (enemy.bossId === "rootbound") {
+      options.addStat("rootboundKills", 1);
+      if (!run._dmgThisWave) options.addStat("rootboundNoHitKills", 1);
+      const classification = Reflect.get(enemy, "regrowthState") as Readonly<{ interruptClassification?: unknown }> | undefined;
+      if (classification?.interruptClassification === "full-interrupt") options.addStat("regrowthFullInterrupts", 1);
+      else if (classification?.interruptClassification === "partial-interrupt") options.addStat("regrowthPartialInterrupts", 1);
+    }
     if (player.hp > 0 && player.hp <= player.maxHp * 0.1) options.maxStat("bossKillsLowHP", 1);
     options.bossKillAchievement(enemy); options.bossGhostMoment(enemy);
   }
@@ -101,6 +111,7 @@ function spreadDeathStatuses(options: KillRuntimeOptions): void {
 
 function resolveBossDeath(options: KillRuntimeOptions): void {
   const { enemy, run } = options;
+  cleanupBossEncounterActors([enemy], "death");
   if (run.mode === "campaign" && enemy.bossId === "source" && options.stageIndex >= options.finalStageIndex)
     run.finalBossDeath = { x: enemy.x, y: enemy.y, color: enemy.color };
   if (run._preBossPlatforms) {

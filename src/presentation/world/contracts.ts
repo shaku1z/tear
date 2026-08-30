@@ -36,7 +36,7 @@ export interface WorldUiPort {
     readonly time?: number; readonly lowGraphics?: boolean;
   }): void;
   bossIntro(canvas: CanvasRenderingContext2D, options: {
-    readonly screen: WorldRect; readonly bossName: string; readonly epithet: string;
+    readonly screen: WorldRect; readonly bossName: string; readonly epithet: string; readonly openingLine: string;
     readonly color: string; readonly t: number; readonly dur: number;
   }): void;
 }
@@ -168,7 +168,7 @@ export interface WaveBannerSnapshot {
 }
 
 export interface BossIntroSnapshot {
-  readonly screen: WorldRect; readonly bossName: string; readonly epithet: string;
+  readonly screen: WorldRect; readonly bossName: string; readonly epithet: string; readonly openingLine: string;
   readonly color: string; readonly elapsed: number; readonly duration: number;
 }
 

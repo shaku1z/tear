@@ -349,7 +349,7 @@ describe("C30 production headless environment", () => {
     const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-onehit-failure.json"), "utf8"));
     expect(terminal).toEqual(normalizeLegacyFixtureRevision(fixture));
     expect(terminal?.terminal).toEqual({
-      tick: 222, semanticHash: "ba084c59f720cab1", terminated: true, truncated: false,
+      tick: 222, semanticHash: "f981b3bb62116114", terminated: true, truncated: false,
     });
     expect(terminal?.actions).toEqual([]);
   });

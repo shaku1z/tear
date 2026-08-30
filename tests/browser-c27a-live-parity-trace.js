@@ -142,10 +142,10 @@ function actionsAt(tick) {
 // matrix consumed by the existing detached-world regression gates.
 const focusedCapture = process.env.TEAR_C27A_SCENARIO_ID !== undefined ||
   process.env.TEAR_C27A_MAX_TICKS !== undefined;
-const ARTIFACT_DIR = path.join("artifacts", "tearbench", focusedCapture ? "c27a-focused" : "c27a");
+const ARTIFACT_DIR = path.join("artifacts", "tearbench", "checkpoints", "core", "C27A", "live-parity");
 
 function artifactPath(scenario) {
-  return path.join(ARTIFACT_DIR, `${scenario.id}.json`);
+  return path.join(ARTIFACT_DIR, `${focusedCapture ? "focused-" : ""}${scenario.id}.json`);
 }
 
 withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page, buildInfo }) => {

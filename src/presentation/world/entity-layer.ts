@@ -40,7 +40,7 @@ export function formatEnemyLabel(enemy: EnemyLabelSnapshot): string {
   if (enemy.kind === "support") name = ({ priest: "War Priest", herald: "Herald", mender: "Mender", anchor: "Anchor" } as Record<string, string>)[enemy.supportType ?? ""] ?? "Support";
   else if (enemy.kind === "wraith") name = "Wraith";
   else if (enemy.kind === "chimera") name = "Chimera";
-  else if (enemy.kind === "armored") name = enemy.enraged ? "Armored*" : "Armored";
+  else if (enemy.kind === "armored") name = enemy.variantName ?? (enemy.enraged ? "Armored*" : "Armored");
   else name = enemy.variantName ?? (enemy.kind.charAt(0).toUpperCase() + enemy.kind.slice(1));
   return enemy.affixCount ? `${name} +${String(enemy.affixCount)}` : name;
 }

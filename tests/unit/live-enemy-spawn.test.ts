@@ -46,6 +46,8 @@ describe("live enemy spawn", () => {
     expect(constructLiveEnemy({ type: "flyer" }, construction)).toMatchObject({ kind: "flyer", x: 42, y: 200 });
     expect(constructLiveEnemy({ type: "wraith" }, construction)).toMatchObject({ kind: "wraith", x: 42, y: 220 });
     expect(constructLiveEnemy({ type: "mender" }, construction).kind).toBe("mender");
+    expect(constructLiveEnemy({ type: "rootbinder" }, construction).kind).toBe("rootbinder");
+    expect(constructLiveEnemy({ type: "rimehound" }, construction).kind).toBe("rimehound");
     const boss = constructLiveEnemy({ type: "boss" }, construction);
     expect(boss._live).toBe(true);
     expect(beginBossPresentation).toHaveBeenCalledWith(boss);
@@ -77,5 +79,43 @@ describe("live enemy spawn", () => {
     expect(base.applyVariant).not.toHaveBeenCalled();
     expect(base.rollAffixes).not.toHaveBeenCalled();
     expect(base.recordSpawn).toHaveBeenCalledWith(target, "boss", { vn: "", b: "warden" });
+  });
+
+  it("passes authored stage context and restores a selected identity without rerolling", () => {
+    const target = enemy();
+    const { base } = port({
+      run: () => ({ mode: "campaign" as const, wave: 6, stageId: "verdant-sanctum" as const }),
+      contentWave: () => 6,
+      rollVariant: vi.fn(() => null),
+    });
+    completeEnemySpawn(target, { type: "charger" }, base);
+    expect(base.rollVariant).toHaveBeenCalledWith("charger", 6, expect.objectContaining({
+      stageId: "verdant-sanctum", localWave: 6, globalWave: 6, mode: "campaign",
+    }));
+
+    const restored = enemy();
+    completeEnemySpawn(restored, { type: "charger", variantId: "briar-stalker" }, base);
+    expect(base.rollVariant).toHaveBeenCalledTimes(1);
+    expect(base.applyVariant).toHaveBeenLastCalledWith(restored, expect.objectContaining({ id: "briar-stalker" }));
+  });
+
+  it("rejects an unknown serialized identity before installing the enemy", () => {
+    const target = enemy();
+    const { base, installed } = port();
+    expect(() => completeEnemySpawn(target, { type: "charger", variantId: "seedcaster" }, base)).toThrow(/unknown variant/u);
+    expect(installed).toHaveLength(0);
+  });
+
+  it("passes persisted discovery authority through the production spawn context", () => {
+    const target = enemy();
+    const { base } = port({
+      run: () => ({ mode: "endless" as const, wave: 20, stageId: "grounds" as const,
+        variantDiscovery: ["briar-stalker"] }),
+      rollVariant: vi.fn(() => null),
+    });
+    completeEnemySpawn(target, { type: "charger" }, base);
+    expect(base.rollVariant).toHaveBeenCalledWith("charger", 4, expect.objectContaining({
+      discoveredVariantIds: ["briar-stalker"],
+    }));
   });
 });

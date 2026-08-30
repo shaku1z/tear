@@ -29,9 +29,10 @@ describe("run content director", () => {
       { kind: "chimera", weight: 10, unlockWave: 3 },
     ] as const;
     const early = new SeededRandom("campaign");
-    expect(Array.from({ length: 30 }, () => pickEnemyKind(1, early, pool))).toEqual(Array(30).fill("charger"));
+    expect(Array.from({ length: 30 }, () => pickEnemyKind(31, early, pool, 1))).toEqual(Array(30).fill("charger"));
     const later = new SeededRandom("campaign");
-    expect(new Set(Array.from({ length: 100 }, () => pickEnemyKind(3, later, pool)))).toContain("chimera");
+    expect(new Set(Array.from({ length: 100 }, () => pickEnemyKind(33, later, pool, 3)))).toContain("chimera");
+    expect(() => pickEnemyKind(31, new SeededRandom("missing-local"), pool)).toThrow(/explicit localWave/);
   });
 
   it("maps known boss ids and fails closed for unknown ids", () => {

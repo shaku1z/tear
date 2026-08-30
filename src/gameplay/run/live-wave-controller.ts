@@ -2,10 +2,12 @@ import type { RandomSource } from "../../domain/random";
 import type { EnemyPreset } from "../affixes";
 import type { BossId, CampaignPoolEntry, EnemyKind, MiniBossId } from "./content-director";
 import type { RunDifficulty, RunMode } from "./session";
+import type { StageId } from "../stages";
 import { scheduleWaveSpawn, type SpawnTuning } from "./spawn-scheduler";
 import {
   activatePreparedWave,
   planNextWave,
+  stageAt,
   type WavePlanIntent,
   type WaveSpawnSpec,
   type WaveStage,
@@ -19,6 +21,7 @@ import {
 } from "./wave-clear-planner";
 
 export interface LiveWaveStageSource {
+  readonly id: StageId;
   readonly name: string;
   readonly boss: BossId;
   readonly pool?: readonly (CampaignPoolEntry | readonly [EnemyKind, number, number?])[];
@@ -66,6 +69,7 @@ export interface LiveWavePort {
   readonly run: () => LiveWaveRun | null;
   readonly tuning: () => LiveWaveTuning;
   readonly stages: readonly LiveWaveStageSource[];
+  readonly bossOnlyStages?: readonly LiveWaveStageSource[];
   readonly presets: readonly EnemyPreset[];
   readonly random: RandomSource;
   readonly modeDefinition: (mode: RunMode) => Readonly<{ waves?: number; bossOnly?: boolean }>;
@@ -89,6 +93,7 @@ export interface LiveWavePort {
 
 function normalizeStages(stages: readonly LiveWaveStageSource[]): readonly WaveStage[] {
   return stages.map((stage) => ({
+    id: stage.id,
     name: stage.name,
     boss: stage.boss,
     pool: (stage.pool ?? []).map((entry) => {
@@ -107,10 +112,12 @@ function isLegacyPoolTuple(
 export class LiveWaveController {
   readonly #port: LiveWavePort;
   readonly #stages: readonly WaveStage[];
+  readonly #bossOnlyStages: readonly WaveStage[] | undefined;
 
   constructor(port: LiveWavePort) {
     this.#port = port;
     this.#stages = normalizeStages(port.stages);
+    this.#bossOnlyStages = port.bossOnlyStages === undefined ? undefined : normalizeStages(port.bossOnlyStages);
   }
 
   startNextWave(): void {
@@ -139,6 +146,7 @@ export class LiveWaveController {
       },
       tuning,
       stages: this.#stages,
+      ...(this.#bossOnlyStages === undefined ? {} : { bossOnlyStages: this.#bossOnlyStages }),
       presets: this.#port.presets,
       random: this.#port.random,
       configuredWaves: mode.waves ?? 0,
@@ -185,10 +193,13 @@ export class LiveWaveController {
   update(dt: number): void {
     const run = this.#requireRun();
     const tuning = this.#port.tuning();
+    const stage = this.#port.currentStage();
+    const stageId = stageAt(this.#stages, stage.index).id;
     const scheduled = scheduleWaveSpawn({
       state: {
         mode: run.mode,
         wave: run.wave,
+        ...(run.mode === "campaign" ? { stageId } : {}),
         horde: Boolean(run.horde),
         spawnQueue: run.spawnQueue,
         spawnTimer: run.spawnTimer,
@@ -202,7 +213,6 @@ export class LiveWaveController {
     run.spawnTimer = scheduled.state.spawnTimer;
     if (scheduled.spawned !== null) this.#port.spawn(scheduled.spawned);
 
-    const stage = this.#port.currentStage();
     const cleared = planWaveClear({
       state: {
         mode: run.mode,

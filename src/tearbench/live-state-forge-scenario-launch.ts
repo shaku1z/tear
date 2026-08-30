@@ -8,6 +8,7 @@ import { synthesizeProgression } from "./progression-ledger";
 import { compileResolvedTearSdlSnapshot } from "./state-forge-live-compiler";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { TearSdlResolved } from "./tearsdl";
+import { CAMPAIGN_STAGE_IDS, stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
 
 function naturalScenario(resolved: TearSdlResolved): TearScenarioV1 {
   const requested = resolved.scenario;
@@ -55,9 +56,17 @@ export function launchResolvedLiveState(
       weapon: resolved.scenario.start.weapon,
       targetWave: wave,
       policy: "exact-ledger",
+      configuredCampaignWaves: CAMPAIGN_STAGE_IDS.length * 10,
     });
     if (!progression.reachable) throw new TypeError(progression.explanation ?? "progression is unreachable");
     context.replayProgression(progression.ledger);
+  }
+  const stageId = resolved.scenario.start.stage;
+  if (stageId !== undefined) {
+    const surface = resolved.scenario.start.mode === "playground" ? "playground" : "adventure";
+    const stageIndex = stageRuntimeIndexForSurface(stageId as StageId, surface);
+    if (stageIndex < 0) throw new RangeError(`State Forge stage does not exist: ${stageId}`);
+    context.loadStage(stageIndex);
   }
   const source = snapshots.capture(`${resolved.document.id}.source`);
   const forged = compileResolvedTearSdlSnapshot(source, resolved);

@@ -21,6 +21,10 @@ export interface AchievementBoss {
   bossId?: string;
   dmgSrc?: Set<string>;
   _lastSrc?: string;
+  regrowthState?: Readonly<{
+    phase?: string;
+    interruptClassification?: "full-interrupt" | "partial-interrupt" | "no-interrupt" | null;
+  }>;
 }
 
 export interface AchievementEnemy {
@@ -79,6 +83,10 @@ export function bossKillIntents(
   if (boss.bossId === "warden" && only("deflect")) intents.push({ type: "profile-max", stat: "wardenDeflectOnly", value: 1 });
   if (boss.bossId === "colossus" && sources.size > 0 && !sources.has("melee")) intents.push({ type: "profile-max", stat: "colossusThrowOnly", value: 1 });
   if (boss.bossId === "echo" && boss._lastSrc === "deflect") intents.push({ type: "profile-max", stat: "echoReflectKill", value: 1 });
+  if (boss.bossId === "rootbound" && boss.regrowthState?.phase === "resolved"
+    && boss.regrowthState.interruptClassification === "full-interrupt") {
+    intents.push({ type: "profile-max", stat: "rootboundRegrowthFullInterrupt", value: 1 });
+  }
   if (boss.bossId === "source" && run._bossFightT != null && run.runTime - run._bossFightT < 60) {
     intents.push({ type: "profile-max", stat: "sourceSpeedrun", value: 1 });
   }

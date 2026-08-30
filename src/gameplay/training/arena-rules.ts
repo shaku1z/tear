@@ -50,15 +50,19 @@ function authoredPlatform(bossId: string, material: string, x: number, y: number
 }
 
 export function createBossArena(bossId: string, viewportWidth: number, viewportHeight: number, groundY: number, reformWarn: number): readonly ArenaPlatform[] | null {
-  const materials: Readonly<Record<string, string>> = { warden: "wardenSteel", colossus: "colossusGantry", aldric: "aldricStone" };
+  const materials: Readonly<Record<string, string>> = { warden: "wardenSteel", colossus: "colossusGantry", aldric: "aldricStone", rootbound: "verdant-rootstone", "white-hart": "pale-ice" };
   const material = materials[bossId] ?? "arena";
   const floor: ArenaPlatform = { x: 0, y: groundY, w: viewportWidth, h: viewportHeight - groundY, floor: true,
-    platformId: `arena:${bossId}:floor`, arenaBoss: bossId, arenaPlatId: `${bossId}:floor`, arenaMaterial: `${material}Floor` };
+    platformId: `arena:${bossId}:floor`, arenaBoss: bossId, arenaPlatId: `${bossId}:floor`, arenaMaterial: bossId === "rootbound" || bossId === "white-hart" ? material : `${material}Floor` };
   const offsetX = (viewportWidth - 1600) / 2, offsetY = (viewportHeight - 900) / 2;
   const platform = (x: number, y: number, width: number, index: number) => authoredPlatform(bossId, material, x, y, width, index, offsetX, offsetY, reformWarn);
   if (bossId === "warden") return [floor, platform(150, 430, 240, 0), platform(1210, 430, 240, 1), platform(680, 555, 240, 2)];
   if (bossId === "colossus") return [floor, platform(430, 400, 230, 0), platform(685, 400, 230, 1), platform(940, 400, 230, 2), platform(110, 645, 210, 3), platform(1280, 645, 210, 4)];
   if (bossId === "aldric") return [floor, platform(250, 610, 260, 0), platform(690, 500, 220, 1), platform(1090, 610, 260, 2)];
+  if (bossId === "rootbound") return [floor, platform(160, 625, 300, 0), platform(1140, 625, 300, 1),
+    platform(470, 455, 250, 2), platform(880, 455, 250, 3), platform(680, 300, 240, 4)];
+  if (bossId === "white-hart") return [floor, platform(90, 620, 330, 0), platform(1180, 620, 330, 1),
+    platform(410, 475, 300, 2), platform(890, 475, 300, 3), platform(665, 325, 270, 4)];
   return null;
 }
 

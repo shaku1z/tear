@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { AFFIXES, PRESETS } from "../../src/gameplay/affixes";
-import { ENEMY_KIND_IDS } from "../../src/gameplay/run/content-director";
+import { ENEMY_IDENTITY_IDS } from "../../src/gameplay/run/content-director";
 import { VARIANTS } from "../../src/gameplay/variants";
 import { projectEnemyReference, validateProjectedEnemies } from "../../src/game-reference/enemy-reference";
 
-const enemyFamilies = ENEMY_KIND_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
+const enemyFamilies = ENEMY_IDENTITY_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
 
 function project() {
   return projectEnemyReference({ enemyFamilies, enemyAffixes: AFFIXES, enemyPresets: PRESETS });
@@ -31,13 +31,18 @@ describe("enemy reference catalog", () => {
   it("projects the exact structural catalog and deep-freezes copied data", () => {
     const result = project();
     expect(result.families.map((family) => family.id)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera",
+      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
     ]);
-    expect(result.families).toHaveLength(11);
+    expect(result.families).toHaveLength(12);
     expect(result.families.filter((family) => family.variants.length === 0)).toHaveLength(7);
+    expect(result.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
     expect(result.families.find((family) => family.id === "charger")?.variants.map((variant) => variant.id)).toEqual([
-      "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist",
+      "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker",
     ]);
+    expect(result.families.flatMap((family) => family.variants.map((variant) => variant.id))).not.toEqual(expect.arrayContaining([
+      "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard",
+    ]));
+    expect(JSON.stringify(result)).not.toContain("rimehound");
     expect(result.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
     expect(result.presets).toEqual([
       { familyId: "ranged", affixIds: ["rapid", "volley"] },
@@ -107,5 +112,9 @@ describe("enemy reference catalog", () => {
     const reordered = cloneProjected();
     reordered.families.reverse();
     expect(() => validateProjectedEnemies(reordered, "enemies")).toThrow(/exact canonical authored order/u);
+
+    const missingRootbinder = cloneProjected();
+    missingRootbinder.families.pop();
+    expect(() => validateProjectedEnemies(missingRootbinder, "enemies")).toThrow(/exact canonical authored order/u);
   });
 });

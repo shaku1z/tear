@@ -6,10 +6,12 @@ export function installStandardEnemyRenderers(types: EnemyTypes, runtime: EnemyR
   const { CONFIG, THEME, clamp, CHIMERA_MOVE_COLOR } = runtime;
   Object.assign(types.Flyer.prototype, {
         draw(this: RenderInstance<"Flyer">, ctx: CanvasRenderingContext2D) {
-            // Dive Bomber's ground warning marker
-            if (this.behavior === "divebomb" && this.state === "warn" && this.diveX != null) {
-              const gy = CONFIG.world.groundY, k = 1 - clamp(this.warnT / 1.1, 0, 1);
-              ctx.strokeStyle = CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 3;
+            // Dive Bomber and Canopy Diver ground warning markers. Canopy's
+            // warning is intentionally visible before its forceful dive.
+            if ((this.behavior === "divebomb" || this.behavior === "canopy-diver" || this.behavior === "snowfall-kite") && this.state === "warn" && this.diveX != null) {
+              const duration = this.behavior === "canopy-diver" ? 0.75 : this.behavior === "snowfall-kite" ? 0.82 : 1.1;
+              const gy = CONFIG.world.groundY, k = 1 - clamp(this.warnT / duration, 0, 1);
+              ctx.strokeStyle = this.behavior === "snowfall-kite" ? "#b9f4ff" : CONFIG.colors.slam; ctx.globalAlpha = 0.35 + 0.5 * k; ctx.lineWidth = 3;
               ctx.beginPath(); ctx.arc(this.diveX, gy - 4, 34 - 22 * k, 0, Math.PI * 2); ctx.stroke();
               ctx.beginPath(); ctx.moveTo(this.diveX, this.y + this.hh); ctx.setLineDash([4, 8]); ctx.lineTo(this.diveX, gy - 4); ctx.stroke();
               ctx.setLineDash([]); ctx.globalAlpha = 1;
@@ -24,6 +26,11 @@ export function installStandardEnemyRenderers(types: EnemyTypes, runtime: EnemyR
             ctx.closePath();
             ctx.fill();
             ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.stroke();
+            if (this.behavior === "snowfall-kite" && this.snowWakeT > 0) {
+              ctx.strokeStyle = "#b9f4ff"; ctx.globalAlpha = Math.min(0.8, this.snowWakeT);
+              ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(this.x - 80, this.y + this.hh);
+              ctx.lineTo(this.x + 80, this.y + this.hh); ctx.stroke(); ctx.globalAlpha = 1;
+            }
             // variant accent: a downward fang on divers
             if (this.behavior !== "swoop") {
               ctx.fillStyle = THEME.ink;
@@ -55,6 +62,11 @@ export function installStandardEnemyRenderers(types: EnemyTypes, runtime: EnemyR
             else if (this.behavior === "juggle") { ctx.fillStyle = "#fff"; for (let i = 0; i < 3; i++) ctx.fillRect(this.x - 6 + i * 5, this.y - 3, 3, 3); }
             else if (this.behavior === "sludge") { ctx.fillStyle = CONFIG.colors.sludge; ctx.beginPath(); ctx.arc(this.x, this.y, this.hw * 0.5, 0, Math.PI * 2); ctx.fill(); }
             else if (this.behavior === "geo") { ctx.fillStyle = "#fff"; ctx.fillRect(this.x - 5, this.y - 4, 10, 8); }
+            else if (this.behavior === "hailcaster") {
+              ctx.strokeStyle = "#b9f4ff"; ctx.lineWidth = 2;
+              ctx.beginPath(); ctx.moveTo(this.x - 8, this.y); ctx.lineTo(this.x + 8, this.y);
+              ctx.moveTo(this.x, this.y - 8); ctx.lineTo(this.x, this.y + 8); ctx.stroke();
+            }
             this.drawHpBar(ctx);
           }
       });
@@ -75,6 +87,12 @@ export function installStandardEnemyRenderers(types: EnemyTypes, runtime: EnemyR
             ctx.fillStyle = this.flash > 0 ? "#fff" : (this.stun > 0 ? "#9aa6b2" : body);
             ctx.fillRect(x, y, w, h);
             ctx.strokeStyle = THEME.ink; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+            if (this.behavior === "glacier-guard" && !this.enraged) {
+              ctx.strokeStyle = "#d9fbff"; ctx.lineWidth = this.glacierCracked ? 3 : 6; ctx.strokeRect(x - 3, y - 3, w + 6, h + 6);
+              if (this.glacierCracked) {
+                ctx.beginPath(); ctx.moveTo(this.x - 8, y - 3); ctx.lineTo(this.x + 2, this.y); ctx.lineTo(this.x - 4, y + h + 3); ctx.stroke();
+              }
+            }
             // vulnerable (airborne) -> dashed double outline so it reads as "hit me now"
             if (vulnerable && this.stun <= 0) {
               ctx.strokeStyle = CONFIG.colors.slam;

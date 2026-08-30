@@ -140,15 +140,42 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   }
 });
 
-test("production stages select their exact authored live boss encounters", () => {
+test("published stages select exactly six live boss encounters without preview leakage", () => {
   const selection = select(["src/gameplay/stages.ts"]);
   for (const id of ["warden-grounds-live-encounter", "colossus-undercroft-live-encounter",
-    "aldric-crimson-fields-live-encounter", "echo-voidspire-live-encounter", "source-void-low-hp-rescue-seek"]) {
+    "aldric-crimson-fields-live-encounter", "rootbound-verdant-sanctum-live-encounter",
+    "echo-voidspire-live-encounter", "source-void-low-hp-rescue-seek"]) {
     assert.ok(selection.scenarios.includes(id), id);
   }
+  assert.equal(selection.scenarios.includes("white-hart-pale-traverse-foundation-live-encounter"), false);
   const shared = selection.evidenceCommands.filter((entry) => entry.command ===
     "pnpm build:test:standalone && node tests/browser-boss-parity.js");
-  assert.equal(shared.length, 4);
+  assert.equal(shared.length, 5);
+});
+
+test("Pale authorities select natural White Hart plus surgical and browser evidence", () => {
+  const aurora = select(["src/gameplay/environment/aurora-track-runtime.ts"]);
+  assert.ok(aurora.routes.includes("pale-aurora-rimehound"));
+  assert.ok(aurora.authorityCommands.some((command) => command.includes("pale-state-forge-scenarios.test.ts")));
+  assert.ok(aurora.journeyCommands.includes("node tests/browser-pale-presentation.js"));
+
+  const rimehound = select(["src/gameplay/entities/enemy-types/rimehound.ts"]);
+  assert.ok(rimehound.routes.includes("pale-aurora-rimehound"));
+  assert.ok(rimehound.journeyCommands.includes("node tests/browser-pale-rimehound.js"));
+
+  const variants = select(["tests/unit/pale-variant-selection.test.ts"]);
+  assert.ok(variants.routes.includes("pale-variant-selection"));
+  assert.ok(variants.journeyCommands.includes("node tests/browser-pale-variants.js"));
+
+  const hart = select(["src/gameplay/entities/enemy-types/white-hart.ts"]);
+  assert.ok(hart.routes.includes("pale-white-hart"));
+  assert.ok(hart.scenarios.includes("white-hart-pale-traverse-foundation-live-encounter"));
+  assert.ok(hart.journeyCommands.includes("node tests/browser-pale-white-hart-phases.js"));
+
+  const reference = select(["src/game-reference/game-reference.ts"]);
+  assert.ok(reference.routes.includes("pale-wave-reference"));
+  assert.ok(reference.authorityCommands.some((command) => command.includes("tests/unit/game-reference.test.ts")));
+  assert.ok(reference.scenarios.includes("white-hart-pale-traverse-foundation-live-encounter"));
 });
 
 test("missing, duplicate, retired, or mismatched production stage/boss evidence fails closed", () => {
@@ -365,9 +392,9 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   const previousArgv = process.argv, previousLog = console.log;
   process.argv = [process.execPath, script, "identity-test-import"];
   console.log = () => {};
-  let validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
+  let formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
   try {
-    ({ validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));
+    ({ formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));
   } finally {
     console.log = previousLog;
     process.argv = previousArgv;
@@ -390,4 +417,14 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   assert.throws(() => verifyCurrentWeaponParityExecution(selection, { status: "passed",
     executions: [{ ...execution, receipts: [{ ...receipt, source: { ...source, fingerprint: "e".repeat(64) } }] }] }),
   /stale source identity/u);
+
+  const diagnostic = formatFailedEvidenceExecution({ status: "failed", executions: [{
+    id: "linux-browser-proof", command: "node tests/browser-proof.js", status: "failed",
+    receipts: [{ kind: "node", status: "failed", exitCode: 1, stdout: "captured stdout", stderr: "captured stderr" }],
+  }] }, 80);
+  assert.match(diagnostic, /linux-browser-proof/u);
+  assert.match(diagnostic, /node tests\/browser-proof\.js/u);
+  assert.match(diagnostic, /captured stdout/u);
+  assert.match(diagnostic, /captured stderr/u);
+  assert.equal(formatFailedEvidenceExecution({ status: "passed", executions: [] }), "");
 });

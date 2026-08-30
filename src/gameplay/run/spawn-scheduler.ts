@@ -1,6 +1,8 @@
 import type { RandomSource } from "../../domain/random";
 import type { RunMode } from "./session";
 import type { WaveSpawnSpec } from "./wave-planner";
+import type { StageId } from "../stages";
+import { campaignStageCurve } from "./campaign-stage-curve";
 
 export interface SpawnTuning {
   readonly maxConcurrent: number;
@@ -12,6 +14,7 @@ export interface SpawnTuning {
 export interface SpawnScheduleState {
   readonly mode: RunMode;
   readonly wave: number;
+  readonly stageId?: StageId;
   readonly horde: boolean;
   readonly spawnQueue: readonly WaveSpawnSpec[];
   readonly spawnTimer: number;
@@ -32,11 +35,12 @@ export interface SpawnScheduleResult {
   readonly eligible: boolean;
 }
 
-export function concurrentEnemyCap(state: Pick<SpawnScheduleState, "mode" | "wave" | "horde">, tuning: SpawnTuning): number {
+export function concurrentEnemyCap(state: Pick<SpawnScheduleState, "mode" | "wave" | "stageId" | "horde">, tuning: SpawnTuning): number {
   if (state.mode === "campaign") {
+    if (state.stageId === undefined) throw new RangeError("campaign spawn scheduling requires a StageId");
     return Math.min(
       tuning.maxConcurrentCap,
-      tuning.maxConcurrent + Math.floor((state.wave - 1) / 10) * tuning.concurrentPerStage,
+      tuning.maxConcurrent + campaignStageCurve(state.stageId).concurrentAdd,
     );
   }
   if (state.mode === "endless" || state.mode === "gauntlet") {

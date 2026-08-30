@@ -7,9 +7,12 @@ import { createEchoEnemyTypes } from "./enemy-types/echo-enemies";
 import { createEnemyBase } from "./enemy-types/enemy-base";
 import { createGroundEnemyTypes } from "./enemy-types/ground-enemies";
 import { createSourceType } from "./enemy-types/source";
+import { createRootboundType } from "./enemy-types/rootbound";
+import { createRimehoundType } from "./enemy-types/rimehound";
 import { createSpecialEnemyTypes } from "./enemy-types/special-enemies";
 import { createThroneFireRuntime } from "./enemy-types/throne-fire";
 import { createWardenType } from "./enemy-types/warden";
+import { createWhiteHartType } from "./enemy-types/white-hart";
 import type { EnemyDependencies } from "./enemy-contracts";
 
 function createEnemyTypes(dependencies: EnemyDependencies) {
@@ -19,17 +22,20 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const Enemy = createEnemyBase(dependencies, bossRuntime);
   const { Charger, Ranged } = createGroundEnemyTypes(dependencies, Enemy);
   const { Flyer, Bomber, Armored } = createAirEnemyTypes(dependencies, Enemy);
-  const { Boss, Support, Wraith, Chimera } = createSpecialEnemyTypes(dependencies, Enemy);
+  const { Boss, Rootbinder, Support, Wraith, Chimera } = createSpecialEnemyTypes(dependencies, Enemy);
   const { BOSSFX, weaponCapsuleIntersectsSegment } = bossRuntime;
   const Warden = createWardenType(dependencies, Enemy, bossRuntime);
   const Colossus = createColossusType(dependencies, Enemy, bossRuntime);
   const Aldric = createAldricType(dependencies, Enemy, bossRuntime, throneFireRuntime);
   const { Echo, VoidWisp } = createEchoEnemyTypes(dependencies, Enemy, bossRuntime);
   const Source = createSourceType(dependencies, Enemy, bossRuntime, throneFireRuntime);
+  const Rootbound = createRootboundType(dependencies, Enemy, bossRuntime);
+  const Rimehound = createRimehoundType(dependencies, Enemy);
+  const WhiteHart = createWhiteHartType(dependencies, Enemy);
 
   return Object.freeze({
     Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,
-    Flyer, Ranged, Source, Support, VoidWisp, Warden, Wraith,
+    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, WhiteHart, Wraith,
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   });
 }

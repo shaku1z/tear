@@ -16,6 +16,14 @@ const ARTIFACT_RETENTION_DAYS = 90;
 const MANIFEST_FILENAME = "game-reference.v1.json";
 const RECEIPT_FILENAME = "game-reference.v1.receipt.json";
 const ARTIFACT_NAME_PREFIX = "tear-game-reference-v1-";
+const PUBLIC_STAGE_IDS = Object.freeze([
+  "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear",
+]);
+const PUBLIC_BOSS_IDS = Object.freeze(["warden", "colossus", "aldric", "rootbound", "echo", "source"]);
+const PUBLIC_ENEMY_FAMILY_IDS = Object.freeze([
+  "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
+]);
+const PALE_ONLY_IDS = Object.freeze(["pale-traverse", "white-hart", "rimehound", "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard"]);
 
 function fullSha(value, label) {
   const normalized = typeof value === "string" ? value.toLowerCase() : "";
@@ -81,6 +89,23 @@ export function validateManifestEnvelope(manifest, { sourceSha, repository = GAM
     const collection = manifest.collections[collectionId];
     exactKeys(collection, ["status", "items"], `game-reference manifest collections.${collectionId}`);
     if (collection.status !== "complete") throw new TypeError(`game-reference collection ${collectionId} is not complete`);
+  }
+  const stageIds = manifest.collections.stages.items.map((stage) => stage?.id);
+  if (stageIds.length !== PUBLIC_STAGE_IDS.length || stageIds.some((id, index) => id !== PUBLIC_STAGE_IDS[index])) {
+    throw new Error("game-reference publication requires the exact six published stages");
+  }
+  const bossIds = manifest.collections.bosses.items.map((boss) => boss?.id);
+  if (bossIds.length !== PUBLIC_BOSS_IDS.length || bossIds.some((id, index) => id !== PUBLIC_BOSS_IDS[index])) {
+    throw new Error("game-reference publication requires the exact six published bosses");
+  }
+  const enemyFamilies = manifest.collections.enemies.items?.families;
+  const enemyFamilyIds = Array.isArray(enemyFamilies) ? enemyFamilies.map((family) => family?.id) : [];
+  if (enemyFamilyIds.length !== PUBLIC_ENEMY_FAMILY_IDS.length || enemyFamilyIds.some((id, index) => id !== PUBLIC_ENEMY_FAMILY_IDS[index])) {
+    throw new Error("game-reference publication requires the public enemy-family catalog");
+  }
+  const serializedCollections = JSON.stringify(manifest.collections);
+  for (const leakedId of PALE_ONLY_IDS) {
+    if (serializedCollections.includes(leakedId)) throw new Error(`game-reference publication leaked Playground-only identity ${leakedId}`);
   }
   return manifestSha;
 }

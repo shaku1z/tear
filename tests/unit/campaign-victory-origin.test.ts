@@ -9,9 +9,10 @@ import {
   CAMPAIGN_VICTORY_FINAL_WAVE,
   CAMPAIGN_VICTORY_ORIGIN_WAVE,
   createCampaignVictoryOrigin,
-  createCampaignWave49RewardFrontier,
+  createCampaignWave59RewardFrontier,
 } from "../../src/tearbench/campaign-victory-origin";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
+import { projectEnvironmentHash } from "../../src/tearbench/environment-codec";
 import { reconstructProgression, synthesizeProgression } from "../../src/tearbench/progression-ledger";
 
 function sourceSnapshot(): TearSnapshotV1 {
@@ -74,7 +75,7 @@ function codec(snapshot: TearSnapshotV1, id: string): Record<string, unknown> {
 }
 
 describe("campaign victory State Forge origin", () => {
-  it("retains the canonical wave-49 history and removes only the false terminal event", () => {
+  it("retains the six-stage wave-59 history and removes only the false terminal event", () => {
     const source = synthesizeProgression({
       mode: "campaign", difficulty: "normal", weapon: "sword",
       targetWave: CAMPAIGN_VICTORY_ORIGIN_WAVE,
@@ -84,22 +85,22 @@ describe("campaign victory State Forge origin", () => {
     const origin = createCampaignVictoryOrigin();
 
     expect(origin).toMatchObject({
-      id: "campaign-wave-49-victory-origin", legal: true, terminal: false,
-      currentWave: 49, nextWave: 50,
+      id: "campaign-wave-59-victory-origin", legal: true, terminal: false,
+      currentWave: 59, nextWave: 60,
       provenance: {
         kind: "canonical-nonterminal-progression-prefix",
         producer: "synthesizeProgression",
         sourceProgressionHash: source.ledger.progressionHash,
-        removedEvent: { type: "run.completed", wave: 49 },
+        removedEvent: { type: "run.completed", wave: 59 },
       },
     });
     expect(origin.ledger.events).toEqual(source.ledger.events.slice(0, -1));
     expect(source.ledger.events).toHaveLength(origin.ledger.events.length + 1);
     expect(origin.ledger.events.some((event) => event.type === "run.completed")).toBe(false);
-    expect(origin.ledger.events.at(-1)).toMatchObject({ type: "reward.granted", wave: 49 });
-    expect(origin.ledger.events.filter((event) => event.type === "wave.started")).toHaveLength(49);
-    expect(origin.ledger.events.filter((event) => event.type === "wave.cleared")).toHaveLength(49);
-    expect(origin.finalReward).toMatchObject({ type: "draft", wave: 49 });
+    expect(origin.ledger.events.at(-1)).toMatchObject({ type: "reward.granted", wave: 59 });
+    expect(origin.ledger.events.filter((event) => event.type === "wave.started")).toHaveLength(59);
+    expect(origin.ledger.events.filter((event) => event.type === "wave.cleared")).toHaveLength(59);
+    expect(origin.finalReward).toMatchObject({ type: "draft", wave: 59 });
     expect(origin.finalReward.offeredIds).toContain(origin.finalReward.selectedId);
   });
 
@@ -116,11 +117,11 @@ describe("campaign victory State Forge origin", () => {
     expect(Object.isFrozen(first.ledger.events)).toBe(true);
   });
 
-  it("creates the deterministic post-selection frontier without running wave 50 or mutating its source", () => {
+  it("creates the deterministic post-selection frontier without running wave 60 or mutating its source", () => {
     const source = sourceSnapshot();
     const before = structuredClone(source);
     const certificate = createCampaignVictoryOrigin();
-    const frontier = createCampaignWave49RewardFrontier(source, certificate, (index) => stagePlatforms(index, CONFIG));
+    const frontier = createCampaignWave59RewardFrontier(source, certificate, (index) => stagePlatforms(index, CONFIG));
     const run = codec(frontier, "tear.run.v1");
     const world = codec(frontier, "tear.world.v1");
     const runtime = world.runtime as Record<string, unknown>;
@@ -129,7 +130,7 @@ describe("campaign victory State Forge origin", () => {
 
     expect(source).toEqual(before);
     expect(frontier).toMatchObject({
-      id: "campaign-wave-49-reward-frontier",
+      id: "campaign-wave-59-reward-frontier",
       tick: certificate.statistics.elapsedTicks,
       stateClass: "reconstructed-reachable",
       lineage: {
@@ -139,10 +140,10 @@ describe("campaign victory State Forge origin", () => {
     });
     expect(run).toMatchObject({
       mode: "campaign", difficulty: "normal", diff: "normal", weaponId: "sword",
-      wave: 49, stage: 4, _biomeIdx: 4, spawnQueue: [], chapterState: "WAVE_LIVE",
+      wave: 59, stage: 5, _biomeIdx: 5, spawnQueue: [], chapterState: "WAVE_LIVE",
       score: certificate.statistics.score,
     });
-    expect(waveLog).toHaveLength(49);
+    expect(waveLog).toHaveLength(59);
     expect(waveLog.reduce((sum, entry) => sum + entry.kills, 0)).toBe(certificate.statistics.kills);
     expect(waveLog.reduce((sum, entry) => sum + entry.time, 0)).toBeCloseTo(certificate.statistics.elapsedTicks / 120, 10);
     expect(waveLog.filter((entry) => entry.wave === "BOSS")).toHaveLength(
@@ -151,21 +152,21 @@ describe("campaign victory State Forge origin", () => {
     expect(frontier.state["tear.enemy.v1"]).toEqual([]);
     expect(frontier.state["tear.boss.v1"]).toEqual([]);
     expect(frontier.state["tear.projectile.v1"]).toEqual([]);
-    expect(frontier.state["tear.platform.v1"]).toEqual(stagePlatforms(4, CONFIG));
+    expect(frontier.state["tear.platform.v1"]).toEqual(stagePlatforms(5, CONFIG));
     expect(frontier.state["tear.cinematic.v1"]).toEqual(INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
     expect(codec(frontier, "tear.player.v1")).toMatchObject({
       cinematicProtected: false, cinematicGraceT: 0,
     });
     expect(runtime).toMatchObject({
       lifecycle: {
-        phase: "reward-pending", sessionId: "campaign-session", wave: 49, bossWave: false,
-        activationDeferred: false, reward: "draft", outcome: null, revision: 197,
+        phase: "reward-pending", sessionId: "campaign-session", wave: 59, bossWave: false,
+        activationDeferred: false, reward: "draft", outcome: null, revision: 237,
       },
       chapterBinding: null, stageBanner: { name: "The Tear", seconds: 0 },
       cinemaProtection: { active: false, lastMode: null },
     });
     expect(codec(frontier, "tear.ui.v1").screen).toBe("draft");
-    expect(reward).toMatchObject({ phase: "complete", mode: "campaign", wave: 49, revision: 2 });
+    expect(reward).toMatchObject({ phase: "complete", mode: "campaign", wave: 59, revision: 2 });
     const choices = reward.choices as readonly { id: string }[];
     expect(choices.map((choice) => choice.id)).toEqual(certificate.finalReward.offeredIds);
     const selectedChoice = choices.find((choice) => choice.id === certificate.finalReward.selectedId);
@@ -178,7 +179,7 @@ describe("campaign victory State Forge origin", () => {
     expect(frontier.hashes).toMatchObject({
       exact: stableVerificationHash(frontier.state),
       progression: certificate.ledger.progressionHash,
-      environment: stableVerificationHash(frontier.state["tear.world.v1"]),
+      environment: stableVerificationHash(projectEnvironmentHash(frontier.state["tear.hazard.v1"])),
     });
   });
 
@@ -187,14 +188,14 @@ describe("campaign victory State Forge origin", () => {
     const wrongMode = structuredClone(sourceSnapshot());
     (wrongMode.state["tear.run.v1"] as { mode: string }).mode = "endless";
     (wrongMode.hashes as { exact: string }).exact = stableVerificationHash(wrongMode.state);
-    expect(() => createCampaignWave49RewardFrontier(wrongMode, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/Campaign Normal Sword/u);
+    expect(() => createCampaignWave59RewardFrontier(wrongMode, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/Campaign Normal Sword/u);
 
     const corrupt = structuredClone(sourceSnapshot());
     (corrupt.state["tear.run.v1"] as { score: number }).score = 99;
-    expect(() => createCampaignWave49RewardFrontier(corrupt, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/source exact hash/u);
+    expect(() => createCampaignWave59RewardFrontier(corrupt, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/source exact hash/u);
 
     const altered = structuredClone(certificate);
     (altered.finalReward as { selectedId: string }).selectedId = "not-the-certified-choice";
-    expect(() => createCampaignWave49RewardFrontier(sourceSnapshot(), altered, (index) => stagePlatforms(index, CONFIG))).toThrow(/canonical wave-49 certificate/u);
+    expect(() => createCampaignWave59RewardFrontier(sourceSnapshot(), altered, (index) => stagePlatforms(index, CONFIG))).toThrow(/canonical wave-59 certificate/u);
   });
 });

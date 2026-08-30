@@ -20,6 +20,7 @@ import type { CombatEntityIdentityState } from "../gameplay/combat/combat-entity
 import type { RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { TearCodecValue, TearCodecWorld } from "../tearbench/state-codecs";
+import type { EnvironmentRuntimeState, EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import type { TearLiveRestoreContext, TearLiveWorldAdapter } from "../tearbench/live-state-snapshot";
 import {
   applyTearCodecConfiguration,
@@ -28,6 +29,7 @@ import {
   type TearStagedWorld,
   type TearWorldConstructionPort,
 } from "../tearbench/detached-world-hydrator";
+import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 
 interface Platform {
   readonly x: number;
@@ -70,6 +72,10 @@ export interface LiveStateForgeAdapterOptions {
   readonly replacePlatforms: (platforms: Platform[]) => void;
   readonly slowZones: () => GameSlowZone[];
   readonly walls: () => GameTemporaryWall[];
+  readonly environment: () => EnvironmentRuntimeState;
+  /** Clears canonical environment records immediately before replacement. */
+  readonly clearEnvironmentRestore?: () => void;
+  readonly restoreEnvironment: (snapshot: EnvironmentSnapshot) => void;
   readonly screen: () => string;
   readonly setScreen: (screen: string) => void;
   readonly focus: () => number;
@@ -194,6 +200,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   if (player === undefined || blade === undefined || run === null) throw new Error("State Forge capture requires a live run");
   const enemies = options.state.enemies();
   const projectiles = options.state.projectiles();
+  const environment = options.environment().snapshot();
   const identities = new Map<object, string>([[player, "player"], [blade, "blade"]]);
   for (const enemy of enemies) identities.set(enemy, options.actorId(enemy, "enemy"));
   for (const projectile of projectiles) identities.set(projectile, options.actorId(projectile, "projectile"));
@@ -230,8 +237,13 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     entity(projectile, identities.get(projectile) ?? "", { factoryId: "projectile" }))));
   components.set("tear.platform.v1", encode(options.platforms(), identities));
   components.set("tear.hazard.v1", Object.freeze({
+    ...(environment.worldId === undefined ? {} : { worldId: environment.worldId }),
+    stageId: environment.stageId,
     slowZones: encode(options.slowZones(), identities),
     walls: encode(options.walls(), identities),
+    fields: encode(environment.fields, identities),
+    combatObjects: encode(environment.combatObjects, identities),
+    routes: encode(environment.routes, identities),
   }));
   components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()) }));
   components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
@@ -290,12 +302,23 @@ export function createLiveStateForgeAdapter(
     stage: (world, context) => stageWorld(options, world, context),
     validate(candidate) {
       const issues: string[] = [];
+      const availableStages = candidate.run.mode === "playground"
+        ? options.dependencies.PLAYGROUND_STAGES
+        : options.dependencies.STAGES;
       if (!(candidate.player.maxHp > 0) || candidate.player.hp < 0 || candidate.player.hp > candidate.player.maxHp) {
         issues.push("player health is outside legal bounds");
       }
       if (!Number.isSafeInteger(candidate.tick) || candidate.tick < 0) issues.push("simulation tick is invalid");
       if (!Number.isSafeInteger(candidate.stageIndex) || candidate.stageIndex < 0 ||
-        candidate.stageIndex >= options.dependencies.STAGES.length) issues.push("campaign stage index is invalid");
+        candidate.stageIndex >= availableStages.length) issues.push("stage index is invalid for the restored run mode");
+      const stage = availableStages[candidate.stageIndex];
+      if (candidate.environment.stageId !== "unknown" && stage !== undefined && candidate.environment.stageId !== stage.id) {
+        issues.push("environment snapshot stage does not match restored world stage");
+      }
+      const currentWorldId = options.environment().snapshot().worldId;
+      if (candidate.environment.worldId !== undefined && currentWorldId !== undefined && candidate.environment.worldId !== currentWorldId) {
+        issues.push("environment snapshot belongs to another world");
+      }
       if (candidate.enemies.some((enemy) => !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y))) {
         issues.push("enemy transform is not finite");
       }
@@ -304,6 +327,11 @@ export function createLiveStateForgeAdapter(
       return Object.freeze(issues);
     },
     commit(candidate) {
+      cleanupBossEncounterActors(options.state.enemies(), "restore");
+      // Rebind the detached candidate before any host/environment owner can
+      // observe it and allocate a competing ID from the restored sequence.
+      options.restoreIdentityState(candidate.identityState);
+      for (const binding of candidate.identityBindings) options.bindActorId(binding.entity, binding.id);
       options.worldServices.configuration.resetToBase();
       const weapon = options.dependencies.applyWeapon(options.worldServices.configuration.value, candidate.weaponId);
       // Hydrate codec values into a detached snapshot, then reconcile them
@@ -322,12 +350,22 @@ export function createLiveStateForgeAdapter(
       options.state.setSlowZones(candidate.slowZones);
       options.state.setTemporaryWalls(candidate.walls);
       options.restoreStageIndex(candidate.stageIndex);
+      const availableStages = candidate.run.mode === "playground"
+        ? options.dependencies.PLAYGROUND_STAGES
+        : options.dependencies.STAGES;
+      const restoredStage = availableStages[candidate.stageIndex];
+      const currentWorldId = options.environment().snapshot().worldId;
+      const environment = {
+        ...candidate.environment,
+        ...(candidate.environment.stageId === "unknown" && restoredStage !== undefined ? { stageId: restoredStage.id } : {}),
+        ...(candidate.environment.worldId === undefined && currentWorldId !== undefined ? { worldId: currentWorldId } : {}),
+      };
+      options.clearEnvironmentRestore?.();
+      options.restoreEnvironment(environment);
       options.replacePlatforms(candidate.platforms);
       options.worldServices.random.restore(candidate.rng);
       options.restoreGhost(candidate.ghost);
-      options.restoreIdentityState(candidate.identityState);
       options.restoreReward(candidate.reward);
-      for (const binding of candidate.identityBindings) options.bindActorId(binding.entity, binding.id);
       options.setTick(candidate.tick);
       options.clearInputProjection();
       options.setFocus(candidate.focus);

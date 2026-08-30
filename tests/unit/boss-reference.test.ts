@@ -12,16 +12,19 @@ const expected = [
   { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.30] },
   { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
   { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
+  { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
+  { id: "white-hart", name: "The White Hart", stageId: "pale-traverse", phaseMarks: [0.65, 0.28] },
   { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
   { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
 ] as const;
+const expectedPublished = expected.filter(({ id }) => id !== "white-hart");
 
 describe("authored boss reference", () => {
-  it("is the frozen five-entry identity and phase authority", () => {
+  it("keeps authored seven-entry identity while exposing only six public bosses", () => {
     expect(BOSS_DEFINITIONS).toEqual(expected.map(({ id, name, phaseMarks }) => ({ id, name, phaseMarks })));
     expect(Object.isFrozen(BOSS_DEFINITIONS)).toBe(true);
     for (const definition of BOSS_DEFINITIONS) expect(Object.isFrozen(definition.phaseMarks)).toBe(true);
-    expect(BOSS_ROSTER).toEqual(expected.map(({ id, name }) => ({ id, name })));
+    expect(BOSS_ROSTER).toEqual(expectedPublished.map(({ id, name }) => ({ id, name })));
     expect(Object.isFrozen(BOSS_ROSTER)).toBe(true);
     const first = BOSS_ROSTER[0];
     const firstId: "warden" = first.id;
@@ -33,7 +36,8 @@ describe("authored boss reference", () => {
 
   it("projects the exact stage bijection and imported shape", () => {
     const result = projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES });
-    expect(result).toEqual(expected);
+    expect(result).toEqual(expectedPublished);
+    expect(result.some((boss) => boss.id === "rootbound")).toBe(true);
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result[0])).toBe(true);
     expect(Object.isFrozen(result[0]?.phaseMarks)).toBe(true);
@@ -65,6 +69,8 @@ describe("authored boss reference", () => {
       warden: harness.types.Warden,
       colossus: harness.types.Colossus,
       aldric: harness.types.Aldric,
+      rootbound: harness.types.Rootbound,
+      "white-hart": harness.types.WhiteHart,
       echo: harness.types.Echo,
       source: harness.types.Source,
     } as const;

@@ -1,11 +1,17 @@
 import type { EnemyPreset } from "../affixes";
-import type { EnemyVariant } from "../variants";
+import { findVariant, type EnemyVariant, type VariantSelectionContext } from "../variants";
 import type { RandomSource } from "../../domain/random";
 import type { RunMode } from "./session";
+import type { StageId } from "../stages";
 import { bossScaling } from "./wave-rules";
 import type { WaveSpawnSpec } from "./wave-planner";
 
-export interface LiveWaveSpawnSpec extends WaveSpawnSpec { readonly variant?: EnemyVariant | null }
+export interface LiveWaveSpawnSpec extends WaveSpawnSpec {
+  /** Legacy in-memory override; serialized state should use variantId. */
+  readonly variant?: EnemyVariant | null;
+  /** Stable selected identity; callbacks are resolved only at the spawn boundary. */
+  readonly variantId?: string;
+}
 
 export interface LiveSpawnEnemy {
   kind: string;
@@ -27,6 +33,7 @@ export interface LiveSpawnEnemy {
   isMirrorBoss?: boolean;
   _live?: boolean;
   variantName?: string;
+  variant?: string;
   canClimb?: boolean;
   climber?: boolean;
   climbApt?: number;
@@ -40,28 +47,34 @@ export interface LiveSpawnRun {
   readonly bossesBeaten?: number;
   readonly diffHp?: number;
   readonly waveKinds?: readonly string[];
+  readonly stageId?: StageId;
+  readonly localWave?: number;
+  readonly discoveredVariantIds?: readonly string[];
+  /** Persisted run authority; the compatibility field above is for callers that already project it. */
+  readonly variantDiscovery?: readonly string[];
 }
 
 export interface LiveEnemySpawnPort<TEnemy extends LiveSpawnEnemy> {
   readonly random: RandomSource;
   readonly run: () => LiveSpawnRun;
   readonly campaignStage: () => number;
+  readonly stageId?: () => StageId;
   readonly contentWave: () => number;
   readonly groundSpawn: (halfHeight: number) => Readonly<{ x: number; y: number }>;
   readonly applyPreset: (enemy: TEnemy, preset: EnemyPreset) => void;
-  readonly rollVariant: (kind: string, wave: number) => EnemyVariant | null;
+  readonly rollVariant: (kind: string, wave: number, context?: VariantSelectionContext) => EnemyVariant | null;
   readonly applyVariant: (enemy: TEnemy, variant: EnemyVariant | null) => void;
   readonly rollAffixes: (enemy: TEnemy, wave: number) => void;
   readonly arrivalEffect: (enemy: TEnemy, boss: boolean) => void;
-  readonly recordSpawn: (enemy: TEnemy, role: string, detail: Readonly<{ vn: string; b: string }>) => void;
+  readonly recordSpawn: (enemy: TEnemy, role: string, detail: Readonly<{ vn: string; b: string; vid?: string }>) => void;
   readonly install: (enemy: TEnemy) => void;
 }
 
 export interface LiveEnemyConstructionPort<TEnemy extends LiveSpawnEnemy> {
   readonly sideSpawn: () => number;
-  readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera") => TEnemy;
+  readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera" | "rimehound") => TEnemy;
   readonly createAir: (kind: "flyer" | "wraith", x: number, y: number) => TEnemy;
-  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor") => TEnemy;
+  readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor" | "rootbinder") => TEnemy;
   readonly createBoss: (bossId?: string) => TEnemy;
   readonly beginBossPresentation: (enemy: TEnemy) => void;
 }
@@ -73,11 +86,13 @@ export function constructLiveEnemy<TEnemy extends LiveSpawnEnemy>(
 ): TEnemy {
   let enemy: TEnemy;
   switch (spec.type) {
-    case "ranged": case "bomber": case "armored": case "chimera":
+    case "ranged": case "bomber": case "armored": case "chimera": case "rimehound":
       enemy = port.createGround(spec.type); break;
     case "flyer": case "wraith":
       enemy = port.createAir(spec.type, port.sideSpawn(), spec.type === "flyer" ? 200 : 220); break;
     case "priest": case "herald": case "mender": case "anchor":
+      enemy = port.createSupport(spec.type); break;
+    case "rootbinder":
       enemy = port.createSupport(spec.type); break;
     case "boss":
       enemy = port.createBoss();
@@ -114,7 +129,22 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
     }
     if (spec.preset !== undefined) port.applyPreset(enemy, spec.preset);
     else {
-      port.applyVariant(enemy, spec.variant ?? port.rollVariant(enemy.kind, port.contentWave()));
+      const stageId = port.stageId?.() ?? run.stageId ?? "grounds";
+      const globalWave = port.contentWave() || run.wave;
+      const discoveredVariantIds = run.discoveredVariantIds ?? run.variantDiscovery;
+      const context: VariantSelectionContext = {
+        stageId,
+        localWave: run.localWave ?? ((run.wave - 1) % 10 + 1),
+        globalWave,
+        mode: run.mode,
+        random: port.random,
+        ...(discoveredVariantIds === undefined ? {} : { discoveredVariantIds }),
+      };
+      const restoredVariant = spec.variantId === undefined ? null : findVariant(enemy.kind, spec.variantId);
+      if (spec.variantId !== undefined && restoredVariant === null) {
+        throw new RangeError(`unknown variant ${spec.variantId} for ${enemy.kind}`);
+      }
+      port.applyVariant(enemy, restoredVariant ?? spec.variant ?? port.rollVariant(enemy.kind, globalWave, context));
       port.rollAffixes(enemy, run.wave);
     }
     if (spec.type !== "flyer" && spec.type !== "wraith") {
@@ -147,6 +177,7 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
   port.recordSpawn(enemy, enemy.isBoss ? "boss" : spec.type, {
     vn: enemy.variantName ?? "",
     b: enemy.bossId ?? spec.bossId ?? "",
+    ...(typeof enemy.variant === "string" && enemy.variant.length > 0 ? { vid: enemy.variant } : {}),
   });
   port.install(enemy);
   return enemy;

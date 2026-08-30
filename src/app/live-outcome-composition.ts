@@ -10,6 +10,7 @@ import type { StoredRecordingSummary } from "../gameplay/run/live-recording-cont
 import { createTearTerminalRunFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
 import type { LiveGhostPracticeSessionState } from "./live-ghost-practice-session-state";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
@@ -31,6 +32,7 @@ export interface LiveOutcomeCompositionOptions {
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (weapon: string) => void;
   readonly clearCombat: () => void;
+  readonly environment: EnvironmentRuntimeState;
   readonly resetWinSeconds: () => void;
   readonly setScreen: (screen: "win" | "gameover") => void;
   readonly saveBest: (mode: string, difficulty: string, wave: number, score: number, seconds: number) => boolean;
@@ -45,6 +47,7 @@ export interface LiveOutcomeCompositionOptions {
   readonly executeVictory: (intents: readonly VictoryProgressionIntent[]) => void;
   readonly emitMusicOutcome: (outcome: "defeat" | "victory") => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  readonly cleanupBossActors: () => void;
   readonly startFinale: (death: Readonly<{ x: number; y: number }>, recovered?: boolean) => void;
   readonly cinema: Readonly<{ active: boolean; cancel(reason: string): void }>;
   readonly width: number;
@@ -86,7 +89,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
     stopClipper: () => { d.Clipper?.stop(); },
     terminate: (outcome) => {
-      try { options.lifecycle.terminate(outcome); }
+      try { options.cleanupBossActors(); options.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal"); options.lifecycle.terminate(outcome); }
       finally { d.Input.stopSemanticRecording(); }
     },
     publishTerminal,
@@ -119,7 +122,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       if (outcome === "victory") { d.SFX.wave(); d.CG.happytime(); } else d.SFX.gameover();
     },
     midgame: (callback) => { d.CG.midgame(callback); },
-    restartCurrentRun: () => { options.startRun(active().mode, active().diff); },
+    restartCurrentRun: () => { options.cleanupBossActors(); options.environment.clear("retry"); options.startRun(active().mode, active().diff); },
     ...(options.observeOutcomeChronology === undefined
       ? {}
       : { observeOutcomeChronology: options.observeOutcomeChronology }),
