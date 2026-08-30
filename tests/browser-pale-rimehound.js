@@ -13,21 +13,25 @@ withJourney({ name: "Pale PT3-C3 Rimehound", port: 8353 }, async ({ page, waitSc
       && hounds.some((enemy) => enemy.atk === "windup");
   }, undefined, { timeout: 10_000 });
 
-  const directory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints",
-    "pale-traverse", "PT3-C3", "rimehound");
-  fs.mkdirSync(directory, { recursive: true });
-  const normalFile = "normal-windup-1600x900.png";
-  await page.screenshot({ path: path.join(directory, normalFile) });
   const windup = await page.evaluate(() => window.TEAR_WEAPON_DEBUG().enemies
     .filter((enemy) => enemy.kind === "rimehound"));
   assert.deepEqual(windup.map((enemy) => enemy.packRole), ["line", "flank"]);
   assert.equal(windup.filter((enemy) => enemy.packAttackAuthorized).length, 1);
   assert.ok(windup.some((enemy) => enemy.pounceTargetX > enemy.x), "windup must expose its committed route");
+  const directory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints",
+    "pale-traverse", "PT3-C3", "rimehound");
+  fs.mkdirSync(directory, { recursive: true });
+  const normalFile = "normal-windup-1600x900.png";
+  await page.screenshot({ path: path.join(directory, normalFile) });
 
+  // Each phase is a short live state. Recompose between screenshots so a slow
+  // capture cannot advance beyond the next state before its assertion begins.
+  await page.evaluate(() => window.__PANTHEON_TEST.prepareRimehoundScenario());
   await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies
     .some((enemy) => enemy.kind === "rimehound" && enemy.atk === "pounce"), undefined, { timeout: 10_000 });
   const pounceFile = "committed-pounce-1600x900.png";
   await page.screenshot({ path: path.join(directory, pounceFile) });
+  await page.evaluate(() => window.__PANTHEON_TEST.prepareRimehoundScenario());
   await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies
     .some((enemy) => enemy.kind === "rimehound" && enemy.atk === "skid"), undefined, { timeout: 10_000 });
 
