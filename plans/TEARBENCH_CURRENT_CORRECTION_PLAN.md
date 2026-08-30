@@ -59,7 +59,7 @@ runtime authority.
 | ---: | --- | --- | --- |
 | 1 | TC-1 — Publication authority | Complete | Plan activation |
 | 2 | TC-2 — Bloom backend honesty | Complete | TC-1 |
-| 3 | TC-3 — Environment invariant binding | Not started | TC-2 |
+| 3 | TC-3 — Environment invariant binding | Complete | TC-2 |
 | 4 | TC-4 — Rootbound repeated-poll regression | Not started | TC-3 |
 | 5 | TC-5 — Source-derived content terminology | Not started | TC-1 |
 | 6 | TC-6 — Specialized evidence-route ownership | Not started | TC-2 through TC-5 |
@@ -180,16 +180,16 @@ materializer at `tests/browser-tearbench-live-materialize.js`.
 
 ### Checklist
 
-- [ ] Define the source-owned subject-kind → invariant-set rule in one TearBench location.
-- [ ] Materialize canonical environment scenarios with finite-state, unique-ID, valid-reference, no-orphan-link, legal-transition, and boundedness checks.
-- [ ] Make browser/current-game execution consume the canonical materialized assertions instead of rebuilding a weaker scenario.
-- [ ] Add one small negative case each for duplicate ID, missing owner/target, illegal transition, and population bound.
-- [ ] Add a negative binding test proving that removing automatic environment-invariant attachment fails.
-- [ ] Confirm non-environment scenarios are unchanged and privileged invariants still fail closed when observations are missing.
-- [ ] Require every invariant used by a canonical scenario to have an executable checker; reject silent skipping of a registered-but-unimplemented invariant.
-- [ ] Replace the audited vacuous or tautological owner, isolation, branch-equivalence, wave, softlock, boss-phase, focus, and finite-state checks with source-backed discriminators or explicit unsupported dispositions.
-- [ ] Preserve native causal events through the ordinary TearBench session, fail closed on unknown event mappings, and distinguish engine-native from bridge-derived provenance.
-- [ ] Avoid a large corruption matrix; one minimal discriminator per invariant family is sufficient.
+- [x] Define the source-owned subject-kind → invariant-set rule in one TearBench location.
+- [x] Materialize canonical environment scenarios with finite-state, unique-ID, valid-reference, no-orphan-link, legal-transition, and boundedness checks.
+- [x] Make browser/current-game execution consume the canonical materialized assertions instead of rebuilding a weaker scenario.
+- [x] Add one small negative case each for duplicate ID, missing owner/target, illegal transition, and population bound.
+- [x] Add a negative binding test proving that removing automatic environment-invariant attachment fails.
+- [x] Confirm non-environment scenarios are unchanged and privileged invariants still fail closed when observations are missing.
+- [x] Require every invariant used by a canonical scenario to have an executable checker; reject silent skipping of a registered-but-unimplemented invariant.
+- [x] Replace the audited vacuous or tautological owner, isolation, branch-equivalence, wave, softlock, boss-phase, focus, and finite-state checks with source-backed discriminators or explicit unsupported dispositions.
+- [x] Preserve native causal events through the ordinary TearBench session, fail closed on unknown event mappings, and distinguish engine-native from bridge-derived provenance.
+- [x] Avoid a large corruption matrix; one minimal discriminator per invariant family is sufficient.
 
 **Focused gate:** TearBench invariant, canonical-scenario, validation,
 current-game authority, and current gameplay browser tests after rebuilding the
@@ -479,7 +479,7 @@ commit alone is insufficient.
 | --- | --- | --- | --- | --- | --- |
 | TC-1 | `83c0a0c306aa1adf00175118c18c357f2af6b872` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-1_PUBLICATION_AUTHORITY.md`; focused publication, release-preflight, game-reference, content-availability, Verdant, docs, and terminology checks | N/A | Final focused review green; historical evidence preserved; no protected integration claimed | Complete |
 | TC-2 | `29a2460be71003416a8a73ad4e36b4ad2e617309` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-2_BLOOM_BACKEND_HONESTY.md`; 36 focused typed tests, 28 selector tests, typecheck, docs, and terminology gates | Clean-commit Class-A journey passed all 13 source-owned scenarios at build fingerprint `9d9bffd9b423d3a5d3cb4e11b34f328a9aa1d7daf45d0c333d9ce37d1585d2c4` | Final focused review green; no headless Bloom or protected integration claimed | Complete |
-| TC-3 | — | — | — | — | Not started |
+| TC-3 | `1bb873e1cecdf1682d71a3134b7f8d5adc4683af` + `7a0c3e700c74cd2652822c62c9778c6daf043bd3` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-3_ENVIRONMENT_INVARIANT_BINDING.md`; 65 focused tests, typecheck, syntax, and diff gates | Clean-commit Class-A journey passed 13 source-owned scenarios at build fingerprint `0c124bdceb1710d2f41173836fed7772354b463a8eab6236e74dd8ae57225294`; full 744-tick Bloom materialization passed | Independent review found three blockers; all were corrected and the re-review passed; no protected integration claimed | Complete |
 | TC-4 | — | — | — | — | Not started |
 | TC-5 | — | — | N/A | — | Not started |
 | TC-6 | — | — | Selected only | — | Not started |
