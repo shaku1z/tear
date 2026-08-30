@@ -158,6 +158,10 @@ export interface EvidenceRoute {
   readonly id: string;
   readonly prefixes: readonly string[];
   readonly scenarios: readonly string[];
+  readonly specialized?: boolean;
+  readonly owner?: string;
+  readonly requiredScenarios?: readonly string[];
+  readonly reducedDisposition?: string;
   readonly graveyardCases: readonly string[];
   readonly journeyCheckpoint: string;
   readonly baseComparison: string;
@@ -179,10 +183,17 @@ export function selectDiffAwareEvidence(
   changedFiles: readonly string[],
   routes: readonly EvidenceRoute[],
 ): EvidenceSelection {
-  const normalized = changedFiles.map((file) => file.replaceAll("\\", "/"));
+  // Compatibility projection only: scripts/tearbench.mjs is the executable
+  // selector authority. Keep this adapter's conservative union/fallback shape
+  // aligned with that selector; it must not become a second route policy.
+  const normalized = [...new Set(changedFiles.map((file) => file.replaceAll("\\", "/").trim()))].sort();
   const selected = routes.filter((route) =>
     normalized.some((file) => route.prefixes.some((prefix) => file.startsWith(prefix))));
-  const effective = selected.length === 0 ? routes.filter((route) => route.id === "shared-runtime") : selected;
+  const unmatched = normalized.filter((file) =>
+    !routes.some((route) => route.prefixes.some((prefix) => file.startsWith(prefix))));
+  const fallback = routes.filter((route) => route.id === "shared-runtime");
+  const effective = (selected.length === 0 || unmatched.length > 0)
+    ? [...selected, ...fallback.filter((route) => !selected.includes(route))] : selected;
   const collect = (pick: (route: EvidenceRoute) => readonly string[]): readonly string[] =>
     Object.freeze([...new Set(effective.flatMap((route) => [...pick(route)]))].sort());
   return Object.freeze({

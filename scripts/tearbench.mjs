@@ -19,6 +19,10 @@ const evidenceRoutesPath = resolve(option("--routes", resolve(root, "src", "tear
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
 const publicationBoundary = JSON.parse(await readFile(resolve(root, "config", "campaign-publication-boundary.json"), "utf8"));
+const trackedPathsResult = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
+if (trackedPathsResult.status !== 0) throw new Error(`unable to validate evidence prefixes: ${trackedPathsResult.stderr || trackedPathsResult.stdout}`);
+const trackedRepositoryPaths = trackedPathsResult.stdout.split("\0").filter(Boolean)
+  .map((value) => value.replaceAll("\\", "/"));
 
 function fail(message) {
   console.error(message);
@@ -332,10 +336,47 @@ function validateActiveWeaponSubject(scenario, weapon) {
   }
 }
 
+function validateRoutePrefix(prefix, routeId) {
+  if (typeof prefix !== "string" || prefix.trim() === "" || isAbsolute(prefix) || prefix.includes("..")
+    || prefix !== prefix.replaceAll("\\", "/")) {
+    throw new TypeError(`route ${routeId} has an unsafe evidence prefix: ${String(prefix)}`);
+  }
+  if (!trackedRepositoryPaths.some((file) => file.startsWith(prefix))) {
+    throw new RangeError(`route ${routeId} has an evidence prefix with no tracked repository match: ${prefix}`);
+  }
+}
+
+function validateRouteDisposition(route) {
+  if (route.specialized === true) {
+    if (typeof route.owner !== "string" || route.owner.trim() === "") {
+      throw new TypeError(`specialized route ${route.id} is missing an explicit owner`);
+    }
+    const required = route.requiredScenarios;
+    if (required !== undefined && (!Array.isArray(required) || required.some((id) => typeof id !== "string" || id.trim() === "")
+      || new Set(required).size !== required.length)) {
+      throw new TypeError(`specialized route ${route.id} has invalid required scenarios`);
+    }
+    const available = new Set(route.scenarios);
+    for (const id of required ?? []) if (!available.has(id)) {
+      throw new RangeError(`specialized route ${route.id} required scenario is not routed: ${id}`);
+    }
+    const disposition = route.reducedDisposition;
+    if (route.scenarios.length === 0 && route.scenarioSubjects?.length === 0
+      && (typeof disposition !== "string" || disposition.trim() === "")) {
+      throw new RangeError(`specialized route ${route.id} has no specialized scenario or reduced disposition`);
+    }
+    if (disposition !== undefined && (typeof disposition !== "string" || disposition.trim() === "")) {
+      throw new TypeError(`specialized route ${route.id} has an invalid reduced disposition`);
+    }
+  }
+}
+
 function routeScenarioIds(route) {
   if (typeof route.id !== "string" || !Array.isArray(route.prefixes) || !Array.isArray(route.scenarios)) {
     throw new TypeError(`malformed TearBench evidence route: ${String(route.id)}`);
   }
+  for (const prefix of route.prefixes) validateRoutePrefix(prefix, route.id);
+  validateRouteDisposition(route);
   for (const command of [...(route.journeyCommands ?? []), ...(route.authorityCommands ?? [])]) parseApprovedEvidenceCommand(command);
   const ids = new Set(route.scenarios);
   for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
@@ -383,6 +424,8 @@ function routeScenarioIds(route) {
   return [...ids];
 }
 
+const routeIds = evidenceRoutes.map((route) => route.id);
+if (new Set(routeIds).size !== routeIds.length) throw new TypeError("TearBench evidence route IDs must be unique");
 for (const route of evidenceRoutes) routeScenarioIds(route);
 if (!evidenceRoutes.some((route) => route.id === "shared-runtime")) {
   throw new TypeError("TearBench evidence routes must include a shared-runtime fallback");

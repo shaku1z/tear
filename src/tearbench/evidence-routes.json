@@ -68,6 +68,8 @@
   },
   {
     "id": "source-void-replay",
+    "specialized": true, "owner": "source-void", "requiredScenarios": ["source-void-low-hp-rescue-seek"],
+    "reducedDisposition": "detached-source-void-unsupported",
     "prefixes": ["src/gameplay/campaign/source-void-", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-source-void-", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-codecs.ts", "src/replay/legacy-compat.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-source-void-ghost-seek.js", "tests/browser-c40-state-forge-source-void.js", "tests/unit/c40-source-void-evidence-registry.test.ts"],
     "scenarios": ["source-void-low-hp-rescue-seek"],
     "graveyardCases": [],
@@ -77,6 +79,7 @@
   },
   {
     "id": "current-event-runtime",
+    "specialized": true, "owner": "current-event-runtime", "requiredScenarios": ["source-void-low-hp-rescue-seek"],
     "prefixes": ["src/gameplay/runtime/gameplay-events.ts"],
     "scenarios": ["source-void-low-hp-rescue-seek"],
     "scenarioSubjects": ["active-weapons"],
@@ -86,6 +89,7 @@
   },
   {
     "id": "current-game-authority",
+    "specialized": true, "owner": "current-game-authority", "requiredScenarios": ["movement-jump", "dash-one-way-platform", "source-void-low-hp-rescue-seek", "wave-clear-to-draft", "draft-selection-to-gameplay"],
     "prefixes": ["src/gameplay/weapon-selection.ts", "src/gameplay/stages.ts", "src/gameplay/upgrades.ts", "src/gameplay/run/boss-definitions.ts", "src/gameplay/run/difficulty-catalog.ts", "src/gameplay/run/mode-catalog.ts", "src/gameplay/run/content-director.ts", "src/gameplay/run/live-content-runtime.ts", "src/gameplay/run/live-enemy-spawn.ts", "src/gameplay/runtime/gameplay-events.ts", "src/gameplay/environment/environment-contracts.ts", "src/gameplay/scoring/coin-awards.ts", "src/gameplay/scoring/live-economy-runtime.ts"],
     "scenarios": ["movement-jump", "dash-one-way-platform", "source-void-low-hp-rescue-seek", "wave-clear-to-draft", "draft-selection-to-gameplay"],
     "scenarioSubjects": ["active-weapons", "current-stage-bosses"], "graveyardCases": [], "journeyCheckpoint": "current-game-alignment",
@@ -94,6 +98,7 @@
   },
   {
     "id": "current-environment-runtime",
+    "specialized": true, "owner": "current-environment-runtime", "requiredScenarios": ["boot-start-run"],
     "prefixes": ["src/gameplay/environment/environment-contracts.ts", "src/gameplay/environment/environment-state.ts", "src/gameplay/environment/environment-runtime.ts", "src/gameplay/runtime/tear-world-context.ts", "src/gameplay/runtime/tear-world-composition.ts", "src/gameplay/runtime/tear-simulation-runtime.ts", "src/gameplay/runtime/authoritative-step.ts", "src/simulation/runtime-world-port.ts", "tests/unit/environment-runtime.test.ts", "tests/unit/tear-world-context.test.ts", "tests/unit/tear-world-composition.test.ts"],
     "scenarios": ["boot-start-run"],
     "scenarioSubjects": [],
@@ -106,6 +111,7 @@
   },
   {
     "id": "verdant-c3-environment-codec",
+    "specialized": true, "owner": "verdant-environment", "reducedDisposition": "engineering-only-codec",
     "prefixes": ["src/tearbench/environment-codec.ts", "src/tearbench/state-codecs.ts", "src/tearbench/contracts.ts", "src/tearbench/invariants.ts", "src/tearbench/state-forge-factories.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-snapshots.ts", "src/tearbench/production-replay-composition.ts", "src/tearbench/campaign-victory-origin.ts", "src/tearbench/regression-minimization.ts", "src/gameplay/runtime/canonical-state.ts", "tests/unit/environment-state-codec.test.ts", "tests/unit/production-replay-composition.test.ts"],
     "scenarios": [],
     "scenarioSubjects": [],
@@ -118,6 +124,7 @@
   },
   {
     "id": "verdant-c4-environment-kernel",
+    "specialized": true, "owner": "verdant-environment", "requiredScenarios": ["generic-environment-field-transition", "generic-environment-combat-object-transition"],
     "prefixes": ["src/gameplay/environment/", "src/gameplay/runtime/gameplay-events.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/registries.ts", "src/tearbench/state-forge-factories.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/canonical-scenarios.ts", "src/tearbench/validation.ts", "scripts/tearbench.mjs", "tests/browser-current-gameplay-scenarios.js", "tests/unit/environment-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts", "tests/unit/environment-combat-object-runtime.test.ts", "tests/unit/gameplay-causal-events.test.ts", "tests/unit/tearbench-current-game-authority.test.ts"],
     "scenarios": ["generic-environment-field-transition", "generic-environment-combat-object-transition"],
     "scenarioSubjects": [],
@@ -130,6 +137,7 @@
   },
   {
     "id": "verdant-c5-bloom-well",
+    "specialized": true, "owner": "verdant-environment", "requiredScenarios": ["verdant-bloom-well-cycle"],
     "prefixes": ["src/gameplay/environment/bloom-well.ts", "src/gameplay/environment/environment-runtime.ts", "src/presentation/environment/", "src/tearbench/state-forge-factories.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/canonical-scenarios.json", "tests/browser-current-gameplay-scenarios.js", "tests/unit/bloom-well-runtime.test.ts"],
     "scenarios": ["verdant-bloom-well-cycle"],
     "backend": "live-only",
@@ -143,6 +151,7 @@
   },
   {
     "id": "verdant-c6-rootbinder-network",
+    "specialized": true, "owner": "verdant-rootbinder", "requiredScenarios": ["verdant-root-network-sever"],
     "prefixes": ["src/gameplay/entities/rootbinder-runtime.ts", "src/gameplay/entities/enemy-types/special-enemies.ts", "src/gameplay/environment/", "src/tearbench/state-forge-factories.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-contracts.ts", "src/tearbench/registries.ts", "src/tearbench/canonical-scenarios.json", "tests/browser-current-gameplay-scenarios.js", "tests/unit/rootbinder-runtime.test.ts", "tests/unit/rootbinder-network.test.ts"],
     "scenarios": ["verdant-root-network-sever"],
     "scenarioSubjects": [],
@@ -155,6 +164,7 @@
   },
   {
     "id": "verdant-c7-variant-selection",
+    "specialized": true, "owner": "verdant-variants", "requiredScenarios": ["verdant-variant-selection"],
     "prefixes": ["src/gameplay/variants.ts", "src/gameplay/run/session.ts", "src/gameplay/run/live-enemy-spawn.ts", "src/gameplay/entities/enemy-types/ground-enemies.ts", "src/gameplay/entities/enemy-types/air-enemies.ts", "src/gameplay/runtime/gameplay-events.ts", "src/gameplay/runtime/gameplay-event-publishers.ts", "src/app/live-content-host.ts", "src/app/live-content-composition.ts", "src/app/live-run-start-host.ts", "src/app/live-debug-harness.ts", "src/app/live-debug-composition.ts", "src/app/live-game-runtime.ts", "src/gameplay/run/live-content-runtime.ts", "src/simulation/runtime-world-port.ts", "src/tearbench/contracts.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/production-world-factory.ts", "src/tearbench/production-wave-reward-runtime.ts", "src/tearbench/live-codec-validation.ts", "src/tearbench/registries.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/canonical-scenarios.ts", "src/tearbench/validation.ts", "src/game-reference/enemy-reference.ts", "src/replay/visual-replay.ts", "src/replay/legacy-compat.ts", "src/presentation/replay-puppet-factory.ts", "src/presentation/enemies/renderers/standard-renderers.ts", "src/presentation/world/entity-layer.ts", "tests/browser-current-gameplay-scenarios.js", "tests/unit/enemy-variants.test.ts", "tests/unit/verdant-variant-selection.test.ts", "tests/unit/live-enemy-spawn.test.ts", "tests/unit/live-codec-validation.test.ts", "tests/unit/replay-puppet-factory.test.ts", "tests/unit/replay-visual.test.ts", "tests/unit/run-session.test.ts", "tests/unit/world-renderers.test.ts", "tests/unit/enemy-catalogue.test.ts", "tests/unit/enemy-reference.test.ts"],
     "scenarios": ["verdant-variant-selection"],
     "scenarioSubjects": [],
@@ -167,6 +177,7 @@
   },
   {
     "id": "verdant-c9-presentation",
+    "specialized": true, "owner": "verdant-presentation", "reducedDisposition": "presentation-only",
     "prefixes": ["src/presentation/backdrop.ts", "src/presentation/backdrop-biomes.ts", "src/presentation/platform-materials/verdant-rootstone.ts", "src/presentation/environment/", "src/gameplay/environment/bloom-well-presentation-facts.ts", "src/gameplay/environment/presentation-snapshot.ts", "src/app/live-world-presentation-adapters.ts", "tests/browser-verdant-presentation.js", "tests/unit/backdrop-biomes.test.ts", "tests/unit/platform-materials.test.ts", "tests/unit/verdant-presentation.test.ts"],
     "scenarios": [],
     "scenarioSubjects": [],
@@ -180,6 +191,7 @@
   },
   {
     "id": "verdant-c12-rootbound-phase-two",
+    "specialized": true, "owner": "rootbound", "requiredScenarios": ["rootbound-graft-anchor-destruction"],
     "prefixes": ["src/gameplay/entities/enemy-types/rootbound.ts", "src/gameplay/entities/enemies.ts", "src/gameplay/environment/graft-anchor.ts", "src/gameplay/environment/root-cage.ts", "src/gameplay/environment/environment-runtime.ts", "src/app/live-rootbound-wiring.ts", "src/presentation/enemies/renderers/rootbound-renderer.ts", "src/presentation/environment/verdant-environment-presentation.ts", "src/tearbench/rootbound-graft-anchor-forge.ts", "src/tearbench/state-forge-factories.ts", "src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-contracts.ts", "src/tearbench/registries.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-current-gameplay-scenarios.js", "tests/unit/rootbound-phase-two.test.ts", "tests/unit/graft-anchor.test.ts"],
     "scenarios": ["rootbound-graft-anchor-destruction"],
     "scenarioSubjects": [],
@@ -193,6 +205,7 @@
   },
   {
     "id": "verdant-c15-wave-balance",
+    "specialized": true, "owner": "verdant-progression", "requiredScenarios": ["wave-clear-to-draft", "draft-selection-to-gameplay"],
     "prefixes": ["src/gameplay/run/campaign-stage-curve.ts", "src/gameplay/run/composition-budget.ts", "src/gameplay/run/wave-planner.ts", "src/gameplay/run/spawn-scheduler.ts", "src/gameplay/run/live-wave-controller.ts", "src/tearbench/progression-ledger.ts", "src/tearbench/verdant-stage-engineering-scenario.ts", "tests/unit/campaign-stage-curve.test.ts", "tests/unit/verdant-stage-state-forge.test.ts", "tests/unit/verdant-wave-composition.test.ts", "tests/unit/verdant-wave-economy.test.ts", "tests/browser-progression-journeys.js"],
     "scenarios": ["wave-clear-to-draft", "draft-selection-to-gameplay"],
     "scenarioSubjects": [],
@@ -206,6 +219,7 @@
   },
   {
     "id": "pale-aurora-rimehound",
+    "specialized": true, "owner": "pale-aurora", "reducedDisposition": "preview-engineering-only",
     "prefixes": ["src/gameplay/environment/aurora-track", "src/gameplay/environment/white-hart-route-runtime.ts", "src/gameplay/entities/enemy-types/rimehound.ts", "src/app/live-aurora-track-wiring.ts", "src/app/live-white-hart-wiring.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/pale-aurora-definitions.test.ts", "tests/unit/pale-aurora-runtime.test.ts", "tests/unit/rimehound.test.ts", "tests/unit/pale-state-forge-scenarios.test.ts"],
     "scenarios": [],
     "scenarioSubjects": [],
@@ -219,6 +233,7 @@
   },
   {
     "id": "pale-variant-selection",
+    "specialized": true, "owner": "pale-variants", "reducedDisposition": "preview-engineering-only",
     "prefixes": ["src/gameplay/variants.ts", "src/gameplay/entities/enemy-types/ground-enemies.ts", "src/gameplay/entities/enemy-types/air-enemies.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/pale-variant-selection.test.ts", "tests/browser-pale-variants.js"],
     "scenarios": [],
     "scenarioSubjects": [],
@@ -232,6 +247,7 @@
   },
   {
     "id": "pale-white-hart",
+    "specialized": true, "owner": "pale-white-hart", "requiredScenarios": ["white-hart-pale-traverse-foundation-live-encounter"],
     "prefixes": ["src/gameplay/entities/enemy-types/white-hart.ts", "src/gameplay/environment/white-hart-route-runtime.ts", "src/app/live-white-hart-wiring.ts", "src/presentation/enemies/renderers/white-hart-renderer.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/white-hart-foundation.test.ts", "tests/unit/white-hart-phases.test.ts", "tests/unit/white-hart-route-runtime.test.ts", "tests/unit/white-hart-state-forge.test.ts", "tests/browser-pale-white-hart-phases.js"],
     "scenarios": ["white-hart-pale-traverse-foundation-live-encounter"],
     "scenarioSubjects": [],
@@ -245,6 +261,7 @@
   },
   {
     "id": "pale-wave-reference",
+    "specialized": true, "owner": "pale-reference", "requiredScenarios": ["white-hart-pale-traverse-foundation-live-encounter", "wave-clear-to-draft", "draft-selection-to-gameplay"],
     "prefixes": ["src/gameplay/run/campaign-stage-curve.ts", "src/gameplay/run/composition-budget.ts", "src/gameplay/run/wave-planner.ts", "src/tearbench/pale-stage-engineering-scenario.ts", "src/game-reference/", "tests/unit/pale-wave-composition.test.ts", "tests/unit/pale-stage-state-forge.test.ts", "tests/unit/game-reference.test.ts"],
     "scenarios": ["white-hart-pale-traverse-foundation-live-encounter", "wave-clear-to-draft", "draft-selection-to-gameplay"],
     "scenarioSubjects": [],
@@ -257,6 +274,20 @@
     "journeyCommands": ["node tests/browser-pale-presentation.js", "node tests/browser-pale-white-hart-phases.js"]
   },
   {
+    "id": "production-replay-headless-composition",
+    "specialized": true,
+    "owner": "production-replay-headless-composition",
+    "reducedDisposition": "subject-specific-backend-required",
+    "prefixes": ["src/tearbench/production-combat-phases.ts", "src/tearbench/production-replay-composition.ts", "src/tearbench/production-headless-environment.ts"],
+    "scenarios": [],
+    "graveyardCases": [],
+    "journeyCheckpoint": "production-replay-headless-composition-engineering",
+    "baseComparison": "not-run-by-this-scenario",
+    "interactionMatrices": ["headless", "replay", "combat", "events"],
+    "buildTargets": ["test-standalone"],
+    "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"]
+  },
+  {
     "id": "current-player-surfaces",
     "prefixes": ["src/app/replay-hub.ts", "src/app/run-monitor.ts", "src/app/live-replay-screen-adapter.ts", "src/app/replay-library-controller.ts", "src/app/replay-editor.ts", "src/app/replay-transport-controller.ts", "src/app/live-player-watch-controller.ts", "src/app/live-ghost-lab-home.ts", "src/tearbench/browser/replay-hub.ts", "src/tearbench/browser/replay-hub-route.ts", "src/tearbench/browser/replay-hub-selectors.ts", "src/agents/run-monitor.ts", "src/agents/live-watch-agent-host.ts", "src/agents/live-watch-agent-panel.ts", "src/agents/panel-surface.ts", "src/agents/surface-route.ts", "src/presentation/screens/ghost-lab.ts"],
     "scenarios": ["boot-start-run", "draft-selection-to-gameplay"], "graveyardCases": [],
@@ -265,12 +296,13 @@
     "journeyCommands": ["node tests/browser-ghost-lab-home.js"]
   },
   {
-    "id": "documentation-only", "prefixes": ["docs/", "plans/", "README.md", "CONTRIBUTING.md", "CRAZYGAMES.md", "DEPLOYMENT.md"],
+    "id": "documentation-only", "prefixes": ["docs/", "plans/", "CONTRIBUTING.md", "CRAZYGAMES.md", "DEPLOYMENT.md"],
     "scenarios": [], "graveyardCases": [], "journeyCheckpoint": "documentation-only", "baseComparison": "not-run",
     "interactionMatrices": [], "buildTargets": [], "authorityCommands": ["node scripts/check-docs.mjs"]
   },
   {
     "id": "chainblade-hook-sling-replay",
+    "specialized": true, "owner": "chainblade", "requiredScenarios": ["chainblade-hook-sling-catch-seek"],
     "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/live-weapon-runtime.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-chainblade-bind-yank-ghost-seek.js", "tests/unit/c40-chainblade-evidence-registry.test.ts"],
     "scenarios": ["chainblade-hook-sling-catch-seek"],
     "graveyardCases": [],
@@ -280,6 +312,7 @@
   },
   {
     "id": "hammer-meteor-terrain-replay",
+    "specialized": true, "owner": "hammer", "requiredScenarios": ["hammer-meteor-terrain-catch-seek"],
     "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-hammer-meteor-ghost-seek.js", "tests/unit/c40-hammer-evidence-registry.test.ts"],
     "scenarios": ["hammer-meteor-terrain-catch-seek"],
     "graveyardCases": [],
@@ -289,6 +322,7 @@
   },
   {
     "id": "greatsword-wheelcut-replay",
+    "specialized": true, "owner": "greatsword", "requiredScenarios": ["greatsword-wheelcut-catch-seek"],
     "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-greatsword-wheelcut-ghost-seek.js", "tests/unit/c40-greatsword-evidence-registry.test.ts"],
     "scenarios": ["greatsword-wheelcut-catch-seek"],
     "graveyardCases": [],
@@ -298,6 +332,7 @@
   },
   {
     "id": "sword-reversal-threadcut-replay",
+    "specialized": true, "owner": "sword", "requiredScenarios": ["sword-reversal-threadcut-catch-seek"],
     "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/live-weapon-runtime.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-sword-crosscut-ghost-seek.js", "tests/unit/c40-sword-evidence-registry.test.ts"],
     "scenarios": ["sword-reversal-threadcut-catch-seek"],
     "graveyardCases": [],
@@ -307,6 +342,7 @@
   },
   {
     "id": "riftlock-loose-cannon-replay",
+    "specialized": true, "owner": "riftlock", "requiredScenarios": ["riftlock-loose-cannon-catch-seek"],
     "prefixes": ["src/gameplay/combat/live-opening-phase.ts", "src/gameplay/combat/weapon-secondary-runtime.ts", "src/gameplay/entities/blade.ts", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-combat-actions.ts", "src/app/live-game-runtime.ts", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-riftlock-loose-cannon-ghost-seek.js", "tests/unit/c40-riftlock-evidence-registry.test.ts"],
     "scenarios": ["riftlock-loose-cannon-catch-seek"],
     "graveyardCases": [],

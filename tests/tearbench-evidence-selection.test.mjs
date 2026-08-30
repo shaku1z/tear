@@ -39,6 +39,14 @@ function mutatedCatalog(name, mutate) {
   return path;
 }
 
+function mutatedRoutes(name, mutate) {
+  const routes = JSON.parse(readFileSync(routesPath, "utf8"));
+  mutate(routes);
+  const path = join(temporaryRoot, `${name}.routes.json`);
+  writeFileSync(path, `${JSON.stringify(routes)}\n`, "utf8");
+  return path;
+}
+
 test.after(() => { rmSync(temporaryRoot, { recursive: true, force: true }); });
 
 test("documentation and governed plans select focused authority without gameplay builds", () => {
@@ -48,6 +56,34 @@ test("documentation and governed plans select focused authority without gameplay
     assert.deepEqual(selection.scenarios, []);
     assert.deepEqual(selection.buildTargets, []);
     assert.deepEqual(selection.authorityCommands, ["node scripts/check-docs.mjs"]);
+  }
+});
+
+test("specialized routes expose an owner and route-owned evidence", () => {
+  const routes = JSON.parse(readFileSync(routesPath, "utf8"));
+  const specialized = routes.filter((route) => route.specialized === true);
+  assert.ok(specialized.length > 0);
+  for (const route of specialized) {
+    assert.equal(typeof route.owner, "string", route.id);
+    assert.ok(route.requiredScenarios?.length > 0 || route.reducedDisposition, route.id);
+  }
+});
+
+test("specialized route ownership fails closed when its owner or scenario proof is removed", () => {
+  const mutations = [
+    ["missing-owner", (routes) => { delete routes.find((route) => route.id === "verdant-c6-rootbinder-network").owner; }, /missing an explicit owner/u],
+    ["missing-scenario", (routes) => {
+      const route = routes.find((entry) => entry.id === "verdant-c6-rootbinder-network");
+      route.scenarios = [];
+      route.requiredScenarios = [];
+      delete route.reducedDisposition;
+    }, /no specialized scenario or reduced disposition/u],
+    ["invalid-prefix", (routes) => { routes.find((route) => route.id === "verdant-c6-rootbinder-network").prefixes.push("src/not-a-real-route/"); }, /no tracked repository match/u],
+  ];
+  for (const [name, mutate, expected] of mutations) {
+    const result = rejected(["src/gameplay/environment/environment-runtime.ts"], { routes: mutatedRoutes(name, mutate) });
+    assert.notEqual(result.status, 0, name);
+    assert.match(`${result.stderr}\n${result.stdout}`, expected, name);
   }
 });
 
@@ -181,6 +217,14 @@ test("boss, stage, progression, event, and player owners receive current mapped 
     assert.ok(surface.routes.includes("current-player-surfaces"));
     assert.deepEqual(surface.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
   }
+});
+
+test("production replay/headless composition is explicitly dispositioned", () => {
+  const selection = select(["src/tearbench/production-combat-phases.ts", "src/tearbench/production-replay-composition.ts",
+    "src/tearbench/production-headless-environment.ts"]);
+  assert.ok(selection.routes.includes("production-replay-headless-composition"));
+  assert.ok(selection.buildTargets.includes("test-standalone"));
+  assert.ok(selection.authorityCommands.some((command) => command.includes("production-headless-environment.test.ts")));
 });
 
 test("published stages select exactly six live boss encounters without preview leakage", () => {
@@ -414,6 +458,16 @@ test("selection records timestamp, exact source identity, and explicit diff scop
   assert.deepEqual(selection.scope.changedFiles, ["docs/identity-check.md"]);
   assert.deepEqual(selection.scope.routes, selection.routes);
   assert.deepEqual(selection.scope.scenarios, selection.scenarios);
+  assert.deepEqual(selection.scope.journeyCommands, selection.journeyCommands);
+  assert.deepEqual(selection.scope.authorityCommands, selection.authorityCommands);
+  assert.match(selection.scopeDigest, /^[0-9a-f]{64}$/u);
+  assert.match(selection.routeDefinitionDigest, /^[0-9a-f]{64}$/u);
+});
+
+test("diff scope canonicalization deduplicates and sorts changed files", () => {
+  const selection = select(["docs/z.md", "docs/a.md", "docs/z.md", "docs\\a.md"]);
+  assert.deepEqual(selection.scope.changedFiles, ["docs/a.md", "docs/z.md"]);
+  assert.equal(selection.changedFiles.join(","), "docs/a.md,docs/z.md");
 });
 
 test("dirty development evidence receipts remain bound to the executed source", () => {
@@ -435,9 +489,9 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   const previousArgv = process.argv, previousLog = console.log;
   process.argv = [process.execPath, script, "identity-test-import"];
   console.log = () => {};
-  let formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
+  let canReuseDiffCapabilityReport, formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
   try {
-    ({ formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));
+    ({ canReuseDiffCapabilityReport, formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));
   } finally {
     console.log = previousLog;
     process.argv = previousArgv;
@@ -470,4 +524,17 @@ test("served build identity refuses stale revision and source fingerprint", asyn
   assert.match(diagnostic, /captured stdout/u);
   assert.match(diagnostic, /captured stderr/u);
   assert.equal(formatFailedEvidenceExecution({ status: "passed", executions: [] }), "");
+
+  const scope = { kind: "diff", changedFiles: ["src/gameplay/weapon-selection.ts"], routes: ["current-game-authority"],
+    scenarios: ["sword-reversal-threadcut-catch-seek"], journeyCheckpoints: ["current-game-authority"],
+    buildTargets: ["test-standalone"], journeyCommands: [], authorityCommands: [] };
+  const reusableSelection = { source, scope, scopeDigest: "d".repeat(64), routeDefinitionDigest: "f".repeat(64) };
+  const report = { format: "tearbench-diff-capability", schemaVersion: 2, kind: "last-run-diff", cumulative: false,
+    status: "passed", source, scope, scopeDigest: reusableSelection.scopeDigest,
+    routeDefinitionDigest: reusableSelection.routeDefinitionDigest };
+  assert.equal(canReuseDiffCapabilityReport(reusableSelection, report), true);
+  assert.equal(canReuseDiffCapabilityReport(reusableSelection, { ...report, format: "tearbench-current-capability" }), false);
+  assert.equal(canReuseDiffCapabilityReport(reusableSelection, { ...report, scope: { ...scope, scenarios: [] } }), false);
+  assert.equal(canReuseDiffCapabilityReport(reusableSelection, { ...report, scopeDigest: "e".repeat(64) }), false);
+  assert.equal(canReuseDiffCapabilityReport({ ...reusableSelection, source: { ...source, state: "clean" } }, report), false);
 });
