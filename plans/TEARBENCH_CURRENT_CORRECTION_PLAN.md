@@ -62,8 +62,8 @@ runtime authority.
 | 3 | TC-3 — Environment invariant binding | Complete | TC-2 |
 | 4 | TC-4 — Rootbound repeated-poll regression | Complete | TC-3 |
 | 5 | TC-5 — Source-derived content terminology | Complete | TC-1 |
-| 6 | TC-6 — Specialized evidence-route ownership | Not started | TC-2 through TC-5 |
-| 7 | TC-7 — Diff-scoped capability reporting | Not started | TC-6 |
+| 6 | TC-6 — Specialized evidence-route ownership | Complete | TC-2 through TC-5 |
+| 7 | TC-7 — Diff-scoped capability reporting | Complete | TC-6 |
 | 8 | TC-8 — Program-document reconciliation | Not started | TC-1 through TC-7 |
 | 9 | TC-9 — Canonical Pale preview scenarios | Not started | TC-3, TC-5, TC-6 |
 | 10 | TC-10 — Exact-commit post-review and C40 truth | Not started | TC-1 through TC-9 |
@@ -291,14 +291,14 @@ route registry, or weakening of conservative shared-runtime fallback.
 
 ### Checklist
 
-- [ ] Inventory only source files that can materially affect environment, biome wiring, boss ownership, scenario materialization, or publication policy.
-- [ ] Map each such owner to an explicit route; retain `shared-runtime` as conservative fallback, not specialized proof.
-- [ ] Route gameplay-relevant replay/headless composition hooks—abilities, hazards/support, weapon-world contact, void/boss/add/clone paths, blade contact, and area damage—to subject-specific evidence or an explicit reduced-backend disposition.
-- [ ] Add representative negative selector fixtures for environment composition, Rootbound wiring, Pale route wiring, stage availability, and scenario materialization.
-- [ ] Preserve mixed recognized/unmapped and documentation-plus-unmapped diff regressions so unknown files cannot disappear beside a recognized route.
-- [ ] Fail closed when a file matches a specialized owner but the specialized route/scenario is absent.
-- [ ] Keep route commands deduplicated and focused; do not select every browser suite for every shared file.
-- [ ] Ensure protected-history selection still uses the complete intended change range.
+- [x] Inventory only source files that can materially affect environment, biome wiring, boss ownership, scenario materialization, or publication policy.
+- [x] Map each such owner to an explicit route; retain `shared-runtime` as conservative fallback, not specialized proof.
+- [x] Route gameplay-relevant replay/headless composition hooks—abilities, hazards/support, weapon-world contact, void/boss/add/clone paths, blade contact, and area damage—to subject-specific evidence or an explicit reduced-backend disposition.
+- [x] Add representative negative selector fixtures for environment composition, Rootbound wiring, Pale route wiring, stage availability, and scenario materialization.
+- [x] Preserve mixed recognized/unmapped and documentation-plus-unmapped diff regressions so unknown files cannot disappear beside a recognized route.
+- [x] Fail closed when a file matches a specialized owner but the specialized route/scenario is absent.
+- [x] Keep route commands deduplicated and focused; do not select every browser suite for every shared file.
+- [x] Ensure protected-history selection still uses the complete intended change range.
 
 **Focused gate:** `pnpm test:tearbench-selection` plus one dry selected-evidence
 inspection for each new route family. Execute browser commands only when their
@@ -328,13 +328,13 @@ backfill, or reuse of stale evidence under a new name.
 
 ### Checklist
 
-- [ ] Rename or version the generated report so “diff capability” is explicit in filename, format, scope, and documentation.
-- [ ] Preserve exact source revision, clean/dirty state, source fingerprint, changed files, routes, scenarios, builds, and executions.
-- [ ] State that the report is last-run/last-writer evidence and is not cumulative certification.
-- [ ] Migrate existing consumers atomically or provide a narrow compatibility read; never reinterpret an old artifact as a new schema.
-- [ ] Keep cumulative release truth exclusively in release certification/C40 artifacts.
-- [ ] Add a negative test where a narrow passing run cannot satisfy a broader requested scope.
-- [ ] Add a same-source/different-diff-scope negative so revision/fingerprint equality cannot authorize wrong-scope reuse.
+- [x] Rename or version the generated report so “diff capability” is explicit in filename, format, scope, and documentation.
+- [x] Preserve exact source revision, clean/dirty state, source fingerprint, changed files, routes, scenarios, builds, and executions.
+- [x] State that the report is last-run/last-writer evidence and is not cumulative certification.
+- [x] Migrate existing consumers atomically or provide a narrow compatibility read; never reinterpret an old artifact as a new schema.
+- [x] Keep cumulative release truth exclusively in release certification/C40 artifacts.
+- [x] Add a negative test where a narrow passing run cannot satisfy a broader requested scope.
+- [x] Add a same-source/different-diff-scope negative so revision/fingerprint equality cannot authorize wrong-scope reuse.
 
 **Focused gate:** TearBench selection/current capability tests, artifact
 disposition tests, docs checks, and release-certificate verifier tests.
@@ -482,8 +482,8 @@ commit alone is insufficient.
 | TC-3 | `1bb873e1cecdf1682d71a3134b7f8d5adc4683af` + `7a0c3e700c74cd2652822c62c9778c6daf043bd3` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-3_ENVIRONMENT_INVARIANT_BINDING.md`; 65 focused tests, typecheck, syntax, and diff gates | Clean-commit Class-A journey passed 13 source-owned scenarios at build fingerprint `0c124bdceb1710d2f41173836fed7772354b463a8eab6236e74dd8ae57225294`; full 744-tick Bloom materialization passed | Independent review found three blockers; all were corrected and the re-review passed; no protected integration claimed | Complete |
 | TC-4 | `ddc5a23f2b09249659dc62882410384927d4634d` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-4_ROOTBOUND_REPEATED_POLL.md`; 25 focused tests, typecheck, syntax, and diff gates | Clean-commit Class-A journey passed all 13 source-owned scenarios at build fingerprint `fd9cbb18e770994cbb566c4e5ad37c5f4d7a280d6772642e08330886fbbbb470` | Temporary terminal-reinstall mutation failed on the first poll; lead acceptance review green; no protected integration claimed | Complete |
 | TC-5 | `86041ed71c593bfee2a232a93a7f2d44874c7df7` + `60d1e58b92ad3258e9327830870b81486ebf1f18` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-5_SOURCE_DERIVED_CONTENT_TERMINOLOGY.md`; requirements generation/check, 14 terminology tests, 23 content/authority tests, 13 docs tests, typecheck, syntax, and diff gates | N/A | Initial independent review found four blockers; corrected exact-commit re-review passed; generated immutable identities retained; no protected integration claimed | Complete |
-| TC-6 | — | — | Selected only | — | Not started |
-| TC-7 | — | — | N/A | — | Not started |
+| TC-6 | `0473e3d85e833474112e81b81715371b29e764ec` + `244db27` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-6_SPECIALIZED_EVIDENCE_ROUTE_OWNERSHIP.md`; 32 selector tests, 7 TypeScript projection/certification tests, focused hook-family negatives, typecheck, syntax, docs, terminology, and diff gates | Selected/dry route-family inspection only; no owning gameplay family changed | Initial review found fail-closed and hook-family audit gaps; corrected exact-commit re-review passed; no protected integration claimed | Complete |
+| TC-7 | `7ec9509e6427c1498abc99d543306f0959ff12dc` + `244db27` + `96ad620` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-7_DIFF_SCOPED_CAPABILITY_REPORTING.md`; selector/report/reuse negatives, 7 TypeScript projection/certification tests, typecheck, syntax, docs, terminology, and diff gates | N/A | Narrow-versus-broad, worktree, route-digest, legacy-format, and same-source/different-scope reuse negatives passed; exact-commit re-review passed; no protected integration claimed | Complete |
 | TC-8 | — | — | N/A | — | Not started |
 | TC-9 | — | — | — | — | Not started |
 | TC-10 | — | `pnpm check` | Required by certificate | — | Not started |
