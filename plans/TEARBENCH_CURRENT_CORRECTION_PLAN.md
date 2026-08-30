@@ -61,7 +61,7 @@ runtime authority.
 | 2 | TC-2 — Bloom backend honesty | Complete | TC-1 |
 | 3 | TC-3 — Environment invariant binding | Complete | TC-2 |
 | 4 | TC-4 — Rootbound repeated-poll regression | Complete | TC-3 |
-| 5 | TC-5 — Source-derived content terminology | Not started | TC-1 |
+| 5 | TC-5 — Source-derived content terminology | Complete | TC-1 |
 | 6 | TC-6 — Specialized evidence-route ownership | Not started | TC-2 through TC-5 |
 | 7 | TC-7 — Diff-scoped capability reporting | Not started | TC-6 |
 | 8 | TC-8 — Program-document reconciliation | Not started | TC-1 through TC-7 |
@@ -257,14 +257,14 @@ rename, or removal of required compatibility aliases.
 
 ### Checklist
 
-- [ ] Derive stage IDs/display names, boss IDs/home stages, published/preview state, environment mechanic identities, and canonical scenario subjects from their production owners.
-- [ ] Preserve the existing product rename registry for compatibility aliases; do not overload it with a duplicate gameplay catalog.
-- [ ] Apply the current translation layer to mutable generated requirement/evidence descriptions, while keeping the immutable v0.6 source and hash-bound historical records unchanged.
-- [ ] Add one minimal source-owner mutation for stage/display, boss/home, environment mechanic, publication state, and scenario subject coverage.
-- [ ] Prove `tear` → `The Tear` → `source`, Verdant → Rootbound, and Pale → White Hart through source-derived assertions.
-- [ ] Prove preview/canonical implementation language is distinct: White Hart is canonical while Pale publication remains gated.
-- [ ] Reject stale provisional definition symbols and stale current-facing checkpoint comments.
-- [ ] Scan current mutable documentation and TearBench descriptions while excluding immutable source/checkpoint history through explicit policy.
+- [x] Derive stage IDs/display names, boss IDs/home stages, published/preview state, environment mechanic identities, and canonical scenario subjects from their production owners.
+- [x] Preserve the existing product rename registry for compatibility aliases; do not overload it with a duplicate gameplay catalog.
+- [x] Apply the current translation layer to mutable generated requirement/evidence descriptions, while keeping the immutable v0.6 source and hash-bound historical records unchanged.
+- [x] Add one minimal source-owner mutation for stage/display, boss/home, environment mechanic, publication state, and scenario subject coverage.
+- [x] Prove `tear` → `The Tear` → `source`, Verdant → Rootbound, and Pale → White Hart through source-derived assertions.
+- [x] Prove preview/canonical implementation language is distinct: White Hart is canonical while Pale publication remains gated.
+- [x] Reject stale provisional definition symbols and stale current-facing checkpoint comments.
+- [x] Scan current mutable documentation and TearBench descriptions while excluding immutable source/checkpoint history through explicit policy.
 
 **Focused gate:** Terminology checker/tests, current-game authority tests, boss
 observation authority, content availability, and documentation authority.
@@ -481,7 +481,7 @@ commit alone is insufficient.
 | TC-2 | `29a2460be71003416a8a73ad4e36b4ad2e617309` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-2_BLOOM_BACKEND_HONESTY.md`; 36 focused typed tests, 28 selector tests, typecheck, docs, and terminology gates | Clean-commit Class-A journey passed all 13 source-owned scenarios at build fingerprint `9d9bffd9b423d3a5d3cb4e11b34f328a9aa1d7daf45d0c333d9ce37d1585d2c4` | Final focused review green; no headless Bloom or protected integration claimed | Complete |
 | TC-3 | `1bb873e1cecdf1682d71a3134b7f8d5adc4683af` + `7a0c3e700c74cd2652822c62c9778c6daf043bd3` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-3_ENVIRONMENT_INVARIANT_BINDING.md`; 65 focused tests, typecheck, syntax, and diff gates | Clean-commit Class-A journey passed 13 source-owned scenarios at build fingerprint `0c124bdceb1710d2f41173836fed7772354b463a8eab6236e74dd8ae57225294`; full 744-tick Bloom materialization passed | Independent review found three blockers; all were corrected and the re-review passed; no protected integration claimed | Complete |
 | TC-4 | `ddc5a23f2b09249659dc62882410384927d4634d` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-4_ROOTBOUND_REPEATED_POLL.md`; 25 focused tests, typecheck, syntax, and diff gates | Clean-commit Class-A journey passed all 13 source-owned scenarios at build fingerprint `fd9cbb18e770994cbb566c4e5ad37c5f4d7a280d6772642e08330886fbbbb470` | Temporary terminal-reinstall mutation failed on the first poll; lead acceptance review green; no protected integration claimed | Complete |
-| TC-5 | — | — | N/A | — | Not started |
+| TC-5 | `86041ed71c593bfee2a232a93a7f2d44874c7df7` + `60d1e58b92ad3258e9327830870b81486ebf1f18` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-5_SOURCE_DERIVED_CONTENT_TERMINOLOGY.md`; requirements generation/check, 14 terminology tests, 23 content/authority tests, 13 docs tests, typecheck, syntax, and diff gates | N/A | Initial independent review found four blockers; corrected exact-commit re-review passed; generated immutable identities retained; no protected integration claimed | Complete |
 | TC-6 | — | — | Selected only | — | Not started |
 | TC-7 | — | — | N/A | — | Not started |
 | TC-8 | — | — | N/A | — | Not started |
