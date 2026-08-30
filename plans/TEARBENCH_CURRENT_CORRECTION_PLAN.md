@@ -60,7 +60,7 @@ runtime authority.
 | 1 | TC-1 — Publication authority | Complete | Plan activation |
 | 2 | TC-2 — Bloom backend honesty | Complete | TC-1 |
 | 3 | TC-3 — Environment invariant binding | Complete | TC-2 |
-| 4 | TC-4 — Rootbound repeated-poll regression | Not started | TC-3 |
+| 4 | TC-4 — Rootbound repeated-poll regression | Complete | TC-3 |
 | 5 | TC-5 — Source-derived content terminology | Not started | TC-1 |
 | 6 | TC-6 — Specialized evidence-route ownership | Not started | TC-2 through TC-5 |
 | 7 | TC-7 — Diff-scoped capability reporting | Not started | TC-6 |
@@ -218,13 +218,13 @@ or unrelated boss refactor.
 
 ### Checklist
 
-- [ ] Add the repeated-poll browser step first and prove it fails against a temporary local regression that permits a terminal Graft to be reinstalled or mutated.
-- [ ] Keep Rootbound active in Phase II after the Mercy Graft is destroyed.
-- [ ] Advance at least two bounded live production polls after destruction; do not manually clean the Graft before these assertions.
-- [ ] Assert no exception and exactly one stable Graft ID.
-- [ ] Assert terminal state/tick remain stable and no replacement Graft appears.
-- [ ] Assert no duplicate create/effect/score/enemy-defeated facts.
-- [ ] Retain the later terminal cleanup assertion as a separate lifecycle fact.
+- [x] Add the repeated-poll browser step first and prove it fails against a temporary local regression that permits a terminal Graft to be reinstalled or mutated.
+- [x] Keep Rootbound active in Phase II after the Mercy Graft is destroyed.
+- [x] Advance at least two bounded live production polls after destruction; do not manually clean the Graft before these assertions.
+- [x] Assert no exception and exactly one stable Graft ID.
+- [x] Assert terminal state/tick remain stable and no replacement Graft appears.
+- [x] Assert no duplicate create/effect/score/enemy-defeated facts.
+- [x] Retain the later terminal cleanup assertion as a separate lifecycle fact.
 
 **Focused gate:** Graft Anchor and Rootbound Phase-II unit tests, followed by the
 single selected current-game browser journey.
@@ -480,7 +480,7 @@ commit alone is insufficient.
 | TC-1 | `83c0a0c306aa1adf00175118c18c357f2af6b872` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-1_PUBLICATION_AUTHORITY.md`; focused publication, release-preflight, game-reference, content-availability, Verdant, docs, and terminology checks | N/A | Final focused review green; historical evidence preserved; no protected integration claimed | Complete |
 | TC-2 | `29a2460be71003416a8a73ad4e36b4ad2e617309` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-2_BLOOM_BACKEND_HONESTY.md`; 36 focused typed tests, 28 selector tests, typecheck, docs, and terminology gates | Clean-commit Class-A journey passed all 13 source-owned scenarios at build fingerprint `9d9bffd9b423d3a5d3cb4e11b34f328a9aa1d7daf45d0c333d9ce37d1585d2c4` | Final focused review green; no headless Bloom or protected integration claimed | Complete |
 | TC-3 | `1bb873e1cecdf1682d71a3134b7f8d5adc4683af` + `7a0c3e700c74cd2652822c62c9778c6daf043bd3` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-3_ENVIRONMENT_INVARIANT_BINDING.md`; 65 focused tests, typecheck, syntax, and diff gates | Clean-commit Class-A journey passed 13 source-owned scenarios at build fingerprint `0c124bdceb1710d2f41173836fed7772354b463a8eab6236e74dd8ae57225294`; full 744-tick Bloom materialization passed | Independent review found three blockers; all were corrected and the re-review passed; no protected integration claimed | Complete |
-| TC-4 | — | — | — | — | Not started |
+| TC-4 | `ddc5a23f2b09249659dc62882410384927d4634d` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-4_ROOTBOUND_REPEATED_POLL.md`; 25 focused tests, typecheck, syntax, and diff gates | Clean-commit Class-A journey passed all 13 source-owned scenarios at build fingerprint `fd9cbb18e770994cbb566c4e5ad37c5f4d7a280d6772642e08330886fbbbb470` | Temporary terminal-reinstall mutation failed on the first poll; lead acceptance review green; no protected integration claimed | Complete |
 | TC-5 | — | — | N/A | — | Not started |
 | TC-6 | — | — | Selected only | — | Not started |
 | TC-7 | — | — | N/A | — | Not started |
