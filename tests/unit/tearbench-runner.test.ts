@@ -15,6 +15,7 @@ import {
   type TearScenarioV1,
 } from "../../src/tearbench";
 import type { TearScenarioTransition } from "../../src/tearbench/runner";
+import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-events";
 
 function observation(tick: number, hp = 100, scenario?: TearScenarioV1): TearObservationV1 {
   return {
@@ -48,7 +49,7 @@ class FixtureRuntime implements TearScenarioRuntime {
   step(actions: Parameters<TearScenarioRuntime["step"]>[0]) {
     this.#tick += 1;
     return {
-      observation: observation(this.#tick, this.#tick === this.#failAt ? Number.NaN : 100, this.#scenario),
+      observation: observation(this.#tick, this.#tick === this.#failAt ? -1 : 100, this.#scenario),
       events: [],
       actions,
       terminated: this.#tick === 5,
@@ -106,6 +107,18 @@ class SequenceEnvironmentRuntime implements TearScenarioRuntime {
   }
 
   metrics() { return { steps: this.#index }; }
+}
+
+class SuppliedEventRuntime implements TearScenarioRuntime {
+  #tick = 0;
+  constructor(private readonly supplied: readonly ReturnType<typeof createGameplayCausalEvent>[]) {}
+  reset(scenario: TearScenarioV1): TearObservationV1 { this.#tick = 0; return observation(0, 100, scenario); }
+  step(actions: Parameters<TearScenarioRuntime["step"]>[0]): TearScenarioTransition {
+    this.#tick += 1;
+    return { observation: observation(this.#tick), events: this.supplied, actions,
+      terminated: true, truncated: false, info: {} };
+  }
+  metrics() { return { steps: this.#tick }; }
 }
 
 function environmentScenario(): TearScenarioV1 {
@@ -185,6 +198,17 @@ describe("TearBench engineering runner", () => {
     });
     expect(artifact.firstFailureTick).toBe(3);
     expect(artifact.invariantId).toBe("player.valid-health");
+  });
+
+  it("preserves supplied native causal events in order without inventing per-tick events", () => {
+    const scenario = createCanonicalScenarioRegistry().get("movement-jump");
+    const supplied = [
+      createGameplayCausalEvent({ kind: "run", tick: 1, transition: "started", runId: "run-a", mode: "campaign", difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 0 }, 0, "native:0", "engine"),
+      createGameplayCausalEvent({ kind: "wave", tick: 1, wave: 1, event: "start" }, 1, "native:1", "engine"),
+    ] as const;
+    const result = new TearBenchRunner(new SuppliedEventRuntime(supplied)).run(scenario);
+    expect(result.status).toBe("passed");
+    expect(result.events).toEqual(supplied);
   });
 
   it.each([

@@ -24,6 +24,7 @@ import {
   GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
   HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS,
   INVARIANT_REGISTRY,
+  UNSUPPORTED_INVARIANT_IDS,
   RUN_MODE_REGISTRY,
   STAGE_REGISTRY,
   WEAPON_REGISTRY,
@@ -273,6 +274,11 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
     if (start.wave !== undefined && !safeInteger(start.wave, 1)) issue(issues, "start.wave", "must be a positive integer");
   }
   if (!boundedArray(value.assertions) || value.assertions.some((entry) => typeof entry !== "string" || !INVARIANT_REGISTRY.has(entry))) issue(issues, "assertions", "contains an unregistered invariant");
+  else {
+    const unsupported = value.assertions.filter((entry): entry is typeof UNSUPPORTED_INVARIANT_IDS[number] =>
+      typeof entry === "string" && UNSUPPORTED_INVARIANT_IDS.includes(entry as typeof UNSUPPORTED_INVARIANT_IDS[number]));
+    if (unsupported.length > 0) issue(issues, "assertions", `contains unsupported invariant claim(s): ${unsupported.join(", ")}`);
+  }
   if (!boundedArray(value.tags) || value.tags.some((entry) => !stringValue(entry))) issue(issues, "tags", "must be a bounded identifier array");
   if (value.backends !== undefined) {
     if (!boundedArray(value.backends) || value.backends.length === 0

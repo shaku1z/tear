@@ -396,7 +396,7 @@ export function createProductionHeadlessEnvironment(
       const causalEvents: TearCausalEventV1[] = current.nativeEvents.slice(deliveredCausalEventCount)
         .map((event, offset) => {
           const sequence = deliveredCausalEventCount + offset;
-          return createGameplayCausalEvent(event, sequence, `headless:${String(event.tick)}:${String(sequence)}`);
+          return createGameplayCausalEvent(event, sequence, `headless:${String(event.tick)}:${String(sequence)}`, "engine");
         });
       deliveredCausalEventCount = current.nativeEvents.length;
       return Object.freeze({

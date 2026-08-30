@@ -5,7 +5,7 @@ import type { TearCausalEventV1 } from "../tearbench/contracts";
 /** Converts a native gameplay fact into an independent validated V3 event. */
 export function createLiveGhostCausalEvent(event: TearGameplayEvent, sequence: number): TearCausalEventV1 {
   if (!Number.isSafeInteger(sequence) || sequence < 1) throw new RangeError("Ghost causal event sequence must be positive");
-  return createGameplayCausalEvent(event, sequence, `ghost-live-${String(sequence)}`);
+  return createGameplayCausalEvent(event, sequence, `ghost-live-${String(sequence)}`, "engine");
 }
 
 /** Stable reference used by later V3 keyframes to cite the sealed opening event. */

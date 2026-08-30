@@ -234,7 +234,7 @@ export function createLiveTearRuntimeEnvironment(
     if (startingRun && event.kind === "run" && event.transition === "abandoned") return;
     waveOwnership.consume(event);
     nativeEventLog.push(event);
-    eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`));
+    eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`, "engine"));
   });
 
   const projectObservation = (tick: number): TearObservationV1 => {

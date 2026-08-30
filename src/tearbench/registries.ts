@@ -176,6 +176,10 @@ export const INVARIANT_IDS = Object.freeze([
 ] as const);
 export const INVARIANT_REGISTRY = createStableRegistry("invariant", INVARIANT_IDS);
 export type TearInvariantId = typeof INVARIANT_IDS[number];
+/** Registered ontology IDs that are intentionally unavailable until a real input contract exists. */
+export const UNSUPPORTED_INVARIANT_IDS = Object.freeze([
+  "replay.branch-equivalence", "test.production-isolation",
+] as const satisfies readonly TearInvariantId[]);
 
 export const WITHIN_TICK_PHASES = Object.freeze([
   "input-canonicalized",

@@ -261,12 +261,9 @@ const canonicalScenario = await loadCanonicalScenario(catalogEntry);
 Object.assign(runtimeScenario, {
   subject: canonicalScenario.subject,
   backends: canonicalScenario.backends,
-  // Preserve browser-only diagnostic checks while sourcing the base and
-  // subject-required set from canonical-scenarios.ts.
-  assertions: Object.freeze([...new Set([
-    ...canonicalScenario.assertions,
-    "world.legal-bounds", "wave.valid-completion", "boss.valid-phase", "ui.valid-focus",
-  ])]),
+  // The typed canonical materializer owns assertion applicability. Adding
+  // privileged checks here would make ordinary non-boss/non-UI subjects lie.
+  assertions: canonicalScenario.assertions,
 });
 let materialized;
 await withJourney({

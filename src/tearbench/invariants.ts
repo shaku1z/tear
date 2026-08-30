@@ -1,4 +1,4 @@
-import type { TearInvariantId } from "./registries";
+import { UNSUPPORTED_INVARIANT_IDS, type TearInvariantId } from "./registries";
 import type { TearObservationV1, TearScenarioSubjectV1, TearScenarioV1 } from "./contracts";
 import { modeOwnsWaveActors } from "../gameplay/run/mode-catalog";
 
@@ -60,12 +60,27 @@ function finite(values: readonly number[]): boolean {
   return values.every(Number.isFinite);
 }
 
+function numericValues(value: unknown): readonly number[] {
+  if (typeof value === "number") return [value];
+  if (Array.isArray(value)) return value.flatMap((entry) => numericValues(entry));
+  if (typeof value === "object" && value !== null) return Object.values(value).flatMap((entry) => numericValues(entry));
+  return [];
+}
+
+function requireDiagnosticField<T>(
+  id: TearInvariantId,
+  value: T | undefined,
+  field: string,
+): T {
+  if (value === undefined) throw new Error(`requested invariant ${id} requires source-owned diagnostic field ${field}`);
+  return value;
+}
+
 export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, TearInvariantCheck>>> = Object.freeze({
   "runtime.finite-state": (observation) => finite([
-    observation.player.x, observation.player.y, observation.player.vx, observation.player.vy,
-    observation.blade.handX, observation.blade.handY, observation.blade.tipX, observation.blade.tipY,
-    ...observation.entities.flatMap((entity) => [entity.x, entity.y, entity.vx, entity.vy,
-      ...(entity.hpRatio === undefined ? [] : [entity.hpRatio]), ...(entity.damage === undefined ? [] : [entity.damage])]),
+    ...numericValues(observation.player), ...numericValues(observation.blade),
+    ...numericValues(observation.entities), ...numericValues(observation.run),
+    ...numericValues(observation.diagnostics), ...numericValues(observation.navigation),
   ]) ? null : failure("runtime.finite-state", observation, "authoritative state contains a non-finite number", "fatal"),
   "player.finite-transform": (observation) => finite([
     observation.player.x, observation.player.y, observation.player.vx, observation.player.vy,
@@ -81,10 +96,11 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
   "entity.valid-owner": (observation) => {
     const ids = new Set(observation.entities.map((entity) => entity.id));
     ids.add("player");
-    const invalid = observation.entities.find((entity) => entity.ownerId !== undefined && !ids.has(entity.ownerId));
+    const invalid = observation.entities.find((entity) => entity.ownerId !== undefined
+      && (!ids.has(entity.ownerId) || entity.ownerId === entity.id));
     return invalid === undefined
       ? null
-      : failure("entity.valid-owner", observation, `entity ${invalid.id} refers to missing owner ${invalid.ownerId ?? ""}`, "fatal");
+      : failure("entity.valid-owner", observation, `entity ${invalid.id} refers to invalid owner ${invalid.ownerId ?? ""}`, "fatal");
   },
   "player.valid-health": (observation) => {
     const { hp, maxHp } = observation.player;
@@ -93,8 +109,14 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
       : failure("player.valid-health", observation, `player health ${String(hp)}/${String(maxHp)} is invalid`, "fatal");
   },
   "world.legal-bounds": (observation) => {
-    const bounds = observation.diagnostics?.worldBounds;
-    if (bounds === undefined) return null;
+    const diagnostics = requireDiagnosticField("world.legal-bounds", observation.diagnostics, "worldBounds");
+    const bounds = requireDiagnosticField("world.legal-bounds", diagnostics.worldBounds, "worldBounds");
+    if (!finite([bounds.minX, bounds.maxX, bounds.minY, bounds.maxY])) {
+      throw new Error("requested invariant world.legal-bounds requires finite source-owned diagnostic field worldBounds");
+    }
+    if (bounds.minX > bounds.maxX || bounds.minY > bounds.maxY) {
+      return failure("world.legal-bounds", observation, "declared world bounds are not ordered");
+    }
     const actors = [
       { id: "player", x: observation.player.x, y: observation.player.y },
       ...observation.entities.map(({ id, x, y }) => ({ id, x, y })),
@@ -107,23 +129,37 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
   },
   "wave.valid-completion": (observation) => {
     if (!modeOwnsWaveActors(observation.run.mode)) return null;
-    const diagnostics = observation.diagnostics;
-    if (diagnostics?.waveOwnership === "unavailable" || diagnostics?.livingWaveEnemies === undefined) {
-      throw new Error("wave completion requires source-owned current-wave actor evidence");
+    const diagnostics = requireDiagnosticField("wave.valid-completion", observation.diagnostics, "waveOwnership/livingWaveEnemies/waveComplete");
+    if (diagnostics.waveOwnership !== "source-events") {
+      throw new Error("wave completion requires source-owned current-wave actor evidence (waveOwnership)");
     }
-    return diagnostics.waveComplete === true && diagnostics.livingWaveEnemies > 0
+    const livingWaveEnemies = requireDiagnosticField("wave.valid-completion", diagnostics.livingWaveEnemies, "livingWaveEnemies");
+    const waveComplete = requireDiagnosticField("wave.valid-completion", diagnostics.waveComplete, "waveComplete");
+    if (!Number.isFinite(livingWaveEnemies) || livingWaveEnemies < 0) {
+      throw new Error("wave completion requires finite source-owned diagnostic field livingWaveEnemies");
+    }
+    return waveComplete === true && livingWaveEnemies > 0
       ? failure("wave.valid-completion", observation, "wave is complete while wave-owned enemies remain")
       : null;
   },
   "boss.valid-phase": (observation) => {
-    const boss = observation.diagnostics?.boss;
-    return boss !== undefined && !boss.validPhases.includes(boss.phase)
+    const diagnostics = requireDiagnosticField("boss.valid-phase", observation.diagnostics, "boss");
+    const boss = requireDiagnosticField("boss.valid-phase", diagnostics.boss, "boss");
+    if (boss.id.trim().length === 0 || boss.phase.trim().length === 0 || boss.homeStage.trim().length === 0
+      || boss.validPhases.length === 0) {
+      throw new Error("requested invariant boss.valid-phase requires complete source-owned boss phase diagnostics");
+    }
+    return !boss.validPhases.includes(boss.phase)
       ? failure("boss.valid-phase", observation, `boss ${boss.id} is in undeclared phase ${boss.phase}`)
       : null;
   },
   "ui.valid-focus": (observation) => {
-    const ui = observation.diagnostics?.ui;
-    return ui?.focusedId !== undefined && !ui.focusableIds.includes(ui.focusedId)
+    const diagnostics = requireDiagnosticField("ui.valid-focus", observation.diagnostics, "ui");
+    const ui = requireDiagnosticField("ui.valid-focus", diagnostics.ui, "ui");
+    if (!("focusedId" in ui) || !Array.isArray(ui.focusableIds)) {
+      throw new Error("requested invariant ui.valid-focus requires complete source-owned focus diagnostics");
+    }
+    return ui.focusedId !== undefined && !ui.focusableIds.includes(ui.focusedId)
       ? failure("ui.valid-focus", observation, `UI focus points to non-focusable control ${ui.focusedId}`)
       : null;
   },
@@ -134,8 +170,12 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
       : failure("runtime.pause-freezes-simulation", observation, "authoritative elapsed time advanced while paused");
   },
   "runtime.no-softlock": (observation) => {
-    const progressTick = observation.diagnostics?.progressTick;
-    const limit = observation.diagnostics?.softlockLimitTicks;
+    const diagnostics = requireDiagnosticField("runtime.no-softlock", observation.diagnostics, "progressTick/softlockLimitTicks");
+    const progressTick = requireDiagnosticField("runtime.no-softlock", diagnostics.progressTick, "progressTick");
+    const limit = requireDiagnosticField("runtime.no-softlock", diagnostics.softlockLimitTicks, "softlockLimitTicks");
+    if (!Number.isFinite(progressTick) || !Number.isFinite(limit) || limit < 0) {
+      throw new Error("requested invariant runtime.no-softlock requires finite source-owned softlock diagnostics");
+    }
     return progressTick !== undefined && limit !== undefined && observation.tick - progressTick > limit
       ? failure("runtime.no-softlock", observation, `no declared progress for ${String(observation.tick - progressTick)} ticks`)
       : null;
@@ -205,6 +245,9 @@ export function runInvariantChecks(
 ): readonly TearInvariantFailure[] {
   const failures: TearInvariantFailure[] = [];
   for (const id of ids) {
+    if (UNSUPPORTED_INVARIANT_IDS.includes(id as typeof UNSUPPORTED_INVARIANT_IDS[number])) {
+      throw new Error(`requested invariant ${id} is unsupported: no source-owned comparison inputs or production input contract exists`);
+    }
     if (["world.legal-bounds", "wave.valid-completion", "boss.valid-phase", "ui.valid-focus",
       "runtime.pause-freezes-simulation", "runtime.no-softlock"].includes(id)
       && observation.diagnostics === undefined) {
