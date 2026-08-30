@@ -35,11 +35,12 @@ labels are preserved only as evidence notes, not current player-facing terminolo
 The last locally reconciled protected source baseline is
 `a8a476c6171d913581c01bb0e4432f53cf44f9e4` (2026-08-25). This identifies protected
 source, not an independently reverified public deployment or an uncommitted
-development build. Current selected capability evidence is generated under
-`artifacts/tearbench/generated/current-capability.json` and carries its execution
-timestamp, changed scope, source SHA/dirty state/fingerprint, and, when applicable,
-the actual standalone artifact identity. A dirty development report is not a clean
-release certificate.
+development build. Last-run selected capability evidence is generated under
+`artifacts/tearbench/generated/diff-capability.json` as a non-cumulative,
+diff-scoped report. It carries its execution timestamp, canonical changed scope,
+source SHA/dirty state/fingerprint, and, when applicable, the actual standalone
+artifact identity. A dirty development report is not a clean release certificate;
+cumulative release truth remains owned by the release certificate and C40 evidence.
 
 The accepted runtime-boundary correction is recorded in
 [`TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md`](TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md).

@@ -348,7 +348,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 - [x] Record current checkpoint statuses, partial capabilities, and actual normal-player visibility in the existing handoff/evidence catalog/dashboard.
 - [x] Reconcile closed C32 and partial C37 evidence without promoting a local foundation to a finished player product.
 - [x] Record current release/deployment identity truthfully; remove present-tense frozen/no-public-SHA claims once contradicted by protected release evidence.
-- [x] Add source commit, evidence timestamp, artifact identity, and scope to generated current-capability reporting where existing generators already own those outputs.
+- [x] Add source commit, evidence timestamp, artifact identity, and canonical diff scope to generated last-run diff-capability reporting where existing generators already own those outputs; keep cumulative truth in release certification/C40.
 - [x] Keep the governed seven-plan index stable unless a separately authorized change intentionally updates its checker and metadata contracts.
 - [x] Treat C40 as incomplete until a real clean-commit release certificate passes every named current-game requirement.
 

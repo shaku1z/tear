@@ -475,6 +475,38 @@ async function changedFiles() {
   return inline.split(",").map((entry) => entry.trim()).filter(Boolean);
 }
 
+function canonicalList(values, normalize = (value) => value) {
+  return [...new Set(values.map(normalize))].sort();
+}
+
+function canonicalDiffScope(scope) {
+  const normalizePath = (value) => {
+    const normalized = String(value).replaceAll("\\", "/").trim();
+    if (normalized === "" || isAbsolute(normalized) || normalized.split("/").includes("..")) {
+      throw new TypeError(`unsafe changed-file scope path: ${String(value)}`);
+    }
+    return normalized;
+  };
+  return Object.freeze({
+    kind: "diff",
+    changedFiles: Object.freeze(canonicalList(scope.changedFiles ?? [], normalizePath)),
+    routes: Object.freeze(canonicalList(scope.routes ?? [])),
+    scenarios: Object.freeze(canonicalList(scope.scenarios ?? [])),
+    journeyCheckpoints: Object.freeze(canonicalList(scope.journeyCheckpoints ?? [])),
+    buildTargets: Object.freeze(canonicalList(scope.buildTargets ?? [])),
+    journeyCommands: Object.freeze(canonicalList(scope.journeyCommands ?? [])),
+    authorityCommands: Object.freeze(canonicalList(scope.authorityCommands ?? [])),
+  });
+}
+
+function diffScopeDigest(scope) {
+  return createHash("sha256").update(canonicalJson(canonicalDiffScope(scope))).digest("hex");
+}
+
+function routeDefinitionDigest() {
+  return createHash("sha256").update(canonicalJson(evidenceRoutes)).digest("hex");
+}
+
 function currentWeaponParityPlan(routes, scenarioIds) {
   const required = routes.some((route) => (route.scenarioSubjects ?? []).includes("active-weapons"));
   if (!required) return Object.freeze({ required: false, weapons: Object.freeze([]), scenarios: Object.freeze([]) });
@@ -511,7 +543,7 @@ function currentWeaponParityPlan(routes, scenarioIds) {
 }
 
 function evidenceForDiff(files) {
-  const normalized = files.map((file) => file.replaceAll("\\", "/"));
+  const normalized = canonicalList(files, (file) => file.replaceAll("\\", "/").trim());
   const matched = evidenceRoutes.filter((route) =>
     normalized.some((file) => route.prefixes.some((prefix) => file.startsWith(prefix))));
   const unmatched = normalized.filter((file) =>
@@ -550,14 +582,26 @@ function evidenceForDiff(files) {
     buildTargets: collect("buildTargets"),
     journeyCommands: collect("journeyCommands"),
     authorityCommands,
-    scope: Object.freeze({
-      kind: "diff", changedFiles: Object.freeze([...normalized]),
-      routes: Object.freeze(selected.map((route) => route.id).sort()),
-      scenarios: Object.freeze([...scenarios]),
-      journeyCheckpoints: Object.freeze([...new Set(selected.map((route) => route.journeyCheckpoint))].sort()),
-      buildTargets: Object.freeze(collect("buildTargets")),
+    scope: canonicalDiffScope({
+      changedFiles: normalized,
+      routes: selected.map((route) => route.id),
+      scenarios,
+      journeyCheckpoints: selected.map((route) => route.journeyCheckpoint),
+      buildTargets: collect("buildTargets"),
+      journeyCommands: collect("journeyCommands"),
+      authorityCommands,
     }),
     unrelatedUnitTestsAreGameplayEvidence: false,
+    scopeDigest: diffScopeDigest({
+      changedFiles: normalized,
+      routes: selected.map((route) => route.id),
+      scenarios,
+      journeyCheckpoints: selected.map((route) => route.journeyCheckpoint),
+      buildTargets: collect("buildTargets"),
+      journeyCommands: collect("journeyCommands"),
+      authorityCommands,
+    }),
+    routeDefinitionDigest: routeDefinitionDigest(),
   };
 }
 
@@ -595,16 +639,18 @@ function executeApprovedEvidence(command, state) {
     ? "passed" : "failed", receipts };
 }
 
-function writeCurrentCapabilityReport(scope, state, executions) {
+function writeDiffCapabilityReport(scope, state, executions) {
   if (scope.scenarios.length === 0 && scope.buildTargets.length === 0 && scope.journeyCommands.length === 0) return undefined;
+  const canonicalScope = canonicalDiffScope(scope);
   const report = {
-    format: "tearbench-current-capability", schemaVersion: 1, generatedAt: new Date().toISOString(),
+    format: "tearbench-diff-capability", schemaVersion: 2, generatedAt: new Date().toISOString(),
+    kind: "last-run-diff", cumulative: false,
     executionClass: "engineering", source: state.source ?? readSourceIdentity(),
     ...(state.build === undefined ? {} : { build: state.build }),
-    scope: Object.freeze({ ...scope, scenarios: [...scope.scenarios], journeyCommands: [...scope.journeyCommands], buildTargets: [...scope.buildTargets] }),
+    scope: canonicalScope, scopeDigest: diffScopeDigest(canonicalScope), routeDefinitionDigest: routeDefinitionDigest(),
     status: executions.every((entry) => entry.status === "passed") ? "passed" : "failed", executions,
   };
-  const path = resolve(root, "artifacts", "tearbench", "generated", "current-capability.json");
+  const path = resolve(root, "artifacts", "tearbench", "generated", "diff-capability.json");
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   return workspaceRelativePath(path);
@@ -612,7 +658,7 @@ function writeCurrentCapabilityReport(scope, state, executions) {
 
 function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets = [], authorityCommands = [], scope = {}) {
   const state = { testStandaloneBuilt: false, source: readSourceIdentity() }, executions = [], completedCommands = new Map();
-  const executionScope = { scenarios: [...scenarios], journeyCommands: [...journeyCommands], buildTargets: [...buildTargets], ...scope };
+  const executionScope = canonicalDiffScope({ scenarios, journeyCommands, buildTargets, ...scope });
   const runOne = (id, command, backend = "explicit-command") => {
     const completed = completedCommands.get(command);
     if (completed !== undefined) {
@@ -642,7 +688,7 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
     for (const command of authorityCommands) if (!runOne(`authority:${command}`, command)) break;
   }
   const status = executions.every((entry) => entry.status === "passed") ? "passed" : "failed";
-  const generatedArtifact = writeCurrentCapabilityReport(executionScope, state, executions);
+  const generatedArtifact = writeDiffCapabilityReport(executionScope, state, executions);
   return { status, executions, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
 }
 
@@ -696,18 +742,16 @@ export function verifyCurrentWeaponParityExecution(selection, evidence) {
 function executeCurrentWeaponParity() {
   const selected = evidenceForDiff(["src/gameplay/weapon-selection.ts"]);
   const scenarios = [...selected.currentWeaponParity.scenarios];
-  const scope = { ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
-    buildTargets: ["test-standalone"] };
+  const scope = canonicalDiffScope({ ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
+    buildTargets: ["test-standalone"], journeyCommands: [], authorityCommands: [] });
   const selection = { ...selected, scenarios, evidenceCommands: scenarios.flatMap((id) =>
     evidenceCommandsForScenario(scenarioById(id)).map((evidence) => ({ id, ...evidence }))),
-  journeyCommands: [], authorityCommands: [], scope };
-  const existingPath = resolve(root, "artifacts", "tearbench", "generated", "current-capability.json");
+  journeyCommands: [], authorityCommands: [], scope, scopeDigest: diffScopeDigest(scope) };
+  const existingPath = resolve(root, "artifacts", "tearbench", "generated", "diff-capability.json");
   if (existsSync(existingPath)) {
     try {
       const existing = JSON.parse(readFileSync(existingPath, "utf8"));
-      if (existing.format === "tearbench-current-capability" && existing.status === "passed"
-        && existing.source?.revision === selection.source.revision
-        && existing.source?.fingerprint === selection.source.fingerprint) {
+      if (canReuseDiffCapabilityReport({ ...selection, scope }, existing)) {
         return { ...selection, evidenceExecution: { ...verifyCurrentWeaponParityExecution(selection, existing),
           reusedExactSourceEvidence: true } };
       }
@@ -732,6 +776,19 @@ function canonicalJson(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+}
+
+export function canReuseDiffCapabilityReport(selection, existing) {
+  if (existing?.format !== "tearbench-diff-capability" || existing.schemaVersion !== 2
+    || existing.kind !== "last-run-diff" || existing.cumulative !== false || existing.status !== "passed") return false;
+  const source = selection.source;
+  const exactSource = existing.source?.revision === source.revision
+    && existing.source?.state === source.state
+    && existing.source?.fingerprint === source.fingerprint
+    && existing.source?.worktreeFingerprint === source.worktreeFingerprint;
+  const exactScope = existing.scopeDigest === selection.scopeDigest
+    && canonicalJson(existing.scope ?? {}) === canonicalJson(selection.scope);
+  return exactSource && exactScope && existing.routeDefinitionDigest === selection.routeDefinitionDigest;
 }
 
 /** Share the same tracked/untracked source digest used by actual standalone builds. */
