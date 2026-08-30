@@ -39,7 +39,8 @@ current paths and hashes until a separately authorized atomic migration.
 | [ECONOMY_REWORK_PLAN.md](../plans/active/ECONOMY_REWORK_PLAN.md) | Active balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
 | [PHASE_F_MIRROR_PLAN.md](../plans/completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
 | [TearBench current correction plan](../plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md) | Temporary active authority for the ten corrections reopened against the protected six-stage game. |
-| [Verdant Sanctum Revision 3](../plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | Active Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; publication remains joint with Pale and separately authorized. |
+| [Verdant Sanctum Revision 3](../plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | Active Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; current publication follows the tracked six-stage boundary and does not publish Pale. |
+| [Pale Traverse Revision 3](../plans/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md) | Active Pale biome and engineering-freeze authority; current publication follows the tracked boundary and keeps Pale preview-only. |
 | [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |
 
 ## Root Markdown classification (remaining 3 root documents)

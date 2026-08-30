@@ -103,12 +103,12 @@ ledgers, `plans/README.md`, `docs/README.md`,
 
 ### Checklist
 
-- [ ] Add a current authority overlay to the active Verdant and Pale plans without rewriting historical checkpoint evidence.
-- [ ] Make the plan indexes route publication questions to the tracked publication boundary and current source.
-- [ ] Prove the two-view authority matrix: seven authored stages, exactly six published stages, and Pale as the one preview derive from the source-owned availability policy.
-- [ ] Add small negative tests for a dropped/reordered published stage, accidental Pale publication, and restoration of the obsolete “joint publication only” policy.
-- [ ] Confirm release preflight and game-reference publication use the same current policy.
-- [ ] Record the protected source identity that changed or affirmed the policy.
+- [x] Add a current authority overlay to the active Verdant and Pale plans without rewriting historical checkpoint evidence.
+- [x] Make the plan indexes route publication questions to the tracked publication boundary and current source.
+- [x] Prove the two-view authority matrix: seven authored stages, exactly six published stages, and Pale as the one preview derive from the source-owned availability policy.
+- [x] Add small negative tests for a dropped/reordered published stage, accidental Pale publication, and restoration of the obsolete “joint publication only” policy.
+- [x] Confirm release preflight and game-reference publication use the same current policy.
+- [ ] Record the protected source identity that changed or affirmed the policy after the implementation commit exists.
 
 **Focused gate:** Run the existing campaign-publication, release-preflight,
 game-reference publication, content-availability, and documentation-authority
@@ -477,7 +477,7 @@ commit alone is insufficient.
 
 | Checkpoint | Source commit | Focused evidence | Browser/backend evidence | Post-review | State |
 | --- | --- | --- | --- | --- | --- |
-| TC-1 | — | — | N/A | — | Not started |
+| TC-1 | `1bc797bce8cab0fde420eea4a9e8519dc7aae9c7` + reviewed working-tree diff | `docs/checkpoints/tearbench-current-corrections/TC-1_PUBLICATION_AUTHORITY.md`; focused publication, release-preflight, game-reference, content-availability, Verdant, docs, and terminology checks | N/A | Focused review green; exact implementation commit pending | In review |
 | TC-2 | — | — | — | — | Not started |
 | TC-3 | — | — | — | — | Not started |
 | TC-4 | — | — | — | — | Not started |

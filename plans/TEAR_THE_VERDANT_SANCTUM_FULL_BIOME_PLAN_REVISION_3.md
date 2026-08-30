@@ -26,6 +26,15 @@
 | Public release boundary | **Verdant and Pale promote together; no public six-stage campaign** |
 | Certification boundary | Verdant engineering evidence is non-certifying and does not close C40 |
 
+> **Current TC-1 publication overlay (2026-08-30).** The active publication
+> authority is `config/campaign-publication-boundary.json` at the current typed
+> source identity: Verdant is published as stage 4 of the six-stage, 60-wave
+> campaign, and `pale-traverse` is the sole Playground preview. The typed stage
+> availability projection, release preflight, and game-reference publication
+> must consume that policy and fail closed on drift. The release-boundary text
+> above and the historical checkpoint statements below are preserved as
+> Revision 3 history; they do not authorize reversion to joint publication.
+
 - **Owner:** Verdant biome and campaign owner
 - **Status:** Active
 - **Closure condition:** VS3-C0 through VS3-C21 have green or explicitly authorized dispositions at one reconciled feature identity, the Pale shared-dependency handoff is complete, and VS3-C22 remains explicitly blocked until Pale completion and separately authorized joint promotion.

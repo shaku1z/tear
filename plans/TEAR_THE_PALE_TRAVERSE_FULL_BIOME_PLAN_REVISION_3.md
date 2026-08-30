@@ -22,6 +22,15 @@
 | Public release boundary | **No joint integration, publication, dispatch, or deployment is authorized by this plan** |
 | Certification boundary | Pale engineering evidence is non-certifying and does not close C40 |
 
+> **Current TC-1 publication overlay (2026-08-30).** The active publication
+> authority is `config/campaign-publication-boundary.json` at the current typed
+> source identity: the public campaign is exactly six stages and 60 waves,
+> while `pale-traverse` remains the sole Playground/engineering preview. The
+> release preflight and game-reference publisher consume this same policy and
+> fail closed on drift. The release-boundary text above and historical
+> checkpoint statements below remain preserved evidence; they do not authorize
+> reversion to joint publication or publication of Pale.
+
 - **Owner:** Pale biome and campaign owner
 - **Status:** Active
 - **Closure condition:** PT3-C0 through PT3-C11 are green at one frozen Pale feature identity, all Pale implementation reuses the singular Verdant shared contracts, and joint Verdant/Pale integration remains explicitly blocked pending separate authorization.

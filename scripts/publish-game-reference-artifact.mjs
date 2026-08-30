@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { assertCampaignPublicationAllowed } from "./campaign-publication-boundary.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const FULL_SHA = /^[a-f0-9]{40}$/u;
@@ -16,9 +17,6 @@ const ARTIFACT_RETENTION_DAYS = 90;
 const MANIFEST_FILENAME = "game-reference.v1.json";
 const RECEIPT_FILENAME = "game-reference.v1.receipt.json";
 const ARTIFACT_NAME_PREFIX = "tear-game-reference-v1-";
-const PUBLIC_STAGE_IDS = Object.freeze([
-  "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear",
-]);
 const PUBLIC_BOSS_IDS = Object.freeze(["warden", "colossus", "aldric", "rootbound", "echo", "source"]);
 const PUBLIC_ENEMY_FAMILY_IDS = Object.freeze([
   "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
@@ -46,6 +44,11 @@ function exactKeys(value, expected, label) {
   }
 }
 
+function currentPublicationPolicy(repositoryRoot = root) {
+  const policyPath = path.join(repositoryRoot, "config", "campaign-publication-boundary.json");
+  return assertCampaignPublicationAllowed(JSON.parse(fs.readFileSync(policyPath, "utf8")));
+}
+
 function git(rootPath, ...args) {
   const result = spawnSync("git", args, { cwd: rootPath, encoding: "utf8", stdio: "pipe" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
@@ -69,7 +72,8 @@ export function validatePublicationInputs({ sourceSha, headSha, status, reposito
 }
 
 /** The generated manifest is checked again before any artifact file is written. */
-export function validateManifestEnvelope(manifest, { sourceSha, repository = GAME_REFERENCE_REPOSITORY } = {}) {
+export function validateManifestEnvelope(manifest, { sourceSha, repository = GAME_REFERENCE_REPOSITORY, repositoryRoot = root } = {}) {
+  const publicationPolicy = currentPublicationPolicy(repositoryRoot);
   exactKeys(manifest, ["format", "schemaVersion", "source", "terminologyVersion", "roster", "collections"], "game-reference manifest");
   if (manifest.format !== GAME_REFERENCE_FORMAT || manifest.schemaVersion !== GAME_REFERENCE_SCHEMA_VERSION) {
     throw new TypeError("game-reference manifest format/schema is unsupported");
@@ -91,7 +95,8 @@ export function validateManifestEnvelope(manifest, { sourceSha, repository = GAM
     if (collection.status !== "complete") throw new TypeError(`game-reference collection ${collectionId} is not complete`);
   }
   const stageIds = manifest.collections.stages.items.map((stage) => stage?.id);
-  if (stageIds.length !== PUBLIC_STAGE_IDS.length || stageIds.some((id, index) => id !== PUBLIC_STAGE_IDS[index])) {
+  if (stageIds.length !== publicationPolicy.activeStageIds.length
+    || stageIds.some((id, index) => id !== publicationPolicy.activeStageIds[index])) {
     throw new Error("game-reference publication requires the exact six published stages");
   }
   const bossIds = manifest.collections.bosses.items.map((boss) => boss?.id);
@@ -298,7 +303,7 @@ function publishGameReferenceArtifactInternal({
   } catch (error) {
     throw new Error(`game-reference exporter produced invalid JSON: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
-  validateManifestEnvelope(manifest, { sourceSha: requestedSha, repository });
+  validateManifestEnvelope(manifest, { sourceSha: requestedSha, repository, repositoryRoot: resolvedRoot });
   if (!encoded.endsWith("\n")) throw new Error("game-reference manifest must end with one newline");
   const manifestSha256 = createHash("sha256").update(Buffer.from(encoded, "utf8")).digest("hex");
   const receipt = buildReceipt({
