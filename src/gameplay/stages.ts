@@ -351,6 +351,22 @@ export function stagePublicationState(stageId: StageId): StagePublicationState {
   return STAGE_PUBLICATION_STATE[stageId];
 }
 
+export interface StageAuthorityProjection {
+  readonly displayNames: Readonly<Record<string, string>>;
+  readonly bossHomes: Readonly<Record<string, string>>;
+  readonly publication: Readonly<Record<string, StagePublicationState>>;
+}
+
+/** Validate an injected content projection against the authored stage owner. */
+export function assertStageAuthorityProjection(projection: StageAuthorityProjection): void {
+  for (const stage of AUTHORED_STAGES) {
+    if (projection.displayNames[stage.id] !== stage.name) throw new Error(`stage display drift for ${stage.id}`);
+    if (projection.bossHomes[stage.id] !== STAGE_BOSS_HOME[stage.id]) throw new Error(`boss home drift for ${stage.id}`);
+    const expectedPublication = STAGE_CONTENT_AVAILABILITY[stage.id].published ? "published" : "preview";
+    if (projection.publication[stage.id] !== expectedPublication) throw new Error(`publication drift for ${stage.id}`);
+  }
+}
+
 export function stageIdsAvailableOn(surface: ContentAvailabilitySurface): readonly StageId[] {
   return Object.freeze(STAGE_IDS.filter((id) => STAGE_CONTENT_AVAILABILITY[id][surface]));
 }

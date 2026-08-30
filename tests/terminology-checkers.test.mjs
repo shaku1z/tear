@@ -242,6 +242,25 @@ test("generated requirements apply mutable terminology at the generator boundary
     createHash("sha256").update("State Forge is required.").digest("hex"));
 });
 
+test("current-source checker rejects stale provisional definitions and checkpoint claims only on mutable paths", () => {
+  withFixture((root) => {
+    const registry = baseRegistry();
+    registry.currentSourcePolicy.mutableScanPaths = ["src/gameplay/run/boss-definitions.ts", "docs/**/*.md"];
+    writeRegistry(root, registry);
+    writeFixture(root, "src/gameplay/run/boss-definitions.ts",
+      "export const WHITE_HART_PROVISIONAL_DEFINITION = {};");
+    writeFixture(root, "docs/TEARBENCH_GHOST3_PROGRAM.md",
+      "Current checkpoint C24: provisional pending implementation.\n");
+    writeFixture(root, "docs/checkpoints/old-history.md",
+      "Current checkpoint C24: provisional historical wording.\n");
+    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => /stale provisional definition symbol/u.test(error)));
+    assert.ok(result.errors.some((error) => /stale current-facing checkpoint claim/u.test(error)));
+    assert.equal(result.errors.some((error) => error.includes("old-history.md")), false);
+  });
+});
+
 test("active-roster checker verifies canonical order and exact retired-ID migration", () => {
   withFixture((root) => {
     const registry = baseRegistry();

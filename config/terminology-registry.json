@@ -26,6 +26,25 @@
     "mutablePaths": ["src/tearbench/canonical-scenarios.json", "docs/tearbench-ghost3-evidence-catalog.json"],
     "immutablePaths": ["docs/source/**", "docs/checkpoints/**", "docs/ghost3/**"]
   },
+  "currentSourcePolicy": {
+    "mutableScanPaths": [
+      "src/gameplay/run/boss-definitions.ts",
+      "src/gameplay/environment/*.ts",
+      "src/tearbench/*.ts",
+      "docs/TEARBENCH_GHOST3_PROGRAM.md",
+      "docs/TEARBENCH_GHOST3_REQUIREMENT_LEDGER.md",
+      "docs/tearbench-ghost3-evidence-catalog.json",
+      "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md"
+    ],
+    "immutableHistoryPaths": ["docs/source/**", "docs/checkpoints/**", "docs/ghost3/**"],
+    "staleDefinitionPatterns": [
+      "\\b(?:WHITE_HART|ROOTBOUND|BLOOM_WELL|PALE_STAGE|VERDANT_STAGE)_(?:PROVISIONAL|DRAFT|PLACEHOLDER)_[A-Z0-9_]+\\b"
+    ],
+    "staleCheckpointCommentPatterns": [
+      "\\bcurrent\\s+(?:checkpoint|status)\\b[^\\r\\n]*(?:provisional|draft|placeholder)\\b",
+      "\\bcheckpoint\\s+C(?:2[1-9]|3\\d|40)\\b[^\\r\\n]*(?:provisional|draft|placeholder)\\b"
+    ]
+  },
   "terms": [
     {
       "id": "tear-music",

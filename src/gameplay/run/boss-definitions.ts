@@ -43,6 +43,13 @@ export const BOSS_DISPLAY_NAMES = Object.freeze(Object.fromEntries(
   BOSS_DEFINITIONS.map(({ id, name }) => [id, name]),
 ) as Readonly<Record<BossDefinitionId, string>>);
 
+/** Validate an injected boss-name projection against the authored definitions. */
+export function assertBossDisplayProjection(projection: Readonly<Record<string, string>>): void {
+  for (const boss of BOSS_DEFINITIONS) {
+    if (projection[boss.id] !== boss.name) throw new Error(`boss display drift for ${boss.id}`);
+  }
+}
+
 export function bossDefinition(id: BossDefinitionId): BossDefinition {
   const definition = BOSS_DEFINITIONS.find((candidate) => candidate.id === id);
   if (definition === undefined) throw new Error(`unknown boss definition ${id}`);

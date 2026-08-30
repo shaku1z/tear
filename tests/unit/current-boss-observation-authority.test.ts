@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
-import { BOSS_DEFINITIONS, bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
+import { BOSS_DEFINITIONS, BOSS_DISPLAY_NAMES, assertBossDisplayProjection, bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
 import { CANONICAL_CONTENT_AUTHORITY, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
 import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
@@ -108,6 +108,15 @@ describe("current boss observation authority", () => {
       const altered = { ...bloom, tags: bloom.tags.filter((tag) => tag !== "bloom-well") };
       materializeCanonicalScenario(altered);
     }).toThrow(/source-owned field mechanic/u);
+    const genericField = scenarioCatalog.find((entry) => entry.subject.id === "generic-field");
+    const genericCombatObject = scenarioCatalog.find((entry) => entry.subject.id === "generic-combat-object");
+    if (genericField === undefined || genericCombatObject === undefined) throw new Error("generic environment scenarios are incomplete");
+    expect(() => {
+      materializeCanonicalScenario({ ...genericField, tags: [...genericField.tags, "bloom-well"] });
+    }).toThrow(/generic environment scenario.*specialized mechanic/u);
+    expect(() => {
+      materializeCanonicalScenario({ ...genericCombatObject, tags: [...genericCombatObject.tags, "root-link"] });
+    }).toThrow(/generic environment scenario.*specialized mechanic/u);
   });
 
   it("projects current product names, homes, and publication state from production owners", () => {
@@ -126,5 +135,11 @@ describe("current boss observation authority", () => {
     expect(STAGE_PUBLICATION_STATE["verdant-sanctum"]).toBe("published");
     expect(STAGE_PUBLICATION_STATE["pale-traverse"]).toBe("preview");
     expect(CANONICAL_CONTENT_AUTHORITY.environmentMechanics).toEqual(["bloom-well", "root-link", "graft-anchor"]);
+  });
+
+  it("rejects an injected boss-name projection that drifts from the production owner", () => {
+    const staleNames = { ...BOSS_DISPLAY_NAMES, rootbound: "Rootbinder" };
+    expect(() => assertBossDisplayProjection(staleNames)).toThrow(/boss display drift/u);
+    expect(BOSS_DEFINITIONS.find(({ id }) => id === "rootbound")?.name).toBe("The Rootbound");
   });
 });

@@ -194,6 +194,34 @@ export function validateRegistry(registry) {
       if (mutableFields.has(field)) errors.push(`mutableProjectionPolicy field cannot be both mutable and immutable: ${field}`);
     }
   }
+  const currentSource = registry.currentSourcePolicy;
+  if (!currentSource || typeof currentSource !== "object") {
+    errors.push("currentSourcePolicy must be an object");
+  } else {
+    for (const key of ["mutableScanPaths", "immutableHistoryPaths", "staleDefinitionPatterns", "staleCheckpointCommentPatterns"]) {
+      if (!Array.isArray(currentSource[key]) || currentSource[key].length === 0
+        || currentSource[key].some((value) => !nonEmptyString(value))) {
+        errors.push(`currentSourcePolicy.${key} must contain non-empty values`);
+      }
+    }
+    const mutablePaths = currentSource.mutableScanPaths ?? [];
+    const immutablePaths = currentSource.immutableHistoryPaths ?? [];
+    for (const mutablePath of mutablePaths) {
+      if (immutablePaths.some((immutablePath) => matchesPathPattern(mutablePath, immutablePath)
+        || matchesPathPattern(immutablePath, mutablePath))) {
+        errors.push(`currentSourcePolicy mutable path overlaps immutable history: ${mutablePath}`);
+      }
+    }
+    for (const [key, patterns] of [["staleDefinitionPatterns", currentSource.staleDefinitionPatterns], ["staleCheckpointCommentPatterns", currentSource.staleCheckpointCommentPatterns]]) {
+      for (const pattern of patterns ?? []) {
+        try {
+          new RegExp(pattern, "imu");
+        } catch (error) {
+          errors.push(`currentSourcePolicy.${key} contains invalid regular expression: ${String(error.message)}`);
+        }
+      }
+    }
+  }
   if (!Array.isArray(registry.terms) || registry.terms.length === 0) {
     errors.push("registry.terms must be a non-empty array");
     return errors;
@@ -321,6 +349,39 @@ export function translateMutableGeneratedDescriptions(value, registry) {
   return result;
 }
 
+function scanPatternMatches(text, patterns) {
+  return patterns.flatMap((pattern) => {
+    const expression = new RegExp(pattern, "gimu");
+    return [...text.matchAll(expression)].map((match) => ({ pattern, index: match.index ?? 0, text: match[0] }));
+  });
+}
+
+/**
+ * Reject only known stale provisional definitions and current checkpoint
+ * claims. Explicit immutable-history paths are never scanned by this policy.
+ */
+export function scanStaleCurrentClaims(root, registry) {
+  const policy = registry.currentSourcePolicy;
+  const findings = [];
+  const errors = [];
+  const files = collectMatchingFiles(root, policy.mutableScanPaths)
+    .filter((relativePath) => !pathMatchesAny(relativePath, policy.immutableHistoryPaths));
+  for (const relativePath of files) {
+    const text = fs.readFileSync(path.join(root, relativePath), "utf8");
+    for (const { pattern, index, text: matchText } of scanPatternMatches(text, policy.staleDefinitionPatterns)) {
+      const line = text.slice(0, index).split(/\r?\n/u).length;
+      findings.push({ relativePath, line, kind: "stale-definition", pattern, text: matchText });
+      errors.push(`${relativePath}:${line} contains stale provisional definition symbol "${matchText}"`);
+    }
+    for (const { pattern, index, text: matchText } of scanPatternMatches(text, policy.staleCheckpointCommentPatterns)) {
+      const line = text.slice(0, index).split(/\r?\n/u).length;
+      findings.push({ relativePath, line, kind: "stale-checkpoint-comment", pattern, text: matchText });
+      errors.push(`${relativePath}:${line} contains stale current-facing checkpoint claim "${matchText}"`);
+    }
+  }
+  return { errors, findings, scannedFiles: files.length };
+}
+
 export function sourceStringSegments(text) {
   const segments = [];
   for (let index = 0; index < text.length; index += 1) {
@@ -428,7 +489,15 @@ export function runTerminologyCheck({ root = process.cwd(), registryPath = DEFAU
   const validationErrors = validateRegistry(registry);
   if (validationErrors.length > 0) return { ok: false, errors: validationErrors, findings: [], scannedFiles: 0, registry };
   const scanResult = scanDeprecatedUserFacingCopy(root, registry);
-  return { ok: scanResult.errors.length === 0, errors: scanResult.errors, findings: scanResult.findings, scannedFiles: scanResult.scannedFiles, registry };
+  const staleResult = scanStaleCurrentClaims(root, registry);
+  return {
+    ok: scanResult.errors.length === 0 && staleResult.errors.length === 0,
+    errors: [...scanResult.errors, ...staleResult.errors],
+    findings: [...scanResult.findings, ...staleResult.findings],
+    scannedFiles: scanResult.scannedFiles,
+    staleScannedFiles: staleResult.scannedFiles,
+    registry,
+  };
 }
 
 function parseCliArguments(argumentsList) {

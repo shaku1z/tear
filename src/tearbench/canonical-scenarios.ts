@@ -27,6 +27,8 @@ import { effectiveInvariantIdsForScenario } from "./invariants";
 
 type CanonicalCatalogEntry = (typeof scenarioCatalog)[number];
 
+const GENERIC_ENVIRONMENT_SUBJECT_IDS = new Set(["generic-field", "generic-combat-object"]);
+
 function homeStageForBoss(bossId: string): StageId | undefined {
   const match = Object.entries(STAGE_BOSS_HOME).find(([, id]) => id === bossId);
   return match?.[0] as StageId | undefined;
@@ -67,7 +69,14 @@ function assertSourceOwnedContent(entry: CanonicalCatalogEntry): void {
     }
   }
   if (entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object") {
-    sourceEnvironmentMechanicKind(entry);
+    const specialized = !GENERIC_ENVIRONMENT_SUBJECT_IDS.has(entry.subject.id);
+    const category = entry.subject.kind === "environment-field" ? "field" : "combat-object";
+    const specializedTags = Object.values(ENVIRONMENT_OBJECT_DEFINITIONS)
+      .filter((definition) => definition.category === category && entry.tags.includes(definition.kind));
+    if (specialized) sourceEnvironmentMechanicKind(entry);
+    else if (specializedTags.length > 0) {
+      throw new RangeError(`generic environment scenario ${entry.id} cannot claim a specialized mechanic identity`);
+    }
   }
 }
 
@@ -177,7 +186,8 @@ export const CANONICAL_CONTENT_AUTHORITY = Object.freeze({
     id, displayName: name, homeStage: homeStageForBoss(id),
   }))),
   environmentMechanics: Object.freeze([...new Set(scenarioCatalog
-    .filter((entry) => entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object")
+    .filter((entry) => (entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object")
+      && !GENERIC_ENVIRONMENT_SUBJECT_IDS.has(entry.subject.id))
     .map((entry) => sourceEnvironmentMechanicKind(entry)))]),
   stageEnvironmentMechanics: Object.freeze(Object.fromEntries(AUTHORED_STAGES.map(({ id }) => [
     id, stageEnvironmentMechanicKinds(id),
