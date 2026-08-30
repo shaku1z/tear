@@ -1,5 +1,6 @@
 import type { TearInvariantId } from "./registries";
 import type { TearObservationV1 } from "./contracts";
+import { modeOwnsWaveActors } from "../gameplay/run/mode-catalog";
 
 export interface TearInvariantFailure {
   readonly id: TearInvariantId;
@@ -70,6 +71,7 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
       : failure("world.legal-bounds", observation, `${invalid.id} is outside declared world bounds`);
   },
   "wave.valid-completion": (observation) => {
+    if (!modeOwnsWaveActors(observation.run.mode)) return null;
     const diagnostics = observation.diagnostics;
     if (diagnostics?.waveOwnership === "unavailable" || diagnostics?.livingWaveEnemies === undefined) {
       throw new Error("wave completion requires source-owned current-wave actor evidence");

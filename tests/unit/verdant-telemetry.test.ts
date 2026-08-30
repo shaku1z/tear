@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { verdantTelemetryIntents } from "../../src/gameplay/progression/verdant-telemetry";
-import { executeEnvironmentTelemetryIntents, paleTelemetryIntents } from "../../src/gameplay/progression/environment-telemetry";
+import { executeEnvironmentTelemetryIntents } from "../../src/gameplay/progression/environment-telemetry";
 import type { TearGameplayEvent, UntickedTearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 
 const event = (value: UntickedTearGameplayEvent): TearGameplayEvent => ({ ...value, tick: 12 });
@@ -15,10 +15,6 @@ describe("Verdant telemetry", () => {
       .toEqual([{ type: "profile-add", stat: "rootLinksSevered", amount: 1 }]);
     expect(verdantTelemetryIntents(event({ kind: "environment", event: "combat-object-destroyed", objectId: "graft:1", category: "combat-object", objectKind: "graft-anchor" })))
       .toEqual([{ type: "profile-add", stat: "graftsDestroyed", amount: 1 }]);
-    expect(paleTelemetryIntents(event({ kind: "stage", stage: 6, stageId: "pale-traverse", transition: "entered" })))
-      .toEqual([{ type: "profile-max", stat: "paleEntered", value: 1 }]);
-    expect(paleTelemetryIntents(event({ kind: "environment", event: "field-started", objectId: "track:1", category: "field", objectKind: "aurora-track" })))
-      .toEqual([{ type: "profile-add", stat: "auroraTracksActivated", amount: 1 }]);
   });
 
   it("ignores presentation-ambiguous facts and executes through the profile port", () => {

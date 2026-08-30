@@ -4,7 +4,7 @@ import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
 import {
   BOSS_DEFINITIONS,
   BOSS_IDENTITY_IDS,
-  WHITE_HART_PROVISIONAL_DEFINITION,
+  WHITE_HART_DEFINITION,
 } from "../../src/gameplay/run/boss-definitions";
 import {
   AUTHORED_BOSS_ROSTER,
@@ -22,7 +22,7 @@ describe("Pale Revision 3 content authority", () => {
     expect(BOSS_IDENTITY_IDS.filter((id) => id === "white-hart")).toHaveLength(1);
     expect(ENEMY_IDENTITY_IDS.filter((id) => id === "rimehound")).toHaveLength(1);
     expect(STAGE_BOSS_HOME["pale-traverse"]).toBe("white-hart");
-    expect(WHITE_HART_PROVISIONAL_DEFINITION).toMatchObject({ id: "white-hart", name: "The White Hart" });
+    expect(WHITE_HART_DEFINITION).toMatchObject({ id: "white-hart", name: "The White Hart" });
   });
 
   it("preserves completed Pale content as authored engineering content outside publication", () => {

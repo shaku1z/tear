@@ -73,7 +73,7 @@ function cloneData<T extends TearCodecValue>(value: T): T {
 }
 
 export const TEAR_REFERENCE_KEYS = Object.freeze([
-  "ownerId", "targetId", "summonerId", "platformId", "projectileId", "stolenBladeId", "sourceTrackId",
+  "ownerId", "targetId", "summonerId", "platformId", "projectileId", "stolenBladeId",
 ] as const);
 const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
 
@@ -111,8 +111,9 @@ function declaresReference(codecId: TearCodecId, key: string, ownerPath: string)
   // Treating it as an entity reference makes valid long void runs impossible
   // to seal once the conveyor correctly retires the ingress platform.
   if (codecId === "tear.run.v1" && key === "platformId" && ownerPath === "$.voidScroll.ingress") return false;
-  if (codecId === "tear.hazard.v1" && key === "actorId" && /^\$\.fields\[\d+\]\.carryStates\[\d+\]$/u.test(ownerPath)) return true;
-  return (referenceKeys.has(key) || key === "sourceId" || key === "targetIds" || key === "linkedActorIds")
+  const authoredEnvironmentReference = codecId === "tear.hazard.v1"
+    && /^(?:owner|target|source|actor).*Id$/iu.test(key);
+  return (referenceKeys.has(key) || authoredEnvironmentReference || key === "sourceId" || key === "targetIds" || key === "linkedActorIds")
     && !declaresIdentity(codecId, key, ownerPath);
 }
 

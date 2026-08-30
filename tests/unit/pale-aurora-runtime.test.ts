@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createAuroraTrackFieldState, type AuroraTrackFieldState } from "../../src/gameplay/environment/aurora-track";
+import { assertAuroraTrackFieldState, createAuroraTrackFieldState, type AuroraTrackFieldState } from "../../src/gameplay/environment/aurora-track";
 import { advanceAuroraTrack, type AuroraTransportActor, type AuroraTransportKind } from "../../src/gameplay/environment/aurora-track-runtime";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { bindPaleEnvironmentActors } from "./environment-feature-fixture";
@@ -89,7 +89,10 @@ describe("Pale Aurora fixed-step runtime", () => {
     first.addField(track());
     first.step(1, 1 / 120, () => undefined);
     const snapshot = first.snapshot();
-    expect(snapshot.fields[0]?.carryStates).toEqual([{ actorId: "player", direction: 1, remainingTicks: 48 }]);
+    const restoredField = snapshot.fields[0];
+    if (restoredField === undefined) throw new Error("restored Aurora Track is missing");
+    assertAuroraTrackFieldState(restoredField);
+    expect(restoredField.carryStates).toEqual([{ actorId: "player", direction: 1, remainingTicks: 48 }]);
     const restoredHero = actor("player", "player", { vx: hero.vx });
     const second = createEnvironmentRuntime({ stageId: "pale-traverse", worldId: "aurora-b",
       availableActorIds: () => new Set(["player", "blade"]) });
@@ -113,7 +116,10 @@ describe("Pale Aurora fixed-step runtime", () => {
     ]) }));
     runtime.step(1, 1 / 120, () => undefined);
     expect(runtime.snapshot().fields).toHaveLength(1);
-    expect(runtime.snapshot().fields[0]?.carryStates).toEqual([]);
+    const prunedField = runtime.snapshot().fields[0];
+    if (prunedField === undefined) throw new Error("pruned Aurora Track is missing");
+    assertAuroraTrackFieldState(prunedField);
+    expect(prunedField.carryStates).toEqual([]);
   });
 
   it("fails closed on duplicate transport identities", () => {
@@ -149,6 +155,9 @@ describe("Pale Aurora fixed-step runtime", () => {
     const baseline = run(false);
     const influenced = run(true);
     expect(influenced.vx).toBeGreaterThan(baseline.vx);
-    expect(influenced.environment.fields[0]?.carryStates).toEqual([{ actorId: "player", direction: 1, remainingTicks: 48 }]);
+    const influencedField = influenced.environment.fields[0];
+    if (influencedField === undefined) throw new Error("influenced Aurora Track is missing");
+    assertAuroraTrackFieldState(influencedField);
+    expect(influencedField.carryStates).toEqual([{ actorId: "player", direction: 1, remainingTicks: 48 }]);
   });
 });

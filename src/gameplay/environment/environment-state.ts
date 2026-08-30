@@ -15,31 +15,20 @@ const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
   maxFields: 64, maxCombatObjects: 128, maxRoutes: 64,
 });
 
-function copyField(value: EnvironmentFieldState): EnvironmentFieldState {
-  return Object.freeze({ ...value, geometry: Object.freeze({ ...value.geometry,
-    ...(value.geometry.points === undefined ? {} : { points: Object.freeze(value.geometry.points.map((point) => Object.freeze({ ...point })) ) }),
-  }), eligibility: Object.freeze({ ...value.eligibility }),
-    ...(value.schedule === null ? {} : { schedule: Object.freeze({ ...value.schedule }) }),
-    ...(value.force === null ? {} : { force: Object.freeze({ ...value.force }) }),
-    ...(value.lifecycle === undefined ? {} : { lifecycle: Object.freeze({ ...value.lifecycle }) }),
-    ...(value.transportEligibility === undefined ? {} : { transportEligibility: Object.freeze({ ...value.transportEligibility }) }),
-    ...(value.momentum === undefined ? {} : { momentum: Object.freeze({ ...value.momentum }) }),
-    ...(value.carryStates === undefined ? {} : { carryStates: Object.freeze(value.carryStates.map((carry) => Object.freeze({ ...carry }))) }),
-  });
+function freezeData(value: unknown): unknown {
+  if (Array.isArray(value)) return Object.freeze(value.map(freezeData));
+  if (typeof value !== "object" || value === null) return value;
+  const copy = Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, freezeData(entry)]));
+  return Object.freeze(copy);
 }
 
-function copyCombatObject(value: EnvironmentCombatObjectState): EnvironmentCombatObjectState {
-  return Object.freeze({ ...value, geometry: Object.freeze({ ...value.geometry,
-    ...(value.geometry.points === undefined ? {} : { points: Object.freeze(value.geometry.points.map((point) => Object.freeze({ ...point })) ) }),
-  }), counterplayTags: Object.freeze([...value.counterplayTags]) });
+/** Clone/freeze every data-only authored extension without teaching the kernel biome vocabulary. */
+function copyState<T extends EnvironmentFieldState | EnvironmentCombatObjectState | EnvironmentRouteState>(value: T): T {
+  return freezeData(structuredClone(value)) as T;
 }
-
-function copyRoute(value: EnvironmentRouteState): EnvironmentRouteState {
-  return Object.freeze({ ...value, points: Object.freeze(value.points.map((point) => Object.freeze({ ...point }))),
-    ...(value.lifecycle === undefined ? {} : { lifecycle: Object.freeze({ ...value.lifecycle }) }),
-    ...(value.hitActorIds === undefined ? {} : { hitActorIds: Object.freeze([...value.hitActorIds]) }),
-  });
-}
+const copyField = (value: EnvironmentFieldState): EnvironmentFieldState => copyState(value);
+const copyCombatObject = (value: EnvironmentCombatObjectState): EnvironmentCombatObjectState => copyState(value);
+const copyRoute = (value: EnvironmentRouteState): EnvironmentRouteState => copyState(value);
 
 function assertUnique(ids: readonly string[], category: string): void {
   const seen = new Set<string>();
@@ -149,32 +138,38 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     return chosen;
   }
 
-  addField(value: Omit<EnvironmentFieldState, "id"> & { readonly id?: string }): string {
+  addField<T extends object>(value: Omit<EnvironmentFieldState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string {
     if (this.#fields.length >= this.configuration.maxFields) throw new RangeError("environment field population bound exceeded");
     assertEnvironmentObjectCategory("field", value.kind);
-    for (const validator of this.#validators) validator.validateField?.(value as EnvironmentFieldState);
-    const id = this.#claim(value.id, "field"); this.#fields.push(copyField({ ...value, id })); this.#revision += 1; return id;
+    const id = this.#claim(value.id, "field");
+    const field: EnvironmentFieldState = { ...value, id };
+    for (const validator of this.#validators) validator.validateField?.(field);
+    this.#fields.push(copyField(field)); this.#revision += 1; return id;
   }
-  addCombatObject(value: Omit<EnvironmentCombatObjectState, "id"> & { readonly id?: string }): string {
+  addCombatObject<T extends object>(value: Omit<EnvironmentCombatObjectState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string {
     if (this.#combatObjects.length >= this.configuration.maxCombatObjects) throw new RangeError("environment combat-object population bound exceeded");
     assertEnvironmentCombatCapabilities(value.kind, value.counterplayTags, value.procEligible);
-    for (const validator of this.#validators) validator.validateCombatObject?.(value as EnvironmentCombatObjectState);
-    const id = this.#claim(value.id, "combat-object"); this.#combatObjects.push(copyCombatObject({ ...value, id })); this.#revision += 1; return id;
+    const id = this.#claim(value.id, "combat-object");
+    const object: EnvironmentCombatObjectState = { ...value, id };
+    for (const validator of this.#validators) validator.validateCombatObject?.(object);
+    this.#combatObjects.push(copyCombatObject(object)); this.#revision += 1; return id;
   }
-  addRoute(value: Omit<EnvironmentRouteState, "id"> & { readonly id?: string }): string {
+  addRoute<T extends object>(value: Omit<EnvironmentRouteState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string {
     if (this.#routes.length >= this.configuration.maxRoutes) throw new RangeError("environment route population bound exceeded");
     assertEnvironmentObjectCategory("route", value.kind);
-    for (const validator of this.#validators) validator.validateRoute?.(value as EnvironmentRouteState);
-    const id = this.#claim(value.id, "route"); this.#routes.push(copyRoute({ ...value, id })); this.#revision += 1; return id;
+    const id = this.#claim(value.id, "route");
+    const route: EnvironmentRouteState = { ...value, id };
+    for (const validator of this.#validators) validator.validateRoute?.(route);
+    this.#routes.push(copyRoute(route)); this.#revision += 1; return id;
   }
 
   #update<T extends { readonly id: string }>(items: T[], id: string, patch: Partial<Omit<T, "id">>, copy: (value: T) => T): void {
     const index = items.findIndex((item) => item.id === id); if (index < 0) throw new RangeError(`unknown environment object: ${id}`);
     items[index] = copy({ ...items[index], ...patch, id } as T); this.#revision += 1;
   }
-  updateField(id: string, patch: Partial<Omit<EnvironmentFieldState, "id">>): void { this.#update(this.#fields, id, patch, copyField); }
-  updateCombatObject(id: string, patch: Partial<Omit<EnvironmentCombatObjectState, "id">>): void { this.#update(this.#combatObjects, id, patch, copyCombatObject); }
-  updateRoute(id: string, patch: Partial<Omit<EnvironmentRouteState, "id">>): void { this.#update(this.#routes, id, patch, copyRoute); }
+  updateField<T extends object>(id: string, patch: Partial<Omit<EnvironmentFieldState, "id">> & T & Readonly<Partial<T>>): void { this.#update(this.#fields, id, patch, copyField); }
+  updateCombatObject<T extends object>(id: string, patch: Partial<Omit<EnvironmentCombatObjectState, "id">> & T & Readonly<Partial<T>>): void { this.#update(this.#combatObjects, id, patch, copyCombatObject); }
+  updateRoute<T extends object>(id: string, patch: Partial<Omit<EnvironmentRouteState, "id">> & T & Readonly<Partial<T>>): void { this.#update(this.#routes, id, patch, copyRoute); }
   removeField(id: string): void { this.#remove(this.#fields, id); }
   removeCombatObject(id: string): void { this.#remove(this.#combatObjects, id); }
   removeRoute(id: string): void { this.#remove(this.#routes, id); }

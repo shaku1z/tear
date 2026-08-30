@@ -15,7 +15,7 @@ import {
   PUBLISHED_STAGE_IDS,
   bossIdsAvailableOn,
 } from "../../src/gameplay/stages";
-import { ENVIRONMENT_OBJECT_KIND_IDS as GAME_ENVIRONMENT_OBJECT_KIND_IDS } from "../../src/gameplay/environment/environment-contracts";
+import { ENVIRONMENT_OBJECT_KIND_IDS as GAME_ENVIRONMENT_OBJECT_KIND_IDS } from "../../src/gameplay/environment/environment-object-kinds";
 import { CANONICAL_UPGRADE_IDS as GAME_UPGRADE_IDS } from "../../src/gameplay/upgrades";
 import { isRetiredWeaponSelection, WEAPON_IDS as GAME_WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { getWeapon } from "../../src/gameplay/weapons";

@@ -11,7 +11,7 @@
 
 import type { RandomSource } from "../domain/random";
 import type { RunMode } from "./run/session";
-import { STAGE_CONTENT_AVAILABILITY, type StageId } from "./stages";
+import { STAGE_CONTENT_AVAILABILITY, type ContentAvailabilitySurface, type StageId } from "./stages";
 
 /**
  * All inputs that can affect an authored variant roll.  Keeping the stage,
@@ -140,10 +140,20 @@ function isStageNativeVariant(id: string): boolean {
   return isVerdantVariant(id) || isPaleVariant(id);
 }
 
-function variantHomeStage(id: string): StageId | null {
+export function variantHomeStage(id: string): StageId | null {
   if (isVerdantVariant(id)) return "verdant-sanctum";
   if (isPaleVariant(id)) return "pale-traverse";
   return null;
+}
+
+/** Variant identities exposed on a surface, derived from their authored home stage. */
+export function variantIdsAvailableOn(surface: ContentAvailabilitySurface): readonly string[] {
+  return Object.freeze(Object.values(VARIANTS).flatMap((variants) => variants
+    .filter(({ id }) => {
+      const home = variantHomeStage(id);
+      return home === null || STAGE_CONTENT_AVAILABILITY[home][surface];
+    })
+    .map(({ id }) => id)));
 }
 
 /**

@@ -195,7 +195,8 @@ The following C27A foundation slices are complete:
   Mirror's per-tick combat read lived inside the live adapter, so a world
   without that adapter left the boss inert. `mirror-combat-feedback` now
   owns the advance and the shatter transition. Ten scenarios — three
-  ordinary runs, all five bosses, a 600-tick run, and a terminal run —
+  ordinary runs, all five bosses present at that historical slice, a 600-tick
+  run, and a terminal run —
   match the live authoritative hash on every executed tick. Outward
   effects remain recorded rather than performed.
 - Campaign and gauntlet then joined the matrix. Gauntlet matched;

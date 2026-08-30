@@ -1,7 +1,7 @@
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
-import type { AuroraTrackCarryState, EnvironmentTrackDirection } from "./environment-contracts";
-import type { AuroraTrackFieldState } from "./aurora-track";
+import type { EnvironmentTrackDirection } from "./environment-contracts";
+import type { AuroraTrackCarryState, AuroraTrackFieldState } from "./aurora-track";
 
 export type AuroraTransportKind = "player" | "light-enemy" | "heavy-enemy" | "boss" |
   "thrown-blade" | "deflected-projectile" | "boss-charge";

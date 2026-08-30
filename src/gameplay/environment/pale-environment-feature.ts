@@ -26,8 +26,11 @@ export class PaleEnvironmentFeature implements EnvironmentFeature {
     const byId = new Map(actors.map((actor) => [actor.id, actor]));
     for (const actor of actors) {
       const phaseToken = `:p${String(actor.state.phase)}:`;
-      for (const field of environment.fields()) if (field.ownerId === actor.id && field.kind === "aurora-track" && field.variant === "boss-wake"
-        && !field.id.includes(phaseToken) && field.state !== "expired" && field.state !== "destroyed") environment.updateField(field.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+      for (const field of environment.fields()) if (field.ownerId === actor.id && field.kind === "aurora-track") {
+        assertAuroraTrackFieldState(field);
+        if (field.variant === "boss-wake" && !field.id.includes(phaseToken)
+          && field.state !== "expired" && field.state !== "destroyed") environment.updateField(field.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+      }
       for (const route of environment.routes()) if (route.ownerId === actor.id && route.kind === "ghost-track"
         && !route.id.includes(phaseToken) && route.state !== "expired" && route.state !== "destroyed") environment.updateRoute(route.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
       let acknowledged = 0;
@@ -49,6 +52,7 @@ export class PaleEnvironmentFeature implements EnvironmentFeature {
       if (result.field !== field) environment.updateField(field.id, result.field);
     }
   }
+
 }
 
 export interface WhiteHartEnvironmentActor {

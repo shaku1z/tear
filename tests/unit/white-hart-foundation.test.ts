@@ -6,7 +6,7 @@ import { createEnemyHarness } from "./enemy-test-harness";
 import {
   BOSS_DEFINITIONS,
   bossPhaseAttackAvailable,
-  WHITE_HART_PROVISIONAL_DEFINITION,
+  WHITE_HART_DEFINITION,
 } from "../../src/gameplay/run/boss-definitions";
 import { AUTHORED_BOSS_ROSTER, BOSS_ROSTER } from "../../src/gameplay/run/content-director";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
@@ -36,7 +36,7 @@ function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
 
 describe("White Hart production foundation", () => {
   it("promotes one source definition into the canonical roster and Pale home stage", () => {
-    expect(BOSS_DEFINITIONS.find(({ id }) => id === "white-hart")).toBe(WHITE_HART_PROVISIONAL_DEFINITION);
+    expect(BOSS_DEFINITIONS.find(({ id }) => id === "white-hart")).toBe(WHITE_HART_DEFINITION);
     expect(AUTHORED_BOSS_ROSTER.find(({ id }) => id === "white-hart")).toEqual({ id: "white-hart", name: "The White Hart" });
     expect(BOSS_ROSTER.map(({ id }) => id)).not.toContain("white-hart");
     expect(STAGE_BOSS_HOME["pale-traverse"]).toBe("white-hart");

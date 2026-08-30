@@ -14,11 +14,14 @@ function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T):
 
 /** Ordinary production roster; preview bosses remain authored but require an explicit Playground path. */
 const PUBLISHED_BOSS_IDS = new Set(bossIdsAvailableOn("published"));
+type BossDefinitionById<TId extends BossDefinition["id"]> = Extract<typeof BOSS_DEFINITIONS[number], { readonly id: TId }>;
 type PublishedBossDefinitions = readonly [
-  typeof BOSS_DEFINITIONS[0], typeof BOSS_DEFINITIONS[1], typeof BOSS_DEFINITIONS[2],
-  typeof BOSS_DEFINITIONS[3], typeof BOSS_DEFINITIONS[5], typeof BOSS_DEFINITIONS[6],
+  BossDefinitionById<"warden">, BossDefinitionById<"colossus">, BossDefinitionById<"aldric">,
+  BossDefinitionById<"rootbound">, BossDefinitionById<"echo">, BossDefinitionById<"source">,
 ];
-const publishedBossDefinitions = BOSS_DEFINITIONS.filter(({ id }) => PUBLISHED_BOSS_IDS.has(id)) as unknown as PublishedBossDefinitions;
+const publishedBossDefinitions = Object.freeze(
+  BOSS_DEFINITIONS.filter(({ id }) => PUBLISHED_BOSS_IDS.has(id)),
+) as unknown as PublishedBossDefinitions;
 export const BOSS_ROSTER = Object.freeze(projectBossRoster(
   publishedBossDefinitions,
 ));

@@ -1,9 +1,23 @@
 import type {
-  AuroraTrackCarryState, AuroraTrackMomentumPolicy, AuroraTrackTransportEligibility, AuroraTrackVariant,
   EnvironmentFieldState, EnvironmentGeometry, EnvironmentPoint, EnvironmentRouteState,
   EnvironmentTrackDirection, EnvironmentTrackLifecycle,
   EnvironmentObjectValidationPort,
 } from "./environment-contracts";
+
+export type AuroraTrackVariant = "stage" | "boss-wake";
+export type GhostTrackVariant = "ghost";
+export interface AuroraTrackTransportEligibility {
+  readonly player: boolean; readonly enemies: boolean; readonly bosses: boolean;
+  readonly lightEnemies: boolean; readonly heavyEnemies: boolean; readonly thrownBlade: boolean;
+  readonly deflectedProjectiles: boolean; readonly bossCharges: boolean;
+}
+export interface AuroraTrackMomentumPolicy {
+  readonly accelerationMultiplier: number; readonly velocityRetention: number;
+  readonly exitCarryTicks: number; readonly heavyInfluenceScale: number;
+}
+export interface AuroraTrackCarryState {
+  readonly actorId: string; readonly direction: EnvironmentTrackDirection; readonly remainingTicks: number;
+}
 
 export interface AuroraTrackDefinition {
   readonly id: AuroraTrackVariant;
@@ -63,7 +77,7 @@ export type AuroraTrackFieldState = EnvironmentFieldState & Readonly<{
 export type GhostTrackRouteState = EnvironmentRouteState & Readonly<{
   kind: "ghost-track"; variant: "ghost"; direction: EnvironmentTrackDirection; width: number;
   lifecycle: EnvironmentTrackLifecycle; maximumConcurrent: 3; damage: number; threatening: boolean;
-  hitActorIds: readonly string[];
+  hitActorIds: readonly string[]; sourceTrackId: string | null;
 }>;
 
 function isUnknownArray(value: unknown): value is readonly unknown[] {
@@ -76,13 +90,14 @@ function isUnknownRecord(value: unknown): value is Readonly<Record<string, unkno
 
 export function assertAuroraTrackFieldState(value: EnvironmentFieldState): asserts value is AuroraTrackFieldState {
   if (value.kind !== "aurora-track") return;
-  if (typeof value.trackId !== "string" || value.trackId.length === 0) throw new TypeError("Aurora Track requires a stable trackId");
-  if (value.variant !== "stage" && value.variant !== "boss-wake") throw new TypeError("Aurora Track variant is not approved");
-  assertDirection(value.direction);
-  if (value.lifecycle === undefined) throw new TypeError("Aurora Track lifecycle is required");
-  assertLifecycle(value.lifecycle);
-  if (value.transportEligibility === undefined || value.momentum === undefined) throw new TypeError("Aurora Track transport data is required");
-  const carryStates: unknown = value.carryStates;
+  const candidate = value as EnvironmentFieldState & Partial<AuroraTrackFieldState>;
+  if (typeof candidate.trackId !== "string" || candidate.trackId.length === 0) throw new TypeError("Aurora Track requires a stable trackId");
+  if (candidate.variant !== "stage" && candidate.variant !== "boss-wake") throw new TypeError("Aurora Track variant is not approved");
+  assertDirection(candidate.direction);
+  if (candidate.lifecycle === undefined) throw new TypeError("Aurora Track lifecycle is required");
+  assertLifecycle(candidate.lifecycle);
+  if (candidate.transportEligibility === undefined || candidate.momentum === undefined) throw new TypeError("Aurora Track transport data is required");
+  const carryStates: unknown = candidate.carryStates;
   if (!isUnknownArray(carryStates)) throw new TypeError("Aurora Track carryStates must be an array");
   const carryIds = new Set<string>();
   for (const carry of carryStates) {
@@ -93,37 +108,38 @@ export function assertAuroraTrackFieldState(value: EnvironmentFieldState): asser
     carryIds.add(actorId);
     assertDirection(direction);
     positiveSafeInteger(remainingTicks, "Aurora Track carry remainingTicks");
-    if (remainingTicks > value.momentum.exitCarryTicks) throw new RangeError("Aurora Track carry exceeds exitCarryTicks");
+    if (remainingTicks > candidate.momentum.exitCarryTicks) throw new RangeError("Aurora Track carry exceeds exitCarryTicks");
   }
-  const definition = AURORA_TRACK_DEFINITIONS[value.variant];
-  if (value.maximumConcurrent !== definition.maximumConcurrent) throw new RangeError("Aurora Track maximumConcurrent does not match its variant definition");
+  const definition = AURORA_TRACK_DEFINITIONS[candidate.variant];
+  if (candidate.maximumConcurrent !== definition.maximumConcurrent) throw new RangeError("Aurora Track maximumConcurrent does not match its variant definition");
   for (const key of ["player", "enemies", "bosses", "lightEnemies", "heavyEnemies", "thrownBlade", "deflectedProjectiles", "bossCharges"] as const) {
-    if (typeof value.transportEligibility[key] !== "boolean") throw new TypeError(`Aurora Track eligibility ${key} must be boolean`);
+    if (typeof candidate.transportEligibility[key] !== "boolean") throw new TypeError(`Aurora Track eligibility ${key} must be boolean`);
   }
-  const momentum = value.momentum;
+  const momentum = candidate.momentum;
   if (!(Number.isFinite(momentum.accelerationMultiplier) && momentum.accelerationMultiplier >= 1)) throw new RangeError("Aurora Track acceleration multiplier must be finite and at least one");
   if (!(Number.isFinite(momentum.velocityRetention) && momentum.velocityRetention >= 0 && momentum.velocityRetention <= 1)) throw new RangeError("Aurora Track velocity retention must be within zero and one");
   nonNegativeSafeInteger(momentum.exitCarryTicks, "Aurora Track exit carry ticks");
   if (!(Number.isFinite(momentum.heavyInfluenceScale) && momentum.heavyInfluenceScale >= 0 && momentum.heavyInfluenceScale <= 1)) throw new RangeError("Aurora Track heavy influence scale must be within zero and one");
-  for (const key of ["warningTicks", "activeTicks", "cooldownTicks"] as const) if (value.lifecycle[key] !== definition.lifecycle[key]) throw new RangeError(`Aurora Track ${key} does not match its variant definition`);
+  for (const key of ["warningTicks", "activeTicks", "cooldownTicks"] as const) if (candidate.lifecycle[key] !== definition.lifecycle[key]) throw new RangeError(`Aurora Track ${key} does not match its variant definition`);
   for (const key of ["accelerationMultiplier", "velocityRetention", "exitCarryTicks", "heavyInfluenceScale"] as const) if (momentum[key] !== definition.momentum[key]) throw new RangeError(`Aurora Track momentum ${key} does not match its variant definition`);
-  for (const key of ["player", "enemies", "bosses", "lightEnemies", "heavyEnemies", "thrownBlade", "deflectedProjectiles", "bossCharges"] as const) if (value.transportEligibility[key] !== definition.transportEligibility[key]) throw new TypeError(`Aurora Track eligibility ${key} does not match its variant definition`);
+  for (const key of ["player", "enemies", "bosses", "lightEnemies", "heavyEnemies", "thrownBlade", "deflectedProjectiles", "bossCharges"] as const) if (candidate.transportEligibility[key] !== definition.transportEligibility[key]) throw new TypeError(`Aurora Track eligibility ${key} does not match its variant definition`);
 }
 
 export function assertGhostTrackRouteState(value: EnvironmentRouteState): asserts value is GhostTrackRouteState {
   if (value.kind !== "ghost-track") return;
-  if (value.variant !== "ghost") throw new TypeError("Ghost Track variant is not approved");
-  assertDirection(value.direction);
+  const candidate = value as EnvironmentRouteState & Partial<GhostTrackRouteState>;
+  if (candidate.variant !== "ghost") throw new TypeError("Ghost Track variant is not approved");
+  assertDirection(candidate.direction);
   assertPoints(value.points);
-  if (!(Number.isFinite(value.width) && Number(value.width) > 0)) throw new RangeError("Ghost Track width must be finite and positive");
-  if (value.lifecycle === undefined) throw new TypeError("Ghost Track lifecycle is required");
-  assertLifecycle(value.lifecycle);
-  if (value.maximumConcurrent !== 3) throw new RangeError("Ghost Track maximumConcurrent must remain three");
-  const damage = value.damage;
+  if (!(Number.isFinite(candidate.width) && Number(candidate.width) > 0)) throw new RangeError("Ghost Track width must be finite and positive");
+  if (candidate.lifecycle === undefined) throw new TypeError("Ghost Track lifecycle is required");
+  assertLifecycle(candidate.lifecycle);
+  if (candidate.maximumConcurrent !== 3) throw new RangeError("Ghost Track maximumConcurrent must remain three");
+  const damage = candidate.damage;
   if (!(typeof damage === "number" && Number.isFinite(damage) && damage >= 0)) throw new RangeError("Ghost Track damage must be finite and non-negative");
-  if (typeof value.threatening !== "boolean") throw new TypeError("Ghost Track threatening state is required");
-  if (!Array.isArray(value.hitActorIds) || value.hitActorIds.some((id) => typeof id !== "string" || id.length === 0)
-    || new Set(value.hitActorIds).size !== value.hitActorIds.length) throw new TypeError("Ghost Track hit actor IDs must be unique stable IDs");
+  if (typeof candidate.threatening !== "boolean") throw new TypeError("Ghost Track threatening state is required");
+  if (!Array.isArray(candidate.hitActorIds) || candidate.hitActorIds.some((id) => typeof id !== "string" || id.length === 0)
+    || new Set(candidate.hitActorIds).size !== candidate.hitActorIds.length) throw new TypeError("Ghost Track hit actor IDs must be unique stable IDs");
 }
 
 /** Pale-only validation installed beside Pale behavior at composition. */

@@ -1,5 +1,5 @@
 import type { StageId } from "../stages";
-import type { EnvironmentObjectKind } from "./environment-contracts";
+import type { EnvironmentObjectKind } from "./environment-object-kinds";
 import type { EnvironmentGeometry } from "./environment-contracts";
 
 export interface StageInitialFieldDefinition {
