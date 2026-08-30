@@ -16,7 +16,7 @@ owning test/script references in one reviewable transaction.
 | Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) | [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
-| TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | [Current-game alignment and permanent synchronization plan](TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md); [temporary verification-acceleration execution plan](TEARBENCH_VERIFICATION_ACCELERATION_EXECUTION_PLAN.md); preserved generated registries and evidence catalogs |
+| TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | [Temporary current correction plan](../plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md); [current-game alignment and permanent synchronization plan](TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md); [temporary verification-acceleration execution plan](TEARBENCH_VERIFICATION_ACCELERATION_EXECUTION_PLAN.md); preserved generated registries and evidence catalogs |
 | Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | `config/artifact-layout.json`; G5 retention and disposition records |
 
 `docs/checkpoints/` and `docs/checkpoints/program-normalization/` are
@@ -38,6 +38,7 @@ current paths and hashes until a separately authorized atomic migration.
 | --- | --- |
 | [ECONOMY_REWORK_PLAN.md](../plans/active/ECONOMY_REWORK_PLAN.md) | Active balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
 | [PHASE_F_MIRROR_PLAN.md](../plans/completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
+| [TearBench current correction plan](../plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md) | Temporary active authority for the ten corrections reopened against the protected six-stage game. |
 | [Verdant Sanctum Revision 3](../plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md) | Active Verdant biome, shared environment-runtime, TearBench, and engineering-freeze implementation authority; publication remains joint with Pale and separately authorized. |
 | [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |
 

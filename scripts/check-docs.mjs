@@ -23,6 +23,7 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md",
   "plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md",
   "plans/TEARBENCH_C40_EXECUTION_GUIDE.md",
+  "plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md",
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
   "plans/TEARBENCH_MASTER_HANDOFF.md",
   "plans/active/ECONOMY_REWORK_PLAN.md",
@@ -32,6 +33,10 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
 // The checker derives the active set from plans/README.md and compares it to
 // this allowlist; it does not use this list as the source of active rows.
 export const ACTIVE_PLAN_METADATA_PATHS = CANONICAL_ACTIVE_PLAN_PATHS;
+
+export const TEMPORARY_ACTIVE_PLAN_PATHS = Object.freeze([
+  "plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md",
+]);
 
 const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
@@ -388,6 +393,16 @@ export function checkActivePlanMetadata(root, indexResult = undefined) {
     if (metadata.Owner !== row.owner) errors.push(`${relativePath} Owner metadata does not match ${PLANS_INDEX_PATH}`);
     if (metadata.Status !== row.status) errors.push(`${relativePath} Status metadata does not match ${PLANS_INDEX_PATH}`);
     if (metadata["Closure condition"] !== row.closureCondition) errors.push(`${relativePath} Closure condition metadata does not match ${PLANS_INDEX_PATH}`);
+    if (TEMPORARY_ACTIVE_PLAN_PATHS.includes(relativePath)) {
+      const documentRoles = metadataEntries(markdown, "Document role");
+      const retirements = metadataEntries(markdown, "Retirement");
+      if (documentRoles.length !== 1 || !/^Temporary(?:\s|$)/u.test(documentRoles[0] ?? "")) {
+        errors.push(`${relativePath} must have exactly one Temporary Document role metadata value`);
+      }
+      if (retirements.length !== 1 || retirements[0] === "") {
+        errors.push(`${relativePath} must have exactly one nonempty Retirement metadata value`);
+      }
+    }
   }
   return { errors, activePlanPaths };
 }

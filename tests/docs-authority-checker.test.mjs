@@ -93,6 +93,22 @@ test("active-plan metadata rejects missing owner or non-active status", () => {
   }
 });
 
+test("temporary correction authority requires an explicit temporary role and retirement contract", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-temporary-plan-metadata-"));
+  try {
+    copyActivePlanFixture(fixtureRoot);
+    const target = path.join(fixtureRoot, "plans", "TEARBENCH_CURRENT_CORRECTION_PLAN.md");
+    fs.writeFileSync(target, fs.readFileSync(target, "utf8")
+      .replace("- **Document role:** Temporary active execution authority", "- **Document role:** Active execution authority")
+      .replace(/^- \*\*Retirement:\*\*.*$/mu, "- **Retirement:**"), "utf8");
+    const errors = checkActivePlanMetadata(fixtureRoot).errors.join("\n");
+    assert.match(errors, /Temporary Document role/u);
+    assert.match(errors, /nonempty Retirement/u);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test("plan metadata ignores fenced examples but rejects duplicate live fields", () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-plan-duplicates-"));
   try {
