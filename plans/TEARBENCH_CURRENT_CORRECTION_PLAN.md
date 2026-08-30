@@ -64,7 +64,7 @@ runtime authority.
 | 5 | TC-5 — Source-derived content terminology | Complete | TC-1 |
 | 6 | TC-6 — Specialized evidence-route ownership | Complete | TC-2 through TC-5 |
 | 7 | TC-7 — Diff-scoped capability reporting | Complete | TC-6 |
-| 8 | TC-8 — Program-document reconciliation | Not started | TC-1 through TC-7 |
+| 8 | TC-8 — Program-document reconciliation | Complete | TC-1 through TC-7 |
 | 9 | TC-9 — Canonical Pale preview scenarios | Not started | TC-3, TC-5, TC-6 |
 | 10 | TC-10 — Exact-commit post-review and C40 truth | Not started | TC-1 through TC-9 |
 
@@ -364,17 +364,17 @@ music re-vendoring, wiki publication, or optimistic dashboard promotion.
 
 ### Checklist
 
-- [ ] Add a semantic documentation negative that mutates one governed baseline, publication, deployment, diff-scope, or C40 statement and proves the authority check fails.
-- [ ] Update the reconciled baseline to the exact protected commit actually reviewed.
-- [ ] Record the current successful Validate and production deployment receipts without converting them into C40 evidence.
-- [ ] Mark prior “integration/deployment unperformed” statements as historical to their checkpoint rather than present truth.
-- [ ] Route current correction work to this temporary plan before broader C21-C40 development.
-- [ ] Describe generated current capability evidence as diff-scoped after TC-7.
-- [ ] Keep C25/C27/C30-C40 status conservative and source-backed.
-- [ ] Reconcile C32 catalog treatment, the partial normal-build C37 surface, and one C38-C40 umbrella roll-up without turning slice evidence into milestone completion.
-- [ ] Reconcile the G7/current-production receipt in `plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md` and quarantine or regenerate any stale local build identity rather than citing it as current.
-- [ ] Reconcile the capability dashboard/evidence catalog only where current evidence supports a state change; do not regenerate immutable source intent casually.
-- [ ] Update this plan and the handoff together after each correction checkpoint.
+- [x] Add a semantic documentation negative that mutates one governed baseline, publication, deployment, diff-scope, or C40 statement and proves the authority check fails.
+- [x] Update the reconciled baseline to the exact protected commit actually reviewed.
+- [x] Record the current successful Validate and production deployment receipts without converting them into C40 evidence.
+- [x] Mark prior “integration/deployment unperformed” statements as historical to their checkpoint rather than present truth.
+- [x] Route current correction work to this temporary plan before broader C21-C40 development.
+- [x] Describe generated current capability evidence as diff-scoped after TC-7.
+- [x] Keep C25/C27/C30-C40 status conservative and source-backed.
+- [x] Reconcile C32 catalog treatment, the partial normal-build C37 surface, and one C38-C40 umbrella roll-up without turning slice evidence into milestone completion.
+- [x] Reconcile the G7/current-production receipt in `plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md` and quarantine or regenerate any stale local build identity rather than citing it as current.
+- [x] Reconcile the capability dashboard/evidence catalog only where current evidence supports a state change; do not regenerate immutable source intent casually.
+- [x] Update this plan and the handoff together after each correction checkpoint.
 
 **Focused gate:** `pnpm check:docs`, `pnpm test:docs`,
 `pnpm requirements:check`, and `pnpm check:terminology`.
@@ -484,7 +484,7 @@ commit alone is insufficient.
 | TC-5 | `86041ed71c593bfee2a232a93a7f2d44874c7df7` + `60d1e58b92ad3258e9327830870b81486ebf1f18` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-5_SOURCE_DERIVED_CONTENT_TERMINOLOGY.md`; requirements generation/check, 14 terminology tests, 23 content/authority tests, 13 docs tests, typecheck, syntax, and diff gates | N/A | Initial independent review found four blockers; corrected exact-commit re-review passed; generated immutable identities retained; no protected integration claimed | Complete |
 | TC-6 | `0473e3d85e833474112e81b81715371b29e764ec` + `244db27` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-6_SPECIALIZED_EVIDENCE_ROUTE_OWNERSHIP.md`; 32 selector tests, 7 TypeScript projection/certification tests, focused hook-family negatives, typecheck, syntax, docs, terminology, and diff gates | Selected/dry route-family inspection only; no owning gameplay family changed | Initial review found fail-closed and hook-family audit gaps; corrected exact-commit re-review passed; no protected integration claimed | Complete |
 | TC-7 | `7ec9509e6427c1498abc99d543306f0959ff12dc` + `244db27` + `96ad620` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-7_DIFF_SCOPED_CAPABILITY_REPORTING.md`; selector/report/reuse negatives, 7 TypeScript projection/certification tests, typecheck, syntax, docs, terminology, and diff gates | N/A | Narrow-versus-broad, worktree, route-digest, legacy-format, and same-source/different-scope reuse negatives passed; exact-commit re-review passed; no protected integration claimed | Complete |
-| TC-8 | — | — | N/A | — | Not started |
+| TC-8 | `52cb587d1ac2266f0e5549fcea3fa1d1dcac0fdf` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-8_PROGRAM_DOCUMENT_RECONCILIATION.md`; 15 docs authority tests, docs, requirements, terminology, syntax, and diff gates | N/A | Exact receipt chain and conservative current-state semantics independently reviewed green; production attributable, G7 open, C40 incomplete; no protected integration claimed | Complete |
 | TC-9 | — | — | — | — | Not started |
 | TC-10 | — | `pnpm check` | Required by certificate | — | Not started |
 
