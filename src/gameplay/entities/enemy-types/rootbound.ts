@@ -1,6 +1,6 @@
 import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
-import { ROOTBOUND_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
+import { ROOTBOUND_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
@@ -77,8 +77,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     stateT: number = ROOTBOUND_PHASE_ONE_CADENCE.openingDelay;
     override facing = 1;
     override readonly phaseMarks: [number, number] = [
-      ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[0],
-      ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks[1],
+      ROOTBOUND_DEFINITION.phaseMarks[0],
+      ROOTBOUND_DEFINITION.phaseMarks[1],
     ];
     readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep", "seed-arc", "rootline", "canopy-step"]);
     readonly phaseOneAttackOrder = ROOTBOUND_PHASE_ONE_ATTACK_ORDER;
@@ -124,11 +124,11 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     constructor(x: number, y: number) {
       super(x, y, CONFIG.boss);
       this.kind = "rootbound";
-      this.bossId = ROOTBOUND_PROVISIONAL_DEFINITION.id;
+      this.bossId = ROOTBOUND_DEFINITION.id;
       this.bossName = "THE ROOTBOUND";
       this.epithet = "KEEPER OF THE LAST MERCY";
       this.openingLine = "YOU DO NOT HAVE TO DIE HERE.";
-      this.presentationId = ROOTBOUND_PROVISIONAL_DEFINITION.id;
+      this.presentationId = ROOTBOUND_DEFINITION.id;
       this.isBoss = true;
       this.color = CONFIG.colors.boss;
       this.atk = "unavailable";

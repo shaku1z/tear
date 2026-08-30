@@ -83,6 +83,9 @@ describe("TearBench current-game invariants", () => {
     expect(() => runInvariantChecks({ ...current, diagnostics: { ...unknownWaveDiagnostics,
       waveOwnership: "unavailable" } }, ["wave.valid-completion"]))
       .toThrow(/source-owned current-wave actor evidence/u);
+    expect(runInvariantChecks({ ...current, run: { ...current.run, mode: "playground" },
+      diagnostics: { ...unknownWaveDiagnostics, waveOwnership: "unavailable" } }, ["wave.valid-completion"]))
+      .toEqual([]);
 
     ownership.consume({ kind: "death", tick: 5, actorId: "enemy:current", cause: "blade" });
     expect([...ownership.actors(2) ?? []]).toEqual([]);

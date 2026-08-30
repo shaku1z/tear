@@ -1,6 +1,6 @@
-import { ENEMY_IDENTITY_IDS, type EnemyKind } from "../gameplay/run/content-director";
+import { ENEMY_IDENTITY_IDS, enemyIdsAvailableOn, type EnemyKind } from "../gameplay/run/content-director";
 import type { EnemyAffix, EnemyPreset } from "../gameplay/affixes";
-import { PALE_VARIANT_IDS, type EnemyVariant } from "../gameplay/variants";
+import { variantIdsAvailableOn, type EnemyVariant } from "../gameplay/variants";
 
 /** The structural enemy catalog handoff; runtime behavior remains out of scope. */
 export interface GameReferenceEnemyVariantV1 {
@@ -51,7 +51,7 @@ export const CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze([
 
 /** Public game-reference authority excludes the Playground-only Pale family. */
 export const PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze(
-  CANONICAL_ENEMY_IDENTITY_IDS.filter((id) => id !== "rimehound"),
+  CANONICAL_ENEMY_IDENTITY_IDS.filter((id) => enemyIdsAvailableOn("published").includes(id)),
 );
 
 export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze({
@@ -69,10 +69,10 @@ export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly st
   rootbinder: Object.freeze([]),
   rimehound: Object.freeze([]),
 });
-const PALE_VARIANT_ID_SET: ReadonlySet<string> = new Set(PALE_VARIANT_IDS);
+const PUBLISHED_VARIANT_ID_SET: ReadonlySet<string> = new Set(variantIdsAvailableOn("published"));
 export const PUBLIC_CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze(
   Object.fromEntries(Object.entries(CANONICAL_ENEMY_VARIANT_IDS).map(([id, variants]) => [
-    id, Object.freeze(variants.filter((variant) => !PALE_VARIANT_ID_SET.has(variant))),
+    id, Object.freeze(variants.filter((variant) => PUBLISHED_VARIANT_ID_SET.has(variant))),
   ])) as Record<EnemyKind, readonly string[]>,
 );
 
@@ -187,7 +187,7 @@ function projectFamily(sourceValue: unknown, expectedId: EnemyKind, path: string
   if (id !== expectedId) throw new TypeError(`${path}.id must use the exact canonical enemy-family order`);
   if (!Array.isArray(source.variants)) throw new TypeError(`${path}.variants must be an array`);
   const expectedVariantIds = PUBLIC_CANONICAL_ENEMY_VARIANT_IDS[expectedId];
-  const publicVariants = source.variants.filter((variant) => !PALE_VARIANT_ID_SET.has(text(record(variant, `${path}.variants`).id, `${path}.variants.id`)));
+  const publicVariants = source.variants.filter((variant) => PUBLISHED_VARIANT_ID_SET.has(text(record(variant, `${path}.variants`).id, `${path}.variants.id`)));
   const publicVariantIds = publicVariants.map((variant, index) => text(record(variant, `${path}.variants[${String(index)}]`).id, `${path}.variants[${String(index)}].id`));
   assertCanonicalOrderedIds(publicVariantIds, expectedVariantIds, `${path}.variants.public`);
   const variants = Object.freeze(publicVariants.map((variant, index) => validateSourceVariant(variant, expectedAt(expectedVariantIds, index, `${path}.variants.public`), `${path}.variants[${String(index)}]`)));

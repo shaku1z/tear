@@ -15,6 +15,7 @@ import {
   ENEMY_IDENTITY_IDS,
   PUBLISHED_ENEMY_IDENTITY_IDS,
 } from "../../src/gameplay/run/content-director";
+import { PALE_VARIANT_IDS, variantIdsAvailableOn } from "../../src/gameplay/variants";
 
 const OFFICIAL_STAGES = [
   "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear",
@@ -48,5 +49,7 @@ describe("published content availability", () => {
     expect(BOSS_ROSTER.map(({ id }) => id)).toEqual(OFFICIAL_BOSSES);
     expect(AUTHORED_BOSS_ROSTER.map(({ id }) => id)).toEqual([...OFFICIAL_BOSSES.slice(0, 4), "white-hart", ...OFFICIAL_BOSSES.slice(4)]);
     expect(PUBLISHED_ENEMY_IDENTITY_IDS).toEqual(ENEMY_IDENTITY_IDS.filter((id) => id !== "rimehound"));
+    expect(variantIdsAvailableOn("published")).not.toEqual(expect.arrayContaining([...PALE_VARIANT_IDS]));
+    expect(variantIdsAvailableOn("playground")).toEqual(expect.arrayContaining([...PALE_VARIANT_IDS]));
   });
 });

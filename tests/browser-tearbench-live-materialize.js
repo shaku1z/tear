@@ -218,6 +218,7 @@ const artifactPath = path.resolve(option("--artifact", defaultArtifact));
 const artifactStem = artifactPath.replace(/\.json$/u, "");
 const actionTracePath = `${artifactStem}.actions.json`;
 const screenshotPath = `${artifactStem}.png`;
+const scenarioStart = headlessTerminal?.scenario.start ?? catalogEntry.start;
 const runtimeScenario = {
   format: "tear-contract",
   kind: "scenario",
@@ -230,7 +231,7 @@ const runtimeScenario = {
   stateClass: "recorded-canonical",
   executionClass: headlessTerminal?.scenario.executionClass ?? "engineering",
   seed,
-  start: headlessTerminal?.scenario.start ?? catalogEntry.start,
+  start: scenarioStart,
   maxTicks,
   assertions: [
     "runtime.finite-state", "player.finite-transform", "blade.finite-transform",

@@ -2,7 +2,7 @@ import type {
   EnvironmentPoint, EnvironmentRuntimeState, EnvironmentTrackDirection,
 } from "./environment-contracts";
 import {
-  createAuroraTrackFieldState, createGhostTrackRouteState, type GhostTrackRouteState,
+  assertAuroraTrackFieldState, createAuroraTrackFieldState, createGhostTrackRouteState, type GhostTrackRouteState,
 } from "./aurora-track";
 
 export type WhiteHartEnvironmentRequest = Readonly<{
@@ -121,11 +121,13 @@ export function installWhiteHartEnvironmentRequest(
     return id;
   }
   if (environment.fields().some((field) => field.id === id)) return id;
-  for (const field of environment.fields().filter((entry) => entry.ownerId === ownerId
-    && entry.kind === "aurora-track" && entry.variant === "boss-wake"
-    && (entry.state === "expired" || entry.state === "destroyed"))) environment.removeField(field.id);
-  const owned = environment.fields().filter((field) => field.ownerId === ownerId
-    && field.kind === "aurora-track" && field.variant === "boss-wake");
+  const wakes = environment.fields().filter((field) => {
+    if (field.ownerId !== ownerId || field.kind !== "aurora-track") return false;
+    assertAuroraTrackFieldState(field);
+    return field.variant === "boss-wake";
+  });
+  for (const field of wakes.filter((entry) => entry.state === "expired" || entry.state === "destroyed")) environment.removeField(field.id);
+  const owned = wakes.filter((entry) => entry.state !== "expired" && entry.state !== "destroyed");
   retireOldest(owned, 3, (fieldId) => { environment.removeField(fieldId); });
   environment.addField(createAuroraTrackFieldState({
     id, ownerId, variant: "boss-wake", direction: request.direction,

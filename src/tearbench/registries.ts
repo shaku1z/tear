@@ -13,7 +13,7 @@ import {
 } from "../gameplay/stages";
 import { CANONICAL_UPGRADE_IDS as GAME_UPGRADE_IDS } from "../gameplay/upgrades";
 import { GAMEPLAY_EVENT_KIND_IDS as GAME_EVENT_KIND_IDS } from "../gameplay/runtime/gameplay-events";
-import { ENVIRONMENT_OBJECT_KIND_IDS as GAME_ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentObjectKind } from "../gameplay/environment/environment-contracts";
+import { ENVIRONMENT_OBJECT_KIND_IDS as GAME_ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentObjectKind } from "../gameplay/environment/environment-object-kinds";
 import { WEAPON_IDS as GAME_WEAPON_IDS, type WeaponId } from "../gameplay/weapon-selection";
 
 const STABLE_ID_PATTERN = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;

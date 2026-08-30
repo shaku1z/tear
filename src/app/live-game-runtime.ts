@@ -28,7 +28,7 @@ import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGame
 import { createLiveStateForgeAdapter } from "./live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-bridge";
 import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, seekBrowserGhostCapsuleProductionReplay, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
-import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events"; import { verdantTelemetryIntents } from "../gameplay/progression/verdant-telemetry"; import { executeEnvironmentTelemetryIntents, paleTelemetryIntents } from "../gameplay/progression/environment-telemetry"; import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
+import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events"; import { verdantTelemetryIntents } from "../gameplay/progression/verdant-telemetry"; import { executeEnvironmentTelemetryIntents } from "../gameplay/progression/environment-telemetry"; import { paleTelemetryIntents } from "../gameplay/progression/pale-telemetry"; import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
 import { createGhostAuthoritativeReceipt } from "../ghost/authoritative-receipt";

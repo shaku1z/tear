@@ -793,10 +793,41 @@ async function writeReleaseCertificate() {
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
   const invocations = runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath);
-  const passed = invocations.length === repeat && invocations.every((entry) => entry.status === 0);
+  const passed = invocations.length === repeat && invocations.every((entry) => entry.status === 0)
+    && existsSync(artifactPath);
+  if (!passed && !existsSync(artifactPath)) {
+    const diagnostic = {
+      format: "tearbench-run-materialization-diagnostic",
+      schemaVersion: 1,
+      createdAt: new Date().toISOString(),
+      status: "failed",
+      source: readSourceIdentity(),
+      requested: Object.freeze({ scenarioId: scenario.id, seed, repeat }),
+      declaredEvidence: evidenceCommandForScenario(scenario),
+      rerunSupported: false,
+      reason: "the live materializer exited before producing a replayable tearbench-run artifact",
+      invocations: invocations.map((entry) => Object.freeze({
+        index: entry.index,
+        exitCode: entry.status ?? 1,
+        stdout: entry.stdout ?? "",
+        stderr: entry.stderr ?? "",
+        artifact: workspaceRelativePath(entry.artifact),
+      })),
+    };
+    mkdirSync(dirname(artifactPath), { recursive: true });
+    writeFileSync(artifactPath, `${JSON.stringify(diagnostic, null, 2)}\n`, "utf8");
+  }
   console.log(`${passed ? "PASS" : "FAIL"} ${scenario.id} seed=${seed} repeat=${String(repeat)}`);
   console.log(`artifact: ${artifactPath}`);
-  if (!passed) process.exitCode = 1;
+  if (!passed) {
+    for (const invocation of invocations.filter((entry) => entry.status !== 0)) {
+      const stdout = typeof invocation.stdout === "string" ? invocation.stdout.trim() : "";
+      const stderr = typeof invocation.stderr === "string" ? invocation.stderr.trim() : "";
+      if (stdout !== "") console.error(`materializer stdout (attempt ${String(invocation.index + 1)}):\n${stdout}`);
+      if (stderr !== "") console.error(`materializer stderr (attempt ${String(invocation.index + 1)}):\n${stderr}`);
+    }
+    process.exitCode = 1;
+  }
 }
 
 /** Compare two fully materialized runs through C26's typed contract. */
@@ -1170,7 +1201,7 @@ try {
     const seed = option("--seed", "1001");
     const repeat = Number.parseInt(option("--repeat", "1"), 10);
     if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > 100) throw new RangeError("--repeat must be an integer from 1 through 100");
-    const defaultArtifact = resolve(root, "artifacts", "tearbench", `${id}-${seed}.json`);
+    const defaultArtifact = resolve(root, "artifacts", "tearbench", "runs", `${id}-${seed}.json`);
     await executeRun(scenario, seed, repeat, resolve(option("--artifact", defaultArtifact)), option("--actions"));
   } else if (command === "rerun") {
     const artifactPath = option("--artifact");

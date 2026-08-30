@@ -1,15 +1,4 @@
-/**
- * Stable identities for world-owned environment objects.
- *
- * This is the production authority for field/combat-object kind IDs. Runtime
- * behavior and object state belong to later environment modules; consumers must
- * import these IDs rather than maintaining a second registry.
- */
-export const ENVIRONMENT_OBJECT_KIND_IDS = Object.freeze([
-  "bloom-well", "aurora-track", "rootline", "root-link", "graft-anchor", "regrowth-link", "ghost-track",
-] as const);
-
-export type EnvironmentObjectKind = typeof ENVIRONMENT_OBJECT_KIND_IDS[number];
+import type { EnvironmentObjectKind } from "./environment-object-kinds";
 
 /** Gameplay-only categories owned by the environment runtime. */
 export type EnvironmentObjectCategory = "field" | "combat-object" | "route";
@@ -55,34 +44,11 @@ export interface EnvironmentEligibility {
 }
 
 export type EnvironmentTrackDirection = -1 | 1;
-export type AuroraTrackVariant = "stage" | "boss-wake";
-export type GhostTrackVariant = "ghost";
 
 export interface EnvironmentTrackLifecycle {
   readonly warningTicks: number;
   readonly activeTicks: number;
   readonly cooldownTicks: number;
-}
-
-export interface AuroraTrackTransportEligibility extends EnvironmentEligibility {
-  readonly lightEnemies: boolean;
-  readonly heavyEnemies: boolean;
-  readonly thrownBlade: boolean;
-  readonly deflectedProjectiles: boolean;
-  readonly bossCharges: boolean;
-}
-
-export interface AuroraTrackMomentumPolicy {
-  readonly accelerationMultiplier: number;
-  readonly velocityRetention: number;
-  readonly exitCarryTicks: number;
-  readonly heavyInfluenceScale: number;
-}
-
-export interface AuroraTrackCarryState {
-  readonly actorId: string;
-  readonly direction: EnvironmentTrackDirection;
-  readonly remainingTicks: number;
 }
 
 export interface EnvironmentForcePolicy {
@@ -105,14 +71,6 @@ export interface EnvironmentFieldState {
   readonly force: EnvironmentForcePolicy | null;
   readonly cleanupReason: EnvironmentClearReason | null;
   readonly patternId?: string;
-  readonly trackId?: string;
-  readonly variant?: string;
-  readonly direction?: EnvironmentTrackDirection;
-  readonly lifecycle?: EnvironmentTrackLifecycle;
-  readonly transportEligibility?: AuroraTrackTransportEligibility;
-  readonly momentum?: AuroraTrackMomentumPolicy;
-  readonly maximumConcurrent?: number;
-  readonly carryStates?: readonly AuroraTrackCarryState[];
 }
 
 export interface EnvironmentCombatObjectState {
@@ -142,15 +100,6 @@ export interface EnvironmentRouteState {
   readonly stateTick: number;
   readonly ownerId: string | null;
   readonly cleanupReason: EnvironmentClearReason | null;
-  readonly variant?: GhostTrackVariant;
-  readonly direction?: EnvironmentTrackDirection;
-  readonly width?: number;
-  readonly lifecycle?: EnvironmentTrackLifecycle;
-  readonly sourceTrackId?: string | null;
-  readonly maximumConcurrent?: number;
-  readonly damage?: number;
-  readonly threatening?: boolean;
-  readonly hitActorIds?: readonly string[];
 }
 
 export interface EnvironmentSnapshot {
@@ -201,12 +150,12 @@ export interface EnvironmentRuntimeState {
   replace(snapshot: EnvironmentSnapshot): void;
   clear(reason: EnvironmentClearReason): void;
   setStage(stageId: string, reason?: EnvironmentClearReason): void;
-  addField(value: Omit<EnvironmentFieldState, "id"> & { readonly id?: string }): string;
-  addCombatObject(value: Omit<EnvironmentCombatObjectState, "id"> & { readonly id?: string }): string;
-  addRoute(value: Omit<EnvironmentRouteState, "id"> & { readonly id?: string }): string;
-  updateField(id: string, patch: Partial<Omit<EnvironmentFieldState, "id">>): void;
-  updateCombatObject(id: string, patch: Partial<Omit<EnvironmentCombatObjectState, "id">>): void;
-  updateRoute(id: string, patch: Partial<Omit<EnvironmentRouteState, "id">>): void;
+  addField<T extends object>(value: Omit<EnvironmentFieldState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string;
+  addCombatObject<T extends object>(value: Omit<EnvironmentCombatObjectState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string;
+  addRoute<T extends object>(value: Omit<EnvironmentRouteState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string;
+  updateField<T extends object>(id: string, patch: Partial<Omit<EnvironmentFieldState, "id">> & T & Readonly<Partial<T>>): void;
+  updateCombatObject<T extends object>(id: string, patch: Partial<Omit<EnvironmentCombatObjectState, "id">> & T & Readonly<Partial<T>>): void;
+  updateRoute<T extends object>(id: string, patch: Partial<Omit<EnvironmentRouteState, "id">> & T & Readonly<Partial<T>>): void;
   removeField(id: string): void;
   removeCombatObject(id: string): void;
   removeRoute(id: string): void;

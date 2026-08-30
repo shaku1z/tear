@@ -22,6 +22,27 @@ function lifecycleChanged(
   return priorState !== next.state || priorCleanupReason !== next.cleanupReason;
 }
 
+function prunedActorReferenceLists(
+  entry: Readonly<Record<string, unknown>>,
+  availableActorIds: ReadonlySet<string>,
+): Readonly<Record<string, unknown>> {
+  const actorReferenceId = (value: unknown): string | undefined => {
+    if (typeof value !== "object" || value === null) return undefined;
+    const actorId = (value as Readonly<{ actorId?: unknown }>).actorId;
+    return typeof actorId === "string" ? actorId : undefined;
+  };
+  const patch: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(entry)) {
+    if (!Array.isArray(value) || !value.some((item: unknown) => actorReferenceId(item) !== undefined)) continue;
+    const filtered = value.filter((item: unknown) => {
+      const actorId = actorReferenceId(item);
+      return actorId === undefined || availableActorIds.has(actorId);
+    });
+    if (filtered.length !== value.length) patch[key] = Object.freeze(filtered);
+  }
+  return Object.freeze(patch);
+}
+
 /** Data collection and fixed-step phase owner. No biome implementation is imported here. */
 export class EnvironmentRuntime extends EnvironmentState implements EnvironmentStepPort, EnvironmentFeatureContext {
   readonly #hooks: EnvironmentStepHooks;
@@ -81,11 +102,11 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   #cleanupOrphans(tick: number, availableActorIds?: ReadonlySet<string>): void {
     // The ordinary fixed-step path usually has no environment objects. Avoid
     // cloning two complete snapshots merely to prove that an empty set stays
-    // empty; populated Verdant/Pale worlds retain the full cleanup contract.
+    // empty; populated authored worlds retain the full cleanup contract.
     if (this.fields().length === 0 && this.combatObjects().length === 0 && this.routes().length === 0) return;
     const sourceIds = availableActorIds ?? this.#availableActorIds?.(); if (sourceIds === undefined) return; const ids = new Set(sourceIds); ids.add(this.stageId); const before = this.snapshot(); const after = cleanupOrphanedEnvironmentReferences(before, ids, "stage-transition");
     if (this.#events !== undefined) for (const [category, entries] of [["field", after.fields], ["combat-object", after.combatObjects], ["route", after.routes]] as const) { const prior = new Map((category === "field" ? before.fields : category === "combat-object" ? before.combatObjects : before.routes).map((entry) => [entry.id, entry])); for (const entry of entries) if (entry.cleanupReason !== null && prior.get(entry.id)?.cleanupReason !== entry.cleanupReason) publishEnvironmentEvent(this.#events, { event: "object-cleaned", objectId: entry.id, category, objectKind: entry.kind, reason: entry.cleanupReason }, tick); }
-    for (const entry of after.fields) { const prior = before.fields.find((candidate) => candidate.id === entry.id); const carryStates = entry.carryStates?.filter((carry) => ids.has(carry.actorId)); const carryChanged = entry.carryStates !== undefined && carryStates !== undefined && carryStates.length !== entry.carryStates.length; if (lifecycleChanged(prior, entry) || carryChanged) this.updateField(entry.id, { ...entry, ...(carryStates === undefined ? {} : { carryStates: Object.freeze(carryStates) }) }); }
+    for (const entry of after.fields) { const prior = before.fields.find((candidate) => candidate.id === entry.id); const pruned = prunedActorReferenceLists(entry as unknown as Readonly<Record<string, unknown>>, ids); if (lifecycleChanged(prior, entry) || Object.keys(pruned).length > 0) this.updateField(entry.id, { ...entry, ...pruned }); }
     for (const entry of after.combatObjects) { const prior = before.combatObjects.find((candidate) => candidate.id === entry.id); if (lifecycleChanged(prior, entry)) { this.updateCombatObject(entry.id, entry); this.#combatKernels.delete(entry.id); } }
     for (const entry of after.routes) { const prior = before.routes.find((candidate) => candidate.id === entry.id); if (lifecycleChanged(prior, entry)) this.updateRoute(entry.id, entry); }
   }

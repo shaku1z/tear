@@ -455,6 +455,57 @@ function dependencyErrors(relative, text) {
       : []);
 }
 
+const neutralEnvironmentRoots = Object.freeze([
+  "src/gameplay/environment/environment-contracts.ts",
+  "src/gameplay/environment/environment-runtime.ts",
+  "src/gameplay/environment/environment-state.ts",
+  "src/gameplay/environment/environment-feature-ports.ts",
+  "src/gameplay/environment/environment-events.ts",
+  "src/gameplay/environment/presentation-snapshot.ts",
+  "src/tearbench/environment-codec.ts",
+  "src/tearbench/contracts.ts",
+  "src/tearbench/state-codecs.ts",
+  "src/gameplay/progression/environment-telemetry.ts",
+]);
+const biomeSchemaPattern = /\b(?:Verdant\w*|Pale\w*|Aurora\w*|GhostTrack\w*|Bloom\w*|Graft\w*|RootCage\w*|Rootbound\w*|WhiteHart\w*|carryStates|transportEligibility|heavyInfluenceScale|sourceTrackId|graftType|rootCageId|paleEntered|verdantEntered)\b/u;
+function neutralSchemaErrors(relative, text) {
+  return neutralEnvironmentRoots.includes(relative) && biomeSchemaPattern.test(text)
+    ? [`${relative}: biome-neutral environment foundation contains biome-owned schema vocabulary`]
+    : [];
+}
+
+function moduleImports(relative, text, available) {
+  const imports = [...text.matchAll(/(?:from\s+|import\s*\()\s*["']([^"']+)["']/gu)].map((match) => match[1]);
+  return imports.flatMap((specifier) => {
+    if (!specifier.startsWith(".")) return [];
+    const candidate = path.posix.normalize(path.posix.join(path.posix.dirname(relative), specifier));
+    for (const resolved of [`${candidate}.ts`, `${candidate}/index.ts`, candidate]) if (available.has(resolved)) return [resolved];
+    return [];
+  });
+}
+
+function transitiveBiomeErrors(graph) {
+  const families = [
+    { roots: forbiddenDependencyRules[0].roots, forbidden: /(?:bloom-well|verdant-environment-feature|rootbinder-runtime|enemy-types\/rootbound|graft-anchor|root-cage|regrowth-link)/u,
+      message: "Pale biome source transitively depends on Verdant-specific implementation" },
+    { roots: forbiddenDependencyRules[1].roots, forbidden: /(?:aurora-track|pale-environment-feature|white-hart-route-runtime|enemy-types\/(?:white-hart|rimehound))/u,
+      message: "Verdant biome source transitively depends on Pale-specific implementation" },
+  ];
+  const result = [];
+  for (const family of families) for (const source of graph.keys()) {
+    if (!family.roots.some((rootPath) => source.startsWith(rootPath))) continue;
+    const seen = new Set([source]), pending = [...(graph.get(source) ?? [])];
+    while (pending.length > 0) {
+      const dependency = pending.shift();
+      if (dependency === undefined || seen.has(dependency)) continue;
+      seen.add(dependency);
+      if (family.forbidden.test(dependency)) { result.push(`${source}: ${family.message} through ${dependency}`); break; }
+      pending.push(...(graph.get(dependency) ?? []));
+    }
+  }
+  return result;
+}
+
 // A planted forbidden edge proves this gate is capable of rejecting the
 // dependency it claims to enforce, without modifying the worktree.
 if (dependencyErrors("src/tearbench/__planted-violation.ts",
@@ -484,6 +535,18 @@ if (dependencyErrors("src/tearbench/environment-codec.ts",
 if (dependencyErrors("src/gameplay/environment/presentation-snapshot.ts",
   'import { isGraftAnchorState } from "./graft-anchor";').length !== 1) {
   throw new Error("source architecture neutral-observation dependency self-test failed");
+}
+if (neutralSchemaErrors("src/tearbench/environment-codec.ts", "interface AuroraTrackCarryState {}").length !== 1
+  || neutralSchemaErrors("src/tearbench/environment-codec.ts", "interface EnvironmentExtensionState {}").length !== 0) {
+  throw new Error("source architecture neutral environment schema self-test failed");
+}
+const plantedTransitiveGraph = new Map([
+  ["src/gameplay/environment/pale-environment-feature.ts", ["src/gameplay/environment/__shared-hop.ts"]],
+  ["src/gameplay/environment/__shared-hop.ts", ["src/gameplay/environment/graft-anchor.ts"]],
+  ["src/gameplay/environment/graft-anchor.ts", []],
+]);
+if (transitiveBiomeErrors(plantedTransitiveGraph).length !== 1) {
+  throw new Error("source architecture transitive biome dependency self-test failed");
 }
 for (const forbiddenGameReferenceImport of [
   "../config/game-config",
@@ -1039,7 +1102,17 @@ function walk(directory) {
   });
 }
 
-for (const file of walk(sourceRoot)) {
+const sourceFiles = walk(sourceRoot);
+const sourceRelatives = new Set(sourceFiles.filter((file) => file.endsWith(".ts"))
+  .map((file) => path.relative(root, file).replaceAll("\\", "/")));
+const sourceGraph = new Map();
+for (const file of sourceFiles.filter((candidate) => candidate.endsWith(".ts"))) {
+  const relative = path.relative(root, file).replaceAll("\\", "/");
+  sourceGraph.set(relative, moduleImports(relative, fs.readFileSync(file, "utf8"), sourceRelatives));
+}
+errors.push(...transitiveBiomeErrors(sourceGraph));
+
+for (const file of sourceFiles) {
   const relative = path.relative(root, file).replaceAll("\\", "/");
   if (file.endsWith(".js")) errors.push(`${relative}: production source must be strict TypeScript`);
   if (!file.endsWith(".ts")) continue;
@@ -1052,6 +1125,7 @@ for (const file of walk(sourceRoot)) {
     if (text.includes(suppression)) errors.push(`${relative}: contains forbidden ${suppression} suppression`);
   }
   errors.push(...dependencyErrors(relative, text));
+  errors.push(...neutralSchemaErrors(relative, text));
 }
 
 if (errors.length > 0) {

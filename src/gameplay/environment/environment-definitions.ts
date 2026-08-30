@@ -1,4 +1,5 @@
-import type { EnvironmentObjectCategory, EnvironmentObjectKind } from "./environment-contracts";
+import type { EnvironmentObjectCategory } from "./environment-contracts";
+import type { EnvironmentObjectKind } from "./environment-object-kinds";
 
 export interface EnvironmentObjectDefinition {
   readonly kind: EnvironmentObjectKind;

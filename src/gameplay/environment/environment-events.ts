@@ -1,4 +1,5 @@
-import type { EnvironmentObjectCategory, EnvironmentObjectKind } from "./environment-contracts";
+import type { EnvironmentObjectCategory } from "./environment-contracts";
+import type { EnvironmentObjectKind } from "./environment-object-kinds";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 
 export type EnvironmentEventName = "field-started" | "field-resolved" | "combat-object-link-created" | "combat-object-damaged" | "combat-object-destroyed" | "object-cleaned";

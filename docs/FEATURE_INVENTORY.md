@@ -2,6 +2,40 @@
 
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
+## Current integrated content authority
+
+- [x] The published Adventure is exactly six stages and 60 waves: Grounds,
+  Undercroft, Crimson Fields, Verdant Sanctum, Voidspire, and The Tear.
+  Rootbound is the Wave 40 boss, Echo is Wave 50, and Source is Wave 60.
+- [x] Pale Traverse, Rimehound, its five variants, Aurora/Ghost Tracks, and
+  White Hart remain fully authored engineering content available through
+  Playground, State Forge, replay, and TearBench. They are excluded from
+  Adventure, Endless, Gauntlet, Boss Test, Enemy Test, Tutorial, published
+  progression/reference surfaces, and ordinary campaign state by the
+  source-owned content-availability policy.
+- [x] Shared environment contracts, state, presentation projection, replay,
+  State Forge, and TearBench codecs are biome-neutral. Verdant and Pale own
+  independent typed extensions and runtime features, and architecture checks
+  reject direct/transitive cross-biome dependencies plus biome schema leakage
+  into the neutral layer.
+- [x] Rootbound and White Hart are canonical authored boss definitions;
+  Rootbound phases 1–3 are implemented and generically State Forge-capable.
+  White Hart remains unpublished by availability policy, not by provisional
+  implementation status.
+- [ ] Final Verdant and Pale soundtrack selections are intentionally unfinished.
+  Both currently route to the approved `fillet` fallback; this inventory does
+  not authorize re-vendoring or selecting replacement cues.
+- [ ] C40 release-evidence certification remains unclaimed. C40 certifies one
+  exact clean commit only after its required retained journeys, arbitrary-state
+  proofs, device/input/output matrices, replay/preservation evidence, and full
+  repository gate are assembled and verified. It does not change gameplay or
+  deploy the site by itself.
+
+Historical checkpoint bullets below describe the state at their named
+checkpoint. Where their roster, phase-availability, publication, or balance
+language differs, this current authority supersedes it without rewriting the
+frozen evidence record.
+
 ## G6 game-reference foundation
 
 - [x] Game-owned `game-reference.v1` foundation — `src/game-reference/game-reference.ts`
@@ -21,21 +55,25 @@ This is the migration checklist for the architectural redesign. A checked featur
   callbacks in the projection. `achievement-catalog.ts` is the immutable
   achievement metadata authority; runtime behavior joins onto it.
 - [x] Stage and mode reference catalogs — the fixed game-reference collections
-  now include the five runtime-authored stages and seven published `RunMode`
+  now include the six published runtime stages and seven published `RunMode`
   entries. Stage projections contain normalized pools/layout/narrative/theme
   data plus boss/enemy ID references, while mode projections contain authored
   order, presentation metadata, lifecycle classification, and explicit
   training/boss-only/sandbox flags. Runtime stage generation, mutable hazards,
   mode planners, and debug flags remain outside the handoff.
-- [x] Structural enemy reference catalog — the fixed game-reference collection
-  contains the exact eleven factory-ready `ENEMY_KIND_IDS`, authored variant metadata (with
+- [x] Structural enemy reference catalog — the public game-reference collection
+  contains the eleven ordinary `ENEMY_KIND_IDS` plus published Rootbinder,
+  while Playground-only Rimehound remains in engineering identity coverage;
+  authored variant metadata (with
   empty arrays where no variants exist), six affixes, and three preset
   family/affix signatures. Source order is fail-closed; runtime callbacks,
   behavior/stat mutations, base stats, eligibility, CONFIG, and presentation
   objects are excluded. `null` represents an absent `minWave` gate.
-- [x] Authored boss reference catalog — the engineering game-reference collection
-  contains the exact six factory-ready boss definitions in authored order,
-  exact names, six-way stage mapping, and two descending phase thresholds per boss. The
+- [x] Authored boss reference catalog — the public game-reference collection
+  contains the exact six published boss definitions in authored order, while
+  the authored engineering catalog also retains Playground-only White Hart.
+  Public entries keep exact names, six-way stage mapping, and two descending
+  phase thresholds per boss. The
   pure `boss-definitions.ts` authority and `boss-reference.ts` projection
   exclude constructors, runtime behavior, and tuning beyond those thresholds.
 - [x] Verdant identity foundation (engineering-only) — `stages.ts`,

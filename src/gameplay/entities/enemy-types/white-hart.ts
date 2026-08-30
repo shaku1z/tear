@@ -2,7 +2,7 @@ import type {
   EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile, WeaponSegment,
 } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
-import { WHITE_HART_PROVISIONAL_DEFINITION } from "../../run/boss-definitions";
+import { WHITE_HART_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
 import type { EnvironmentPoint, EnvironmentTrackDirection } from "../../environment/environment-contracts";
 import type { WhiteHartEnvironmentRequest } from "../../environment/white-hart-route-runtime";
@@ -56,7 +56,7 @@ export function createWhiteHartType(dependencies: EnemyDependencies, Enemy: Enem
     stateMax: number = WHITE_HART_FOUNDATION_CADENCE.openingDelay;
     override facing = -1;
     override readonly phaseMarks: [number, number] = [
-      WHITE_HART_PROVISIONAL_DEFINITION.phaseMarks[0], WHITE_HART_PROVISIONAL_DEFINITION.phaseMarks[1],
+      WHITE_HART_DEFINITION.phaseMarks[0], WHITE_HART_DEFINITION.phaseMarks[1],
     ];
     readonly availableAttacks: readonly WhiteHartAttackId[] = WHITE_HART_ATTACK_IDS;
     cleanupReason: BossEncounterCleanupReason | null = null;
@@ -72,9 +72,9 @@ export function createWhiteHartType(dependencies: EnemyDependencies, Enemy: Enem
 
     constructor(x: number, y: number) {
       super(x, y, CONFIG.whiteHart);
-      this.kind = "white-hart"; this.bossId = WHITE_HART_PROVISIONAL_DEFINITION.id;
+      this.kind = "white-hart"; this.bossId = WHITE_HART_DEFINITION.id;
       this.bossName = "THE WHITE HART"; this.epithet = "KEEPER OF THE LAST ROAD";
-      this.openingLine = "TAKE THEM HOME."; this.presentationId = WHITE_HART_PROVISIONAL_DEFINITION.id;
+      this.openingLine = "TAKE THEM HOME."; this.presentationId = WHITE_HART_DEFINITION.id;
       this.isBoss = true; this.color = "#dceff1"; this.atk = "idle";
     }
     get phase(): 1 | 2 | 3 {

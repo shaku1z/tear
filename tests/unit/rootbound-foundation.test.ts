@@ -5,7 +5,7 @@ import {
   BOSS_DEFINITIONS,
   BOSS_IDENTITY_IDS,
   bossPhaseAttackAvailable,
-  ROOTBOUND_PROVISIONAL_DEFINITION,
+  ROOTBOUND_DEFINITION,
 } from "../../src/gameplay/run/boss-definitions";
 import { beginBossEncounter, cleanupBossEncounterActors, type BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
 import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
@@ -27,17 +27,17 @@ function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
 }
 
 describe("Rootbound production foundation", () => {
-  it("locks identity, authored name, provisional phase marks, and Verdant home stage before factory promotion", () => {
+  it("locks canonical identity, authored name, phase marks, and Verdant home stage", () => {
     expect(BOSS_IDENTITY_IDS).toContain("rootbound");
-    expect(ROOTBOUND_PROVISIONAL_DEFINITION).toEqual({
+    expect(ROOTBOUND_DEFINITION).toEqual({
       id: "rootbound",
       name: "The Rootbound",
       phaseMarks: [0.65, 0.28],
     });
     expect(STAGE_BOSS_HOME["verdant-sanctum"]).toBe("rootbound");
-    expect(BOSS_DEFINITIONS.find(({ id }) => id === "rootbound")).toBe(ROOTBOUND_PROVISIONAL_DEFINITION);
-    expect(Object.isFrozen(ROOTBOUND_PROVISIONAL_DEFINITION)).toBe(true);
-    expect(Object.isFrozen(ROOTBOUND_PROVISIONAL_DEFINITION.phaseMarks)).toBe(true);
+    expect(BOSS_DEFINITIONS.find(({ id }) => id === "rootbound")).toBe(ROOTBOUND_DEFINITION);
+    expect(Object.isFrozen(ROOTBOUND_DEFINITION)).toBe(true);
+    expect(Object.isFrozen(ROOTBOUND_DEFINITION.phaseMarks)).toBe(true);
   });
 
   it("constructs through the approved enemy family with only implemented attacks declared", () => {
@@ -46,7 +46,7 @@ describe("Rootbound production foundation", () => {
     const boss = new harness.types.Rootbound(placement.x, placement.y);
 
     expect(placement.factoryId).toBe("rootbound");
-    expect([1, 2, 3].map((phase) => bossPhaseAttackAvailable("rootbound", phase))).toEqual([true, false, false]);
+    expect([1, 2, 3].map((phase) => bossPhaseAttackAvailable("rootbound", phase))).toEqual([true, true, true]);
     expect(bossPhaseAttackAvailable("warden", 1)).toBe(true);
     expect(boss).toMatchObject({
       kind: "rootbound",

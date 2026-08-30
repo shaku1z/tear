@@ -1,10 +1,10 @@
 import type {
   EnvironmentCombatObjectState,
   EnvironmentGeometry,
-  EnvironmentObjectKind,
   EnvironmentPoint,
   EnvironmentRuntimeState,
 } from "./environment-contracts";
+import type { EnvironmentObjectKind } from "./environment-object-kinds";
 import { environmentObjectDefinition } from "./environment-definitions";
 
 export const GRAFT_ANCHOR_TYPES = Object.freeze(["bastion", "mercy", "haste"] as const);

@@ -10,7 +10,7 @@ import type {
   TearWeaponId,
   TearWithinTickPhase,
 } from "./registries";
-import type { EnvironmentObjectKind } from "../gameplay/environment/environment-contracts";
+import type { EnvironmentObjectKind } from "../gameplay/environment/environment-object-kinds";
 
 export const TEAR_CONTRACT_FORMAT = "tear-contract";
 export const TEAR_CONTRACT_VERSION = 1;
@@ -129,6 +129,7 @@ export interface TearNavigationObservationV1 {
 }
 
 export interface TearObservedEnvironmentFieldV1 {
+  readonly [authoredDetail: string]: unknown;
   readonly id: string;
   readonly kind: EnvironmentObjectKind;
   readonly bounds: TearObservedBoundsV1;
@@ -136,17 +137,10 @@ export interface TearObservedEnvironmentFieldV1 {
   readonly active: boolean;
   readonly ownerId?: string;
   readonly eligibility?: Readonly<{ player: boolean; enemies: boolean; bosses: boolean }>;
-  readonly variant?: string;
-  readonly direction?: -1 | 1;
-  readonly trackId?: string;
-  readonly lifecycle?: Readonly<{ warningTicks: number; activeTicks: number; cooldownTicks: number }>;
-  readonly transportEligibility?: Readonly<Record<string, boolean>>;
-  readonly momentum?: Readonly<{ accelerationMultiplier: number; velocityRetention: number; exitCarryTicks: number; heavyInfluenceScale: number }>;
-  readonly maximumConcurrent?: number;
-  readonly carryStates?: readonly Readonly<{ actorId: string; direction: -1 | 1; remainingTicks: number }>[];
 }
 
 export interface TearObservedEnvironmentCombatObjectV1 {
+  readonly [authoredDetail: string]: unknown;
   readonly id: string;
   readonly kind: EnvironmentObjectKind;
   readonly ownerId?: string;
@@ -156,29 +150,15 @@ export interface TearObservedEnvironmentCombatObjectV1 {
   readonly state: string;
   readonly counterplayTags: readonly string[];
   readonly procEligible: boolean;
-  readonly graftType?: string;
-  readonly effect?: string;
-  readonly recoverySpentHealthFraction?: number;
-  readonly rootCageId?: string;
-  readonly boundarySide?: "left" | "right";
-  readonly response?: "sever-either-boundary";
 }
 
 export interface TearObservedEnvironmentRouteV1 {
+  readonly [authoredDetail: string]: unknown;
   readonly id: string;
   readonly kind: EnvironmentObjectKind;
   readonly points: readonly Readonly<{ x: number; y: number }>[];
   readonly state: string;
   readonly ownerId?: string;
-  readonly variant?: string;
-  readonly direction?: -1 | 1;
-  readonly width?: number;
-  readonly lifecycle?: Readonly<{ warningTicks: number; activeTicks: number; cooldownTicks: number }>;
-  readonly sourceTrackId?: string | null;
-  readonly maximumConcurrent?: number;
-  readonly damage?: number;
-  readonly threatening?: boolean;
-  readonly hitActorIds?: readonly string[];
 }
 
 export interface TearEnvironmentObservationV1 {

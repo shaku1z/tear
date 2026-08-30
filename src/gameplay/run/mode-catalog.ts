@@ -79,6 +79,17 @@ export const PROFILE_TRACKED_MODE_IDS: readonly RunMode[] = Object.freeze(
   MODE_CATALOG.filter((mode) => !mode.bossOnly && !mode.sandbox).map((mode) => mode.id),
 );
 
+/** Modes whose natural run lifecycle owns campaign-style wave actors. */
+export const WAVE_OWNING_MODE_IDS: readonly RunMode[] = Object.freeze(
+  MODE_CATALOG.filter((mode) => mode.classification === "campaign"
+    || mode.classification === "endless" || mode.classification === "gauntlet")
+    .map((mode) => mode.id),
+);
+
+export function modeOwnsWaveActors(mode: RunMode): boolean {
+  return WAVE_OWNING_MODE_IDS.includes(mode);
+}
+
 export function tracksModeProgress(mode: RunMode): boolean {
   return PROFILE_TRACKED_MODE_IDS.includes(mode);
 }

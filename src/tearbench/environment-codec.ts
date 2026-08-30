@@ -1,5 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
-import { ENVIRONMENT_OBJECT_KIND_IDS, type EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import { ENVIRONMENT_OBJECT_KIND_IDS } from "../gameplay/environment/environment-object-kinds";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
 import type { TearEnvironmentObservationV1 } from "./contracts";
 import { ENVIRONMENT_STATE_FORGE_FACTORY_REGISTRY } from "./state-forge-factories";
@@ -22,6 +23,7 @@ const MAX_FIELDS = 64;
 const MAX_COMBAT_OBJECTS = 128;
 const MAX_ROUTES = 64;
 const MAX_POINTS = 256;
+const ENVIRONMENT_REFERENCE_KEY = /^(?:owner|target|source|actor).*Id$/iu;
 
 function isGeneratedEnvironmentId(id: string, worldId: string): boolean {
   if (!id.startsWith(`${worldId}:`)) return false;
@@ -65,11 +67,12 @@ export function rebaseEnvironmentSnapshot(value: unknown, destinationWorldId: st
   }
   const rewrite = (entry: unknown): unknown => {
     if (!record(entry)) return entry;
-    const references = ["ownerId", "targetId", "sourceId", "sourceTrackId"] as const;
     const result: Record<string, unknown> = { ...entry, id: portableEnvironmentId(entry.id, remapping) };
-    for (const key of references) if (key in entry) result[key] = portableEnvironmentId(entry[key], remapping);
-    for (const key of ["targetIds", "linkedActorIds"] as const) {
-      if (Array.isArray(entry[key])) result[key] = entry[key].map((reference) => portableEnvironmentId(reference, remapping));
+    for (const [key, reference] of Object.entries(entry)) {
+      if (ENVIRONMENT_REFERENCE_KEY.test(key)) result[key] = portableEnvironmentId(reference, remapping);
+      else if (/(?:target|source|actor).*Ids$/iu.test(key) && Array.isArray(reference)) {
+        result[key] = reference.map((item) => portableEnvironmentId(item, remapping));
+      }
     }
     return result;
   };
@@ -204,6 +207,31 @@ function projectionGeometry(value: Readonly<Record<string, unknown>>): Readonly<
   return Object.freeze(result);
 }
 
+function projectData(value: unknown, key: string, remapping: ReadonlyMap<string, string>): unknown {
+  if (typeof value === "number") return rounded(value);
+  if (typeof value === "string") return ENVIRONMENT_REFERENCE_KEY.test(key) ? portableEnvironmentId(value, remapping) : value;
+  if (Array.isArray(value)) return Object.freeze(value.map((entry) => projectData(entry, key, remapping)));
+  if (!record(value)) return value;
+  return Object.freeze(Object.fromEntries(Object.keys(value).sort().map((childKey) =>
+    [childKey, projectData(value[childKey], childKey, remapping)])));
+}
+
+function projectExtensions(
+  entry: Readonly<Record<string, unknown>>,
+  excluded: ReadonlySet<string>,
+  remapping: ReadonlyMap<string, string>,
+): Readonly<Record<string, unknown>> {
+  return Object.freeze(Object.fromEntries(Object.keys(entry).sort().filter((key) => !excluded.has(key)
+    && !/^(?:cosmetic|presentation)/iu.test(key)).map((key) =>
+    [key, projectData(entry[key], key, remapping)])));
+}
+
+const COMMON_KEYS = new Set(["id", "kind", "geometry", "points", "state", "stateTick", "ownerId", "cleanupReason"]);
+const FIELD_KEYS = new Set([...COMMON_KEYS, "timer", "eligibility", "force", "schedule", "patternId"]);
+const COMBAT_OBJECT_KEYS = new Set([...COMMON_KEYS, "targetId", "targetIds", "linkedActorIds", "integrity", "maxIntegrity",
+  "counterplayTags", "procEligible", "damageDedupeId", "patternId"]);
+const ROUTE_KEYS = new Set(COMMON_KEYS);
+
 /** Presentation-independent environment projection used by exact hosts and replay. */
 export function projectEnvironmentHash(value: unknown): unknown {
   if (!record(value)) return Object.freeze({ stageId: "unknown", fields: [], combatObjects: [], routes: [] });
@@ -213,39 +241,16 @@ export function projectEnvironmentHash(value: unknown): unknown {
     return entries.map((entry): unknown => {
     if (!record(entry)) return entry;
     const commonValue: Record<string, unknown> = { id: portableEnvironmentId(entry.id, remapping), kind: entry.kind, geometry: projectionGeometry(record(entry.geometry) ? entry.geometry : {}), state: entry.state, stateTick: entry.stateTick, ownerId: portableEnvironmentId(entry.ownerId ?? null, remapping), cleanupReason: entry.cleanupReason ?? null };
-    if (key === "fields") Object.assign(commonValue, { timer: finite(entry.timer) ? rounded(entry.timer) : entry.timer, eligibility: entry.eligibility ?? null, force: entry.force ?? null, schedule: entry.schedule ?? null, patternId: entry.patternId ?? null,
-      variant: entry.variant ?? null, bloomWellId: entry.bloomWellId ?? null, stageOwnerId: entry.stageOwnerId ?? null,
-      bossOwnerId: portableEnvironmentId(entry.bossOwnerId ?? null, remapping), startTick: entry.startTick ?? null, transitionTick: entry.transitionTick ?? null });
-    if (key === "fields" && entry.kind === "aurora-track") Object.assign(commonValue, {
-      trackId: entry.trackId, direction: entry.direction, lifecycle: entry.lifecycle,
-      transportEligibility: entry.transportEligibility, momentum: entry.momentum, maximumConcurrent: entry.maximumConcurrent,
-      carryStates: Array.isArray(entry.carryStates) ? entry.carryStates.map((carry) => record(carry) ? Object.freeze({ actorId: carry.actorId,
-        direction: carry.direction, remainingTicks: carry.remainingTicks }) : null) : entry.carryStates,
-    });
+    if (key === "fields") Object.assign(commonValue, { timer: finite(entry.timer) ? rounded(entry.timer) : entry.timer,
+      eligibility: entry.eligibility ?? null, force: entry.force ?? null, schedule: entry.schedule ?? null,
+      patternId: entry.patternId ?? null }, projectExtensions(entry, FIELD_KEYS, remapping));
     if (key === "combatObjects") {
       Object.assign(commonValue, { targetId: portableEnvironmentId(entry.targetId ?? null, remapping), ...(Array.isArray(entry.targetIds) ? { targetIds: entry.targetIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), ...(Array.isArray(entry.linkedActorIds) ? { linkedActorIds: entry.linkedActorIds.map((target) => portableEnvironmentId(target, remapping)) } : {}), integrity: entry.integrity, maxIntegrity: entry.maxIntegrity, counterplayTags: entry.counterplayTags ?? [], procEligible: entry.procEligible, damageDedupeId: entry.damageDedupeId, patternId: entry.patternId ?? null });
-      if (entry.factoryId === "graft-anchor") Object.assign(commonValue, {
-        factoryId: entry.factoryId, graftType: entry.graftType, effect: entry.effect, procPolicyId: entry.procPolicyId,
-        connectionGeometry: projectionGeometry(record(entry.connectionGeometry) ? entry.connectionGeometry : {}),
-        createdTick: entry.createdTick, activationTick: entry.activationTick, nextPulseTick: entry.nextPulseTick,
-        recoverySpentHealthFraction: entry.recoverySpentHealthFraction,
-        ...(entry.effect === "incoming-damage-multiplier" ? { incomingDamageMultiplier: entry.incomingDamageMultiplier } : {}),
-        ...(entry.effect === "bounded-pulse-recovery" ? { pulseIntervalSeconds: entry.pulseIntervalSeconds,
-          pulseHealthFraction: entry.pulseHealthFraction, maxRecoveryHealthFraction: entry.maxRecoveryHealthFraction } : {}),
-        ...(entry.effect === "selected-attack-cadence-multiplier" ? { cadenceMultiplier: entry.cadenceMultiplier,
-          minimumWarningSeconds: entry.minimumWarningSeconds } : {}),
-      });
-      if (entry.factoryId === "root-link" && typeof entry.rootCageId === "string") Object.assign(commonValue, {
-        factoryId: entry.factoryId, rootCageId: entry.rootCageId, boundarySide: entry.boundarySide,
-        response: entry.response, createdTick: entry.createdTick, activationTick: entry.activationTick, expiryTick: entry.expiryTick,
-      });
+      Object.assign(commonValue, projectExtensions(entry, COMBAT_OBJECT_KEYS, remapping));
     }
     if (key === "routes") {
       commonValue.points = Array.isArray(entry.points) ? entry.points.map((point) => ({ x: rounded(Number((point as Record<string, unknown>).x)), y: rounded(Number((point as Record<string, unknown>).y)) })) : [];
-      if (entry.kind === "ghost-track") Object.assign(commonValue, { variant: entry.variant, direction: entry.direction,
-        width: entry.width, lifecycle: entry.lifecycle, sourceTrackId: portableEnvironmentId(entry.sourceTrackId ?? null, remapping),
-        maximumConcurrent: entry.maximumConcurrent, damage: entry.damage, threatening: entry.threatening,
-        hitActorIds: Array.isArray(entry.hitActorIds) ? entry.hitActorIds.map((id) => portableEnvironmentId(id, remapping)) : [] });
+      Object.assign(commonValue, projectExtensions(entry, ROUTE_KEYS, remapping));
     }
     return Object.freeze(commonValue);
     });
@@ -268,19 +273,23 @@ export function environmentSnapshotToObservation(value: unknown): TearEnvironmen
     return Object.freeze({ minX: x, maxX: x + w, minY: y, maxY: y + h });
   };
   return Object.freeze({
-    fields: (projection.fields as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, bounds: bounds(entry.geometry), state: entry.state, active: entry.state === "active", ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), eligibility: entry.eligibility,
-      ...(entry.kind === "aurora-track" ? { variant: entry.variant, direction: entry.direction, trackId: entry.trackId,
-        lifecycle: entry.lifecycle, transportEligibility: entry.transportEligibility, momentum: entry.momentum,
-        maximumConcurrent: entry.maximumConcurrent, carryStates: entry.carryStates } : {}) })),
-    combatObjects: (projection.combatObjects as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}), ...(typeof entry.targetId === "string" ? { targetId: entry.targetId } : {}), bounds: bounds(entry.geometry), integrityRatio: Number(entry.maxIntegrity) > 0 ? Number(entry.integrity) / Number(entry.maxIntegrity) : 0, state: entry.state, counterplayTags: entry.counterplayTags, procEligible: entry.procEligible,
-      ...(typeof entry.graftType === "string" ? { graftType: entry.graftType } : {}), ...(typeof entry.effect === "string" ? { effect: entry.effect } : {}),
-      ...(typeof entry.recoverySpentHealthFraction === "number" ? { recoverySpentHealthFraction: entry.recoverySpentHealthFraction } : {}),
-      ...(typeof entry.rootCageId === "string" ? { rootCageId: entry.rootCageId, boundarySide: entry.boundarySide, response: entry.response } : {}),
+    fields: (projection.fields as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({
+      id: entry.id as string, kind: entry.kind, bounds: bounds(entry.geometry), state: entry.state,
+      active: entry.state === "active", ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}),
+      eligibility: entry.eligibility, ...projectExtensions(entry, new Set([...FIELD_KEYS, "geometry"]), new Map()),
     })),
-    routes: (projection.routes as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({ id: entry.id as string, kind: entry.kind, points: entry.points, state: entry.state, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}),
-      ...(entry.kind === "ghost-track" ? { variant: entry.variant, direction: entry.direction, width: entry.width,
-        lifecycle: entry.lifecycle, sourceTrackId: entry.sourceTrackId, maximumConcurrent: entry.maximumConcurrent,
-        damage: entry.damage, threatening: entry.threatening, hitActorIds: entry.hitActorIds } : {}) })),
+    combatObjects: (projection.combatObjects as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({
+      id: entry.id as string, kind: entry.kind, ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}),
+      ...(typeof entry.targetId === "string" ? { targetId: entry.targetId } : {}), bounds: bounds(entry.geometry),
+      integrityRatio: Number(entry.maxIntegrity) > 0 ? Number(entry.integrity) / Number(entry.maxIntegrity) : 0,
+      state: entry.state, counterplayTags: entry.counterplayTags, procEligible: entry.procEligible,
+      ...projectExtensions(entry, new Set([...COMBAT_OBJECT_KEYS, "geometry"]), new Map()),
+    })),
+    routes: (projection.routes as readonly Readonly<Record<string, unknown>>[]).map((entry) => Object.freeze({
+      id: entry.id as string, kind: entry.kind, points: entry.points, state: entry.state,
+      ...(typeof entry.ownerId === "string" ? { ownerId: entry.ownerId } : {}),
+      ...projectExtensions(entry, ROUTE_KEYS, new Map()),
+    })),
   }) as TearEnvironmentObservationV1;
 }
 
