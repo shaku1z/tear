@@ -82,6 +82,13 @@ function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+const DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS = Object.freeze([
+  "description", "artifact", "text", "implementationDeliverable", "userVisibleResult", "acceptanceCondition",
+]);
+const DEFAULT_IMMUTABLE_SOURCE_FIELDS = Object.freeze([
+  "id", "sourceStatement", "sourceTextHash", "atomicTextHash", "sourceVersion",
+]);
+
 function uniqueNormalized(values) {
   const seen = new Set();
   const duplicates = [];
@@ -153,6 +160,40 @@ export function validateRegistry(registry) {
   if (!registry || typeof registry !== "object") return ["registry must be an object"];
   if (registry.schemaVersion !== 1) errors.push("registry.schemaVersion must equal 1");
   if (!nonEmptyString(registry.registryId)) errors.push("registry.registryId must be a non-empty string");
+  const authority = registry.sourceAuthority;
+  if (!authority || typeof authority !== "object") {
+    errors.push("sourceAuthority must be an object");
+  } else {
+    const owners = authority.productionOwners;
+    const requiredOwners = ["stages", "bosses", "environmentMechanics", "stageEnvironment", "publication", "canonicalScenarios"];
+    if (!owners || typeof owners !== "object") errors.push("sourceAuthority.productionOwners must be an object");
+    else for (const key of requiredOwners) if (!nonEmptyString(owners[key])) errors.push(`sourceAuthority.productionOwners.${key} must be a repository path`);
+    if (!nonEmptyString(authority.projectionRule)) errors.push("sourceAuthority.projectionRule must be a non-empty policy");
+    if (!nonEmptyString(authority.specializedMechanicsRule)) errors.push("sourceAuthority.specializedMechanicsRule must be a non-empty policy");
+  }
+  const projection = registry.mutableProjectionPolicy;
+  if (!projection || typeof projection !== "object") {
+    errors.push("mutableProjectionPolicy must be an object");
+  } else {
+    for (const [key, fallback] of [["mutableGeneratedTextFields", DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS], ["immutableSourceFields", DEFAULT_IMMUTABLE_SOURCE_FIELDS]]) {
+      if (!Array.isArray(projection[key]) || projection[key].length === 0 || projection[key].some((field) => !nonEmptyString(field))) {
+        errors.push(`mutableProjectionPolicy.${key} must contain non-empty field names`);
+      } else if (new Set(projection[key]).size !== projection[key].length) {
+        errors.push(`mutableProjectionPolicy.${key} must not contain duplicate fields`);
+      } else if (fallback.some((field) => !projection[key].includes(field))) {
+        errors.push(`mutableProjectionPolicy.${key} is missing a required field`);
+      }
+    }
+    for (const key of ["mutablePaths", "immutablePaths"]) {
+      if (!Array.isArray(projection[key]) || projection[key].length === 0 || projection[key].some((value) => !nonEmptyString(value))) {
+        errors.push(`mutableProjectionPolicy.${key} must contain repository paths`);
+      }
+    }
+    const mutableFields = new Set(projection.mutableGeneratedTextFields ?? []);
+    for (const field of projection.immutableSourceFields ?? []) {
+      if (mutableFields.has(field)) errors.push(`mutableProjectionPolicy field cannot be both mutable and immutable: ${field}`);
+    }
+  }
   if (!Array.isArray(registry.terms) || registry.terms.length === 0) {
     errors.push("registry.terms must be a non-empty array");
     return errors;
@@ -248,6 +289,36 @@ export function validateRegistry(registry) {
     errors.push(...validateAllowlistEntries(roster.historyAllowlist, "activeRoster.historyAllowlist", rosterIds, { history: true }));
   }
   return errors;
+}
+
+function replaceDeprecatedCopyAliases(value, registry) {
+  let result = value;
+  for (const term of registry.terms) {
+    for (const alias of term.deprecatedCopyAliases ?? []) {
+      const pattern = aliasPattern(alias);
+      result = result.replace(pattern, (match, prefix = "") => `${prefix}${term.displayName}`);
+    }
+  }
+  return result;
+}
+
+/**
+ * Translate only mutable generated prose. Source IDs, source statements, and
+ * hash-bound fields are copied byte-for-byte and never pass through aliases.
+ */
+export function translateMutableGeneratedDescriptions(value, registry) {
+  const mutableFields = new Set(registry.mutableProjectionPolicy?.mutableGeneratedTextFields ?? DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS);
+  if (Array.isArray(value)) return value.map((entry) => translateMutableGeneratedDescriptions(entry, registry));
+  if (!value || typeof value !== "object") return value;
+  const result = {};
+  for (const [key, entry] of Object.entries(value)) {
+    result[key] = mutableFields.has(key) && typeof entry === "string"
+      ? replaceDeprecatedCopyAliases(entry, registry)
+      : (Array.isArray(entry) || (entry && typeof entry === "object"))
+        ? translateMutableGeneratedDescriptions(entry, registry)
+        : entry;
+  }
+  return result;
 }
 
 export function sourceStringSegments(text) {

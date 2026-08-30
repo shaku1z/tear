@@ -335,6 +335,22 @@ export const STAGE_CONTENT_AVAILABILITY = Object.freeze(Object.fromEntries(
   ]),
 ) as Readonly<Record<StageId, StageContentAvailability>>);
 
+/** Source-derived display projection; IDs and names remain owned by AUTHORED_STAGES. */
+export const STAGE_DISPLAY_NAMES = Object.freeze(Object.fromEntries(
+  AUTHORED_STAGES.map(({ id, name }) => [id, name]),
+) as Readonly<Record<StageId, string>>);
+
+export type StagePublicationState = "published" | "preview";
+
+/** Source-derived publication projection; the tracked boundary remains authoritative. */
+export const STAGE_PUBLICATION_STATE = Object.freeze(Object.fromEntries(
+  STAGE_IDS.map((id) => [id, STAGE_CONTENT_AVAILABILITY[id].published ? "published" : "preview"]),
+) as Readonly<Record<StageId, StagePublicationState>>);
+
+export function stagePublicationState(stageId: StageId): StagePublicationState {
+  return STAGE_PUBLICATION_STATE[stageId];
+}
+
 export function stageIdsAvailableOn(surface: ContentAvailabilitySurface): readonly StageId[] {
   return Object.freeze(STAGE_IDS.filter((id) => STAGE_CONTENT_AVAILABILITY[id][surface]));
 }

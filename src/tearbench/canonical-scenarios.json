@@ -182,7 +182,7 @@
     "testFiles": ["tests/unit/white-hart-foundation.test.ts", "tests/unit/white-hart-phases.test.ts", "tests/unit/white-hart-route-runtime.test.ts", "tests/unit/white-hart-state-forge.test.ts"],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-pale-white-hart-phases.js",
-      "artifact": "The dedicated engineering journey captures authored route facts for Antler Run, Aurora Volley, Ghost Tracks, and an accessible Endless Return; fixed-step and State Forge tests cover all twelve attacks and phase/environment restoration without publishing White Hart into ordinary Boss Test.",
+      "artifact": "The dedicated engineering journey captures authored route facts for Antler Run, Aurora Volley, Ghost Tracks, and an accessible Endless Return; fixed-step and Scenario Console tests cover all twelve attacks and phase/environment restoration without publishing White Hart into ordinary Boss Test.",
       "artifactRetention": "Regenerable local engineering screenshots and a source/build-bound evidence manifest are retained outside version control.",
       "executionClass": "engineering",
       "certification": "non-certifying"
@@ -211,11 +211,11 @@
     "subject": { "kind": "environment-field", "id": "generic-field" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
     "backends": ["live"],
-    "tags": ["environment", "field", "generic-field", "fixed-step", "c4"],
+    "tags": ["environment", "field", "generic-field", "bloom-well", "fixed-step", "c4"],
     "maxTicks": 8,
     "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
     "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved field, and observes its real fixed-step lifecycle transitions.",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic Scenario Console-approved field, and observes its real fixed-step lifecycle transitions.",
       "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
@@ -224,16 +224,16 @@
     "subject": { "kind": "environment-combat-object", "id": "generic-combat-object" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
     "backends": ["live"],
-    "tags": ["environment", "combat-object", "generic-combat-object", "damage", "c4"],
+    "tags": ["environment", "combat-object", "generic-combat-object", "root-link", "damage", "c4"],
     "maxTicks": 8,
     "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-combat-object-runtime.test.ts"],
     "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved combat object, and observes source-owned damage/dedupe/destruction facts.",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic Scenario Console-approved combat object, and observes source-owned damage/dedupe/destruction facts.",
       "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "verdant-bloom-well-cycle",
-    "description": "Restore one authored Bloom Well through State Forge and prove deterministic warning, active lift, cooldown, and dormant boundaries without stage insertion.",
+    "description": "Restore one authored Bloom Well through Scenario Console and prove deterministic warning, active lift, cooldown, and dormant boundaries without stage insertion.",
     "subject": { "kind": "environment-field", "id": "verdant-bloom-well" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
     "backends": ["live"],
@@ -241,25 +241,25 @@
     "maxTicks": 744,
     "testFiles": ["tests/unit/bloom-well-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
     "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared current-game browser proof restores the Bloom Well through State Forge and records state/hash/observation boundaries; detached parity is covered by the production environment unit harness.",
+      "artifact": "Shared current-game browser proof restores the Bloom Well through Scenario Console and records state/hash/observation boundaries; detached parity is covered by the production environment unit harness.",
       "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "verdant-root-network-sever",
-    "description": "Restore one Rootbinder and two ordinary allies through State Forge, prove source-owned root-link segments are severable and cleaned without proc or reward leakage.",
+    "description": "Restore one Rootbinder and two ordinary allies through Scenario Console, prove source-owned root-link segments are severable and cleaned without proc or reward leakage.",
     "subject": { "kind": "environment-combat-object", "id": "verdant-root-network" },
     "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
     "backends": ["live"],
-    "tags": ["environment", "combat-object", "rootbinder", "root-network", "verdant-root-network", "sever", "c6"],
+    "tags": ["environment", "combat-object", "rootbinder", "root-network", "root-link", "verdant-root-network", "sever", "c6"],
     "maxTicks": 24,
     "testFiles": ["tests/unit/rootbinder-network.test.ts"],
     "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared Class-A browser proof restores Rootbinder relationship state through State Forge, observes non-proc root-link segments, severs one segment, and verifies cleanup of the remaining links.",
+      "artifact": "Shared Class-A browser proof restores Rootbinder relationship state through Scenario Console, observes non-proc root-link segments, severs one segment, and verifies cleanup of the remaining links.",
       "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {
     "id": "rootbound-graft-anchor-destruction",
-    "description": "Restore Rootbound with one canonical active Graft Anchor through State Forge, destroy it through the environment combat kernel, and prove valid ownership plus reward/proc exclusion.",
+    "description": "Restore Rootbound with one canonical active Graft Anchor through Scenario Console, destroy it through the environment combat kernel, and prove valid ownership plus reward/proc exclusion.",
     "subject": { "kind": "environment-combat-object", "id": "rootbound-graft-anchor" },
     "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "rootbound" },
     "backends": ["live"],
@@ -267,7 +267,7 @@
     "maxTicks": 24,
     "testFiles": ["tests/unit/graft-anchor.test.ts", "tests/unit/rootbound-phase-two.test.ts"],
     "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared Class-A browser proof launches the real Rootbound encounter, restores one specialized Graft through State Forge, observes stable owner/target references, destroys it through the canonical combat-object kernel, and proves no enemy reward/proc leakage.",
+      "artifact": "Shared Class-A browser proof launches the real Rootbound encounter, restores one specialized Graft through Scenario Console, observes stable owner/target references, destroys it through the canonical combat-object kernel, and proves no enemy reward/proc leakage.",
       "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
   },
   {

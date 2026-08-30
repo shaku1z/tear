@@ -11,9 +11,65 @@ import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
 import { TearScenarioRegistry } from "./scenario-registry";
 import scenarioCatalog from "./canonical-scenarios.json";
 import { BLOOM_WELL_TIMING } from "../gameplay/environment/bloom-well";
+import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../gameplay/environment/environment-definitions";
+import { BOSS_DEFINITIONS } from "../gameplay/run/boss-definitions";
+import {
+  AUTHORED_STAGES,
+  STAGE_BOSS_HOME,
+  STAGE_CONTENT_AVAILABILITY,
+  STAGE_DISPLAY_NAMES,
+  STAGE_PUBLICATION_STATE,
+  stageDefinition,
+  type StageId,
+} from "../gameplay/stages";
+import { stageEnvironmentMechanicKinds } from "../gameplay/environment/stage-environment-definitions";
 import { effectiveInvariantIdsForScenario } from "./invariants";
 
 type CanonicalCatalogEntry = (typeof scenarioCatalog)[number];
+
+function homeStageForBoss(bossId: string): StageId | undefined {
+  const match = Object.entries(STAGE_BOSS_HOME).find(([, id]) => id === bossId);
+  return match?.[0] as StageId | undefined;
+}
+
+function sourceEnvironmentMechanicKind(entry: CanonicalCatalogEntry): string {
+  const category = entry.subject.kind === "environment-field" ? "field" : "combat-object";
+  const matches = Object.values(ENVIRONMENT_OBJECT_DEFINITIONS)
+    .filter((definition) => definition.category === category && entry.tags.includes(definition.kind));
+  if (matches.length !== 1) {
+    throw new RangeError(`canonical environment scenario ${entry.id} must name exactly one source-owned ${category} mechanic`);
+  }
+  const match = matches[0];
+  if (match === undefined) throw new RangeError(`canonical environment scenario ${entry.id} has no source-owned ${category} mechanic`);
+  return match.kind;
+}
+
+function assertSourceOwnedContent(entry: CanonicalCatalogEntry): void {
+  if (!entry.tags.includes(entry.subject.id)) {
+    throw new RangeError(`canonical scenario ${entry.id} must retain its source-owned subject tag`);
+  }
+  if (entry.subject.kind === "boss") {
+    const homeStage = homeStageForBoss(entry.subject.id);
+    if (homeStage === undefined) throw new RangeError(`canonical boss scenario ${entry.id} has no source-owned home stage`);
+    if (stageDefinition(homeStage).boss !== entry.subject.id) {
+      throw new RangeError(`canonical boss scenario ${entry.id} does not match its source-owned home stage`);
+    }
+    if (!entry.tags.includes(homeStage)) {
+      throw new RangeError(`canonical boss scenario ${entry.id} must name its source-owned home stage`);
+    }
+    const publication = STAGE_CONTENT_AVAILABILITY[homeStage].published ? "published" : "preview";
+    const previewTag = entry.tags.includes("unpublished-preview") || entry.tags.includes("engineering-only");
+    if (publication === "preview" && !previewTag) {
+      throw new RangeError(`canonical preview boss scenario ${entry.id} must remain explicitly unpublished`);
+    }
+    if (publication === "published" && previewTag) {
+      throw new RangeError(`canonical published boss scenario ${entry.id} cannot carry preview-only tags`);
+    }
+  }
+  if (entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object") {
+    sourceEnvironmentMechanicKind(entry);
+  }
+}
 
 export function materializeCanonicalScenario(
   entry: CanonicalCatalogEntry,
@@ -46,6 +102,9 @@ export function materializeCanonicalScenario(
   }
   if (entry.subject.kind === "environment-field") ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
   if (entry.subject.kind === "environment-combat-object") ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id);
+  // Registry errors retain their precise legacy diagnostics before source-owner
+  // projections validate tags, homes, and specialized mechanic identities.
+  assertSourceOwnedContent(entry);
   if (entry.subject.kind === "environment-field" && entry.subject.id === "verdant-bloom-well") {
     if (entry.backends.length !== 1 || entry.backends[0] !== "live") {
       throw new RangeError(`canonical scenario ${entry.id} Bloom Well evidence is live-only; headless execution is unsupported`);
@@ -105,6 +164,29 @@ export function materializeCanonicalScenario(
 export const CANONICAL_ENGINEERING_SCENARIOS = Object.freeze([
   ...scenarioCatalog.map((entry) => materializeCanonicalScenario(entry)),
 ] as const);
+
+/**
+ * Read-only source projection consumed by authority tests and reporting. It
+ * contains no independently authored IDs or display strings.
+ */
+export const CANONICAL_CONTENT_AUTHORITY = Object.freeze({
+  stages: Object.freeze(AUTHORED_STAGES.map(({ id, name, boss }) => Object.freeze({
+    id, displayName: name, boss, publication: STAGE_PUBLICATION_STATE[id],
+  }))),
+  bosses: Object.freeze(BOSS_DEFINITIONS.map(({ id, name }) => Object.freeze({
+    id, displayName: name, homeStage: homeStageForBoss(id),
+  }))),
+  environmentMechanics: Object.freeze([...new Set(scenarioCatalog
+    .filter((entry) => entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object")
+    .map((entry) => sourceEnvironmentMechanicKind(entry)))]),
+  stageEnvironmentMechanics: Object.freeze(Object.fromEntries(AUTHORED_STAGES.map(({ id }) => [
+    id, stageEnvironmentMechanicKinds(id),
+  ])) as Readonly<Record<StageId, readonly string[]>>),
+  scenarios: Object.freeze(scenarioCatalog.map(({ id, subject }) => Object.freeze({
+    id, subject: Object.freeze({ ...subject }),
+  }))),
+  stageDisplayNames: STAGE_DISPLAY_NAMES,
+});
 
 export function createCanonicalScenarioRegistry(): TearScenarioRegistry {
   const registry = new TearScenarioRegistry();

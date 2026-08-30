@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,11 +8,13 @@ import { fileURLToPath } from "node:url";
 
 import {
   runTerminologyCheck,
+  translateMutableGeneratedDescriptions,
   validateRegistry,
 } from "../scripts/check-terminology.mjs";
 import {
   runActiveRosterCheck,
 } from "../scripts/check-active-roster.mjs";
+import { buildRequirements } from "../scripts/tearbench-requirements.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const registryPath = path.join(repositoryRoot, "config", "terminology-registry.json");
@@ -194,6 +197,49 @@ test("registry validation rejects duplicate aliases and broad mutable exceptions
 
   assert.ok(errors.some((error) => /deprecated alias is duplicated/u.test(error)));
   assert.ok(errors.some((error) => /too broad for mutable compatibility/u.test(error)));
+});
+
+test("generated-description translation leaves source identity and hashes immutable", () => {
+  const registry = baseRegistry();
+  const generated = {
+    id: "TG3-example",
+    sourceStatement: "State Forge is historical source wording.",
+    sourceTextHash: "ABC123",
+    atomicTextHash: "DEF456",
+    sourceVersion: "0.6",
+    text: "State Forge is the current description.",
+    description: "State Forge is the current description.",
+  };
+  const translated = translateMutableGeneratedDescriptions({ requirements: [generated] }, registry);
+  const requirement = translated.requirements[0];
+  assert.equal(requirement.id, generated.id);
+  assert.equal(requirement.sourceStatement, generated.sourceStatement);
+  assert.equal(requirement.sourceTextHash, generated.sourceTextHash);
+  assert.equal(requirement.atomicTextHash, generated.atomicTextHash);
+  assert.equal(requirement.sourceVersion, generated.sourceVersion);
+  assert.equal(requirement.text, "Scenario Console is the current description.");
+  assert.equal(requirement.description, "Scenario Console is the current description.");
+});
+
+test("generated requirements apply mutable terminology at the generator boundary", () => {
+  const [requirement] = buildRequirements({
+    occurrences: [{
+      id: "SRC-example",
+      kind: "paragraph",
+      numberedSection: 1,
+      startLine: 1,
+      endLine: 1,
+      headingPath: ["Requirements"],
+      text: "State Forge is required.",
+      textHash: "SOURCE-HASH",
+    }],
+  }, new Map());
+  assert.ok(requirement);
+  assert.equal(requirement.text, "Scenario Console is required.");
+  assert.equal(requirement.sourceStatement, "State Forge is required.");
+  assert.equal(requirement.sourceTextHash, "SOURCE-HASH");
+  assert.equal(requirement.atomicTextHash,
+    createHash("sha256").update("State Forge is required.").digest("hex"));
 });
 
 test("active-roster checker verifies canonical order and exact retired-ID migration", () => {

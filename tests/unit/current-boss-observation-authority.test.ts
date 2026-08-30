@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
 import { BOSS_DEFINITIONS, bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
+import { CANONICAL_CONTENT_AUTHORITY, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
+import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
 import { projectLiveBossObservation } from "../../src/tearbench/live-observation-actors";
+import { STAGE_PUBLICATION_STATE, stageDefinition } from "../../src/gameplay/stages";
 
 function liveBossRuntime() {
   const harness = createEnemyHarness([0.25, 0.75, 0.4]);
@@ -89,5 +92,39 @@ describe("current boss observation authority", () => {
     expect(projectLiveBossObservation(boss)?.phase).toBe("2");
     boss.hp = boss.maxHp * 0.2;
     expect(projectLiveBossObservation(boss)?.phase).toBe("3");
+  });
+
+  it("rejects canonical scenario subject or specialized mechanic drift", () => {
+    const rootbound = scenarioCatalog.find((entry) => entry.id === "rootbound-graft-anchor-destruction");
+    const bloom = scenarioCatalog.find((entry) => entry.id === "verdant-bloom-well-cycle");
+    if (rootbound === undefined || bloom === undefined) throw new Error("canonical environment scenarios are incomplete");
+    expect(CANONICAL_CONTENT_AUTHORITY.scenarios.find(({ id }) => id === rootbound.id)?.subject).toEqual(rootbound.subject);
+    expect(() => {
+      const altered = { ...rootbound, subject: { kind: "environment-combat-object", id: "invented-mechanic" } } as typeof rootbound;
+      // The canonical materializer is the source-derived boundary for subjects.
+      materializeCanonicalScenario(altered);
+    }).toThrow(/unknown environment combat-object scenario subject|source-owned subject tag/u);
+    expect(() => {
+      const altered = { ...bloom, tags: bloom.tags.filter((tag) => tag !== "bloom-well") };
+      materializeCanonicalScenario(altered);
+    }).toThrow(/source-owned field mechanic/u);
+  });
+
+  it("projects current product names, homes, and publication state from production owners", () => {
+    expect(stageDefinition("tear").name).toBe("The Tear");
+    expect(stageDefinition("tear").boss).toBe("source");
+    expect(CANONICAL_CONTENT_AUTHORITY.stageDisplayNames.tear).toBe("The Tear");
+    expect(CANONICAL_CONTENT_AUTHORITY.bosses.find(({ id }) => id === "source")).toMatchObject({
+      displayName: "The Source", homeStage: "tear",
+    });
+    expect(CANONICAL_CONTENT_AUTHORITY.bosses.find(({ id }) => id === "rootbound")).toMatchObject({
+      displayName: "The Rootbound", homeStage: "verdant-sanctum",
+    });
+    expect(CANONICAL_CONTENT_AUTHORITY.bosses.find(({ id }) => id === "white-hart")).toMatchObject({
+      displayName: "The White Hart", homeStage: "pale-traverse",
+    });
+    expect(STAGE_PUBLICATION_STATE["verdant-sanctum"]).toBe("published");
+    expect(STAGE_PUBLICATION_STATE["pale-traverse"]).toBe("preview");
+    expect(CANONICAL_CONTENT_AUTHORITY.environmentMechanics).toEqual(["bloom-well", "root-link", "graft-anchor"]);
   });
 });

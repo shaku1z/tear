@@ -38,6 +38,11 @@ export const BOSS_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "source", name: "The Source", phaseMarks: Object.freeze([0.58, 0.28] as const) }),
 ] as const satisfies readonly BossDefinition[]);
 
+/** Source-derived display projection; boss IDs and names remain definition-owned. */
+export const BOSS_DISPLAY_NAMES = Object.freeze(Object.fromEntries(
+  BOSS_DEFINITIONS.map(({ id, name }) => [id, name]),
+) as Readonly<Record<BossDefinitionId, string>>);
+
 export function bossDefinition(id: BossDefinitionId): BossDefinition {
   const definition = BOSS_DEFINITIONS.find((candidate) => candidate.id === id);
   if (definition === undefined) throw new Error(`unknown boss definition ${id}`);
