@@ -7,17 +7,17 @@
     "graveyardCases": ["planted-downstream-divergence"],
     "journeyCheckpoint": "normal-adventure-wave",
     "baseComparison": "oracle-ee5e931",
-    "interactionMatrices": ["input", "frame-rate", "performance"],
+    "interactionMatrices": ["input", "frameRate", "performance"],
     "buildTargets": ["test-standalone"]
   },
   {
     "id": "movement",
-    "prefixes": ["src/gameplay/entities/player", "src/input/", "src/gameplay/stages.ts"],
+    "prefixes": ["src/gameplay/entities/player.ts", "src/input/", "src/gameplay/stages.ts"],
     "scenarios": ["movement-jump", "dash-one-way-platform"],
     "graveyardCases": ["movement-boundary-history"],
     "journeyCheckpoint": "normal-adventure-wave",
     "baseComparison": "oracle-ee5e931",
-    "interactionMatrices": ["input", "viewport", "frame-rate"]
+    "interactionMatrices": ["input", "viewport", "frameRate"]
   },
   {
     "id": "progression",
@@ -39,7 +39,7 @@
   },
   {
     "id": "persistence-cloud",
-    "prefixes": ["src/persistence/", "src/platform/", "src/ghost/", "workers/", "migrations/", "wrangler"],
+    "prefixes": ["src/persistence/", "src/platform/", "src/ghost/", "workers/", "migrations/", "wrangler.jsonc", "wrangler.preview.jsonc", "wrangler.ghost.jsonc"],
     "scenarios": ["boot-start-run"],
     "graveyardCases": ["migration-and-corruption-history"],
     "journeyCheckpoint": "replay-library-round-trip",
@@ -53,7 +53,7 @@
     "graveyardCases": ["audio-lifecycle-history"],
     "journeyCheckpoint": "audio-repeated-run",
     "baseComparison": "oracle-ee5e931",
-    "interactionMatrices": ["browser", "platform", "interruption", "long-run"]
+    "interactionMatrices": ["browser", "platform", "interruption", "longRun"]
   },
   {
     "id": "shared-runtime",
@@ -63,7 +63,7 @@
     "graveyardCases": ["all-shared-runtime-history"],
     "journeyCheckpoint": "menu-to-menu-smoke",
     "baseComparison": "main-base",
-    "interactionMatrices": ["browser", "input", "platform", "viewport", "frame-rate", "network", "interruption", "performance", "long-run"],
+    "interactionMatrices": ["browser", "input", "platform", "viewport", "frameRate", "network", "interruption", "performance", "longRun"],
     "buildTargets": ["test-standalone"]
   },
   {
@@ -105,7 +105,7 @@
     "graveyardCases": [],
     "journeyCheckpoint": "current-environment-runtime-foundation",
     "baseComparison": "main-base",
-    "interactionMatrices": ["frame-rate", "interruption"],
+    "interactionMatrices": ["frameRate", "interruption"],
     "buildTargets": [],
     "authorityCommands": ["pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts"]
   },
@@ -118,7 +118,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c3-environment-codec-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["serialization", "restore", "observation"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["serialization", "restore", "observation"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/environment-state-codec.test.ts tests/unit/production-replay-composition.test.ts tests/unit/tearbench-state-codecs.test.ts tests/unit/tearbench-invariants.test.ts"]
   },
@@ -131,7 +132,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c4-environment-kernel-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["fixed-step", "combat", "events", "isolation"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["fixed-step", "combat", "events", "isolation"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/environment-field-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/gameplay-causal-events.test.ts tests/unit/tearbench-current-game-authority.test.ts"]
   },
@@ -145,7 +147,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c5-bloom-well-cycle-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["fixed-step", "movement", "accessibility", "restore"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["fixed-step", "movement", "accessibility", "restore"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/bloom-well-runtime.test.ts tests/unit/environment-field-runtime.test.ts tests/unit/environment-runtime.test.ts"]
   },
@@ -158,7 +161,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c6-rootbinder-network-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["fixed-step", "combat", "events", "restore", "isolation"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["fixed-step", "combat", "events", "restore", "isolation"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/rootbinder-network.test.ts tests/unit/rootbinder-runtime.test.ts tests/unit/environment-runtime.test.ts tests/unit/gameplay-causal-events.test.ts"]
   },
@@ -171,7 +175,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c7-variant-selection-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["selection", "restore", "replay", "stage-gating"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["selection", "restore", "replay", "stage-gating"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/enemy-variants.test.ts tests/unit/verdant-variant-selection.test.ts tests/unit/live-enemy-spawn.test.ts tests/unit/tearbench-current-game-authority.test.ts", "pnpm exec vitest run tests/unit/game-reference.test.ts"]
   },
@@ -184,7 +189,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c9-responsive-presentation-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["browser", "viewport", "accessibility", "performance"],
+    "interactionMatrices": ["browser", "viewport", "performance"],
+    "capabilityClaims": ["accessibility"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/backdrop-biomes.test.ts tests/unit/platform-materials.test.ts tests/unit/verdant-presentation.test.ts"],
     "journeyCommands": ["node tests/browser-verdant-presentation.js"]
@@ -198,7 +204,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c12-rootbound-phase-two-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["fixed-step", "combat", "events", "restore", "browser", "accessibility"],
+    "interactionMatrices": ["browser"],
+    "capabilityClaims": ["fixed-step", "combat", "events", "restore", "accessibility"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/rootbound-phase-two.test.ts tests/unit/graft-anchor.test.ts tests/unit/bloom-well-runtime.test.ts tests/unit/environment-state-codec.test.ts tests/unit/verdant-final-five-conformance.test.ts"],
     "journeyCommands": ["node tests/browser-current-gameplay-scenarios.js"]
@@ -212,7 +219,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "verdant-c15-wave-balance-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["progression", "difficulty", "composition", "browser"],
+    "interactionMatrices": ["browser"],
+    "capabilityClaims": ["progression", "difficulty", "composition"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-forge.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts"],
     "journeyCommands": ["node tests/browser-progression-journeys.js"]
@@ -220,14 +228,15 @@
   {
     "id": "pale-aurora-rimehound",
     "specialized": true, "owner": "pale-aurora", "reducedDisposition": "preview-engineering-only",
-    "prefixes": ["src/gameplay/environment/aurora-track", "src/gameplay/environment/white-hart-route-runtime.ts", "src/gameplay/entities/enemy-types/rimehound.ts", "src/app/live-aurora-track-wiring.ts", "src/app/live-white-hart-wiring.ts", "src/tearbench/pale-canonical-scenario-bridge.ts", "src/tearbench/canonical-structured-assertions.ts", "src/tearbench/canonical-scenarios.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/live-state-forge-scenario-launch.ts", "src/app/live-state-forge-adapter.ts", "src/app/live-world-entity-factory.ts", "src/gameplay/runtime/tear-world-legacy-entity-construction.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/pale-aurora-definitions.test.ts", "tests/unit/pale-aurora-runtime.test.ts", "tests/unit/rimehound.test.ts", "tests/unit/pale-state-forge-scenarios.test.ts"],
+    "prefixes": ["src/gameplay/environment/aurora-track.ts", "src/gameplay/environment/aurora-track-runtime.ts", "src/gameplay/environment/white-hart-route-runtime.ts", "src/gameplay/entities/enemy-types/rimehound.ts", "src/app/live-aurora-track-wiring.ts", "src/app/live-white-hart-wiring.ts", "src/tearbench/pale-canonical-scenario-bridge.ts", "src/tearbench/canonical-structured-assertions.ts", "src/tearbench/canonical-scenarios.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/state-forge-live-compiler.ts", "src/tearbench/live-state-forge-scenario-launch.ts", "src/app/live-state-forge-adapter.ts", "src/app/live-world-entity-factory.ts", "src/gameplay/runtime/tear-world-legacy-entity-construction.ts", "src/tearbench/pale-state-forge-scenarios.ts", "tests/unit/pale-aurora-definitions.test.ts", "tests/unit/pale-aurora-runtime.test.ts", "tests/unit/rimehound.test.ts", "tests/unit/pale-state-forge-scenarios.test.ts"],
     "requiredScenarios": ["pale-aurora-track-behavior", "pale-rimehound-aurora-interaction"],
     "scenarios": ["pale-aurora-track-behavior", "pale-rimehound-aurora-interaction"],
     "scenarioSubjects": [],
     "graveyardCases": [],
     "journeyCheckpoint": "pale-aurora-rimehound-state-forge-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["fixed-step", "movement", "combat", "restore", "isolation", "accessibility"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["fixed-step", "movement", "combat", "restore", "isolation", "accessibility"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/pale-aurora-definitions.test.ts tests/unit/pale-aurora-runtime.test.ts tests/unit/rimehound.test.ts tests/unit/pale-state-forge-scenarios.test.ts"],
     "journeyCommands": ["node tests/browser-pale-rimehound.js", "node tests/browser-pale-presentation.js"]
@@ -242,7 +251,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "pale-variant-state-forge-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["selection", "combat", "restore", "stage-gating", "accessibility"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["selection", "combat", "restore", "stage-gating", "accessibility"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/pale-variant-selection.test.ts tests/unit/pale-state-forge-scenarios.test.ts tests/unit/live-codec-validation.test.ts tests/unit/game-reference.test.ts"],
     "journeyCommands": ["node tests/browser-pale-variants.js"]
@@ -256,7 +266,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "pale-white-hart-natural-and-surgical-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["fixed-step", "combat", "events", "restore", "browser", "accessibility"],
+    "interactionMatrices": ["browser"],
+    "capabilityClaims": ["fixed-step", "combat", "events", "restore", "accessibility"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/white-hart-foundation.test.ts tests/unit/white-hart-phases.test.ts tests/unit/white-hart-route-runtime.test.ts tests/unit/white-hart-state-forge.test.ts tests/unit/pale-state-forge-scenarios.test.ts"],
     "journeyCommands": ["node tests/browser-pale-white-hart-phases.js"]
@@ -270,7 +281,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "pale-reference-and-wave-authority-engineering",
     "baseComparison": "main-base",
-    "interactionMatrices": ["progression", "difficulty", "composition", "reference", "browser"],
+    "interactionMatrices": ["browser"],
+    "capabilityClaims": ["progression", "difficulty", "composition", "reference"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/game-reference.test.ts tests/unit/enemy-reference.test.ts tests/unit/boss-reference.test.ts tests/unit/pale-wave-composition.test.ts tests/unit/pale-stage-state-forge.test.ts tests/unit/tearbench-current-game-authority.test.ts"],
     "journeyCommands": ["node tests/browser-pale-presentation.js", "node tests/browser-pale-white-hart-phases.js"]
@@ -285,7 +297,8 @@
     "graveyardCases": [],
     "journeyCheckpoint": "production-replay-headless-composition-engineering",
     "baseComparison": "not-run-by-this-scenario",
-    "interactionMatrices": ["headless", "replay", "combat", "events"],
+    "interactionMatrices": [],
+    "capabilityClaims": ["headless", "replay", "combat", "events"],
     "buildTargets": ["test-standalone"],
     "authorityCommands": ["pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts"],
     "backendDispositions": [

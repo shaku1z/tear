@@ -249,7 +249,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 | Checkpoint | Purpose | Entry gate | State |
 | --- | --- | --- | --- |
 | VAP-0 | Baseline and authority | Gate A | Complete at local authority `b15fb19`; protected integration not claimed |
-| VAP-1 | Correct route/matrix/certification semantics | Gate A | Not started |
+| VAP-1 | Correct route/matrix/certification semantics | Gate A | Complete locally; protected integration not claimed |
 | VAP-2 | Atomic task registry | Gate B | Not started |
 | VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Not started |
 | VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Not started |
@@ -289,16 +289,21 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 
 ### Checklist
 
-- [ ] Complete or consume the TC-3 invariant-binding correction.
-- [ ] Complete or consume the TC-6 specialized route-ownership correction, including mapped-plus-unmapped and documentation-plus-unmapped negatives.
-- [ ] Complete or consume the TC-7 diff-scope correction, including same-source/different-scope rejection.
-- [ ] Canonicalize matrix IDs and explicitly map every supported route obligation to one or more tasks.
-- [ ] Reject unknown matrix IDs, duplicate route IDs, invalid prefixes, missing specialized owners, and unmaterialized obligations.
-- [ ] Reconcile the CLI selector and TypeScript selector so both preserve the same conservative fallback behavior.
-- [ ] Bind environment invariant sets to source-owned subject kinds.
-- [ ] Resolve every declared backend ambiguity, including truncated lifecycle horizons and live-only versus headless support.
-- [ ] Require matrix/backend-specific evidence; a generic receipt cannot satisfy unrelated coverage cells.
-- [ ] Reconcile the 120 Hz versus 60 Hz scenario-authoring contradiction from current source authority.
+- [x] Complete or consume the TC-3 invariant-binding correction.
+- [x] Complete or consume the TC-6 specialized route-ownership correction, including mapped-plus-unmapped and documentation-plus-unmapped negatives.
+- [x] Complete or consume the TC-7 diff-scope correction, including same-source/different-scope rejection.
+- [x] Canonicalize matrix IDs and explicitly map every supported route obligation to one or more tasks.
+- [x] Reject unknown matrix IDs, duplicate route IDs, invalid prefixes, missing specialized owners, and unmaterialized obligations.
+- [x] Reconcile the CLI selector and TypeScript selector so both preserve the same conservative fallback behavior.
+- [x] Bind environment invariant sets to source-owned subject kinds.
+- [x] Resolve every declared backend ambiguity, including truncated lifecycle horizons and live-only versus headless support.
+- [x] Require matrix/backend-specific evidence; a generic receipt cannot satisfy unrelated coverage cells.
+- [x] Reconcile the 120 Hz versus 60 Hz scenario-authoring contradiction from current source authority.
+
+**Recorded evidence:** [`VAP-1_ROUTE_MATRIX_CERTIFICATION_SEMANTICS.md`](checkpoints/tearbench-verification-acceleration/VAP-1_ROUTE_MATRIX_CERTIFICATION_SEMANTICS.md)
+records the single policy authority, fail-closed mutations, backend/lifecycle
+dispositions, timing-profile resolution, receipt-scope bridge, and exact focused
+proof. Protected integration remains separately authorized.
 
 **Focused proof:** Route/selection mutation tests, matrix schema tests, backend-disposition tests, invariant negatives, scope negatives, and release-verifier negatives.
 

@@ -17,8 +17,10 @@ function option(name, fallback) {
 
 const catalogPath = resolve(option("--catalog", resolve(root, "src", "tearbench", "canonical-scenarios.json")));
 const evidenceRoutesPath = resolve(option("--routes", resolve(root, "src", "tearbench", "evidence-routes.json")));
+const evidencePolicyPath = resolve(root, "src", "tearbench", "evidence-policy.json");
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
+const evidencePolicy = JSON.parse(await readFile(evidencePolicyPath, "utf8"));
 const publicationBoundary = JSON.parse(await readFile(resolve(root, "config", "campaign-publication-boundary.json"), "utf8"));
 const trackedPathsResult = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
 if (trackedPathsResult.status !== 0) throw new Error(`unable to validate evidence prefixes: ${trackedPathsResult.stderr || trackedPathsResult.stdout}`);
@@ -29,6 +31,33 @@ const REQUIRED_PRODUCTION_HOOK_FAMILIES = Object.freeze([
   "boss-add-clone", "blade-contact", "area-damage",
 ]);
 const KNOWN_BACKEND_DISPOSITIONS = new Set(["supported", "reduced", "unsupported"]);
+const EVIDENCE_KINDS = new Set(["scenario-live", "scenario-headless", "journey", "authority"]);
+if (evidencePolicy?.schemaVersion !== 1 || evidencePolicy.matrices === null
+  || typeof evidencePolicy.matrices !== "object" || Array.isArray(evidencePolicy.matrices)
+  || !Array.isArray(evidencePolicy.capabilityClaims)
+  || evidencePolicy.buildTargets === null || typeof evidencePolicy.buildTargets !== "object"
+  || Array.isArray(evidencePolicy.buildTargets)) {
+  throw new TypeError("TearBench evidence policy is malformed");
+}
+const canonicalMatrixIds = new Set(Object.keys(evidencePolicy.matrices));
+const capabilityClaimIds = new Set(evidencePolicy.capabilityClaims);
+const buildTargetIds = new Set(Object.keys(evidencePolicy.buildTargets));
+if (canonicalMatrixIds.size === 0 || capabilityClaimIds.size !== evidencePolicy.capabilityClaims.length
+  || [...evidencePolicy.capabilityClaims].some((id) => typeof id !== "string" || id.trim() === "")
+  || [...canonicalMatrixIds].some((id) => !/^[a-z][A-Za-z0-9-]*$/u.test(id))) {
+  throw new TypeError("TearBench evidence policy has invalid canonical IDs");
+}
+for (const [id, policy] of Object.entries(evidencePolicy.matrices)) {
+  if (policy === null || typeof policy !== "object" || !Array.isArray(policy.variants)
+    || !Array.isArray(policy.evidenceKinds) || policy.evidenceKinds.length === 0
+    || policy.evidenceKinds.some((kind) => !EVIDENCE_KINDS.has(kind))) {
+    throw new TypeError(`TearBench matrix policy ${id} is malformed`);
+  }
+}
+for (const [id, target] of Object.entries(evidencePolicy.buildTargets)) {
+  if (target === null || typeof target !== "object" || typeof target.command !== "string"
+    || target.command.trim() === "") throw new TypeError(`TearBench build target policy ${id} is malformed`);
+}
 
 function fail(message) {
   console.error(message);
@@ -381,14 +410,85 @@ function validateActiveWeaponSubject(scenario, weapon) {
   }
 }
 
+function prefixMatches(file, prefix) {
+  return prefix.endsWith("/") || prefix.endsWith("-") ? file.startsWith(prefix) : file === prefix;
+}
+
 function validateRoutePrefix(prefix, routeId) {
   if (typeof prefix !== "string" || prefix.trim() === "" || isAbsolute(prefix) || prefix.includes("..")
     || prefix !== prefix.replaceAll("\\", "/")) {
     throw new TypeError(`route ${routeId} has an unsafe evidence prefix: ${String(prefix)}`);
   }
-  if (!trackedRepositoryPaths.some((file) => file.startsWith(prefix))) {
+  if (!prefix.endsWith("/") && !prefix.endsWith("-") && !trackedRepositoryPaths.includes(prefix)) {
+    throw new RangeError(`route ${routeId} has an unsafe evidence prefix boundary: ${prefix}`);
+  }
+  if (!trackedRepositoryPaths.some((file) => prefixMatches(file, prefix))) {
     throw new RangeError(`route ${routeId} has an evidence prefix with no tracked repository match: ${prefix}`);
   }
+}
+
+function canonicalEvidenceBindings(values) {
+  if (!Array.isArray(values)) throw new TypeError("TearBench route obligations must be an array");
+  const normalized = values.map((value) => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)
+      || typeof value.route !== "string" || typeof value.obligation !== "string"
+      || !Array.isArray(value.commands) || value.commands.length === 0
+      || value.commands.some((command) => typeof command !== "string" || command.trim() === "")) {
+      throw new TypeError("TearBench route obligation binding is malformed");
+    }
+    return { route: value.route, obligation: value.obligation, commands: [...new Set(value.commands)].sort() };
+  });
+  const keys = normalized.map((value) => `${value.route}\0${value.obligation}`);
+  if (new Set(keys).size !== keys.length) throw new TypeError("TearBench route obligations must be unique");
+  return normalized.sort((left, right) => left.route.localeCompare(right.route) || left.obligation.localeCompare(right.obligation));
+}
+
+function routeEvidenceCandidates(route, scenarioIds) {
+  const candidates = [];
+  for (const id of scenarioIds) {
+    for (const evidence of evidenceCommandsForScenario(scenarioById(id))) {
+      candidates.push({ kind: `scenario-${evidence.backend}`, command: evidence.command });
+    }
+  }
+  for (const command of route.journeyCommands ?? []) candidates.push({ kind: "journey", command });
+  for (const command of route.authorityCommands ?? []) candidates.push({ kind: "authority", command });
+  return [...new Map(candidates.map((value) => [`${value.kind}\0${value.command}`, value])).values()];
+}
+
+function materializeRouteObligations(route, scenarioIds) {
+  const candidates = routeEvidenceCandidates(route, scenarioIds);
+  const bindings = [];
+  for (const matrix of route.interactionMatrices) {
+    const allowedKinds = evidencePolicy.matrices[matrix].evidenceKinds;
+    const commands = candidates.filter((candidate) => allowedKinds.includes(candidate.kind)).map((candidate) => candidate.command);
+    if (commands.length === 0) throw new RangeError(`route ${route.id} matrix ${matrix} has no executable evidence`);
+    bindings.push({ route: route.id, obligation: `matrix:${matrix}`, commands });
+  }
+  for (const capability of route.capabilityClaims ?? []) {
+    if (candidates.length === 0) throw new RangeError(`route ${route.id} capability ${capability} has no executable evidence`);
+    bindings.push({ route: route.id, obligation: `capability:${capability}`, commands: candidates.map((candidate) => candidate.command) });
+  }
+  return bindings;
+}
+
+function validateRouteObligations(route, scenarioIds) {
+  if (!Array.isArray(route.interactionMatrices)
+    || route.interactionMatrices.some((id) => typeof id !== "string" || !canonicalMatrixIds.has(id))
+    || new Set(route.interactionMatrices).size !== route.interactionMatrices.length) {
+    throw new TypeError(`route ${route.id} has unknown or duplicate interaction matrix IDs`);
+  }
+  const capabilities = route.capabilityClaims ?? [];
+  if (!Array.isArray(capabilities) || capabilities.some((id) => typeof id !== "string" || !capabilityClaimIds.has(id))
+    || new Set(capabilities).size !== capabilities.length
+    || route.interactionMatrices.some((id) => capabilities.includes(id))) {
+    throw new TypeError(`route ${route.id} has unknown or duplicate capability claims`);
+  }
+  const buildTargets = route.buildTargets ?? [];
+  if (!Array.isArray(buildTargets) || buildTargets.some((id) => typeof id !== "string" || !buildTargetIds.has(id))
+    || new Set(buildTargets).size !== buildTargets.length) {
+    throw new TypeError(`route ${route.id} has unknown or duplicate build targets`);
+  }
+  return canonicalEvidenceBindings(materializeRouteObligations(route, scenarioIds));
 }
 
 function validateRouteDisposition(route) {
@@ -492,6 +592,7 @@ function routeScenarioIds(route) {
       throw new TypeError(`route ${route.id} is live-only but scenario ${nonLiveScenario.id} declares another backend`);
     }
   }
+  validateRouteObligations(route, [...ids]);
   return [...ids];
 }
 
@@ -578,10 +679,14 @@ function canonicalDiffScope(scope) {
     routes: Object.freeze(canonicalList(scope.routes ?? [])),
     scenarios: Object.freeze(canonicalList(scope.scenarios ?? [])),
     journeyCheckpoints: Object.freeze(canonicalList(scope.journeyCheckpoints ?? [])),
+    baseComparisons: Object.freeze(canonicalList(scope.baseComparisons ?? [])),
+    interactionMatrices: Object.freeze(canonicalList(scope.interactionMatrices ?? [])),
+    capabilityClaims: Object.freeze(canonicalList(scope.capabilityClaims ?? [])),
     buildTargets: Object.freeze(canonicalList(scope.buildTargets ?? [])),
     journeyCommands: Object.freeze(canonicalList(scope.journeyCommands ?? [])),
     authorityCommands: Object.freeze(canonicalList(scope.authorityCommands ?? [])),
     backendDispositions: Object.freeze(canonicalBackendDispositions(scope.backendDispositions ?? [])),
+    obligationBindings: Object.freeze(canonicalEvidenceBindings(scope.obligationBindings ?? [])),
   });
 }
 
@@ -631,9 +736,9 @@ function currentWeaponParityPlan(routes, scenarioIds) {
 function evidenceForDiff(files) {
   const normalized = canonicalList(files, (file) => file.replaceAll("\\", "/").trim());
   const matched = evidenceRoutes.filter((route) =>
-    normalized.some((file) => route.prefixes.some((prefix) => file.startsWith(prefix))));
+    normalized.some((file) => route.prefixes.some((prefix) => prefixMatches(file, prefix))));
   const unmatched = normalized.filter((file) =>
-    !evidenceRoutes.some((route) => route.prefixes.some((prefix) => file.startsWith(prefix))));
+    !evidenceRoutes.some((route) => route.prefixes.some((prefix) => prefixMatches(file, prefix))));
   const fallback = evidenceRoutes.find((route) => route.id === "shared-runtime");
   const selected = [...matched];
   if ((selected.length === 0 || unmatched.length > 0) && fallback !== undefined && !selected.includes(fallback)) {
@@ -641,7 +746,10 @@ function evidenceForDiff(files) {
   }
   if (selected.length === 0) throw new TypeError("TearBench evidence selection has no applicable route");
   const collect = (field) => [...new Set(selected.flatMap((route) => route[field] ?? []))].sort();
-  const scenarios = [...new Set(selected.flatMap((route) => routeScenarioIds(route)))].sort();
+  const selectedRouteScenarios = selected.map((route) => ({ route, scenarioIds: routeScenarioIds(route) }));
+  const scenarios = [...new Set(selectedRouteScenarios.flatMap((entry) => entry.scenarioIds))].sort();
+  const obligationBindings = canonicalEvidenceBindings(selectedRouteScenarios.flatMap(({ route, scenarioIds }) =>
+    materializeRouteObligations(route, scenarioIds)));
   const currentWeaponParity = currentWeaponParityPlan(selected, scenarios);
   const authorityCommands = collect("authorityCommands");
   const backendDispositions = canonicalBackendDispositions(selected.flatMap((route) => route.backendDispositions ?? []));
@@ -666,6 +774,8 @@ function evidenceForDiff(files) {
     journeyCheckpoints: [...new Set(selected.map((route) => route.journeyCheckpoint))].sort(),
     baseComparisons: [...new Set(selected.map((route) => route.baseComparison))].sort(),
     interactionMatrices: collect("interactionMatrices"),
+    capabilityClaims: collect("capabilityClaims"),
+    obligationBindings,
     buildTargets: collect("buildTargets"),
     journeyCommands: collect("journeyCommands"),
     authorityCommands,
@@ -675,10 +785,14 @@ function evidenceForDiff(files) {
       routes: selected.map((route) => route.id),
       scenarios,
       journeyCheckpoints: selected.map((route) => route.journeyCheckpoint),
+      baseComparisons: selected.map((route) => route.baseComparison),
+      interactionMatrices: collect("interactionMatrices"),
+      capabilityClaims: collect("capabilityClaims"),
       buildTargets: collect("buildTargets"),
       journeyCommands: collect("journeyCommands"),
       authorityCommands,
       backendDispositions,
+      obligationBindings,
     }),
     unrelatedUnitTestsAreGameplayEvidence: false,
     scopeDigest: diffScopeDigest({
@@ -686,10 +800,14 @@ function evidenceForDiff(files) {
       routes: selected.map((route) => route.id),
       scenarios,
       journeyCheckpoints: selected.map((route) => route.journeyCheckpoint),
+      baseComparisons: selected.map((route) => route.baseComparison),
+      interactionMatrices: collect("interactionMatrices"),
+      capabilityClaims: collect("capabilityClaims"),
       buildTargets: collect("buildTargets"),
       journeyCommands: collect("journeyCommands"),
       authorityCommands,
       backendDispositions,
+      obligationBindings,
     }),
     routeDefinitionDigest: routeDefinitionDigest(),
   };
@@ -766,8 +884,10 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
     if (execution.status === "passed") completedCommands.set(command, result);
     return execution.status === "passed";
   };
-  if (buildTargets.includes("test-standalone") && !runOne("build-target:test-standalone", "pnpm build:test:standalone")) {
-    return { status: "failed", executions };
+  for (const target of buildTargets) {
+    const policy = evidencePolicy.buildTargets[target];
+    if (policy === undefined) throw new TypeError(`unknown TearBench build target: ${target}`);
+    if (!runOne(`build-target:${target}`, policy.command)) return { status: "failed", executions };
   }
   for (const id of scenarios) {
     for (const evidence of evidenceCommandsForScenario(scenarioById(id))) {
@@ -782,8 +902,13 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
     for (const command of authorityCommands) if (!runOne(`authority:${command}`, command)) break;
   }
   const status = executions.every((entry) => entry.status === "passed") ? "passed" : "failed";
+  const obligationExecution = canonicalEvidenceBindings(scope.obligationBindings ?? []).map((binding) => {
+    const matched = executions.filter((entry) => binding.commands.includes(entry.command));
+    return { ...binding, status: matched.length > 0 && matched.every((entry) => entry.status === "passed") ? "passed" : "failed",
+      executionIds: matched.map((entry) => entry.id) };
+  });
   const generatedArtifact = writeDiffCapabilityReport(executionScope, state, executions);
-  return { status, executions, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
+  return { status, executions, obligationExecution, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
 }
 
 export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8_000) {

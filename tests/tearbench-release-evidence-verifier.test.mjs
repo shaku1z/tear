@@ -16,10 +16,11 @@ function fixture() {
   const files = new Map();
   const add = (path, content) => { files.set(resolve(root, path), content); return { path, sha256: sha(content) }; };
   const source = { repository: "shaku1z/tear", revision: head, state: "clean", fingerprint: sha("source"), worktreeFingerprint: clean };
-  const evidenceEntry = (id, command) => {
+  const evidenceEntry = (id, command, scopeFields = {}) => {
     const artifact = add(`evidence/${id}.json`, id);
     const correctionId = /^tc-([1-9])-focused$/u.exec(id)?.[1];
-    const scope = correctionId === undefined ? { kind: "receipt", id } : { kind: "receipt", id, correctionId: `TC-${correctionId}` };
+    const scope = correctionId === undefined ? { kind: "receipt", id, ...scopeFields }
+      : { kind: "receipt", id, correctionId: `TC-${correctionId}`, ...scopeFields };
     const receipt = add(`artifacts/tearbench/receipts/${id}.json`, JSON.stringify({
       format: "tearbench-evidence-receipt", schemaVersion: 1, id, command,
       timestamp: "2026-01-01T00:00:00.000Z", commit: head, worktreeFingerprint: clean, source,
@@ -34,13 +35,26 @@ function fixture() {
   const manifest = {
     format: "tearbench-release-evidence-manifest", schemaVersion: 1, commit: head, worktreeFingerprint: clean,
     evidence: [
-      ...REQUIRED_RELEASE_EVIDENCE_IDS.map((id) => evidenceEntry(id, id === "full-check" ? "pnpm check" : `pnpm ${id}`)),
+      ...REQUIRED_RELEASE_EVIDENCE_IDS.filter((id) => id !== "interaction-matrices")
+        .map((id) => evidenceEntry(id, id === "full-check" ? "pnpm check" : `pnpm ${id}`)),
+      evidenceEntry("interaction-matrices", "pnpm interaction-matrices", {
+        matrixId: "browser", backend: "live", observationClass: "structured-state",
+      }),
+      ...REQUIRED_RELEASE_MATRIX_IDS.filter((id) => id !== "browser")
+        .map((id) => evidenceEntry(`matrix-${id}`, `pnpm matrix:${id}`, {
+          matrixId: id, backend: "live", observationClass: "structured-state",
+        })),
       ...REQUIRED_CORRECTION_IDS.map((id) => evidenceEntry(`${id.toLowerCase()}-focused`, `pnpm focused:${id.toLowerCase()}`)),
     ],
     coverage: {
       arbitraryStates: [{ id: "wave-99", evidenceId: "deterministic-scenarios" }],
       journeys: [{ id: "normal-adventure-menu-to-menu", evidenceId: "browser-journeys" }],
-      matrices: REQUIRED_RELEASE_MATRIX_IDS.map((id) => ({ id, evidenceId: "interaction-matrices" })),
+      matrices: REQUIRED_RELEASE_MATRIX_IDS.map((id) => ({
+        id,
+        evidenceId: id === "browser" ? "interaction-matrices" : `matrix-${id}`,
+        backend: "live",
+        observationClass: "structured-state",
+      })),
     },
     preservation: { runtimeManifest: add("preservation/runtime.json", "runtime"), corpus: add("preservation/corpus.json", "corpus") },
   };
@@ -121,6 +135,32 @@ describe("C40 immutable release evidence verifier", () => {
       const { manifest, runtime } = fixture(); manifest.coverage[key] = [];
       assert.equal((await verifyReleaseEvidenceManifest(manifest, runtime)).verified, false);
     }
+  });
+
+  it("requires matrix receipts to bind one canonical matrix to one backend and observation", async () => {
+    const reused = fixture();
+    for (const entry of reused.manifest.coverage.matrices) entry.evidenceId = "interaction-matrices";
+    const reusedResult = await verifyReleaseEvidenceManifest(reused.manifest, reused.runtime);
+    assert.equal(reusedResult.verified, false);
+    assert.match(reusedResult.errors.join("\n"), /reused across unrelated matrix cells/u);
+
+    const backendMismatch = fixture();
+    backendMismatch.manifest.coverage.matrices.find((entry) => entry.id === "input").backend = "headless";
+    const backendResult = await verifyReleaseEvidenceManifest(backendMismatch.manifest, backendMismatch.runtime);
+    assert.equal(backendResult.verified, false);
+    assert.match(backendResult.errors.join("\n"), /exact matrix\/backend\/observation identity/u);
+
+    const observationMismatch = fixture();
+    observationMismatch.manifest.coverage.matrices.find((entry) => entry.id === "input").observationClass = "pixel";
+    const observationResult = await verifyReleaseEvidenceManifest(observationMismatch.manifest, observationMismatch.runtime);
+    assert.equal(observationResult.verified, false);
+    assert.match(observationResult.errors.join("\n"), /exact matrix\/backend\/observation identity/u);
+
+    const unknown = fixture();
+    unknown.manifest.coverage.matrices[0].id = "frame-rate";
+    const unknownResult = await verifyReleaseEvidenceManifest(unknown.manifest, unknown.runtime);
+    assert.equal(unknownResult.verified, false);
+    assert.match(unknownResult.errors.join("\n"), /unknown canonical matrix/u);
   });
 
   it("rejects missing, duplicate, extra, and out-of-order correction IDs", async () => {

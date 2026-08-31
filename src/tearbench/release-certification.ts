@@ -1,4 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
+import evidencePolicy from "./evidence-policy.json";
 
 export type TearSuiteCadence = "local" | "pull-request" | "nightly" | "weekly-endurance" | "release-candidate";
 
@@ -166,6 +167,10 @@ export interface EvidenceRoute {
   readonly journeyCheckpoint: string;
   readonly baseComparison: string;
   readonly interactionMatrices: readonly string[];
+  /** Dynamic catalog expansion is executable-selector-only. */
+  readonly scenarioSubjects?: readonly string[];
+  readonly buildTargets?: readonly string[];
+  readonly capabilityClaims?: readonly string[];
 }
 
 export interface EvidenceSelection {
@@ -182,6 +187,20 @@ export interface EvidenceSelection {
 /** The executable Node selector remains the sole route/policy authority. */
 export const TEAR_EVIDENCE_SELECTOR_AUTHORITY = "scripts/tearbench.mjs" as const;
 
+function normalizedRepositoryPath(value: string, label: string): string {
+  const normalized = value.replaceAll("\\", "/").trim().replace(/^\.\//u, "");
+  if (normalized.length === 0 || normalized.startsWith("/") || /^[A-Za-z]:\//u.test(normalized)
+    || normalized.split("/").includes("..")) {
+    throw new TypeError(`${label} must be a repository-relative path: ${value}`);
+  }
+  return normalized;
+}
+
+function prefixOwnsPath(prefix: string, file: string): boolean {
+  const normalizedPrefix = normalizedRepositoryPath(prefix, "route prefix").replace(/\/+$/u, "");
+  return file === normalizedPrefix || file.startsWith(`${normalizedPrefix}/`);
+}
+
 export function selectDiffAwareEvidence(
   changedFiles: readonly string[],
   routes: readonly EvidenceRoute[],
@@ -189,12 +208,21 @@ export function selectDiffAwareEvidence(
   // Compatibility projection only: scripts/tearbench.mjs is the executable
   // selector authority. Keep this adapter's conservative union/fallback shape
   // aligned with that selector; it must not become a second route policy.
-  const normalized = [...new Set(changedFiles.map((file) => file.replaceAll("\\", "/").trim()))].sort();
-  const selected = routes.filter((route) =>
-    normalized.some((file) => route.prefixes.some((prefix) => file.startsWith(prefix))));
-  const unmatched = normalized.filter((file) =>
-    !routes.some((route) => route.prefixes.some((prefix) => file.startsWith(prefix))));
+  const routeIds = routes.map((route) => route.id);
+  if (new Set(routeIds).size !== routeIds.length) throw new TypeError("evidence route IDs must be unique");
   const fallback = routes.filter((route) => route.id === "shared-runtime");
+  if (fallback.length !== 1) throw new TypeError("exactly one shared-runtime fallback route is required");
+  for (const route of routes) {
+    if ((route.scenarioSubjects?.length ?? 0) > 0) {
+      throw new TypeError(`route ${route.id} has dynamic scenario subjects; use ${TEAR_EVIDENCE_SELECTOR_AUTHORITY}`);
+    }
+    for (const prefix of route.prefixes) normalizedRepositoryPath(prefix, `route ${route.id} prefix`);
+  }
+  const normalized = [...new Set(changedFiles.map((file) => normalizedRepositoryPath(file, "changed file")))].sort();
+  const selected = routes.filter((route) =>
+    normalized.some((file) => route.prefixes.some((prefix) => prefixOwnsPath(prefix, file))));
+  const unmatched = normalized.filter((file) =>
+    !routes.some((route) => route.prefixes.some((prefix) => prefixOwnsPath(prefix, file))));
   const effective = (selected.length === 0 || unmatched.length > 0)
     ? [...selected, ...fallback.filter((route) => !selected.includes(route))] : selected;
   const collect = (pick: (route: EvidenceRoute) => readonly string[]): readonly string[] =>
@@ -219,14 +247,7 @@ export const TEAR_SUITE_PROFILES = Object.freeze({
   "release-candidate": Object.freeze(["check:full", "journey:all", "state:affected", "preservation:golden", "certificate"]),
 } as const satisfies Readonly<Record<TearSuiteCadence, readonly string[]>>);
 
-export const TEAR_INTERACTION_MATRICES = Object.freeze({
-  browser: Object.freeze(["chromium"]),
-  input: Object.freeze(["keyboard-mouse", "touch", "controller"]),
-  platform: Object.freeze(["standalone", "crazygames"]),
-  viewport: Object.freeze(["desktop", "small-desktop", "tablet-landscape", "phone-portrait"]),
-  frameRate: Object.freeze([30, 60, 144]),
-  network: Object.freeze(["online", "offline", "slow", "interrupted"]),
-  interruption: Object.freeze(["blur", "visibility-hidden", "controller-disconnect", "resume"]),
-  performance: Object.freeze(["desktop", "constrained"]),
-  longRun: Object.freeze(["five-cycle", "1000-environment", "10000-episode"]),
-});
+/** Compatibility projection of the single JSON policy authority consumed by the executable selector. */
+export const TEAR_INTERACTION_MATRICES = Object.freeze(Object.fromEntries(
+  Object.entries(evidencePolicy.matrices).map(([id, policy]) => [id, Object.freeze([...policy.variants])]),
+));

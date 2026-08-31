@@ -37,6 +37,27 @@ describe("TearBench current-game invariants", () => {
       .toEqual(explicit);
   });
 
+  it("requires environment-owned invariants and the live-only backend declaration", () => {
+    const scenario = CANONICAL_ENGINEERING_SCENARIOS.find((entry) => entry.subject.kind === "environment-field");
+    if (scenario === undefined) throw new Error("canonical environment scenario fixture is unavailable");
+    expect(validateTearContract(scenario).ok).toBe(true);
+
+    const missingEnvironmentAssertions = validateTearContract({
+      ...scenario,
+      assertions: ["runtime.finite-state"],
+    });
+    expect(missingEnvironmentAssertions.ok).toBe(false);
+    if (missingEnvironmentAssertions.ok) return;
+    expect(missingEnvironmentAssertions.issues.filter((entry) => entry.path === "assertions")).toHaveLength(
+      ENVIRONMENT_REQUIRED_INVARIANT_IDS.length - 1,
+    );
+
+    const headlessEnvironment = validateTearContract({ ...scenario, backends: ["headless"] });
+    expect(headlessEnvironment.ok).toBe(false);
+    if (headlessEnvironment.ok) return;
+    expect(headlessEnvironment.issues.some((entry) => entry.message.includes("supported live backend"))).toBe(true);
+  });
+
   it("fails closed for assertions without an applicable real implementation", () => {
     expect(() => runInvariantChecks(observation(), ["replay.branch-equivalence"])).toThrow(/comparison inputs/u);
     expect(() => runInvariantChecks(observation(), ["test.production-isolation"])).toThrow(/unsupported/u);

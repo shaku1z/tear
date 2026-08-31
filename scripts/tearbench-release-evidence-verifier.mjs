@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 
 export const REQUIRED_RELEASE_EVIDENCE_IDS = Object.freeze([
@@ -7,10 +8,8 @@ export const REQUIRED_RELEASE_EVIDENCE_IDS = Object.freeze([
   "base-comparison", "historical-replays", "interaction-matrices",
 ]);
 
-export const REQUIRED_RELEASE_MATRIX_IDS = Object.freeze([
-  "browser", "input", "platform", "viewport", "frameRate", "network",
-  "interruption", "performance", "longRun",
-]);
+const evidencePolicy = JSON.parse(readFileSync(new URL("../src/tearbench/evidence-policy.json", import.meta.url), "utf8"));
+export const REQUIRED_RELEASE_MATRIX_IDS = Object.freeze(Object.keys(evidencePolicy.matrices));
 
 export const REQUIRED_CORRECTION_IDS = Object.freeze(
   Array.from({ length: 9 }, (_, index) => `TC-${String(index + 1)}`),
@@ -41,6 +40,54 @@ function namedEntries(value, label, errors) {
     errors.push(`${label} IDs must be non-empty and unique`);
   }
   return value;
+}
+
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+function verifyMatrixCoverage(matrices, evidenceById, receiptRecords, errors) {
+  const canonicalMatrixIds = new Set(REQUIRED_RELEASE_MATRIX_IDS);
+  const evidenceOwners = new Map();
+  for (const entry of matrices) {
+    const matrixId = entry?.id;
+    const evidenceId = entry?.evidenceId;
+    if (!canonicalMatrixIds.has(matrixId)) {
+      errors.push(`matrix coverage contains unknown canonical matrix: ${String(matrixId)}`);
+      continue;
+    }
+    if (!nonEmptyString(evidenceId)) {
+      errors.push(`matrix proof ${String(matrixId)} has no evidence ID`);
+      continue;
+    }
+    const owner = evidenceOwners.get(evidenceId);
+    if (owner !== undefined && owner !== matrixId) {
+      errors.push(`matrix evidence ${evidenceId} is reused across unrelated matrix cells (${owner}, ${matrixId})`);
+    } else {
+      evidenceOwners.set(evidenceId, matrixId);
+    }
+    if (!nonEmptyString(entry?.backend) || !nonEmptyString(entry?.observationClass)) {
+      errors.push(`matrix proof ${matrixId} must name backend and observation identity`);
+      continue;
+    }
+    const evidence = evidenceById.get(evidenceId);
+    const receipt = receiptRecords.get(evidenceId);
+    if (evidence === undefined || receipt === undefined) continue;
+    const expectedScope = {
+      matrixId,
+      backend: entry.backend,
+      observationClass: entry.observationClass,
+    };
+    const manifestScope = evidence.scope;
+    const receiptScope = receipt.scope;
+    for (const [label, scope] of [["manifest", manifestScope], ["receipt", receiptScope]]) {
+      if (scope?.matrixId !== expectedScope.matrixId
+        || scope?.backend !== expectedScope.backend
+        || scope?.observationClass !== expectedScope.observationClass) {
+        errors.push(`matrix proof ${matrixId} evidence ${evidenceId} is not bound to the exact matrix/backend/observation identity in its ${label} scope`);
+      }
+    }
+  }
 }
 
 async function readWorkspaceFile(runtime, path, label, errors) {
@@ -241,6 +288,7 @@ export async function verifyReleaseEvidenceManifest(manifest, runtime) {
   }
   const matrixIds = new Set(matrices.map((entry) => entry?.id));
   for (const id of REQUIRED_RELEASE_MATRIX_IDS) if (!matrixIds.has(id)) errors.push(`required matrix coverage is missing: ${id}`);
+  verifyMatrixCoverage(matrices, evidenceById, receiptRecords, errors);
 
   for (const [label, proof] of [["preservation manifest", manifest.preservation?.runtimeManifest], ["preservation corpus", manifest.preservation?.corpus]]) {
     const artifact = insideWorkspace(root, proof?.path);

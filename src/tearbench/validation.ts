@@ -14,6 +14,7 @@ import type {
   TearScenarioV1,
   TearSnapshotV1,
   TearCausalEventV1,
+  TearScenarioSubjectV1,
 } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import {
@@ -33,6 +34,7 @@ import {
   ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY,
   ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY,
 } from "./registries";
+import { requiredInvariantIdsForSubject } from "./invariants";
 
 const MAX_COLLECTION = 100_000;
 const MAX_IDENTIFIER = 256;
@@ -317,8 +319,25 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
       }
     } else if (subject.kind === "environment-field") {
       if (!ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.has(subject.id)) issue(issues, "subject", "environment field subject is not registered");
+      if (Array.isArray(value.backends) && (value.backends.length !== 1 || value.backends[0] !== "live")) {
+        issue(issues, "backends", "environment subjects require the supported live backend");
+      }
     } else if (subject.kind === "environment-combat-object") {
       if (!ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.has(subject.id)) issue(issues, "subject", "environment combat-object subject is not registered");
+      if (Array.isArray(value.backends) && (value.backends.length !== 1 || value.backends[0] !== "live")) {
+        issue(issues, "backends", "environment subjects require the supported live backend");
+      }
+    }
+    if (isRecord(subject)
+      && (subject.kind === "environment-field" || subject.kind === "environment-combat-object")) {
+      const required = requiredInvariantIdsForSubject(subject as TearScenarioSubjectV1);
+      if (Array.isArray(value.assertions)) {
+        for (const invariantId of required) {
+          if (!value.assertions.includes(invariantId)) {
+            issue(issues, "assertions", `environment subjects require source-owned invariant ${invariantId}`);
+          }
+        }
+      }
     }
   }
   return issues.length === 0 ? value as unknown as TearScenarioV1 : undefined;

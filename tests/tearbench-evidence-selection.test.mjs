@@ -117,6 +117,45 @@ test("specialized route ownership fails closed when its owner or scenario proof 
   }
 });
 
+test("route policy rejects noncanonical matrix aliases, duplicates, unknown claims, targets, and prefix boundaries", () => {
+  const mutations = [
+    ["hyphenated-frame-rate", (routes) => {
+      routes.find((route) => route.id === "combat").interactionMatrices[1] = "frame-rate";
+    }, /unknown or duplicate interaction matrix IDs/u],
+    ["hyphenated-long-run", (routes) => {
+      routes.find((route) => route.id === "audio").interactionMatrices[3] = "long-run";
+    }, /unknown or duplicate interaction matrix IDs/u],
+    ["duplicate-matrix", (routes) => {
+      routes.find((route) => route.id === "combat").interactionMatrices.push("input");
+    }, /unknown or duplicate interaction matrix IDs/u],
+    ["unknown-capability", (routes) => {
+      routes.find((route) => route.id === "verdant-c3-environment-codec").capabilityClaims.push("not-a-capability");
+    }, /unknown or duplicate capability claims/u],
+    ["unknown-build-target", (routes) => {
+      routes.find((route) => route.id === "combat").buildTargets.push("not-a-build-target");
+    }, /unknown or duplicate build targets/u],
+    ["unsafe-prefix-boundary", (routes) => {
+      routes.find((route) => route.id === "movement").prefixes[0] = "src/gameplay/entities/player";
+    }, /unsafe evidence prefix boundary/u],
+  ];
+  for (const [name, mutate, expected] of mutations) {
+    const result = rejected(["src/gameplay/combat/kill-runtime.ts"], { routes: mutatedRoutes(name, mutate) });
+    assert.notEqual(result.status, 0, name);
+    assert.match(`${result.stderr}\n${result.stdout}`, expected, name);
+  }
+});
+
+test("selection exposes canonical matrix and capability obligations bound to executable commands", () => {
+  const selection = select(["src/gameplay/combat/kill-runtime.ts"]);
+  assert.deepEqual(selection.interactionMatrices, ["frameRate", "input", "performance"]);
+  assert.deepEqual(selection.capabilityClaims, []);
+  assert.ok(selection.obligationBindings.length > 0);
+  assert.ok(selection.obligationBindings.every((binding) => binding.commands.length > 0));
+  assert.ok(selection.scope.interactionMatrices.includes("frameRate"));
+  assert.deepEqual(selection.scope.capabilityClaims, []);
+  assert.ok(selection.scope.obligationBindings.length > 0);
+});
+
 test("production composition exposes all required hook-family dispositions", () => {
   const selection = select(["src/tearbench/production-replay-composition.ts"]);
   assert.deepEqual(selection.backendDispositions.map((entry) => entry.family), [
@@ -537,6 +576,9 @@ test("selected player journeys are actually dispatched through safe evidence exe
   assert.equal(executions[0].reusedExecutionId, undefined);
   assert.ok(executions.slice(1).every((entry) => entry.reusedExecutionId === executions[0].id));
   assert.ok(executions.every((entry) => entry.receipts.some((receipt) => receipt.status === "passed")));
+  assert.ok(selection.evidenceExecution.obligationExecution.length > 0);
+  assert.ok(selection.evidenceExecution.obligationExecution.every((entry) =>
+    entry.status === "passed" && entry.executionIds.length > 0));
 });
 
 test("selection records timestamp, exact source identity, and explicit diff scope", () => {

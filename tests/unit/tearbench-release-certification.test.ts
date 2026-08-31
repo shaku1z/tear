@@ -33,33 +33,22 @@ function preservation() {
 const routes: readonly EvidenceRoute[] = [{
   id: "combat",
   prefixes: ["src/gameplay/combat/", "src/gameplay/entities/"],
-  scenarios: ["enemy-contact"],
+  scenarios: ["movement-jump"],
   graveyardCases: ["planted-downstream-divergence"],
   journeyCheckpoint: "normal-adventure-wave",
   baseComparison: "oracle-ee5e931",
-  interactionMatrices: ["input", "frame-rate"],
+  interactionMatrices: ["input", "frameRate"],
+  buildTargets: [],
 }, {
   id: "shared-runtime",
   prefixes: ["src/simulation/", "src/tearbench/"],
-  scenarios: ["deterministic-render-rate"],
+  scenarios: ["boot-start-run"],
   graveyardCases: ["all-shared-runtime"],
   journeyCheckpoint: "menu-to-menu-smoke",
   baseComparison: "main-base",
-  interactionMatrices: ["browser", "platform", "frame-rate"],
+  interactionMatrices: ["browser", "platform", "frameRate"],
+  buildTargets: [],
 }];
-
-function readStaticRoutes(path: string): EvidenceRoute[] {
-  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
-  if (!Array.isArray(parsed)) throw new Error("evidence route fixture must be an array");
-  return parsed.map((value): EvidenceRoute => {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
-      throw new Error("evidence route fixture entry must be an object");
-    }
-    const route = { ...(value as Record<string, unknown>) };
-    delete route.scenarioSubjects;
-    return route as unknown as EvidenceRoute;
-  });
-}
 
 function commonSelection(selection: {
   changedFiles: readonly string[]; routes: readonly string[]; scenarios: readonly string[];
@@ -74,14 +63,13 @@ function commonSelection(selection: {
   };
 }
 
-function executableProjection(changedFiles: readonly string[]) {
+function executableProjection(changedFiles: readonly string[], projectionRoutes: readonly EvidenceRoute[] = routes) {
   const repositoryRoot = resolve(import.meta.dirname, "../..");
   const temporaryRoot = mkdtempSync(join(tmpdir(), "tearbench-selector-boundary-"));
   try {
-    const fixtureRoutes = readStaticRoutes(resolve(repositoryRoot, "src/tearbench/evidence-routes.json"));
     const fixturePath = join(temporaryRoot, "routes.json");
     const artifactPath = join(temporaryRoot, "selection.json");
-    writeFileSync(fixturePath, `${JSON.stringify(fixtureRoutes)}\n`, "utf8");
+    writeFileSync(fixturePath, `${JSON.stringify(projectionRoutes)}\n`, "utf8");
     execFileSync(process.execPath, [resolve(repositoryRoot, "scripts/tearbench.mjs"), "select",
       "--files", changedFiles.join(","), "--routes", fixturePath, "--artifact", artifactPath],
     { cwd: repositoryRoot, stdio: "pipe" });
@@ -133,11 +121,11 @@ describe("TearBench release certification", () => {
     const selection = selectDiffAwareEvidence(["src\\gameplay\\combat\\kill-runtime.ts"], routes);
     expect(selection).toMatchObject({
       routes: ["combat"],
-      scenarios: ["enemy-contact"],
+      scenarios: ["movement-jump"],
       graveyardCases: ["planted-downstream-divergence"],
       journeyCheckpoints: ["normal-adventure-wave"],
       baseComparisons: ["oracle-ee5e931"],
-      interactionMatrices: ["frame-rate", "input"],
+      interactionMatrices: ["frameRate", "input"],
       unrelatedUnitTestsAreGameplayEvidence: false,
     });
   });
@@ -146,14 +134,30 @@ describe("TearBench release certification", () => {
     [["src/gameplay/combat/kill-runtime.ts", "src/unmapped/new-runtime-boundary.ts"]],
     [["docs/example.md", "src/unmapped/new-runtime-boundary.ts"]],
   ])("keeps the TS compatibility projection aligned with executable selector for %j", (changedFiles) => {
-    const projection = selectDiffAwareEvidence(changedFiles, readStaticRoutes(
-      resolve(import.meta.dirname, "../../src/tearbench/evidence-routes.json"),
-    ));
+    const projection = selectDiffAwareEvidence(changedFiles, routes);
     expect(commonSelection(projection)).toEqual(commonSelection(executableProjection(changedFiles)));
   });
 
   it("marks the TS API as a projection and keeps executable selector authority explicit", () => {
     expect(TEAR_EVIDENCE_SELECTOR_AUTHORITY).toBe("scripts/tearbench.mjs");
+  });
+
+  it("fails closed instead of projecting dynamic scenario subjects without catalog authority", () => {
+    const fullRoutes = JSON.parse(readFileSync(
+      resolve(import.meta.dirname, "../../src/tearbench/evidence-routes.json"), "utf8",
+    )) as EvidenceRoute[];
+    expect(() => selectDiffAwareEvidence(["src/gameplay/weapon-selection.ts"], fullRoutes))
+      .toThrow(/dynamic scenario subjects.*scripts\/tearbench\.mjs/u);
+  });
+
+  it("uses repository path boundaries and rejects unsafe paths and invalid fallback registries", () => {
+    expect(selectDiffAwareEvidence(["src/gameplay/entities-old/player.ts"], routes).routes)
+      .toEqual(["shared-runtime"]);
+    expect(() => selectDiffAwareEvidence(["../outside.ts"], routes)).toThrow(/repository-relative/u);
+    expect(() => selectDiffAwareEvidence(["src/gameplay/combat/kill-runtime.ts"], [...routes, routes[0]!]))
+      .toThrow(/IDs must be unique/u);
+    expect(() => selectDiffAwareEvidence(["src/gameplay/combat/kill-runtime.ts"], routes.slice(0, 1)))
+      .toThrow(/shared-runtime fallback/u);
   });
 
 });
