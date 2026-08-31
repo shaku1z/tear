@@ -16,11 +16,22 @@ async function loadCanonicalAssertions() {
   }
 }
 
+const hasSharedBrowserSubject = (entry) => entry.subject.kind === "gameplay"
+  || entry.subject.kind === "environment-field"
+  || entry.subject.kind === "environment-combat-object";
+const stateForgeScenarios = canonicalScenarios.filter((entry) =>
+  hasSharedBrowserSubject(entry) && entry.stateForge !== undefined);
 const scenarios = canonicalScenarios.filter((entry) =>
-  entry.subject.kind === "gameplay" || entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object");
+  hasSharedBrowserSubject(entry) && entry.stateForge === undefined);
 
 async function main() {
   const assertionsByScenario = await loadCanonicalAssertions();
+  for (const entry of stateForgeScenarios) {
+    assert.equal(entry.stateForge.documentId, entry.id,
+      `${entry.id} must own its matching State Forge document`);
+    assert.equal(entry.evidence.command, `pnpm tearbench run ${entry.id}`,
+      `${entry.id} must own canonical live State Forge execution outside the natural reset journey`);
+  }
   await withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST);
   for (const entry of scenarios) {
