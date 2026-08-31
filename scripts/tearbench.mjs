@@ -1,11 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readSourceIdentitySync } from "./release-artifact.mjs";
-import { createReleaseCertificate, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
+import { RELEASE_REPOSITORY, readSourceIdentitySync } from "./release-artifact.mjs";
+import { createReleaseCertificate, REQUIRED_CORRECTION_IDS, REQUIRED_RELEASE_EVIDENCE_IDS, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
 import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -928,44 +928,73 @@ function gitCleanHead() {
 
 function receiptPathFor(id) {
   if (!/^[a-z0-9][a-z0-9._-]*$/iu.test(id)) throw new TypeError("evidence receipt ID must be a safe non-empty slug");
-  return resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`)));
+  return resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`);
 }
 
 async function recordEvidenceReceipt() {
-  const usage = "usage: pnpm tearbench evidence record --id <id> --subject <generated-artifact> -- <explicit command>";
-  const id = requiredOption("--id", usage);
-  const subjectPath = workspaceRelativePath(resolve(requiredOption("--subject", usage)));
-  const separator = process.argv.indexOf("--");
-  // pnpm consumes the conventional `--` separator before Node receives argv.
-  // Accept the remaining positional arguments after --subject as the explicit
-  // command in that launcher case, while retaining direct-node support.
-  const commandParts = separator >= 0
-    ? process.argv.slice(separator + 1)
-    : process.argv.slice(process.argv.indexOf("--subject") + 2);
+  const usage = "usage: pnpm tearbench evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] -- <explicit command>";
+  let id;
+  let correctionId;
+  let explicitSubject;
+  let cursor = 4;
+  while (cursor < process.argv.length) {
+    const argument = process.argv[cursor];
+    if (argument === "--") { cursor += 1; break; }
+    if (argument === "--id" || argument === "--correction" || argument === "--subject") {
+      const value = process.argv[cursor + 1];
+      if (!value || value === "--") throw new TypeError(usage);
+      if (argument === "--id") id = value;
+      else if (argument === "--correction") correctionId = value;
+      else explicitSubject = value;
+      cursor += 2;
+      continue;
+    }
+    break;
+  }
+  if (id === undefined) throw new TypeError(usage);
+  if (correctionId !== undefined && !REQUIRED_CORRECTION_IDS.includes(correctionId)) throw new TypeError("evidence correction owner must be TC-1 through TC-9");
+  // pnpm may consume the conventional separator before Node receives argv;
+  // the first non-receipt argument is therefore the command boundary.
+  const commandParts = process.argv.slice(cursor);
   if (commandParts.length === 0) throw new TypeError(usage);
   const command = commandParts.join(" ");
-  const before = readSourceIdentity();
+  const before = { repository: RELEASE_REPOSITORY, ...readSourceIdentity() };
   const result = spawnSync(command, { cwd: root, encoding: "utf8", shell: true });
-  const after = readSourceIdentity();
+  const after = { repository: RELEASE_REPOSITORY, ...readSourceIdentity() };
   if (after.revision !== before.revision || after.state !== before.state || after.fingerprint !== before.fingerprint) throw new Error("evidence command changed the executed source");
-  const scope = Object.freeze({ kind: "receipt", id, subject: subjectPath, command });
+  const subjectPath = explicitSubject === undefined
+    ? workspaceRelativePath(resolve(root, "artifacts", "tearbench", "generated", "receipt-subjects", `${id}.json`))
+    : workspaceRelativePath(resolve(explicitSubject));
+  if (!subjectPath.startsWith("artifacts/tearbench/")) throw new TypeError("evidence receipt subjects must remain in the ignored TearBench artifact store");
+  if (explicitSubject === undefined) {
+    const output = await prepareWorkspaceOutput(resolve(root, subjectPath), "artifacts/tearbench/generated/receipt-subjects/", "generated evidence subject");
+    const commandOutput = { format: "tearbench-command-output", schemaVersion: 1, id, command,
+      status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1,
+      stdout: result.stdout ?? "", stderr: result.stderr ?? "", source: before };
+    await writeFile(output.absolute, `${JSON.stringify(commandOutput, null, 2)}\n`, "utf8");
+  }
+  const scope = Object.freeze({ kind: "receipt", id, subject: subjectPath, command,
+    ...(correctionId === undefined ? {} : { correctionId }) });
   let subject;
   try {
-    const contents = await readFile(resolve(root, subjectPath));
-    subject = { path: subjectPath, sha256: createHash("sha256").update(contents).digest("hex"), size: (await stat(resolve(root, subjectPath))).size };
+    const subjectInput = await canonicalWorkspaceInput(resolve(root, subjectPath), "evidence receipt subject");
+    const contents = await readFile(subjectInput.absolute);
+    subject = { path: subjectPath, sha256: createHash("sha256").update(contents).digest("hex"), size: (await stat(subjectInput.absolute)).size };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
       commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
       status: "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: `${result.stderr ?? ""}\nsubject unavailable: ${detail}` };
-    const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-    console.log(`FAIL ${id}`); console.log(`receipt: ${path}`); process.exitCode = 1; return;
+    const output = await prepareWorkspaceOutput(receiptPathFor(id), "artifacts/tearbench/receipts/", "evidence receipt");
+    await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    console.log(`FAIL ${id}`); console.log(`receipt: ${output.absolute}`); process.exitCode = 1; return;
   }
   const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
     commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
     status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", subject };
-  const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-  console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${path}`);
+  const output = await prepareWorkspaceOutput(receiptPathFor(id), "artifacts/tearbench/receipts/", "evidence receipt");
+  await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+  console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${output.absolute}`);
   if (receipt.status !== "passed") process.exitCode = 1;
 }
 
@@ -977,8 +1006,9 @@ async function composePartialEvidenceManifest() {
   const binding = gitCleanHead();
   const evidence = [];
   for (const input of values) {
-    const receiptPath = workspaceRelativePath(resolve(input));
-    const contents = await readFile(resolve(root, receiptPath), "utf8");
+    const receiptInput = await canonicalWorkspaceInput(resolve(input), "partial-manifest receipt");
+    const receiptPath = receiptInput.stored;
+    const contents = await readFile(receiptInput.absolute, "utf8");
     const receipt = JSON.parse(contents);
     if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
     evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit,
@@ -991,9 +1021,102 @@ async function composePartialEvidenceManifest() {
   const manifest = { format: "tearbench-release-evidence-manifest", schemaVersion: 1, generatedAt: new Date().toISOString(),
     ...binding, scope: { kind: "partial-manifest", evidenceIds: ids }, evidence,
     coverage: { arbitraryStates: [], journeys: [], matrices: [] }, preservation: {} };
-  const path = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "partial-release-evidence.json")));
-  await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-  console.log(`PARTIAL ${evidence.length} receipt(s)`); console.log(`artifact: ${path}`);
+  const output = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "partial-release-evidence.json"))),
+    "artifacts/tearbench/generated/", "partial evidence manifest");
+  await writeFile(output.absolute, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  console.log(`PARTIAL ${evidence.length} receipt(s)`); console.log(`artifact: ${output.absolute}`);
+}
+
+async function composeCorrectionClosureManifest() {
+  const usage = "usage: pnpm tearbench evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]";
+  const receiptValues = requiredOption("--receipts", usage).split(/[\s,]+/u).map((value) => value.trim()).filter(Boolean);
+  if (receiptValues.length === 0) throw new TypeError(usage);
+  const baseManifestInput = await canonicalWorkspaceInput(resolve(requiredOption("--base-manifest", usage)), "base release evidence manifest");
+  const metadataInput = await canonicalWorkspaceInput(resolve(requiredOption("--metadata", usage)), "correction closure metadata");
+  const baseManifestPath = baseManifestInput.stored;
+  const metadataPath = metadataInput.stored;
+  if (!baseManifestPath.startsWith("artifacts/tearbench/") || !metadataPath.startsWith("artifacts/tearbench/")) {
+    throw new TypeError("correction manifest inputs must be ignored TearBench artifacts");
+  }
+  const binding = gitCleanHead();
+  const evidence = [];
+  for (const input of receiptValues) {
+    const receiptInput = await canonicalWorkspaceInput(resolve(input), "correction evidence receipt");
+    const receiptPath = receiptInput.stored;
+    if (!receiptPath.startsWith("artifacts/tearbench/receipts/")) throw new TypeError(`receipt is outside the ignored receipt store: ${receiptPath}`);
+    const contents = await readFile(receiptInput.absolute, "utf8");
+    const receipt = JSON.parse(contents);
+    if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
+    if (receipt.status !== "passed" || receipt.exitCode !== 0 || receipt.commit !== binding.commit
+      || receipt.worktreeFingerprint !== binding.worktreeFingerprint
+      || receipt.source?.revision !== binding.source.revision || receipt.source?.state !== "clean"
+      || receipt.source?.fingerprint !== binding.source.fingerprint
+      || receipt.source?.worktreeFingerprint !== binding.source.worktreeFingerprint) {
+      throw new TypeError(`evidence receipt is not a passed exact-source receipt: ${receiptPath}`);
+    }
+    evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit,
+      worktreeFingerprint: receipt.worktreeFingerprint, source: receipt.source, scope: receipt.scope,
+      artifactPath: receipt.subject?.path, artifactSha256: receipt.subject?.sha256, artifactSize: receipt.subject?.size,
+      receiptPath, receiptSha256: createHash("sha256").update(contents).digest("hex") });
+  }
+  const ids = evidence.map((entry) => entry.id);
+  if (new Set(ids).size !== ids.length) throw new TypeError("correction manifest receipts must have unique IDs");
+  const metadata = JSON.parse(await readFile(metadataInput.absolute, "utf8"));
+  if (metadata?.format !== "tearbench-correction-closure-metadata" || metadata.schemaVersion !== 1
+    || !Array.isArray(metadata.corrections) || metadata.corrections.length !== REQUIRED_CORRECTION_IDS.length
+    || !Array.isArray(metadata.blockers) || !["incomplete", "certified"].includes(metadata.c40Status)) {
+    throw new TypeError("correction metadata is invalid");
+  }
+  const baseManifest = JSON.parse(await readFile(baseManifestInput.absolute, "utf8"));
+  if (baseManifest?.format !== "tearbench-release-evidence-manifest" || baseManifest.schemaVersion !== 1
+    || typeof baseManifest.coverage !== "object" || baseManifest.coverage === null
+    || typeof baseManifest.preservation !== "object" || baseManifest.preservation === null) {
+    throw new TypeError("base release evidence manifest is incomplete");
+  }
+  const corrections = [];
+  for (let index = 0; index < REQUIRED_CORRECTION_IDS.length; index += 1) {
+    const entry = metadata.corrections[index];
+    if (entry?.id !== REQUIRED_CORRECTION_IDS[index]) throw new TypeError("correction metadata must be exactly ordered TC-1 through TC-9");
+    const reportInput = await canonicalWorkspaceInput(resolve(entry.reportPath), `correction ${REQUIRED_CORRECTION_IDS[index]} report`);
+    const reportPath = reportInput.stored;
+    const report = await readFile(reportInput.absolute, "utf8");
+    corrections.push({ id: REQUIRED_CORRECTION_IDS[index], status: entry.status, reportPath,
+      reportSha256: createHash("sha256").update(report).digest("hex"), focusedReceiptIds: entry.focusedReceiptIds,
+      postReviewDisposition: entry.postReviewDisposition });
+  }
+  const retainedIds = new Set(ids);
+  const receiptById = new Map(evidence.map((entry) => [entry.id, entry]));
+  const focusedReceiptOwners = new Map();
+  if (!retainedIds.has("full-check")) throw new TypeError("final full-check evidence receipt is missing");
+  if (metadata.c40Status === "certified") {
+    for (const id of REQUIRED_RELEASE_EVIDENCE_IDS) if (!retainedIds.has(id)) throw new TypeError(`required evidence receipt is missing: ${id}`);
+  }
+  for (const correction of corrections) {
+    if (correction.status !== "complete" || correction.postReviewDisposition !== "green"
+      || !Array.isArray(correction.focusedReceiptIds) || correction.focusedReceiptIds.length === 0
+      || correction.focusedReceiptIds.some((id) => id === "full-check" || !retainedIds.has(id)
+        || receiptById.get(id)?.scope?.correctionId !== correction.id)) {
+      throw new TypeError(`correction metadata is incomplete: ${correction.id}`);
+    }
+    for (const id of correction.focusedReceiptIds) {
+      if (focusedReceiptOwners.has(id)) throw new TypeError(`focused receipt is reused across corrections: ${id}`);
+      focusedReceiptOwners.set(id, correction.id);
+    }
+  }
+  const planPath = "plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md";
+  const planInput = await canonicalWorkspaceInput(resolve(root, planPath), "correction plan");
+  const plan = await readFile(planInput.absolute, "utf8");
+  const manifest = { format: "tearbench-release-evidence-manifest", schemaVersion: 1, generatedAt: new Date().toISOString(),
+    ...binding, scope: { kind: "correction-closure", evidenceIds: ids }, evidence,
+    coverage: baseManifest.coverage, preservation: baseManifest.preservation,
+    correctionClosure: { format: "tearbench-correction-closure", schemaVersion: 1, status: "correction-complete",
+      c40Status: metadata.c40Status, source: { repository: "shaku1z/tear", ...binding.source },
+      plan: { path: planPath, sha256: createHash("sha256").update(plan).digest("hex") }, corrections, blockers: metadata.blockers,
+      finalFullCheck: { evidenceId: "full-check", receiptSha256: evidence.find((entry) => entry.id === "full-check")?.receiptSha256 } } };
+  const output = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "correction-release-evidence.json"))),
+    "artifacts/tearbench/generated/", "correction manifest");
+  await writeFile(output.absolute, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  console.log(`CORRECTION CLOSURE ${corrections.length} checkpoint(s)`); console.log(`artifact: ${output.absolute}`);
 }
 
 async function writeReleaseCertificate() {
@@ -1002,33 +1125,40 @@ async function writeReleaseCertificate() {
   // repository fixture. Keep the default under generated evidence so a stale
   // checked-in "certified" JSON object cannot be mistaken for current release
   // approval.
-  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "release-certificate.json")));
-  const manifestPath = manifestOption === undefined ? undefined : workspaceRelativePath(resolve(manifestOption));
+  const certificateOutput = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "release-certificate.json"))),
+    "artifacts/tearbench/generated/", "release certificate");
+  const manifestInput = manifestOption === undefined ? undefined : await canonicalWorkspaceInput(resolve(manifestOption), "release evidence manifest");
+  const manifestPath = manifestInput?.stored;
   let verification;
+  let manifestBytes;
   try {
     if (option("--full-check") !== undefined || option("--commit") !== undefined) throw new Error("certification accepts only an immutable --manifest; --full-check and --commit assertions are forbidden");
     if (manifestOption === undefined) throw new TypeError("usage: pnpm tearbench certify --manifest <release-evidence.json> [--artifact path]");
-    const manifest = JSON.parse(await readFile(resolve(manifestOption), "utf8"));
+    if (!manifestPath.startsWith("artifacts/tearbench/generated/")) throw new TypeError("release evidence manifest must be an ignored generated artifact");
+    manifestBytes = await readFile(manifestInput.absolute);
+    const manifest = JSON.parse(manifestBytes.toString("utf8"));
     verification = await verifyReleaseEvidenceManifest(manifest, {
       root,
+      sourceIdentity: async () => ({ repository: "shaku1z/tear", ...readSourceIdentity() }),
       git: async (argumentsList) => {
         const result = spawnSync("git", argumentsList, { cwd: root, encoding: "utf8" });
         if (result.status !== 0) throw new Error(result.stderr || `git ${argumentsList.join(" ")} failed`);
         return result.stdout;
       },
       readFile,
+      realpath,
     });
   } catch (error) {
     const headResult = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
     const statusResult = spawnSync("git", ["status", "--porcelain=v1", "-z"], { cwd: root, encoding: "utf8" });
     verification = { verified: false, errors: [error instanceof Error ? error.message : String(error)], head: headResult.stdout.trim(), worktreeFingerprint: createHash("sha256").update(statusResult.stdout).digest("hex") };
   }
-  const certificate = createReleaseCertificate({ manifestPath: manifestPath ?? "<missing>", verification, generatedAt: new Date().toISOString() });
-  await mkdir(dirname(artifactPath), { recursive: true });
-  await writeFile(artifactPath, `${JSON.stringify(certificate, null, 2)}\n`, "utf8");
+  const manifestSha256 = manifestBytes === undefined ? undefined : createHash("sha256").update(manifestBytes).digest("hex");
+  const certificate = createReleaseCertificate({ manifestPath: manifestPath ?? "<missing>", manifestSha256, verification, generatedAt: new Date().toISOString() });
+  await writeFile(certificateOutput.absolute, `${JSON.stringify(certificate, null, 2)}\n`, "utf8");
   console.log(`${certificate.status.toUpperCase()} ${certificate.commit}`);
-  console.log(`artifact: ${artifactPath}`);
-  if (!verification.verified) process.exitCode = 1;
+  console.log(`artifact: ${certificateOutput.absolute}`);
+  if (certificate.status !== "certified") process.exitCode = 1;
 }
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
@@ -1224,6 +1354,43 @@ function workspaceRelativePath(path) {
   const stored = relative(root, resolved).replaceAll("\\", "/");
   if (stored === "" || stored.startsWith("../") || isAbsolute(stored)) throw new TypeError(`graveyard artifacts and registries must remain inside the workspace: ${path}`);
   return stored;
+}
+
+function assertCanonicalContainment(canonicalRoot, canonicalPath, label, allowRoot = false) {
+  const stored = relative(canonicalRoot, canonicalPath).replaceAll("\\", "/");
+  if ((!allowRoot && stored === "") || stored.startsWith("../") || isAbsolute(stored)) throw new TypeError(`${label} resolves outside the workspace`);
+}
+
+async function canonicalWorkspaceInput(path, label) {
+  const stored = workspaceRelativePath(path);
+  const canonicalRoot = await realpath(root);
+  const canonicalPath = await realpath(resolve(root, stored));
+  assertCanonicalContainment(canonicalRoot, canonicalPath, label);
+  return Object.freeze({ stored, absolute: canonicalPath });
+}
+
+async function prepareWorkspaceOutput(path, requiredPrefix, label) {
+  const stored = workspaceRelativePath(path);
+  if (!stored.startsWith(requiredPrefix)) throw new TypeError(`${label} must remain under ${requiredPrefix}`);
+  const absolute = resolve(root, stored);
+  const canonicalRoot = await realpath(root);
+  let ancestor = dirname(absolute);
+  while (!existsSync(ancestor)) {
+    const parent = dirname(ancestor);
+    if (parent === ancestor) throw new TypeError(`${label} has no resolvable workspace ancestor`);
+    ancestor = parent;
+  }
+  assertCanonicalContainment(canonicalRoot, await realpath(ancestor), label, true);
+  await mkdir(dirname(absolute), { recursive: true });
+  assertCanonicalContainment(canonicalRoot, await realpath(dirname(absolute)), label);
+  try {
+    const outputInfo = await lstat(absolute);
+    if (outputInfo.isSymbolicLink()) throw new TypeError(`${label} cannot overwrite a symbolic link or junction`);
+    assertCanonicalContainment(canonicalRoot, await realpath(absolute), label);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  return Object.freeze({ stored, absolute });
 }
 
 async function withTearbenchModule(callback) {
@@ -1506,6 +1673,8 @@ try {
     await recordEvidenceReceipt();
   } else if (command === "evidence" && process.argv[3] === "partial-manifest") {
     await composePartialEvidenceManifest();
+  } else if (command === "evidence" && process.argv[3] === "correction-manifest") {
+    await composeCorrectionClosureManifest();
   } else if (command === "parity" && process.argv[3] === "current-weapons") {
     const result = executeCurrentWeaponParity();
     if (result.evidenceExecution.status !== "passed") process.exitCode = 1;
@@ -1555,7 +1724,7 @@ try {
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {
-    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> --subject <generated-artifact> -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
+    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));

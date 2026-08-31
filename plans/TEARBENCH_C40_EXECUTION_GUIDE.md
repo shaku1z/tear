@@ -1128,6 +1128,19 @@ portability, concurrent complete worlds, or C27A completion.
 
 ### C40 — Certification
 
+- [ ] TC-1 through TC-9 are exactly ordered and complete in the generated
+  correction closure, with current report hashes, globally unique focused
+  receipt IDs owned by their exact checkpoint, and green post-review
+  dispositions
+- [ ] Correction closure source, plan hash, receipt source identities, and
+  clean-worktree fingerprint match the exact final `HEAD`; canonical path and
+  final source-identity checks reject link escapes and verification-time drift
+- [ ] Exactly one retained `full-check` receipt records the literal command
+  `pnpm check`, passes, and predates manifest generation
+- [ ] Generated manifest and certificate remain ignored artifacts; the
+  certificate binds the exact manifest bytes through `evidenceManifestSha256`
+- [ ] An incomplete C40 disposition names every blocker and remains
+  non-certifying; a certified disposition has no blockers
 - [ ] Full `pnpm check` green on a clean tree
 - [ ] Migration, performance, accessibility, security validated
 - [ ] Docs, dashboard, catalog, and checkpoint reports match repository reality
