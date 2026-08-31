@@ -151,10 +151,12 @@ describe("TearBench release certification", () => {
   });
 
   it("uses repository path boundaries and rejects unsafe paths and invalid fallback registries", () => {
+    const firstRoute = routes[0];
+    if (firstRoute === undefined) throw new Error("static route fixture must not be empty");
     expect(selectDiffAwareEvidence(["src/gameplay/entities-old/player.ts"], routes).routes)
       .toEqual(["shared-runtime"]);
     expect(() => selectDiffAwareEvidence(["../outside.ts"], routes)).toThrow(/repository-relative/u);
-    expect(() => selectDiffAwareEvidence(["src/gameplay/combat/kill-runtime.ts"], [...routes, routes[0]!]))
+    expect(() => selectDiffAwareEvidence(["src/gameplay/combat/kill-runtime.ts"], [...routes, firstRoute]))
       .toThrow(/IDs must be unique/u);
     expect(() => selectDiffAwareEvidence(["src/gameplay/combat/kill-runtime.ts"], routes.slice(0, 1)))
       .toThrow(/shared-runtime fallback/u);
