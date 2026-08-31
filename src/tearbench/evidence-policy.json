@@ -17,6 +17,6 @@
     "selection", "serialization", "stage-gating"
   ],
   "buildTargets": {
-    "test-standalone": { "command": "pnpm build:test:standalone" }
+    "test-standalone": { "taskId": "build.test-standalone" }
   }
 }

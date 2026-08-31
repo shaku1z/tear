@@ -50,6 +50,16 @@ function mutatedRoutes(name, mutate) {
 
 test.after(() => { rmSync(temporaryRoot, { recursive: true, force: true }); });
 
+test("evidence receipts reject arbitrary shell execution before spawning it", () => {
+  const marker = join(temporaryRoot, "shell-bypass-marker.txt");
+  const result = spawnSync(process.execPath, [script, "evidence", "record", "--id", "shell-bypass", "--",
+    "node", "-e", `require('node:fs').writeFileSync('${marker.replaceAll("\\", "\\\\")}', 'unsafe')`],
+  { cwd: root, encoding: "utf8" });
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stderr}\n${result.stdout}`, /unsupported TearBench evidence command/u);
+  assert.equal(existsSync(marker), false);
+});
+
 test("materialized run status fails closed for failed or truncated artifacts", () => {
   const cases = [
     ["failed", "failed"],
@@ -314,19 +324,23 @@ test("Pale State Forge selection rejects detached descriptors, false claims, and
 
 test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {
   const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
+  const registry = JSON.parse(readFileSync(join(root, "src", "tearbench", "task-registry.json"), "utf8"));
+  const functional = new Set(registry.profiles["check.functional"]);
   assert.match(scripts["test:browser:current-weapon-parity"], /tearbench parity current-weapons/u);
   assert.equal(scripts["test:headless:current-weapon-parity"],
     "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts");
-  assert.match(scripts["check:functional"], /pnpm test:headless:current-weapon-parity/u);
+  assert.ok(functional.has("headless.test-headless-current-weapon-parity"));
   assert.equal(scripts["test:headless:current-gameplay-scenarios"],
     "pnpm exec vitest run tests/unit/current-headless-gameplay-scenarios.test.ts");
-  assert.match(scripts["check:functional"], /pnpm test:headless:current-gameplay-scenarios/u);
+  assert.ok(functional.has("headless.test-headless-current-gameplay-scenarios"));
   assert.equal(scripts["test:browser:current-gameplay-scenarios"], "node tests/browser-current-gameplay-scenarios.js");
-  assert.match(scripts["check:functional"], /pnpm test:browser:current-gameplay-scenarios/u);
-  assert.match(scripts["check:functional"], /pnpm test:browser:current-weapon-parity/u);
+  assert.ok(functional.has("browser.test-browser-current-gameplay-scenarios"));
+  assert.ok(functional.has("browser.test-browser-current-weapon-parity"));
   assert.equal(scripts["test:tearbench-selection"], "node --test tests/tearbench-evidence-selection.test.mjs");
   assert.match(scripts["check:workspace"], /pnpm test:tearbench-selection/u);
-  assert.match(scripts["check:functional"], /pnpm check:workspace/u);
+  assert.ok(functional.has("unit.test-tearbench-selection"));
+  assert.ok(functional.has("static.check-workspace"));
+  assert.equal(scripts["check:functional"], "pnpm tearbench tasks run-profile check.functional");
 });
 
 test("boss, stage, progression, event, and player owners receive current mapped evidence", () => {

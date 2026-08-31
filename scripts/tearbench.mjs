@@ -15,12 +15,17 @@ function option(name, fallback) {
   return index < 0 ? fallback : process.argv[index + 1];
 }
 
-const catalogPath = resolve(option("--catalog", resolve(root, "src", "tearbench", "canonical-scenarios.json")));
-const evidenceRoutesPath = resolve(option("--routes", resolve(root, "src", "tearbench", "evidence-routes.json")));
+const canonicalCatalogPath = resolve(root, "src", "tearbench", "canonical-scenarios.json");
+const canonicalEvidenceRoutesPath = resolve(root, "src", "tearbench", "evidence-routes.json");
+const catalogPath = resolve(option("--catalog", canonicalCatalogPath));
+const evidenceRoutesPath = resolve(option("--routes", canonicalEvidenceRoutesPath));
+const enforceCanonicalTaskProjections = catalogPath === canonicalCatalogPath && evidenceRoutesPath === canonicalEvidenceRoutesPath;
 const evidencePolicyPath = resolve(root, "src", "tearbench", "evidence-policy.json");
+const taskRegistryPath = resolve(root, "src", "tearbench", "task-registry.json");
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
 const evidencePolicy = JSON.parse(await readFile(evidencePolicyPath, "utf8"));
+const taskRegistry = JSON.parse(await readFile(taskRegistryPath, "utf8"));
 const publicationBoundary = JSON.parse(await readFile(resolve(root, "config", "campaign-publication-boundary.json"), "utf8"));
 const trackedPathsResult = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
 if (trackedPathsResult.status !== 0) throw new Error(`unable to validate evidence prefixes: ${trackedPathsResult.stderr || trackedPathsResult.stdout}`);
@@ -32,6 +37,22 @@ const REQUIRED_PRODUCTION_HOOK_FAMILIES = Object.freeze([
 ]);
 const KNOWN_BACKEND_DISPOSITIONS = new Set(["supported", "reduced", "unsupported"]);
 const EVIDENCE_KINDS = new Set(["scenario-live", "scenario-headless", "journey", "authority"]);
+const TASK_RUNNER_KINDS = new Set(["node", "vitest", "typescript", "eslint", "build-target", "wrangler", "tearbench", "certifier"]);
+const TASK_RESOURCE_CLASSES = new Set(["static", "unit", "headless", "build", "browser", "endurance"]);
+if (taskRegistry?.schemaVersion !== 1 || !Number.isSafeInteger(taskRegistry.definitionPolicyVersion)
+  || !Array.isArray(taskRegistry.tasks) || taskRegistry.profiles === null || typeof taskRegistry.profiles !== "object") {
+  throw new TypeError("TearBench task registry is malformed");
+}
+const taskIds = taskRegistry.tasks.map((task) => task?.taskId);
+if (new Set(taskIds).size !== taskIds.length || taskRegistry.tasks.some((task) =>
+  typeof task?.taskId !== "string" || !/^[a-z][a-z0-9.-]*$/u.test(task.taskId)
+  || !TASK_RUNNER_KINDS.has(task.runner?.kind) || !TASK_RESOURCE_CLASSES.has(task.resourceClass)
+  || typeof task.runner?.executable !== "string" || !Array.isArray(task.runner?.args)
+  || /[;&|<>`$()\r\n]/u.test(task.runner.executable)
+  || task.runner.args.some((argument) => typeof argument !== "string" || /[;&|<>`$()\r\n]/u.test(argument)))) {
+  throw new TypeError("TearBench task registry has duplicate, unsupported, or unsafe task definitions");
+}
+const taskById = new Map(taskRegistry.tasks.map((task) => [task.taskId, task]));
 if (evidencePolicy?.schemaVersion !== 1 || evidencePolicy.matrices === null
   || typeof evidencePolicy.matrices !== "object" || Array.isArray(evidencePolicy.matrices)
   || !Array.isArray(evidencePolicy.capabilityClaims)
@@ -55,8 +76,40 @@ for (const [id, policy] of Object.entries(evidencePolicy.matrices)) {
   }
 }
 for (const [id, target] of Object.entries(evidencePolicy.buildTargets)) {
-  if (target === null || typeof target !== "object" || typeof target.command !== "string"
-    || target.command.trim() === "") throw new TypeError(`TearBench build target policy ${id} is malformed`);
+  const task = target === null || typeof target !== "object" ? undefined : taskById.get(target.taskId);
+  if (task === undefined || task.runner.kind !== "build-target" || task.runner.args.length !== 1) {
+    throw new TypeError(`TearBench build target policy ${id} is malformed`);
+  }
+}
+
+function displayCommandForTask(taskId) {
+  const task = taskById.get(taskId);
+  if (task === undefined) throw new RangeError(`unknown TearBench task: ${taskId}`);
+  if (task.runner.kind === "build-target" && task.runner.args.length === 1) {
+    return task.runner.args[0].startsWith("test-")
+      ? `pnpm build:test:${task.runner.args[0].replace(/^test-/u, "")}` : `pnpm build:${task.runner.args[0]}`;
+  }
+  if (task.runner.kind === "vitest") return `pnpm exec vitest ${task.runner.args.join(" ")}`;
+  if (task.runner.kind === "tearbench") return `pnpm tearbench ${task.runner.args.join(" ")}`;
+  if (task.runner.kind === "node" && task.runner.executable === "node") return `node ${task.runner.args.join(" ")}`;
+  throw new TypeError(`TearBench task ${taskId} has no approved compatibility command`);
+}
+
+function commandForTaskIds(taskIds, label) {
+  if (!Array.isArray(taskIds) || taskIds.length === 0 || taskIds.some((id) => typeof id !== "string" || !taskById.has(id))) {
+    throw new TypeError(`${label} has missing or unknown TearBench task IDs`);
+  }
+  return taskIds.map(displayCommandForTask).join(" && ");
+}
+
+function projectedTaskCommand(taskIds, projectedCommand, label) {
+  if (typeof projectedCommand === "string") parseApprovedEvidenceCommand(projectedCommand);
+  if (!enforceCanonicalTaskProjections && typeof projectedCommand === "string") return projectedCommand;
+  const command = commandForTaskIds(taskIds, label);
+  if (projectedCommand !== undefined && projectedCommand !== command) {
+    throw new TypeError(`${label} command projection disagrees with the typed task registry`);
+  }
+  return command;
 }
 
 function fail(message) {
@@ -211,6 +264,7 @@ function parseApprovedEvidenceCommand(command) {
         safeRepoFile(file, /^tests\/[A-Za-z0-9._/-]+\.ts$/u, "unit test")) };
     }
     if (tokens[0] === "node" && tokens.length === 2) {
+      if (tokens[1] === "--version") return { kind: "node-version" };
       return { kind: "node", file: safeRepoFile(tokens[1], /^tests\/browser-[A-Za-z0-9._-]+\.js$/u, "browser proof") };
     }
     if (tokens[0] === "node" && tokens[1] === "--check" && tokens.length === 3
@@ -315,7 +369,8 @@ function validateScenarioMetadata(scenario) {
       throw new RangeError(`scenario ${scenario.id} must use the Bloom Well lifecycle horizon of ${String(BLOOM_WELL_LIFECYCLE_TICKS)} ticks`);
     }
   }
-  const command = scenario.evidence?.command;
+  const command = scenario.evidence === undefined ? undefined
+    : projectedTaskCommand(scenario.backendTaskIds?.live, scenario.evidence.command, `scenario ${scenario.id} live evidence`);
   if (typeof command !== "string") return;
   const proof = parseApprovedEvidenceCommand(command).find((entry) => entry.kind === "node");
   if (proof === undefined) return;
@@ -365,8 +420,8 @@ function evidenceCommandsForScenario(scenario) {
   if (!Array.isArray(declaredBackends) || declaredBackends.length === 0) {
     throw new RangeError(`scenario ${scenario.id} has no executable evidence backend declaration`);
   }
-  const command = scenario.evidence?.command;
-  const testFiles = scenario.testFiles;
+  const command = scenario.evidence === undefined ? undefined
+    : projectedTaskCommand(scenario.backendTaskIds?.live, scenario.evidence.command, `scenario ${scenario.id} live evidence`);
   return declaredBackends.map((backend) => {
     if (backend === "live" && typeof command === "string" && command.trim() !== "") {
       const parsed = parseApprovedEvidenceCommand(command);
@@ -374,9 +429,8 @@ function evidenceCommandsForScenario(scenario) {
       if (mismatched !== undefined) throw new RangeError(`scenario ${scenario.id} evidence command targets ${mismatched.scenarioId}`);
       return Object.freeze({ backend, command });
     }
-    if (backend === "headless" && Array.isArray(testFiles) && testFiles.length > 0
-      && testFiles.every((file) => typeof file === "string" && file.trim() !== "")) {
-      const derivedCommand = `pnpm exec vitest run ${testFiles.join(" ")}`;
+    if (backend === "headless") {
+      const derivedCommand = commandForTaskIds(scenario.backendTaskIds?.headless, `scenario ${scenario.id} headless evidence`);
       parseApprovedEvidenceCommand(derivedCommand);
       return Object.freeze({ backend, command: derivedCommand });
     }
@@ -450,8 +504,18 @@ function routeEvidenceCandidates(route, scenarioIds) {
       candidates.push({ kind: `scenario-${evidence.backend}`, command: evidence.command });
     }
   }
-  for (const command of route.journeyCommands ?? []) candidates.push({ kind: "journey", command });
-  for (const command of route.authorityCommands ?? []) candidates.push({ kind: "authority", command });
+  const journeyCommands = route.journeyTaskIds === undefined && !enforceCanonicalTaskProjections ? (route.journeyCommands ?? [])
+    : (route.journeyTaskIds ?? []).map((id) => displayCommandForTask(id));
+  const authorityCommands = route.authorityTaskIds === undefined && !enforceCanonicalTaskProjections ? (route.authorityCommands ?? [])
+    : (route.authorityTaskIds ?? []).map((id) => displayCommandForTask(id));
+  if (enforceCanonicalTaskProjections && route.journeyCommands !== undefined && JSON.stringify(journeyCommands) !== JSON.stringify(route.journeyCommands)) {
+    throw new TypeError(`route ${route.id} journey command projection disagrees with typed tasks`);
+  }
+  if (enforceCanonicalTaskProjections && route.authorityCommands !== undefined && JSON.stringify(authorityCommands) !== JSON.stringify(route.authorityCommands)) {
+    throw new TypeError(`route ${route.id} authority command projection disagrees with typed tasks`);
+  }
+  for (const command of journeyCommands) candidates.push({ kind: "journey", command });
+  for (const command of authorityCommands) candidates.push({ kind: "authority", command });
   return [...new Map(candidates.map((value) => [`${value.kind}\0${value.command}`, value])).values()];
 }
 
@@ -751,7 +815,8 @@ function evidenceForDiff(files) {
   const obligationBindings = canonicalEvidenceBindings(selectedRouteScenarios.flatMap(({ route, scenarioIds }) =>
     materializeRouteObligations(route, scenarioIds)));
   const currentWeaponParity = currentWeaponParityPlan(selected, scenarios);
-  const authorityCommands = collect("authorityCommands");
+  const authorityTaskIds = collect("authorityTaskIds");
+  const authorityCommands = authorityTaskIds.map(displayCommandForTask);
   const backendDispositions = canonicalBackendDispositions(selected.flatMap((route) => route.backendDispositions ?? []));
   if (currentWeaponParity.required) {
     const command = "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts";
@@ -778,6 +843,8 @@ function evidenceForDiff(files) {
     obligationBindings,
     buildTargets: collect("buildTargets"),
     journeyCommands: collect("journeyCommands"),
+    journeyTaskIds: collect("journeyTaskIds"),
+    authorityTaskIds,
     authorityCommands,
     backendDispositions,
     scope: canonicalDiffScope({
@@ -834,6 +901,8 @@ function executeApprovedEvidence(command, state) {
       result = spawnSync(process.execPath, [resolve(root, "node_modules", "vitest", "vitest.mjs"), "run", ...step.files], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "docs-check") {
       result = spawnSync(process.execPath, [step.file], { cwd: root, encoding: "utf8" });
+    } else if (step.kind === "node-version") {
+      result = spawnSync(process.execPath, ["--version"], { cwd: root, encoding: "utf8" });
     } else {
       result = spawnSync(process.execPath, step.kind === "node-check" ? ["--check", step.file] : [step.file], { cwd: root, encoding: "utf8" });
     }
@@ -887,7 +956,7 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
   for (const target of buildTargets) {
     const policy = evidencePolicy.buildTargets[target];
     if (policy === undefined) throw new TypeError(`unknown TearBench build target: ${target}`);
-    if (!runOne(`build-target:${target}`, policy.command)) return { status: "failed", executions };
+    if (!runOne(`build-target:${target}`, displayCommandForTask(policy.taskId))) return { status: "failed", executions };
   }
   for (const id of scenarios) {
     for (const evidence of evidenceCommandsForScenario(scenarioById(id))) {
@@ -909,6 +978,43 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
   });
   const generatedArtifact = writeDiffCapabilityReport(executionScope, state, executions);
   return { status, executions, obligationExecution, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
+}
+
+function executeRegistryTask(task) {
+  const runner = task.runner;
+  if (runner.kind === "build-target") {
+    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], { cwd: root, stdio: "inherit" });
+  }
+  if (runner.kind === "node" && runner.executable === "node") {
+    return spawnSync(process.execPath, runner.args, { cwd: root, stdio: "inherit" });
+  }
+  if (["vitest", "typescript", "eslint", "wrangler", "tearbench", "certifier"].includes(runner.kind)) {
+    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], { cwd: root, stdio: "inherit" });
+  }
+  throw new TypeError(`unsupported TearBench task runner: ${String(runner.kind)}`);
+}
+
+function runTaskProfile() {
+  const usage = "usage: pnpm tearbench tasks <list-profile|run-profile> <profile-id>";
+  const action = process.argv[3], profileId = process.argv[4];
+  if (!['list-profile', 'run-profile'].includes(action) || typeof profileId !== "string" || process.argv.length !== 5) {
+    throw new TypeError(usage);
+  }
+  const profile = taskRegistry.profiles[profileId];
+  if (!Array.isArray(profile) || profile.some((id) => !taskById.has(id))) throw new RangeError(`unknown or invalid TearBench task profile: ${profileId}`);
+  if (action === "list-profile") {
+    console.log(JSON.stringify({ format: "tearbench-task-profile", schemaVersion: 1, profileId, taskIds: profile }, null, 2));
+    return;
+  }
+  for (const [index, taskId] of profile.entries()) {
+    const task = taskById.get(taskId);
+    console.log(`TASK ${String(index + 1)}/${String(profile.length)} ${taskId}`);
+    const result = executeRegistryTask(task);
+    if (result.status !== 0) {
+      process.exitCode = result.status ?? 1;
+      return;
+    }
+  }
 }
 
 export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8_000) {
@@ -1108,7 +1214,12 @@ async function recordEvidenceReceipt() {
   if (commandParts.length === 0) throw new TypeError(usage);
   const command = commandParts.join(" ");
   const before = { repository: RELEASE_REPOSITORY, ...readSourceIdentity() };
-  const result = spawnSync(command, { cwd: root, encoding: "utf8", shell: true });
+  const execution = executeApprovedEvidence(command, { testStandaloneBuilt: false, source: before });
+  const result = {
+    status: execution.status === "passed" ? 0 : 1,
+    stdout: execution.receipts.map((receipt) => receipt.stdout ?? "").filter(Boolean).join("\n"),
+    stderr: execution.receipts.map((receipt) => receipt.stderr ?? "").filter(Boolean).join("\n"),
+  };
   const after = { repository: RELEASE_REPOSITORY, ...readSourceIdentity() };
   if (after.revision !== before.revision || after.state !== before.state || after.fingerprint !== before.fingerprint) throw new Error("evidence command changed the executed source");
   const subjectPath = explicitSubject === undefined
@@ -1874,10 +1985,12 @@ try {
       : undefined;
     console.log(`selection: ${artifactPath}`);
     if (evidence.status !== 0 || evidenceExecution.status === "failed" || graveyardReport?.status === "failed") process.exitCode = 1;
+  } else if (command === "tasks") {
+    runTaskProfile();
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {
-    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
+    console.log("TearBench CLI\n  list\n  tasks <list-profile|run-profile> <profile-id>\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));

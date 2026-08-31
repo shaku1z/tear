@@ -250,7 +250,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 | --- | --- | --- | --- |
 | VAP-0 | Baseline and authority | Gate A | Complete at local authority `b15fb19`; protected integration not claimed |
 | VAP-1 | Correct route/matrix/certification semantics | Gate A | Complete locally; protected integration not claimed |
-| VAP-2 | Atomic task registry | Gate B | Not started |
+| VAP-2 | Atomic task registry | Gate B | Complete locally; protected integration not claimed |
 | VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Not started |
 | VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Not started |
 | VAP-5 | Build once and exact artifact fanout | VAP-4 | Not started |
@@ -317,15 +317,20 @@ proof. Protected integration remains separately authorized.
 
 ### Checklist
 
-- [ ] Define the typed task, dependency, claim, resource, output, and intentional-replica schemas.
-- [ ] Assign stable IDs to existing unit/headless groups, builds, browser commands, reproducibility sides, preservation proofs, deploy dry-runs, and certification tasks.
-- [ ] Compute a deterministic `taskDefinitionDigest` from executable semantics, not display text.
-- [ ] Reference task IDs from routes and release profiles; do not maintain commands in both the task registry and package scripts.
-- [ ] Make package scripts thin compatibility aliases to the task authority where practical.
-- [ ] Reject arbitrary shell strings from canonical task definitions.
-- [ ] Encode build targets and produced artifacts as dependencies.
-- [ ] Encode reproducibility A/B and distinct backend executions as intentional replicas.
-- [ ] Add tests for duplicate IDs, cyclic dependencies, missing outputs, invalid resource classes, and unsupported runners.
+- [x] Define the typed task, dependency, claim, resource, output, and intentional-replica schemas.
+- [x] Assign stable IDs to existing unit/headless groups, builds, browser commands, reproducibility sides, preservation proofs, deploy dry-runs, and certification tasks.
+- [x] Compute a deterministic `taskDefinitionDigest` from executable semantics, not display text.
+- [x] Reference task IDs from routes and release profiles; do not maintain commands in both the task registry and package scripts.
+- [x] Make package scripts thin compatibility aliases to the task authority where practical.
+- [x] Reject arbitrary shell strings from canonical task definitions.
+- [x] Encode build targets and produced artifacts as dependencies.
+- [x] Encode reproducibility A/B and distinct backend executions as intentional replicas.
+- [x] Add tests for duplicate IDs, cyclic dependencies, missing outputs, invalid resource classes, and unsupported runners.
+
+**Recorded evidence:** [`VAP-2_ATOMIC_TASK_REGISTRY.md`](checkpoints/tearbench-verification-acceleration/VAP-2_ATOMIC_TASK_REGISTRY.md)
+records the exact 78+2 compatibility inventory, closed task schema, intentional
+replicas, thin aliases, shell-bypass correction, hostile validation, and focused
+proof. Protected integration remains separately authorized.
 
 **Focused proof:** Registry schema/unit tests plus a static expansion comparison against the VAP-0 candidate inventory.
 
