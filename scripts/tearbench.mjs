@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { RELEASE_REPOSITORY, readSourceIdentitySync } from "./release-artifact.mjs";
 import { createReleaseCertificate, REQUIRED_CORRECTION_IDS, REQUIRED_RELEASE_EVIDENCE_IDS, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
 import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
+import { createTearBenchShadowPlan } from "./tearbench-shadow-plan.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BLOOM_WELL_LIFECYCLE_TICKS = 744;
@@ -705,6 +706,15 @@ function runFiles(files) {
 }
 
 async function changedFiles() {
+  const revision = option("--revision");
+  if (revision !== undefined) {
+    if (!/^[0-9a-f]{7,40}$/u.test(revision)) throw new TypeError("TearBench changed-file revision must be a Git SHA");
+    const parent = spawnSync("git", ["rev-parse", `${revision}^1`], { cwd: root, encoding: "utf8" });
+    if (parent.status !== 0) throw new RangeError(`TearBench changed-file revision has no resolvable parent: ${revision}`);
+    const diff = spawnSync("git", ["diff", "--name-only", parent.stdout.trim(), revision], { cwd: root, encoding: "utf8" });
+    if (diff.status !== 0) throw new Error(`unable to resolve changed files for ${revision}: ${diff.stderr || diff.stdout}`);
+    return diff.stdout.split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
+  }
   const file = option("--files-from");
   if (file) return (await readFile(resolve(file), "utf8")).split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
   const inline = option("--files", "");
@@ -831,6 +841,8 @@ function evidenceForDiff(files) {
     source: readSourceIdentity(),
     changedFiles: normalized,
     routes: selected.map((route) => route.id).sort(),
+    routeScenarios: selectedRouteScenarios.map(({ route, scenarioIds }) => ({ routeId: route.id, scenarioIds: [...scenarioIds].sort() }))
+      .sort((left, right) => left.routeId.localeCompare(right.routeId)),
     scenarios,
     currentWeaponParity,
     evidenceCommands: scenarios.flatMap((id) => evidenceCommandsForScenario(scenarioById(id))
@@ -1015,6 +1027,33 @@ function runTaskProfile() {
       return;
     }
   }
+}
+
+async function writeShadowPlan(explain = false) {
+  const usage = "usage: pnpm tearbench <plan|explain> --profile <development|pull-request|protected-main|release|nightly|endurance> [--files comma,list | --files-from path | --revision sha] [--artifact path]";
+  const profileId = option("--profile");
+  if (!["development", "pull-request", "protected-main", "release", "nightly", "endurance"].includes(profileId)) throw new TypeError(usage);
+  const selection = evidenceForDiff(await changedFiles());
+  const requestedRevision = option("--revision");
+  if (requestedRevision !== undefined) {
+    const revision = spawnSync("git", ["rev-parse", requestedRevision], { cwd: root, encoding: "utf8" });
+    const parent = spawnSync("git", ["rev-parse", `${requestedRevision}^1`], { cwd: root, encoding: "utf8" });
+    if (revision.status !== 0 || parent.status !== 0) throw new RangeError(`TearBench historical planning basis is not resolvable: ${requestedRevision}`);
+    selection.planningBasis = Object.freeze({ kind: "historical-commit", revision: revision.stdout.trim(), parentRevision: parent.stdout.trim() });
+  }
+  const plan = createTearBenchShadowPlan({ registry: taskRegistry, policy: evidencePolicy, selection, catalog, routes: evidenceRoutes, profileId });
+  const output = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "shadow-plan.json"))),
+    "artifacts/tearbench/generated/", "shadow plan");
+  await writeFile(output.absolute, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+  console.log(`${plan.diagnostics.status.toUpperCase()} shadow plan ${plan.planDigest}`);
+  console.log(`profile: ${plan.profileId} (${String(plan.requiredTaskIds.length)} unique task(s))`);
+  console.log(`critical-path upper bound: ${String(plan.estimates.dependencyCriticalPathMs)} ms`);
+  console.log(`artifact: ${output.absolute}`);
+  if (explain) for (const entry of plan.explanations) {
+    console.log(`${entry.taskId}: ${entry.selectedBecause.join(", ")}`);
+    if (entry.unprovedWithout.length > 0) console.log(`  unproved without: ${entry.unprovedWithout.join(", ")}`);
+  }
+  if (plan.diagnostics.status !== "complete") process.exitCode = 1;
 }
 
 export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8_000) {
@@ -1985,12 +2024,14 @@ try {
       : undefined;
     console.log(`selection: ${artifactPath}`);
     if (evidence.status !== 0 || evidenceExecution.status === "failed" || graveyardReport?.status === "failed") process.exitCode = 1;
+  } else if (command === "plan" || command === "explain") {
+    await writeShadowPlan(command === "explain");
   } else if (command === "tasks") {
     runTaskProfile();
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {
-    console.log("TearBench CLI\n  list\n  tasks <list-profile|run-profile> <profile-id>\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
+    console.log("TearBench CLI\n  list\n  plan --profile <profile> [--files comma,list | --files-from path] [--artifact path]\n  explain --profile <profile> [--files comma,list | --files-from path] [--artifact path]\n  tasks <list-profile|run-profile> <profile-id>\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));

@@ -251,7 +251,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 | VAP-0 | Baseline and authority | Gate A | Complete at local authority `b15fb19`; protected integration not claimed |
 | VAP-1 | Correct route/matrix/certification semantics | Gate A | Complete locally; protected integration not claimed |
 | VAP-2 | Atomic task registry | Gate B | Complete locally; protected integration not claimed |
-| VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Not started |
+| VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Complete locally; protected integration not claimed |
 | VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Not started |
 | VAP-5 | Build once and exact artifact fanout | VAP-4 | Not started |
 | VAP-6 | Bounded parallel CI canary | VAP-5 | Not started |
@@ -344,15 +344,15 @@ proof. Protected integration remains separately authorized.
 
 ### Checklist
 
-- [ ] Add a deterministic plan representation for development, pull-request, protected-main, release, nightly, and endurance profiles.
-- [ ] Bind the plan to exact source, changed-file scope, task-registry digest, policy digest, and required claims.
-- [ ] Materialize every route matrix/backend/invariant obligation into task IDs.
-- [ ] Produce a dependency graph, critical-path estimate, resource-class totals, and duplicate/overlap report.
-- [ ] Explain why every task was selected and which claim would be unproved without it.
-- [ ] Report missing, unsupported, extra, and duplicate obligations without executing tasks.
-- [ ] Run shadow planning for every route family, documentation-only, mapped-plus-unmapped, and central fan-out files.
-- [ ] Compare shadow output with the current gate for at least five consecutive protected gameplay validations.
-- [ ] Keep the current gate authoritative and required throughout shadow mode.
+- [x] Add a deterministic plan representation for development, pull-request, protected-main, release, nightly, and endurance profiles.
+- [x] Bind the plan to exact source, changed-file scope, task-registry digest, policy digest, and required claims.
+- [x] Materialize every route matrix/backend/invariant obligation into task IDs.
+- [x] Produce a dependency graph, critical-path estimate, resource-class totals, and duplicate/overlap report.
+- [x] Explain why every task was selected and which claim would be unproved without it.
+- [x] Report missing, unsupported, extra, and duplicate obligations without executing tasks.
+- [x] Run shadow planning for every route family, documentation-only, mapped-plus-unmapped, and central fan-out files.
+- [x] Compare shadow output with the current gate for at least five consecutive protected gameplay validations.
+- [x] Keep the current gate authoritative and required throughout shadow mode.
 
 **Focused proof:** Golden plan fixtures and hostile mutations proving deterministic ordering, exact scope, complete matrix materialization, and fail-closed missing obligations.
 

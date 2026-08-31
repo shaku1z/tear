@@ -3352,6 +3352,230 @@
       "outputs": [],
       "timeoutMs": 180000,
       "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-terminology",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/terminology-checkers.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "documentation",
+        "terminology"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.tearbench-ci-core",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/tearbench-runner.test.ts",
+          "tests/unit/tearbench-regression-intelligence.test.ts",
+          "tests/unit/tearbench-graveyard.test.ts",
+          "tests/unit/tearbench-regression-minimization.test.ts",
+          "tests/unit/tearbench-bisection.test.ts",
+          "tests/unit/tearbench-release-certification.test.ts"
+        ]
+      },
+      "claimIds": [
+        "selected-evidence",
+        "tearbench-core"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.release-preflight-negative",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/release-preflight.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "protected-validation",
+        "release-preflight"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-game-reference-artifact",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/game-reference-artifact-publication.test.mjs",
+          "tests/dispatch-wiki-reference.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "protected-validation",
+        "game-reference"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "endurance.test-endurance",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "--config",
+          "vitest.endurance.config.ts"
+        ]
+      },
+      "claimIds": [
+        "endurance"
+      ],
+      "dependencies": [],
+      "resourceClass": "endurance",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 1800000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "endurance.test-weekly-ghost",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/ghost-replay-world.test.ts",
+          "tests/unit/ghost-capsule-vault.test.ts"
+        ]
+      },
+      "claimIds": [
+        "endurance",
+        "preservation"
+      ],
+      "dependencies": [],
+      "resourceClass": "endurance",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "certify.game-reference-publication",
+      "version": 1,
+      "runner": {
+        "kind": "certifier",
+        "executable": "scripts/publish-game-reference-artifact.mjs",
+        "args": []
+      },
+      "claimIds": [
+        "protected-main",
+        "game-reference-publication"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.all-shared-runtime-history",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "graveyard",
+          "run",
+          "--cases",
+          "all-shared-runtime-history"
+        ]
+      },
+      "claimIds": [
+        "selected-evidence",
+        "graveyard"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.audio-lifecycle-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "audio-lifecycle-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.migration-and-corruption-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "migration-and-corruption-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.movement-boundary-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "movement-boundary-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.planted-downstream-divergence",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "planted-downstream-divergence"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.progression-ledger-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "progression-ledger-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.screen-route-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "screen-route-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
     }
   ],
   "profiles": {
@@ -3607,6 +3831,197 @@
     "deploy.dry-run": [
       "build.standalone",
       "deploy.game-dry-run"
+    ],
+    "development": [
+      "static.requirements-check",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit"
+    ],
+    "pull-request": [
+      "unit.release-preflight-negative",
+      "unit.test-game-reference-artifact",
+      "static.requirements-check",
+      "static.check-docs",
+      "unit.test-docs",
+      "unit.test-workspace",
+      "unit.test-parent-layout",
+      "unit.test-artifact-retention",
+      "unit.test-artifact-disposition",
+      "static.check-artifact-disposition",
+      "static.check-artifacts",
+      "static.check-parent-layout",
+      "unit.test-workspace-recovery",
+      "unit.test-workspace-recovery-second-wave",
+      "unit.test-deferred-workspace-dependency",
+      "unit.test-preserved-copy-comparison",
+      "unit.test-remaining-workspace-inventory",
+      "unit.test-workspace-quarantine",
+      "unit.test-workspace-preservation-quarantine",
+      "unit.test-serve",
+      "unit.test-tearbench-selection",
+      "static.check-terminology",
+      "static.check-active-roster",
+      "static.check-workspace",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit",
+      "unit.test-weapons",
+      "headless.test-headless-current-weapon-parity",
+      "headless.test-headless-current-gameplay-scenarios",
+      "static.check-tear-score",
+      "static.check-adaptive-soundtrack",
+      "static.check-game-reference",
+      "build.standalone",
+      "build.crazygames",
+      "static.check-test-isolation",
+      "browser.test-browser-production-isolation",
+      "build.check-bundles",
+      "build.check-crazygames-package",
+      "certify.reproducible",
+      "build.check-cloudflare",
+      "static.check-ghost-types",
+      "build.check-ghost-cloud",
+      "build.check-ghost-cloud.2",
+      "build.test-standalone",
+      "build.test-crazygames",
+      "browser.test-browser-current-live-detached-parity",
+      "browser.test-browser-current-weapon-parity",
+      "browser.test-browser-current-gameplay-scenarios",
+      "browser.test-browser",
+      "browser.test-browser-features",
+      "browser.test-browser-bosses",
+      "browser.test-browser-journeys",
+      "browser.test-browser-journeys.2",
+      "browser.test-browser-journeys.3",
+      "browser.test-browser-journeys.4",
+      "browser.test-browser-journeys.5",
+      "browser.test-browser-fresh-run-meta",
+      "browser.test-browser-agent-journey",
+      "browser.test-browser-tear-runtime",
+      "browser.test-browser-state-forge",
+      "browser.test-browser-state-forge.2",
+      "browser.test-browser-state-forge.3",
+      "browser.test-browser-input",
+      "browser.test-browser-blade-lifecycle",
+      "browser.test-browser-player-locomotion",
+      "browser.test-browser-enemy-charge",
+      "browser.test-browser-combat-resolution",
+      "browser.test-browser-ranged-cycle",
+      "browser.test-browser-projectile-parry",
+      "browser.test-browser-mirror-pursuit",
+      "browser.test-browser-responsive",
+      "browser.test-browser-audio",
+      "browser.test-browser-platform",
+      "browser.test-browser-platform.2",
+      "browser.test-browser-crazygames-iframe",
+      "browser.test-pwa"
+    ],
+    "protected-main": [
+      "unit.release-preflight-negative",
+      "unit.test-game-reference-artifact",
+      "static.requirements-check",
+      "static.check-docs",
+      "unit.test-docs",
+      "unit.test-workspace",
+      "unit.test-parent-layout",
+      "unit.test-artifact-retention",
+      "unit.test-artifact-disposition",
+      "static.check-artifact-disposition",
+      "static.check-artifacts",
+      "static.check-parent-layout",
+      "unit.test-workspace-recovery",
+      "unit.test-workspace-recovery-second-wave",
+      "unit.test-deferred-workspace-dependency",
+      "unit.test-preserved-copy-comparison",
+      "unit.test-remaining-workspace-inventory",
+      "unit.test-workspace-quarantine",
+      "unit.test-workspace-preservation-quarantine",
+      "unit.test-serve",
+      "unit.test-tearbench-selection",
+      "static.check-terminology",
+      "static.check-active-roster",
+      "static.check-workspace",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit",
+      "unit.test-weapons",
+      "headless.test-headless-current-weapon-parity",
+      "headless.test-headless-current-gameplay-scenarios",
+      "static.check-tear-score",
+      "static.check-adaptive-soundtrack",
+      "static.check-game-reference",
+      "build.standalone",
+      "build.crazygames",
+      "static.check-test-isolation",
+      "browser.test-browser-production-isolation",
+      "build.check-bundles",
+      "build.check-crazygames-package",
+      "certify.reproducible",
+      "build.check-cloudflare",
+      "static.check-ghost-types",
+      "build.check-ghost-cloud",
+      "build.check-ghost-cloud.2",
+      "build.test-standalone",
+      "build.test-crazygames",
+      "browser.test-browser-current-live-detached-parity",
+      "browser.test-browser-current-weapon-parity",
+      "browser.test-browser-current-gameplay-scenarios",
+      "browser.test-browser",
+      "browser.test-browser-features",
+      "browser.test-browser-bosses",
+      "browser.test-browser-journeys",
+      "browser.test-browser-journeys.2",
+      "browser.test-browser-journeys.3",
+      "browser.test-browser-journeys.4",
+      "browser.test-browser-journeys.5",
+      "browser.test-browser-fresh-run-meta",
+      "browser.test-browser-agent-journey",
+      "browser.test-browser-tear-runtime",
+      "browser.test-browser-state-forge",
+      "browser.test-browser-state-forge.2",
+      "browser.test-browser-state-forge.3",
+      "browser.test-browser-input",
+      "browser.test-browser-blade-lifecycle",
+      "browser.test-browser-player-locomotion",
+      "browser.test-browser-enemy-charge",
+      "browser.test-browser-combat-resolution",
+      "browser.test-browser-ranged-cycle",
+      "browser.test-browser-projectile-parry",
+      "browser.test-browser-mirror-pursuit",
+      "browser.test-browser-responsive",
+      "browser.test-browser-audio",
+      "browser.test-browser-platform",
+      "browser.test-browser-platform.2",
+      "browser.test-browser-crazygames-iframe",
+      "browser.test-pwa",
+      "certify.game-reference-publication"
+    ],
+    "nightly": [
+      "static.requirements-check",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture"
+    ],
+    "endurance": [
+      "endurance.test-endurance",
+      "endurance.test-weekly-ghost"
+    ],
+    "pull-request-docs": [
+      "static.check-docs",
+      "unit.test-docs",
+      "static.check-terminology",
+      "unit.test-terminology",
+      "static.requirements-check"
     ]
   },
   "compatibilityInventory": {
