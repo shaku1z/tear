@@ -41,7 +41,7 @@ When documents disagree, use this order:
 | --- | --- | --- |
 | A — Correction authority is real | The correction plan is committed, indexed, checked, and has an explicit temporary/sunset contract. | VAP-0 measurement and VAP-1 correctness work may be recorded against a stable authority. |
 | B — Planning inputs are truthful | TC-3 invariant binding, TC-6 fail-closed specialized route ownership, and TC-7 diff-scope semantics are closed with focused negative evidence. | VAP-2 and VAP-3 shadow planning may proceed. |
-| C — Correction program is closed | TC-10 exact-source review and truthful C40 disposition are complete. | VAP-4 through VAP-7 executor, certificate, parallel-canary, and cutover work may become release-authority candidates. |
+| C — Correction program is closed | Complete locally: TC-10 exact-source review is green and C40 is truthfully incomplete with named blockers; protected integration is not claimed. | Local VAP-4 through VAP-7 implementation may proceed, but release-authority candidacy still requires protected exact-source evidence and its normal authorization. |
 
 Do not bypass Gate B by teaching the planner to execute incomplete route metadata faster. Do not bypass Gate C by replacing `check:functional` before correction-scope parity is proven.
 

@@ -3,6 +3,7 @@
 - **Document role:** Temporary active execution authority for the post-Verdant/Pale TearBench correction sequence. It blocks broader TearBench development only where a listed correction is a prerequisite.
 - **Owner:** TearBench current correction owner
 - **Status:** Active
+- **Current disposition:** Correction-complete locally; C40 incomplete; protected integration not claimed. Keep this temporary plan active until its separately checked retirement transaction.
 - **Baseline:** Protected game `main` at `9e7d6a701ca0b992c8d78cccc2af329d698778c0`, audited 2026-08-30.
 - **Closure condition:** TC-1 through TC-10 satisfy their exact exit gates on one clean protected source identity, the final post-review finds no unresolved correction-scope defect, and C40 truthfully records either a valid release certificate or its remaining blockers without overstating completion.
 - **Retirement:** After closure is reconciled into the master handoff, program charter, alignment plan, and plan indexes, move this document to completed history in a separate atomic documentation change. Do not leave two active sequencing authorities for the same corrections.
@@ -66,7 +67,7 @@ runtime authority.
 | 7 | TC-7 — Diff-scoped capability reporting | Complete | TC-6 |
 | 8 | TC-8 — Program-document reconciliation | Complete | TC-1 through TC-7 |
 | 9 | TC-9 — Canonical Pale preview scenarios | Complete | TC-3, TC-5, TC-6 |
-| 10 | TC-10 — Exact-commit post-review and C40 truth | Not started | TC-1 through TC-9 |
+| 10 | TC-10 — Exact-commit post-review and C40 truth | Complete locally; C40 incomplete | TC-1 through TC-9 |
 
 ### Known audit inputs that must not be dropped
 
@@ -444,17 +445,17 @@ and this plan's no-drift table.
 
 ### Checklist
 
-- [ ] Re-resolve current protected `origin/main`; record source SHA, clean state, fingerprint, and intended diff.
-- [ ] Verify every prior checkpoint checkbox against implementation and fresh evidence rather than prose.
-- [ ] Run the focused correction gates first and fix any owner-specific failure.
-- [ ] Run `pnpm check` once on the exact final intended clean commit.
-- [ ] Run the current C40 release-certificate command from the C40 execution guide only after the repository gate passes.
-- [ ] Verify certificate source/build/artifact identity and every required current-game correction input.
-- [ ] Treat any unresolved reduced C29/C30 gameplay path, invariant/event-provenance defect, stale dashboard claim, or umbrella-status gap listed above as a named blocker rather than silently excluding it.
-- [ ] If broader C40 requirements remain incomplete, record the exact blockers and keep C40 incomplete; this correction plan cannot waive them.
-- [ ] Perform an independent adversarial post-review of the final diff, artifacts, claims, and plan states.
-- [ ] Reopen the owning checkpoint for every finding; create a numbered corrective sub-checkpoint only when the finding does not fit an existing owner.
-- [ ] After every corrective change, treat the prior SHA, full gate, artifact identity, and certificate as invalid; re-resolve the exact clean source, rerun focused evidence, rerun `pnpm check`, rerun the C40 certificate command, and repeat post-review.
+- [x] Re-resolve current protected `origin/main`; record source SHA, clean state, fingerprint, and intended diff.
+- [x] Verify every prior checkpoint checkbox against implementation and fresh evidence rather than prose.
+- [x] Run the focused correction gates first and fix any owner-specific failure.
+- [x] Run `pnpm check` once on the exact final intended clean commit.
+- [x] Run the current C40 release-certificate command from the C40 execution guide only after the repository gate passes.
+- [x] Verify certificate source/build/artifact identity and every required current-game correction input.
+- [x] Treat any unresolved reduced C29/C30 gameplay path, invariant/event-provenance defect, stale dashboard claim, or umbrella-status gap listed above as a named blocker rather than silently excluding it.
+- [x] If broader C40 requirements remain incomplete, record the exact blockers and keep C40 incomplete; this correction plan cannot waive them.
+- [x] Perform an independent adversarial post-review of the final diff, artifacts, claims, and plan states.
+- [x] Reopen the owning checkpoint for every finding; create a numbered corrective sub-checkpoint only when the finding does not fit an existing owner.
+- [x] After every corrective change, treat the prior SHA, full gate, artifact identity, and certificate as invalid; re-resolve the exact clean source, rerun focused evidence, rerun `pnpm check`, rerun the C40 certificate command, and repeat post-review.
 
 **Exit:** All correction-scope findings are closed on the exact reviewed source.
 C40 is marked complete only if the actual end-to-end certificate passes every
@@ -486,7 +487,7 @@ commit alone is insufficient.
 | TC-7 | `7ec9509e6427c1498abc99d543306f0959ff12dc` + `244db27` + `96ad620` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-7_DIFF_SCOPED_CAPABILITY_REPORTING.md`; selector/report/reuse negatives, 7 TypeScript projection/certification tests, typecheck, syntax, docs, terminology, and diff gates | N/A | Narrow-versus-broad, worktree, route-digest, legacy-format, and same-source/different-scope reuse negatives passed; exact-commit re-review passed; no protected integration claimed | Complete |
 | TC-8 | `52cb587d1ac2266f0e5549fcea3fa1d1dcac0fdf` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-8_PROGRAM_DOCUMENT_RECONCILIATION.md`; 15 docs authority tests, docs, requirements, terminology, syntax, and diff gates | N/A | Exact receipt chain and conservative current-state semantics independently reviewed green; production attributable, G7 open, C40 incomplete; no protected integration claimed | Complete |
 | TC-9 | `3f5787047892a1df48cfdbbed36919ca6e4c546f` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-9_CANONICAL_PALE_PREVIEW_SCENARIOS.md`; 46 Pale unit tests, 14 runner tests, 35 selector tests, 5 snapshot tests, typecheck, syntax, and diff gates | Ten canonical per-ID live State Forge runs passed with exact horizons and zero failures; Rimehound, variant, and White Hart browser journeys passed as complementary evidence | Multiple fail-closed and provenance blockers were corrected; final exact-commit re-review passed; Pale remains unpublished and no protected integration is claimed | Complete |
-| TC-10 | — | `pnpm check` | Required by certificate | — | Not started |
+| TC-10 | `def8b014c6e07e3689ab49db77c0804b1a232292` + `ee8a6aa976eb38e126c5208f8264477c74f48f27` (implementation; final closure identity is receipt-bound) | `docs/checkpoints/tearbench-current-corrections/TC-10_EXACT_COMMIT_C40_TRUTH.md`; nine uniquely owned focused receipts plus one exact `pnpm check` receipt | Existing current browser/backend gates are retained by `pnpm check`; C40 evidence families remain incomplete | Repeated adversarial review closed six integrity gaps and one CLI compatibility regression; exact-commit re-review passed | Correction complete locally; C40 incomplete; protected integration not claimed |
 
 ## 16. Agent handoff contract
 
