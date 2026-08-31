@@ -926,26 +926,28 @@ function gitCleanHead() {
   return { commit: source.revision, source, worktreeFingerprint: source.worktreeFingerprint };
 }
 
-function receiptPathFor(id) {
+function receiptPathFor(id, artifact) {
   if (!/^[a-z0-9][a-z0-9._-]*$/iu.test(id)) throw new TypeError("evidence receipt ID must be a safe non-empty slug");
-  return resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`);
+  return resolve(artifact ?? resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`));
 }
 
 async function recordEvidenceReceipt() {
-  const usage = "usage: pnpm tearbench evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] -- <explicit command>";
+  const usage = "usage: pnpm tearbench evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>";
   let id;
   let correctionId;
   let explicitSubject;
+  let receiptArtifact;
   let cursor = 4;
   while (cursor < process.argv.length) {
     const argument = process.argv[cursor];
     if (argument === "--") { cursor += 1; break; }
-    if (argument === "--id" || argument === "--correction" || argument === "--subject") {
+    if (argument === "--id" || argument === "--correction" || argument === "--subject" || argument === "--artifact") {
       const value = process.argv[cursor + 1];
       if (!value || value === "--") throw new TypeError(usage);
       if (argument === "--id") id = value;
       else if (argument === "--correction") correctionId = value;
-      else explicitSubject = value;
+      else if (argument === "--subject") explicitSubject = value;
+      else receiptArtifact = value;
       cursor += 2;
       continue;
     }
@@ -985,14 +987,14 @@ async function recordEvidenceReceipt() {
     const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
       commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
       status: "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: `${result.stderr ?? ""}\nsubject unavailable: ${detail}` };
-    const output = await prepareWorkspaceOutput(receiptPathFor(id), "artifacts/tearbench/receipts/", "evidence receipt");
+    const output = await prepareWorkspaceOutput(receiptPathFor(id, receiptArtifact), "artifacts/tearbench/receipts/", "evidence receipt");
     await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
     console.log(`FAIL ${id}`); console.log(`receipt: ${output.absolute}`); process.exitCode = 1; return;
   }
   const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
     commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
     status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", subject };
-  const output = await prepareWorkspaceOutput(receiptPathFor(id), "artifacts/tearbench/receipts/", "evidence receipt");
+  const output = await prepareWorkspaceOutput(receiptPathFor(id, receiptArtifact), "artifacts/tearbench/receipts/", "evidence receipt");
   await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
   console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${output.absolute}`);
   if (receipt.status !== "passed") process.exitCode = 1;
@@ -1724,7 +1726,7 @@ try {
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {
-    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
+    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));

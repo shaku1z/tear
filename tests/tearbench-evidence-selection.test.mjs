@@ -562,16 +562,16 @@ test("diff scope canonicalization deduplicates and sorts changed files", () => {
 });
 
 test("dirty development evidence receipts remain bound to the executed source", () => {
-  const artifact = join(temporaryRoot, `receipt-${String(artifactIndex++)}.json`);
+  const artifact = join(root, "artifacts", "tearbench", "receipts", `identity-receipt-${String(artifactIndex++)}.json`);
   const result = spawnSync(process.execPath, [script, "evidence", "record", "--id", "identity-receipt-test",
-    "--subject", "package.json", "--artifact", artifact, "--", "node", "--version"],
+    "--artifact", artifact, "--", "node", "--version"],
   { cwd: root, encoding: "utf8" });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   const receipt = JSON.parse(readFileSync(artifact, "utf8"));
   assert.equal(receipt.status, "passed");
   assert.equal(receipt.commit, receipt.source.revision);
   assert.equal(receipt.worktreeFingerprint, receipt.source.worktreeFingerprint);
-  assert.equal(receipt.scope.subject, "package.json");
+  assert.match(receipt.scope.subject, /^artifacts\/tearbench\/generated\/receipt-subjects\/identity-receipt-test\.json$/u);
   assert.equal(receipt.scope.id, receipt.id);
   assert.match(receipt.source.fingerprint, /^[0-9a-f]{64}$/u);
 });
