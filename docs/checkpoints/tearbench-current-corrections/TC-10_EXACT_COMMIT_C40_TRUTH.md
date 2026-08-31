@@ -15,7 +15,8 @@ reviewed at local commits `def8b014c6e07e3689ab49db77c0804b1a232292`
 and `ee8a6aa976eb38e126c5208f8264477c74f48f27`. Full-gate corrections were
 reviewed at `f8a17e065a47571448ced4d378ce2d4b123509e6`,
 `2500c03b48a9403395eb619fe545c082b28eac81`, and
-`94e5336d2801ea2e9da500a7d6d1758442045b35`; protected integration is not
+`94e5336d2801ea2e9da500a7d6d1758442045b35`. The broad-gate authority
+correction is `96fc039a975af99f8efbf089bc83f5ad8e36f106`; protected integration is not
 claimed. The intended local diff is TC-1 through TC-10 plus the verification
 acceleration authority and VAP-0 baseline already recorded by this branch.
 
@@ -81,6 +82,16 @@ receipts could have been resubmitted as current evidence, and one simplified
 variant guard could skip rehydration when serialized behavior was missing. A
 last contract review also aligned explicit `--artifact` production with the
 canonical `<id>.json` path required by both composers and the verifier.
+
+The next retained `pnpm check` attempt passed workspace authority, typecheck,
+lint, architecture, preservation, and 1,953 unit tests before two stale tests
+failed. One asserted the pre-TC-7 Source route shape without its required
+specialized owner, scenario, and reduced-backend disposition. The other still
+forbade Rimehound canonical evidence even though TC-9 deliberately promoted
+the unpublished Rimehound/Aurora scenario. Commit
+`96fc039a975af99f8efbf089bc83f5ad8e36f106` updates only those assertions to
+enforce the current route and non-publishable Pale contracts. The failed
+attempt remains non-admissible retry history.
 
 The final re-review of `94e5336d2801ea2e9da500a7d6d1758442045b35`
 returned PASS. The replacement exact-source focused and full-check receipts are
