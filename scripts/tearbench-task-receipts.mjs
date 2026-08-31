@@ -76,6 +76,11 @@ function protectedOrigin(origin) {
     && typeof origin.job === "string" && origin.job.length > 0
     && Number.isSafeInteger(origin.attempt) && origin.attempt > 0;
 }
+function sameProtectedRun(left, right) {
+  return protectedOrigin(left) && protectedOrigin(right)
+    && left.kind === right.kind && left.repository === right.repository && left.workflow === right.workflow
+    && left.runId === right.runId && left.attempt === right.attempt;
+}
 
 export function taskAttemptPath(value) {
   const { missionId, attemptNumber, executionKey } = value;
@@ -255,7 +260,7 @@ function verifyReceipt(receipt, plan, task, expectedOrigin, artifactBytes, build
   if (RELEASE_PROFILES.has(plan.profileId)) {
     if (receipt.source?.state !== "clean") errors.push(`${label} release source is dirty`);
     if (receipt.authority !== "protected-ci" || receipt.canonicalReleaseAuthority !== true) errors.push(`${label} is below protected release authority`);
-    if (!protectedOrigin(receipt.origin) || !same(receipt.origin, expectedOrigin)) errors.push(`${label} protected origin is forged or mismatched`);
+    if (!sameProtectedRun(receipt.origin, expectedOrigin)) errors.push(`${label} protected origin is forged or mismatched`);
   }
   if (!['passed', 'failed'].includes(receipt.result?.status)
     || (receipt.result?.status === "passed") !== (receipt.result?.exitCode === 0)) errors.push(`${label} result is invalid`);

@@ -3889,8 +3889,7 @@
       "browser.test-browser-crazygames-iframe",
       "browser.test-pwa",
       "build.test-standalone",
-      "browser.test-browser-performance",
-      "certify.release"
+      "browser.test-browser-performance"
     ],
     "deploy.dry-run": [
       "build.standalone",

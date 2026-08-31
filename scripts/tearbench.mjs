@@ -1072,7 +1072,7 @@ async function writeShadowPlan(explain = false) {
     toolchain: Object.freeze({ node: process.version, pnpm: process.env.npm_config_user_agent ?? packageSource.packageManager,
       playwright: packageSource.devDependencies?.playwright ?? packageSource.dependencies?.playwright ?? "unknown" }),
     environment: Object.freeze({ platform: process.platform, arch: process.arch,
-      runner: process.env.RUNNER_NAME ?? "local", runnerImage: process.env.ImageOS ?? "local" }),
+      runnerClass: process.env.RUNNER_ENVIRONMENT ?? "local", runnerImage: process.env.ImageOS ?? "local" }),
   });
   const requestedRevision = option("--revision");
   if (requestedRevision !== undefined) {

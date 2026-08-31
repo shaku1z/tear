@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { createProviderArtifactReceipt } from "./tearbench-build-artifact.mjs";
+import { receiptSha256 } from "./tearbench-task-receipts.mjs";
 
 const usage = "usage: node scripts/record-build-provider-artifact.mjs --records path,path --output path --artifact-id id --artifact-digest digest --artifact-url url";
 const allowed = new Set(["--records", "--output", "--artifact-id", "--artifact-digest", "--artifact-url"]), values = {};
@@ -23,8 +23,9 @@ for (const path of recordPaths) {
     artifactDigest: values["--artifact-digest"], artifactUrl: values["--artifact-url"], repository, runId }));
 }
 const unsigned = { format: "tear-build-provider-bundle", schemaVersion: 1, repository, runId,
-  artifactId: values["--artifact-id"], artifactDigest: values["--artifact-digest"], receipts };
-const bundle = { ...unsigned, bundleDigest: createHash("sha256").update(JSON.stringify(unsigned)).digest("hex") };
+  artifactId: values["--artifact-id"], artifactDigest: values["--artifact-digest"],
+  artifactUrl: values["--artifact-url"], receipts };
+const bundle = { ...unsigned, bundleDigest: receiptSha256(unsigned) };
 const output = resolve(values["--output"]); await mkdir(dirname(output), { recursive: true });
 await writeFile(output, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
 console.log(`PASS provider artifact receipt: ${bundle.artifactId} ${bundle.artifactDigest} (${String(receipts.length)} build identities)`);

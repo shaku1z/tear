@@ -254,7 +254,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 | VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Complete locally; protected integration not claimed |
 | VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Complete locally; protected integration not claimed |
 | VAP-5 | Build once and exact artifact fanout | VAP-4 | Complete locally; protected integration not claimed |
-| VAP-6 | Bounded parallel CI canary | VAP-5 | Not started |
+| VAP-6 | Bounded parallel CI canary | VAP-5 | Local canary implementation complete; protected runs pending |
 | VAP-7 | Stable required-gate cutover | VAP-6 | Not started |
 | VAP-8 | TearSkills and Luna evidence protocol | VAP-4, VAP-7 | Not started |
 | VAP-9 | Wiki exact-artifact promotion | VAP-7, separate wiki authorization | Not started |
@@ -411,17 +411,17 @@ proof. Protected integration remains separately authorized.
 
 ### Checklist
 
-- [ ] Keep existing plain Node/Playwright browser commands unchanged for the first canary.
-- [ ] Generate a static or deterministic dynamic matrix from the exact plan.
-- [ ] Start with four browser shards and a bounded unit/headless matrix.
-- [ ] Use separate runner jobs so fixed local ports and process state cannot collide.
-- [ ] Set matrix fail-fast off so the certifier receives complete failure evidence.
-- [ ] Upload uniquely named receipts/artifacts even after task failure.
-- [ ] Run the aggregate certifier after all task jobs, including failed jobs, unless the workflow was explicitly cancelled.
+- [x] Keep existing plain Node/Playwright browser commands unchanged for the first canary.
+- [x] Generate a static or deterministic dynamic matrix from the exact plan.
+- [x] Start with four browser shards and a bounded unit/headless matrix.
+- [x] Use separate runner jobs so fixed local ports and process state cannot collide.
+- [x] Set matrix fail-fast off so the certifier receives complete failure evidence.
+- [x] Upload uniquely named receipts/artifacts even after task failure.
+- [x] Run the aggregate certifier after all task jobs, including failed jobs, unless the workflow was explicitly cancelled.
 - [ ] Compare serial and parallel task/claim sets and results for the same source/build identity.
 - [ ] Measure runner queue time, setup/install time, shard balance, critical path, total runner minutes, and wall time.
 - [ ] Tune shard packing from robust historical durations; freeze the shard plan in the plan artifact.
-- [ ] Do not use high local worker counts or native Playwright sharding yet.
+- [x] Do not use high local worker counts or native Playwright sharding yet.
 
 **Focused proof:** A non-required protected canary whose receipts prove exact task parity with the serial authority, including a planted failed shard and successful aggregate rejection.
 

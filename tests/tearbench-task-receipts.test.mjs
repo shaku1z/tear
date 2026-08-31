@@ -104,6 +104,10 @@ test("local and forged protected origins remain below release authority", () => 
   assert.equal(certify([local, receipt("task.b")]).status, "rejected");
   const forged = structuredClone(receipt("task.a")); forged.origin.runId = "999";
   assert.equal(certify([resign(forged), receipt("task.b")]).status, "rejected");
+  const siblingJob = receipt("task.a", { origin: { ...origin, job: "browser-2" } });
+  assert.equal(certify([siblingJob, receipt("task.b")]).status, "certified");
+  const siblingRun = receipt("task.a", { origin: { ...origin, job: "browser-2", attempt: 2 } });
+  assert.equal(certify([siblingRun, receipt("task.b")]).status, "rejected");
 });
 
 test("failed and authorized passing attempts are retained as recovered-flaky; hidden or failed retries reject", () => {

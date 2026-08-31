@@ -115,7 +115,7 @@ function toolchainBinding() {
     playwright: packageSource.devDependencies?.playwright ?? packageSource.dependencies?.playwright ?? "unknown" });
 }
 function environmentBinding(task) {
-  return Object.freeze({ platform: platform(), arch: arch(), runner: process.env.RUNNER_NAME ?? "local",
+  return Object.freeze({ platform: platform(), arch: arch(), runnerClass: process.env.RUNNER_ENVIRONMENT ?? "local",
     runnerImage: process.env.ImageOS ?? "local", resourceClass: task.resourceClass, resourceKeys: [...task.resourceKeys].sort() });
 }
 async function buildBinding(requirement, plan) {
@@ -167,7 +167,7 @@ async function producedBuildAttestations(requirement, plan) {
   }
   return Object.freeze(produced);
 }
-export async function executePlanTask({ planPath, taskId, missionId, attemptNumber }) {
+export async function executePlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId }) {
   const planInput = await workspaceInput(planPath, "task plan");
   const plan = JSON.parse(await readFile(planInput.absolute, "utf8"));
   const task = registry.tasks.find((entry) => entry.taskId === taskId);
@@ -201,7 +201,11 @@ export async function executePlanTask({ planPath, taskId, missionId, attemptNumb
     if (previous.stored !== `artifacts/tearbench/missions/${missionId}/${taskId}/${matches[0]}`) throw new TypeError("prior task attempt uses a symlink or alias");
     retryOf = JSON.parse(await readFile(previous.absolute, "utf8")).receiptDigest;
   }
-  const startedAt = new Date().toISOString(), result = executeTask(task), finishedAt = new Date().toISOString();
+  const startedAt = new Date().toISOString();
+  const result = plantedFailureTaskId === taskId
+    ? { status: 97, stdout: "", stderr: `VAP-6 planted canary failure: ${taskId}\n` }
+    : executeTask(task);
+  const finishedAt = new Date().toISOString();
   const after = sourceIdentity();
   if (canonicalJson(before) !== canonicalJson(after)) throw new Error(`task ${taskId} changed its source identity`);
   const descriptors = [];
