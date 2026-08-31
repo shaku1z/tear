@@ -24,6 +24,8 @@
     "test:unit:without-preservation-corpus": "pnpm exec vitest run --exclude '**/ghost-preservation-corpus.test.ts' --no-file-parallelism",
     "test:endurance": "vitest run --config vitest.endurance.config.ts",
     "tearbench": "node scripts/tearbench.mjs",
+    "tearbench:run-task": "node scripts/tearbench-task-execution.mjs run-task",
+    "tearbench:certify-plan": "node scripts/tearbench-task-execution.mjs certify",
     "requirements:generate": "node scripts/tearbench-requirements.mjs generate",
     "requirements:check": "node scripts/tearbench-requirements.mjs check",
     "test:weapons": "pnpm exec vitest run tests/unit/final-five-weapon-roster.test.ts",
@@ -243,6 +245,7 @@
     "deploy": "pnpm deploy:dry-run",
     "deploy:dry-run": "pnpm build:standalone && pnpm check:cloudflare",
     "release:preflight": "node scripts/release-preflight.mjs",
+    "release:verify-plan-certificate": "node scripts/verify-plan-certificate.mjs",
     "release:verify-artifact": "node scripts/verify-release-artifact.mjs standalone"
   },
   "devDependencies": {

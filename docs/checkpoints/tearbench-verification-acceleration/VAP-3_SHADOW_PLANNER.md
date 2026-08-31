@@ -95,3 +95,8 @@ Complete locally. VAP-3 can explain every current release obligation and the
 selected evidence expansion without changing or invoking the gate. No protected
 check, workflow authority, branch rule, PR, push, merge, deployment, production
 approval, wiki repository, or publication was changed or claimed.
+
+VAP-4 subsequently added exact execution requirements and declared output
+bindings to the plan schema. The VAP-3 route corpus and all five historical
+protected canaries were rerun successfully; every regenerated plan is complete,
+self-bound, and retains zero missing or unexplained-extra obligations.

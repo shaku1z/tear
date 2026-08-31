@@ -27,6 +27,7 @@ const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
 const evidencePolicy = JSON.parse(await readFile(evidencePolicyPath, "utf8"));
 const taskRegistry = JSON.parse(await readFile(taskRegistryPath, "utf8"));
+const packageSource = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
 const publicationBoundary = JSON.parse(await readFile(resolve(root, "config", "campaign-publication-boundary.json"), "utf8"));
 const trackedPathsResult = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
 if (trackedPathsResult.status !== 0) throw new Error(`unable to validate evidence prefixes: ${trackedPathsResult.stderr || trackedPathsResult.stdout}`);
@@ -1034,6 +1035,12 @@ async function writeShadowPlan(explain = false) {
   const profileId = option("--profile");
   if (!["development", "pull-request", "protected-main", "release", "nightly", "endurance"].includes(profileId)) throw new TypeError(usage);
   const selection = evidenceForDiff(await changedFiles());
+  selection.executionRequirements = Object.freeze({
+    toolchain: Object.freeze({ node: process.version, pnpm: process.env.npm_config_user_agent ?? packageSource.packageManager,
+      playwright: packageSource.devDependencies?.playwright ?? packageSource.dependencies?.playwright ?? "unknown" }),
+    environment: Object.freeze({ platform: process.platform, arch: process.arch,
+      runner: process.env.RUNNER_NAME ?? "local", runnerImage: process.env.ImageOS ?? "local" }),
+  });
   const requestedRevision = option("--revision");
   if (requestedRevision !== undefined) {
     const revision = spawnSync("git", ["rev-parse", requestedRevision], { cwd: root, encoding: "utf8" });

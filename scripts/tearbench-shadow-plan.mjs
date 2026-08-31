@@ -244,6 +244,7 @@ export function createTearBenchShadowPlan({ registry, policy, selection, catalog
   const taskNodes = [...selected].sort().map((taskId) => {
     const task = tasks.get(taskId); return { taskId, taskDefinitionDigest: shadowTaskDefinitionDigest(task, registry.definitionPolicyVersion),
       resourceClass: task.resourceClass, resourceKeys: [...task.resourceKeys].sort(), timeoutMs: task.timeoutMs,
+      outputs: task.outputs.map((entry) => ({ ...entry })).sort((a, b) => a.outputId.localeCompare(b.outputId)),
       dependencies: task.dependencies.filter((entry) => selected.has(entry.taskId)).map((entry) => ({ taskId: entry.taskId, outputId: entry.outputId ?? null }))
         .sort((a, b) => `${a.taskId}:${a.outputId ?? ""}`.localeCompare(`${b.taskId}:${b.outputId ?? ""}`)),
       claimIds: [...task.claimIds].sort(), reasons: canonicalStrings(reasons.get(taskId) ?? ["dependency"]) };
@@ -265,6 +266,7 @@ export function createTearBenchShadowPlan({ registry, policy, selection, catalog
   const payload = {
     format: "tearbench-shadow-plan", schemaVersion: 1, executionMode: "shadow-only", authoritativeGateUnchanged: true,
     profileId, effectiveProfileId, source: selection.source, planningBasis: selection.planningBasis ?? { kind: "working-source" },
+    executionRequirements: selection.executionRequirements ?? { toolchain: { kind: "unspecified-shadow" }, environment: { kind: "unspecified-shadow" } },
     scope: selection.scope, scopeDigest: selection.scopeDigest,
     routeDefinitionDigest: selection.routeDefinitionDigest, taskRegistryDigest: shadowTaskRegistryDigest(registry),
     policyDigest: sha256(policy), plannerPolicyDigest: sha256(PLANNER_POLICY),

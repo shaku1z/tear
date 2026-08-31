@@ -252,7 +252,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 | VAP-1 | Correct route/matrix/certification semantics | Gate A | Complete locally; protected integration not claimed |
 | VAP-2 | Atomic task registry | Gate B | Complete locally; protected integration not claimed |
 | VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Complete locally; protected integration not claimed |
-| VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Not started |
+| VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Complete locally; protected integration not claimed |
 | VAP-5 | Build once and exact artifact fanout | VAP-4 | Not started |
 | VAP-6 | Bounded parallel CI canary | VAP-5 | Not started |
 | VAP-7 | Stable required-gate cutover | VAP-6 | Not started |
@@ -366,17 +366,17 @@ proof. Protected integration remains separately authorized.
 
 ### Checklist
 
-- [ ] Implement the execution-key and immutable attempt-receipt schemas.
-- [ ] Bind receipts to source, task definition, build, toolchain, environment, policy, backend, observation class, matrix cell, and claims.
-- [ ] Enforce clean-only receipt production for release-authority profiles while retaining explicitly non-canonical dirty development receipts.
-- [ ] Store receipts under mission/task/attempt-specific paths; remove last-writer shared-output ambiguity.
-- [ ] Preserve initial failure and retry receipts; expose `recovered-flaky` rather than hiding it.
-- [ ] Reject stale source/build/policy/toolchain/task-definition/scope reuse.
-- [ ] Require the certificate to derive complete claim/task coverage from the current plan.
-- [ ] Include receipt digests, missing/extra/unsupported/duplicate results, artifact digests, retry history, and plan digest.
-- [ ] Bind protected certificates to GitHub repository/workflow/run/job/attempt identity.
-- [ ] Keep local engineering receipts below protected CI authority.
-- [ ] Make game production require the valid protected certificate in addition to its existing exact-artifact verification before cutover.
+- [x] Implement the execution-key and immutable attempt-receipt schemas.
+- [x] Bind receipts to source, task definition, build, toolchain, environment, policy, backend, observation class, matrix cell, and claims.
+- [x] Enforce clean-only receipt production for release-authority profiles while retaining explicitly non-canonical dirty development receipts.
+- [x] Store receipts under mission/task/attempt-specific paths; remove last-writer shared-output ambiguity.
+- [x] Preserve initial failure and retry receipts; expose `recovered-flaky` rather than hiding it.
+- [x] Reject stale source/build/policy/toolchain/task-definition/scope reuse.
+- [x] Require the certificate to derive complete claim/task coverage from the current plan.
+- [x] Include receipt digests, missing/extra/unsupported/duplicate results, artifact digests, retry history, and plan digest.
+- [x] Bind protected certificates to GitHub repository/workflow/run/job/attempt identity.
+- [x] Keep local engineering receipts below protected CI authority.
+- [x] Make game production require the valid protected certificate in addition to its existing exact-artifact verification before cutover.
 
 **Focused proof:** Negative verifier tests for wrong task definition, wrong scope, generic matrix receipt, wrong backend, stale build, dirty release receipt, altered artifact, missing shard, forged protected origin, and hidden retry.
 
