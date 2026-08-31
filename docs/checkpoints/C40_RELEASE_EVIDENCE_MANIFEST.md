@@ -40,9 +40,11 @@ not change the source identity. When `--subject` is omitted, TearBench writes
 the captured command output as an ignored subject; this is the required form
 for the exact final `pnpm check`. An explicit subject must remain under ignored
 `artifacts/tearbench/` and exist after the command. The ignored receipt is
-written under `artifacts/tearbench/receipts/`; `--artifact` may choose a unique
-receipt filename only within that ignored store. A failed command still
-receives a failed receipt, but cannot satisfy the verifier.
+written as the canonical `artifacts/tearbench/receipts/<id>.json`; `--artifact`
+may state that exact path explicitly but cannot choose an alternate current
+filename. Prior attempts are archived only under `receipts/history/` and cannot
+enter a manifest. A failed command still receives a failed receipt, but cannot
+satisfy the verifier.
 
 Each TC-1 through TC-9 focused receipt must use its exact `--correction` owner.
 Focused receipt IDs are unique across checkpoints, so one passing command cannot

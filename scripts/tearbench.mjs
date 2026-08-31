@@ -973,6 +973,10 @@ async function recordEvidenceReceipt() {
   }
   if (id === undefined) throw new TypeError(usage);
   if (correctionId !== undefined && !REQUIRED_CORRECTION_IDS.includes(correctionId)) throw new TypeError("evidence correction owner must be TC-1 through TC-9");
+  if (receiptArtifact !== undefined
+    && workspaceRelativePath(resolve(receiptArtifact)) !== `artifacts/tearbench/receipts/${id}.json`) {
+    throw new TypeError("evidence receipt artifact must use the canonical artifacts/tearbench/receipts/<id>.json path");
+  }
   // pnpm may consume the conventional separator before Node receives argv;
   // the first non-receipt argument is therefore the command boundary.
   const commandParts = process.argv.slice(cursor);

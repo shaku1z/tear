@@ -562,8 +562,9 @@ test("diff scope canonicalization deduplicates and sorts changed files", () => {
 });
 
 test("dirty development evidence receipts remain bound to the executed source", () => {
-  const artifact = join(root, "artifacts", "tearbench", "receipts", `identity-receipt-${String(artifactIndex++)}.json`);
-  const result = spawnSync(process.execPath, [script, "evidence", "record", "--id", "identity-receipt-test",
+  const id = `identity-receipt-${String(artifactIndex++)}`;
+  const artifact = join(root, "artifacts", "tearbench", "receipts", `${id}.json`);
+  const result = spawnSync(process.execPath, [script, "evidence", "record", "--id", id,
     "--artifact", artifact, "--", "node", "--version"],
   { cwd: root, encoding: "utf8" });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
@@ -571,9 +572,17 @@ test("dirty development evidence receipts remain bound to the executed source", 
   assert.equal(receipt.status, "passed");
   assert.equal(receipt.commit, receipt.source.revision);
   assert.equal(receipt.worktreeFingerprint, receipt.source.worktreeFingerprint);
-  assert.match(receipt.scope.subject, /^artifacts\/tearbench\/generated\/receipt-subjects\/identity-receipt-test\.json$/u);
+  assert.equal(receipt.scope.subject, `artifacts/tearbench/generated/receipt-subjects/${id}.json`);
   assert.equal(receipt.scope.id, receipt.id);
   assert.match(receipt.source.fingerprint, /^[0-9a-f]{64}$/u);
+});
+
+test("evidence receipts reject noncanonical current artifact filenames", () => {
+  const result = spawnSync(process.execPath, [script, "evidence", "record", "--id", "canonical-receipt-test",
+    "--artifact", join(root, "artifacts", "tearbench", "receipts", "alternate-name.json"), "--", "node", "--version"],
+  { cwd: root, encoding: "utf8" });
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}\n${result.stderr}`, /receipt artifact must use the canonical/u);
 });
 
 test("served build identity refuses stale revision and source fingerprint", async () => {
