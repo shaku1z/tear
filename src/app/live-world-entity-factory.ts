@@ -3,6 +3,7 @@ import { createTearWorldLegacyEntityConstruction } from "../gameplay/runtime/tea
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
 import { makeCombatEnemy } from "./live-runtime-type-guards";
+import { applyVariant, findVariant } from "../gameplay/variants";
 
 export type LiveWorldEntityDependencies = Pick<GameRuntimeDependencies,
   "Player" | "Blade" | "Projectile" | "Charger" | "Ranged" | "Flyer" | "Bomber" | "Armored"
@@ -53,6 +54,18 @@ export function createLiveWorldEntityFactory(
       // Codec hydration clones `_mods`; restore the Echo host's live run link
       // only after the final staged run has been decoded.
       (actor as GameEnemy & { _mods?: GameRun["mods"] })._mods = mods;
+    },
+    finalizeEnemy(factoryId, actor): void {
+      const variantId = (actor as GameEnemy & { variant?: unknown }).variant;
+      if (typeof variantId !== "string" || variantId === "") return;
+      const variant = findVariant(factoryId, variantId);
+      if (variant === null) throw new RangeError(`unknown ${factoryId} variant during live State Forge restore: ${variantId}`);
+      const hydrated = actor as GameEnemy & { variantName?: unknown; behavior?: unknown };
+      // Complete snapshots already carry the source-applied behavior and
+      // stats. Reapplying a stat-scaling variant would drift their hashes;
+      // freshly forged payloads omit variantName and still need application.
+      if (hydrated.variantName === variant.name && typeof hydrated.behavior === "string" && hydrated.behavior !== "") return;
+      applyVariant(actor, variant);
     },
   });
 }

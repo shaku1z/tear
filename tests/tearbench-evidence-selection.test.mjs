@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
+import { isPassedTearBenchRunArtifact, materializedRunStatus } from "../scripts/tearbench-run-artifact.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const script = resolve(root, "scripts", "tearbench.mjs");
@@ -48,6 +49,32 @@ function mutatedRoutes(name, mutate) {
 }
 
 test.after(() => { rmSync(temporaryRoot, { recursive: true, force: true }); });
+
+test("materialized run status fails closed for failed or truncated artifacts", () => {
+  const cases = [
+    ["failed", "failed"],
+    ["truncated", "truncated"],
+    ["passed", "passed"],
+  ];
+  for (const [name, status] of cases) {
+    const artifact = join(temporaryRoot, `run-status-${name}.json`);
+    writeFileSync(artifact, JSON.stringify({ format: "tearbench-run", status }));
+    assert.equal(isPassedTearBenchRunArtifact(artifact), status === "passed", name);
+  }
+  const malformed = join(temporaryRoot, "run-status-malformed.json");
+  writeFileSync(malformed, "not-json");
+  assert.equal(isPassedTearBenchRunArtifact(malformed), false);
+});
+
+test("surgical artifacts pass only at their exact live horizon", () => {
+  const base = { failures: [], maxTicks: 240, surgical: true, terminated: false };
+  assert.equal(materializedRunStatus({ ...base, finalTick: 240, fixedTicks: 240 }), "passed");
+  assert.equal(materializedRunStatus({ ...base, finalTick: 239, fixedTicks: 239 }), "truncated");
+  assert.equal(materializedRunStatus({ ...base, finalTick: 240, fixedTicks: 239 }), "truncated");
+  assert.equal(materializedRunStatus({ ...base, finalTick: 239, fixedTicks: 239, terminated: true }), "truncated");
+  assert.equal(materializedRunStatus({ ...base, finalTick: 240, fixedTicks: 240, failures: [{ id: "wrong" }] }), "failed");
+  assert.equal(materializedRunStatus({ failures: [], finalTick: 240, maxTicks: 240, fixedTicks: 240, surgical: false, terminated: false }), "truncated");
+});
 
 test("documentation and governed plans select focused authority without gameplay builds", () => {
   for (const file of ["docs/example.md", "plans/current-alignment.md"]) {
@@ -212,6 +239,38 @@ test("canonical selection rejects exact start metadata instead of silently dropp
     assert.notEqual(result.status, 0);
     assert.match(`${result.stderr}\n${result.stdout}`, /exact .* state; use State Forge/u);
   }
+});
+
+test("Pale State Forge selection rejects detached descriptors, false claims, and ad hoc route proof", () => {
+  const mutations = [
+    ["pale-missing-descriptor", (entries) => { delete entries.find((entry) => entry.id === "pale-aurora-track-behavior").stateForge; }, /exact .* state; use State Forge/u],
+    ["pale-plain-live-substitute", (entries) => {
+      const entry = entries.find((candidate) => candidate.id === "pale-rime-runner-behavior");
+      delete entry.stateForge;
+      entry.start.stage = undefined;
+      entry.start.wave = undefined;
+      entry.evidence.command = "node tests/browser-pale-variants.js";
+    }, /source-owned gameplay subject|unknown current gameplay subject|State Forge/u],
+    ["pale-false-backend", (entries) => { entries.find((entry) => entry.id === "pale-prism-seer-behavior").backends = ["headless"]; }, /invalid State Forge descriptor|live-only/u],
+    ["pale-false-publication", (entries) => { entries.find((entry) => entry.id === "pale-snowfall-kite-behavior").tags.push("published"); }, /invalid State Forge publication/u],
+    ["pale-wrong-descriptor", (entries) => { entries.find((entry) => entry.id === "pale-white-hart-phase-2").stateForge.documentId = "pale-white-hart-phase-3"; }, /invalid State Forge descriptor/u],
+    ["pale-unknown-subject", (entries) => { entries.find((entry) => entry.id === "pale-hailcaster-behavior").subject.id = "pale-not-a-real-subject"; }, /unknown current gameplay subject/u],
+  ];
+  for (const [name, mutate, expected] of mutations) {
+    const result = rejected(["src/tearbench/canonical-scenarios.ts"], { catalog: mutatedCatalog(name, mutate) });
+    assert.notEqual(result.status, 0, name);
+    assert.match(`${result.stderr}\n${result.stdout}`, expected, name);
+  }
+  const missingRouteProof = rejected(["src/gameplay/environment/aurora-track.ts"], {
+    routes: mutatedRoutes("pale-empty-ad-hoc-route", (routes) => {
+      const route = routes.find((entry) => entry.id === "pale-aurora-rimehound");
+      route.requiredScenarios = [];
+      route.scenarios = [];
+      delete route.reducedDisposition;
+    }),
+  });
+  assert.notEqual(missingRouteProof.status, 0);
+  assert.match(`${missingRouteProof.stderr}\n${missingRouteProof.stdout}`, /no specialized scenario or reduced disposition/u);
 });
 
 test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {

@@ -184,6 +184,18 @@ async function validateLiveObservations(observations, assertions) {
   }
 }
 
+async function validateCanonicalStructuredAssertions(observations, assertions) {
+  if (assertions.length === 0) return;
+  const { createServer } = await import("vite");
+  const server = await createServer({ root, server: { middlewareMode: true } });
+  try {
+    const { assertCanonicalStructuredObservations } = await server.ssrLoadModule("/src/tearbench/canonical-structured-assertions.ts");
+    assertCanonicalStructuredObservations(assertions, observations);
+  } finally {
+    await server.close();
+  }
+}
+
 /** Resolve the source-owned canonical scenario so browser artifacts carry the
  * same effective assertions as the typed runner. */
 async function loadCanonicalScenario(entry) {
@@ -191,7 +203,11 @@ async function loadCanonicalScenario(entry) {
   const server = await createServer({ root, server: { middlewareMode: true } });
   try {
     const { materializeCanonicalScenario } = await server.ssrLoadModule("/src/tearbench/canonical-scenarios.ts");
-    return materializeCanonicalScenario(entry);
+    const { paleCanonicalDocumentForScenario } = await server.ssrLoadModule("/src/tearbench/pale-canonical-scenario-bridge.ts");
+    const { resolveTearSdl } = await server.ssrLoadModule("/src/tearbench/tearsdl.ts");
+    const scenario = materializeCanonicalScenario(entry);
+    const document = paleCanonicalDocumentForScenario(scenario.id);
+    return Object.freeze({ scenario, resolved: document === undefined ? undefined : resolveTearSdl(document) });
   } finally {
     await server.close();
   }
@@ -257,10 +273,17 @@ const runtimeScenario = {
 };
 
 async function main() {
-const canonicalScenario = await loadCanonicalScenario(catalogEntry);
+const { materializedRunStatus } = await import("../scripts/tearbench-run-artifact.mjs");
+const canonicalLaunch = await loadCanonicalScenario(catalogEntry);
+const canonicalScenario = canonicalLaunch.scenario;
+if (catalogEntry.stateForge !== undefined && seed !== canonicalScenario.seed) {
+  throw new RangeError(`canonical State Forge scenario ${scenarioId} requires its authoritative catalog seed ${canonicalScenario.seed}`);
+}
 Object.assign(runtimeScenario, {
   subject: canonicalScenario.subject,
   backends: canonicalScenario.backends,
+  stateClass: canonicalScenario.stateClass,
+  seed: canonicalScenario.seed,
   // The typed canonical materializer owns assertion applicability. Adding
   // privileged checks here would make ordinary non-boss/non-UI subjects lie.
   assertions: canonicalScenario.assertions,
@@ -272,11 +295,24 @@ await withJourney({
   colorScheme: presentation.colorScheme,
   reducedMotion: presentation.reducedMotion,
 }, async ({ page }) => {
-  const result = await page.evaluate(({ scenario, schedule, actions, snapshot }) => {
+  const result = await page.evaluate(({ scenario, resolved, schedule, actions, snapshot }) => {
     if (!window.__TEAR_RUNTIME_ENVIRONMENT__) throw new Error("test-only Tear runtime bridge was not installed");
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-    environment.reset(scenario);
-    const initialSnapshot = snapshot ?? environment.captureSnapshot(`c26-${scenario.id}-initial`, "recorded-canonical");
+    if (resolved !== undefined) {
+      const forged = environment.forgeResolvedScenario(resolved);
+      if (!forged.ok) throw new Error(`canonical State Forge launch failed for ${scenario.id}: ${forged.phase} ${JSON.stringify(forged.issues)}`);
+    } else {
+      environment.reset(scenario);
+    }
+    const expectedSnapshotClass = scenario.stateClass;
+    const expectedSnapshotSeed = resolved === undefined ? undefined : scenario.seed;
+    const initialSnapshot = snapshot ?? environment.captureSnapshot(
+      `c26-${scenario.id}-initial`, expectedSnapshotClass,
+      resolved === undefined ? undefined : expectedSnapshotSeed,
+    );
+    if (resolved !== undefined && (initialSnapshot.stateClass !== expectedSnapshotClass || initialSnapshot.seed !== expectedSnapshotSeed)) {
+      throw new Error(`initial snapshot provenance does not match canonical scenario ${scenario.id}`);
+    }
     if (snapshot) {
       const restored = environment.restoreSnapshot(snapshot);
       if (!restored.ok) throw new Error(`State Forge snapshot restore failed during materialization: ${restored.phase}`);
@@ -308,7 +344,7 @@ await withJourney({
       screenshot,
       initialSnapshot,
     };
-  }, { scenario: runtimeScenario, schedule: actionSchedule(submittedActions), actions: submittedActions, snapshot: requestedSnapshot });
+  }, { scenario: runtimeScenario, resolved: canonicalLaunch.resolved, schedule: actionSchedule(submittedActions), actions: submittedActions, snapshot: requestedSnapshot });
   materialized = result;
 });
 
@@ -369,6 +405,7 @@ const actionTrace = {
   actionsHash: sha256(canonicalJson(submittedActions)),
 };
 const failures = await validateLiveObservations(materialized.observations, runtimeScenario.assertions);
+await validateCanonicalStructuredAssertions(materialized.observations, catalogEntry.structuredAssertions ?? []);
 const artifact = {
   format: "tearbench-run",
   schemaVersion: 1,
@@ -380,7 +417,12 @@ const artifact = {
   build,
   resolvedScenario: runtimeScenario,
   seed,
-  status: failures.length > 0 ? "failed" : terminalTransition?.terminated ? "passed" : "truncated",
+  status: materializedRunStatus({
+    failures, finalTick: finalObservation.tick, maxTicks,
+    fixedTicks: materialized.metrics.fixedTicks,
+    surgical: runtimeScenario.stateClass === "surgical-valid" && catalogEntry.stateForge !== undefined,
+    terminated: terminalTransition?.terminated === true,
+  }),
   ticks: finalObservation.tick,
   actions: submittedActions,
   events: materialized.events,

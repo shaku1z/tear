@@ -87,7 +87,7 @@ function patch(base: TearSdlDocumentV1, id: string, state: Patch): TearSdlDocume
 export function forgeWaveState(
   base: TearSdlDocumentV1,
   wave: number,
-  enemies: readonly Readonly<{ kind: string; count: number; hpScale?: number }>[],
+  enemies: readonly Readonly<{ kind: string; count: number; hpScale?: number; variantId?: string }>[],
 ): TearSdlDocumentV1 {
   if (!Number.isSafeInteger(wave) || wave < 1) throw new RangeError("wave must be a positive safe integer");
   for (const entry of enemies) {

@@ -201,7 +201,7 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
   "environment.valid-references": (observation) => {
     const environment = observation.environment;
     if (environment === undefined) throw new Error("environment reference invariant requires structured environment observation");
-    const ids = new Set(["player", "blade", ...observation.entities.map((entry) => entry.id),
+    const ids = new Set(["player", "blade", observation.run.stage, ...observation.entities.map((entry) => entry.id),
       ...environment.fields.map((entry) => entry.id), ...environment.combatObjects.map((entry) => entry.id), ...environment.routes.map((entry) => entry.id)]);
     const invalid = environment.fields.find((entry) => entry.ownerId !== undefined && !ids.has(entry.ownerId))
       ?? environment.combatObjects.find((entry) => (entry.ownerId !== undefined && !ids.has(entry.ownerId)) || (entry.targetId !== undefined && !ids.has(entry.targetId)))

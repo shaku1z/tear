@@ -587,7 +587,7 @@ export function createLiveTearRuntimeEnvironment(
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },
-    captureSnapshot: (id: string, stateClass?: TearStateClass) => snapshots.capture(id, stateClass),
+    captureSnapshot: (id: string, stateClass?: TearStateClass, seed?: string) => snapshots.capture(id, stateClass, seed),
     restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
     forgeExitLaunch: (launch: StateForgeExitLaunch) => {
       if (launch.kind === "boss-finisher" && context.bossIntroActive()) {

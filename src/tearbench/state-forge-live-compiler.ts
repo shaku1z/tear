@@ -1,5 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
 import { stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
+import { findVariant } from "../gameplay/variants";
 import type { TearSnapshotV1 } from "./contracts";
 import type { TearSdlResolved } from "./tearsdl";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
@@ -22,12 +23,24 @@ function finite(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function enemyPayload(kind: string, id: string, index: number, position?: Readonly<{ x: number; y: number }>): Readonly<Record<string, unknown>> {
+function enemyPayload(
+  kind: string,
+  id: string,
+  index: number,
+  position?: Readonly<{ x: number; y: number }>,
+  variantId?: string,
+): Readonly<Record<string, unknown>> {
+  const variant = variantId === undefined ? undefined : findVariant(kind, variantId);
+  if (variantId !== undefined && variant === null) throw new RangeError(`unknown ${kind} variant in State Forge: ${variantId}`);
+  const variantProbe = variant === undefined ? undefined : { behavior: "", contactReach: 0, speedMult: 1, hp: 1, maxHp: 1 };
+  variant?.apply(variantProbe!);
   return Object.freeze({
     id,
     factoryId: kind,
     x: position?.x ?? 260 + (index % 8) * 130,
     y: position?.y ?? 620 - Math.floor(index / 8) * 80,
+    ...(variantId === undefined ? {} : { variantId }),
+    ...(variantProbe === undefined ? {} : { behavior: variantProbe.behavior }),
   });
 }
 
@@ -56,7 +69,9 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
       // The live combat identity owner accepts its canonical numeric namespace
       // only.  State Forge must stage real actors through that same namespace,
       // rather than smuggling descriptive test IDs into production restore.
-      payloads.push(enemyPayload(kind, `enemy:${String(payloads.length + 1)}`, payloads.length, position));
+      const variantId = typeof spec.variantId === "string" && spec.variantId.trim() !== ""
+        ? spec.variantId : undefined;
+      payloads.push(enemyPayload(kind, `enemy:${String(payloads.length + 1)}`, payloads.length, position, variantId));
     }
   }
   (snapshot.state as MutableRecord)["tear.enemy.v1"] = Object.freeze(payloads);
@@ -80,9 +95,25 @@ function patchEnvironment(snapshot: TearSnapshotV1, environment: unknown, expect
   hazard.routes = structuredClone(value.routes);
 }
 
-function patchExactStage(run: MutableRecord, stageId: string | undefined, wave: number): void {
+/** Rebase stage-owned temporal records to the forged fixed-tick origin. */
+function rebaseEnvironmentOrigin(snapshot: TearSnapshotV1): void {
+  const hazard = record(snapshot.state["tear.hazard.v1"], "hazard codec");
+  for (const key of ["fields", "combatObjects", "routes"] as const) {
+    const entries = hazard[key];
+    if (!Array.isArray(entries)) continue;
+    hazard[key] = entries.map((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return entry;
+      const value = { ...(entry as Record<string, unknown>) };
+      if (typeof value.stateTick === "number") value.stateTick = 0;
+      return value;
+    });
+  }
+}
+
+function patchExactStage(run: MutableRecord, stageId: string | undefined, wave: number, stateClass?: string): void {
   if (stageId === undefined) return;
-  const surface = run.mode === "playground" ? "playground" : "adventure";
+  const previewSurgical = stageId === "pale-traverse" && stateClass === "surgical-valid";
+  const surface = run.mode === "playground" || previewSurgical ? "playground" : "adventure";
   const stageIndex = stageRuntimeIndexForSurface(stageId as StageId, surface);
   if (stageIndex < 0) throw new RangeError(`resolved scenario stage does not exist: ${stageId}`);
   if (run.mode === "campaign" && Math.floor((wave - 1) / 10) !== stageIndex) {
@@ -113,9 +144,18 @@ export function compileResolvedTearSdlSnapshot(
   run.difficulty = resolved.scenario.start.difficulty;
   run.diff = resolved.scenario.start.difficulty;
   run.weaponId = resolved.scenario.start.weapon;
+  // The boss lookup used to obtain the production source snapshot may advance
+  // one fixed tick before the actor exists. A forged scenario is a fresh
+  // deterministic origin, so do not leak that lookup tick into the action
+  // envelope contract or the first submitted command will target the wrong
+  // fixed tick.
+  mutable.tick = 0;
+  run.tick = 0;
+  const worldClock = forged.state["tear.world.v1"];
+  if (worldClock !== undefined) record(worldClock, "world codec").clock = 0;
   const wave = resolved.scenario.start.wave ?? 1;
   run.wave = wave;
-  patchExactStage(run, resolved.scenario.start.stage, wave);
+  patchExactStage(run, resolved.scenario.start.stage, wave, resolved.document.stateClass);
   if (typeof state.playerHp === "number") player.hp = state.playerHp;
   if (typeof state.playerMaxHp === "number") player.maxHp = state.playerMaxHp;
   if (typeof state.playerHpRatio === "number") player.hp = Number(player.maxHp) * state.playerHpRatio;
@@ -136,6 +176,7 @@ export function compileResolvedTearSdlSnapshot(
       patchRecord(record(forged.state[key], `${key} codec`), value, `${key} patch`);
     }
   }
+  rebaseEnvironmentOrigin(forged);
   run.stateForgeScenario = Object.freeze({
     id: resolved.document.id,
     stateClass: resolved.document.stateClass,

@@ -12,7 +12,7 @@ declare const __TEAR_BUILD_SOURCE_FINGERPRINT__: string | undefined;
 declare const __TEAR_BUILD_TARGET__: string | undefined;
 
 export interface LiveRuntimeSnapshotController {
-  capture(id: string, stateClass?: TearStateClass): TearSnapshotV1;
+  capture(id: string, stateClass?: TearStateClass, seed?: string): TearSnapshotV1;
   restore(snapshot: TearSnapshotV1): TearLiveRestoreResult;
 }
 
@@ -126,14 +126,14 @@ export function createLiveRuntimeSnapshotController(
   const registry = createDefaultStateCodecRegistry();
   const factory = createLiveStateForgeRestoreFactory(registry);
   const controller: LiveRuntimeSnapshotController = {
-    capture(id: string, stateClass: TearStateClass = "recorded-canonical") {
+    capture(id: string, stateClass: TearStateClass = "recorded-canonical", seed?: string) {
       const tick = context.authoritative()?.tick ?? 0;
       const world = context.stateForge.capture();
       const contentHash = stableVerificationHash(ENTITY_KIND_REGISTRY.ids);
       const runtimeBuild = injectedBuildIdentity("test-standalone", contentHash);
       return captureLiveStateForgeSnapshot({
         id, tick, stateClass, stateForge: context.stateForge, world, rng: context.random(), registry,
-        seed: String(context.state.run()?.runSeed ?? "unknown"),
+        seed: seed ?? String(context.state.run()?.runSeed ?? "unknown"),
         observationClass: accessClass === "A" ? "privileged-diagnostic" : "structured-state",
         producer: "live-tear-runtime", target: runtimeBuild?.target ?? "test-standalone", contentHash: runtimeBuild?.contentHash ?? contentHash,
         visualHash: stableVerificationHash(context.screenshot()),

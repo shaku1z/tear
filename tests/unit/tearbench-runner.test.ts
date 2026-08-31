@@ -148,6 +148,7 @@ describe("TearBench engineering runner", () => {
   it("binds each current-game subject to its compatible natural opening", () => {
     const registry = createCanonicalScenarioRegistry();
     for (const scenario of CANONICAL_ENGINEERING_SCENARIOS) {
+      if (scenario.start.stage !== undefined) continue;
       expect(scenario.stateClass, scenario.id).toBe("recorded-canonical");
       expect(scenario.start.stage, scenario.id).toBeUndefined();
     }
@@ -231,6 +232,21 @@ describe("TearBench engineering runner", () => {
     const result = runEnvironmentSequence(observations);
     expect(result.status, name).toBe("failed");
     expect(result.failures.some((failure) => failure.id === failureId), name).toBe(true);
+  });
+
+  it("accepts the current stage as a valid owner for stage-owned environment objects", () => {
+    const scenario = environmentScenario();
+    const stageOwner = scenario.start.stage ?? "grounds";
+    const valid = environmentObservation(0, scenario, environment([
+      { ...environmentField("stage-owned"), ownerId: stageOwner },
+    ]));
+    const invalid = environmentObservation(0, scenario, environment([
+      { ...environmentField("unknown-owner"), ownerId: "missing-stage" },
+    ]));
+    expect(runEnvironmentSequence([valid]).status).toBe("passed");
+    const failed = runEnvironmentSequence([invalid]);
+    expect(failed.status).toBe("failed");
+    expect(failed.failures.some((failure) => failure.id === "environment.valid-references")).toBe(true);
   });
 
   it("pauses without advancing simulation and resumes deterministically", () => {

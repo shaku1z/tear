@@ -7,7 +7,8 @@ import {
 } from "./contracts";
 import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
   HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS, RUN_MODE_REGISTRY, WEAPON_REGISTRY,
-  ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY, ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY } from "./registries";
+  ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY, ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY,
+  INVARIANT_REGISTRY } from "./registries";
 import { TearScenarioRegistry } from "./scenario-registry";
 import scenarioCatalog from "./canonical-scenarios.json";
 import { BLOOM_WELL_TIMING } from "../gameplay/environment/bloom-well";
@@ -24,8 +25,12 @@ import {
 } from "../gameplay/stages";
 import { stageEnvironmentMechanicKinds } from "../gameplay/environment/stage-environment-definitions";
 import { effectiveInvariantIdsForScenario } from "./invariants";
+import { assertPaleCanonicalStateForgeDocument, paleCanonicalDocumentForScenario } from "./pale-canonical-scenario-bridge";
 
 type CanonicalCatalogEntry = (typeof scenarioCatalog)[number];
+type CanonicalCatalogEntryWithStructuredAssertions = CanonicalCatalogEntry & {
+  readonly structuredAssertions?: readonly string[];
+};
 
 const GENERIC_ENVIRONMENT_SUBJECT_IDS = new Set(["generic-field", "generic-combat-object"]);
 
@@ -78,17 +83,43 @@ function assertSourceOwnedContent(entry: CanonicalCatalogEntry): void {
       throw new RangeError(`generic environment scenario ${entry.id} cannot claim a specialized mechanic identity`);
     }
   }
+  const stateForge = entry.stateForge;
+  if (stateForge !== undefined) {
+    if (typeof stateForge !== "object" || stateForge === null || typeof stateForge.documentId !== "string"
+      || typeof entry.seed !== "string") {
+      throw new RangeError(`canonical scenario ${entry.id} has malformed State Forge descriptor`);
+    }
+    if (stateForge.documentId !== entry.id) {
+      throw new RangeError(`canonical scenario ${entry.id} State Forge document must use the canonical scenario ID`);
+    }
+    assertPaleCanonicalStateForgeDocument(stateForge.documentId, entry.seed, entry.stateClass);
+    const document = paleCanonicalDocumentForScenario(stateForge.documentId);
+    if (document === undefined) throw new RangeError(`canonical scenario ${entry.id} is missing its State Forge source document`);
+    for (const field of ["stage", "wave", "boss", "bossPhase"] as const) {
+      if (entry.start[field] !== document.start[field]) {
+        throw new RangeError(`canonical scenario ${entry.id} ${field} disagrees with its State Forge source document`);
+      }
+    }
+    if (entry.backends.length !== 1 || entry.backends[0] !== "live") {
+      throw new RangeError(`canonical State Forge scenario ${entry.id} must be live-only`);
+    }
+    const tags = new Set(entry.tags);
+    if (!tags.has("engineering-only") || !tags.has("unpublished-preview") || tags.has("published")
+      || tags.has("headless") || tags.has("replay") || tags.has("seek")) {
+      throw new RangeError(`canonical State Forge scenario ${entry.id} has an invalid publication/backend claim`);
+    }
+  }
 }
 
 export function materializeCanonicalScenario(
   entry: CanonicalCatalogEntry,
 ): TearCanonicalScenarioV1 {
   const surgicalFields = ["stage", "wave", "bossPhase"].filter((field) => Object.hasOwn(entry.start, field));
-  if (surgicalFields.length > 0) {
+  if (surgicalFields.length > 0 && entry.stateForge === undefined) {
     throw new RangeError(`canonical scenario ${entry.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
   }
   const unknownFields = Object.keys(entry.start).filter((field) =>
-    !["mode", "difficulty", "weapon", "boss"].includes(field));
+    !["mode", "difficulty", "weapon", "boss", "stage", "wave", "bossPhase"].includes(field));
   if (unknownFields.length > 0) {
     throw new RangeError(`canonical scenario ${entry.id} has unsupported start metadata: ${unknownFields.join(", ")}`);
   }
@@ -124,7 +155,10 @@ export function materializeCanonicalScenario(
   }
   const environmentBossContext = entry.subject.kind === "environment-field"
     || entry.subject.kind === "environment-combat-object";
-  if (boss !== undefined && !environmentBossContext && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {
+  const paleWhiteHartPhase = entry.subject.kind === "gameplay"
+    && entry.id.startsWith("pale-white-hart-phase-");
+  if (boss !== undefined && !environmentBossContext && !paleWhiteHartPhase
+    && (entry.subject.kind !== "boss" || entry.subject.id !== boss)) {
     throw new RangeError(`canonical boss scenario ${entry.id} requires its matching authoritative boss subject`);
   }
   if (boss !== undefined && (mode !== "bossonly" || entry.backends.includes("headless"))) {
@@ -143,13 +177,23 @@ export function materializeCanonicalScenario(
           ? Object.freeze({ kind: "environment-field", id: ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) })
           : Object.freeze({ kind: "environment-combat-object", id: ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.assert(entry.subject.id) });
   const backends = Object.freeze([...entry.backends]) as readonly [TearScenarioBackendV1, ...TearScenarioBackendV1[]];
-  const assertions = effectiveInvariantIdsForScenario({
+  const requestedAssertions = entry.assertions ?? [];
+  for (const assertion of requestedAssertions) INVARIANT_REGISTRY.assert(assertion);
+  const structuredAssertions = (entry as CanonicalCatalogEntryWithStructuredAssertions).structuredAssertions ?? [];
+  if (entry.stateForge !== undefined && (structuredAssertions.length === 0
+    || structuredAssertions.some((assertion) => typeof assertion !== "string" || assertion.trim() === ""))) {
+    throw new RangeError(`canonical State Forge scenario ${entry.id} requires subject-specific structured assertions`);
+  }
+  const assertions = [...new Set([
+    ...requestedAssertions,
+    ...effectiveInvariantIdsForScenario({
     subject,
     assertions: [
       "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
       "entity.unique-id", "entity.valid-owner", "player.valid-health", "replay.monotonic-time",
     ],
-  });
+    }),
+  ])] as readonly typeof INVARIANT_REGISTRY.ids[number][];
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT,
     kind: "scenario",
@@ -157,12 +201,22 @@ export function materializeCanonicalScenario(
     id: entry.id,
     version: 1,
     description: entry.description,
-    stateClass: "recorded-canonical",
+    stateClass: (entry.stateClass ?? "recorded-canonical") as TearCanonicalScenarioV1["stateClass"],
     executionClass: "engineering",
     subject,
     backends,
-    seed: "1001",
-    start: Object.freeze({ mode, difficulty, weapon, ...(boss === undefined ? {} : { boss }) }),
+    seed: entry.seed ?? "1001",
+    start: Object.freeze({
+      mode,
+      difficulty,
+      weapon,
+      ...(entry.stateForge === undefined ? {} : {
+        ...(entry.start.stage === undefined ? {} : { stage: entry.start.stage }),
+        ...(entry.start.wave === undefined ? {} : { wave: entry.start.wave }),
+        ...(entry.start.bossPhase === undefined ? {} : { bossPhase: entry.start.bossPhase }),
+      }),
+      ...(boss === undefined ? {} : { boss }),
+    }),
     maxTicks: entry.maxTicks,
     // Only advertise assertions whose inputs exist in every declared backend.
     assertions,

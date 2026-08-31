@@ -6,6 +6,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readSourceIdentitySync } from "./release-artifact.mjs";
 import { createReleaseCertificate, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
+import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BLOOM_WELL_LIFECYCLE_TICKS = 744;
@@ -169,6 +170,10 @@ function parseApprovedEvidenceCommand(command) {
   return parts.map((part) => {
     const tokens = part.split(/\s+/u);
     if (part === "pnpm build:test:standalone") return { kind: "build" };
+    if (tokens[0] === "pnpm" && tokens[1] === "tearbench" && tokens[2] === "run" && tokens.length === 4
+      && /^[a-z][a-z0-9-]*$/u.test(tokens[3])) {
+      return { kind: "canonical-live", scenarioId: tokens[3] };
+    }
     if (part === "node scripts/check-docs.mjs") {
       return { kind: "docs-check", file: safeRepoFile("scripts/check-docs.mjs", /^scripts\/check-docs\.mjs$/u, "docs authority checker") };
     }
@@ -190,8 +195,32 @@ function parseApprovedEvidenceCommand(command) {
 function validateScenarioMetadata(scenario) {
   const surgicalFields = ["stage", "wave", "bossPhase"].filter((field) =>
     scenario.start !== null && typeof scenario.start === "object" && Object.hasOwn(scenario.start, field));
-  if (surgicalFields.length > 0) {
+  const stateForge = scenario.stateForge;
+  if (surgicalFields.length > 0 && stateForge === undefined) {
     throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
+  }
+  if (stateForge !== undefined) {
+    if (stateForge === null || typeof stateForge !== "object" || Array.isArray(stateForge)
+      || stateForge.documentId !== scenario.id || typeof scenario.seed !== "string"
+      || !Array.isArray(scenario.backends) || scenario.backends.length !== 1 || scenario.backends[0] !== "live") {
+      throw new TypeError(`scenario ${scenario.id} has an invalid State Forge descriptor`);
+    }
+    if (scenario.start?.stage !== "pale-traverse" || !Number.isSafeInteger(scenario.start?.wave)) {
+      throw new RangeError(`scenario ${scenario.id} State Forge start must retain its exact Pale stage and wave coordinates`);
+    }
+    if (scenario.id.startsWith("pale-white-hart-phase-")
+      && (scenario.start?.boss !== "white-hart" || !["1", "2", "3"].includes(scenario.start?.bossPhase))) {
+      throw new RangeError(`scenario ${scenario.id} State Forge start must retain its exact White Hart phase coordinates`);
+    }
+    const tags = new Set(scenario.tags ?? []);
+    if (!tags.has("engineering-only") || !tags.has("unpublished-preview")
+      || ["published", "headless", "replay", "seek"].some((tag) => tags.has(tag))) {
+      throw new RangeError(`scenario ${scenario.id} has an invalid State Forge publication/backend claim`);
+    }
+    if (!Array.isArray(scenario.structuredAssertions) || scenario.structuredAssertions.length === 0
+      || scenario.structuredAssertions.some((assertion) => typeof assertion !== "string" || assertion.trim() === "")) {
+      throw new RangeError(`scenario ${scenario.id} requires subject-specific structured assertions`);
+    }
   }
   if (Object.hasOwn(scenario, "backends") && (!Array.isArray(scenario.backends) || scenario.backends.length === 0
     || scenario.backends.some((backend) => !["live", "headless"].includes(backend))
@@ -204,9 +233,14 @@ function validateScenarioMetadata(scenario) {
     || typeof subject.id !== "string" || subject.id.trim() === "") {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
+  if (stateForge === undefined && subject.kind === "gameplay" && subject.id.startsWith("pale-")) {
+    throw new RangeError(`source-owned Pale scenario ${scenario.id} requires its State Forge descriptor`);
+  }
   const isRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor"
     && scenario.start?.boss === "rootbound";
-  if (scenario.start?.boss !== undefined && !isRootboundGraft && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
+  const isPaleWhiteHartPhase = subject.kind === "gameplay" && scenario.id.startsWith("pale-white-hart-phase-");
+  if (scenario.start?.boss !== undefined && !isRootboundGraft && !isPaleWhiteHartPhase
+    && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
     throw new TypeError(`scenario ${scenario.id} boss start requires its matching authoritative boss subject`);
   }
   if (subject.kind === "gameplay") {
@@ -256,6 +290,10 @@ function validateScenarioMetadata(scenario) {
   if (typeof command !== "string") return;
   const proof = parseApprovedEvidenceCommand(command).find((entry) => entry.kind === "node");
   if (proof === undefined) return;
+  // Surgical State Forge scenarios are materialized by the typed live bridge;
+  // their complementary browser journeys intentionally begin from a natural
+  // UI setup and cannot prove the forged coordinates through source text.
+  if (stateForge !== undefined) return;
   const source = readFileSync(proof.file, "utf8");
   if (subject.kind === "gameplay"
     && relative(root, proof.file).replaceAll("\\", "/") === "tests/browser-current-gameplay-scenarios.js") {
@@ -302,7 +340,9 @@ function evidenceCommandsForScenario(scenario) {
   const testFiles = scenario.testFiles;
   return declaredBackends.map((backend) => {
     if (backend === "live" && typeof command === "string" && command.trim() !== "") {
-      parseApprovedEvidenceCommand(command);
+      const parsed = parseApprovedEvidenceCommand(command);
+      const mismatched = parsed.find((step) => step.kind === "canonical-live" && step.scenarioId !== scenario.id);
+      if (mismatched !== undefined) throw new RangeError(`scenario ${scenario.id} evidence command targets ${mismatched.scenarioId}`);
       return Object.freeze({ backend, command });
     }
     if (backend === "headless" && Array.isArray(testFiles) && testFiles.length > 0
@@ -668,6 +708,10 @@ function executeApprovedEvidence(command, state) {
       if (state.testStandaloneBuilt) { receipts.push({ kind: step.kind, status: "skipped", reason: "deduplicated test-standalone build" }); continue; }
       result = spawnSync(process.execPath, [resolve(root, "scripts", "build-target.mjs"), "test-standalone"], { cwd: root, encoding: "utf8" });
       if (result.status === 0) state.testStandaloneBuilt = true;
+    } else if (step.kind === "canonical-live") {
+      const pnpmEntry = process.env.npm_execpath;
+      if (!pnpmEntry) throw new Error("TearBench must be launched through pnpm so canonical live evidence can reuse the pinned package manager");
+      result = spawnSync(process.execPath, [pnpmEntry, "tearbench", "run", step.scenarioId], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "vitest") {
       result = spawnSync(process.execPath, [resolve(root, "node_modules", "vitest", "vitest.mjs"), "run", ...step.files], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "docs-check") {
@@ -988,9 +1032,12 @@ async function writeReleaseCertificate() {
 }
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
+  if (scenario.stateForge !== undefined && seed !== scenario.seed) {
+    throw new RangeError(`canonical State Forge scenario ${scenario.id} requires its authoritative catalog seed ${scenario.seed}`);
+  }
   const invocations = runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath);
   const passed = invocations.length === repeat && invocations.every((entry) => entry.status === 0)
-    && existsSync(artifactPath);
+    && existsSync(artifactPath) && isPassedTearBenchRunArtifact(artifactPath);
   if (!passed && !existsSync(artifactPath)) {
     const diagnostic = {
       format: "tearbench-run-materialization-diagnostic",
@@ -1394,7 +1441,7 @@ try {
     const id = process.argv[3];
     if (!id) throw new TypeError("usage: pnpm tearbench run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]");
     const scenario = scenarioById(id);
-    const seed = option("--seed", "1001");
+    const seed = option("--seed", scenario.stateForge === undefined ? "1001" : scenario.seed);
     const repeat = Number.parseInt(option("--repeat", "1"), 10);
     if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > 100) throw new RangeError("--repeat must be an integer from 1 through 100");
     const defaultArtifact = resolve(root, "artifacts", "tearbench", "runs", `${id}-${seed}.json`);
