@@ -34,6 +34,12 @@ type CanonicalCatalogEntryWithStructuredAssertions = CanonicalCatalogEntry & {
 
 const GENERIC_ENVIRONMENT_SUBJECT_IDS = new Set(["generic-field", "generic-combat-object"]);
 
+function stateForgeDocumentId(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const documentId: unknown = Reflect.get(value, "documentId");
+  return documentId;
+}
+
 function homeStageForBoss(bossId: string): StageId | undefined {
   const match = Object.entries(STAGE_BOSS_HOME).find(([, id]) => id === bossId);
   return match?.[0] as StageId | undefined;
@@ -85,15 +91,16 @@ function assertSourceOwnedContent(entry: CanonicalCatalogEntry): void {
   }
   const stateForge = entry.stateForge;
   if (stateForge !== undefined) {
-    if (typeof stateForge !== "object" || stateForge === null || typeof stateForge.documentId !== "string"
-      || typeof entry.seed !== "string") {
-      throw new RangeError(`canonical scenario ${entry.id} has malformed State Forge descriptor`);
+    const documentId = stateForgeDocumentId(stateForge);
+    const scenarioId: string = entry.id;
+    if (typeof documentId !== "string" || typeof entry.seed !== "string") {
+      throw new RangeError(`canonical scenario ${scenarioId} has malformed State Forge descriptor`);
     }
-    if (stateForge.documentId !== entry.id) {
-      throw new RangeError(`canonical scenario ${entry.id} State Forge document must use the canonical scenario ID`);
+    if (documentId !== entry.id) {
+      throw new RangeError(`canonical scenario ${scenarioId} State Forge document must use the canonical scenario ID`);
     }
-    assertPaleCanonicalStateForgeDocument(stateForge.documentId, entry.seed, entry.stateClass);
-    const document = paleCanonicalDocumentForScenario(stateForge.documentId);
+    assertPaleCanonicalStateForgeDocument(documentId, entry.seed, entry.stateClass);
+    const document = paleCanonicalDocumentForScenario(documentId);
     if (document === undefined) throw new RangeError(`canonical scenario ${entry.id} is missing its State Forge source document`);
     for (const field of ["stage", "wave", "boss", "bossPhase"] as const) {
       if (entry.start[field] !== document.start[field]) {
@@ -211,8 +218,8 @@ export function materializeCanonicalScenario(
       difficulty,
       weapon,
       ...(entry.stateForge === undefined ? {} : {
-        ...(entry.start.stage === undefined ? {} : { stage: entry.start.stage }),
-        ...(entry.start.wave === undefined ? {} : { wave: entry.start.wave }),
+        stage: entry.start.stage,
+        wave: entry.start.wave,
         ...(entry.start.bossPhase === undefined ? {} : { bossPhase: entry.start.bossPhase }),
       }),
       ...(boss === undefined ? {} : { boss }),

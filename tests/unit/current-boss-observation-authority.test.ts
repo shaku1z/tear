@@ -100,7 +100,7 @@ describe("current boss observation authority", () => {
     if (rootbound === undefined || bloom === undefined) throw new Error("canonical environment scenarios are incomplete");
     expect(CANONICAL_CONTENT_AUTHORITY.scenarios.find(({ id }) => id === rootbound.id)?.subject).toEqual(rootbound.subject);
     expect(() => {
-      const altered = { ...rootbound, subject: { kind: "environment-combat-object", id: "invented-mechanic" } } as typeof rootbound;
+      const altered = { ...rootbound, subject: { kind: "environment-combat-object", id: "invented-mechanic" } };
       // The canonical materializer is the source-derived boundary for subjects.
       materializeCanonicalScenario(altered);
     }).toThrow(/unknown environment combat-object scenario subject|source-owned subject tag/u);
@@ -139,7 +139,7 @@ describe("current boss observation authority", () => {
 
   it("rejects an injected boss-name projection that drifts from the production owner", () => {
     const staleNames = { ...BOSS_DISPLAY_NAMES, rootbound: "Rootbinder" };
-    expect(() => assertBossDisplayProjection(staleNames)).toThrow(/boss display drift/u);
+    expect(() => { assertBossDisplayProjection(staleNames); }).toThrow(/boss display drift/u);
     expect(BOSS_DEFINITIONS.find(({ id }) => id === "rootbound")?.name).toBe("The Rootbound");
   });
 });

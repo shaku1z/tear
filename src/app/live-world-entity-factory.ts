@@ -56,15 +56,14 @@ export function createLiveWorldEntityFactory(
       (actor as GameEnemy & { _mods?: GameRun["mods"] })._mods = mods;
     },
     finalizeEnemy(factoryId, actor): void {
-      const variantId = (actor as GameEnemy & { variant?: unknown }).variant;
+      const variantId = actor.variant;
       if (typeof variantId !== "string" || variantId === "") return;
       const variant = findVariant(factoryId, variantId);
       if (variant === null) throw new RangeError(`unknown ${factoryId} variant during live State Forge restore: ${variantId}`);
-      const hydrated = actor as GameEnemy & { variantName?: unknown; behavior?: unknown };
       // Complete snapshots already carry the source-applied behavior and
       // stats. Reapplying a stat-scaling variant would drift their hashes;
       // freshly forged payloads omit variantName and still need application.
-      if (hydrated.variantName === variant.name && typeof hydrated.behavior === "string" && hydrated.behavior !== "") return;
+      if (actor.variantName === variant.name && actor.behavior !== "") return;
       applyVariant(actor, variant);
     },
   });

@@ -138,7 +138,7 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
     if (!Number.isFinite(livingWaveEnemies) || livingWaveEnemies < 0) {
       throw new Error("wave completion requires finite source-owned diagnostic field livingWaveEnemies");
     }
-    return waveComplete === true && livingWaveEnemies > 0
+    return waveComplete && livingWaveEnemies > 0
       ? failure("wave.valid-completion", observation, "wave is complete while wave-owned enemies remain")
       : null;
   },
@@ -156,12 +156,13 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
   "ui.valid-focus": (observation) => {
     const diagnostics = requireDiagnosticField("ui.valid-focus", observation.diagnostics, "ui");
     const ui = requireDiagnosticField("ui.valid-focus", diagnostics.ui, "ui");
-    if (!("focusedId" in ui) || !Array.isArray(ui.focusableIds)) {
+    if (!Object.prototype.hasOwnProperty.call(ui, "focusedId") || !Array.isArray(ui.focusableIds)) {
       throw new Error("requested invariant ui.valid-focus requires complete source-owned focus diagnostics");
     }
-    return ui.focusedId !== undefined && !ui.focusableIds.includes(ui.focusedId)
-      ? failure("ui.valid-focus", observation, `UI focus points to non-focusable control ${ui.focusedId}`)
-      : null;
+    const focusedId = ui.focusedId;
+    return focusedId === undefined || ui.focusableIds.includes(focusedId)
+      ? null
+      : failure("ui.valid-focus", observation, `UI focus points to non-focusable control ${focusedId}`);
   },
   "runtime.pause-freezes-simulation": (observation, previous) => {
     if (previous === undefined || observation.diagnostics?.paused !== true) return null;
@@ -176,7 +177,7 @@ export const DEFAULT_INVARIANT_CHECKS: Readonly<Partial<Record<TearInvariantId, 
     if (!Number.isFinite(progressTick) || !Number.isFinite(limit) || limit < 0) {
       throw new Error("requested invariant runtime.no-softlock requires finite source-owned softlock diagnostics");
     }
-    return progressTick !== undefined && limit !== undefined && observation.tick - progressTick > limit
+    return observation.tick - progressTick > limit
       ? failure("runtime.no-softlock", observation, `no declared progress for ${String(observation.tick - progressTick)} ticks`)
       : null;
   },

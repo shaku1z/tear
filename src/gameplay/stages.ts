@@ -19,12 +19,16 @@ export const STAGE_IDS = Object.freeze([
 ] as const);
 export type StageId = typeof STAGE_IDS[number];
 
-type PublicationBoundary = {
+interface PublicationBoundary {
   readonly status: unknown;
   readonly rulesetVersion: unknown;
   readonly activeStageIds: unknown;
   readonly previewStageIds: unknown;
-};
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id: unknown): id is string => typeof id === "string");
+}
 
 function sameStageOrder(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((id, index) => id === right[index]);
@@ -39,9 +43,7 @@ function readCurrentPublicationBoundary(value: PublicationBoundary) {
   if (value.status !== "public" || value.rulesetVersion !== CURRENT_RULESET_VERSION) {
     throw new Error("current campaign publication boundary is not the public ruleset");
   }
-  if (!Array.isArray(value.activeStageIds) || !Array.isArray(value.previewStageIds)
-    || value.activeStageIds.some((id): id is string => typeof id !== "string")
-    || value.previewStageIds.some((id): id is string => typeof id !== "string")) {
+  if (!isStringArray(value.activeStageIds) || !isStringArray(value.previewStageIds)) {
     throw new TypeError("current campaign publication boundary stage IDs are invalid");
   }
   const activeStageIds = value.activeStageIds;
@@ -54,7 +56,7 @@ function readCurrentPublicationBoundary(value: PublicationBoundary) {
     || activeStageIds.includes("pale-traverse") || new Set(previewStageIds).size !== previewStageIds.length) {
     throw new Error("current campaign publication boundary must reserve Pale as the sole preview");
   }
-  const authoredIds = new Set(STAGE_IDS);
+  const authoredIds = new Set<string>(STAGE_IDS);
   if (activeStageIds.some((id) => !authoredIds.has(id)) || previewStageIds.some((id) => !authoredIds.has(id))) {
     throw new Error("current campaign publication boundary references an unknown authored stage");
   }

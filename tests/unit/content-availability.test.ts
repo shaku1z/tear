@@ -59,20 +59,20 @@ describe("published content availability", () => {
 
   it("fails when a stage/display projection is mutated away from its production owner", () => {
     const projected = { ...STAGE_DISPLAY_NAMES, grounds: "Stale Grounds" };
-    expect(() => assertStageAuthorityProjection({
+    expect(() => { assertStageAuthorityProjection({
       displayNames: projected, bossHomes: STAGE_BOSS_HOME, publication: STAGE_PUBLICATION_STATE,
-    })).toThrow(/stage display drift/u);
+    }); }).toThrow(/stage display drift/u);
   });
 
   it("fails when boss home or publication projections are mutated", () => {
     const wrongHome = { ...STAGE_BOSS_HOME, "verdant-sanctum": "white-hart" };
-    expect(() => assertStageAuthorityProjection({
+    expect(() => { assertStageAuthorityProjection({
       displayNames: STAGE_DISPLAY_NAMES, bossHomes: wrongHome, publication: STAGE_PUBLICATION_STATE,
-    })).toThrow(/boss home drift/u);
+    }); }).toThrow(/boss home drift/u);
 
     const wrongPublication = { ...STAGE_PUBLICATION_STATE, "pale-traverse": "published" as const };
-    expect(() => assertStageAuthorityProjection({
+    expect(() => { assertStageAuthorityProjection({
       displayNames: STAGE_DISPLAY_NAMES, bossHomes: STAGE_BOSS_HOME, publication: wrongPublication,
-    })).toThrow(/publication drift/u);
+    }); }).toThrow(/publication drift/u);
   });
 });

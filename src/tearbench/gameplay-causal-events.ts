@@ -49,10 +49,15 @@ export type TearGameplayCausalEventSource = "engine" | "derived";
 export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedGameplayEvent {
   switch (event.kind) {
     case "run": return {
-      type: event.transition === "started" ? "run.started" : event.transition === "paused" ? "run.paused"
-        : event.transition === "resumed" ? "run.resumed" : event.transition === "completed" ? "run.completed"
-          : event.transition === "defeated" ? "run.defeated" : event.transition === "abandoned" ? "run.abandoned"
-            : (() => { throw new RangeError(`unrecognized native run transition: ${String(event.transition)}`); })(),
+      type: (() => {
+        // Widen before runtime validation so malformed untyped host payloads
+        // remain fail-closed even though the public port is discriminated.
+        const transition: string = event.transition;
+        return transition === "started" ? "run.started" : transition === "paused" ? "run.paused"
+          : transition === "resumed" ? "run.resumed" : transition === "completed" ? "run.completed"
+            : transition === "defeated" ? "run.defeated" : transition === "abandoned" ? "run.abandoned"
+              : (() => { throw new RangeError(`unrecognized native run transition: ${transition}`); })();
+      })(),
       phase: event.transition === "started" || event.transition === "resumed"
         ? "pre-simulation" : "post-simulation-commit",
       payload: Object.freeze({
@@ -64,9 +69,9 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
     case "stage": {
       // Numeric legacy stage facts predate the explicit transition field and
       // remain a supported compatibility form for stage entry.
-      const transition = event.transition ?? "entered";
+      const transition: string = event.transition ?? "entered";
       if (transition !== "entered" && transition !== "exited") {
-        throw new RangeError(`unrecognized native stage transition: ${String(transition)}`);
+        throw new RangeError(`unrecognized native stage transition: ${transition}`);
       }
       return {
       type: transition === "exited" ? "stage.exited" : "stage.entered", phase: "wave-draft-and-state-transitions",
@@ -98,12 +103,13 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       payload: Object.freeze({ choiceId: event.choiceId, tier: event.tier, wave: event.wave }),
     };
     case "weapon": {
-      const type = event.event === "throw-launch" ? "blade.thrown"
-        : event.event === "catch" ? "blade.caught" : event.event === "throw-resolved" ? "blade.throw-resolved" : undefined;
-      if (type === undefined) throw new RangeError(`unrecognized native weapon event: ${String(event.event)}`);
+      const nativeEvent: string = event.event;
+      const type = nativeEvent === "throw-launch" ? "blade.thrown"
+        : nativeEvent === "catch" ? "blade.caught" : nativeEvent === "throw-resolved" ? "blade.throw-resolved" : undefined;
+      if (type === undefined) throw new RangeError(`unrecognized native weapon event: ${nativeEvent}`);
       return {
       type,
-      phase: event.event === "throw-launch" ? "player-and-blade" : "post-simulation-commit",
+      phase: nativeEvent === "throw-launch" ? "player-and-blade" : "post-simulation-commit",
       payload: Object.freeze({
         weaponId: event.weaponId, throwId: event.throwId, x: event.x, y: event.y,
         ...(event.damage === undefined ? {} : { damage: event.damage }),
@@ -111,15 +117,16 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       };
     }
     case "projectile": {
-      const type = event.event === "spawned" ? "projectile.spawned"
-        : event.event === "deflected" ? "projectile.deflected"
-          : event.event === "owner-changed" ? "projectile.owner-changed"
-            : event.event === "hit" ? "projectile.hit" : event.event === "expired" ? "projectile.expired" : undefined;
-      if (type === undefined) throw new RangeError(`unrecognized native projectile event: ${String(event.event)}`);
+      const nativeEvent: string = event.event;
+      const type = nativeEvent === "spawned" ? "projectile.spawned"
+        : nativeEvent === "deflected" ? "projectile.deflected"
+          : nativeEvent === "owner-changed" ? "projectile.owner-changed"
+            : nativeEvent === "hit" ? "projectile.hit" : nativeEvent === "expired" ? "projectile.expired" : undefined;
+      if (type === undefined) throw new RangeError(`unrecognized native projectile event: ${nativeEvent}`);
       return {
       type,
-      phase: event.event === "spawned" ? "wave-draft-and-state-transitions"
-        : event.event === "hit" || event.event === "expired" ? "deaths-and-rewards" : "player-and-blade",
+      phase: nativeEvent === "spawned" ? "wave-draft-and-state-transitions"
+        : nativeEvent === "hit" || nativeEvent === "expired" ? "deaths-and-rewards" : "player-and-blade",
       actorId: event.projectileId,
       payload: Object.freeze({
         x: event.x, y: event.y, vx: event.vx, vy: event.vy, owner: event.owner,
@@ -130,8 +137,9 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       };
     }
     case "world": {
-      if (event.event !== "void-rescue") {
-        throw new RangeError(`unrecognized native world event: ${String((event as { event?: unknown }).event)}`);
+      const nativeEvent: string = event.event;
+      if (nativeEvent !== "void-rescue") {
+        throw new RangeError(`unrecognized native world event: ${nativeEvent}`);
       }
       return {
       type: "world.void-rescue", phase: "post-simulation-commit",

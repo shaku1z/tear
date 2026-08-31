@@ -10,6 +10,7 @@ import {
   resolvePreservedRuntime,
   selectDiffAwareEvidence,
   TEAR_EVIDENCE_SELECTOR_AUTHORITY,
+  type EvidenceSelection,
   type EvidenceRoute,
 } from "../../src/tearbench/release-certification";
 
@@ -47,6 +48,19 @@ const routes: readonly EvidenceRoute[] = [{
   interactionMatrices: ["browser", "platform", "frame-rate"],
 }];
 
+function readStaticRoutes(path: string): EvidenceRoute[] {
+  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (!Array.isArray(parsed)) throw new Error("evidence route fixture must be an array");
+  return parsed.map((value): EvidenceRoute => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("evidence route fixture entry must be an object");
+    }
+    const route = { ...(value as Record<string, unknown>) };
+    delete route.scenarioSubjects;
+    return route as unknown as EvidenceRoute;
+  });
+}
+
 function commonSelection(selection: {
   changedFiles: readonly string[]; routes: readonly string[]; scenarios: readonly string[];
   graveyardCases: readonly string[]; journeyCheckpoints: readonly string[]; baseComparisons: readonly string[];
@@ -64,15 +78,14 @@ function executableProjection(changedFiles: readonly string[]) {
   const repositoryRoot = resolve(import.meta.dirname, "../..");
   const temporaryRoot = mkdtempSync(join(tmpdir(), "tearbench-selector-boundary-"));
   try {
-    const fixtureRoutes = JSON.parse(readFileSync(resolve(repositoryRoot, "src/tearbench/evidence-routes.json"), "utf8"))
-      .map((route: Record<string, unknown>) => { const { scenarioSubjects: _scenarioSubjects, ...staticRoute } = route; return staticRoute; });
+    const fixtureRoutes = readStaticRoutes(resolve(repositoryRoot, "src/tearbench/evidence-routes.json"));
     const fixturePath = join(temporaryRoot, "routes.json");
     const artifactPath = join(temporaryRoot, "selection.json");
     writeFileSync(fixturePath, `${JSON.stringify(fixtureRoutes)}\n`, "utf8");
     execFileSync(process.execPath, [resolve(repositoryRoot, "scripts/tearbench.mjs"), "select",
       "--files", changedFiles.join(","), "--routes", fixturePath, "--artifact", artifactPath],
     { cwd: repositoryRoot, stdio: "pipe" });
-    return JSON.parse(readFileSync(artifactPath, "utf8"));
+    return JSON.parse(readFileSync(artifactPath, "utf8")) as EvidenceSelection;
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });
   }
@@ -133,9 +146,9 @@ describe("TearBench release certification", () => {
     [["src/gameplay/combat/kill-runtime.ts", "src/unmapped/new-runtime-boundary.ts"]],
     [["docs/example.md", "src/unmapped/new-runtime-boundary.ts"]],
   ])("keeps the TS compatibility projection aligned with executable selector for %j", (changedFiles) => {
-    const projection = selectDiffAwareEvidence(changedFiles, JSON.parse(
-      readFileSync(resolve(import.meta.dirname, "../../src/tearbench/evidence-routes.json"), "utf8"),
-    ).map((route: Record<string, unknown>) => { const { scenarioSubjects: _scenarioSubjects, ...staticRoute } = route; return staticRoute; }));
+    const projection = selectDiffAwareEvidence(changedFiles, readStaticRoutes(
+      resolve(import.meta.dirname, "../../src/tearbench/evidence-routes.json"),
+    ));
     expect(commonSelection(projection)).toEqual(commonSelection(executableProjection(changedFiles)));
   });
 

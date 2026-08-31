@@ -7,6 +7,10 @@ import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayl
 
 type MutableRecord = Record<string, unknown>;
 
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 function record(value: unknown, label: string): MutableRecord {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError(`${label} must be an object`);
@@ -33,7 +37,7 @@ function enemyPayload(
   const variant = variantId === undefined ? undefined : findVariant(kind, variantId);
   if (variantId !== undefined && variant === null) throw new RangeError(`unknown ${kind} variant in State Forge: ${variantId}`);
   const variantProbe = variant === undefined ? undefined : { behavior: "", contactReach: 0, speedMult: 1, hp: 1, maxHp: 1 };
-  variant?.apply(variantProbe!);
+  if (variant !== undefined && variant !== null && variantProbe !== undefined) variant.apply(variantProbe);
   return Object.freeze({
     id,
     factoryId: kind,
@@ -100,7 +104,7 @@ function rebaseEnvironmentOrigin(snapshot: TearSnapshotV1): void {
   const hazard = record(snapshot.state["tear.hazard.v1"], "hazard codec");
   for (const key of ["fields", "combatObjects", "routes"] as const) {
     const entries = hazard[key];
-    if (!Array.isArray(entries)) continue;
+    if (!isUnknownArray(entries)) continue;
     hazard[key] = entries.map((entry) => {
       if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return entry;
       const value = { ...(entry as Record<string, unknown>) };

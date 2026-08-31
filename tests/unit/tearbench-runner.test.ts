@@ -97,12 +97,16 @@ class SequenceEnvironmentRuntime implements TearScenarioRuntime {
 
   reset(): TearObservationV1 {
     this.#index = 0;
-    return this.observations[0]!;
+    const first = this.observations[0];
+    if (first === undefined) throw new Error("sequence runtime requires at least one observation");
+    return first;
   }
 
   step(actions: Parameters<TearScenarioRuntime["step"]>[0]): TearScenarioTransition {
     this.#index = Math.min(this.#index + 1, this.observations.length - 1);
-    return { observation: this.observations[this.#index]!, events: [], actions,
+    const current = this.observations[this.#index];
+    if (current === undefined) throw new Error("sequence runtime observation is missing");
+    return { observation: current, events: [], actions,
       terminated: true, truncated: false, info: {} };
   }
 

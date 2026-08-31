@@ -64,7 +64,8 @@ describe("Pale source-owned State Forge scenarios", () => {
     for (const id of ids) {
       const entry = scenarioCatalog.find((candidate) => candidate.id === id);
       expect(entry).toBeDefined();
-      const scenario = materializeCanonicalScenario(entry!);
+      if (entry === undefined) throw new Error(`missing canonical scenario: ${id}`);
+      const scenario = materializeCanonicalScenario(entry);
       expect(scenario.stateClass).toBe("surgical-valid");
       expect(scenario.start.stage).toBe("pale-traverse");
       expect(scenario.start.wave).toBeGreaterThan(0);
@@ -77,10 +78,11 @@ describe("Pale source-owned State Forge scenarios", () => {
   it("rejects catalog coordinates that disagree with the source State Forge document", () => {
     const source = scenarioCatalog.find((candidate) => candidate.id === "pale-white-hart-phase-2");
     expect(source).toBeDefined();
-    const mutated = structuredClone(source!);
+    if (source === undefined) throw new Error("missing White Hart phase scenario");
+    const mutated = structuredClone(source);
     mutated.start.bossPhase = "3";
     expect(() => materializeCanonicalScenario(mutated)).toThrow(/bossPhase disagrees/u);
-    const wrongClass = structuredClone(source!);
+    const wrongClass = structuredClone(source);
     wrongClass.stateClass = "recorded-canonical";
     expect(() => materializeCanonicalScenario(wrongClass)).toThrow(/mismatched seed or identity/u);
   });
@@ -91,11 +93,11 @@ describe("Pale source-owned State Forge scenarios", () => {
       entities: [{ id: "enemy:1", kind: "rimehound", variantId: "rime-runner" }],
       diagnostics: { boss: { id: "white-hart", phase: "2", validPhases: ["1", "2", "3"], homeStage: "pale-traverse" } },
     } as never;
-    expect(() => assertCanonicalStructuredObservations([
+    expect(() => { assertCanonicalStructuredObservations([
       "environment.field.id=pale-traverse:aurora-track:rimehound-lane", "environment.field.state=warning",
       "entity.kind=rimehound", "entity.variantId=rime-runner", "boss.phase=2",
-    ], [observation])).not.toThrow();
-    expect(() => assertCanonicalStructuredObservations(["entity.variantId=glacier-guard"], [observation]))
+    ], [observation]); }).not.toThrow();
+    expect(() => { assertCanonicalStructuredObservations(["entity.variantId=glacier-guard"], [observation]); })
       .toThrow(/structured assertion failed/u);
   });
 });

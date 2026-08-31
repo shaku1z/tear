@@ -931,6 +931,24 @@ function receiptPathFor(id, artifact) {
   return resolve(artifact ?? resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`));
 }
 
+async function preservePriorReceipt(path, id) {
+  if (!existsSync(path)) return;
+  const contents = await readFile(path);
+  let prior;
+  try { prior = JSON.parse(contents.toString("utf8")); } catch { prior = {}; }
+  const timestamp = typeof prior.timestamp === "string" ? prior.timestamp.replace(/[^0-9A-Za-z]+/gu, "-").replace(/^-|-$/gu, "") : "unknown-time";
+  const status = prior.status === "passed" ? "passed" : "failed";
+  const digest = createHash("sha256").update(contents).digest("hex").slice(0, 12);
+  const history = await prepareWorkspaceOutput(resolve(root, "artifacts", "tearbench", "receipts", "history", `${id}-${status}-${timestamp}-${digest}.json`),
+    "artifacts/tearbench/receipts/history/", "evidence receipt history");
+  if (existsSync(history.absolute)) {
+    const retained = await readFile(history.absolute);
+    if (!retained.equals(contents)) throw new Error(`receipt history collision: ${history.stored}`);
+    return;
+  }
+  await writeFile(history.absolute, contents, { flag: "wx" });
+}
+
 async function recordEvidenceReceipt() {
   const usage = "usage: pnpm tearbench evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>";
   let id;
@@ -988,6 +1006,7 @@ async function recordEvidenceReceipt() {
       commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
       status: "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: `${result.stderr ?? ""}\nsubject unavailable: ${detail}` };
     const output = await prepareWorkspaceOutput(receiptPathFor(id, receiptArtifact), "artifacts/tearbench/receipts/", "evidence receipt");
+    await preservePriorReceipt(output.absolute, id);
     await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
     console.log(`FAIL ${id}`); console.log(`receipt: ${output.absolute}`); process.exitCode = 1; return;
   }
@@ -995,6 +1014,7 @@ async function recordEvidenceReceipt() {
     commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
     status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", subject };
   const output = await prepareWorkspaceOutput(receiptPathFor(id, receiptArtifact), "artifacts/tearbench/receipts/", "evidence receipt");
+  await preservePriorReceipt(output.absolute, id);
   await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
   console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${output.absolute}`);
   if (receipt.status !== "passed") process.exitCode = 1;
