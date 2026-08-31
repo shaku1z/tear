@@ -12,7 +12,10 @@ cannot contain its own commit hash.
 Protected `origin/main` was re-resolved immediately before closure and remains
 `9e7d6a701ca0b992c8d78cccc2af329d698778c0`. The correction implementation was
 reviewed at local commits `def8b014c6e07e3689ab49db77c0804b1a232292`
-and `ee8a6aa976eb38e126c5208f8264477c74f48f27`; protected integration is not
+and `ee8a6aa976eb38e126c5208f8264477c74f48f27`. Full-gate corrections were
+reviewed at `f8a17e065a47571448ced4d378ce2d4b123509e6`,
+`2500c03b48a9403395eb619fe545c082b28eac81`, and
+`94e5336d2801ea2e9da500a7d6d1758442045b35`; protected integration is not
 claimed. The intended local diff is TC-1 through TC-10 plus the verification
 acceleration authority and VAP-0 baseline already recorded by this branch.
 
@@ -60,6 +63,31 @@ command boundary and restricted its output to the ignored receipt store. The
 canonical selector gate passed 37/37, the verifier suite passed 16/16, targeted
 lint/docs/terminology/syntax/diff checks passed, and the repeated exact-commit
 review returned PASS with no remaining correction-scope finding.
+
+## Full-gate retry history
+
+The first retained `pnpm check` attempt on clean commit
+`2010defe1e405ef4d5598ac62b9a19b2ec196ca4` failed at repository-wide ESLint
+after the preceding workspace checks passed. It exposed 45 correction-scope
+lint errors across TC-1 through TC-9 source and tests. That receipt is retained
+as failed retry history and is never admissible as current manifest evidence.
+
+The owning files were reopened. The corrections preserved runtime validation
+and test coverage while removing redundant assertions, unsafe JSON typing,
+unnecessary discriminant checks, and confusing void callbacks. Repository-wide
+lint, the full TypeScript build, 88 integrated focused tests, and 16 verifier
+tests then passed. Re-review found and closed two deeper issues: archived passed
+receipts could have been resubmitted as current evidence, and one simplified
+variant guard could skip rehydration when serialized behavior was missing. A
+last contract review also aligned explicit `--artifact` production with the
+canonical `<id>.json` path required by both composers and the verifier.
+
+The final re-review of `94e5336d2801ea2e9da500a7d6d1758442045b35`
+returned PASS. The replacement exact-source focused and full-check receipts are
+generated only after this tracked report is committed. Before overwriting a
+canonical receipt, TearBench content-addresses the prior bytes under
+`receipts/history/`; both composers and the verifier reject that history as
+current evidence.
 
 ## Truthful C40 blockers
 
