@@ -16,7 +16,8 @@ and `ee8a6aa976eb38e126c5208f8264477c74f48f27`. Full-gate corrections were
 reviewed at `f8a17e065a47571448ced4d378ce2d4b123509e6`,
 `2500c03b48a9403395eb619fe545c082b28eac81`, and
 `94e5336d2801ea2e9da500a7d6d1758442045b35`. The broad-gate authority
-correction is `96fc039a975af99f8efbf089bc83f5ad8e36f106`; protected integration is not
+corrections are `96fc039a975af99f8efbf089bc83f5ad8e36f106` and
+`9e32fa715af797744a7f9189ccca6a4c245ee802`; protected integration is not
 claimed. The intended local diff is TC-1 through TC-10 plus the verification
 acceleration authority and VAP-0 baseline already recorded by this branch.
 
@@ -92,6 +93,19 @@ the unpublished Rimehound/Aurora scenario. Commit
 `96fc039a975af99f8efbf089bc83f5ad8e36f106` updates only those assertions to
 enforce the current route and non-publishable Pale contracts. The failed
 attempt remains non-admissible retry history.
+
+A later retained attempt passed those unit tests, parity, production builds,
+isolation, package/reproducibility/Cloudflare checks, test builds, and the
+current live-versus-detached weapon matrix before the shared natural-gameplay
+browser journey tried to reset TC-9 surgical scenarios. The live runtime
+correctly rejected their explicit stage selection because surgical scenarios
+must enter through State Forge. Commit
+`9e32fa715af797744a7f9189ccca6a4c245ee802` makes that boundary explicit:
+natural scenarios remain in the shared reset journey, while every surgical
+entry must own a matching State Forge document and exact
+`pnpm tearbench run <id>` canonical command. The focused browser journey then
+passed all 13 natural source-owned subjects, and selector coverage passed
+38/38. This failed attempt also remains non-admissible retry history.
 
 The final re-review of `94e5336d2801ea2e9da500a7d6d1758442045b35`
 returned PASS. The replacement exact-source focused and full-check receipts are
