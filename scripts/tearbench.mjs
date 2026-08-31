@@ -1121,6 +1121,11 @@ export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8
 
 export function verifyCurrentWeaponParityExecution(selection, evidence) {
   if (selection.currentWeaponParity.required !== true) return evidence;
+  // Preserve the first real execution failure so callers can emit its captured
+  // receipts. Parity completeness is only meaningful once the selected
+  // evidence set itself passed; otherwise a later missing weapon masks the
+  // command that actually stopped execution.
+  if (evidence?.status !== "passed") return evidence;
   for (const [index, id] of selection.currentWeaponParity.scenarios.entries()) {
     const weapon = selection.currentWeaponParity.weapons[index];
     const execution = evidence.executions.find((entry) => entry.id === id);

@@ -668,14 +668,17 @@ test("served build identity refuses stale revision and source fingerprint", asyn
     .currentWeaponParity.status, "passed");
   assert.throws(() => verifyCurrentWeaponParityExecution(selection, { status: "passed", executions: [] }),
     /parity evidence is missing or failed/u);
+  const failedEvidence = { status: "failed", executions: [{
+    id: "linux-browser-proof", command: "node tests/browser-proof.js", status: "failed",
+    receipts: [{ kind: "node", status: "failed", exitCode: 1, stdout: "captured stdout", stderr: "captured stderr" }],
+  }] };
+  assert.equal(verifyCurrentWeaponParityExecution(selection, failedEvidence), failedEvidence,
+    "an earlier execution failure must remain available for diagnostics");
   assert.throws(() => verifyCurrentWeaponParityExecution(selection, { status: "passed",
     executions: [{ ...execution, receipts: [{ ...receipt, source: { ...source, fingerprint: "e".repeat(64) } }] }] }),
   /stale source identity/u);
 
-  const diagnostic = formatFailedEvidenceExecution({ status: "failed", executions: [{
-    id: "linux-browser-proof", command: "node tests/browser-proof.js", status: "failed",
-    receipts: [{ kind: "node", status: "failed", exitCode: 1, stdout: "captured stdout", stderr: "captured stderr" }],
-  }] }, 80);
+  const diagnostic = formatFailedEvidenceExecution(failedEvidence, 80);
   assert.match(diagnostic, /linux-browser-proof/u);
   assert.match(diagnostic, /node tests\/browser-proof\.js/u);
   assert.match(diagnostic, /captured stdout/u);
