@@ -295,6 +295,7 @@ await withJourney({
   colorScheme: presentation.colorScheme,
   reducedMotion: presentation.reducedMotion,
 }, async ({ page }) => {
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
   const result = await page.evaluate(({ scenario, resolved, schedule, actions, snapshot }) => {
     if (!window.__TEAR_RUNTIME_ENVIRONMENT__) throw new Error("test-only Tear runtime bridge was not installed");
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
