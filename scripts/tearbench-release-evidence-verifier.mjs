@@ -164,7 +164,8 @@ async function verifyCorrectionClosure(closure, manifest, evidenceById, receiptR
 
 async function receiptEntry(entry, root, head, worktreeFingerprint, runtime, errors) {
   const receipt = insideWorkspace(root, entry?.receiptPath);
-  if (!receipt || !isSha256(entry?.receiptSha256)) {
+  const canonicalReceiptPath = typeof entry?.id === "string" ? `artifacts/tearbench/receipts/${entry.id}.json` : undefined;
+  if (!receipt || entry?.receiptPath !== canonicalReceiptPath || !isSha256(entry?.receiptSha256)) {
     errors.push(`evidence ${String(entry?.id)} has an invalid receipt reference`);
     return undefined;
   }

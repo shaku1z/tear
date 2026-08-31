@@ -1033,6 +1033,7 @@ async function composePartialEvidenceManifest() {
     const contents = await readFile(receiptInput.absolute, "utf8");
     const receipt = JSON.parse(contents);
     if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
+    if (receiptPath !== `artifacts/tearbench/receipts/${receipt.id}.json`) throw new TypeError(`partial manifest requires the canonical current receipt path: ${receiptPath}`);
     evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit,
       worktreeFingerprint: receipt.worktreeFingerprint, source: receipt.source, scope: receipt.scope,
       artifactPath: receipt.subject?.path, artifactSha256: receipt.subject?.sha256, artifactSize: receipt.subject?.size,
@@ -1069,6 +1070,7 @@ async function composeCorrectionClosureManifest() {
     const contents = await readFile(receiptInput.absolute, "utf8");
     const receipt = JSON.parse(contents);
     if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
+    if (receiptPath !== `artifacts/tearbench/receipts/${receipt.id}.json`) throw new TypeError(`correction manifest requires the canonical current receipt path: ${receiptPath}`);
     if (receipt.status !== "passed" || receipt.exitCode !== 0 || receipt.commit !== binding.commit
       || receipt.worktreeFingerprint !== binding.worktreeFingerprint
       || receipt.source?.revision !== binding.source.revision || receipt.source?.state !== "clean"

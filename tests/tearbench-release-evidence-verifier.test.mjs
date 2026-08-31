@@ -20,7 +20,7 @@ function fixture() {
     const artifact = add(`evidence/${id}.json`, id);
     const correctionId = /^tc-([1-9])-focused$/u.exec(id)?.[1];
     const scope = correctionId === undefined ? { kind: "receipt", id } : { kind: "receipt", id, correctionId: `TC-${correctionId}` };
-    const receipt = add(`receipts/${id}.json`, JSON.stringify({
+    const receipt = add(`artifacts/tearbench/receipts/${id}.json`, JSON.stringify({
       format: "tearbench-evidence-receipt", schemaVersion: 1, id, command,
       timestamp: "2026-01-01T00:00:00.000Z", commit: head, worktreeFingerprint: clean, source,
       status: "passed", exitCode: 0, stdout: "pass", stderr: "",
@@ -96,11 +96,11 @@ describe("C40 immutable release evidence verifier", () => {
   it("rejects missing, tampered, failed, and receipt/subject mismatches", async () => {
     const missing = fixture(); delete missing.manifest.evidence[0].receiptPath;
     assert.match((await verifyReleaseEvidenceManifest(missing.manifest, missing.runtime)).errors.join("\n"), /invalid receipt reference/);
-    const tampered = fixture(); tampered.files.set(resolve(tampered.root, "receipts/graveyard.json"), "tampered");
+    const tampered = fixture(); tampered.files.set(resolve(tampered.root, "artifacts/tearbench/receipts/graveyard.json"), "tampered");
     assert.match((await verifyReleaseEvidenceManifest(tampered.manifest, tampered.runtime)).errors.join("\n"), /receipt hash mismatch/);
-    const failed = fixture(); const receiptPath = resolve(failed.root, "receipts/graveyard.json"); const receipt = JSON.parse(failed.files.get(receiptPath)); receipt.status = "failed"; failed.files.set(receiptPath, JSON.stringify(receipt)); failed.manifest.evidence.find((entry) => entry.id === "graveyard").receiptSha256 = sha(JSON.stringify(receipt));
+    const failed = fixture(); const receiptPath = resolve(failed.root, "artifacts/tearbench/receipts/graveyard.json"); const receipt = JSON.parse(failed.files.get(receiptPath)); receipt.status = "failed"; failed.files.set(receiptPath, JSON.stringify(receipt)); failed.manifest.evidence.find((entry) => entry.id === "graveyard").receiptSha256 = sha(JSON.stringify(receipt));
     assert.match((await verifyReleaseEvidenceManifest(failed.manifest, failed.runtime)).errors.join("\n"), /receipt did not pass/);
-    const mismatch = fixture(); const mismatchPath = resolve(mismatch.root, "receipts/graveyard.json"); const mismatchReceipt = JSON.parse(mismatch.files.get(mismatchPath)); mismatchReceipt.subject.size = 999; mismatch.files.set(mismatchPath, JSON.stringify(mismatchReceipt)); mismatch.manifest.evidence.find((entry) => entry.id === "graveyard").receiptSha256 = sha(JSON.stringify(mismatchReceipt));
+    const mismatch = fixture(); const mismatchPath = resolve(mismatch.root, "artifacts/tearbench/receipts/graveyard.json"); const mismatchReceipt = JSON.parse(mismatch.files.get(mismatchPath)); mismatchReceipt.subject.size = 999; mismatch.files.set(mismatchPath, JSON.stringify(mismatchReceipt)); mismatch.manifest.evidence.find((entry) => entry.id === "graveyard").receiptSha256 = sha(JSON.stringify(mismatchReceipt));
     assert.match((await verifyReleaseEvidenceManifest(mismatch.manifest, mismatch.runtime)).errors.join("\n"), /receipt subject does not match manifest/);
     const timestampMismatch = fixture();
     timestampMismatch.manifest.evidence.find((entry) => entry.id === "graveyard").timestamp = "2026-01-01T00:00:00.500Z";
@@ -108,6 +108,12 @@ describe("C40 immutable release evidence verifier", () => {
     const emptyId = fixture();
     emptyId.manifest.evidence.push({ ...emptyId.manifest.evidence.at(-1), id: "" });
     assert.match((await verifyReleaseEvidenceManifest(emptyId.manifest, emptyId.runtime)).errors.join("\n"), /unique non-empty strings/u);
+    const historical = fixture();
+    const historicalEntry = historical.manifest.evidence.find((entry) => entry.id === "graveyard");
+    const currentPath = resolve(historical.root, historicalEntry.receiptPath);
+    historicalEntry.receiptPath = "artifacts/tearbench/receipts/history/graveyard-passed-old.json";
+    historical.files.set(resolve(historical.root, historicalEntry.receiptPath), historical.files.get(currentPath));
+    assert.match((await verifyReleaseEvidenceManifest(historical.manifest, historical.runtime)).errors.join("\n"), /invalid receipt reference/u);
   });
 
   it("rejects missing named arbitrary-state, journey, and matrix coverage", async () => {

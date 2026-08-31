@@ -63,7 +63,7 @@ export function createLiveWorldEntityFactory(
       // Complete snapshots already carry the source-applied behavior and
       // stats. Reapplying a stat-scaling variant would drift their hashes;
       // freshly forged payloads omit variantName and still need application.
-      if (actor.variantName === variant.name && actor.behavior !== "") return;
+      if (actor.variantName === variant.name && typeof actor.behavior === "string" && actor.behavior !== "") return;
       applyVariant(actor, variant);
     },
   });
