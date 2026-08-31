@@ -34,6 +34,7 @@ test("source attribution detects tracked/untracked drift and blocks dirty releas
     const metadata = await writeReleaseArtifactMetadata({ directory: settings.directory, sourceDirectory: root,
       repository: settings.expectedRepository, sha, target: "standalone", mode: "test-standalone" });
     assert.equal(JSON.parse(readFileSync(join(root, "dist", "build-info.json"), "utf8")).sourceFingerprint, metadata.sourceFingerprint);
+    await assert.rejects(verifyReleaseArtifact({ ...settings, expectedMode: "standalone", allowDirty: true }), /mode/u);
     await verifyReleaseArtifact({ ...settings, allowDirty: true });
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

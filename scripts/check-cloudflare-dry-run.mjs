@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { resolve } from "node:path";
 import process from "node:process";
 import { RELEASE_REPOSITORY, verifyReleaseArtifact } from "./release-artifact.mjs";
@@ -17,11 +19,12 @@ if (!existsSync(resolve(expectedAssets, "build-info.json"))) {
 }
 const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: projectRoot, encoding: "utf8", stdio: "pipe" });
 if (revision.status !== 0) throw new Error(`failed to resolve build revision: ${revision.stderr || revision.stdout}`);
-await verifyReleaseArtifact({
+const verified = await verifyReleaseArtifact({
   directory: expectedAssets,
   expectedRepository: process.env.GITHUB_REPOSITORY || RELEASE_REPOSITORY,
   expectedSha: revision.stdout.trim().toLowerCase(),
   expectedTarget: "standalone",
+  expectedMode: "standalone",
   sourceDirectory: projectRoot,
 });
 
@@ -50,3 +53,9 @@ if (!/Read \d+ files? from the assets directory/u.test(plainOutput)) {
 }
 
 console.log(`PASS Cloudflare dry-run boundary: ${normalizedExpected}`);
+const receiptPath = resolve(projectRoot, "artifacts/tearbench/generated/cloudflare-dry-run.json");
+await mkdir(dirname(receiptPath), { recursive: true });
+await writeFile(receiptPath, `${JSON.stringify({ format: "tear-cloudflare-dry-run", schemaVersion: 1,
+  repository: process.env.GITHUB_REPOSITORY || RELEASE_REPOSITORY, sourceRevision: revision.stdout.trim().toLowerCase(),
+  buildIdentityDigest: verified.metadata.buildIdentityDigest, artifactHash: verified.artifact.hash,
+  assetsDirectory: "dist/standalone", status: "passed" }, null, 2)}\n`, "utf8");

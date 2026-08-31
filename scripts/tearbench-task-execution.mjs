@@ -7,6 +7,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { calculateArtifactHash, readSourceIdentitySync } from "./release-artifact.mjs";
+import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 import { shadowTaskDefinitionDigest } from "./tearbench-shadow-plan.mjs";
 import { canonicalJson, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256 } from "./tearbench-task-receipts.mjs";
 
@@ -44,7 +45,8 @@ function executeTask(task) {
   const args = runner.kind === "node" && runner.executable === "node"
     ? runner.args : [resolve(root, runner.executable), ...runner.args];
   const result = spawnSync(executable, args, { cwd: root, encoding: "utf8", maxBuffer: 50 * 1024 * 1024,
-    env: { ...process.env, TEARBENCH_TASK_ID: task.taskId } });
+    env: { ...process.env, TEARBENCH_TASK_ID: task.taskId,
+      ...(task.dependencies.some((entry) => entry.outputId === "build-artifact") ? { TEARBENCH_REUSE_VERIFIED_BUILDS: "1" } : {}) } });
   process.stdout.write(result.stdout ?? ""); process.stderr.write(result.stderr ?? "");
   return result;
 }
@@ -124,13 +126,20 @@ async function buildBinding(requirement, plan) {
     if (input.stored !== buildInfoPath) throw new TypeError(`dependency build-info uses a symlink or alias: ${buildInfoPath}`);
     const bytes = await readFile(input.absolute), info = JSON.parse(bytes.toString("utf8"));
     const artifact = await calculateArtifactHash(resolve(root, dependency.path));
+    const recordPath = `artifacts/tearbench/generated/builds/${info.mode}.json`;
+    const record = JSON.parse(await readFile((await workspaceInput(resolve(root, recordPath), "dependency build record")).absolute, "utf8"));
+    await verifyContentAddressedBuild({ workspaceRoot: root, directory: resolve(root, info.contentAddressedPath), expectedRecord: record });
     if (info.format !== "tear-build-info" || info.schemaVersion !== 1 || info.sourceRevision !== plan.source.revision
       || info.sourceFingerprint !== plan.source.fingerprint || !/^[0-9a-f]{64}$/u.test(info.artifactHash)
-      || info.artifactHash !== artifact.hash) {
+      || info.artifactHash !== artifact.hash || info.target !== dependency.target || info.mode !== dependency.mode
+      || record.buildIdentityDigest !== info.buildIdentityDigest) {
       throw new TypeError(`dependency build-info is stale or malformed: ${buildInfoPath}`);
     }
     attestations.push({ ...dependency, buildInfoPath, buildInfoSha256: receiptSha256(bytes), artifactHash: info.artifactHash,
-      sourceRevision: info.sourceRevision, sourceFingerprint: info.sourceFingerprint, target: info.target, mode: info.mode ?? null });
+      sourceRevision: info.sourceRevision, sourceFingerprint: info.sourceFingerprint, target: info.target, mode: info.mode,
+      toolchainDigest: info.toolchain.digest, configurationDigest: info.configuration.digest,
+      buildIdentityDigest: info.buildIdentityDigest, contentAddressedPath: info.contentAddressedPath,
+      recordPath, recordDigest: record.recordDigest });
   }
   return Object.freeze({ requirement, attestations: Object.freeze(attestations), produced: Object.freeze([]) });
 }
@@ -143,11 +152,18 @@ async function producedBuildAttestations(requirement, plan) {
     if (input.stored !== buildInfoPath) throw new TypeError(`produced build-info uses a symlink or alias: ${buildInfoPath}`);
     const bytes = await readFile(input.absolute), info = JSON.parse(bytes.toString("utf8"));
     const artifact = await calculateArtifactHash(resolve(root, output.path));
+    const recordPath = `artifacts/tearbench/generated/builds/${info.mode}.json`;
+    const record = JSON.parse(await readFile((await workspaceInput(resolve(root, recordPath), "produced build record")).absolute, "utf8"));
+    await verifyContentAddressedBuild({ workspaceRoot: root, directory: resolve(root, info.contentAddressedPath), expectedRecord: record });
     if (info.format !== "tear-build-info" || info.schemaVersion !== 1 || info.sourceRevision !== plan.source.revision
       || info.sourceFingerprint !== plan.source.fingerprint || !/^[0-9a-f]{64}$/u.test(info.artifactHash)
-      || info.artifactHash !== artifact.hash) throw new TypeError(`produced build-info is stale or malformed: ${buildInfoPath}`);
+      || info.artifactHash !== artifact.hash || info.target !== output.target || info.mode !== output.mode
+      || record.buildIdentityDigest !== info.buildIdentityDigest) throw new TypeError(`produced build-info is stale or malformed: ${buildInfoPath}`);
     produced.push({ ...output, buildInfoPath, buildInfoSha256: receiptSha256(bytes), artifactHash: info.artifactHash,
-      sourceRevision: info.sourceRevision, sourceFingerprint: info.sourceFingerprint, target: info.target, mode: info.mode ?? null });
+      sourceRevision: info.sourceRevision, sourceFingerprint: info.sourceFingerprint, target: info.target, mode: info.mode,
+      toolchainDigest: info.toolchain.digest, configurationDigest: info.configuration.digest,
+      buildIdentityDigest: info.buildIdentityDigest, contentAddressedPath: info.contentAddressedPath,
+      recordPath, recordDigest: record.recordDigest });
   }
   return Object.freeze(produced);
 }
@@ -229,7 +245,9 @@ export async function certifyPlanMission({ planPath, receiptPaths, artifactPath 
   ]) {
     try {
       artifactBytes[attestation.buildInfoPath] = await readFile((await workspaceInput(attestation.buildInfoPath, "build-info attestation")).absolute);
+      artifactBytes[attestation.recordPath] = await readFile((await workspaceInput(attestation.recordPath, "build record attestation")).absolute);
       buildArtifactHashes[attestation.path] = (await calculateArtifactHash(resolve(root, attestation.path))).hash;
+      buildArtifactHashes[attestation.contentAddressedPath] = (await calculateArtifactHash(resolve(root, attestation.contentAddressedPath))).hash;
     }
     catch { /* The pure certifier reports a missing/altered build attestation. */ }
   }

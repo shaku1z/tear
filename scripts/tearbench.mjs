@@ -4,10 +4,12 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { RELEASE_REPOSITORY, readSourceIdentitySync } from "./release-artifact.mjs";
+import { RELEASE_REPOSITORY, readSourceIdentitySync, verifyReleaseArtifact } from "./release-artifact.mjs";
+import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 import { createReleaseCertificate, REQUIRED_CORRECTION_IDS, REQUIRED_RELEASE_EVIDENCE_IDS, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
 import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
 import { createTearBenchShadowPlan } from "./tearbench-shadow-plan.mjs";
+import { dependencyOrderedTaskIds, registryTaskEnvironment } from "./tearbench-task-profile.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BLOOM_WELL_LIFECYCLE_TICKS = 744;
@@ -670,6 +672,10 @@ if (!evidenceRoutes.some((route) => route.id === "shared-runtime")) {
 }
 
 function buildTestStandalone() {
+  if (process.env.TEARBENCH_REUSE_VERIFIED_BUILDS === "1") {
+    validateServedBuildIdentity(readServedBuildInfo(), readSourceIdentity());
+    return;
+  }
   const pnpmEntry = process.env.npm_execpath;
   if (!pnpmEntry) throw new Error("TearBench must be launched through pnpm so the pinned package manager can be reused");
   const build = spawnSync(process.execPath, [pnpmEntry, "build:test:standalone"], { cwd: root, encoding: "utf8" });
@@ -904,6 +910,12 @@ function executeApprovedEvidence(command, state) {
     let result;
     if (step.kind === "build") {
       if (state.testStandaloneBuilt) { receipts.push({ kind: step.kind, status: "skipped", reason: "deduplicated test-standalone build" }); continue; }
+      if (process.env.TEARBENCH_REUSE_VERIFIED_BUILDS === "1") {
+        state.build = validateServedBuildIdentity(readServedBuildInfo(), before);
+        state.testStandaloneBuilt = true;
+        receipts.push({ kind: step.kind, status: "skipped", reason: "verified plan dependency reuse", source: before, build: state.build });
+        continue;
+      }
       result = spawnSync(process.execPath, [resolve(root, "scripts", "build-target.mjs"), "test-standalone"], { cwd: root, encoding: "utf8" });
       if (result.status === 0) state.testStandaloneBuilt = true;
     } else if (step.kind === "canonical-live") {
@@ -995,19 +1007,37 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
 
 function executeRegistryTask(task) {
   const runner = task.runner;
+  const options = { cwd: root, stdio: "inherit", env: registryTaskEnvironment(task) };
   if (runner.kind === "build-target") {
-    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], { cwd: root, stdio: "inherit" });
+    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
   }
   if (runner.kind === "node" && runner.executable === "node") {
-    return spawnSync(process.execPath, runner.args, { cwd: root, stdio: "inherit" });
+    return spawnSync(process.execPath, runner.args, options);
   }
   if (["vitest", "typescript", "eslint", "wrangler", "tearbench", "certifier"].includes(runner.kind)) {
-    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], { cwd: root, stdio: "inherit" });
+    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
   }
   throw new TypeError(`unsupported TearBench task runner: ${String(runner.kind)}`);
 }
 
-function runTaskProfile() {
+async function verifyRegistryBuildDependencies(task) {
+  for (const dependency of task.dependencies.filter((entry) => entry.outputId === "build-artifact")) {
+    const producer = taskById.get(dependency.taskId), output = producer?.outputs.find((entry) => entry.outputId === "build-artifact");
+    const mode = producer?.runner.kind === "build-target" ? producer.runner.args[0] : undefined;
+    if (output === undefined || typeof mode !== "string") throw new TypeError(`${task.taskId} has an invalid build dependency`);
+    const target = mode.endsWith("crazygames") ? "crazygames" : "standalone";
+    const directory = resolve(root, output.path), info = JSON.parse(await readFile(resolve(directory, "build-info.json"), "utf8"));
+    const verified = await verifyReleaseArtifact({ directory, expectedRepository: info.repository, expectedSha: info.sha,
+      expectedTarget: target, expectedMode: mode, sourceDirectory: root, allowDirty: true });
+    const record = JSON.parse(await readFile(resolve(root, "artifacts", "tearbench", "generated", "builds", `${mode}.json`), "utf8"));
+    if (record.buildIdentityDigest !== verified.metadata.buildIdentityDigest) {
+      throw new Error(`${task.taskId} build dependency does not match its immutable build record`);
+    }
+    await verifyContentAddressedBuild({ workspaceRoot: root, directory: resolve(root, record.contentAddressedPath), expectedRecord: record });
+  }
+}
+
+async function runTaskProfile() {
   const usage = "usage: pnpm tearbench tasks <list-profile|run-profile> <profile-id>";
   const action = process.argv[3], profileId = process.argv[4];
   if (!['list-profile', 'run-profile'].includes(action) || typeof profileId !== "string" || process.argv.length !== 5) {
@@ -1015,13 +1045,16 @@ function runTaskProfile() {
   }
   const profile = taskRegistry.profiles[profileId];
   if (!Array.isArray(profile) || profile.some((id) => !taskById.has(id))) throw new RangeError(`unknown or invalid TearBench task profile: ${profileId}`);
+  const ordered = dependencyOrderedTaskIds(profile, taskRegistry.tasks);
   if (action === "list-profile") {
-    console.log(JSON.stringify({ format: "tearbench-task-profile", schemaVersion: 1, profileId, taskIds: profile }, null, 2));
+    console.log(JSON.stringify({ format: "tearbench-task-profile", schemaVersion: 1, profileId,
+      declaredTaskIds: profile, taskIds: ordered }, null, 2));
     return;
   }
-  for (const [index, taskId] of profile.entries()) {
+  for (const [index, taskId] of ordered.entries()) {
     const task = taskById.get(taskId);
-    console.log(`TASK ${String(index + 1)}/${String(profile.length)} ${taskId}`);
+    console.log(`TASK ${String(index + 1)}/${String(ordered.length)} ${taskId}`);
+    await verifyRegistryBuildDependencies(task);
     const result = executeRegistryTask(task);
     if (result.status !== 0) {
       process.exitCode = result.status ?? 1;
@@ -1177,13 +1210,18 @@ function readServedBuildInfo() {
   if (value?.format !== "tear-build-info" || value?.schemaVersion !== 1
     || typeof value.sha !== "string" || typeof value.target !== "string"
     || typeof value.sourceRevision !== "string" || typeof value.sourceState !== "string"
-    || typeof value.sourceFingerprint !== "string" || typeof value.artifactHash !== "string") {
+    || typeof value.sourceFingerprint !== "string" || typeof value.artifactHash !== "string"
+    || !/^[0-9a-f]{64}$/u.test(value.toolchain?.digest) || !/^[0-9a-f]{64}$/u.test(value.configuration?.digest)
+    || !/^[0-9a-f]{64}$/u.test(value.buildIdentityDigest)
+    || value.contentAddressedPath !== `artifacts/tearbench/builds/${value.buildIdentityDigest}/payload`) {
     throw new TypeError("served test build has incomplete build-info identity");
   }
   return Object.freeze({ sha: value.sha, target: value.target, mode: value.mode,
     sourceRevision: value.sourceRevision, sourceState: value.sourceState,
     sourceFingerprint: value.sourceFingerprint, artifactHash: value.artifactHash,
-    artifactFiles: value.artifactFiles });
+    artifactFiles: value.artifactFiles, toolchainDigest: value.toolchain.digest,
+    configurationDigest: value.configuration.digest, buildIdentityDigest: value.buildIdentityDigest,
+    contentAddressedPath: value.contentAddressedPath });
 }
 
 export function validateServedBuildIdentity(build, source = readSourceIdentity()) {
@@ -2034,7 +2072,7 @@ try {
   } else if (command === "plan" || command === "explain") {
     await writeShadowPlan(command === "explain");
   } else if (command === "tasks") {
-    runTaskProfile();
+    await runTaskProfile();
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {

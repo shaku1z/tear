@@ -140,6 +140,7 @@ test("build receipts bind canonical build-info paths and independently recompute
   const buildPlanPayload = { ...planPayload, requiredTaskIds: ["build", "consumer"], requiredClaims: ["claim.build", "claim.consumer"],
     taskNodes: [
       { taskId: "build", taskDefinitionDigest: "8".repeat(16), claimIds: ["claim.build"], resourceClass: "build", resourceKeys: [], dependencies: [],
+        build: { target: "standalone", mode: "test-standalone" },
         outputs: [{ outputId: "build-artifact", path: buildPath }] },
       { taskId: "consumer", taskDefinitionDigest: "9".repeat(16), claimIds: ["claim.consumer"], resourceClass: "browser", resourceKeys: [],
         dependencies: [{ taskId: "build", outputId: "build-artifact" }], outputs: [] },
@@ -148,10 +149,20 @@ test("build receipts bind canonical build-info paths and independently recompute
     ], diagnostics: { unsupported: [] } };
   const buildPlan = { ...buildPlanPayload, planDigest: receiptSha256(buildPlanPayload) };
   const info = Buffer.from(JSON.stringify({ format: "tear-build-info", schemaVersion: 1, sourceRevision: source.revision,
-    sourceFingerprint: source.fingerprint, artifactHash: "d".repeat(64) }), "utf8");
+    sourceFingerprint: source.fingerprint, target: "standalone", mode: "test-standalone", artifactHash: "d".repeat(64),
+    toolchain: { digest: "1".repeat(64) }, configuration: { digest: "2".repeat(64) }, buildIdentityDigest: "3".repeat(64),
+    contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload` }), "utf8");
+  const recordPath = "artifacts/tearbench/generated/builds/test-standalone.json";
+  const recordUnsigned = { format: "tear-build-artifact-record", schemaVersion: 1, buildIdentityDigest: "3".repeat(64),
+    artifactHash: "d".repeat(64), contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload` };
+  const record = { ...recordUnsigned, recordDigest: receiptSha256(recordUnsigned) };
+  const recordBytes = Buffer.from(JSON.stringify(record), "utf8");
   const attestation = { taskId: "build", outputId: "build-artifact", path: buildPath, buildInfoPath,
     buildInfoSha256: receiptSha256(info), artifactHash: "d".repeat(64), sourceRevision: source.revision,
-    sourceFingerprint: source.fingerprint, target: "standalone", mode: null };
+    sourceFingerprint: source.fingerprint, target: "standalone", mode: "test-standalone",
+    toolchainDigest: "1".repeat(64), configurationDigest: "2".repeat(64), buildIdentityDigest: "3".repeat(64),
+    contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload`,
+    recordPath, recordDigest: record.recordDigest };
   const make = (taskId, build, artifacts = []) => {
     const bindings = expectedTaskBindings(buildPlan, taskId);
     return createTaskAttemptReceipt({ missionId: "build-mission", plan: buildPlan, taskId, attemptNumber: 1,
@@ -164,8 +175,9 @@ test("build receipts bind canonical build-info paths and independently recompute
   const producer = make("build", { attestations: [], produced: [attestation] }, [buildArtifact]);
   const consumer = make("consumer", { attestations: [attestation], produced: [] });
   const certificateInput = { plan: buildPlan, receipts: [producer, consumer], expectedOrigin: origin,
-    artifactBytes: { [buildPath]: buildArtifactBytes, [buildInfoPath]: info },
-    buildArtifactHashes: { [buildPath]: "d".repeat(64) }, generatedAt: "2026-08-31T00:01:00.000Z" };
+    artifactBytes: { [buildPath]: buildArtifactBytes, [buildInfoPath]: info, [recordPath]: recordBytes },
+    buildArtifactHashes: { [buildPath]: "d".repeat(64), [attestation.contentAddressedPath]: "d".repeat(64) },
+    generatedAt: "2026-08-31T00:01:00.000Z" };
   const buildCertificate = createPlanCertificate(certificateInput);
   assert.equal(buildCertificate.status, "certified", buildCertificate.errors.join("\n"));
   assert.equal(createPlanCertificate({ ...certificateInput, buildArtifactHashes: { [buildPath]: "f".repeat(64) } }).status, "rejected");

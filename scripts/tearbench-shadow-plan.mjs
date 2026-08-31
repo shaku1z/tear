@@ -244,6 +244,8 @@ export function createTearBenchShadowPlan({ registry, policy, selection, catalog
   const taskNodes = [...selected].sort().map((taskId) => {
     const task = tasks.get(taskId); return { taskId, taskDefinitionDigest: shadowTaskDefinitionDigest(task, registry.definitionPolicyVersion),
       resourceClass: task.resourceClass, resourceKeys: [...task.resourceKeys].sort(), timeoutMs: task.timeoutMs,
+      build: task.runner.kind === "build-target" && task.runner.args.length === 1
+        ? { mode: task.runner.args[0], target: task.runner.args[0].endsWith("crazygames") ? "crazygames" : "standalone" } : null,
       outputs: task.outputs.map((entry) => ({ ...entry })).sort((a, b) => a.outputId.localeCompare(b.outputId)),
       dependencies: task.dependencies.filter((entry) => selected.has(entry.taskId)).map((entry) => ({ taskId: entry.taskId, outputId: entry.outputId ?? null }))
         .sort((a, b) => `${a.taskId}:${a.outputId ?? ""}`.localeCompare(`${b.taskId}:${b.outputId ?? ""}`)),

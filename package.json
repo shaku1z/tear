@@ -26,6 +26,7 @@
     "tearbench": "node scripts/tearbench.mjs",
     "tearbench:run-task": "node scripts/tearbench-task-execution.mjs run-task",
     "tearbench:certify-plan": "node scripts/tearbench-task-execution.mjs certify",
+    "tearbench:record-build-provider": "node scripts/record-build-provider-artifact.mjs",
     "requirements:generate": "node scripts/tearbench-requirements.mjs generate",
     "requirements:check": "node scripts/tearbench-requirements.mjs check",
     "test:weapons": "pnpm exec vitest run tests/unit/final-five-weapon-roster.test.ts",

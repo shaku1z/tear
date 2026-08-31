@@ -44,10 +44,15 @@ export function expectedTaskBindings(plan, taskId) {
     const producer = planTask(plan, entry.taskId);
     const output = (producer.outputs ?? []).find((candidate) => candidate.outputId === entry.outputId);
     if (output === undefined) throw new TypeError(`plan task ${taskId} requires missing build output ${entry.taskId}:${String(entry.outputId)}`);
-    return { taskId: entry.taskId, outputId: entry.outputId, path: output.path };
+    if (producer.build === null || producer.build === undefined) throw new TypeError(`plan build producer ${producer.taskId} has no target/mode identity`);
+    return { taskId: entry.taskId, outputId: entry.outputId, path: output.path,
+      target: producer.build.target, mode: producer.build.mode };
   });
   const buildOutputs = (task.outputs ?? []).filter((entry) => entry.outputId === "build-artifact")
-    .map((entry) => ({ taskId, outputId: entry.outputId, path: entry.path }));
+    .map((entry) => {
+      if (task.build === null || task.build === undefined) throw new TypeError(`plan build producer ${taskId} has no target/mode identity`);
+      return { taskId, outputId: entry.outputId, path: entry.path, target: task.build.target, mode: task.build.mode };
+    });
   return Object.freeze({
     build: Object.freeze({ kind: task.resourceClass === "build" ? "produces-build-output"
       : buildDependencies.length > 0 ? "consumes-verified-build" : "not-applicable",
@@ -111,7 +116,14 @@ export function createTaskAttemptReceipt(input) {
     if (attestation?.path !== dependency.path || attestation.buildInfoPath !== `${dependency.path}/build-info.json`
       || !SHA256.test(attestation.buildInfoSha256)
       || !SHA256.test(attestation.artifactHash) || attestation.sourceRevision !== plan.source.revision
-      || attestation.sourceFingerprint !== plan.source.fingerprint) throw new TypeError("receipt build attestation is stale or malformed");
+      || attestation.sourceFingerprint !== plan.source.fingerprint || attestation.target !== dependency.target
+      || attestation.mode !== dependency.mode || !SHA256.test(attestation.toolchainDigest)
+      || !SHA256.test(attestation.configurationDigest) || !SHA256.test(attestation.buildIdentityDigest)
+      || !SHA256.test(attestation.recordDigest)
+      || attestation.recordPath !== `artifacts/tearbench/generated/builds/${dependency.mode}.json`
+      || attestation.contentAddressedPath !== `artifacts/tearbench/builds/${attestation.buildIdentityDigest}/payload`) {
+      throw new TypeError("receipt build attestation is stale or malformed");
+    }
   }
   if (input.build.produced.length > expectedBindings.build.outputs.length
     || (input.status === "passed" && input.build.produced.length !== expectedBindings.build.outputs.length)) {
@@ -121,7 +133,12 @@ export function createTaskAttemptReceipt(input) {
     const attestation = input.build.produced.find((entry) => entry.taskId === output.taskId && entry.outputId === output.outputId);
     if (attestation?.path !== output.path || attestation.buildInfoPath !== `${output.path}/build-info.json`
       || !SHA256.test(attestation.buildInfoSha256) || !SHA256.test(attestation.artifactHash)
-      || attestation.sourceRevision !== plan.source.revision || attestation.sourceFingerprint !== plan.source.fingerprint) {
+      || attestation.sourceRevision !== plan.source.revision || attestation.sourceFingerprint !== plan.source.fingerprint
+      || attestation.target !== output.target || attestation.mode !== output.mode || !SHA256.test(attestation.toolchainDigest)
+      || !SHA256.test(attestation.configurationDigest) || !SHA256.test(attestation.buildIdentityDigest)
+      || !SHA256.test(attestation.recordDigest)
+      || attestation.recordPath !== `artifacts/tearbench/generated/builds/${output.mode}.json`
+      || attestation.contentAddressedPath !== `artifacts/tearbench/builds/${attestation.buildIdentityDigest}/payload`) {
       throw new TypeError("receipt produced build attestation is stale or malformed");
     }
   }
@@ -180,9 +197,20 @@ function verifyBuildAttestation(attestation, expected, plan, artifactBytes, buil
   }
   try {
     const info = JSON.parse(Buffer.from(bytes).toString("utf8"));
+    const expectedRecordPath = `artifacts/tearbench/generated/builds/${expected.mode}.json`;
+    const recordBytes = artifactBytes[expectedRecordPath];
+    const record = recordBytes === undefined ? undefined : JSON.parse(Buffer.from(recordBytes).toString("utf8"));
+    const { recordDigest, ...recordUnsigned } = record ?? {};
     if (info.sourceRevision !== plan.source.revision || info.sourceFingerprint !== plan.source.fingerprint
       || info.artifactHash !== attestation.artifactHash || !SHA256.test(info.artifactHash)
-      || buildArtifactHashes[expected.path] !== info.artifactHash) errors.push(`${label} is stale or its build artifact hash is unverified`);
+      || info.target !== expected.target || info.mode !== expected.mode
+      || info.toolchain?.digest !== attestation.toolchainDigest || info.configuration?.digest !== attestation.configurationDigest
+      || info.buildIdentityDigest !== attestation.buildIdentityDigest || info.contentAddressedPath !== attestation.contentAddressedPath
+      || attestation.recordPath !== expectedRecordPath || recordDigest !== attestation.recordDigest
+      || receiptSha256(recordUnsigned) !== recordDigest || record?.buildIdentityDigest !== info.buildIdentityDigest
+      || record?.artifactHash !== info.artifactHash || record?.contentAddressedPath !== info.contentAddressedPath
+      || buildArtifactHashes[expected.path] !== info.artifactHash
+      || buildArtifactHashes[info.contentAddressedPath] !== info.artifactHash) errors.push(`${label} is stale or its complete build identity is unverified`);
   } catch { errors.push(`${label} is not valid build-info JSON`); }
 }
 

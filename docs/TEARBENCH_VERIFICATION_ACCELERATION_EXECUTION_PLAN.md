@@ -253,7 +253,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 | VAP-2 | Atomic task registry | Gate B | Complete locally; protected integration not claimed |
 | VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Complete locally; protected integration not claimed |
 | VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Complete locally; protected integration not claimed |
-| VAP-5 | Build once and exact artifact fanout | VAP-4 | Not started |
+| VAP-5 | Build once and exact artifact fanout | VAP-4 | Complete locally; protected integration not claimed |
 | VAP-6 | Bounded parallel CI canary | VAP-5 | Not started |
 | VAP-7 | Stable required-gate cutover | VAP-6 | Not started |
 | VAP-8 | TearSkills and Luna evidence protocol | VAP-4, VAP-7 | Not started |
@@ -390,14 +390,14 @@ proof. Protected integration remains separately authorized.
 
 ### Checklist
 
-- [ ] Materialize production standalone, production CrazyGames, test standalone, and test CrazyGames artifacts under content-addressed identities.
-- [ ] Include source revision/fingerprint, target, mode, artifact digest/file count, toolchain profile, and relevant configuration digest.
-- [ ] Upload immutable artifacts once and record provider artifact ID/digest.
-- [ ] Make unit/browser/packaging/dry-run consumers verify the required artifact before use.
-- [ ] Keep standalone A/B and CrazyGames A/B reproducibility tasks independent and compare them exactly.
-- [ ] Prevent current-weapon parity and performance tasks from rebuilding an already valid test artifact.
-- [ ] Invalidate reuse whenever complete build identity changes.
-- [ ] Preserve production's existing exact-artifact deployment property.
+- [x] Materialize production standalone, production CrazyGames, test standalone, and test CrazyGames artifacts under content-addressed identities.
+- [x] Include source revision/fingerprint, target, mode, artifact digest/file count, toolchain profile, and relevant configuration digest.
+- [x] Upload immutable artifacts once and record provider artifact ID/digest.
+- [x] Make unit/browser/packaging/dry-run consumers verify the required artifact before use.
+- [x] Keep standalone A/B and CrazyGames A/B reproducibility tasks independent and compare them exactly.
+- [x] Prevent current-weapon parity and performance tasks from rebuilding an already valid test artifact.
+- [x] Invalidate reuse whenever complete build identity changes.
+- [x] Preserve production's existing exact-artifact deployment property.
 
 **Focused proof:** Build-identity tests, stale/wrong-target negatives, two independent reproducibility comparisons, and a shadow run showing no unintentional identical build execution.
 

@@ -83,7 +83,9 @@ export async function verifyProtectedPlanCertificate({ certificatePath, planPath
   ]) {
     try {
       bytes[attestation.buildInfoPath] = await artifactBytes(workspaceRoot, attestation.buildInfoPath);
+      bytes[attestation.recordPath] = await artifactBytes(workspaceRoot, attestation.recordPath);
       buildArtifactHashes[attestation.path] = (await calculateArtifactHash(resolve(workspaceRoot, attestation.path))).hash;
+      buildArtifactHashes[attestation.contentAddressedPath] = (await calculateArtifactHash(resolve(workspaceRoot, attestation.contentAddressedPath))).hash;
     }
     catch { /* Aggregate verification emits the exact missing/altered build error. */ }
   }

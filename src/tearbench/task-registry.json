@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "definitionPolicyVersion": 1,
+  "definitionPolicyVersion": 2,
   "tasks": [
     {
       "taskId": "static.requirements-check",
@@ -873,7 +873,16 @@
         "build",
         "check:bundles"
       ],
-      "dependencies": [],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        },
+        {
+          "taskId": "build.crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
       "resourceClass": "build",
       "resourceKeys": [
         "resources/build"
@@ -896,12 +905,22 @@
         "build",
         "check:crazygames-package"
       ],
-      "dependencies": [],
+      "dependencies": [
+        {
+          "taskId": "build.crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
       "resourceClass": "build",
       "resourceKeys": [
         "resources/build"
       ],
-      "outputs": [],
+      "outputs": [
+        {
+          "outputId": "package-artifact",
+          "path": "artifacts/packages/tear-crazygames.zip"
+        }
+      ],
       "timeoutMs": 300000,
       "intentionalReplica": "none"
     },
@@ -912,7 +931,8 @@
         "kind": "node",
         "executable": "node",
         "args": [
-          "scripts/check-reproducible-build.mjs"
+          "scripts/check-reproducible-build.mjs",
+          "certify"
         ]
       },
       "claimIds": [
@@ -949,7 +969,12 @@
       "resourceKeys": [
         "resources/build"
       ],
-      "outputs": [],
+      "outputs": [
+        {
+          "outputId": "comparison-certificate",
+          "path": "artifacts/tearbench/generated/reproducibility/certificate.json"
+        }
+      ],
       "timeoutMs": 300000,
       "intentionalReplica": "none"
     },
@@ -967,7 +992,12 @@
         "build",
         "check:cloudflare"
       ],
-      "dependencies": [],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        }
+      ],
       "resourceClass": "build",
       "resourceKeys": [
         "resources/build"
@@ -2040,6 +2070,10 @@
         {
           "outputId": "comparison-side",
           "path": "artifacts/tearbench/generated/reproducibility/standalone-a.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/standalone-a"
         }
       ],
       "timeoutMs": 300000,
@@ -2069,6 +2103,10 @@
         {
           "outputId": "comparison-side",
           "path": "artifacts/tearbench/generated/reproducibility/standalone-b.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/standalone-b"
         }
       ],
       "timeoutMs": 300000,
@@ -2098,6 +2136,10 @@
         {
           "outputId": "comparison-side",
           "path": "artifacts/tearbench/generated/reproducibility/crazygames-a.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/crazygames-a"
         }
       ],
       "timeoutMs": 300000,
@@ -2127,6 +2169,10 @@
         {
           "outputId": "comparison-side",
           "path": "artifacts/tearbench/generated/reproducibility/crazygames-b.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/crazygames-b"
         }
       ],
       "timeoutMs": 300000,
@@ -2147,7 +2193,12 @@
       "claimIds": [
         "reproducibility"
       ],
-      "dependencies": [],
+      "dependencies": [
+        {
+          "taskId": "repro.crazygames.a",
+          "outputId": "comparison-build"
+        }
+      ],
       "resourceClass": "build",
       "resourceKeys": [
         "resources/build"
@@ -2156,6 +2207,10 @@
         {
           "outputId": "comparison-side",
           "path": "artifacts/tearbench/generated/reproducibility/crazygames-package-a.json"
+        },
+        {
+          "outputId": "comparison-package",
+          "path": "artifacts/tearbench/generated/reproducibility/packages/crazygames-package-a.zip"
         }
       ],
       "timeoutMs": 300000,
@@ -2176,7 +2231,12 @@
       "claimIds": [
         "reproducibility"
       ],
-      "dependencies": [],
+      "dependencies": [
+        {
+          "taskId": "repro.crazygames.b",
+          "outputId": "comparison-build"
+        }
+      ],
       "resourceClass": "build",
       "resourceKeys": [
         "resources/build"
@@ -2185,6 +2245,10 @@
         {
           "outputId": "comparison-side",
           "path": "artifacts/tearbench/generated/reproducibility/crazygames-package-b.json"
+        },
+        {
+          "outputId": "comparison-package",
+          "path": "artifacts/tearbench/generated/reproducibility/packages/crazygames-package-b.zip"
         }
       ],
       "timeoutMs": 300000,
