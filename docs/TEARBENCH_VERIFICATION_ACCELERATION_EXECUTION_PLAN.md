@@ -425,6 +425,12 @@ proof. Protected integration remains separately authorized.
 
 **Focused proof:** A non-required protected canary whose receipts prove exact task parity with the serial authority, including a planted failed shard and successful aggregate rejection.
 
+**Protected launch gate:** GitHub only accepts `workflow_dispatch` after the
+workflow exists on the default branch. Land the inactive, non-required canary
+through the existing protected PR and `check` gate first; then dispatch normal
+and planted-failure runs from `main`. This does not authorize or perform the
+VAP-7 required-check cutover.
+
 **Exit:** The canary preserves every required task and failure signal, has no artifact/port collision, and materially reduces p50/p95 wall time without unacceptable flake or runner-cost growth.
 
 **Reopen when:** Browser harness isolation, task durations, runner image, matrix limit, or artifact transfer changes.

@@ -82,10 +82,24 @@ packing evidence.
 
 ## Protected evidence still required
 
-The workflow has not been pushed or dispatched. VAP-6 is not complete until a
-separately authorized protected normal canary and planted-failure canary provide
-exact serial/parallel task and claim parity, a certified normal aggregate, a
-rejected planted aggregate, provider receipts, collision-free transfers, queue
-and setup measurements, shard balance, runner minutes, and enough retained runs
-to report p50/p95 and tune the frozen history. No protected setting or external
-repository state was changed in this slice.
+The workflow has not been pushed or dispatched. GitHub accepts a
+`workflow_dispatch` event only after that workflow file exists on the default
+branch ([GitHub manual-run contract](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)).
+The protected launch order is therefore:
+
+1. Separately authorize a branch push and pull request for this inactive,
+   non-required workflow.
+2. Satisfy the current `main` ruleset through the existing required `check`
+   context and merge the workflow without changing required-check settings.
+3. Dispatch the normal canary on `main`, then dispatch the planted-failure
+   canary on the same accepted implementation.
+4. Retain and compare both aggregate artifacts before beginning VAP-7.
+
+VAP-6 is not complete until those runs provide exact serial/parallel task and
+claim parity, a certified normal aggregate, a rejected planted aggregate,
+provider receipts, collision-free transfers, queue and setup measurements,
+shard balance, runner minutes, and enough retained runs to report p50/p95 and
+tune the frozen history. The ruleset observed on 2026-08-31 requires pull
+requests and the strict `check` status on `main`, exposes no bypass actor, and
+does not yet require this canary. No protected setting or external repository
+state was changed in this slice.
