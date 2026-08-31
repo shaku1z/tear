@@ -65,7 +65,7 @@ runtime authority.
 | 6 | TC-6 — Specialized evidence-route ownership | Complete | TC-2 through TC-5 |
 | 7 | TC-7 — Diff-scoped capability reporting | Complete | TC-6 |
 | 8 | TC-8 — Program-document reconciliation | Complete | TC-1 through TC-7 |
-| 9 | TC-9 — Canonical Pale preview scenarios | Not started | TC-3, TC-5, TC-6 |
+| 9 | TC-9 — Canonical Pale preview scenarios | Complete | TC-3, TC-5, TC-6 |
 | 10 | TC-10 — Exact-commit post-review and C40 truth | Not started | TC-1 through TC-9 |
 
 ### Known audit inputs that must not be dropped
@@ -406,14 +406,14 @@ unsupported headless claim, or replacement of complementary presentation journey
 
 ### Checklist
 
-- [ ] Add a negative catalog/selector case proving an ad hoc test-hook journey without a canonical seeded scenario cannot satisfy Pale coverage, and reject false backend or publication tags.
-- [ ] Add canonical Scenario Console scenarios for Aurora/Rimehound behavior and explicit Pale variant selection.
-- [ ] Reuse current production definitions and Pale State Forge factories; do not create a second Pale runtime.
-- [ ] Record explicit seed, state class, subject, start contract, backends, assertions, and preview/engineering tags.
-- [ ] Make `pnpm tearbench run` execute each scenario without relying solely on ad hoc Playground preparation.
-- [ ] Keep White Hart canonical and explicitly unpublished; remove ambiguous “provisional implementation” language without publishing it.
-- [ ] Claim live, headless, replay, or seek only where that backend executes the subject specifically.
-- [ ] Preserve focused browser presentation journeys as complementary visual evidence, not the canonical scenario itself.
+- [x] Add a negative catalog/selector case proving an ad hoc test-hook journey without a canonical seeded scenario cannot satisfy Pale coverage, and reject false backend or publication tags.
+- [x] Add canonical Scenario Console scenarios for Aurora/Rimehound behavior and explicit Pale variant selection.
+- [x] Reuse current production definitions and Pale State Forge factories; do not create a second Pale runtime.
+- [x] Record explicit seed, state class, subject, start contract, backends, assertions, and preview/engineering tags.
+- [x] Make `pnpm tearbench run` execute each scenario without relying solely on ad hoc Playground preparation.
+- [x] Keep White Hart canonical and explicitly unpublished; remove ambiguous “provisional implementation” language without publishing it.
+- [x] Claim live, headless, replay, or seek only where that backend executes the subject specifically.
+- [x] Preserve focused browser presentation journeys as complementary visual evidence, not the canonical scenario itself.
 
 **Focused gate:** Pale State Forge, Aurora, Rimehound, variant, White Hart,
 canonical scenario, selector, and the newly selected narrow browser journeys.
@@ -485,7 +485,7 @@ commit alone is insufficient.
 | TC-6 | `0473e3d85e833474112e81b81715371b29e764ec` + `244db27` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-6_SPECIALIZED_EVIDENCE_ROUTE_OWNERSHIP.md`; 32 selector tests, 7 TypeScript projection/certification tests, focused hook-family negatives, typecheck, syntax, docs, terminology, and diff gates | Selected/dry route-family inspection only; no owning gameplay family changed | Initial review found fail-closed and hook-family audit gaps; corrected exact-commit re-review passed; no protected integration claimed | Complete |
 | TC-7 | `7ec9509e6427c1498abc99d543306f0959ff12dc` + `244db27` + `96ad620` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-7_DIFF_SCOPED_CAPABILITY_REPORTING.md`; selector/report/reuse negatives, 7 TypeScript projection/certification tests, typecheck, syntax, docs, terminology, and diff gates | N/A | Narrow-versus-broad, worktree, route-digest, legacy-format, and same-source/different-scope reuse negatives passed; exact-commit re-review passed; no protected integration claimed | Complete |
 | TC-8 | `52cb587d1ac2266f0e5549fcea3fa1d1dcac0fdf` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-8_PROGRAM_DOCUMENT_RECONCILIATION.md`; 15 docs authority tests, docs, requirements, terminology, syntax, and diff gates | N/A | Exact receipt chain and conservative current-state semantics independently reviewed green; production attributable, G7 open, C40 incomplete; no protected integration claimed | Complete |
-| TC-9 | — | — | — | — | Not started |
+| TC-9 | `3f5787047892a1df48cfdbbed36919ca6e4c546f` (implementation; local, not protected integration) | `docs/checkpoints/tearbench-current-corrections/TC-9_CANONICAL_PALE_PREVIEW_SCENARIOS.md`; 46 Pale unit tests, 14 runner tests, 35 selector tests, 5 snapshot tests, typecheck, syntax, and diff gates | Ten canonical per-ID live State Forge runs passed with exact horizons and zero failures; Rimehound, variant, and White Hart browser journeys passed as complementary evidence | Multiple fail-closed and provenance blockers were corrected; final exact-commit re-review passed; Pale remains unpublished and no protected integration is claimed | Complete |
 | TC-10 | — | `pnpm check` | Required by certificate | — | Not started |
 
 ## 16. Agent handoff contract
