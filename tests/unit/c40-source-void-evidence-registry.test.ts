@@ -28,6 +28,10 @@ describe("C40 Source one-HP void rescue seek evidence registry", () => {
     const route = routes.find((entry) => entry.id === "source-void-replay");
     expect(route).toEqual({
       id: "source-void-replay",
+      specialized: true,
+      owner: "source-void",
+      requiredScenarios: ["source-void-low-hp-rescue-seek"],
+      reducedDisposition: "detached-source-void-unsupported",
       prefixes: ["src/gameplay/campaign/source-void-", "src/gameplay/runtime/gameplay-events.ts", "src/app/live-source-void-", "src/tearbench/gameplay-causal-events.ts", "src/tearbench/state-codecs.ts", "src/replay/legacy-compat.ts", "src/tearbench/canonical-scenarios.json", "src/tearbench/evidence-routes.json", "tests/browser-c40-source-void-ghost-seek.js", "tests/browser-c40-state-forge-source-void.js", "tests/unit/c40-source-void-evidence-registry.test.ts"],
       scenarios: ["source-void-low-hp-rescue-seek"],
       graveyardCases: [],

@@ -1,17 +1,34 @@
 # TEAR Program Normalization and Release Governance Master Plan
 
+<!-- tearbench-current-program-state: tc8-current-program-state-2026-08-30 -->
+
+**Current TearBench program-state authority:** `config/tearbench-current-program-state.json`.
+It is the canonical source for the current protected game/wiki receipt chain and
+conservative G7/C25/C27-C40 wording; historical checkpoint receipts remain immutable.
+**Current program-state summary:** Source `9e7d6a701ca0b992c8d78cccc2af329d698778c0`;
+C25 open; C27 open; C28 complete; C29 narrow-complete; C30 active; C31 active;
+C32 foundation-only; C33 active; C34 active; C35 active; C36 open; C37 partial;
+C38 bounded-partial; C39 local-only; C40 incomplete; production attributable;
+G7 eligible/open; certificate absent; dashboard certified count 0.
+Capability evidence is `artifacts/tearbench/generated/diff-capability.json`,
+last-run and non-cumulative.
+
 **Status:** G4 and G5 are CLOSED under their protected-main receipts. G6 is
 CLOSED after the exact game-reference dispatch, protected wiki promotion,
 post-merge validation, and non-production preview evidence recorded in
 `docs/checkpoints/program-normalization/G6_CLOSURE.md`. G7 is now
-ELIGIBLE/OPEN for independent certification; production remains frozen.
+ELIGIBLE/OPEN for independent certification; current production is attributable
+through the recorded receipt chain.
 
-The G6 evidence baseline is game `main` at `71df06260b9ee2b41f729048dce3f910130ea234`
-and wiki `main` at `ecec8c9aeba189fe7b254329010571dd71f7cc3d`. A later
-docs-only merge of this closure record will advance the game SHA, so the
-existing G6 preview is not evidence for that future SHA; G7 must repeat the
-exact-main Validate, artifact dispatch, wiki promotion, and preview checks
-before any production release decision.
+The current recorded G7 release chain is game `main` at
+`9e7d6a701ca0b992c8d78cccc2af329d698778c0` with successful Validate run
+`33316839231`, game production run `33317506163`, wiki sync run `33317579723`,
+and wiki production run `33317775693`. The wiki protected `main` is
+`7fa35d9b4aff9d00a658a3dc648d8512d649887b`; the live source fingerprint and
+artifact identity are recorded in the current program-state authority. G7
+remains ELIGIBLE/OPEN and current production is attributable through the
+recorded receipt chain; these receipts do not constitute C40 certification. The earlier G6 baseline below is historical to
+that checkpoint and is not current release identity.
 
 **Prepared:** 2026-08-20
 
@@ -24,7 +41,8 @@ before any production release decision.
 whole-root preservation is recorded in
 `docs/checkpoints/program-normalization/G5_WORKSPACE_PRESERVATION.md` and is
 bound to the report, manifest, journal, and completion receipt recorded there.
-No deletion occurred; production remained frozen. Restore/reverse-move,
+No deletion occurred; at the historical G5 checkpoint production remained
+frozen. Restore/reverse-move,
 artifact quarantine, remaining workspace normalization, wiki synchronization,
 and deployment remain separately gated work. The age-eligible artifact set has
 since received an evidence-backed retain-in-place disposition; no artifact
@@ -35,7 +53,8 @@ CLOSED after protected merge and post-merge observation; G5 CLOSED with
 evidence recorded in `docs/checkpoints/program-normalization/G5_CLOSURE.md`;
 G6 CLOSED with evidence recorded in
 `docs/checkpoints/program-normalization/G6_CLOSURE.md`; G7 is
-ELIGIBLE/OPEN for independent certification and production remains frozen.
+ELIGIBLE/OPEN for independent certification and current production is
+attributable through the recorded receipt chain.
 
 **Music repository state:** `shaku1z/tear-music` (formerly
 `shaku1z/tear-score`) protected `main` is clean and equal to its canonical
@@ -51,11 +70,13 @@ authority.
 PR. The modern consumer, protected receiver, game sender, and non-production
 preview are operationally proven. The current promoted manifest hash is
 `afc4eb0e7b051c76eb583be852b00a80f4c2b7632744e1a7f4199faffbba7254`.
-Production `tear-wiki` remains frozen and unchanged.
+The historical wiki production state remained frozen and unchanged; the current
+wiki production receipt is recorded in the current program-state authority.
 
-**Production state:** Frozen. G5 closure claims no deployment, Cloudflare,
-DNS, Access, Tunnel, or published-artifact mutation; G7 is eligible/open but
-its production gates remain unsatisfied.
+**Production state:** Current production is attributable through the recorded
+receipt chain. Historical G5 closure claims no deployment, Cloudflare, DNS,
+Access, Tunnel, or published-artifact mutation; G7 is eligible/open, its
+certificate is absent, and C40 remains incomplete.
 
 This document is the single sequencing authority for correcting the current
 TEAR repository, naming, workspace, documentation, wiki, and deployment state.
@@ -485,8 +506,9 @@ change is the exact game PR #8 squash merge `85f1ec9`; the music PR #3
 merge commit on protected `main` is `1ba4ee4`, with its restored source
 branch at `4f7a872`. The game PR #8 source branch remains at `d2b5855`.
 The canonical Final Five remains **Sword, Hammer, Greatsword, Chainblade,
-Riftlock**. All preserved branches and worktrees remain intact, and Cloudflare
-production remains frozen with no deployment performed. Protected PR #9 is the
+Riftlock**. All preserved branches and worktrees remain intact. At the
+historical G2 final-state checkpoint, Cloudflare production remained frozen
+with no deployment performed. Protected PR #9 is the
 approval mechanism; once this record is present on protected `main`, G2 is
 closed and G3 is eligible only after a fresh post-merge ref observation
 confirms these facts.
@@ -766,7 +788,7 @@ preserving saves, replay evidence, routes, provenance, and historical truth.
       the G4-G checkpoint evidence without changing Training Operations or
       Foundry implementation names.
 - [ ] Run final proportional hosted validation and open the protected-main
-      PR; protected merge, post-merge validation, and deployment remain
+      PR; protected merge, post-merge validation, and deployment remained
       outside this slice until reviewed.
 - [ ] Retire Academy/Agent Academy aliases only after the registry condition
       `G4-G-TRAINING-ARCHIVE` is signed; this remains unproven.
@@ -828,7 +850,7 @@ main Validate run `32690766274` succeeded, the branch-cleanup receipt and
 final strict parent-layout evidence were recorded, and canonical refs were
 verified clean/equal. The final strict report is `ok: true` with no no-go
 findings; its 17 loose-file items remain explicitly classified for review and
-are not claimed removed or otherwise resolved. This section records the
+are not claimed removed or otherwise resolved. This historical G5 section records the
 bounded baseline, authority indexes, report-driven preservation, explicit
 deferred dependency audit, and evidence-backed dispositions; no deployment or
 bulk reorganization is claimed.
@@ -1143,9 +1165,10 @@ or deletion is part of G5.
 
 **Status:** CLOSED after the exact game-reference dispatch, protected wiki
 promotion, post-merge validation, and non-production preview evidence recorded
-in `docs/checkpoints/program-normalization/G6_CLOSURE.md`. Production and the
-`tear-wiki` production Worker remain frozen; G7 is eligible/open and has its
-own independent release gates.
+in `docs/checkpoints/program-normalization/G6_CLOSURE.md`. At the historical G6
+closure boundary, production and the `tear-wiki` production Worker remained
+frozen; current production is attributable through the later recorded receipt
+chain. G7 is eligible/open and has its own independent release gates.
 
 **Goal:** Make the wiki consume a stable, typed, versioned representation of
 the modern game at an exact verified commit.
@@ -1280,7 +1303,9 @@ pre-merge status wording is recorded in
 These consumer items are implementation and protected-main validation facts on
 the wiki. The former pre-promotion boundary is now resolved by the exact
 dispatch, promotion, post-merge validation, and preview evidence in
-`G6_CLOSURE.md`; production deployment remains outside G6 and is still frozen.
+`G6_CLOSURE.md`; at that historical G6 boundary, production deployment remained
+outside G6 and frozen. The later current production receipt is recorded by the
+current program-state authority.
 
 ### Checkpoint G6-A — midpoint pause
 
@@ -1316,12 +1341,18 @@ dispatch, promotion, post-merge validation, and preview evidence in
 
 ## 11. G7 — Certify and deploy the converged program
 
-**Status:** ELIGIBLE/OPEN after G6 closure. Production remains frozen. The G6
-preview and promoted manifest are bound to game `main` SHA `71df062`; a merge
-of the docs-only G6 closure PR will create a newer game SHA and therefore
-requires a fresh exact-main Validate, artifact publication, wiki dispatch,
-promotion, post-merge validation, and preview observation before G7 can treat
-that newer SHA as release evidence.
+**Status:** ELIGIBLE/OPEN after G6 closure. Current production is attributable
+through the recorded receipt chain. The G6
+preview and promoted manifest are historical G6 evidence for game `main` SHA
+`71df06260b9ee2b41f729048dce3f910130ea234`; they are not current G7 identity.
+The current recorded release chain is game `main` SHA
+`9e7d6a701ca0b992c8d78cccc2af329d698778c0` with successful Validate run
+`33316839231`, game production run `33317506163`, wiki sync run `33317579723`,
+and wiki production run `33317775693`. The wiki protected `main` is
+`7fa35d9b4aff9d00a658a3dc648d8512d649887b`; these receipts establish
+provenance but do not close G7 or certify C40. Any future game-main SHA still
+requires a fresh exact synchronization cycle before a production release
+decision.
 
 **Goal:** Produce one auditable release chain from canonical branches to public
 surfaces.
@@ -1339,6 +1370,11 @@ surfaces.
 - [ ] Rollback version and Git revert procedure are written before deployment.
 
 ### Deployment sequence
+
+The current game and wiki deployment receipts establish attributable production
+provenance. The following G7 certification/reproducibility checks remain open;
+their unchecked state is not a claim that the recorded deployments did not
+occur.
 
 1. [ ] Approve the exact green game `main` SHA in the protected production
        environment.

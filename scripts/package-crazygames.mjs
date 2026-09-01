@@ -1,10 +1,15 @@
 import { deflateRawSync } from "node:zlib";
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { verifyReleaseArtifact } from "./release-artifact.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const input = path.join(root, "dist", "crazygames");
-const output = path.join(root, "artifacts", "packages", "tear-crazygames.zip");
+const inputIndex = process.argv.indexOf("--input"), outputIndex = process.argv.indexOf("--output");
+if ((inputIndex >= 0) !== (outputIndex >= 0) || (inputIndex >= 0 && process.argv.length !== 6)) {
+  throw new TypeError("usage: node scripts/package-crazygames.mjs [--input path --output path]");
+}
+const input = inputIndex >= 0 ? path.resolve(process.argv[inputIndex + 1]) : path.join(root, "dist", "crazygames");
+const output = outputIndex >= 0 ? path.resolve(process.argv[outputIndex + 1]) : path.join(root, "artifacts", "packages", "tear-crazygames.zip");
 
 const crcTable = Array.from({ length: 256 }, (_, value) => {
   let crc = value;
@@ -100,6 +105,9 @@ async function main() {
   if (!(await stat(input).catch(() => undefined))?.isDirectory()) {
     throw new Error("dist/crazygames is missing; run pnpm build:crazygames first");
   }
+  const buildInfo = JSON.parse(await readFile(path.join(input, "build-info.json"), "utf8"));
+  await verifyReleaseArtifact({ directory: input, expectedRepository: buildInfo.repository, expectedSha: buildInfo.sha,
+    expectedTarget: "crazygames", expectedMode: "crazygames", sourceDirectory: root, allowDirty: true });
   const allNames = await filesBelow(input);
   const activeRevisions = await activeRevisionAssets(input, allNames);
   const names = allNames.filter((name) => !isRevisionAsset(name) || activeRevisions.has(name));

@@ -70,7 +70,8 @@ export async function materializeAcademyCandidateCapsule(
   let sequence = 0;
   for (const event of sourceTracks.nativeEvents) {
     await recorder.append({ kind: "events", tick: event.tick,
-      value: createGameplayCausalEvent(event, ++sequence, `academy-c30-${candidate.episodeId}-${String(sequence)}`) });
+      value: createGameplayCausalEvent(event, ++sequence,
+        `academy-c30-${candidate.episodeId}-${String(sequence)}`, "engine") });
   }
   await recorder.append({ kind: "results", tick: candidate.tick, value: createAcademyCandidateTerminalAnchor(candidate) });
   await recorder.finalize(request.completedAt);

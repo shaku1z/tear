@@ -8,6 +8,43 @@
     "allowlistRule": "Every compatibility exception is path-scoped, term-scoped, owned, justified, evidenced, and expires at a named removal gate. Wildcards are intentionally narrow.",
     "historyRule": "Immutable history is readable but never rewritten for naming. New source files cannot inherit a history exception unless they match an explicitly immutable historical path."
   },
+  "sourceAuthority": {
+    "productionOwners": {
+      "stages": "src/gameplay/stages.ts",
+      "bosses": "src/gameplay/run/boss-definitions.ts",
+      "environmentMechanics": "src/gameplay/environment/environment-definitions.ts",
+      "stageEnvironment": "src/gameplay/environment/stage-environment-definitions.ts",
+      "publication": "config/campaign-publication-boundary.json",
+      "canonicalScenarios": "src/tearbench/canonical-scenarios.json"
+    },
+    "projectionRule": "TearBench may project production owners, but must not repeat their IDs, display names, homes, publication state, or mechanic identities in a second catalog.",
+    "specializedMechanicsRule": "Only mechanics named by a canonical environment scenario may receive a specialized terminology projection; generic gameplay terminology is not inferred from this registry."
+  },
+  "mutableProjectionPolicy": {
+    "mutableGeneratedTextFields": ["description", "artifact", "text", "implementationDeliverable", "userVisibleResult", "acceptanceCondition"],
+    "immutableSourceFields": ["id", "sourceStatement", "sourceTextHash", "atomicTextHash", "sourceVersion"],
+    "mutablePaths": ["src/tearbench/canonical-scenarios.json", "docs/tearbench-ghost3-evidence-catalog.json"],
+    "immutablePaths": ["docs/source/**", "docs/checkpoints/**", "docs/ghost3/**"]
+  },
+  "currentSourcePolicy": {
+    "mutableScanPaths": [
+      "src/gameplay/run/boss-definitions.ts",
+      "src/gameplay/environment/*.ts",
+      "src/tearbench/*.ts",
+      "docs/TEARBENCH_GHOST3_PROGRAM.md",
+      "docs/TEARBENCH_GHOST3_REQUIREMENT_LEDGER.md",
+      "docs/tearbench-ghost3-evidence-catalog.json",
+      "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md"
+    ],
+    "immutableHistoryPaths": ["docs/source/**", "docs/checkpoints/**", "docs/ghost3/**"],
+    "staleDefinitionPatterns": [
+      "\\b(?:WHITE_HART|ROOTBOUND|BLOOM_WELL|PALE_STAGE|VERDANT_STAGE)_(?:PROVISIONAL|DRAFT|PLACEHOLDER)_[A-Z0-9_]+\\b"
+    ],
+    "staleCheckpointCommentPatterns": [
+      "\\bcurrent\\s+(?:checkpoint|status)\\b[^\\r\\n]*(?:provisional|draft|placeholder)\\b",
+      "\\bcheckpoint\\s+C(?:2[1-9]|3\\d|40)\\b[^\\r\\n]*(?:provisional|draft|placeholder)\\b"
+    ]
+  },
   "terms": [
     {
       "id": "tear-music",
@@ -436,6 +473,7 @@
       "src/agents/live-watch-agent-*.ts",
       "src/ghost/player-experiences.ts",
       "src/tearbench/browser/*.ts",
+      "src/tearbench/canonical-scenarios.json",
       "public/**/*.json",
       "public/**/*.html",
       "index.html",

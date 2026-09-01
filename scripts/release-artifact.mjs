@@ -6,6 +6,38 @@ import { join, relative, resolve } from "node:path";
 
 export const BUILD_INFO_FILE = "build-info.json";
 export const RELEASE_REPOSITORY = "shaku1z/tear";
+const BUILD_CONFIGURATION_FILES = Object.freeze([
+  "package.json", "pnpm-lock.yaml", "vite.config.ts", "tsconfig.json", "tsconfig.app.json", "tsconfig.node.json",
+]);
+
+function canonicalJson(value) {
+  if (value === null || typeof value === "boolean" || typeof value === "number" || typeof value === "string") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+}
+function hash(value) { return createHash("sha256").update(typeof value === "string" ? value : canonicalJson(value)).digest("hex"); }
+
+async function buildConfigurationIdentity(directory, mode) {
+  const root = resolve(directory), files = [];
+  for (const name of BUILD_CONFIGURATION_FILES) {
+    const path = join(root, name);
+    if (!existsSync(path)) continue;
+    const contents = await readFile(path);
+    files.push({ path: name, bytes: contents.length, sha256: createHash("sha256").update(contents).digest("hex") });
+  }
+  const viteEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith("VITE_"))
+    .sort(([left], [right]) => left.localeCompare(right)));
+  const environmentDigest = hash(viteEnvironment);
+  return Object.freeze({ mode, files: Object.freeze(files), environmentDigest,
+    digest: hash({ mode, files, environmentDigest }) });
+}
+function buildToolchainIdentity(directory) {
+  const packagePath = join(resolve(directory), "package.json");
+  const packageSource = existsSync(packagePath) ? JSON.parse(readFileSync(packagePath, "utf8")) : {};
+  const value = Object.freeze({ node: process.version, packageManager: packageSource.packageManager ?? "unknown",
+    vite: packageSource.devDependencies?.vite ?? packageSource.dependencies?.vite ?? "unknown" });
+  return Object.freeze({ ...value, digest: hash(value) });
+}
 
 function sourceGit(root, args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" });
@@ -72,7 +104,12 @@ export async function writeReleaseArtifactMetadata({ directory, repository, sha,
   const root = resolve(directory);
   const artifact = await calculateArtifactHash(root);
   const source = readSourceIdentitySync(sourceDirectory ?? root);
+  const configuration = await buildConfigurationIdentity(sourceDirectory ?? root, mode ?? target);
+  const toolchain = buildToolchainIdentity(sourceDirectory ?? root);
   if (sha !== source.revision) throw new Error(`build SHA ${sha} does not match actual source revision ${source.revision}`);
+  const identity = Object.freeze({ repository, sourceRevision: source.revision, sourceFingerprint: source.fingerprint,
+    target, mode: mode ?? target, artifactHash: artifact.hash, artifactFiles: artifact.files,
+    toolchainDigest: toolchain.digest, configurationDigest: configuration.digest });
   const metadata = Object.freeze({
     format: "tear-build-info",
     schemaVersion: 1,
@@ -86,12 +123,16 @@ export async function writeReleaseArtifactMetadata({ directory, repository, sha,
     artifactHashAlgorithm: "sha256-path-size-content-v1",
     artifactHash: artifact.hash,
     artifactFiles: artifact.files,
+    toolchain,
+    configuration,
+    buildIdentityDigest: hash(identity),
+    contentAddressedPath: `artifacts/tearbench/builds/${hash(identity)}/payload`,
   });
   await writeFile(join(root, BUILD_INFO_FILE), `${JSON.stringify(metadata, null, 2)}\n`, "utf8");
   return metadata;
 }
 
-export async function verifyReleaseArtifact({ directory, expectedRepository, expectedSha, expectedTarget,
+export async function verifyReleaseArtifact({ directory, expectedRepository, expectedSha, expectedTarget, expectedMode,
   sourceDirectory, allowDirty = false }) {
   const root = resolve(directory);
   const metadata = JSON.parse(await readFile(join(root, BUILD_INFO_FILE), "utf8"));
@@ -102,9 +143,20 @@ export async function verifyReleaseArtifact({ directory, expectedRepository, exp
   if (metadata.sha !== expectedSha) errors.push(`SHA ${String(metadata.sha)} != ${expectedSha}`);
   if (metadata.sourceRevision !== undefined && metadata.sourceRevision !== metadata.sha) errors.push("artifact SHA does not match its source revision");
   if (metadata.target !== expectedTarget) errors.push(`target ${String(metadata.target)} != ${expectedTarget}`);
+  if (expectedMode !== undefined && metadata.mode !== expectedMode) errors.push(`mode ${String(metadata.mode)} != ${expectedMode}`);
   if (metadata.artifactHashAlgorithm !== "sha256-path-size-content-v1") errors.push("unsupported artifact hash algorithm");
   if (metadata.artifactHash !== artifact.hash) errors.push(`artifact hash ${String(metadata.artifactHash)} != ${artifact.hash}`);
   if (metadata.artifactFiles !== artifact.files) errors.push(`artifact file count ${String(metadata.artifactFiles)} != ${String(artifact.files)}`);
+  const configuration = await buildConfigurationIdentity(sourceDirectory ?? root, metadata.mode ?? metadata.target);
+  const toolchain = buildToolchainIdentity(sourceDirectory ?? root);
+  const identity = { repository: metadata.repository, sourceRevision: metadata.sourceRevision, sourceFingerprint: metadata.sourceFingerprint,
+    target: metadata.target, mode: metadata.mode ?? metadata.target, artifactHash: metadata.artifactHash,
+    artifactFiles: metadata.artifactFiles, toolchainDigest: toolchain.digest, configurationDigest: configuration.digest };
+  const identityDigest = hash(identity);
+  if (metadata.toolchain?.digest !== toolchain.digest) errors.push("build toolchain identity is stale");
+  if (metadata.configuration?.digest !== configuration.digest) errors.push("build configuration identity is stale");
+  if (metadata.buildIdentityDigest !== identityDigest) errors.push("build identity digest is stale");
+  if (metadata.contentAddressedPath !== `artifacts/tearbench/builds/${identityDigest}/payload`) errors.push("build content-addressed path is stale");
   if (sourceDirectory !== undefined) {
     const source = readSourceIdentitySync(sourceDirectory);
     if (metadata.sourceRevision !== source.revision) errors.push(`source revision ${String(metadata.sourceRevision)} != ${source.revision}`);

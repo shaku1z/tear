@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadRegistry, translateMutableGeneratedDescriptions } from "./check-terminology.mjs";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
@@ -26,6 +27,7 @@ const DASHBOARD_PATH = resolve(
   REPOSITORY_ROOT,
   "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
 );
+const TERMINOLOGY_REGISTRY = loadRegistry(REPOSITORY_ROOT);
 
 const EXPECTED_SOURCE = Object.freeze({
   sha256: "007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE",
@@ -717,7 +719,7 @@ function requirementFrom(
     statementHash,
   );
   const requirementDisposition = disposition(statement, occurrenceValue, normative);
-  return {
+  return translateMutableGeneratedDescriptions({
     id,
     sourceOccurrenceId: occurrenceValue.id,
     sourceVersion: "0.6",
@@ -756,7 +758,7 @@ function requirementFrom(
       superseded: requirementDisposition === "superseded",
       conflictCandidate: /\b(conflict|contradict|instead of|replace|supersed)\b/i.test(statement),
     },
-  };
+  }, TERMINOLOGY_REGISTRY);
 }
 
 export function buildRequirements(parsed, checkpointMap) {

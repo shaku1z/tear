@@ -91,7 +91,12 @@ describe("Rootbound Phase II Graft creation", () => {
     if (mercy === undefined) throw new TypeError("expected Mercy Graft");
     expect(environment.damageCombatObject(mercy.id, mercy.integrity, "player-destroyed-mercy", 360).destroyed).toBe(true);
 
-    expect(() => { environment.step(361, 1 / 120, () => undefined, new Set(["enemy:1"])); }).not.toThrow();
+    expect(() => {
+      environment.step(361, 1 / 120, () => undefined, new Set(["enemy:1"]));
+      environment.step(362, 1 / 120, () => undefined, new Set(["enemy:1"]));
+    }).not.toThrow();
+    expect(environment.combatObjects().filter((object) => object.ownerId === "enemy:1" && isGraftAnchorState(object)))
+      .toHaveLength(3);
     expect(environment.combatObjects().filter((object) => object.id === "enemy:1:graft:mercy")).toEqual([
       expect.objectContaining({ state: "destroyed", stateTick: 360 }),
     ]);

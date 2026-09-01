@@ -5,6 +5,7 @@ import { RELEASE_REPOSITORY, verifyReleaseArtifact } from "./release-artifact.mj
 const projectRoot = resolve(import.meta.dirname, "..");
 const target = process.argv[2] || "standalone";
 const directory = process.argv[3] ? resolve(process.argv[3]) : resolve(projectRoot, "dist", target);
+const mode = process.argv[4] || target;
 const expectedSha = (process.env.TEAR_RELEASE_SHA || process.env.GITHUB_SHA || "").toLowerCase();
 if (!/^[0-9a-f]{40}$/u.test(expectedSha)) throw new Error("TEAR_RELEASE_SHA or GITHUB_SHA must contain the full expected Git SHA");
 const expectedRepository = process.env.TEAR_RELEASE_REPOSITORY || process.env.GITHUB_REPOSITORY || RELEASE_REPOSITORY;
@@ -13,6 +14,7 @@ const result = await verifyReleaseArtifact({
   expectedRepository,
   expectedSha,
   expectedTarget: target,
+  expectedMode: mode,
   sourceDirectory: projectRoot,
 });
 console.log(`PASS release artifact: ${result.metadata.sha} ${result.artifact.hash}`);

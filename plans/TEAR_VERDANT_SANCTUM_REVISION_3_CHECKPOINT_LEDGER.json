@@ -8,6 +8,16 @@
   "auditedBaseline": "91706363b80fb56a18df4d973b424bbce94a279e",
   "sourceBaselineRule": "Re-resolve current protected origin/main before every implementation slice.",
   "publicationBoundary": "Verdant and Pale promote together; no public six-stage campaign.",
+  "currentPublicationOverlay": {
+    "authority": "config/campaign-publication-boundary.json plus typed src/gameplay/stages.ts",
+    "status": "public",
+    "rulesetVersion": "tear-rules-six-biome-verdant-r3-pale-preview-v1",
+    "publishedStageIds": ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"],
+    "previewStageIds": ["pale-traverse"],
+    "publishedWaveCount": 60,
+    "historicalBoundaryPreserved": true,
+    "note": "This current overlay supersedes the historical publicationBoundary wording for current release and reference decisions; it does not publish Pale or rewrite checkpoint evidence."
+  },
   "tearbenchCertification": "No C40 certification claim. Verdant evidence is engineering/non-certifying unless a separately named certification gate passes.",
   "completedCheckpoints": [
     "VS3-C0",

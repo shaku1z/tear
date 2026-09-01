@@ -6,6 +6,7 @@ import {
   type LiveWorldEntityDependencies,
 } from "../../src/app/live-world-entity-factory";
 import type { GameRun } from "../../src/app/game-runtime-state";
+import { findVariant } from "../../src/gameplay/variants";
 
 interface ConstructorCall {
   readonly kind: string;
@@ -63,5 +64,22 @@ describe("live world entity factory", () => {
     expect(calls.filter((call) => call.kind === "support").map((call) => call.extra[0]))
       .toEqual(["priest", "herald", "mender", "anchor"]);
     expect((echo as { _mods?: unknown })._mods).toBe(restoredRun.mods);
+  });
+
+  it("rehydrates a matching variant name when serialized behavior is missing", () => {
+    const factory = createLiveWorldEntityFactory(fixtureDependencies([]));
+    const run = { mods: {} } as GameRun;
+    const actor = factory.createEnemy("charger", 1, 2, run);
+    const variant = findVariant("charger", "briar-stalker");
+    if (variant === null) throw new Error("briar-stalker fixture variant is missing");
+    actor.variant = variant.id;
+    actor.variantName = variant.name;
+    (actor as unknown as { behavior?: unknown }).behavior = undefined;
+    actor.speedMult = 1;
+
+    factory.finalizeEnemy?.("charger", actor, run);
+
+    expect(actor.behavior).toBe("briar-stalker");
+    expect(actor.speedMult).toBeCloseTo(1.18);
   });
 });

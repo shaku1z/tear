@@ -302,7 +302,11 @@ export function createLiveStateForgeAdapter(
     stage: (world, context) => stageWorld(options, world, context),
     validate(candidate) {
       const issues: string[] = [];
-      const availableStages = candidate.run.mode === "playground"
+      // Surgical Pale bossonly documents use the preview runtime slot while
+      // retaining bossonly semantics; campaign-mode candidates remain bound
+      // to the published stage roster.
+      const previewStageIndex = candidate.stageIndex >= options.dependencies.STAGES.length;
+      const availableStages = candidate.run.mode === "playground" || previewStageIndex
         ? options.dependencies.PLAYGROUND_STAGES
         : options.dependencies.STAGES;
       if (!(candidate.player.maxHp > 0) || candidate.player.hp < 0 || candidate.player.hp > candidate.player.maxHp) {
@@ -350,7 +354,11 @@ export function createLiveStateForgeAdapter(
       options.state.setSlowZones(candidate.slowZones);
       options.state.setTemporaryWalls(candidate.walls);
       options.restoreStageIndex(candidate.stageIndex);
-      const availableStages = candidate.run.mode === "playground"
+      // Keep the same preview-slot resolution used by validation. Surgical
+      // Pale bossonly restores intentionally use a playground stage index,
+      // while their run mode remains bossonly for the boss contract.
+      const previewStageIndex = candidate.stageIndex >= options.dependencies.STAGES.length;
+      const availableStages = candidate.run.mode === "playground" || previewStageIndex
         ? options.dependencies.PLAYGROUND_STAGES
         : options.dependencies.STAGES;
       const restoredStage = availableStages[candidate.stageIndex];

@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   ACTIVE_PLAN_METADATA_PATHS,
   checkCurrentAuthorityTable,
+  checkCurrentProgramState,
   checkRootDocumentationPolicy,
   checkActivePlanMetadata,
   checkPlansAuthorityIndex,
@@ -37,6 +38,19 @@ function copyActivePlanFixture(fixtureRoot) {
   }
 }
 
+function copyCurrentProgramFixture(fixtureRoot) {
+  fs.mkdirSync(path.join(fixtureRoot, "config"), { recursive: true });
+  fs.mkdirSync(path.join(fixtureRoot, "docs"), { recursive: true });
+  fs.mkdirSync(path.join(fixtureRoot, "plans"), { recursive: true });
+  fs.copyFileSync(path.join(repositoryRoot, "config", "tearbench-current-program-state.json"),
+    path.join(fixtureRoot, "config", "tearbench-current-program-state.json"));
+  for (const relativePath of [
+    "plans/TEARBENCH_MASTER_HANDOFF.md", "docs/TEARBENCH_GHOST3_PROGRAM.md",
+    "docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md", "plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md",
+    "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md", "docs/tearbench-ghost3-evidence-catalog.json",
+  ]) fs.copyFileSync(path.join(repositoryRoot, relativePath), path.join(fixtureRoot, relativePath));
+}
+
 test("docs checker passes the canonical tracked documentation baseline", () => {
   const result = runDocsCheck({ root: repositoryRoot });
   assert.equal(result.ok, true, result.errors.join("\n"));
@@ -46,6 +60,43 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
   assert.ok(result.localLinks >= 30);
   assert.equal(result.currentAuthorities, 10);
   assert.equal(result.activePlans, ACTIVE_PLAN_METADATA_PATHS.length);
+});
+
+test("current program-state authority rejects semantic receipt and status mutations", () => {
+  const mutations = [
+    ["marker", (state) => { state.marker = "<!-- tearbench-current-program-state: wrong-state -->"; }, /marker/u],
+    ["source", (state) => { state.receipts.gameProduction.sourceSha = "f".repeat(40); }, /source SHA diverges/u],
+    ["run", (state) => { state.receipts.wikiSync.validationRunId = "99999999999"; }, /wiki validation receipt diverges/u],
+    ["cumulative", (state) => { state.diffCapability.cumulative = true; }, /diff capability/u],
+    ["c40", (state) => { state.checkpoints.C40 = "complete"; }, /C40 state/u],
+    ["frozen-production", (state) => { state.g7.production = "frozen"; }, /G7 state/u],
+  ];
+  for (const [name, mutate, expected] of mutations) {
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `tear-tc8-state-${name}-`));
+    try {
+      copyCurrentProgramFixture(fixtureRoot);
+      const statePath = path.join(fixtureRoot, "config", "tearbench-current-program-state.json");
+      const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+      mutate(state);
+      fs.writeFileSync(statePath, `${JSON.stringify(state)}\n`, "utf8");
+      const result = checkCurrentProgramState(fixtureRoot);
+      assert.match(result.errors.join("\n"), expected, name);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+test("current program-state checker accepts historical text while requiring current marker", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-tc8-state-history-"));
+  try {
+    copyCurrentProgramFixture(fixtureRoot);
+    const documentPath = path.join(fixtureRoot, "plans", "TEARBENCH_MASTER_HANDOFF.md");
+    fs.appendFileSync(documentPath, "\nHistorical G6 checkpoint: production remained frozen and no deployment was performed; baseline a8a476c6171d913581c01bb0e4432f53cf44f9e4.\n", "utf8");
+    assert.deepEqual(checkCurrentProgramState(fixtureRoot).errors, []);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test("current authority table has one local primary per unique topic", () => {
@@ -88,6 +139,22 @@ test("active-plan metadata rejects missing owner or non-active status", () => {
       .replace("- **Status:** Active", "- **Status:** Paused"), "utf8");
     const result = checkActivePlanMetadata(fixtureRoot);
     assert.match(result.errors.join("\n"), /nonempty Owner|Status: Active/u);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("temporary correction authority requires an explicit temporary role and retirement contract", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-temporary-plan-metadata-"));
+  try {
+    copyActivePlanFixture(fixtureRoot);
+    const target = path.join(fixtureRoot, "plans", "TEARBENCH_CURRENT_CORRECTION_PLAN.md");
+    fs.writeFileSync(target, fs.readFileSync(target, "utf8")
+      .replace("- **Document role:** Temporary active execution authority", "- **Document role:** Active execution authority")
+      .replace(/^- \*\*Retirement:\*\*.*$/mu, "- **Retirement:**"), "utf8");
+    const errors = checkActivePlanMetadata(fixtureRoot).errors.join("\n");
+    assert.match(errors, /Temporary Document role/u);
+    assert.match(errors, /nonempty Retirement/u);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

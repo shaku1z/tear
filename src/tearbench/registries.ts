@@ -48,6 +48,9 @@ export function createStableRegistry<const TIds extends readonly string[]>(
 /** Canonical scenario capabilities are owned here, not inferred from catalog prose. */
 export const GAMEPLAY_SCENARIO_SUBJECT_IDS = Object.freeze([
   "boot", "movement", "dash", "blade", "parry", "wave", "draft", "variant-selection",
+  "pale-aurora-track", "pale-rimehound-aurora", "pale-rime-runner", "pale-prism-seer",
+  "pale-snowfall-kite", "pale-hailcaster", "pale-glacier-guard",
+  "pale-white-hart-phase-1", "pale-white-hart-phase-2", "pale-white-hart-phase-3",
 ] as const);
 export const GAMEPLAY_SCENARIO_SUBJECT_REGISTRY = createStableRegistry(
   "gameplay scenario subject", GAMEPLAY_SCENARIO_SUBJECT_IDS,
@@ -176,6 +179,10 @@ export const INVARIANT_IDS = Object.freeze([
 ] as const);
 export const INVARIANT_REGISTRY = createStableRegistry("invariant", INVARIANT_IDS);
 export type TearInvariantId = typeof INVARIANT_IDS[number];
+/** Registered ontology IDs that are intentionally unavailable until a real input contract exists. */
+export const UNSUPPORTED_INVARIANT_IDS = Object.freeze([
+  "replay.branch-equivalence", "test.production-isolation",
+] as const satisfies readonly TearInvariantId[]);
 
 export const WITHIN_TICK_PHASES = Object.freeze([
   "input-canonicalized",

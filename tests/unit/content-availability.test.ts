@@ -4,7 +4,11 @@ import {
   CAMPAIGN_STAGE_IDS,
   PUBLISHED_STAGE_IDS,
   PLAYGROUND_RUNTIME_STAGE_IDS,
+  STAGE_BOSS_HOME,
   STAGE_CONTENT_AVAILABILITY,
+  STAGE_DISPLAY_NAMES,
+  STAGE_PUBLICATION_STATE,
+  assertStageAuthorityProjection,
   bossIdsAvailableOn,
   stageAt,
   stageRuntimeIndexForSurface,
@@ -51,5 +55,24 @@ describe("published content availability", () => {
     expect(PUBLISHED_ENEMY_IDENTITY_IDS).toEqual(ENEMY_IDENTITY_IDS.filter((id) => id !== "rimehound"));
     expect(variantIdsAvailableOn("published")).not.toEqual(expect.arrayContaining([...PALE_VARIANT_IDS]));
     expect(variantIdsAvailableOn("playground")).toEqual(expect.arrayContaining([...PALE_VARIANT_IDS]));
+  });
+
+  it("fails when a stage/display projection is mutated away from its production owner", () => {
+    const projected = { ...STAGE_DISPLAY_NAMES, grounds: "Stale Grounds" };
+    expect(() => { assertStageAuthorityProjection({
+      displayNames: projected, bossHomes: STAGE_BOSS_HOME, publication: STAGE_PUBLICATION_STATE,
+    }); }).toThrow(/stage display drift/u);
+  });
+
+  it("fails when boss home or publication projections are mutated", () => {
+    const wrongHome = { ...STAGE_BOSS_HOME, "verdant-sanctum": "white-hart" };
+    expect(() => { assertStageAuthorityProjection({
+      displayNames: STAGE_DISPLAY_NAMES, bossHomes: wrongHome, publication: STAGE_PUBLICATION_STATE,
+    }); }).toThrow(/boss home drift/u);
+
+    const wrongPublication = { ...STAGE_PUBLICATION_STATE, "pale-traverse": "published" as const };
+    expect(() => { assertStageAuthorityProjection({
+      displayNames: STAGE_DISPLAY_NAMES, bossHomes: STAGE_BOSS_HOME, publication: wrongPublication,
+    }); }).toThrow(/publication drift/u);
   });
 });

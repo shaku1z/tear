@@ -37,10 +37,22 @@ describe("Pale Revision 3 content authority", () => {
     expect(TEAR_WORLD_ENTITY_FACTORY_IDS).toContain("white-hart");
   });
 
-  it("promotes only the approved White Hart foundation route and defers later natural/phase routes", () => {
-    const serialized = JSON.stringify(scenarioCatalog);
-    expect(serialized).toContain("pale-traverse");
-    expect(serialized).toContain("white-hart");
-    expect(serialized).not.toContain("rimehound");
+  it("keeps approved Pale canonical routes explicitly unpublished", () => {
+    const paleScenarios = scenarioCatalog.filter((scenario) =>
+      scenario.tags.includes("unpublished-preview"),
+    );
+    expect(paleScenarios.map((scenario) => scenario.id)).toEqual(expect.arrayContaining([
+      "pale-rimehound-aurora-interaction",
+      "pale-white-hart-phase-1",
+      "pale-white-hart-phase-2",
+      "pale-white-hart-phase-3",
+    ]));
+    expect(paleScenarios.every((scenario) =>
+      scenario.tags.includes("engineering-only")
+      && scenario.evidence.certification === "non-certifying",
+    )).toBe(true);
+    expect(paleScenarios.filter((scenario) => scenario.tags.includes("tc9")).every((scenario) =>
+      scenario.tags.includes("non-publishable"),
+    )).toBe(true);
   });
 });

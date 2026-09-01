@@ -29,11 +29,14 @@ function naturalScenario(resolved: TearSdlResolved): TearScenarioV1 {
 }
 
 function seekBoss(
-  environment: TearStructuredRuntimeEnvironment,
   context: LiveTearRuntimeEnvironmentContext,
 ): void {
   for (let tick = 0; tick < 1_500 && !context.state.enemies().some((enemy) => enemy.isBoss); tick += 1) {
-    environment.step();
+    // Source discovery must not enter TearBench's public session counters or
+    // action-observation timeline. Advance the shared authoritative tick
+    // directly; the forged snapshot rebases it to its deterministic origin.
+    const steps = context.advanceFixedTick();
+    if (steps !== 1) throw new Error("State Forge boss source lookup did not advance exactly one fixed tick");
   }
   if (!context.state.enemies().some((enemy) => enemy.isBoss)) {
     throw new Error("State Forge could not reach the requested boss source");
@@ -47,7 +50,7 @@ export function launchResolvedLiveState(
   context: LiveTearRuntimeEnvironmentContext,
 ): TearLiveRestoreResult {
   environment.reset(naturalScenario(resolved));
-  if (resolved.scenario.start.boss !== undefined) seekBoss(environment, context);
+  if (resolved.scenario.start.boss !== undefined) seekBoss(context);
   const wave = resolved.scenario.start.wave ?? 1;
   if (resolved.document.stateClass === "reconstructed-reachable" && wave > 1) {
     const progression = synthesizeProgression({
@@ -63,7 +66,11 @@ export function launchResolvedLiveState(
   }
   const stageId = resolved.scenario.start.stage;
   if (stageId !== undefined) {
-    const surface = resolved.scenario.start.mode === "playground" ? "playground" : "adventure";
+    // Pale White Hart surgical documents are bossonly by contract but remain
+    // preview/engineering content. Resolve their stage through the preview
+    // runtime slot instead of treating the unpublished stage as campaign.
+    const previewSurgical = stageId === "pale-traverse" && resolved.document.stateClass === "surgical-valid";
+    const surface = resolved.scenario.start.mode === "playground" || previewSurgical ? "playground" : "adventure";
     const stageIndex = stageRuntimeIndexForSurface(stageId as StageId, surface);
     if (stageIndex < 0) throw new RangeError(`State Forge stage does not exist: ${stageId}`);
     context.loadStage(stageIndex);

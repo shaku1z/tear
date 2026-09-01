@@ -1,9 +1,15 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { gzipSync } from "node:zlib";
+import { verifyReleaseArtifact } from "./release-artifact.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const budgets = JSON.parse(await readFile(resolve(root, "config/bundle-budgets.json"), "utf8"));
+for (const target of ["standalone", "crazygames"]) {
+  const directory = resolve(root, "dist", target), info = JSON.parse(await readFile(resolve(directory, "build-info.json"), "utf8"));
+  await verifyReleaseArtifact({ directory, expectedRepository: info.repository, expectedSha: info.sha,
+    expectedTarget: target, expectedMode: target, sourceDirectory: root, allowDirty: true });
+}
 
 async function largestJavaScriptGzip(directory) {
   const assets = resolve(root, "dist", directory, "assets");

@@ -28,6 +28,7 @@ import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalOb
 import { projectLiveProjectiles } from "./live-observation-projectiles";
 import { projectLiveActorMechanics, projectLiveBladeMechanics, projectLivePlayerMechanics } from "./live-observation-actors";
 import { createGameplayCausalEvent } from "./gameplay-causal-events";
+import { assertTearSimulationStepSeconds } from "./simulation-profile";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -123,6 +124,9 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
 function requireNaturalScenario(value: TearScenarioV1): TearScenarioV1 {
   if (value.backends !== undefined && !value.backends.includes("headless")) {
     throw new RangeError(`scenario ${value.id} does not support headless execution`);
+  }
+  if (value.subject?.kind === "environment-field" || value.subject?.kind === "environment-combat-object") {
+    throw new RangeError(`scenario ${value.id} is environment-owned and requires the live backend`);
   }
   if (value.stateClass !== "recorded-canonical") {
     throw new RangeError("production headless runs require recorded-canonical natural openings");
@@ -352,6 +356,7 @@ export function createProductionHeadlessEnvironment(
       gameplayEvents,
       ...(sourceTracks === undefined ? {} : { recordWaveIntent: (entry) => { sourceTracks.intents.push(entry); } }),
     }).create(snapshot);
+    assertTearSimulationStepSeconds(composed.simulation.stepSeconds);
     gameplayEvents.setTickSource(() => composed.simulation.scheduler.tick);
     const core = Object.freeze({ replay: composed.replay, simulation: composed.combat, waveReward: composed.waveReward,
       bootstrap: bootstrap ?? composed.bootstrap,
@@ -392,11 +397,14 @@ export function createProductionHeadlessEnvironment(
       }
       const lifecycle = current.replay.world.lifecycle.snapshot();
       const terminated = lifecycle.phase === "terminated";
-      const truncated = result.tick >= current.scenario.maxTicks;
+      // A terminal lifecycle transition at the horizon is a natural
+      // termination, not a truncation. Keep the two terminal dispositions
+      // mutually exclusive for browser and artifact consumers.
+      const truncated = !terminated && result.tick >= current.scenario.maxTicks;
       const causalEvents: TearCausalEventV1[] = current.nativeEvents.slice(deliveredCausalEventCount)
         .map((event, offset) => {
           const sequence = deliveredCausalEventCount + offset;
-          return createGameplayCausalEvent(event, sequence, `headless:${String(event.tick)}:${String(sequence)}`);
+          return createGameplayCausalEvent(event, sequence, `headless:${String(event.tick)}:${String(sequence)}`, "engine");
         });
       deliveredCausalEventCount = current.nativeEvents.length;
       return Object.freeze({

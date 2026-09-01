@@ -52,15 +52,20 @@ export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDoc
   });
 }
 
-/** C12 surgical fixture: one active production Graft retains the live Rootbound owner/target identity. */
+/** C12/TC-4 surgical fixture: one active Mercy Graft retains the live Rootbound owner/target identity. */
 export function forgeRootboundGraftAnchorState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
   const warning = createGraftAnchorState({
-    ownerId: "enemy:1", ownerPosition: { x: 800, y: 620 }, graftType: "bastion",
-    geometry: { x: 280, y: 610, w: 54, h: 90 }, createdTick: 0,
+    ownerId: "enemy:1", ownerPosition: { x: 800, y: 620 }, graftType: "mercy",
+    geometry: { x: 773, y: 610, w: 54, h: 90 }, createdTick: 0,
   });
   const active = Object.freeze({ ...warning, state: "active" as const, stateTick: warning.activationTick });
   const forged = forgeEnvironmentCombatObjectState(base, active);
-  return Object.freeze({ ...forged, id: `${base.id}-graft-bastion` });
+  return Object.freeze({ ...forged,
+    state: Object.freeze({ ...forged.state,
+      boss: Object.freeze({ phaseMarker: 2, state: "idle", stateT: 0, atk: "unavailable" }),
+    }),
+    id: `${base.id}-graft-mercy`,
+  });
 }
 
 export function forgeEnvironmentRouteState(
@@ -82,7 +87,7 @@ function patch(base: TearSdlDocumentV1, id: string, state: Patch): TearSdlDocume
 export function forgeWaveState(
   base: TearSdlDocumentV1,
   wave: number,
-  enemies: readonly Readonly<{ kind: string; count: number; hpScale?: number }>[],
+  enemies: readonly Readonly<{ kind: string; count: number; hpScale?: number; variantId?: string }>[],
 ): TearSdlDocumentV1 {
   if (!Number.isSafeInteger(wave) || wave < 1) throw new RangeError("wave must be a positive safe integer");
   for (const entry of enemies) {

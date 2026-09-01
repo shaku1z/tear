@@ -55,3 +55,10 @@ export function stageEnvironmentDefinition(stageId: StageId): StageEnvironmentDe
   const definitions: Readonly<Partial<Record<StageId, StageEnvironmentDefinition>>> = STAGE_ENVIRONMENT_DEFINITIONS;
   return definitions[stageId] ?? null;
 }
+
+/** Source-derived mechanic identity projection for stage-owned initial fields. */
+export function stageEnvironmentMechanicKinds(stageId: StageId): readonly EnvironmentObjectKind[] {
+  const definition = stageEnvironmentDefinition(stageId);
+  if (definition === null) return Object.freeze([]);
+  return Object.freeze([...new Set(definition.initialFields.map(({ kind }) => kind))]);
+}

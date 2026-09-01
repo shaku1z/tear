@@ -8,7 +8,10 @@ passed` flag. It accepts only `--manifest <path>` and independently verifies:
   exit status, timestamp, clean-HEAD binding, and subject artifact path,
   SHA-256, and byte size;
 - named arbitrary-state, normal-journey, and full release matrix coverage;
-- retained preservation runtime-manifest and preservation-corpus hashes.
+- retained preservation runtime-manifest and preservation-corpus hashes; and
+- one exact correction closure for TC-1 through TC-9, including the current
+  plan/report hashes, focused exact-source receipts, post-review dispositions,
+  current clean source identity, and the one final `pnpm check` receipt.
 
 The command always writes a certificate when it can determine repository state.
 Any absent, stale, forged, mutated, or incomplete proof writes a `rejected`
@@ -21,16 +24,34 @@ Certificates are generated evidence, not checked-in approval records. Unless
 `artifacts/tearbench/generated/release-certificate.json`; `artifacts/` is
 ignored by Git. A certificate is meaningful only when its schema is `2`, its
 `evidenceManifest` is present, and the verifier accepted that manifest against
-the exact clean `HEAD` named in the certificate. Schema-1 certificate-shaped
-files are historical data and must not be consumed as release evidence.
+the exact clean `HEAD` named in the certificate. The certificate's
+`evidenceManifestSha256` must equal the SHA-256 of the exact manifest bytes;
+changing even trailing whitespace invalidates the binding. Schema-1
+certificate-shaped files are historical data and must not be consumed as
+release evidence.
 
 ## Receipt producer (engineering foundation)
 
-`pnpm tearbench evidence record --id <id> --subject <generated-artifact> --
-<explicit command>` runs an explicitly named command only when the tracked
-worktree is clean at `HEAD`. It checks that condition again afterwards, then
-writes an ignored receipt under `artifacts/tearbench/receipts/`. A failed
-command still receives a failed receipt, but cannot satisfy the verifier.
+`pnpm tearbench evidence record --id <id> [--correction TC-N]
+[--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit
+command>` runs an explicitly
+named command and verifies that it does
+not change the source identity. When `--subject` is omitted, TearBench writes
+the captured command output as an ignored subject; this is the required form
+for the exact final `pnpm check`. An explicit subject must remain under ignored
+`artifacts/tearbench/` and exist after the command. The ignored receipt is
+written as the canonical `artifacts/tearbench/receipts/<id>.json`; `--artifact`
+may state that exact path explicitly but cannot choose an alternate current
+filename. Prior attempts are archived only under `receipts/history/` and cannot
+enter a manifest. A failed command still receives a failed receipt, but cannot
+satisfy the verifier.
+
+Each TC-1 through TC-9 focused receipt must use its exact `--correction` owner.
+Focused receipt IDs are unique across checkpoints, so one passing command cannot
+be relabeled as evidence for several corrections. Every retained input is
+resolved through its canonical filesystem path; symlink or junction escapes
+outside the workspace are rejected, and source identity is checked again after
+all retained bytes have been read.
 
 `pnpm tearbench evidence partial-manifest --receipts <receipt,...>` composes
 those receipts into an intentionally incomplete manifest. It is useful for
@@ -38,6 +59,56 @@ retaining real C39 preservation-corpus Vitest JSON and the C40 Source-void
 browser engineering proof, but it contains no fabricated coverage and must be
 rejected by `tearbench certify` until every required evidence and matrix proof
 exists. Source-void evidence remains engineering/non-certifying.
+
+## TC-10 correction closure
+
+The final composer is:
+
+```text
+pnpm tearbench evidence correction-manifest \
+  --base-manifest artifacts/tearbench/generated/complete-release-evidence-base.json \
+  --receipts artifacts/tearbench/receipts/<receipt.json,...> \
+  --metadata artifacts/tearbench/generated/correction-closure-metadata.json
+```
+
+All three inputs and the generated output must remain under ignored
+`artifacts/tearbench/` paths. The base manifest contributes only its coverage
+and preservation sections. The composer reconstructs evidence from
+the retained receipt bytes, independently captures the current clean source,
+hashes the current correction plan and TC-1 through TC-9 reports, and writes
+`artifacts/tearbench/generated/correction-release-evidence.json`. A tracked
+closure manifest would change the source it claims to certify and is therefore
+forbidden.
+
+The metadata artifact has format `tearbench-correction-closure-metadata`,
+schema 1. It contains exactly ordered TC-1 through TC-9 entries with `status:
+"complete"`, an exact report path, one or more focused receipt IDs, and
+`postReviewDisposition: "green"`. It also carries `c40Status` and `blockers`.
+An incomplete C40 disposition requires uniquely identified blockers with an
+owner, status, and reason. A certified disposition requires an empty blocker
+array. The composer always requires the final `pnpm check` and every TC-1
+through TC-9 focused receipt. A `certified` disposition additionally requires
+all C40 evidence families. An `incomplete` disposition may retain only the
+evidence that exists; verification then reports absent C40 proofs and the
+rejected certificate preserves the named blockers.
+
+The execution order is immutable:
+
+```text
+commit every tracked correction-plan/verifier/report change
+→ capture the exact clean source
+→ run and retain focused TC-1 through TC-9 receipts
+→ run exactly one retained `pnpm check` receipt
+→ compose the ignored correction/release manifest
+→ run `pnpm tearbench certify --manifest ...`
+→ perform the independent final review
+```
+
+No tracked edit may follow the final full-check receipt. A valid correction
+closure with named broader C40 blockers is structurally verified but still
+produces a `rejected` non-zero certificate. Only `c40Status: "certified"`, an
+empty blocker list, complete release evidence, and all other verifier rules can
+produce `status: "certified"`.
 
 ## Scheduled evidence program
 

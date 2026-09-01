@@ -1,11 +1,38 @@
 const assert = require("node:assert/strict");
+const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
 
-const scenarios = canonicalScenarios.filter((entry) =>
-  entry.subject.kind === "gameplay" || entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object");
+const root = path.resolve(__dirname, "..");
 
-withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
+async function loadCanonicalAssertions() {
+  const { createServer } = await import("vite");
+  const server = await createServer({ root, server: { middlewareMode: true } });
+  try {
+    const { CANONICAL_ENGINEERING_SCENARIOS } = await server.ssrLoadModule("/src/tearbench/canonical-scenarios.ts");
+    return new Map(CANONICAL_ENGINEERING_SCENARIOS.map((scenario) => [scenario.id, scenario.assertions]));
+  } finally {
+    await server.close();
+  }
+}
+
+const hasSharedBrowserSubject = (entry) => entry.subject.kind === "gameplay"
+  || entry.subject.kind === "environment-field"
+  || entry.subject.kind === "environment-combat-object";
+const stateForgeScenarios = canonicalScenarios.filter((entry) =>
+  hasSharedBrowserSubject(entry) && entry.stateForge !== undefined);
+const scenarios = canonicalScenarios.filter((entry) =>
+  hasSharedBrowserSubject(entry) && entry.stateForge === undefined);
+
+async function main() {
+  const assertionsByScenario = await loadCanonicalAssertions();
+  for (const entry of stateForgeScenarios) {
+    assert.equal(entry.stateForge.documentId, entry.id,
+      `${entry.id} must own its matching State Forge document`);
+    assert.equal(entry.evidence.command, `pnpm tearbench run ${entry.id}`,
+      `${entry.id} must own canonical live State Forge execution outside the natural reset journey`);
+  }
+  await withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST);
   for (const entry of scenarios) {
     assert.ok(entry.backends.includes("live"), `${entry.id} must honestly declare its live evidence backend`);
@@ -15,7 +42,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
         id: source.id, version: 1, description: source.description,
         stateClass: "recorded-canonical", executionClass: "engineering",
         subject: source.subject, backends: source.backends, seed: `current-live-${source.subject.id}`,
-        start: source.start, maxTicks: source.maxTicks, assertions: ["runtime.finite-state"], tags: source.tags,
+        start: source.start, maxTicks: source.maxTicks, assertions: source.assertions, tags: source.tags,
       };
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
       let initial = environment.reset(scenario);
@@ -158,6 +185,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           break;
         }
         case "verdant-bloom-well": {
+          if (scenario.maxTicks !== 744) throw new Error("Bloom Well browser proof must use BLOOM_WELL_TIMING.totalTicks");
           const forge = environment.forgeBloomWellCycle();
           if (!forge.ok) throw new Error("Bloom Well must launch through State Forge restore");
           const env = environment.environment();
@@ -179,7 +207,7 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           capture();
           for (let tick = 84; tick < 264; tick += 1) step();
           capture();
-          for (let tick = 264; tick < 744; tick += 1) step();
+          for (let tick = 264; tick < scenario.maxTicks; tick += 1) step();
           const finalField = capture();
           const finalObservation = environment.observe();
           const presentation = environment.bloomWellPresentation({ highContrast: true, reducedMotion: true, lowGraphics: true, audioEnabled: false })[0];
@@ -244,25 +272,57 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
           const env = environment.environment();
           const beforeObservation = environment.observe();
           const boss = beforeObservation.entities.find((actor) => actor.kind === "rootbound");
-          const graft = env.snapshot().combatObjects.find((object) => object.factoryId === "graft-anchor");
+          const graft = env.snapshot().combatObjects.find((object) => object.factoryId === "graft-anchor" && object.graftType === "mercy");
           if (boss === undefined || graft === undefined) throw new Error("Rootbound Graft restore did not retain its live boss owner");
           const scoreBefore = beforeObservation.run.score;
+          const eventCountBeforeDamage = environment.events().length;
           const damage = env.damageCombatObject(graft.id, graft.integrity, "rootbound-graft-browser-cut", beforeObservation.tick + 1);
-          const transition = step();
-          env.cleanupCombatObject(graft.id, "boss-terminal", transition.observation.tick);
+          const polls = [];
+          const pollSnapshots = [];
+          for (let poll = 0; poll < 2; poll += 1) {
+            polls.push(step());
+            pollSnapshots.push(env.snapshot());
+          }
+          const pollOwnerGrafts = pollSnapshots.map((snapshot) => snapshot.combatObjects
+            .filter((object) => object.ownerId === boss.id && object.factoryId === "graft-anchor"));
+          const pollGrafts = pollOwnerGrafts.map((entries) => entries
+            .filter((object) => object.ownerId === boss.id && object.graftType === "mercy"));
+          const postDestructionEvents = environment.events().slice(eventCountBeforeDamage);
+          const eventTypes = postDestructionEvents.map((event) => event.type);
+          const graftEvents = postDestructionEvents.filter((event) =>
+            event.type.startsWith("world.environment-") && event.actorId === graft.id);
+          const unexpectedGraftEvents = graftEvents.filter((event) => ![
+            "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed",
+          ].includes(event.type));
+          const repeatedEnemyDefeats = postDestructionEvents.filter((event) => event.type === "enemy.defeated");
+          const cleanupTick = environment.observe().tick;
+          env.cleanupCombatObject(graft.id, "boss-terminal", cleanupTick);
           step();
           const after = env.snapshot().combatObjects.find((object) => object.id === graft.id);
-          const eventTypes = environment.events().map((event) => event.type);
-          const damagedIndex = eventTypes.indexOf("world.environment-combat-object-damaged");
-          const destroyedIndex = eventTypes.indexOf("world.environment-combat-object-destroyed");
-          const cleanedIndex = eventTypes.indexOf("world.environment-object-cleaned");
+          const cleanupEvents = environment.events().slice(eventCountBeforeDamage).filter((event) =>
+            event.type === "world.environment-object-cleaned" && event.actorId === graft.id);
           const finalObservation = environment.observe();
-          evidence = { forge, graft, damage, after, bossId: boss.id, eventTypes,
+          const expectedOwnerGraftIds = ["enemy:1:graft:bastion", "enemy:1:graft:mercy", "enemy:1:graft:haste"];
+          const oneStableOwnerGraftSet = pollOwnerGrafts.every((entries) => entries.length === expectedOwnerGraftIds.length
+            && entries.map((entry) => entry.id).sort().join(",") === expectedOwnerGraftIds.slice().sort().join(","));
+          const oneStableTerminalGraft = pollGrafts.every((entries) => entries.length === 1)
+            && pollGrafts.every(([entry]) => entry?.id === graft.id && entry.state === "destroyed"
+              && entry.stateTick === beforeObservation.tick + 1
+              && entry.recoverySpentHealthFraction === graft.recoverySpentHealthFraction);
+          const mercyEffectProjection = pollGrafts.map(([entry]) => entry?.state === "active");
+          evidence = { forge, graft, damage, polls: pollGrafts, after, bossId: boss.id, eventTypes,
+            ownerGrafts: pollOwnerGrafts, graftEvents, unexpectedGraftEvents, mercyEffectProjection,
+            repeatedEnemyDefeats, cleanupEvents,
             bossDamageableContract: "production-path-unit", scoreBefore, scoreAfter: finalObservation.run.score };
           proved = graft.ownerId === boss.id && graft.targetId === boss.id && graft.procEligible === false
             && graft.counterplayTags.includes("cut") && damage.accepted && damage.destroyed
+            && oneStableOwnerGraftSet && oneStableTerminalGraft && unexpectedGraftEvents.length === 0
+            && mercyEffectProjection.every((active) => active === false)
+            && repeatedEnemyDefeats.length === 0
             && after?.state === "expired" && after.cleanupReason === "boss-terminal"
-            && damagedIndex >= 0 && destroyedIndex > damagedIndex && cleanedIndex > destroyedIndex
+            && graftEvents.filter((event) => event.type === "world.environment-combat-object-damaged").length === 1
+            && graftEvents.filter((event) => event.type === "world.environment-combat-object-destroyed").length === 1
+            && cleanupEvents.length === 1
             && finalObservation.run.score === scoreBefore
             && !environment.events().some((event) => event.type === "enemy.defeated");
           break;
@@ -273,10 +333,16 @@ withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }
       return { id: scenario.id, subject: scenario.subject.id, mode: final.run.mode, proved, evidence,
         initial: { x: initial.player.x, y: initial.player.y, grounded: initial.player.grounded },
         final: { x: final.player.x, y: final.player.y, grounded: final.player.grounded }, tick: final.tick };
-    }, entry);
+    }, { ...entry, assertions: assertionsByScenario.get(entry.id) });
     assert.equal(receipt.mode, entry.start.mode, `${entry.id} must preserve its declared current run mode`);
     assert.equal(receipt.proved, true,
       `${entry.id} must execute its actual declared ${entry.subject.id} subject: ${JSON.stringify(receipt)}`);
   }
   console.log(`current live gameplay subjects passed (${scenarios.length} source-owned scenarios)`);
+  });
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.stack || error.message : String(error));
+  process.exitCode = 1;
 });

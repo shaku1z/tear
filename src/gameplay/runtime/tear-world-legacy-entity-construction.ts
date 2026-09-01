@@ -44,6 +44,8 @@ export interface TearWorldLegacyEntityConstructorPorts<
   }>;
   /** Reconnects the Echo's mutable run-modifier link after codec hydration. */
   readonly rebindEchoMods?: (enemy: Enemy, mods: EchoMods) => void;
+  /** Reconnect source-owned mutable actor behavior after codec hydration. */
+  readonly finalizeEnemy?: (factoryId: string, enemy: Enemy, run: Run) => void;
 }
 
 /** Creates the stable production actor catalog from caller-owned constructors. */
@@ -83,6 +85,7 @@ export function createTearWorldLegacyEntityConstruction<
     ...(ports.rebindEchoMods === undefined ? {} : {
       finalizeEnemy: (factoryId, enemy, run) => {
         if (factoryId === "echo") ports.rebindEchoMods?.(enemy, ports.echoMods(run));
+        ports.finalizeEnemy?.(factoryId, enemy, run);
       },
     }),
   });

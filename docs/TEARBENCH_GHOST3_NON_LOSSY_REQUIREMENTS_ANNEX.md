@@ -935,16 +935,16 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-240F6463F3B45C2D` | 27-27 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | A reusable `tear-autonomous-playtester` agent Skill that allows Codex or another development agent to invoke |
 | `TG3-4B17350C77C9DCFF` | 27-27 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | interpret |
 | `TG3-77876CC59F28BF22` | 27-27 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | act on the testing platform. |
-| `TG3-15B983C7BC436D17` | 28-28 | 1 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | Tear State Forge |
+| `TG3-15B983C7BC436D17` | 28-28 | 1 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | Tear Scenario Console |
 | `TG3-B707F6167136A210` | 28-28 | 1 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | capable of exact snapshots |
 | `TG3-C0C585412E24D7CD` | 28-28 | 1 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | legal historical-run synthesis |
 | `TG3-AE638EE22345317E` | 28-28 | 1 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | arbitrary wave and boss-phase launch |
 | `TG3-F8638EA21C03F225` | 28-28 | 1 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | time travel |
 | `TG3-417F33894F1B56BA` | 28-28 | 1 | gameplay | yes | missing | required | C21 | deterministic-scenario, base-comparison | counterfactual forks. |
-| `TG3-44A3660A686BE809` | 29-29 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | A self-calibrating TearBot 1–9 ladder with multidimensional astuteness |
+| `TG3-44A3660A686BE809` | 29-29 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | A self-calibrating Game Agent 1–9 ladder with multidimensional astuteness |
 | `TG3-B387A357298436BC` | 29-29 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | human-like bounded rationality |
 | `TG3-D1272B36668418AD` | 29-29 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | statistical skill ratings |
-| `TG3-8EE6CF0D8E804C58` | 29-29 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | an automated Agent Foundry that safely improves the policy population. |
+| `TG3-8EE6CF0D8E804C58` | 29-29 | 1 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | an automated Agent Training Operations that safely improves the policy population. |
 | `TG3-7D3D215ED52154AB` | 30-30 | 1 | preservation | yes | missing | required | C21 | preservation-corpus, full-release-gate | Ghost 3.0 |
 | `TG3-821E88349D18EE73` | 30-30 | 1 | preservation | yes | missing | required | C21 | preservation-corpus, full-release-gate | a standalone replay |
 | `TG3-45C180D4B9466606` | 30-30 | 1 | preservation | yes | missing | required | C21 | preservation-corpus, full-release-gate | rivalry |
@@ -2976,7 +2976,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-2D1BB9B6D2A42C21` | 3502-3502 | 36 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | No infinite combo or reward loop |
 | `TG3-A91523D005FFC1D6` | 3503-3503 | 36 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | No tier that silently fails to apply |
 | `TG3-95916D67DD7900B5` | 3505-3505 | 36 | gameplay | no | reference | reference | C23 | documentation-validation | --- |
-| `TG3-59E701EDDE03C349` | 3509-3509 | 37 | ml-training | yes | prototype | required | C31 | deterministic-scenario, journey-checkpoint | TearBench should include an explicit curriculum product called **Agent Academy**. |
+| `TG3-59E701EDDE03C349` | 3509-3509 | 37 | ml-training | yes | prototype | required | C31 | deterministic-scenario, journey-checkpoint | TearBench should include an explicit curriculum product called **Agent Training Archive**. |
 | `TG3-02CEC8FB15ADE27B` | 3513-3513 | 37 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Make training observable |
 | `TG3-CDB3825DB6A29ED0` | 3514-3514 | 37 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Make progression measurable |
 | `TG3-8D3B605E997E7260` | 3515-3515 | 37 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Allow humans to intervene |
@@ -3502,7 +3502,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-9E36C974ABBE0C0C` | 4231-4231 | 41 | gameplay | yes | missing | required | C39 | deterministic-scenario, base-comparison | wave |
 | `TG3-18253647B31EBF7D` | 4231-4231 | 41 | gameplay | yes | missing | required | C39 | deterministic-scenario, base-comparison | draft |
 | `TG3-4CE27D6ACA03F34B` | 4231-4231 | 41 | gameplay | yes | missing | required | C39 | deterministic-scenario, base-comparison | victory cues |
-| `TG3-C7A0B18A4B67B2B7` | 4232-4232 | 41 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | TearScore lifecycle where enabled |
+| `TG3-C7A0B18A4B67B2B7` | 4232-4232 | 41 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | TEAR Music lifecycle where enabled |
 | `TG3-A281783FC207689A` | 4233-4233 | 41 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | No duplicate or runaway audio nodes |
 | `TG3-C628FF10B476F663` | 4237-4237 | 41 | ui-ux | yes | missing | required | C39 | journey-checkpoint, interaction-matrix | Player and blade readability |
 | `TG3-1B2E8D2AB9584543` | 4238-4238 | 41 | ui-ux | yes | missing | required | C39 | journey-checkpoint, interaction-matrix | Telegraph visibility |
@@ -3935,7 +3935,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-A07C151C46502268` | 5117-5117 | 48 | architecture | yes | missing | required | C25 | unit-contract, full-release-gate | plausible |
 | `TG3-E311A3EC287AAC37` | 5117-5117 | 48 | architecture | yes | missing | required | C25 | unit-contract, full-release-gate | surgical |
 | `TG3-A065A7A94970BC9F` | 5117-5117 | 48 | architecture | yes | missing | required | C25 | unit-contract, full-release-gate | intentionally impossible states. |
-| `TG3-5C6B9176902EB0D2` | 5118-5118 | 48 | ml-training | yes | missing | required | C25 | deterministic-scenario, journey-checkpoint | Provide calibrated TearBot Levels 1–9 whose performance bands are measured rather than guessed. |
+| `TG3-5C6B9176902EB0D2` | 5118-5118 | 48 | ml-training | yes | missing | required | C25 | deterministic-scenario, journey-checkpoint | Provide calibrated Game Agent Levels 1–9 whose performance bands are measured rather than guessed. |
 | `TG3-3D851863ED3A3F5E` | 5119-5119 | 48 | ml-training | yes | missing | required | C25 | deterministic-scenario, journey-checkpoint | Improve agent policies through a gated champion/challenger loop without redefining its own tests. |
 | `TG3-CD9E8C725ACF5CEE` | 5121-5121 | 48 | architecture | no | reference | reference | C25 | documentation-validation | The 500%-beyond-goal outcome is: |
 | `TG3-96A6EB15D40649BD` | 5123-5123 | 48 | architecture | no | reference | reference | C25 | documentation-validation | > Tear does not merely have an AI that can play it. |
@@ -4120,13 +4120,13 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-4A78587E7B6D3014` | 5289-5289 | 49 | gameplay | yes | prototype | required | C23 | deterministic-scenario, base-comparison | A replay and state snapshot |
 | `TG3-4515EC0ABC3E2CB7` | 5290-5290 | 49 | gameplay | yes | integrated | required | C23 | deterministic-scenario, base-comparison | Episode metrics and failures |
 | `TG3-82485A146C9B23A7` | 5292-5292 | 49 | gameplay | no | reference | reference | C23 | documentation-validation | --- |
-| `TG3-341B8DCA63B81C33` | 5296-5296 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | The subsystem responsible for arbitrary-state simulation should be named **Tear State Forge**. |
-| `TG3-3839E04415CA3EB9` | 5298-5298 | 50 | architecture | no | reference | reference | C23 | documentation-validation | State Forge is not a loose set of debug cheats. |
+| `TG3-341B8DCA63B81C33` | 5296-5296 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | The subsystem responsible for arbitrary-state simulation should be named **Tear Scenario Console**. |
+| `TG3-3839E04415CA3EB9` | 5298-5298 | 50 | architecture | no | reference | reference | C23 | documentation-validation | Scenario Console is not a loose set of debug cheats. |
 | `TG3-E0FAE83F6E629515` | 5298-5298 | 50 | compatibility | no | reference | reference | C23 | documentation-validation | It is a deterministic state-construction engine with a formal schema |
 | `TG3-1DFDCC202B629DEE` | 5298-5298 | 50 | compatibility | no | reference | reference | C23 | documentation-validation | provenance |
 | `TG3-72EE258365BBB0E1` | 5298-5298 | 50 | compatibility | no | reference | reference | C23 | documentation-validation | validation |
 | `TG3-C6113C9B5D94A762` | 5298-5298 | 50 | compatibility | no | reference | reference | C23 | documentation-validation | version migration. |
-| `TG3-5FA49DBCE9AB1FBA` | 5302-5302 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | State Forge should contain: |
+| `TG3-5FA49DBCE9AB1FBA` | 5302-5302 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Scenario Console should contain: |
 | `TG3-674D29833074A05E` | 5304-5304 | 50 | data-schema | yes | missing | required | C23 | unit-contract, malformed-input | State Schema Registry: — versioned definitions for every serializable field. |
 | `TG3-59F9C175F1A6687E` | 5305-5305 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Runtime Serializer: — captures the complete live simulation state. |
 | `TG3-2EF404A8C5CD396E` | 5306-5306 | 50 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Runtime Restorer: — reconstructs that state without leaking stale objects or listeners. |
@@ -4450,7 +4450,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-1578A12DD503FB95` | 5795-5795 | 53 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Target wave |
 | `TG3-2B6C5C250CB53961` | 5796-5796 | 53 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Approximate player skill |
 | `TG3-A17FCE095BEC2E7F` | 5797-5797 | 53 | privacy | yes | missing | required | C23 | unit-contract, interaction-matrix | Region or device only when analytically justified and privacy-safe |
-| `TG3-EB5A3E9D310884BA` | 5801-5801 | 53 | ml-training | no | reference | reference | C23 | documentation-validation | Sample from a specified TearBot level or persona. |
+| `TG3-EB5A3E9D310884BA` | 5801-5801 | 53 | ml-training | no | reference | reference | C23 | documentation-validation | Sample from a specified Game Agent level or persona. |
 | `TG3-5F5D414310FFE7BB` | 5805-5805 | 53 | ml-training | no | reference | reference | C23 | documentation-validation | Choose the strongest legal build according to the Draft Strategist and rollout model. |
 | `TG3-D7061B022A24F4FE` | 5809-5809 | 53 | gameplay | no | reference | reference | C23 | documentation-validation | Optimize for a selected boss or phase. |
 | `TG3-5CFD66766DB517BE` | 5813-5813 | 53 | architecture | no | reference | reference | C23 | documentation-validation | Examples: |
@@ -4514,7 +4514,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-ADFE7968D6ED6C5F` | 5936-5936 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Revives used |
 | `TG3-B20A3063C7634A32` | 5937-5937 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Coins earned |
 | `TG3-365B3B2DA04BE510` | 5939-5939 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | The values must satisfy internal arithmetic and achievement constraints. |
-| `TG3-1F71E3C62E693BF9` | 5943-5943 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | When relevant, State Forge must synthesize or load: |
+| `TG3-1F71E3C62E693BF9` | 5943-5943 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | When relevant, Scenario Console must synthesize or load: |
 | `TG3-15268124E2040B77` | 5945-5945 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Meta-shop levels |
 | `TG3-C67C6B45B209C778` | 5946-5946 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Coins |
 | `TG3-AEDFDFD480FE4C6C` | 5947-5947 | 53 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Shards |
@@ -4556,7 +4556,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-E17789C7C69BEE2C` | 6010-6010 | 54 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Invulnerability or armor |
 | `TG3-82C5E4E8ED35EC70` | 6011-6011 | 54 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Scripted event queue |
 | `TG3-BE20F1E03245E9B7` | 6012-6012 | 54 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Intro and death-theater state |
-| `TG3-BC7E4815AC969D88` | 6016-6016 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | State Forge should support: |
+| `TG3-BC7E4815AC969D88` | 6016-6016 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Scenario Console should support: |
 | `TG3-F072A16D9D5058E6` | 6020-6020 | 54 | gameplay | no | reference | reference | C23 | documentation-validation | Start from the exact first frame the production fight would enter the phase. |
 | `TG3-DA777E29913C8B4C` | 6024-6024 | 54 | gameplay | no | reference | reference | C23 | documentation-validation | Start after any cinematic or one-time transition has settled, with the boss ready to act. |
 | `TG3-DA63C1ED52A87486` | 6028-6028 | 54 | gameplay | no | reference | reference | C23 | documentation-validation | Start on a chosen windup |
@@ -4613,7 +4613,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-D3D31774DF1C8707` | 6100-6100 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | 2+ enemies |
 | `TG3-9708B21C359AB0CA` | 6101-6101 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Storm Recall at catch time |
 | `TG3-3E67C2CBA8D059A4` | 6102-6102 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Flow Guard immediately above and below its style threshold |
-| `TG3-DFFB646B9B2B4E42` | 6106-6106 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | State Forge should automatically generate boundary tests at: |
+| `TG3-DFFB646B9B2B4E42` | 6106-6106 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | Scenario Console should automatically generate boundary tests at: |
 | `TG3-F3673C4D47542093` | 6108-6108 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | `threshold - epsilon` |
 | `TG3-1170E85DDD4BE0C1` | 6109-6109 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | `threshold` |
 | `TG3-9DC37DCDBA773729` | 6110-6110 | 54 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | `threshold + epsilon` |
@@ -4690,7 +4690,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-E79AD71F92140926` | 6290-6290 | 55 | ml-training | yes | missing | required | C23 | deterministic-scenario, journey-checkpoint | Population claims without a population model |
 | `TG3-E840D6F88BA1CDF8` | 6291-6291 | 55 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Use of privileged observations in a black-box certification scenario |
 | `TG3-2D84C3060B93C4E3` | 6293-6293 | 55 | architecture | no | reference | reference | C23 | documentation-validation | --- |
-| `TG3-8CE9AFDF32B0764B` | 6297-6297 | 56 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | State Forge should turn every run into a time-travelable experiment. |
+| `TG3-8CE9AFDF32B0764B` | 6297-6297 | 56 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Scenario Console should turn every run into a time-travelable experiment. |
 | `TG3-8ED9E0DE8880285D` | 6301-6301 | 56 | architecture | no | reference | reference | C23 | documentation-validation | Snapshots can be captured: |
 | `TG3-750B75BCE0692A3B` | 6303-6303 | 56 | architecture | yes | missing | required | C23 | unit-contract, full-release-gate | Every fixed number of simulation ticks |
 | `TG3-BC73E84E517760B7` | 6304-6304 | 56 | gameplay | yes | missing | required | C23 | deterministic-scenario, base-comparison | At wave start |
@@ -4850,7 +4850,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-97C8A0A5FCC922DF` | 6531-6531 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | TearBench should develop a formal |
 | `TG3-AF889E1DC56497D6` | 6531-6531 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | data-driven bot difficulty system inspired by the clarity of numbered fighting-game CPU levels |
 | `TG3-CE2736912982EFF1` | 6531-6531 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | but significantly more rigorous. |
-| `TG3-5A59CEE4AF6B9C0B` | 6533-6533 | 58 | ml-training | no | reference | reference | C35 | documentation-validation | The working name is **TearBot Ladder**. |
+| `TG3-5A59CEE4AF6B9C0B` | 6533-6533 | 58 | ml-training | no | reference | reference | C35 | documentation-validation | The working name is **Game Agent Ladder**. |
 | `TG3-933A9D1C145BEB3D` | 6537-6537 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Never collapse these into one number: |
 | `TG3-5118802821F5F025` | 6539-6539 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Game difficulty: — Easy |
 | `TG3-D7AE4BB451E3092B` | 6539-6539 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Normal |
@@ -4927,8 +4927,8 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-F037933573D07E81` | 6643-6643 | 58 | ml-training | no | reference | reference | C35 | documentation-validation | Community documentation indicates that its levels substantially affect reaction speed and the probability of following through on decisions |
 | `TG3-F92BE863B2C0C2A8` | 6643-6643 | 58 | ml-training | no | reference | reference | C35 | documentation-validation | very high levels may react at effectively one-frame speeds. |
 | `TG3-909D6EFDF95E3E15` | 6643-6643 | 58 | ml-training | no | reference | reference | C35 | documentation-validation | That creates apparent strength, but can also produce inhuman defense. |
-| `TG3-9E805BE4DF960402` | 6645-6645 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | TearBot should copy the **clear ladder**, not the unfair shortcuts. |
-| `TG3-C9E52979EEACFEA4` | 6647-6647 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | High TearBot levels should become stronger through: |
+| `TG3-9E805BE4DF960402` | 6645-6645 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Game Agent should copy the **clear ladder**, not the unfair shortcuts. |
+| `TG3-C9E52979EEACFEA4` | 6647-6647 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | High Game Agent levels should become stronger through: |
 | `TG3-67F94ADC75D6EA83` | 6649-6649 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Better prediction |
 | `TG3-87C166DFF91380B6` | 6650-6650 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Better positioning |
 | `TG3-BBCE1C3CAC27DA71` | 6651-6651 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Better planning |
@@ -4952,7 +4952,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C5097896723A158C` | 6683-6683 | 58 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Adaptive level changes must be logged and must not be used for deterministic certification unless explicitly required. |
 | `TG3-5DBE125E6F486944` | 6685-6685 | 58 | ml-training | no | reference | reference | C35 | documentation-validation | --- |
 | `TG3-0381B0999C4A450E` | 6689-6689 | 59 | architecture | yes | missing | required | C35 | unit-contract, full-release-gate | A single scalar cannot express why a bot is good or bad. |
-| `TG3-33B32B87FF430EFF` | 6691-6691 | 59 | ml-training | no | reference | reference | C35 | documentation-validation | Every TearBot needs a multidimensional **Astuteness Vector**. |
+| `TG3-33B32B87FF430EFF` | 6691-6691 | 59 | ml-training | no | reference | reference | C35 | documentation-validation | Every Game Agent needs a multidimensional **Astuteness Vector**. |
 | `TG3-D38B7F90878335B8` | 6695-6695 | 59 | performance | yes | missing | required | C35 | interaction-matrix, long-run | Observation latency |
 | `TG3-5EDD4F9605D1BF00` | 6696-6696 | 59 | architecture | yes | missing | required | C35 | unit-contract, full-release-gate | Observation update rate |
 | `TG3-669417793040E664` | 6697-6697 | 59 | architecture | yes | missing | required | C35 | unit-contract, full-release-gate | Position noise |
@@ -5056,7 +5056,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-2F49DA5F949FC874` | 6858-6858 | 59 | architecture | no | reference | reference | C35 | documentation-validation | This produces much richer test populations than one linear ladder. |
 | `TG3-F68C62E4787CCA5D` | 6860-6860 | 59 | architecture | no | reference | reference | C35 | documentation-validation | --- |
 | `TG3-526588F77F92AFD6` | 6864-6864 | 60 | architecture | yes | prototype | required | C35 | unit-contract, full-release-gate | The project must not guess what Level 4 or Level 8 means forever. |
-| `TG3-5C0DF2EDC83F93BB` | 6866-6866 | 60 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | TearBot levels must be calibrated from measured performance. |
+| `TG3-5C0DF2EDC83F93BB` | 6866-6866 | 60 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Game Agent levels must be calibrated from measured performance. |
 | `TG3-189FEBF785AB1B6D` | 6870-6870 | 60 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | For each level, TearBench must determine a policy and bounded-rationality profile whose measured behavior lands inside a target performance envelope across a representative benchmark suite. |
 | `TG3-93596F049E77B584` | 6872-6872 | 60 | architecture | no | reference | reference | C35 | documentation-validation | The number is therefore an output of calibration, not a manually chosen label. |
 | `TG3-3F3FC598E992FEEE` | 6876-6876 | 60 | ml-training | no | reference | reference | C35 | documentation-validation | Treat every benchmark scenario as an exam item. |
@@ -5177,7 +5177,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-5C000F3556575744` | 7089-7089 | 60 | architecture | no | reference | reference | C35 | documentation-validation | Strategic astuteness and QA astuteness need their own exams. |
 | `TG3-7E287641AE580DFC` | 7091-7091 | 60 | architecture | yes | missing | required | C35 | unit-contract, full-release-gate | A bot should not receive high strategic ratings merely because it has perfect aim. |
 | `TG3-5CDA7B299EBC11D2` | 7093-7093 | 60 | architecture | no | reference | reference | C35 | documentation-validation | --- |
-| `TG3-4DCD8425214629C4` | 7097-7097 | 61 | ml-training | yes | contract | required | C36 | deterministic-scenario, journey-checkpoint | The system that iterates over and improves the bot population should be called the **Agent Foundry**. |
+| `TG3-4DCD8425214629C4` | 7097-7097 | 61 | ml-training | yes | contract | required | C36 | deterministic-scenario, journey-checkpoint | The system that iterates over and improves the bot population should be called the **Agent Training Operations**. |
 | `TG3-D46C2F43BDDD9725` | 7099-7099 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | It must be automated but gated |
 | `TG3-3D33F16559C4A6F1` | 7099-7099 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | auditable |
 | `TG3-EC0A46652EEC5E32` | 7099-7099 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | reversible. |
@@ -5200,7 +5200,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-8BF44FB1365D0B28` | 7112-7112 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Promote: only when all gates pass. |
 | `TG3-0A0D6EE577C2F485` | 7113-7113 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Archive: the old policy and full evidence. |
 | `TG3-36C4E39E7C645C83` | 7114-7114 | 61 | ml-training | yes | contract | required | C36 | deterministic-scenario, journey-checkpoint | Monitor: the new champion for drift. |
-| `TG3-AF5750DFCEF1700E` | 7118-7118 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | The Foundry should rank weaknesses by: |
+| `TG3-AF5750DFCEF1700E` | 7118-7118 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | The Training Operations should rank weaknesses by: |
 | `TG3-D89173B3A60AB9A5` | 7120-7120 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Failure rate |
 | `TG3-E62E7CC174914CCC` | 7121-7121 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Severity |
 | `TG3-B6EA1978A4B86A0C` | 7122-7122 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Frequency in human telemetry |
@@ -5246,7 +5246,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-7C2959C49434E2AC` | 7178-7178 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | nontrivial failures. |
 | `TG3-42CB613517AEFDDB` | 7179-7179 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Agent is rewarded for broad mastery. |
 | `TG3-8E61B2B0B352CF6A` | 7181-7181 | 61 | ml-training | no | reference | reference | C36 | documentation-validation | This produces a controlled arms race. |
-| `TG3-202922F4224BD317` | 7185-7185 | 61 | preservation | yes | missing | required | C36 | preservation-corpus, full-release-gate | The Foundry should preserve multiple high-performing behaviors rather than converging on one style. |
+| `TG3-202922F4224BD317` | 7185-7185 | 61 | preservation | yes | missing | required | C36 | preservation-corpus, full-release-gate | The Training Operations should preserve multiple high-performing behaviors rather than converging on one style. |
 | `TG3-CDE0A482E7B664FF` | 7187-7187 | 61 | ml-training | no | reference | reference | C36 | documentation-validation | Archive dimensions may include: |
 | `TG3-9E1E1CDC768EAFDD` | 7189-7189 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Throw usage |
 | `TG3-CF0FE9B2AA491922` | 7190-7190 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Aerial time |
@@ -5287,13 +5287,13 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-B191D2EB5F89C455` | 7239-7239 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Calibration profile |
 | `TG3-BF04903792C059C7` | 7240-7240 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Benchmark results |
 | `TG3-4D79C52DA08A3A42` | 7241-7241 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Known limitations |
-| `TG3-E1A98EEAFE855ADB` | 7245-7245 | 61 | ml-training | no | reference | reference | C36 | documentation-validation | The Agent Foundry may automatically train and select policies. |
+| `TG3-E1A98EEAFE855ADB` | 7245-7245 | 61 | ml-training | no | reference | reference | C36 | documentation-validation | The Agent Training Operations may automatically train and select policies. |
 | `TG3-B4D067778FFC6A6F` | 7247-7247 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Changes to production game code |
 | `TG3-2A90FA115DE476E7` | 7247-7247 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | reward definitions |
 | `TG3-CA8C42B3B00F59CA` | 7247-7247 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | invariant definitions |
 | `TG3-0134510C3C18F805` | 7247-7247 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | release gates should still require version-controlled review. |
 | `TG3-B66638C39851E361` | 7247-7247 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | A bot must not redefine the exam to make itself look better. |
-| `TG3-5EFEB0FCB27C62E4` | 7251-7251 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Every Foundry cycle should produce: |
+| `TG3-5EFEB0FCB27C62E4` | 7251-7251 | 61 | ml-training | yes | missing | required | C36 | deterministic-scenario, journey-checkpoint | Every Training Operations cycle should produce: |
 | `TG3-0D044890D0772821` | 7268-7268 | 61 | ml-training | no | reference | reference | C36 | documentation-validation | --- |
 | `TG3-F13CEC7210AB397C` | 7272-7272 | 62 | performance | yes | missing | required | C35 | interaction-matrix, long-run | The user-facing level number must correspond to an explicit, measurable contract. |
 | `TG3-CB6A2675C6962EC9` | 7276-7276 | 62 | performance | no | reference | reference | C35 | documentation-validation | For each level, store target ranges for: |
@@ -5381,7 +5381,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C412D8320F700B4E` | 7398-7398 | 62 | performance | yes | missing | optional | C35 | interaction-matrix, long-run | Dynamic adaptation is optional. |
 | `TG3-CEFF697375416EA2` | 7399-7399 | 62 | performance | yes | missing | optional | C35 | interaction-matrix, long-run | It must be transparent during development. |
 | `TG3-54005269DB87DD1A` | 7400-7400 | 62 | performance | yes | missing | optional | C35 | interaction-matrix, long-run | It must not secretly alter certification outcomes. |
-| `TG3-7EA37A6754851F08` | 7401-7401 | 62 | ml-training | yes | missing | optional | C35 | deterministic-scenario, journey-checkpoint | It must not be confused with the fixed public TearBot ladder. |
+| `TG3-7EA37A6754851F08` | 7401-7401 | 62 | ml-training | yes | missing | optional | C35 | deterministic-scenario, journey-checkpoint | It must not be confused with the fixed public Game Agent ladder. |
 | `TG3-001A550E3D1A7700` | 7405-7405 | 62 | ml-training | yes | missing | required | C35 | deterministic-scenario, journey-checkpoint | Compare agents and humans on: |
 | `TG3-7B4916B00755D223` | 7407-7407 | 62 | performance | yes | missing | required | C35 | interaction-matrix, long-run | Reaction-time distribution |
 | `TG3-5327CB43C858DD3A` | 7408-7408 | 62 | performance | yes | missing | required | C35 | interaction-matrix, long-run | Aim acceleration |
@@ -5663,7 +5663,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-808BCD460FEE702A` | 7877-7877 | 65 | privacy | yes | missing | required | C38 | unit-contract, interaction-matrix | verification |
 | `TG3-6E4AD5C2D96E6740` | 7877-7877 | 65 | privacy | yes | missing | required | C38 | unit-contract, interaction-matrix | moderation |
 | `TG3-0CE32EBBBB599D4B` | 7877-7877 | 65 | privacy | yes | missing | required | C38 | unit-contract, interaction-matrix | public metadata. |
-| `TG3-7E4DC4A5B599BF29` | 7878-7878 | 65 | compatibility | yes | missing | required | C29 | unit-contract, preservation-corpus | Ghost Lab: — developer-only inspection |
+| `TG3-7E4DC4A5B599BF29` | 7878-7878 | 65 | compatibility | yes | missing | required | C29 | unit-contract, preservation-corpus | Replay Hub: — developer-only inspection |
 | `TG3-00C97CA1C78B9D88` | 7878-7878 | 65 | compatibility | yes | missing | required | C29 | unit-contract, preservation-corpus | state takeover |
 | `TG3-E802A0C6DD61AE6A` | 7878-7878 | 65 | compatibility | yes | missing | required | C29 | unit-contract, preservation-corpus | compatibility debugging |
 | `TG3-05B2391E15B78330` | 7878-7878 | 65 | compatibility | yes | missing | required | C29 | unit-contract, preservation-corpus | branch comparison |
@@ -6204,7 +6204,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-855BD41B927D9892` | 8638-8638 | 68 | data-schema | yes | missing | required | C27 | unit-contract, malformed-input | Human live play |
 | `TG3-C702BD9724789C43` | 8639-8639 | 68 | data-schema | yes | missing | required | C27 | unit-contract, malformed-input | Scripted bot |
 | `TG3-7709D2145825522A` | 8640-8640 | 68 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Neural bot and policy version |
-| `TG3-F601C4ECB1B5E606` | 8641-8641 | 68 | data-schema | yes | missing | required | C27 | unit-contract, malformed-input | State Forge scenario |
+| `TG3-F601C4ECB1B5E606` | 8641-8641 | 68 | data-schema | yes | missing | required | C27 | unit-contract, malformed-input | Scenario Console scenario |
 | `TG3-C808B1E487907C16` | 8642-8642 | 68 | compatibility | yes | missing | required | C27 | unit-contract, preservation-corpus | Imported legacy replay |
 | `TG3-49C9F14064621F85` | 8643-8643 | 68 | data-schema | yes | missing | required | C27 | unit-contract, malformed-input | Developer debug run |
 | `TG3-ECFA78B996477458` | 8644-8644 | 68 | data-schema | yes | missing | required | C27 | unit-contract, malformed-input | Resumed run |
@@ -6298,7 +6298,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-D0D89C6C77960F69` | 8827-8827 | 69 | ml-training | no | reference | reference | C27 | documentation-validation | a boss transition |
 | `TG3-382C33203356A5C5` | 8827-8827 | 69 | ml-training | no | reference | reference | C27 | documentation-validation | a rapidly mutating void arena deserves more checkpoints than a static menu. |
 | `TG3-827983D287EC6AD9` | 8831-8831 | 69 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Keyframes must not be produced by blindly serializing arbitrary live JavaScript objects. |
-| `TG3-F7C437196637F3DF` | 8833-8833 | 69 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Ghost Core and State Forge should share a versioned codec registry: |
+| `TG3-F7C437196637F3DF` | 8833-8833 | 69 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Ghost Core and Scenario Console should share a versioned codec registry: |
 | `TG3-BA54C395EFCE60F3` | 8844-8844 | 69 | ml-training | no | reference | reference | C27 | documentation-validation | Every codec owns: |
 | `TG3-0338868E98990EC4` | 8846-8846 | 69 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Stable type ID |
 | `TG3-F103A588286D8FB4` | 8847-8847 | 69 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Schema version |
@@ -6600,12 +6600,12 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C2F501CA632EE15E` | 9242-9242 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | entity references |
 | `TG3-B42ECEDEB3184F89` | 9242-9242 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | configuration |
 | `TG3-708D2DC9C5CBF3BA` | 9242-9242 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | run-ledger invariants are verified. |
-| `TG3-9F90EF89C4A52BA9` | 9243-9243 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | State Forge creates the durable practice copy only after validation succeeds. |
+| `TG3-9F90EF89C4A52BA9` | 9243-9243 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | Scenario Console creates the durable practice copy only after validation succeeds. |
 | `TG3-906577A2998086C0` | 9244-9244 | 70 | ml-training | yes | missing | required | C29 | deterministic-scenario, journey-checkpoint | Input latches |
 | `TG3-8AA9EB4174B9C5A1` | 9244-9244 | 70 | ml-training | yes | missing | required | C29 | deterministic-scenario, journey-checkpoint | pointer-lock deltas |
 | `TG3-94CBB6CA796B5B51` | 9244-9244 | 70 | ml-training | yes | missing | required | C29 | deterministic-scenario, journey-checkpoint | buffered jump/dash edges |
 | `TG3-E0DF43BAEA236A02` | 9244-9244 | 70 | ml-training | yes | missing | required | C29 | deterministic-scenario, journey-checkpoint | active control scheme are reset or restored according to an explicit takeover policy. |
-| `TG3-5674D04A7293EA12` | 9245-9245 | 70 | ml-training | yes | missing | required | C29 | deterministic-scenario, journey-checkpoint | The player or selected TearBot gains control. |
+| `TG3-5674D04A7293EA12` | 9245-9245 | 70 | ml-training | yes | missing | required | C29 | deterministic-scenario, journey-checkpoint | The player or selected Game Agent gains control. |
 | `TG3-B75D2044DE904053` | 9246-9246 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | A new Chronicle starts with immutable lineage to the source replay and fork tick. |
 | `TG3-0D00672363CA6CF6` | 9247-9247 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | The practice fork is labeled and cannot submit as the original run. |
 | `TG3-8CCEB231B4248A72` | 9249-9249 | 70 | ui-ux | yes | missing | required | C29 | journey-checkpoint, interaction-matrix | Takeover must fail safely when the selected range depends on unsupported historical code. |
@@ -6755,7 +6755,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-037E91AEA3BF3994` | 9473-9473 | 71 | gameplay | yes | missing | required | C37 | deterministic-scenario, base-comparison | Human or bot preference |
 | `TG3-D1871710444C5623` | 9474-9474 | 71 | gameplay | yes | missing | required | C37 | deterministic-scenario, base-comparison | Similar input device when requested |
 | `TG3-4ACEE24763155C27` | 9476-9476 | 71 | gameplay | no | reference | reference | C37 | documentation-validation | The goal is productive challenge, not always showing the world record. |
-| `TG3-F957F051A4080F11` | 9480-9480 | 71 | ml-training | no | reference | reference | C37 | documentation-validation | Every calibrated TearBot level can publish labeled reference ghosts. |
+| `TG3-F957F051A4080F11` | 9480-9480 | 71 | ml-training | no | reference | reference | C37 | documentation-validation | Every calibrated Game Agent level can publish labeled reference ghosts. |
 | `TG3-34B1D5DA82A7D5CC` | 9482-9482 | 71 | ml-training | yes | missing | required | C37 | deterministic-scenario, journey-checkpoint | Use cases: |
 | `TG3-686F75025BA13E97` | 9484-9484 | 71 | ml-training | yes | missing | required | C37 | deterministic-scenario, journey-checkpoint | Watch the difference between Levels 3 |
 | `TG3-DE9C322DAA4D5DB8` | 9484-9484 | 71 | ml-training | yes | missing | required | C37 | deterministic-scenario, journey-checkpoint | 6 |
@@ -6941,7 +6941,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-32A3938E6214EDF6` | 9772-9772 | 72 | gameplay | yes | missing | required | C37 | deterministic-scenario, base-comparison | Same weapon and difficulty |
 | `TG3-9A8562A17FD53FE4` | 9773-9773 | 72 | gameplay | yes | missing | required | C37 | deterministic-scenario, base-comparison | Same boss phase |
 | `TG3-405F8AE0AC163B52` | 9774-9774 | 72 | architecture | yes | missing | required | C37 | unit-contract, full-release-gate | Same or similar build archetype |
-| `TG3-4429328B113A3BFF` | 9775-9775 | 72 | ml-training | yes | missing | required | C37 | deterministic-scenario, journey-checkpoint | TearBot level representing their current band |
+| `TG3-4429328B113A3BFF` | 9775-9775 | 72 | ml-training | yes | missing | required | C37 | deterministic-scenario, journey-checkpoint | Game Agent level representing their current band |
 | `TG3-AB40E9A54FB1C563` | 9776-9776 | 72 | architecture | yes | missing | required | C37 | unit-contract, full-release-gate | Expert demonstration |
 | `TG3-EDA163004D24F285` | 9780-9780 | 72 | gameplay | yes | contract | required | C37 | deterministic-scenario, base-comparison | Draft regret should not assume that the option with the highest global win rate was automatically correct. |
 | `TG3-94A00BDEFF9BA1D6` | 9782-9782 | 72 | gameplay | yes | missing | required | C37 | deterministic-scenario, base-comparison | It should consider: |
@@ -7193,7 +7193,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-BFF23B08FA2CCCA5` | 10163-10163 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | learning ghosts |
 | `TG3-448A8C76C87F561C` | 10164-10164 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | developer picks |
 | `TG3-4C8F63CDAB87EBBD` | 10165-10165 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | challenge runs |
-| `TG3-CCDB7B2F1939A3DE` | 10166-10166 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | TearBot reference runs |
+| `TG3-CCDB7B2F1939A3DE` | 10166-10166 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Game Agent reference runs |
 | `TG3-F13A700EFE4FD9CA` | 10168-10168 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Ranking should avoid being only raw engagement. |
 | `TG3-EB279588B3B56231` | 10168-10168 | 73 | cloud | no | reference | reference | C38 | documentation-validation | Quality signals may include: |
 | `TG3-3BF03E471C602A36` | 10170-10170 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Completion significance |
@@ -7277,7 +7277,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-102FE8029DDD5543` | 10286-10286 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Community event spectating |
 | `TG3-7A2E4676CF4DD439` | 10287-10287 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Remote developer observation |
 | `TG3-D73F5AA7C84D1644` | 10288-10288 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Private support sessions |
-| `TG3-DD411350C6094DBB` | 10289-10289 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Long-running TearBot exhibitions |
+| `TG3-DD411350C6094DBB` | 10289-10289 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Long-running Game Agent exhibitions |
 | `TG3-038E234D4157A96C` | 10290-10290 | 73 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | QA endurance monitoring |
 | `TG3-0EF9A77FA9BB2E6F` | 10292-10292 | 73 | cloud | no | reference | reference | C38 | documentation-validation | Safety and fairness contract: |
 | `TG3-0E6FC0BAF6584274` | 10294-10294 | 73 | cloud | yes | contract | required | C38 | unit-contract, interaction-matrix | The active player explicitly enables the relay or enters an event with disclosed relay rules. |
@@ -7715,7 +7715,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-CB8C97FA209BABAC` | 10930-10930 | 76 | operations | yes | missing | required | C37 | interaction-matrix, full-release-gate | challenge conversion |
 | `TG3-D556F55A1B45A49C` | 10931-10931 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | coaching-drill completion |
 | `TG3-C7A1767AE0DD7B1D` | 10933-10933 | 76 | ui-ux | yes | missing | required | C39 | journey-checkpoint, interaction-matrix | These metrics should use deliberate event definitions, not fragile screen scraping. |
-| `TG3-E7E93AB54FE14E60` | 10937-10937 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | Ghost Lab should support: |
+| `TG3-E7E93AB54FE14E60` | 10937-10937 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | Replay Hub should support: |
 | `TG3-C58B142E1F3A6AC3` | 10939-10939 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | Open capsule |
 | `TG3-723EC58FF9BC9180` | 10940-10940 | 76 | data-schema | yes | missing | required | C39 | unit-contract, malformed-input | inspect manifest |
 | `TG3-0B0C11C62C1CA050` | 10941-10941 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | view tracks |
@@ -7725,7 +7725,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-5579F4183CF33EB0` | 10945-10945 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | inspect entity state |
 | `TG3-64628CA67A2EA5C6` | 10946-10946 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | inspect causal event graph |
 | `TG3-E9316EC96E56D8AB` | 10947-10947 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | export interval |
-| `TG3-D3E642F587930323` | 10948-10948 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | convert to State Forge scenario |
+| `TG3-D3E642F587930323` | 10948-10948 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | convert to Scenario Console scenario |
 | `TG3-B02901A1B132A6A5` | 10949-10949 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | take control |
 | `TG3-FC9F5E5AE561CE89` | 10950-10950 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | mutate one variable |
 | `TG3-116A06FCC1772906` | 10951-10951 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | verify result |
@@ -7733,9 +7733,9 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-6A9737AA77E7FAD1` | 10953-10953 | 76 | operations | yes | missing | required | C26 | interaction-matrix, full-release-gate | generate regression test |
 | `TG3-2AF2FF30501A8A1D` | 10957-10957 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | A developer should be able to set a replay breakpoint: |
 | `TG3-042F48F729DF7D35` | 10967-10967 | 76 | operations | no | reference | reference | C39 | documentation-validation | Playback pauses with a full inspector. |
-| `TG3-B7A59ED36845A601` | 10971-10971 | 76 | operations | no | reference | reference | C39 | documentation-validation | From a selected replay interval, Ghost Lab can generate: |
+| `TG3-B7A59ED36845A601` | 10971-10971 | 76 | operations | no | reference | reference | C39 | documentation-validation | From a selected replay interval, Replay Hub can generate: |
 | `TG3-88D4EB28D405321C` | 10973-10973 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | Minimal action trace |
-| `TG3-C8E48F06D205F2C4` | 10974-10974 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | State Forge snapshot |
+| `TG3-C8E48F06D205F2C4` | 10974-10974 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | Scenario Console snapshot |
 | `TG3-03DB236F10ED6CE5` | 10975-10975 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | scenario YAML |
 | `TG3-6CB172125CA88CA2` | 10976-10976 | 76 | operations | yes | missing | required | C39 | interaction-matrix, full-release-gate | expected invariant |
 | `TG3-E22DD98EF78B939D` | 10977-10977 | 76 | ui-ux | yes | missing | required | C39 | journey-checkpoint, interaction-matrix | screenshot |
@@ -7781,11 +7781,11 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-647180157656C4CB` | 11034-11034 | 77 | ml-training | yes | missing | required | C37 | deterministic-scenario, journey-checkpoint | human with coach overlay |
 | `TG3-E000456DBEEE0B59` | 11035-11035 | 77 | ml-training | yes | prototype | required | C31 | deterministic-scenario, journey-checkpoint | human takeover from bot |
 | `TG3-8C5C7C99DE92E008` | 11036-11036 | 77 | ml-training | yes | prototype | required | C31 | deterministic-scenario, journey-checkpoint | bot takeover from human demonstration |
-| `TG3-2CB0C11FD9FF5818` | 11037-11037 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | State Forge scenario |
+| `TG3-2CB0C11FD9FF5818` | 11037-11037 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Scenario Console scenario |
 | `TG3-B1C2EA205B287AE4` | 11038-11038 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | replay practice fork |
 | `TG3-F44D57192D078E38` | 11040-11040 | 77 | ml-training | no | reference | reference | C31 | documentation-validation | Hybrid authorship may include segment boundaries. |
 | `TG3-4D4D888307F266DB` | 11044-11044 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Maintain verified reference ghosts for: |
-| `TG3-035F134878B82020` | 11046-11046 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | TearBot Levels 1–9 |
+| `TG3-035F134878B82020` | 11046-11046 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Game Agent Levels 1–9 |
 | `TG3-44F65386F3CBF7D4` | 11047-11047 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Level Ω |
 | `TG3-B60BAD5623679970` | 11048-11048 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | each weapon |
 | `TG3-200EEA15061A8719` | 11049-11049 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | each difficulty |
@@ -7836,7 +7836,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-CD2606730248B1C0` | 11127-11127 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Player can disable personalization. |
 | `TG3-B8028898353AAA3E` | 11128-11128 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Boss difficulty remains governed by declared game difficulty. |
 | `TG3-4F16C3A8F010FB82` | 11129-11129 | 77 | privacy | yes | missing | required | C31 | unit-contract, interaction-matrix | Historical replay data is not uploaded solely for this feature without consent. |
-| `TG3-86E86659621BC821` | 11133-11133 | 77 | preservation | no | reference | reference | C36 | documentation-validation | Agent Foundry runs can preserve lineage: |
+| `TG3-86E86659621BC821` | 11133-11133 | 77 | preservation | no | reference | reference | C36 | documentation-validation | Agent Training Operations runs can preserve lineage: |
 | `TG3-CBA88594AB687B50` | 11142-11142 | 77 | ml-training | no | reference | reference | C31 | documentation-validation | A policy card links to representative Ghost capsules showing: |
 | `TG3-DDCA3AB4C47F5C5E` | 11144-11144 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Strengths |
 | `TG3-BFB0F89FC01D7265` | 11145-11145 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | failures |
@@ -7907,12 +7907,12 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-78C1079FC86FE3C6` | 11239-11239 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | boss phase unfamiliarity |
 | `TG3-F6EBE01DFBF46ED8` | 11240-11240 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | style lost |
 | `TG3-40DE0F094A470DA5` | 11242-11242 | 77 | privacy | no | reference | reference | C31 | documentation-validation | Ghost Coach can ask consenting expert players to record correction demonstrations from selected forks. |
-| `TG3-A23797CA4AA463DC` | 11246-11246 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | State Forge and bot-generated samples must be marked synthetic. |
+| `TG3-A23797CA4AA463DC` | 11246-11246 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Scenario Console and bot-generated samples must be marked synthetic. |
 | `TG3-8CB35D77513BDE2C` | 11248-11248 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Training can use them, but evaluation reports should distinguish: |
 | `TG3-9AE4B115EEF604F8` | 11250-11250 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | human-only performance |
 | `TG3-5F9D390D66C0DF33` | 11251-11251 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | synthetic-heavy performance |
 | `TG3-678E826F01C8E173` | 11252-11252 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | mixed performance |
-| `TG3-D6550DDD1AA1D1CC` | 11256-11256 | 77 | ml-training | no | reference | reference | C31 | documentation-validation | TearBot policies can compete on fixed scenario sets and publish their capsules. |
+| `TG3-D6550DDD1AA1D1CC` | 11256-11256 | 77 | ml-training | no | reference | reference | C31 | documentation-validation | Game Agent policies can compete on fixed scenario sets and publish their capsules. |
 | `TG3-1137CCE5A0703F37` | 11258-11258 | 77 | ml-training | no | reference | reference | C31 | documentation-validation | Ghost tournaments enable: |
 | `TG3-D3E68D34B9249656` | 11260-11260 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | human inspection |
 | `TG3-21E657C43438C8C6` | 11261-11261 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | behavior comparison |
@@ -7932,7 +7932,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C156169A49EC3F71` | 11281-11281 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Evaluation holdouts never appear in training manifests. |
 | `TG3-BF48E4325E3CACE3` | 11282-11282 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Personal Nemesis profile can be deleted and regenerated. |
 | `TG3-990DA90B6B0E2F12` | 11283-11283 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Coach narrative matches structured findings. |
-| `TG3-29A8B70F5C39AD2A` | 11284-11284 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | TearBot level ghosts expose their policy and privilege metadata. |
+| `TG3-29A8B70F5C39AD2A` | 11284-11284 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Game Agent level ghosts expose their policy and privilege metadata. |
 | `TG3-8163F47A5E7A1C74` | 11285-11285 | 77 | ml-training | yes | missing | required | C31 | deterministic-scenario, journey-checkpoint | Dataset reports show representation and known gaps. |
 | `TG3-25E374EEA660E95A` | 11287-11287 | 77 | ml-training | no | reference | reference | C31 | documentation-validation | --- |
 | `TG3-3212AEFA9FFAFA41` | 11291-11291 | 78 | architecture | yes | missing | required | C27 | unit-contract, full-release-gate | Ghost 3.0 should be designed as an independently testable platform with a narrow public façade and modular internals. |
@@ -8066,7 +8066,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C1A94DB80014077E` | 11667-11667 | 78 | performance | yes | missing | required | C27 | interaction-matrix, long-run | Boss Memory |
 | `TG3-4E1D442FEC77C1B7` | 11668-11668 | 78 | gameplay | yes | missing | required | C37 | deterministic-scenario, base-comparison | Daily Echo |
 | `TG3-35CB59FC92F65107` | 11669-11669 | 78 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Learning Ghosts |
-| `TG3-49F38A34194C3B9D` | 11670-11670 | 78 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | TearBot reference ghosts |
+| `TG3-49F38A34194C3B9D` | 11670-11670 | 78 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Game Agent reference ghosts |
 | `TG3-5517B497FB551774` | 11672-11672 | 78 | gameplay | yes | missing | required | C27 | deterministic-scenario, base-comparison | Acceptance: |
 | `TG3-650A565F73B5E1AE` | 11674-11674 | 78 | gameplay | yes | missing | required | C27 | deterministic-scenario, base-comparison | Players can create |
 | `TG3-40A613556A066D91` | 11674-11674 | 78 | gameplay | yes | missing | required | C27 | deterministic-scenario, base-comparison | share |
@@ -8098,12 +8098,12 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-BC7D1396AFF2C0AC` | 11712-11712 | 78 | architecture | yes | missing | required | C27 | unit-contract, full-release-gate | Introduce stable IDs before more content ships. |
 | `TG3-51AF58EC6A74AE34` | 11713-11713 | 78 | architecture | yes | missing | required | C27 | unit-contract, full-release-gate | Move recording off key-value save storage. |
 | `TG3-54DABEE4364DEB1C` | 11714-11714 | 78 | architecture | yes | missing | required | C27 | unit-contract, full-release-gate | Treat input capture and event taxonomy as shared game infrastructure. |
-| `TG3-8CACDB7B11193C97` | 11715-11715 | 78 | architecture | yes | missing | required | C29 | unit-contract, full-release-gate | Build the replay world on the same isolated simulation architecture needed by State Forge. |
+| `TG3-8CACDB7B11193C97` | 11715-11715 | 78 | architecture | yes | missing | required | C29 | unit-contract, full-release-gate | Build the replay world on the same isolated simulation architecture needed by Scenario Console. |
 | `TG3-130FE2783ACF38D1` | 11716-11716 | 78 | architecture | yes | missing | required | C27 | unit-contract, full-release-gate | Keep compact public and forensic QA profiles separate. |
 | `TG3-F52702F0BF0B6FC6` | 11717-11717 | 78 | architecture | yes | missing | required | C38 | unit-contract, full-release-gate | Make verification badges precise and conservative. |
 | `TG3-4742FC8D3BFDD64C` | 11718-11718 | 78 | architecture | yes | missing | required | C29 | unit-contract, full-release-gate | Treat “Practice from here” as a flagship feature because it connects replay |
 | `TG3-A4D408C4A504950F` | 11718-11718 | 78 | architecture | yes | missing | required | C29 | unit-contract, full-release-gate | coaching |
-| `TG3-9EA0FDE53F48D63C` | 11718-11718 | 78 | architecture | yes | missing | required | C29 | unit-contract, full-release-gate | State Forge into one loop. |
+| `TG3-9EA0FDE53F48D63C` | 11718-11718 | 78 | architecture | yes | missing | required | C29 | unit-contract, full-release-gate | Scenario Console into one loop. |
 | `TG3-5528E22EAF2E93F1` | 11719-11719 | 78 | cloud | yes | missing | required | C38 | unit-contract, interaction-matrix | Ship local value before cloud dependence. |
 | `TG3-C8C834ECD05FEF5C` | 11725-11725 | 78 | gameplay | yes | missing | required | C27 | deterministic-scenario, base-comparison | Recording completion rate |
 | `TG3-FA20A7EB201CF903` | 11726-11726 | 78 | gameplay | yes | missing | required | C27 | deterministic-scenario, base-comparison | capsule decode success |
@@ -8239,7 +8239,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-252C2DA45EBA8CC3` | 11815-11815 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | Round-trip state and causality contracts |
 | `TG3-F88C5C1C0FDC554F` | 11816-11816 | 79 | performance | yes | contract | required | C27 | interaction-matrix, long-run | A canonical event ontology |
 | `TG3-3A5A273266F01EB2` | 11817-11817 | 79 | performance | yes | prototype | required | C27 | interaction-matrix, long-run | Modular Ghost Lenses |
-| `TG3-F05924A16C0D6EEF` | 11818-11818 | 79 | performance | yes | contract | required | C37 | interaction-matrix, long-run | A non-destructive Ghost Studio |
+| `TG3-F05924A16C0D6EEF` | 11818-11818 | 79 | performance | yes | contract | required | C37 | interaction-matrix, long-run | A non-destructive Replay Editor |
 | `TG3-CAB62C5E1869E044` | 11819-11819 | 79 | moderation | yes | prototype | required | C28 | unit-contract, interaction-matrix | Ghost Doctor for health |
 | `TG3-CD9AE75258C93C9C` | 11819-11819 | 79 | moderation | yes | prototype | required | C28 | unit-contract, interaction-matrix | repair |
 | `TG3-9FE8AE1EECBC8A95` | 11819-11819 | 79 | moderation | yes | prototype | required | C28 | unit-contract, interaction-matrix | quarantine |
@@ -8321,7 +8321,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-8790D652225B7ED8` | 11943-11943 | 79 | performance | yes | missing | required | C37 | interaction-matrix, long-run | Coach |
 | `TG3-B92B0E2A143B1DA3` | 11943-11943 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | Studio |
 | `TG3-46062B9B4288727A` | 11943-11943 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | verifier |
-| `TG3-7D8A90FB74886B36` | 11943-11943 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | State Forge bridge |
+| `TG3-7D8A90FB74886B36` | 11943-11943 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | Scenario Console bridge |
 | `TG3-8D0843CA729F7AA8` | 11943-11943 | 79 | performance | yes | missing | required | C39 | interaction-matrix, long-run | support report generator |
 | `TG3-0766F4957E7A8960` | 11943-11943 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | TearBench must not each invent their own interpretation of time. |
 | `TG3-CE4B0E5CF186DB70` | 11945-11945 | 79 | performance | no | reference | reference | C27 | documentation-validation | Canonical time is integer simulation ticks. |
@@ -8535,7 +8535,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-61330566C48B7FE8` | 12495-12495 | 79 | privacy | yes | missing | required | C38 | unit-contract, interaction-matrix | `containsPrivilegedState` |
 | `TG3-7005B5D327023935` | 12497-12497 | 79 | privacy | yes | missing | required | C29 | unit-contract, interaction-matrix | Public Theater must not accidentally expose a developer Lens because the underlying track happens to exist. |
 | `TG3-BAEEF7E7E52D160C` | 12499-12499 | 79 | privacy | no | reference | reference | C38 | documentation-validation | --- |
-| `TG3-A3E97BB4A4A1AD36` | 12503-12503 | 79 | performance | yes | contract | required | C37 | interaction-matrix, long-run | Ghost Studio should be a named product surface separate from basic Theater playback. |
+| `TG3-A3E97BB4A4A1AD36` | 12503-12503 | 79 | performance | yes | contract | required | C37 | interaction-matrix, long-run | Replay Editor should be a named product surface separate from basic Theater playback. |
 | `TG3-15A86A612B15C342` | 12505-12505 | 79 | performance | no | reference | reference | C29 | documentation-validation | Theater answers: |
 | `TG3-C445698125FD19BD` | 12507-12507 | 79 | performance | no | reference | reference | C27 | documentation-validation | > What happened? |
 | `TG3-2D11D3A48EC14C2E` | 12509-12509 | 79 | performance | no | reference | reference | C27 | documentation-validation | Studio answers: |
@@ -8624,7 +8624,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-F95F2577EE5A059B` | 12657-12657 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Touch |
 | `TG3-A2B3EC3A53D32A89` | 12657-12657 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | gamepad |
 | `TG3-2CAE4BB288D00540` | 12657-12657 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | keyboard-mouse |
-| `TG3-7A7AAF158C4F12B9` | 12658-12658 | 79 | ml-training | yes | missing | required | C28 | deterministic-scenario, journey-checkpoint | TearBot Levels 1–9 |
+| `TG3-7A7AAF158C4F12B9` | 12658-12658 | 79 | ml-training | yes | missing | required | C28 | deterministic-scenario, journey-checkpoint | Game Agent Levels 1–9 |
 | `TG3-B1DF0EC880AD9E2E` | 12659-12659 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Level Omega stress runs |
 | `TG3-DD0365E0DD1EAA9C` | 12660-12660 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Performance-constrained runs |
 | `TG3-2092EF8CB78B80BF` | 12661-12661 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Important historic releases |
@@ -8803,7 +8803,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-AFD4CFDD6A767118` | 12999-12999 | 79 | performance | no | reference | reference | C27 | documentation-validation | --- |
 | `TG3-D94BFF10F4571A9D` | 13003-13003 | 79 | performance | yes | missing | required | C29 | interaction-matrix, long-run | The comparison laboratory should support more than two runs. |
 | `TG3-A29318BCC6A80F05` | 13005-13005 | 79 | performance | no | reference | reference | C27 | documentation-validation | Examples: |
-| `TG3-2B56FCA63D265A1F` | 13007-13007 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | TearBot Levels 1–9 from one state |
+| `TG3-2B56FCA63D265A1F` | 13007-13007 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Game Agent Levels 1–9 from one state |
 | `TG3-6213F66318013AB8` | 13008-13008 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | Sword versus Hammer across five difficulties |
 | `TG3-C963FE0A66030175` | 13009-13009 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | Human percentile groups |
 | `TG3-78EEF642C7C68400` | 13010-13010 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | Main branch versus three balance candidates |
@@ -8914,7 +8914,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-E3547A6BEED79086` | 13181-13181 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Challenge attempt |
 | `TG3-84FC95339ACC262D` | 13182-13182 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Human correction |
 | `TG3-3D709B9418769308` | 13183-13183 | 79 | ml-training | yes | missing | required | C28 | deterministic-scenario, journey-checkpoint | Agent episode |
-| `TG3-BCFC2AF2B7DC0B40` | 13184-13184 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | State Forge fork |
+| `TG3-BCFC2AF2B7DC0B40` | 13184-13184 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Scenario Console fork |
 | `TG3-D5DD7461CCF4D6E8` | 13185-13185 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Branch replay |
 | `TG3-6B1CC4EACE072584` | 13186-13186 | 79 | performance | yes | prototype | required | C28 | interaction-matrix, long-run | Minimized failure |
 | `TG3-9C01DC531593EB5E` | 13187-13187 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | Canon promotion |
@@ -9033,7 +9033,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-7C351F4F472DC2BD` | 13514-13514 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Observation parity badges |
 | `TG3-725EDCBA83861AF3` | 13515-13515 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Draft-decision explorer |
 | `TG3-4B7DD492315D2FB6` | 13517-13517 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | Acceptance: |
-| `TG3-5567C88EB898CB65` | 13519-13519 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | A developer can compare nine TearBot levels |
+| `TG3-5567C88EB898CB65` | 13519-13519 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | A developer can compare nine Game Agent levels |
 | `TG3-E832C631BAA1174B` | 13519-13519 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | A developer can compare two branches |
 | `TG3-8B7CF483453B9A9C` | 13519-13519 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | A developer can compare multiple weapons |
 | `TG3-4335E4005EC8E804` | 13519-13519 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | A developer can compare human reference runs from one state without losing causal alignment. |
@@ -9108,7 +9108,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-D3787254EB56223C` | 13582-13582 | 79 | performance | yes | prototype | required | C27 | interaction-matrix, long-run | A Graveyard regression |
 | `TG3-D1ABACD348D5FAF6` | 13583-13583 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | A Frontier discovery |
 | `TG3-E1AFE3F2BDB68138` | 13584-13584 | 79 | performance | yes | missing | required | C28 | interaction-matrix, long-run | A Corpus demonstration |
-| `TG3-468218F63DBB0D8E` | 13585-13585 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | A TearBot exam |
+| `TG3-468218F63DBB0D8E` | 13585-13585 | 79 | ml-training | yes | missing | required | C27 | deterministic-scenario, journey-checkpoint | A Game Agent exam |
 | `TG3-56AD43FC518FBB73` | 13586-13586 | 79 | performance | yes | missing | required | C29 | interaction-matrix, long-run | A branch comparison |
 | `TG3-1018858F361F90EB` | 13587-13587 | 79 | performance | yes | prototype | required | C27 | interaction-matrix, long-run | A minimized scenario |
 | `TG3-90B0CC6AE9AE580A` | 13588-13588 | 79 | performance | yes | missing | required | C27 | interaction-matrix, long-run | A historical artifact |
@@ -9170,7 +9170,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-0C91DE5712498EC0` | 13628-13628 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Determinism |
 | `TG3-E70D0F60108F5F53` | 13628-13628 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Performance |
 | `TG3-3ACB8C42D32D1DEE` | 13628-13628 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Agent Intent Lenses plus a visibility firewall. |
-| `TG3-1C4F679217B582B0` | 13629-13629 | 81 | ui-ux | no | reference | reference | C21 | documentation-validation | Added Ghost Studio as a separate non-destructive creator surface with edit decision lists |
+| `TG3-1C4F679217B582B0` | 13629-13629 | 81 | ui-ux | no | reference | reference | C21 | documentation-validation | Added Replay Editor as a separate non-destructive creator surface with edit decision lists |
 | `TG3-9DDC1D6895E2BE11` | 13629-13629 | 81 | ui-ux | no | reference | reference | C21 | documentation-validation | parent attribution |
 | `TG3-71F6E0BFD6091460` | 13629-13629 | 81 | ui-ux | no | reference | reference | C21 | documentation-validation | camera authoring |
 | `TG3-A056AEA2455DE575` | 13629-13629 | 81 | ui-ux | no | reference | reference | C21 | documentation-validation | overlay presets |
@@ -9220,7 +9220,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C0C70B70847D0770` | 13643-13643 | 81 | cloud | no | reference | reference | C21 | documentation-validation | rewards |
 | `TG3-507CAC3783315E90` | 13643-13643 | 81 | cloud | no | reference | reference | C21 | documentation-validation | drafts |
 | `TG3-8997E2BB6E0D9BD8` | 13643-13643 | 81 | cloud | no | reference | reference | C21 | documentation-validation | transitions are causally inspectable. |
-| `TG3-B8B88E18D5AABD67` | 13644-13644 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Added a shared Ghost Core and State Forge state-codec registry with capture |
+| `TG3-B8B88E18D5AABD67` | 13644-13644 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Added a shared Ghost Core and Scenario Console state-codec registry with capture |
 | `TG3-974083B26B7E7F46` | 13644-13644 | 81 | cloud | no | reference | reference | C21 | documentation-validation | validation |
 | `TG3-79194BAA1FD79B51` | 13644-13644 | 81 | cloud | no | reference | reference | C21 | documentation-validation | restore |
 | `TG3-B8FBE7E5BF37EA24` | 13644-13644 | 81 | cloud | no | reference | reference | C21 | documentation-validation | migration |
@@ -9320,7 +9320,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-DE1F544872CD0B84` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Daily Echo |
 | `TG3-23CBB284E5EF8B6E` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Learning Ghosts |
 | `TG3-94D7AD8439E0F56F` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Nemesis Ghosts |
-| `TG3-E652F65F504241F9` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | TearBot ghosts |
+| `TG3-E652F65F504241F9` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Game Agent ghosts |
 | `TG3-CF30A84D080D0C3E` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Ghost Relay |
 | `TG3-2BE78CCACFDE2AE2` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Hall of Echoes |
 | `TG3-C1910D855B936AEF` | 13662-13662 | 81 | cloud | no | reference | reference | C21 | documentation-validation | Run DNA |
@@ -9374,9 +9374,9 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-25F8E2724C20D5D5` | 13667-13667 | 81 | operations | no | reference | reference | C39 | documentation-validation | balance-observatory |
 | `TG3-C9FEA51C8F0B96AD` | 13667-13667 | 81 | operations | no | reference | reference | C39 | documentation-validation | Remote Config |
 | `TG3-8C525C7C0602FC69` | 13667-13667 | 81 | operations | no | reference | reference | C39 | documentation-validation | product analytics |
-| `TG3-B2598F083DB403A9` | 13667-13667 | 81 | operations | no | reference | reference | C39 | documentation-validation | Developer Ghost Lab workflows outside TearBench. |
+| `TG3-B2598F083DB403A9` | 13667-13667 | 81 | operations | no | reference | reference | C39 | documentation-validation | Developer Replay Hub workflows outside TearBench. |
 | `TG3-880F4F77E79167EA` | 13668-13668 | 81 | privacy | no | reference | reference | C21 | documentation-validation | Added human/bot/hybrid provenance |
-| `TG3-A3071F2631584261` | 13668-13668 | 81 | privacy | no | reference | reference | C21 | documentation-validation | calibrated TearBot reference ghosts |
+| `TG3-A3071F2631584261` | 13668-13668 | 81 | privacy | no | reference | reference | C21 | documentation-validation | calibrated Game Agent reference ghosts |
 | `TG3-D2095A3E42BD705D` | 13668-13668 | 81 | privacy | no | reference | reference | C21 | documentation-validation | astuteness fingerprints |
 | `TG3-008A666C6EBBD586` | 13668-13668 | 81 | privacy | no | reference | reference | C21 | documentation-validation | Ghost style embeddings |
 | `TG3-86C8668310A89E22` | 13668-13668 | 81 | privacy | no | reference | reference | C21 | documentation-validation | a Personal Nemesis / evolved Echo concept |
@@ -9394,7 +9394,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-80FD3FA6FBE9B2A4` | 13669-13669 | 81 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | direct recommendations |
 | `TG3-17A41DAD1697CFA0` | 13669-13669 | 81 | architecture | yes | missing | required | C39 | unit-contract, full-release-gate | a strict definition of done. |
 | `TG3-CEAC3C564A8B8E21` | 13673-13673 | 81 | ml-training | yes | missing | required | C21 | deterministic-scenario, journey-checkpoint | Made arbitrary-state launch a second non-negotiable capability alongside full-journey autonomy. |
-| `TG3-AE6D930C78E2DD13` | 13674-13674 | 81 | compatibility | no | reference | reference | C21 | documentation-validation | Added Tear State Forge with full runtime serialization |
+| `TG3-AE6D930C78E2DD13` | 13674-13674 | 81 | compatibility | no | reference | reference | C21 | documentation-validation | Added Tear Scenario Console with full runtime serialization |
 | `TG3-27E6DF2D5B4FBCC9` | 13674-13674 | 81 | compatibility | no | reference | reference | C21 | documentation-validation | transactional restore |
 | `TG3-093A4F492695F312` | 13674-13674 | 81 | compatibility | no | reference | reference | C21 | documentation-validation | provenance |
 | `TG3-EB414B09EEAD6647` | 13674-13674 | 81 | compatibility | no | reference | reference | C21 | documentation-validation | semantic fingerprints |
@@ -9449,7 +9449,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-C66B5D11063BD38A` | 13681-13681 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | environment |
 | `TG3-E6EBDA2A9721FA55` | 13681-13681 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | seed |
 | `TG3-0A0B9BA81883D82A` | 13681-13681 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | agent profile. |
-| `TG3-750A0780763DB977` | 13682-13682 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Added the TearBot 1–9 ladder |
+| `TG3-750A0780763DB977` | 13682-13682 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Added the Game Agent 1–9 ladder |
 | `TG3-0BDC9C03C897951C` | 13682-13682 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Level Ω |
 | `TG3-2AE18829A1D0FBCB` | 13682-13682 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | separate mechanical/strategic/QA astuteness axes |
 | `TG3-6585CE07CCB0368A` | 13682-13682 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | a human-like information firewall. |
@@ -9460,14 +9460,14 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-169F9F4408A6666E` | 13684-13684 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | monotonicity contracts |
 | `TG3-341FC148E8834940` | 13684-13684 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | level-separation contracts |
 | `TG3-41967B9DE471C475` | 13684-13684 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | human anchoring. |
-| `TG3-4FA09589E2DDEFCB` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | Added the Agent Foundry closed loop for weakness mining |
+| `TG3-4FA09589E2DDEFCB` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | Added the Agent Training Operations closed loop for weakness mining |
 | `TG3-B61AAE45D119CDD5` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | curriculum generation |
 | `TG3-0609E563662D8953` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | challenger training |
 | `TG3-44691366EFE79514` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | champion promotion |
 | `TG3-00266CD772DDEFAF` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | quality-diverse policy retention |
 | `TG3-4C5EE63D94E3A99C` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | rollback |
 | `TG3-B9B4A1C43ED21021` | 13685-13685 | 81 | moderation | no | reference | reference | C21 | documentation-validation | iteration reporting. |
-| `TG3-83E713411B703FF9` | 13686-13686 | 81 | ml-training | no | reference | reference | C39 | documentation-validation | Added State Forge |
+| `TG3-83E713411B703FF9` | 13686-13686 | 81 | ml-training | no | reference | reference | C39 | documentation-validation | Added Scenario Console |
 | `TG3-788304E8017B9A74` | 13686-13686 | 81 | ml-training | no | reference | reference | C39 | documentation-validation | bot calibration |
 | `TG3-18BEB1A69F5BF173` | 13686-13686 | 81 | ml-training | no | reference | reference | C39 | documentation-validation | policy lifecycle |
 | `TG3-4026197BB2831A4B` | 13686-13686 | 81 | ml-training | no | reference | reference | C39 | documentation-validation | counterfactual |
@@ -9518,7 +9518,7 @@ to `missing`; only narrowly scoped catalog rules can raise their evidence state.
 | `TG3-D1258CF633BA1AE4` | 13700-13700 | 81 | gameplay | no | reference | reference | C21 | documentation-validation | counterfactual rollout |
 | `TG3-F6DC75C355F1CAA8` | 13700-13700 | 81 | gameplay | no | reference | reference | C21 | documentation-validation | Special guarantee |
 | `TG3-C79914688F1132A6` | 13700-13700 | 81 | gameplay | no | reference | reference | C21 | documentation-validation | tier-evolution testing. |
-| `TG3-EE5287B2A34A4916` | 13701-13701 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Added Agent Academy |
+| `TG3-EE5287B2A34A4916` | 13701-13701 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | Added Agent Training Archive |
 | `TG3-5347CBC58BC490C3` | 13701-13701 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | human takeover correction |
 | `TG3-0BC6D601F9F9991F` | 13701-13701 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | curriculum promotion |
 | `TG3-789F8113C73B38A5` | 13701-13701 | 81 | ml-training | no | reference | reference | C21 | documentation-validation | visible policy report cards. |

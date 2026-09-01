@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "matrices": {
+    "browser": { "variants": ["chromium"], "evidenceKinds": ["scenario-live", "journey"] },
+    "input": { "variants": ["keyboard-mouse", "touch", "controller"], "evidenceKinds": ["scenario-live", "scenario-headless", "journey"] },
+    "platform": { "variants": ["standalone", "crazygames"], "evidenceKinds": ["scenario-live", "scenario-headless", "authority"] },
+    "viewport": { "variants": ["desktop", "small-desktop", "tablet-landscape", "phone-portrait"], "evidenceKinds": ["scenario-live", "journey"] },
+    "frameRate": { "variants": [30, 60, 144], "evidenceKinds": ["scenario-live", "scenario-headless", "authority"] },
+    "network": { "variants": ["online", "offline", "slow", "interrupted"], "evidenceKinds": ["scenario-live", "scenario-headless", "authority"] },
+    "interruption": { "variants": ["blur", "visibility-hidden", "controller-disconnect", "resume"], "evidenceKinds": ["scenario-live", "scenario-headless", "authority"] },
+    "performance": { "variants": ["desktop", "constrained"], "evidenceKinds": ["scenario-headless", "journey", "authority"] },
+    "longRun": { "variants": ["five-cycle", "1000-environment", "10000-episode"], "evidenceKinds": ["scenario-live", "scenario-headless", "journey", "authority"] }
+  },
+  "capabilityClaims": [
+    "accessibility", "combat", "composition", "difficulty", "events", "fixed-step", "headless",
+    "isolation", "movement", "observation", "progression", "reference", "replay", "restore",
+    "selection", "serialization", "stage-gating"
+  ],
+  "buildTargets": {
+    "test-standalone": { "taskId": "build.test-standalone" }
+  }
+}

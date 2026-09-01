@@ -24,7 +24,7 @@ describe("native gameplay causal-event adapter", () => {
   it("maps every native gameplay fact through one valid versioned ontology", () => {
     const facts: readonly TearGameplayEvent[] = [
       run,
-      { kind: "stage", tick: 7, stage: 3 },
+      { kind: "stage", tick: 7, stage: 3, transition: "entered" },
       { kind: "wave", tick: 7, wave: 4, event: "start" },
       { kind: "wave", tick: 7, wave: 4, event: "clear" },
       { kind: "wave", tick: 7, wave: 4, event: "spawn-completed" },
@@ -58,7 +58,7 @@ describe("native gameplay causal-event adapter", () => {
     ];
 
     expect([...new Set(facts.map((fact) => fact.kind))].sort()).toEqual([...GAMEPLAY_EVENT_KIND_IDS].sort());
-    const events = facts.map((fact, index) => createGameplayCausalEvent(fact, index, `test:${String(index)}`));
+    const events = facts.map((fact, index) => createGameplayCausalEvent(fact, index, `test:${String(index)}`, "engine"));
     expect(events.map((event) => event.type)).toEqual(expected);
     expect(events.every((event) => validateTearContract(event).ok)).toBe(true);
     expect(events[6]).toMatchObject({ actorId: "enemy:4", payload: {
@@ -81,7 +81,7 @@ describe("native gameplay causal-event adapter", () => {
       ["abandoned", "run.abandoned", "post-simulation-commit"],
     ] as const;
     expect(transitions.map(([transition], index) => {
-      const event = createGameplayCausalEvent({ ...run, transition }, index, `run:${String(index)}`);
+      const event = createGameplayCausalEvent({ ...run, transition }, index, `run:${String(index)}`, "engine");
       return [event.type, event.phase];
     })).toEqual(transitions.map(([, type, phase]) => [type, phase]));
   });
@@ -89,14 +89,14 @@ describe("native gameplay causal-event adapter", () => {
   it("omits absent optional fields and freezes both event and payload", () => {
     const event = createGameplayCausalEvent({
       kind: "spawn", tick: 1, actorId: "enemy:1", actorKind: "charger", x: 1, y: 2,
-    }, 0, "spawn:0");
+    }, 0, "spawn:0", "engine");
     expect(event.payload).toEqual({ actorKind: "charger", x: 1, y: 2 });
     expect(Object.isFrozen(event)).toBe(true);
     expect(Object.isFrozen(event.payload)).toBe(true);
   });
 
   it("preserves exact payload values and ordering fields", () => {
-    const event = createGameplayCausalEvent(run, 41, "parity:41");
+    const event = createGameplayCausalEvent(run, 41, "parity:41", "engine");
     expect(event).toEqual({
       format: "tear-contract", kind: "event", schemaVersion: 1, id: "parity:41", type: "run.completed",
       tick: 7, phase: "post-simulation-commit", sequence: 41, source: "engine",
@@ -106,7 +106,7 @@ describe("native gameplay causal-event adapter", () => {
   });
 
   it("projects native parity facts without losing exact payload values", () => {
-    const causal = createGameplayCausalEvent(run, 41, "live:7:41");
+    const causal = createGameplayCausalEvent(run, 41, "live:7:41", "engine");
     const projected = projectGameplayEventForParity(run, 0);
     expect(causal.payload.runId).toBe("run-a");
     expect(projected).toEqual({
@@ -131,17 +131,32 @@ describe("native gameplay causal-event adapter", () => {
     ]);
   });
 
+  it("keeps native and bridge provenance explicit at causal-event construction", () => {
+    expect(createGameplayCausalEvent(run, 0, "engine:0", "engine").source).toBe("engine");
+    expect(createGameplayCausalEvent(run, 0, "derived:0", "derived").source).toBe("derived");
+  });
+
   it("rejects invalid ordering and identity instead of silently normalizing them", () => {
-    expect(() => createGameplayCausalEvent(run, -1, "bad")).toThrow(/sequence/u);
-    expect(() => createGameplayCausalEvent(run, 0, "")).toThrow(/ID/u);
-    expect(() => createGameplayCausalEvent(run, 0, " ")).toThrow(/ID/u);
-    expect(() => createGameplayCausalEvent(run, 0, "x".repeat(257))).toThrow(/ID/u);
-    expect(() => createGameplayCausalEvent({ ...run, tick: -1 }, 0, "bad-tick")).toThrow(/tick/u);
-    expect(() => createGameplayCausalEvent({ kind: "wave", tick: 1, wave: 1, event: "unknown" }, 0, "bad-wave"))
+    expect(() => createGameplayCausalEvent(run, -1, "bad", "engine")).toThrow(/sequence/u);
+    expect(() => createGameplayCausalEvent(run, 0, "", "engine")).toThrow(/ID/u);
+    expect(() => createGameplayCausalEvent(run, 0, " ", "engine")).toThrow(/ID/u);
+    expect(() => createGameplayCausalEvent(run, 0, "x".repeat(257), "engine")).toThrow(/ID/u);
+    expect(() => createGameplayCausalEvent({ ...run, tick: -1 }, 0, "bad-tick", "engine")).toThrow(/tick/u);
+    expect(() => createGameplayCausalEvent({ kind: "run", tick: 1, transition: "unknown", runId: "run", mode: "campaign", difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 0 } as never, 0, "bad-run", "engine"))
+      .toThrow(/unrecognized native run transition/u);
+    expect(() => createGameplayCausalEvent({ kind: "stage", tick: 1, stage: 1, transition: "unknown" } as never, 0, "bad-stage", "engine"))
+      .toThrow(/unrecognized native stage transition/u);
+    expect(() => createGameplayCausalEvent({ kind: "weapon", tick: 1, event: "unknown", weaponId: "sword", throwId: 1, x: 0, y: 0 } as never, 0, "bad-weapon", "engine"))
+      .toThrow(/unrecognized native weapon event/u);
+    expect(() => createGameplayCausalEvent({ kind: "projectile", tick: 1, event: "unknown", projectileId: "shot", x: 0, y: 0, vx: 0, vy: 0, owner: "enemy" } as never, 0, "bad-projectile", "engine"))
+      .toThrow(/unrecognized native projectile event/u);
+    expect(() => createGameplayCausalEvent({ kind: "world", tick: 1, event: "unknown", x: 0, y: 0, lane: null, hp: 1 } as never, 0, "bad-world", "engine"))
+      .toThrow(/unrecognized native world event/u);
+    expect(() => createGameplayCausalEvent({ kind: "wave", tick: 1, wave: 1, event: "unknown" }, 0, "bad-wave", "engine"))
       .toThrow(/unrecognized native wave marker/u);
-    expect(() => createGameplayCausalEvent({ kind: "effect", tick: 1, effect: "unclassified", x: 0, y: 0 }, 0, "bad-effect"))
+    expect(() => createGameplayCausalEvent({ kind: "effect", tick: 1, effect: "unclassified", x: 0, y: 0 }, 0, "bad-effect", "engine"))
       .toThrow(/unrecognized native gameplay effect/u);
-    expect(() => createGameplayCausalEvent({ kind: "environment", tick: 1, event: "unclassified", objectId: "field:1", category: "field", objectKind: "bloom-well" } as never, 0, "bad-environment"))
+    expect(() => createGameplayCausalEvent({ kind: "environment", tick: 1, event: "unclassified", objectId: "field:1", category: "field", objectKind: "bloom-well" } as never, 0, "bad-environment", "engine"))
       .toThrow(/unrecognized native environment/u);
   });
 

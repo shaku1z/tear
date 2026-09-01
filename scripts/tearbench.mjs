@@ -1,22 +1,120 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readSourceIdentitySync } from "./release-artifact.mjs";
-import { createReleaseCertificate, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
+import { RELEASE_REPOSITORY, readSourceIdentitySync, verifyReleaseArtifact } from "./release-artifact.mjs";
+import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
+import { createReleaseCertificate, REQUIRED_CORRECTION_IDS, REQUIRED_RELEASE_EVIDENCE_IDS, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
+import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
+import { createTearBenchShadowPlan } from "./tearbench-shadow-plan.mjs";
+import { dependencyOrderedTaskIds, registryTaskEnvironment } from "./tearbench-task-profile.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const BLOOM_WELL_LIFECYCLE_TICKS = 744;
 function option(name, fallback) {
   const index = process.argv.indexOf(name);
   return index < 0 ? fallback : process.argv[index + 1];
 }
 
-const catalogPath = resolve(option("--catalog", resolve(root, "src", "tearbench", "canonical-scenarios.json")));
-const evidenceRoutesPath = resolve(option("--routes", resolve(root, "src", "tearbench", "evidence-routes.json")));
+const canonicalCatalogPath = resolve(root, "src", "tearbench", "canonical-scenarios.json");
+const canonicalEvidenceRoutesPath = resolve(root, "src", "tearbench", "evidence-routes.json");
+const catalogPath = resolve(option("--catalog", canonicalCatalogPath));
+const evidenceRoutesPath = resolve(option("--routes", canonicalEvidenceRoutesPath));
+const enforceCanonicalTaskProjections = catalogPath === canonicalCatalogPath && evidenceRoutesPath === canonicalEvidenceRoutesPath;
+const evidencePolicyPath = resolve(root, "src", "tearbench", "evidence-policy.json");
+const taskRegistryPath = resolve(root, "src", "tearbench", "task-registry.json");
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 const evidenceRoutes = JSON.parse(await readFile(evidenceRoutesPath, "utf8"));
+const evidencePolicy = JSON.parse(await readFile(evidencePolicyPath, "utf8"));
+const taskRegistry = JSON.parse(await readFile(taskRegistryPath, "utf8"));
+const packageSource = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+const publicationBoundary = JSON.parse(await readFile(resolve(root, "config", "campaign-publication-boundary.json"), "utf8"));
+const trackedPathsResult = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
+if (trackedPathsResult.status !== 0) throw new Error(`unable to validate evidence prefixes: ${trackedPathsResult.stderr || trackedPathsResult.stdout}`);
+const trackedRepositoryPaths = trackedPathsResult.stdout.split("\0").filter(Boolean)
+  .map((value) => value.replaceAll("\\", "/"));
+const REQUIRED_PRODUCTION_HOOK_FAMILIES = Object.freeze([
+  "weapon-abilities", "hazards-support", "weapon-world-contact", "source-void",
+  "boss-add-clone", "blade-contact", "area-damage",
+]);
+const KNOWN_BACKEND_DISPOSITIONS = new Set(["supported", "reduced", "unsupported"]);
+const EVIDENCE_KINDS = new Set(["scenario-live", "scenario-headless", "journey", "authority"]);
+const TASK_RUNNER_KINDS = new Set(["node", "vitest", "typescript", "eslint", "build-target", "wrangler", "tearbench", "certifier"]);
+const TASK_RESOURCE_CLASSES = new Set(["static", "unit", "headless", "build", "browser", "endurance"]);
+if (taskRegistry?.schemaVersion !== 1 || !Number.isSafeInteger(taskRegistry.definitionPolicyVersion)
+  || !Array.isArray(taskRegistry.tasks) || taskRegistry.profiles === null || typeof taskRegistry.profiles !== "object") {
+  throw new TypeError("TearBench task registry is malformed");
+}
+const taskIds = taskRegistry.tasks.map((task) => task?.taskId);
+if (new Set(taskIds).size !== taskIds.length || taskRegistry.tasks.some((task) =>
+  typeof task?.taskId !== "string" || !/^[a-z][a-z0-9.-]*$/u.test(task.taskId)
+  || !TASK_RUNNER_KINDS.has(task.runner?.kind) || !TASK_RESOURCE_CLASSES.has(task.resourceClass)
+  || typeof task.runner?.executable !== "string" || !Array.isArray(task.runner?.args)
+  || /[;&|<>`$()\r\n]/u.test(task.runner.executable)
+  || task.runner.args.some((argument) => typeof argument !== "string" || /[;&|<>`$()\r\n]/u.test(argument)))) {
+  throw new TypeError("TearBench task registry has duplicate, unsupported, or unsafe task definitions");
+}
+const taskById = new Map(taskRegistry.tasks.map((task) => [task.taskId, task]));
+if (evidencePolicy?.schemaVersion !== 1 || evidencePolicy.matrices === null
+  || typeof evidencePolicy.matrices !== "object" || Array.isArray(evidencePolicy.matrices)
+  || !Array.isArray(evidencePolicy.capabilityClaims)
+  || evidencePolicy.buildTargets === null || typeof evidencePolicy.buildTargets !== "object"
+  || Array.isArray(evidencePolicy.buildTargets)) {
+  throw new TypeError("TearBench evidence policy is malformed");
+}
+const canonicalMatrixIds = new Set(Object.keys(evidencePolicy.matrices));
+const capabilityClaimIds = new Set(evidencePolicy.capabilityClaims);
+const buildTargetIds = new Set(Object.keys(evidencePolicy.buildTargets));
+if (canonicalMatrixIds.size === 0 || capabilityClaimIds.size !== evidencePolicy.capabilityClaims.length
+  || [...evidencePolicy.capabilityClaims].some((id) => typeof id !== "string" || id.trim() === "")
+  || [...canonicalMatrixIds].some((id) => !/^[a-z][A-Za-z0-9-]*$/u.test(id))) {
+  throw new TypeError("TearBench evidence policy has invalid canonical IDs");
+}
+for (const [id, policy] of Object.entries(evidencePolicy.matrices)) {
+  if (policy === null || typeof policy !== "object" || !Array.isArray(policy.variants)
+    || !Array.isArray(policy.evidenceKinds) || policy.evidenceKinds.length === 0
+    || policy.evidenceKinds.some((kind) => !EVIDENCE_KINDS.has(kind))) {
+    throw new TypeError(`TearBench matrix policy ${id} is malformed`);
+  }
+}
+for (const [id, target] of Object.entries(evidencePolicy.buildTargets)) {
+  const task = target === null || typeof target !== "object" ? undefined : taskById.get(target.taskId);
+  if (task === undefined || task.runner.kind !== "build-target" || task.runner.args.length !== 1) {
+    throw new TypeError(`TearBench build target policy ${id} is malformed`);
+  }
+}
+
+function displayCommandForTask(taskId) {
+  const task = taskById.get(taskId);
+  if (task === undefined) throw new RangeError(`unknown TearBench task: ${taskId}`);
+  if (task.runner.kind === "build-target" && task.runner.args.length === 1) {
+    return task.runner.args[0].startsWith("test-")
+      ? `pnpm build:test:${task.runner.args[0].replace(/^test-/u, "")}` : `pnpm build:${task.runner.args[0]}`;
+  }
+  if (task.runner.kind === "vitest") return `pnpm exec vitest ${task.runner.args.join(" ")}`;
+  if (task.runner.kind === "tearbench") return `pnpm tearbench ${task.runner.args.join(" ")}`;
+  if (task.runner.kind === "node" && task.runner.executable === "node") return `node ${task.runner.args.join(" ")}`;
+  throw new TypeError(`TearBench task ${taskId} has no approved compatibility command`);
+}
+
+function commandForTaskIds(taskIds, label) {
+  if (!Array.isArray(taskIds) || taskIds.length === 0 || taskIds.some((id) => typeof id !== "string" || !taskById.has(id))) {
+    throw new TypeError(`${label} has missing or unknown TearBench task IDs`);
+  }
+  return taskIds.map(displayCommandForTask).join(" && ");
+}
+
+function projectedTaskCommand(taskIds, projectedCommand, label) {
+  if (typeof projectedCommand === "string") parseApprovedEvidenceCommand(projectedCommand);
+  if (!enforceCanonicalTaskProjections && typeof projectedCommand === "string") return projectedCommand;
+  const command = commandForTaskIds(taskIds, label);
+  if (projectedCommand !== undefined && projectedCommand !== command) {
+    throw new TypeError(`${label} command projection disagrees with the typed task registry`);
+  }
+  return command;
+}
 
 function fail(message) {
   console.error(message);
@@ -76,14 +174,28 @@ function currentStageBossPairs() {
   const authoredPairs = [...stageSource.matchAll(
     /^\s{4}id:\s*"([a-z][a-z0-9-]*)",[\s\S]*?^\s{4}boss:\s*"([a-z][a-z0-9-]*)"/gmu,
   )].map((entry) => Object.freeze({ stage: entry[1], boss: entry[2] }));
-  const availability = stageSource.match(
-    /export const STAGE_CONTENT_AVAILABILITY\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\s*as const satisfies/u,
-  );
-  if (availability === null) throw new TypeError("could not read the source-owned stage availability policy");
-  const unpublishedStageIds = new Set([...availability[1].matchAll(
-    /^\s*(?:"([a-z][a-z0-9-]*)"|([a-z][a-z0-9-]*)):\s*Object\.freeze\(\{[\s\S]*?published:\s*false[\s\S]*?\}\),/gmu,
-  )].map((entry) => entry[1] ?? entry[2]));
-  const pairs = authoredPairs.filter((pair) => !unpublishedStageIds.has(pair.stage));
+  if (publicationBoundary?.status !== "public" || !Array.isArray(publicationBoundary.activeStageIds)
+    || !Array.isArray(publicationBoundary.previewStageIds)) {
+    throw new TypeError("could not read the current source-owned stage publication boundary");
+  }
+  const publishedStageIds = new Set(publicationBoundary.activeStageIds);
+  const unpublishedStageIds = new Set(publicationBoundary.previewStageIds);
+  if (publishedStageIds.size !== publicationBoundary.activeStageIds.length
+    || unpublishedStageIds.size !== publicationBoundary.previewStageIds.length
+    || [...publishedStageIds].some((id) => unpublishedStageIds.has(id))) {
+    throw new TypeError("current source-owned stage publication boundary overlaps or duplicates stage IDs");
+  }
+  const authoredByStage = new Map(authoredPairs.map((pair) => [pair.stage, pair]));
+  const governedStageIds = new Set([...publishedStageIds, ...unpublishedStageIds]);
+  if (authoredByStage.size !== authoredPairs.length || authoredPairs.length !== governedStageIds.size
+    || authoredPairs.some((pair) => !governedStageIds.has(pair.stage))) {
+    throw new RangeError("production stage ownership and the publication boundary do not cover the same authored stages");
+  }
+  const pairs = publicationBoundary.activeStageIds.map((stage) => {
+    const pair = authoredByStage.get(stage);
+    if (pair === undefined) throw new RangeError(`published stage ${String(stage)} has no production boss ownership`);
+    return pair;
+  });
   const stageIds = pairs.map((pair) => pair.stage);
   const definitions = bossDefinitionSource.match(
     /export const BOSS_DEFINITIONS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\s*as const satisfies readonly BossDefinition\[\]\)/u,
@@ -144,6 +256,10 @@ function parseApprovedEvidenceCommand(command) {
   return parts.map((part) => {
     const tokens = part.split(/\s+/u);
     if (part === "pnpm build:test:standalone") return { kind: "build" };
+    if (tokens[0] === "pnpm" && tokens[1] === "tearbench" && tokens[2] === "run" && tokens.length === 4
+      && /^[a-z][a-z0-9-]*$/u.test(tokens[3])) {
+      return { kind: "canonical-live", scenarioId: tokens[3] };
+    }
     if (part === "node scripts/check-docs.mjs") {
       return { kind: "docs-check", file: safeRepoFile("scripts/check-docs.mjs", /^scripts\/check-docs\.mjs$/u, "docs authority checker") };
     }
@@ -152,6 +268,7 @@ function parseApprovedEvidenceCommand(command) {
         safeRepoFile(file, /^tests\/[A-Za-z0-9._/-]+\.ts$/u, "unit test")) };
     }
     if (tokens[0] === "node" && tokens.length === 2) {
+      if (tokens[1] === "--version") return { kind: "node-version" };
       return { kind: "node", file: safeRepoFile(tokens[1], /^tests\/browser-[A-Za-z0-9._-]+\.js$/u, "browser proof") };
     }
     if (tokens[0] === "node" && tokens[1] === "--check" && tokens.length === 3
@@ -165,11 +282,36 @@ function parseApprovedEvidenceCommand(command) {
 function validateScenarioMetadata(scenario) {
   const surgicalFields = ["stage", "wave", "bossPhase"].filter((field) =>
     scenario.start !== null && typeof scenario.start === "object" && Object.hasOwn(scenario.start, field));
-  if (surgicalFields.length > 0) {
+  const stateForge = scenario.stateForge;
+  if (surgicalFields.length > 0 && stateForge === undefined) {
     throw new RangeError(`scenario ${scenario.id} requests exact ${surgicalFields.join(", ")} state; use State Forge`);
   }
+  if (stateForge !== undefined) {
+    if (stateForge === null || typeof stateForge !== "object" || Array.isArray(stateForge)
+      || stateForge.documentId !== scenario.id || typeof scenario.seed !== "string"
+      || !Array.isArray(scenario.backends) || scenario.backends.length !== 1 || scenario.backends[0] !== "live") {
+      throw new TypeError(`scenario ${scenario.id} has an invalid State Forge descriptor`);
+    }
+    if (scenario.start?.stage !== "pale-traverse" || !Number.isSafeInteger(scenario.start?.wave)) {
+      throw new RangeError(`scenario ${scenario.id} State Forge start must retain its exact Pale stage and wave coordinates`);
+    }
+    if (scenario.id.startsWith("pale-white-hart-phase-")
+      && (scenario.start?.boss !== "white-hart" || !["1", "2", "3"].includes(scenario.start?.bossPhase))) {
+      throw new RangeError(`scenario ${scenario.id} State Forge start must retain its exact White Hart phase coordinates`);
+    }
+    const tags = new Set(scenario.tags ?? []);
+    if (!tags.has("engineering-only") || !tags.has("unpublished-preview")
+      || ["published", "headless", "replay", "seek"].some((tag) => tags.has(tag))) {
+      throw new RangeError(`scenario ${scenario.id} has an invalid State Forge publication/backend claim`);
+    }
+    if (!Array.isArray(scenario.structuredAssertions) || scenario.structuredAssertions.length === 0
+      || scenario.structuredAssertions.some((assertion) => typeof assertion !== "string" || assertion.trim() === "")) {
+      throw new RangeError(`scenario ${scenario.id} requires subject-specific structured assertions`);
+    }
+  }
   if (Object.hasOwn(scenario, "backends") && (!Array.isArray(scenario.backends) || scenario.backends.length === 0
-    || scenario.backends.some((backend) => !["live", "headless"].includes(backend)))) {
+    || scenario.backends.some((backend) => !["live", "headless"].includes(backend))
+    || new Set(scenario.backends).size !== scenario.backends.length)) {
     throw new TypeError(`scenario ${scenario.id} has invalid evidence backends`);
   }
   const subject = scenario.subject;
@@ -178,9 +320,14 @@ function validateScenarioMetadata(scenario) {
     || typeof subject.id !== "string" || subject.id.trim() === "") {
     throw new TypeError(`scenario ${scenario.id} has malformed evidence subject`);
   }
+  if (stateForge === undefined && subject.kind === "gameplay" && subject.id.startsWith("pale-")) {
+    throw new RangeError(`source-owned Pale scenario ${scenario.id} requires its State Forge descriptor`);
+  }
   const isRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor"
     && scenario.start?.boss === "rootbound";
-  if (scenario.start?.boss !== undefined && !isRootboundGraft && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
+  const isPaleWhiteHartPhase = subject.kind === "gameplay" && scenario.id.startsWith("pale-white-hart-phase-");
+  if (scenario.start?.boss !== undefined && !isRootboundGraft && !isPaleWhiteHartPhase
+    && (subject.kind !== "boss" || subject.id !== scenario.start.boss)) {
     throw new TypeError(`scenario ${scenario.id} boss start requires its matching authoritative boss subject`);
   }
   if (subject.kind === "gameplay") {
@@ -215,18 +362,26 @@ function validateScenarioMetadata(scenario) {
     const isSupportedRootNetwork = subject.kind === "environment-combat-object" && subject.id === "verdant-root-network";
     const isSupportedRootboundGraft = subject.kind === "environment-combat-object" && subject.id === "rootbound-graft-anchor";
     const supportedBackends = isSupportedBloomWell
-      ? Array.isArray(scenario.backends) && scenario.backends.length === 2 && scenario.backends.includes("live") && scenario.backends.includes("headless")
+      ? Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live"
       : isSupportedRootNetwork
         ? Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live"
       : Array.isArray(scenario.backends) && scenario.backends.length === 1 && scenario.backends[0] === "live";
     if ((subject.id !== expected && !isSupportedBloomWell && !isSupportedRootNetwork && !isSupportedRootboundGraft) || !supportedBackends) {
       throw new TypeError(`scenario ${scenario.id} environment subject requires a supported environment evidence backend`);
     }
+    if (isSupportedBloomWell && scenario.maxTicks !== BLOOM_WELL_LIFECYCLE_TICKS) {
+      throw new RangeError(`scenario ${scenario.id} must use the Bloom Well lifecycle horizon of ${String(BLOOM_WELL_LIFECYCLE_TICKS)} ticks`);
+    }
   }
-  const command = scenario.evidence?.command;
+  const command = scenario.evidence === undefined ? undefined
+    : projectedTaskCommand(scenario.backendTaskIds?.live, scenario.evidence.command, `scenario ${scenario.id} live evidence`);
   if (typeof command !== "string") return;
   const proof = parseApprovedEvidenceCommand(command).find((entry) => entry.kind === "node");
   if (proof === undefined) return;
+  // Surgical State Forge scenarios are materialized by the typed live bridge;
+  // their complementary browser journeys intentionally begin from a natural
+  // UI setup and cannot prove the forged coordinates through source text.
+  if (stateForge !== undefined) return;
   const source = readFileSync(proof.file, "utf8");
   if (subject.kind === "gameplay"
     && relative(root, proof.file).replaceAll("\\", "/") === "tests/browser-current-gameplay-scenarios.js") {
@@ -263,19 +418,34 @@ function validateScenarioMetadata(scenario) {
   }
 }
 
-function evidenceCommandForScenario(scenario) {
-  const command = scenario.evidence?.command;
-  if (typeof command === "string" && command.trim() !== "") {
-    parseApprovedEvidenceCommand(command);
-    return { backend: "catalog-command", command };
+function evidenceCommandsForScenario(scenario) {
+  validateScenarioMetadata(scenario);
+  const declaredBackends = scenario.backends;
+  if (!Array.isArray(declaredBackends) || declaredBackends.length === 0) {
+    throw new RangeError(`scenario ${scenario.id} has no executable evidence backend declaration`);
   }
-  if (Array.isArray(scenario.testFiles) && scenario.testFiles.length > 0
-    && scenario.testFiles.every((file) => typeof file === "string" && file.trim() !== "")) {
-    const derivedCommand = `pnpm exec vitest run ${scenario.testFiles.join(" ")}`;
-    parseApprovedEvidenceCommand(derivedCommand);
-    return { backend: "catalog-test-files", command: derivedCommand };
-  }
-  throw new RangeError(`scenario ${scenario.id} has no executable evidence backend`);
+  const command = scenario.evidence === undefined ? undefined
+    : projectedTaskCommand(scenario.backendTaskIds?.live, scenario.evidence.command, `scenario ${scenario.id} live evidence`);
+  return declaredBackends.map((backend) => {
+    if (backend === "live" && typeof command === "string" && command.trim() !== "") {
+      const parsed = parseApprovedEvidenceCommand(command);
+      const mismatched = parsed.find((step) => step.kind === "canonical-live" && step.scenarioId !== scenario.id);
+      if (mismatched !== undefined) throw new RangeError(`scenario ${scenario.id} evidence command targets ${mismatched.scenarioId}`);
+      return Object.freeze({ backend, command });
+    }
+    if (backend === "headless") {
+      const derivedCommand = commandForTaskIds(scenario.backendTaskIds?.headless, `scenario ${scenario.id} headless evidence`);
+      parseApprovedEvidenceCommand(derivedCommand);
+      return Object.freeze({ backend, command: derivedCommand });
+    }
+    throw new RangeError(`scenario ${scenario.id} has no executable ${String(backend)} evidence backend`);
+  });
+}
+
+function evidenceCommandForScenario(scenario, backend = "live") {
+  const evidence = evidenceCommandsForScenario(scenario).find((entry) => entry.backend === backend);
+  if (evidence === undefined) throw new RangeError(`scenario ${scenario.id} does not declare the ${backend} evidence backend`);
+  return evidence;
 }
 
 function validateScenarioSubject(scenario) {
@@ -298,10 +468,154 @@ function validateActiveWeaponSubject(scenario, weapon) {
   }
 }
 
+function prefixMatches(file, prefix) {
+  return prefix.endsWith("/") || prefix.endsWith("-") ? file.startsWith(prefix) : file === prefix;
+}
+
+function validateRoutePrefix(prefix, routeId) {
+  if (typeof prefix !== "string" || prefix.trim() === "" || isAbsolute(prefix) || prefix.includes("..")
+    || prefix !== prefix.replaceAll("\\", "/")) {
+    throw new TypeError(`route ${routeId} has an unsafe evidence prefix: ${String(prefix)}`);
+  }
+  if (!prefix.endsWith("/") && !prefix.endsWith("-") && !trackedRepositoryPaths.includes(prefix)) {
+    throw new RangeError(`route ${routeId} has an unsafe evidence prefix boundary: ${prefix}`);
+  }
+  if (!trackedRepositoryPaths.some((file) => prefixMatches(file, prefix))) {
+    throw new RangeError(`route ${routeId} has an evidence prefix with no tracked repository match: ${prefix}`);
+  }
+}
+
+function canonicalEvidenceBindings(values) {
+  if (!Array.isArray(values)) throw new TypeError("TearBench route obligations must be an array");
+  const normalized = values.map((value) => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)
+      || typeof value.route !== "string" || typeof value.obligation !== "string"
+      || !Array.isArray(value.commands) || value.commands.length === 0
+      || value.commands.some((command) => typeof command !== "string" || command.trim() === "")) {
+      throw new TypeError("TearBench route obligation binding is malformed");
+    }
+    return { route: value.route, obligation: value.obligation, commands: [...new Set(value.commands)].sort() };
+  });
+  const keys = normalized.map((value) => `${value.route}\0${value.obligation}`);
+  if (new Set(keys).size !== keys.length) throw new TypeError("TearBench route obligations must be unique");
+  return normalized.sort((left, right) => left.route.localeCompare(right.route) || left.obligation.localeCompare(right.obligation));
+}
+
+function routeEvidenceCandidates(route, scenarioIds) {
+  const candidates = [];
+  for (const id of scenarioIds) {
+    for (const evidence of evidenceCommandsForScenario(scenarioById(id))) {
+      candidates.push({ kind: `scenario-${evidence.backend}`, command: evidence.command });
+    }
+  }
+  const journeyCommands = route.journeyTaskIds === undefined && !enforceCanonicalTaskProjections ? (route.journeyCommands ?? [])
+    : (route.journeyTaskIds ?? []).map((id) => displayCommandForTask(id));
+  const authorityCommands = route.authorityTaskIds === undefined && !enforceCanonicalTaskProjections ? (route.authorityCommands ?? [])
+    : (route.authorityTaskIds ?? []).map((id) => displayCommandForTask(id));
+  if (enforceCanonicalTaskProjections && route.journeyCommands !== undefined && JSON.stringify(journeyCommands) !== JSON.stringify(route.journeyCommands)) {
+    throw new TypeError(`route ${route.id} journey command projection disagrees with typed tasks`);
+  }
+  if (enforceCanonicalTaskProjections && route.authorityCommands !== undefined && JSON.stringify(authorityCommands) !== JSON.stringify(route.authorityCommands)) {
+    throw new TypeError(`route ${route.id} authority command projection disagrees with typed tasks`);
+  }
+  for (const command of journeyCommands) candidates.push({ kind: "journey", command });
+  for (const command of authorityCommands) candidates.push({ kind: "authority", command });
+  return [...new Map(candidates.map((value) => [`${value.kind}\0${value.command}`, value])).values()];
+}
+
+function materializeRouteObligations(route, scenarioIds) {
+  const candidates = routeEvidenceCandidates(route, scenarioIds);
+  const bindings = [];
+  for (const matrix of route.interactionMatrices) {
+    const allowedKinds = evidencePolicy.matrices[matrix].evidenceKinds;
+    const commands = candidates.filter((candidate) => allowedKinds.includes(candidate.kind)).map((candidate) => candidate.command);
+    if (commands.length === 0) throw new RangeError(`route ${route.id} matrix ${matrix} has no executable evidence`);
+    bindings.push({ route: route.id, obligation: `matrix:${matrix}`, commands });
+  }
+  for (const capability of route.capabilityClaims ?? []) {
+    if (candidates.length === 0) throw new RangeError(`route ${route.id} capability ${capability} has no executable evidence`);
+    bindings.push({ route: route.id, obligation: `capability:${capability}`, commands: candidates.map((candidate) => candidate.command) });
+  }
+  return bindings;
+}
+
+function validateRouteObligations(route, scenarioIds) {
+  if (!Array.isArray(route.interactionMatrices)
+    || route.interactionMatrices.some((id) => typeof id !== "string" || !canonicalMatrixIds.has(id))
+    || new Set(route.interactionMatrices).size !== route.interactionMatrices.length) {
+    throw new TypeError(`route ${route.id} has unknown or duplicate interaction matrix IDs`);
+  }
+  const capabilities = route.capabilityClaims ?? [];
+  if (!Array.isArray(capabilities) || capabilities.some((id) => typeof id !== "string" || !capabilityClaimIds.has(id))
+    || new Set(capabilities).size !== capabilities.length
+    || route.interactionMatrices.some((id) => capabilities.includes(id))) {
+    throw new TypeError(`route ${route.id} has unknown or duplicate capability claims`);
+  }
+  const buildTargets = route.buildTargets ?? [];
+  if (!Array.isArray(buildTargets) || buildTargets.some((id) => typeof id !== "string" || !buildTargetIds.has(id))
+    || new Set(buildTargets).size !== buildTargets.length) {
+    throw new TypeError(`route ${route.id} has unknown or duplicate build targets`);
+  }
+  return canonicalEvidenceBindings(materializeRouteObligations(route, scenarioIds));
+}
+
+function validateRouteDisposition(route) {
+  if (route.specialized === true) {
+    if (typeof route.owner !== "string" || route.owner.trim() === "") {
+      throw new TypeError(`specialized route ${route.id} is missing an explicit owner`);
+    }
+    const required = route.requiredScenarios;
+    if (required !== undefined && (!Array.isArray(required) || required.some((id) => typeof id !== "string" || id.trim() === "")
+      || new Set(required).size !== required.length)) {
+      throw new TypeError(`specialized route ${route.id} has invalid required scenarios`);
+    }
+    const available = new Set(route.scenarios);
+    for (const id of required ?? []) if (!available.has(id)) {
+      throw new RangeError(`specialized route ${route.id} required scenario is not routed: ${id}`);
+    }
+    const disposition = route.reducedDisposition;
+    if (route.scenarios.length === 0 && (route.scenarioSubjects?.length ?? 0) === 0
+      && (typeof disposition !== "string" || disposition.trim() === "")) {
+      throw new RangeError(`specialized route ${route.id} has no specialized scenario or reduced disposition`);
+    }
+    if (disposition !== undefined && (typeof disposition !== "string" || disposition.trim() === "")) {
+      throw new TypeError(`specialized route ${route.id} has an invalid reduced disposition`);
+    }
+  }
+  if (route.id !== "production-replay-headless-composition") return;
+  const families = route.backendDispositions;
+  if (!Array.isArray(families)) throw new TypeError("production composition route is missing hook-family dispositions");
+  const familyIds = families.map((entry) => entry?.family);
+  if (familyIds.some((id) => typeof id !== "string" || id.trim() === "")
+    || new Set(familyIds).size !== familyIds.length) {
+    throw new TypeError("production composition hook-family IDs must be unique and nonempty");
+  }
+  if (REQUIRED_PRODUCTION_HOOK_FAMILIES.some((id) => !familyIds.includes(id))
+    || familyIds.some((id) => !REQUIRED_PRODUCTION_HOOK_FAMILIES.includes(id))) {
+    throw new RangeError("production composition hook-family coverage is incomplete");
+  }
+  for (const family of families) {
+    if (typeof family.backend !== "string" || family.backend.trim() === ""
+      || !KNOWN_BACKEND_DISPOSITIONS.has(family.disposition)
+      || family.evidenceRoute !== route.id
+      || !Array.isArray(family.authorityCommands) || family.authorityCommands.length === 0) {
+      throw new TypeError(`production hook family ${String(family.family)} has an invalid disposition or evidence owner`);
+    }
+    for (const command of family.authorityCommands) {
+      parseApprovedEvidenceCommand(command);
+      if (!route.authorityCommands?.includes(command)) {
+        throw new RangeError(`production hook family ${family.family} references an unowned authority command`);
+      }
+    }
+  }
+}
+
 function routeScenarioIds(route) {
   if (typeof route.id !== "string" || !Array.isArray(route.prefixes) || !Array.isArray(route.scenarios)) {
     throw new TypeError(`malformed TearBench evidence route: ${String(route.id)}`);
   }
+  for (const prefix of route.prefixes) validateRoutePrefix(prefix, route.id);
+  validateRouteDisposition(route);
   for (const command of [...(route.journeyCommands ?? []), ...(route.authorityCommands ?? [])]) parseApprovedEvidenceCommand(command);
   const ids = new Set(route.scenarios);
   for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
@@ -338,15 +652,30 @@ function routeScenarioIds(route) {
     }
   }
   for (const id of ids) { const scenario = scenarioById(id); validateScenarioSubject(scenario); evidenceCommandForScenario(scenario); }
+  if (route.backend !== undefined) {
+    if (route.backend !== "live-only") throw new TypeError(`route ${route.id} has an unsupported backend disposition`);
+    const nonLiveScenario = [...ids].map((id) => scenarioById(id))
+      .find((scenario) => scenario.backends.length !== 1 || scenario.backends[0] !== "live");
+    if (nonLiveScenario !== undefined) {
+      throw new TypeError(`route ${route.id} is live-only but scenario ${nonLiveScenario.id} declares another backend`);
+    }
+  }
+  validateRouteObligations(route, [...ids]);
   return [...ids];
 }
 
+const routeIds = evidenceRoutes.map((route) => route.id);
+if (new Set(routeIds).size !== routeIds.length) throw new TypeError("TearBench evidence route IDs must be unique");
 for (const route of evidenceRoutes) routeScenarioIds(route);
 if (!evidenceRoutes.some((route) => route.id === "shared-runtime")) {
   throw new TypeError("TearBench evidence routes must include a shared-runtime fallback");
 }
 
 function buildTestStandalone() {
+  if (process.env.TEARBENCH_REUSE_VERIFIED_BUILDS === "1") {
+    validateServedBuildIdentity(readServedBuildInfo(), readSourceIdentity());
+    return;
+  }
   const pnpmEntry = process.env.npm_execpath;
   if (!pnpmEntry) throw new Error("TearBench must be launched through pnpm so the pinned package manager can be reused");
   const build = spawnSync(process.execPath, [pnpmEntry, "build:test:standalone"], { cwd: root, encoding: "utf8" });
@@ -367,7 +696,7 @@ function runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePa
   const invocations = [];
   for (let index = 0; index < repeat; index += 1) {
     const attemptArtifact = index === repeat - 1 ? artifactPath : artifactPath.replace(/\.json$/u, `.attempt-${String(index + 1)}.json`);
-    const result = materializeLiveRun(scenario, seed, attemptArtifact, actionTracePath, Math.min(720, scenario.maxTicks), {}, replayContextPath);
+    const result = materializeLiveRun(scenario, seed, attemptArtifact, actionTracePath, scenario.maxTicks, {}, replayContextPath);
     invocations.push({ index, status: result.status, stdout: result.stdout, stderr: result.stderr, artifact: attemptArtifact });
     if (result.status !== 0) break;
   }
@@ -384,10 +713,70 @@ function runFiles(files) {
 }
 
 async function changedFiles() {
+  const revision = option("--revision");
+  if (revision !== undefined) {
+    if (!/^[0-9a-f]{7,40}$/u.test(revision)) throw new TypeError("TearBench changed-file revision must be a Git SHA");
+    const parent = spawnSync("git", ["rev-parse", `${revision}^1`], { cwd: root, encoding: "utf8" });
+    if (parent.status !== 0) throw new RangeError(`TearBench changed-file revision has no resolvable parent: ${revision}`);
+    const diff = spawnSync("git", ["diff", "--name-only", parent.stdout.trim(), revision], { cwd: root, encoding: "utf8" });
+    if (diff.status !== 0) throw new Error(`unable to resolve changed files for ${revision}: ${diff.stderr || diff.stdout}`);
+    return diff.stdout.split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
+  }
   const file = option("--files-from");
   if (file) return (await readFile(resolve(file), "utf8")).split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
   const inline = option("--files", "");
   return inline.split(",").map((entry) => entry.trim()).filter(Boolean);
+}
+
+function canonicalList(values, normalize = (value) => value) {
+  return [...new Set(values.map(normalize))].sort();
+}
+
+function canonicalBackendDispositions(values) {
+  const normalized = values.map((value) => ({
+    family: String(value.family).trim(), backend: String(value.backend).trim(),
+    disposition: String(value.disposition).trim(), evidenceRoute: String(value.evidenceRoute).trim(),
+    authorityCommands: canonicalList(value.authorityCommands ?? []),
+  }));
+  return [...new Map(normalized.map((value) => [canonicalJson(value), value])).values()]
+    .sort((left, right) => {
+      if (left.family !== right.family) return left.family < right.family ? -1 : 1;
+      if (left.backend !== right.backend) return left.backend < right.backend ? -1 : 1;
+      return left.disposition < right.disposition ? -1 : left.disposition > right.disposition ? 1 : 0;
+    });
+}
+
+function canonicalDiffScope(scope) {
+  const normalizePath = (value) => {
+    const normalized = String(value).replaceAll("\\", "/").trim();
+    if (normalized === "" || isAbsolute(normalized) || normalized.split("/").includes("..")) {
+      throw new TypeError(`unsafe changed-file scope path: ${String(value)}`);
+    }
+    return normalized;
+  };
+  return Object.freeze({
+    kind: "diff",
+    changedFiles: Object.freeze(canonicalList(scope.changedFiles ?? [], normalizePath)),
+    routes: Object.freeze(canonicalList(scope.routes ?? [])),
+    scenarios: Object.freeze(canonicalList(scope.scenarios ?? [])),
+    journeyCheckpoints: Object.freeze(canonicalList(scope.journeyCheckpoints ?? [])),
+    baseComparisons: Object.freeze(canonicalList(scope.baseComparisons ?? [])),
+    interactionMatrices: Object.freeze(canonicalList(scope.interactionMatrices ?? [])),
+    capabilityClaims: Object.freeze(canonicalList(scope.capabilityClaims ?? [])),
+    buildTargets: Object.freeze(canonicalList(scope.buildTargets ?? [])),
+    journeyCommands: Object.freeze(canonicalList(scope.journeyCommands ?? [])),
+    authorityCommands: Object.freeze(canonicalList(scope.authorityCommands ?? [])),
+    backendDispositions: Object.freeze(canonicalBackendDispositions(scope.backendDispositions ?? [])),
+    obligationBindings: Object.freeze(canonicalEvidenceBindings(scope.obligationBindings ?? [])),
+  });
+}
+
+function diffScopeDigest(scope) {
+  return createHash("sha256").update(canonicalJson(canonicalDiffScope(scope))).digest("hex");
+}
+
+function routeDefinitionDigest() {
+  return createHash("sha256").update(canonicalJson(evidenceRoutes)).digest("hex");
 }
 
 function currentWeaponParityPlan(routes, scenarioIds) {
@@ -426,11 +815,11 @@ function currentWeaponParityPlan(routes, scenarioIds) {
 }
 
 function evidenceForDiff(files) {
-  const normalized = files.map((file) => file.replaceAll("\\", "/"));
+  const normalized = canonicalList(files, (file) => file.replaceAll("\\", "/").trim());
   const matched = evidenceRoutes.filter((route) =>
-    normalized.some((file) => route.prefixes.some((prefix) => file.startsWith(prefix))));
+    normalized.some((file) => route.prefixes.some((prefix) => prefixMatches(file, prefix))));
   const unmatched = normalized.filter((file) =>
-    !evidenceRoutes.some((route) => route.prefixes.some((prefix) => file.startsWith(prefix))));
+    !evidenceRoutes.some((route) => route.prefixes.some((prefix) => prefixMatches(file, prefix))));
   const fallback = evidenceRoutes.find((route) => route.id === "shared-runtime");
   const selected = [...matched];
   if ((selected.length === 0 || unmatched.length > 0) && fallback !== undefined && !selected.includes(fallback)) {
@@ -438,9 +827,14 @@ function evidenceForDiff(files) {
   }
   if (selected.length === 0) throw new TypeError("TearBench evidence selection has no applicable route");
   const collect = (field) => [...new Set(selected.flatMap((route) => route[field] ?? []))].sort();
-  const scenarios = [...new Set(selected.flatMap((route) => routeScenarioIds(route)))].sort();
+  const selectedRouteScenarios = selected.map((route) => ({ route, scenarioIds: routeScenarioIds(route) }));
+  const scenarios = [...new Set(selectedRouteScenarios.flatMap((entry) => entry.scenarioIds))].sort();
+  const obligationBindings = canonicalEvidenceBindings(selectedRouteScenarios.flatMap(({ route, scenarioIds }) =>
+    materializeRouteObligations(route, scenarioIds)));
   const currentWeaponParity = currentWeaponParityPlan(selected, scenarios);
-  const authorityCommands = collect("authorityCommands");
+  const authorityTaskIds = collect("authorityTaskIds");
+  const authorityCommands = authorityTaskIds.map(displayCommandForTask);
+  const backendDispositions = canonicalBackendDispositions(selected.flatMap((route) => route.backendDispositions ?? []));
   if (currentWeaponParity.required) {
     const command = "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts";
     parseApprovedEvidenceCommand(command);
@@ -454,24 +848,54 @@ function evidenceForDiff(files) {
     source: readSourceIdentity(),
     changedFiles: normalized,
     routes: selected.map((route) => route.id).sort(),
+    routeScenarios: selectedRouteScenarios.map(({ route, scenarioIds }) => ({ routeId: route.id, scenarioIds: [...scenarioIds].sort() }))
+      .sort((left, right) => left.routeId.localeCompare(right.routeId)),
     scenarios,
     currentWeaponParity,
-    evidenceCommands: scenarios.map((id) => ({ id, ...evidenceCommandForScenario(scenarioById(id)) })),
+    evidenceCommands: scenarios.flatMap((id) => evidenceCommandsForScenario(scenarioById(id))
+      .map((evidence) => ({ id, ...evidence }))),
     graveyardCases: collect("graveyardCases"),
     journeyCheckpoints: [...new Set(selected.map((route) => route.journeyCheckpoint))].sort(),
     baseComparisons: [...new Set(selected.map((route) => route.baseComparison))].sort(),
     interactionMatrices: collect("interactionMatrices"),
+    capabilityClaims: collect("capabilityClaims"),
+    obligationBindings,
     buildTargets: collect("buildTargets"),
     journeyCommands: collect("journeyCommands"),
+    journeyTaskIds: collect("journeyTaskIds"),
+    authorityTaskIds,
     authorityCommands,
-    scope: Object.freeze({
-      kind: "diff", changedFiles: Object.freeze([...normalized]),
-      routes: Object.freeze(selected.map((route) => route.id).sort()),
-      scenarios: Object.freeze([...scenarios]),
-      journeyCheckpoints: Object.freeze([...new Set(selected.map((route) => route.journeyCheckpoint))].sort()),
-      buildTargets: Object.freeze(collect("buildTargets")),
+    backendDispositions,
+    scope: canonicalDiffScope({
+      changedFiles: normalized,
+      routes: selected.map((route) => route.id),
+      scenarios,
+      journeyCheckpoints: selected.map((route) => route.journeyCheckpoint),
+      baseComparisons: selected.map((route) => route.baseComparison),
+      interactionMatrices: collect("interactionMatrices"),
+      capabilityClaims: collect("capabilityClaims"),
+      buildTargets: collect("buildTargets"),
+      journeyCommands: collect("journeyCommands"),
+      authorityCommands,
+      backendDispositions,
+      obligationBindings,
     }),
     unrelatedUnitTestsAreGameplayEvidence: false,
+    scopeDigest: diffScopeDigest({
+      changedFiles: normalized,
+      routes: selected.map((route) => route.id),
+      scenarios,
+      journeyCheckpoints: selected.map((route) => route.journeyCheckpoint),
+      baseComparisons: selected.map((route) => route.baseComparison),
+      interactionMatrices: collect("interactionMatrices"),
+      capabilityClaims: collect("capabilityClaims"),
+      buildTargets: collect("buildTargets"),
+      journeyCommands: collect("journeyCommands"),
+      authorityCommands,
+      backendDispositions,
+      obligationBindings,
+    }),
+    routeDefinitionDigest: routeDefinitionDigest(),
   };
 }
 
@@ -486,12 +910,24 @@ function executeApprovedEvidence(command, state) {
     let result;
     if (step.kind === "build") {
       if (state.testStandaloneBuilt) { receipts.push({ kind: step.kind, status: "skipped", reason: "deduplicated test-standalone build" }); continue; }
+      if (process.env.TEARBENCH_REUSE_VERIFIED_BUILDS === "1") {
+        state.build = validateServedBuildIdentity(readServedBuildInfo(), before);
+        state.testStandaloneBuilt = true;
+        receipts.push({ kind: step.kind, status: "skipped", reason: "verified plan dependency reuse", source: before, build: state.build });
+        continue;
+      }
       result = spawnSync(process.execPath, [resolve(root, "scripts", "build-target.mjs"), "test-standalone"], { cwd: root, encoding: "utf8" });
       if (result.status === 0) state.testStandaloneBuilt = true;
+    } else if (step.kind === "canonical-live") {
+      const pnpmEntry = process.env.npm_execpath;
+      if (!pnpmEntry) throw new Error("TearBench must be launched through pnpm so canonical live evidence can reuse the pinned package manager");
+      result = spawnSync(process.execPath, [pnpmEntry, "tearbench", "run", step.scenarioId], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "vitest") {
       result = spawnSync(process.execPath, [resolve(root, "node_modules", "vitest", "vitest.mjs"), "run", ...step.files], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "docs-check") {
       result = spawnSync(process.execPath, [step.file], { cwd: root, encoding: "utf8" });
+    } else if (step.kind === "node-version") {
+      result = spawnSync(process.execPath, ["--version"], { cwd: root, encoding: "utf8" });
     } else {
       result = spawnSync(process.execPath, step.kind === "node-check" ? ["--check", step.file] : [step.file], { cwd: root, encoding: "utf8" });
     }
@@ -509,16 +945,18 @@ function executeApprovedEvidence(command, state) {
     ? "passed" : "failed", receipts };
 }
 
-function writeCurrentCapabilityReport(scope, state, executions) {
+function writeDiffCapabilityReport(scope, state, executions) {
   if (scope.scenarios.length === 0 && scope.buildTargets.length === 0 && scope.journeyCommands.length === 0) return undefined;
+  const canonicalScope = canonicalDiffScope(scope);
   const report = {
-    format: "tearbench-current-capability", schemaVersion: 1, generatedAt: new Date().toISOString(),
+    format: "tearbench-diff-capability", schemaVersion: 2, generatedAt: new Date().toISOString(),
+    kind: "last-run-diff", cumulative: false,
     executionClass: "engineering", source: state.source ?? readSourceIdentity(),
     ...(state.build === undefined ? {} : { build: state.build }),
-    scope: Object.freeze({ ...scope, scenarios: [...scope.scenarios], journeyCommands: [...scope.journeyCommands], buildTargets: [...scope.buildTargets] }),
+    scope: canonicalScope, scopeDigest: diffScopeDigest(canonicalScope), routeDefinitionDigest: routeDefinitionDigest(),
     status: executions.every((entry) => entry.status === "passed") ? "passed" : "failed", executions,
   };
-  const path = resolve(root, "artifacts", "tearbench", "generated", "current-capability.json");
+  const path = resolve(root, "artifacts", "tearbench", "generated", "diff-capability.json");
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   return workspaceRelativePath(path);
@@ -526,8 +964,8 @@ function writeCurrentCapabilityReport(scope, state, executions) {
 
 function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets = [], authorityCommands = [], scope = {}) {
   const state = { testStandaloneBuilt: false, source: readSourceIdentity() }, executions = [], completedCommands = new Map();
-  const executionScope = { scenarios: [...scenarios], journeyCommands: [...journeyCommands], buildTargets: [...buildTargets], ...scope };
-  const runOne = (id, command, backend = "catalog-command") => {
+  const executionScope = canonicalDiffScope({ scenarios, journeyCommands, buildTargets, ...scope });
+  const runOne = (id, command, backend = "explicit-command") => {
     const completed = completedCommands.get(command);
     if (completed !== undefined) {
       executions.push({ ...completed, id, backend, reusedExecutionId: completed.id });
@@ -540,12 +978,16 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
     if (execution.status === "passed") completedCommands.set(command, result);
     return execution.status === "passed";
   };
-  if (buildTargets.includes("test-standalone") && !runOne("build-target:test-standalone", "pnpm build:test:standalone")) {
-    return { status: "failed", executions };
+  for (const target of buildTargets) {
+    const policy = evidencePolicy.buildTargets[target];
+    if (policy === undefined) throw new TypeError(`unknown TearBench build target: ${target}`);
+    if (!runOne(`build-target:${target}`, displayCommandForTask(policy.taskId))) return { status: "failed", executions };
   }
   for (const id of scenarios) {
-    const evidence = evidenceCommandForScenario(scenarioById(id));
-    if (!runOne(id, evidence.command, evidence.backend)) break;
+    for (const evidence of evidenceCommandsForScenario(scenarioById(id))) {
+      if (!runOne(id, evidence.command, evidence.backend)) break;
+    }
+    if (!executions.every((entry) => entry.status === "passed")) break;
   }
   if (executions.every((entry) => entry.status === "passed")) {
     for (const command of journeyCommands) if (!runOne(`journey:${command}`, command)) break;
@@ -554,8 +996,104 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
     for (const command of authorityCommands) if (!runOne(`authority:${command}`, command)) break;
   }
   const status = executions.every((entry) => entry.status === "passed") ? "passed" : "failed";
-  const generatedArtifact = writeCurrentCapabilityReport(executionScope, state, executions);
-  return { status, executions, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
+  const obligationExecution = canonicalEvidenceBindings(scope.obligationBindings ?? []).map((binding) => {
+    const matched = executions.filter((entry) => binding.commands.includes(entry.command));
+    return { ...binding, status: matched.length > 0 && matched.every((entry) => entry.status === "passed") ? "passed" : "failed",
+      executionIds: matched.map((entry) => entry.id) };
+  });
+  const generatedArtifact = writeDiffCapabilityReport(executionScope, state, executions);
+  return { status, executions, obligationExecution, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
+}
+
+function executeRegistryTask(task) {
+  const runner = task.runner;
+  const options = { cwd: root, stdio: "inherit", env: registryTaskEnvironment(task) };
+  if (runner.kind === "build-target") {
+    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
+  }
+  if (runner.kind === "node" && runner.executable === "node") {
+    return spawnSync(process.execPath, runner.args, options);
+  }
+  if (["vitest", "typescript", "eslint", "wrangler", "tearbench", "certifier"].includes(runner.kind)) {
+    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
+  }
+  throw new TypeError(`unsupported TearBench task runner: ${String(runner.kind)}`);
+}
+
+async function verifyRegistryBuildDependencies(task) {
+  for (const dependency of task.dependencies.filter((entry) => entry.outputId === "build-artifact")) {
+    const producer = taskById.get(dependency.taskId), output = producer?.outputs.find((entry) => entry.outputId === "build-artifact");
+    const mode = producer?.runner.kind === "build-target" ? producer.runner.args[0] : undefined;
+    if (output === undefined || typeof mode !== "string") throw new TypeError(`${task.taskId} has an invalid build dependency`);
+    const target = mode.endsWith("crazygames") ? "crazygames" : "standalone";
+    const directory = resolve(root, output.path), info = JSON.parse(await readFile(resolve(directory, "build-info.json"), "utf8"));
+    const verified = await verifyReleaseArtifact({ directory, expectedRepository: info.repository, expectedSha: info.sha,
+      expectedTarget: target, expectedMode: mode, sourceDirectory: root, allowDirty: true });
+    const record = JSON.parse(await readFile(resolve(root, "artifacts", "tearbench", "generated", "builds", `${mode}.json`), "utf8"));
+    if (record.buildIdentityDigest !== verified.metadata.buildIdentityDigest) {
+      throw new Error(`${task.taskId} build dependency does not match its immutable build record`);
+    }
+    await verifyContentAddressedBuild({ workspaceRoot: root, directory: resolve(root, record.contentAddressedPath), expectedRecord: record });
+  }
+}
+
+async function runTaskProfile() {
+  const usage = "usage: pnpm tearbench tasks <list-profile|run-profile> <profile-id>";
+  const action = process.argv[3], profileId = process.argv[4];
+  if (!['list-profile', 'run-profile'].includes(action) || typeof profileId !== "string" || process.argv.length !== 5) {
+    throw new TypeError(usage);
+  }
+  const profile = taskRegistry.profiles[profileId];
+  if (!Array.isArray(profile) || profile.some((id) => !taskById.has(id))) throw new RangeError(`unknown or invalid TearBench task profile: ${profileId}`);
+  const ordered = dependencyOrderedTaskIds(profile, taskRegistry.tasks);
+  if (action === "list-profile") {
+    console.log(JSON.stringify({ format: "tearbench-task-profile", schemaVersion: 1, profileId,
+      declaredTaskIds: profile, taskIds: ordered }, null, 2));
+    return;
+  }
+  for (const [index, taskId] of ordered.entries()) {
+    const task = taskById.get(taskId);
+    console.log(`TASK ${String(index + 1)}/${String(ordered.length)} ${taskId}`);
+    await verifyRegistryBuildDependencies(task);
+    const result = executeRegistryTask(task);
+    if (result.status !== 0) {
+      process.exitCode = result.status ?? 1;
+      return;
+    }
+  }
+}
+
+async function writeShadowPlan(explain = false) {
+  const usage = "usage: pnpm tearbench <plan|explain> --profile <development|pull-request|protected-main|release|nightly|endurance> [--files comma,list | --files-from path | --revision sha] [--artifact path]";
+  const profileId = option("--profile");
+  if (!["development", "pull-request", "protected-main", "release", "nightly", "endurance"].includes(profileId)) throw new TypeError(usage);
+  const selection = evidenceForDiff(await changedFiles());
+  selection.executionRequirements = Object.freeze({
+    toolchain: Object.freeze({ node: process.version, pnpm: process.env.npm_config_user_agent ?? packageSource.packageManager,
+      playwright: packageSource.devDependencies?.playwright ?? packageSource.dependencies?.playwright ?? "unknown" }),
+    environment: Object.freeze({ platform: process.platform, arch: process.arch,
+      runnerClass: process.env.RUNNER_ENVIRONMENT ?? "local", runnerImage: process.env.ImageOS ?? "local" }),
+  });
+  const requestedRevision = option("--revision");
+  if (requestedRevision !== undefined) {
+    const revision = spawnSync("git", ["rev-parse", requestedRevision], { cwd: root, encoding: "utf8" });
+    const parent = spawnSync("git", ["rev-parse", `${requestedRevision}^1`], { cwd: root, encoding: "utf8" });
+    if (revision.status !== 0 || parent.status !== 0) throw new RangeError(`TearBench historical planning basis is not resolvable: ${requestedRevision}`);
+    selection.planningBasis = Object.freeze({ kind: "historical-commit", revision: revision.stdout.trim(), parentRevision: parent.stdout.trim() });
+  }
+  const plan = createTearBenchShadowPlan({ registry: taskRegistry, policy: evidencePolicy, selection, catalog, routes: evidenceRoutes, profileId });
+  const output = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "shadow-plan.json"))),
+    "artifacts/tearbench/generated/", "shadow plan");
+  await writeFile(output.absolute, `${JSON.stringify(plan, null, 2)}\n`, "utf8");
+  console.log(`${plan.diagnostics.status.toUpperCase()} shadow plan ${plan.planDigest}`);
+  console.log(`profile: ${plan.profileId} (${String(plan.requiredTaskIds.length)} unique task(s))`);
+  console.log(`critical-path upper bound: ${String(plan.estimates.dependencyCriticalPathMs)} ms`);
+  console.log(`artifact: ${output.absolute}`);
+  if (explain) for (const entry of plan.explanations) {
+    console.log(`${entry.taskId}: ${entry.selectedBecause.join(", ")}`);
+    if (entry.unprovedWithout.length > 0) console.log(`  unproved without: ${entry.unprovedWithout.join(", ")}`);
+  }
+  if (plan.diagnostics.status !== "complete") process.exitCode = 1;
 }
 
 export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8_000) {
@@ -583,6 +1121,11 @@ export function formatFailedEvidenceExecution(evidenceExecution, outputLimit = 8
 
 export function verifyCurrentWeaponParityExecution(selection, evidence) {
   if (selection.currentWeaponParity.required !== true) return evidence;
+  // Preserve the first real execution failure so callers can emit its captured
+  // receipts. Parity completeness is only meaningful once the selected
+  // evidence set itself passed; otherwise a later missing weapon masks the
+  // command that actually stopped execution.
+  if (evidence?.status !== "passed") return evidence;
   for (const [index, id] of selection.currentWeaponParity.scenarios.entries()) {
     const weapon = selection.currentWeaponParity.weapons[index];
     const execution = evidence.executions.find((entry) => entry.id === id);
@@ -608,17 +1151,16 @@ export function verifyCurrentWeaponParityExecution(selection, evidence) {
 function executeCurrentWeaponParity() {
   const selected = evidenceForDiff(["src/gameplay/weapon-selection.ts"]);
   const scenarios = [...selected.currentWeaponParity.scenarios];
-  const scope = { ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
-    buildTargets: ["test-standalone"] };
-  const selection = { ...selected, scenarios, evidenceCommands: scenarios.map((id) =>
-    ({ id, ...evidenceCommandForScenario(scenarioById(id)) })), journeyCommands: [], authorityCommands: [], scope };
-  const existingPath = resolve(root, "artifacts", "tearbench", "generated", "current-capability.json");
+  const scope = canonicalDiffScope({ ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
+    buildTargets: ["test-standalone"], journeyCommands: [], authorityCommands: [] });
+  const selection = { ...selected, scenarios, evidenceCommands: scenarios.flatMap((id) =>
+    evidenceCommandsForScenario(scenarioById(id)).map((evidence) => ({ id, ...evidence }))),
+  journeyCommands: [], authorityCommands: [], scope, scopeDigest: diffScopeDigest(scope) };
+  const existingPath = resolve(root, "artifacts", "tearbench", "generated", "diff-capability.json");
   if (existsSync(existingPath)) {
     try {
       const existing = JSON.parse(readFileSync(existingPath, "utf8"));
-      if (existing.format === "tearbench-current-capability" && existing.status === "passed"
-        && existing.source?.revision === selection.source.revision
-        && existing.source?.fingerprint === selection.source.fingerprint) {
+      if (canReuseDiffCapabilityReport({ ...selection, scope }, existing)) {
         return { ...selection, evidenceExecution: { ...verifyCurrentWeaponParityExecution(selection, existing),
           reusedExactSourceEvidence: true } };
       }
@@ -645,6 +1187,19 @@ function canonicalJson(value) {
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
 }
 
+export function canReuseDiffCapabilityReport(selection, existing) {
+  if (existing?.format !== "tearbench-diff-capability" || existing.schemaVersion !== 2
+    || existing.kind !== "last-run-diff" || existing.cumulative !== false || existing.status !== "passed") return false;
+  const source = selection.source;
+  const exactSource = existing.source?.revision === source.revision
+    && existing.source?.state === source.state
+    && existing.source?.fingerprint === source.fingerprint
+    && existing.source?.worktreeFingerprint === source.worktreeFingerprint;
+  const exactScope = existing.scopeDigest === selection.scopeDigest
+    && canonicalJson(existing.scope ?? {}) === canonicalJson(selection.scope);
+  return exactSource && exactScope && existing.routeDefinitionDigest === selection.routeDefinitionDigest;
+}
+
 /** Share the same tracked/untracked source digest used by actual standalone builds. */
 export function readSourceIdentity() {
   const source = readSourceIdentitySync(root);
@@ -660,13 +1215,18 @@ function readServedBuildInfo() {
   if (value?.format !== "tear-build-info" || value?.schemaVersion !== 1
     || typeof value.sha !== "string" || typeof value.target !== "string"
     || typeof value.sourceRevision !== "string" || typeof value.sourceState !== "string"
-    || typeof value.sourceFingerprint !== "string" || typeof value.artifactHash !== "string") {
+    || typeof value.sourceFingerprint !== "string" || typeof value.artifactHash !== "string"
+    || !/^[0-9a-f]{64}$/u.test(value.toolchain?.digest) || !/^[0-9a-f]{64}$/u.test(value.configuration?.digest)
+    || !/^[0-9a-f]{64}$/u.test(value.buildIdentityDigest)
+    || value.contentAddressedPath !== `artifacts/tearbench/builds/${value.buildIdentityDigest}/payload`) {
     throw new TypeError("served test build has incomplete build-info identity");
   }
   return Object.freeze({ sha: value.sha, target: value.target, mode: value.mode,
     sourceRevision: value.sourceRevision, sourceState: value.sourceState,
     sourceFingerprint: value.sourceFingerprint, artifactHash: value.artifactHash,
-    artifactFiles: value.artifactFiles });
+    artifactFiles: value.artifactFiles, toolchainDigest: value.toolchain.digest,
+    configurationDigest: value.configuration.digest, buildIdentityDigest: value.buildIdentityDigest,
+    contentAddressedPath: value.contentAddressedPath });
 }
 
 export function validateServedBuildIdentity(build, source = readSourceIdentity()) {
@@ -686,46 +1246,106 @@ function gitCleanHead() {
   return { commit: source.revision, source, worktreeFingerprint: source.worktreeFingerprint };
 }
 
-function receiptPathFor(id) {
+function receiptPathFor(id, artifact) {
   if (!/^[a-z0-9][a-z0-9._-]*$/iu.test(id)) throw new TypeError("evidence receipt ID must be a safe non-empty slug");
-  return resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`)));
+  return resolve(artifact ?? resolve(root, "artifacts", "tearbench", "receipts", `${id}.json`));
+}
+
+async function preservePriorReceipt(path, id) {
+  if (!existsSync(path)) return;
+  const contents = await readFile(path);
+  let prior;
+  try { prior = JSON.parse(contents.toString("utf8")); } catch { prior = {}; }
+  const timestamp = typeof prior.timestamp === "string" ? prior.timestamp.replace(/[^0-9A-Za-z]+/gu, "-").replace(/^-|-$/gu, "") : "unknown-time";
+  const status = prior.status === "passed" ? "passed" : "failed";
+  const digest = createHash("sha256").update(contents).digest("hex").slice(0, 12);
+  const history = await prepareWorkspaceOutput(resolve(root, "artifacts", "tearbench", "receipts", "history", `${id}-${status}-${timestamp}-${digest}.json`),
+    "artifacts/tearbench/receipts/history/", "evidence receipt history");
+  if (existsSync(history.absolute)) {
+    const retained = await readFile(history.absolute);
+    if (!retained.equals(contents)) throw new Error(`receipt history collision: ${history.stored}`);
+    return;
+  }
+  await writeFile(history.absolute, contents, { flag: "wx" });
 }
 
 async function recordEvidenceReceipt() {
-  const usage = "usage: pnpm tearbench evidence record --id <id> --subject <generated-artifact> -- <explicit command>";
-  const id = requiredOption("--id", usage);
-  const subjectPath = workspaceRelativePath(resolve(requiredOption("--subject", usage)));
-  const separator = process.argv.indexOf("--");
-  // pnpm consumes the conventional `--` separator before Node receives argv.
-  // Accept the remaining positional arguments after --subject as the explicit
-  // command in that launcher case, while retaining direct-node support.
-  const commandParts = separator >= 0
-    ? process.argv.slice(separator + 1)
-    : process.argv.slice(process.argv.indexOf("--subject") + 2);
+  const usage = "usage: pnpm tearbench evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>";
+  let id;
+  let correctionId;
+  let explicitSubject;
+  let receiptArtifact;
+  let cursor = 4;
+  while (cursor < process.argv.length) {
+    const argument = process.argv[cursor];
+    if (argument === "--") { cursor += 1; break; }
+    if (argument === "--id" || argument === "--correction" || argument === "--subject" || argument === "--artifact") {
+      const value = process.argv[cursor + 1];
+      if (!value || value === "--") throw new TypeError(usage);
+      if (argument === "--id") id = value;
+      else if (argument === "--correction") correctionId = value;
+      else if (argument === "--subject") explicitSubject = value;
+      else receiptArtifact = value;
+      cursor += 2;
+      continue;
+    }
+    break;
+  }
+  if (id === undefined) throw new TypeError(usage);
+  if (correctionId !== undefined && !REQUIRED_CORRECTION_IDS.includes(correctionId)) throw new TypeError("evidence correction owner must be TC-1 through TC-9");
+  if (receiptArtifact !== undefined
+    && workspaceRelativePath(resolve(receiptArtifact)) !== `artifacts/tearbench/receipts/${id}.json`) {
+    throw new TypeError("evidence receipt artifact must use the canonical artifacts/tearbench/receipts/<id>.json path");
+  }
+  // pnpm may consume the conventional separator before Node receives argv;
+  // the first non-receipt argument is therefore the command boundary.
+  const commandParts = process.argv.slice(cursor);
   if (commandParts.length === 0) throw new TypeError(usage);
   const command = commandParts.join(" ");
-  const before = readSourceIdentity();
-  const result = spawnSync(command, { cwd: root, encoding: "utf8", shell: true });
-  const after = readSourceIdentity();
+  const before = { repository: RELEASE_REPOSITORY, ...readSourceIdentity() };
+  const execution = executeApprovedEvidence(command, { testStandaloneBuilt: false, source: before });
+  const result = {
+    status: execution.status === "passed" ? 0 : 1,
+    stdout: execution.receipts.map((receipt) => receipt.stdout ?? "").filter(Boolean).join("\n"),
+    stderr: execution.receipts.map((receipt) => receipt.stderr ?? "").filter(Boolean).join("\n"),
+  };
+  const after = { repository: RELEASE_REPOSITORY, ...readSourceIdentity() };
   if (after.revision !== before.revision || after.state !== before.state || after.fingerprint !== before.fingerprint) throw new Error("evidence command changed the executed source");
-  const scope = Object.freeze({ kind: "receipt", id, subject: subjectPath, command });
+  const subjectPath = explicitSubject === undefined
+    ? workspaceRelativePath(resolve(root, "artifacts", "tearbench", "generated", "receipt-subjects", `${id}.json`))
+    : workspaceRelativePath(resolve(explicitSubject));
+  if (!subjectPath.startsWith("artifacts/tearbench/")) throw new TypeError("evidence receipt subjects must remain in the ignored TearBench artifact store");
+  if (explicitSubject === undefined) {
+    const output = await prepareWorkspaceOutput(resolve(root, subjectPath), "artifacts/tearbench/generated/receipt-subjects/", "generated evidence subject");
+    const commandOutput = { format: "tearbench-command-output", schemaVersion: 1, id, command,
+      status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1,
+      stdout: result.stdout ?? "", stderr: result.stderr ?? "", source: before };
+    await writeFile(output.absolute, `${JSON.stringify(commandOutput, null, 2)}\n`, "utf8");
+  }
+  const scope = Object.freeze({ kind: "receipt", id, subject: subjectPath, command,
+    ...(correctionId === undefined ? {} : { correctionId }) });
   let subject;
   try {
-    const contents = await readFile(resolve(root, subjectPath));
-    subject = { path: subjectPath, sha256: createHash("sha256").update(contents).digest("hex"), size: (await stat(resolve(root, subjectPath))).size };
+    const subjectInput = await canonicalWorkspaceInput(resolve(root, subjectPath), "evidence receipt subject");
+    const contents = await readFile(subjectInput.absolute);
+    subject = { path: subjectPath, sha256: createHash("sha256").update(contents).digest("hex"), size: (await stat(subjectInput.absolute)).size };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
       commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
       status: "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: `${result.stderr ?? ""}\nsubject unavailable: ${detail}` };
-    const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-    console.log(`FAIL ${id}`); console.log(`receipt: ${path}`); process.exitCode = 1; return;
+    const output = await prepareWorkspaceOutput(receiptPathFor(id, receiptArtifact), "artifacts/tearbench/receipts/", "evidence receipt");
+    await preservePriorReceipt(output.absolute, id);
+    await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    console.log(`FAIL ${id}`); console.log(`receipt: ${output.absolute}`); process.exitCode = 1; return;
   }
   const receipt = { format: "tearbench-evidence-receipt", schemaVersion: 1, id, command, timestamp: new Date().toISOString(),
     commit: before.revision, worktreeFingerprint: before.worktreeFingerprint, source: before, scope,
     status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", subject };
-  const path = receiptPathFor(id); await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-  console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${path}`);
+  const output = await prepareWorkspaceOutput(receiptPathFor(id, receiptArtifact), "artifacts/tearbench/receipts/", "evidence receipt");
+  await preservePriorReceipt(output.absolute, id);
+  await writeFile(output.absolute, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+  console.log(`${receipt.status === "passed" ? "PASS" : "FAIL"} ${id}`); console.log(`receipt: ${output.absolute}`);
   if (receipt.status !== "passed") process.exitCode = 1;
 }
 
@@ -737,10 +1357,12 @@ async function composePartialEvidenceManifest() {
   const binding = gitCleanHead();
   const evidence = [];
   for (const input of values) {
-    const receiptPath = workspaceRelativePath(resolve(input));
-    const contents = await readFile(resolve(root, receiptPath), "utf8");
+    const receiptInput = await canonicalWorkspaceInput(resolve(input), "partial-manifest receipt");
+    const receiptPath = receiptInput.stored;
+    const contents = await readFile(receiptInput.absolute, "utf8");
     const receipt = JSON.parse(contents);
     if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
+    if (receiptPath !== `artifacts/tearbench/receipts/${receipt.id}.json`) throw new TypeError(`partial manifest requires the canonical current receipt path: ${receiptPath}`);
     evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit,
       worktreeFingerprint: receipt.worktreeFingerprint, source: receipt.source, scope: receipt.scope,
       artifactPath: receipt.subject?.path, artifactSha256: receipt.subject?.sha256, artifactSize: receipt.subject?.size,
@@ -751,9 +1373,103 @@ async function composePartialEvidenceManifest() {
   const manifest = { format: "tearbench-release-evidence-manifest", schemaVersion: 1, generatedAt: new Date().toISOString(),
     ...binding, scope: { kind: "partial-manifest", evidenceIds: ids }, evidence,
     coverage: { arbitraryStates: [], journeys: [], matrices: [] }, preservation: {} };
-  const path = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "partial-release-evidence.json")));
-  await mkdir(dirname(path), { recursive: true }); await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-  console.log(`PARTIAL ${evidence.length} receipt(s)`); console.log(`artifact: ${path}`);
+  const output = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "partial-release-evidence.json"))),
+    "artifacts/tearbench/generated/", "partial evidence manifest");
+  await writeFile(output.absolute, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  console.log(`PARTIAL ${evidence.length} receipt(s)`); console.log(`artifact: ${output.absolute}`);
+}
+
+async function composeCorrectionClosureManifest() {
+  const usage = "usage: pnpm tearbench evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]";
+  const receiptValues = requiredOption("--receipts", usage).split(/[\s,]+/u).map((value) => value.trim()).filter(Boolean);
+  if (receiptValues.length === 0) throw new TypeError(usage);
+  const baseManifestInput = await canonicalWorkspaceInput(resolve(requiredOption("--base-manifest", usage)), "base release evidence manifest");
+  const metadataInput = await canonicalWorkspaceInput(resolve(requiredOption("--metadata", usage)), "correction closure metadata");
+  const baseManifestPath = baseManifestInput.stored;
+  const metadataPath = metadataInput.stored;
+  if (!baseManifestPath.startsWith("artifacts/tearbench/") || !metadataPath.startsWith("artifacts/tearbench/")) {
+    throw new TypeError("correction manifest inputs must be ignored TearBench artifacts");
+  }
+  const binding = gitCleanHead();
+  const evidence = [];
+  for (const input of receiptValues) {
+    const receiptInput = await canonicalWorkspaceInput(resolve(input), "correction evidence receipt");
+    const receiptPath = receiptInput.stored;
+    if (!receiptPath.startsWith("artifacts/tearbench/receipts/")) throw new TypeError(`receipt is outside the ignored receipt store: ${receiptPath}`);
+    const contents = await readFile(receiptInput.absolute, "utf8");
+    const receipt = JSON.parse(contents);
+    if (receipt?.format !== "tearbench-evidence-receipt" || receipt?.schemaVersion !== 1) throw new TypeError(`invalid evidence receipt: ${receiptPath}`);
+    if (receiptPath !== `artifacts/tearbench/receipts/${receipt.id}.json`) throw new TypeError(`correction manifest requires the canonical current receipt path: ${receiptPath}`);
+    if (receipt.status !== "passed" || receipt.exitCode !== 0 || receipt.commit !== binding.commit
+      || receipt.worktreeFingerprint !== binding.worktreeFingerprint
+      || receipt.source?.revision !== binding.source.revision || receipt.source?.state !== "clean"
+      || receipt.source?.fingerprint !== binding.source.fingerprint
+      || receipt.source?.worktreeFingerprint !== binding.source.worktreeFingerprint) {
+      throw new TypeError(`evidence receipt is not a passed exact-source receipt: ${receiptPath}`);
+    }
+    evidence.push({ id: receipt.id, status: receipt.status, command: receipt.command, timestamp: receipt.timestamp, commit: receipt.commit,
+      worktreeFingerprint: receipt.worktreeFingerprint, source: receipt.source, scope: receipt.scope,
+      artifactPath: receipt.subject?.path, artifactSha256: receipt.subject?.sha256, artifactSize: receipt.subject?.size,
+      receiptPath, receiptSha256: createHash("sha256").update(contents).digest("hex") });
+  }
+  const ids = evidence.map((entry) => entry.id);
+  if (new Set(ids).size !== ids.length) throw new TypeError("correction manifest receipts must have unique IDs");
+  const metadata = JSON.parse(await readFile(metadataInput.absolute, "utf8"));
+  if (metadata?.format !== "tearbench-correction-closure-metadata" || metadata.schemaVersion !== 1
+    || !Array.isArray(metadata.corrections) || metadata.corrections.length !== REQUIRED_CORRECTION_IDS.length
+    || !Array.isArray(metadata.blockers) || !["incomplete", "certified"].includes(metadata.c40Status)) {
+    throw new TypeError("correction metadata is invalid");
+  }
+  const baseManifest = JSON.parse(await readFile(baseManifestInput.absolute, "utf8"));
+  if (baseManifest?.format !== "tearbench-release-evidence-manifest" || baseManifest.schemaVersion !== 1
+    || typeof baseManifest.coverage !== "object" || baseManifest.coverage === null
+    || typeof baseManifest.preservation !== "object" || baseManifest.preservation === null) {
+    throw new TypeError("base release evidence manifest is incomplete");
+  }
+  const corrections = [];
+  for (let index = 0; index < REQUIRED_CORRECTION_IDS.length; index += 1) {
+    const entry = metadata.corrections[index];
+    if (entry?.id !== REQUIRED_CORRECTION_IDS[index]) throw new TypeError("correction metadata must be exactly ordered TC-1 through TC-9");
+    const reportInput = await canonicalWorkspaceInput(resolve(entry.reportPath), `correction ${REQUIRED_CORRECTION_IDS[index]} report`);
+    const reportPath = reportInput.stored;
+    const report = await readFile(reportInput.absolute, "utf8");
+    corrections.push({ id: REQUIRED_CORRECTION_IDS[index], status: entry.status, reportPath,
+      reportSha256: createHash("sha256").update(report).digest("hex"), focusedReceiptIds: entry.focusedReceiptIds,
+      postReviewDisposition: entry.postReviewDisposition });
+  }
+  const retainedIds = new Set(ids);
+  const receiptById = new Map(evidence.map((entry) => [entry.id, entry]));
+  const focusedReceiptOwners = new Map();
+  if (!retainedIds.has("full-check")) throw new TypeError("final full-check evidence receipt is missing");
+  if (metadata.c40Status === "certified") {
+    for (const id of REQUIRED_RELEASE_EVIDENCE_IDS) if (!retainedIds.has(id)) throw new TypeError(`required evidence receipt is missing: ${id}`);
+  }
+  for (const correction of corrections) {
+    if (correction.status !== "complete" || correction.postReviewDisposition !== "green"
+      || !Array.isArray(correction.focusedReceiptIds) || correction.focusedReceiptIds.length === 0
+      || correction.focusedReceiptIds.some((id) => id === "full-check" || !retainedIds.has(id)
+        || receiptById.get(id)?.scope?.correctionId !== correction.id)) {
+      throw new TypeError(`correction metadata is incomplete: ${correction.id}`);
+    }
+    for (const id of correction.focusedReceiptIds) {
+      if (focusedReceiptOwners.has(id)) throw new TypeError(`focused receipt is reused across corrections: ${id}`);
+      focusedReceiptOwners.set(id, correction.id);
+    }
+  }
+  const planPath = "plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md";
+  const planInput = await canonicalWorkspaceInput(resolve(root, planPath), "correction plan");
+  const plan = await readFile(planInput.absolute, "utf8");
+  const manifest = { format: "tearbench-release-evidence-manifest", schemaVersion: 1, generatedAt: new Date().toISOString(),
+    ...binding, scope: { kind: "correction-closure", evidenceIds: ids }, evidence,
+    coverage: baseManifest.coverage, preservation: baseManifest.preservation,
+    correctionClosure: { format: "tearbench-correction-closure", schemaVersion: 1, status: "correction-complete",
+      c40Status: metadata.c40Status, source: { repository: "shaku1z/tear", ...binding.source },
+      plan: { path: planPath, sha256: createHash("sha256").update(plan).digest("hex") }, corrections, blockers: metadata.blockers,
+      finalFullCheck: { evidenceId: "full-check", receiptSha256: evidence.find((entry) => entry.id === "full-check")?.receiptSha256 } } };
+  const output = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "correction-release-evidence.json"))),
+    "artifacts/tearbench/generated/", "correction manifest");
+  await writeFile(output.absolute, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  console.log(`CORRECTION CLOSURE ${corrections.length} checkpoint(s)`); console.log(`artifact: ${output.absolute}`);
 }
 
 async function writeReleaseCertificate() {
@@ -762,39 +1478,49 @@ async function writeReleaseCertificate() {
   // repository fixture. Keep the default under generated evidence so a stale
   // checked-in "certified" JSON object cannot be mistaken for current release
   // approval.
-  const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "release-certificate.json")));
-  const manifestPath = manifestOption === undefined ? undefined : workspaceRelativePath(resolve(manifestOption));
+  const certificateOutput = await prepareWorkspaceOutput(resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "generated", "release-certificate.json"))),
+    "artifacts/tearbench/generated/", "release certificate");
+  const manifestInput = manifestOption === undefined ? undefined : await canonicalWorkspaceInput(resolve(manifestOption), "release evidence manifest");
+  const manifestPath = manifestInput?.stored;
   let verification;
+  let manifestBytes;
   try {
     if (option("--full-check") !== undefined || option("--commit") !== undefined) throw new Error("certification accepts only an immutable --manifest; --full-check and --commit assertions are forbidden");
     if (manifestOption === undefined) throw new TypeError("usage: pnpm tearbench certify --manifest <release-evidence.json> [--artifact path]");
-    const manifest = JSON.parse(await readFile(resolve(manifestOption), "utf8"));
+    if (!manifestPath.startsWith("artifacts/tearbench/generated/")) throw new TypeError("release evidence manifest must be an ignored generated artifact");
+    manifestBytes = await readFile(manifestInput.absolute);
+    const manifest = JSON.parse(manifestBytes.toString("utf8"));
     verification = await verifyReleaseEvidenceManifest(manifest, {
       root,
+      sourceIdentity: async () => ({ repository: "shaku1z/tear", ...readSourceIdentity() }),
       git: async (argumentsList) => {
         const result = spawnSync("git", argumentsList, { cwd: root, encoding: "utf8" });
         if (result.status !== 0) throw new Error(result.stderr || `git ${argumentsList.join(" ")} failed`);
         return result.stdout;
       },
       readFile,
+      realpath,
     });
   } catch (error) {
     const headResult = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
     const statusResult = spawnSync("git", ["status", "--porcelain=v1", "-z"], { cwd: root, encoding: "utf8" });
     verification = { verified: false, errors: [error instanceof Error ? error.message : String(error)], head: headResult.stdout.trim(), worktreeFingerprint: createHash("sha256").update(statusResult.stdout).digest("hex") };
   }
-  const certificate = createReleaseCertificate({ manifestPath: manifestPath ?? "<missing>", verification, generatedAt: new Date().toISOString() });
-  await mkdir(dirname(artifactPath), { recursive: true });
-  await writeFile(artifactPath, `${JSON.stringify(certificate, null, 2)}\n`, "utf8");
+  const manifestSha256 = manifestBytes === undefined ? undefined : createHash("sha256").update(manifestBytes).digest("hex");
+  const certificate = createReleaseCertificate({ manifestPath: manifestPath ?? "<missing>", manifestSha256, verification, generatedAt: new Date().toISOString() });
+  await writeFile(certificateOutput.absolute, `${JSON.stringify(certificate, null, 2)}\n`, "utf8");
   console.log(`${certificate.status.toUpperCase()} ${certificate.commit}`);
-  console.log(`artifact: ${artifactPath}`);
-  if (!verification.verified) process.exitCode = 1;
+  console.log(`artifact: ${certificateOutput.absolute}`);
+  if (certificate.status !== "certified") process.exitCode = 1;
 }
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
+  if (scenario.stateForge !== undefined && seed !== scenario.seed) {
+    throw new RangeError(`canonical State Forge scenario ${scenario.id} requires its authoritative catalog seed ${scenario.seed}`);
+  }
   const invocations = runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath);
   const passed = invocations.length === repeat && invocations.every((entry) => entry.status === 0)
-    && existsSync(artifactPath);
+    && existsSync(artifactPath) && isPassedTearBenchRunArtifact(artifactPath);
   if (!passed && !existsSync(artifactPath)) {
     const diagnostic = {
       format: "tearbench-run-materialization-diagnostic",
@@ -803,7 +1529,7 @@ async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath,
       status: "failed",
       source: readSourceIdentity(),
       requested: Object.freeze({ scenarioId: scenario.id, seed, repeat }),
-      declaredEvidence: evidenceCommandForScenario(scenario),
+      declaredEvidence: evidenceCommandsForScenario(scenario),
       rerunSupported: false,
       reason: "the live materializer exited before producing a replayable tearbench-run artifact",
       invocations: invocations.map((entry) => Object.freeze({
@@ -981,6 +1707,43 @@ function workspaceRelativePath(path) {
   const stored = relative(root, resolved).replaceAll("\\", "/");
   if (stored === "" || stored.startsWith("../") || isAbsolute(stored)) throw new TypeError(`graveyard artifacts and registries must remain inside the workspace: ${path}`);
   return stored;
+}
+
+function assertCanonicalContainment(canonicalRoot, canonicalPath, label, allowRoot = false) {
+  const stored = relative(canonicalRoot, canonicalPath).replaceAll("\\", "/");
+  if ((!allowRoot && stored === "") || stored.startsWith("../") || isAbsolute(stored)) throw new TypeError(`${label} resolves outside the workspace`);
+}
+
+async function canonicalWorkspaceInput(path, label) {
+  const stored = workspaceRelativePath(path);
+  const canonicalRoot = await realpath(root);
+  const canonicalPath = await realpath(resolve(root, stored));
+  assertCanonicalContainment(canonicalRoot, canonicalPath, label);
+  return Object.freeze({ stored, absolute: canonicalPath });
+}
+
+async function prepareWorkspaceOutput(path, requiredPrefix, label) {
+  const stored = workspaceRelativePath(path);
+  if (!stored.startsWith(requiredPrefix)) throw new TypeError(`${label} must remain under ${requiredPrefix}`);
+  const absolute = resolve(root, stored);
+  const canonicalRoot = await realpath(root);
+  let ancestor = dirname(absolute);
+  while (!existsSync(ancestor)) {
+    const parent = dirname(ancestor);
+    if (parent === ancestor) throw new TypeError(`${label} has no resolvable workspace ancestor`);
+    ancestor = parent;
+  }
+  assertCanonicalContainment(canonicalRoot, await realpath(ancestor), label, true);
+  await mkdir(dirname(absolute), { recursive: true });
+  assertCanonicalContainment(canonicalRoot, await realpath(dirname(absolute)), label);
+  try {
+    const outputInfo = await lstat(absolute);
+    if (outputInfo.isSymbolicLink()) throw new TypeError(`${label} cannot overwrite a symbolic link or junction`);
+    assertCanonicalContainment(canonicalRoot, await realpath(absolute), label);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  return Object.freeze({ stored, absolute });
 }
 
 async function withTearbenchModule(callback) {
@@ -1198,7 +1961,7 @@ try {
     const id = process.argv[3];
     if (!id) throw new TypeError("usage: pnpm tearbench run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]");
     const scenario = scenarioById(id);
-    const seed = option("--seed", "1001");
+    const seed = option("--seed", scenario.stateForge === undefined ? "1001" : scenario.seed);
     const repeat = Number.parseInt(option("--repeat", "1"), 10);
     if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > 100) throw new RangeError("--repeat must be an integer from 1 through 100");
     const defaultArtifact = resolve(root, "artifacts", "tearbench", "runs", `${id}-${seed}.json`);
@@ -1263,6 +2026,8 @@ try {
     await recordEvidenceReceipt();
   } else if (command === "evidence" && process.argv[3] === "partial-manifest") {
     await composePartialEvidenceManifest();
+  } else if (command === "evidence" && process.argv[3] === "correction-manifest") {
+    await composeCorrectionClosureManifest();
   } else if (command === "parity" && process.argv[3] === "current-weapons") {
     const result = executeCurrentWeaponParity();
     if (result.evidenceExecution.status !== "passed") process.exitCode = 1;
@@ -1309,10 +2074,14 @@ try {
       : undefined;
     console.log(`selection: ${artifactPath}`);
     if (evidence.status !== 0 || evidenceExecution.status === "failed" || graveyardReport?.status === "failed") process.exitCode = 1;
+  } else if (command === "plan" || command === "explain") {
+    await writeShadowPlan(command === "explain");
+  } else if (command === "tasks") {
+    await runTaskProfile();
   } else if (command === "certify") {
     await writeReleaseCertificate();
   } else {
-    console.log("TearBench CLI\n  list\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> --subject <generated-artifact> -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
+    console.log("TearBench CLI\n  list\n  plan --profile <profile> [--files comma,list | --files-from path] [--artifact path]\n  explain --profile <profile> [--files comma,list | --files-from path] [--artifact path]\n  tasks <list-profile|run-profile> <profile-id>\n  run <scenario-id> [--seed value] [--repeat count] [--actions path] [--artifact path]\n  rerun --artifact <run.json>\n  investigate --base <tearbench-run.json> --candidate <tearbench-run.json> [--artifact path]\n  failure --base <run.json> --candidate <run.json> [--investigation <investigation.json>] [--artifact path]\n  minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]\n  bisect --good <ancestor-revision> --bad <known-bad-revision> --scenario <canonical-id> [--seed value] [--actions trace.json] [--repetitions 3] [--max-revisions 24]\n  graveyard register --id <slug> --signature <signature> --original <failed-artifact.json> --minimal <failed-artifact.json> --minimal-replay <candidate-run.json> --fix-commit <revision> --fix-base <run.json> --fix-candidate <run.json> --invariant <id> --selectors comma,list --owner <owner> [--hints comma,list] [--registry path]\n  graveyard list [--registry path]\n  graveyard reopen --id <slug> --reason <reason> [--registry path]\n  graveyard run --cases <selector,selector> [--registry path] [--artifact path]\n  forge wave99 [--artifact path]\n  evidence record --id <id> [--correction TC-N] [--subject <generated-artifact>] [--artifact <receipt.json>] -- <explicit command>\n  evidence partial-manifest --receipts <receipt.json,receipt.json> [--artifact path]\n  evidence correction-manifest --base-manifest <release-evidence.json> --receipts <receipt.json,...> --metadata <closure-metadata.json> [--artifact path]\n  select [--files comma,list | --files-from path] [--artifact path]\n  ci [--files comma,list | --files-from path] [--registry path] [--artifact path]\n  certify --manifest <release-evidence.json> [--artifact path]");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
