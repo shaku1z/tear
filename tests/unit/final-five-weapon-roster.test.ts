@@ -259,6 +259,9 @@ describe("Final Five weapon roster", () => {
     expect(blade.state).toBe("returning");
     expect(blade.hookTarget).toBeNull();
     expect(Math.abs(target.vx - beforeRelease.vx) + Math.abs(target.vy - beforeRelease.vy)).toBeGreaterThan(0);
+    expect(blade.drainWeaponEvents()).toEqual([expect.objectContaining({
+      type: "slingRelease", x: target.x, y: target.y, vx: target.vx, vy: target.vy,
+    })]);
   });
 
   it("scales Chainblade fling continuously by mass, knockback susceptibility, and secondary power", () => {
@@ -312,11 +315,12 @@ describe("Final Five weapon roster", () => {
     expect(blade._fireRazorRound(player)).toBe(false);
     const [razorRound] = blade.drainWeaponEvents();
     expect(razorRound?.type).toBe("razorRound");
-    expect(razorRound?.damage).toBe(config.weapons.riftlock.razorDamage);
-    expect(razorRound?.throwId).toBe(7);
-    expect(razorRound?.attackId).toEqual(expect.any(Number));
-    expect(razorRound?.remote).toBe(false);
-    expect(razorRound?.secondary).toBe(false);
+    if (razorRound?.type !== "razorRound") throw new Error("expected a Razor Round event");
+    expect(razorRound.damage).toBe(config.weapons.riftlock.razorDamage);
+    expect(razorRound.throwId).toBe(7);
+    expect(razorRound.attackId).toEqual(expect.any(Number));
+    expect(razorRound.remote).toBe(false);
+    expect(razorRound.secondary).toBe(false);
   });
 
   it("fires Riftlock only on a fresh tether press", () => {

@@ -1,5 +1,5 @@
 import { planHeldStrike } from "./held-strike-planner";
-import type { HeldBladeCollisionInput, HeldBladeEnemy } from "./held-blade-collision-contracts";
+import type { HeldBladeCollisionInput, HeldBladeEnemy, PointDistance } from "./held-blade-collision-contracts";
 
 export interface HeldBladeCollisionResult { readonly hitStop: number }
 
@@ -100,7 +100,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     const strike = weaponEffect?.damageMult === undefined ? plannedStrike
       : { ...plannedStrike, damage: plannedStrike.damage * weaponEffect.damageMult };
     const firstDamage = enemy.firstPlayerDamageAt == null;
-    blade.claimAttack();
+    const attackId = blade.claimAttack();
     const dealt = enemy.hit(strike.damage, blade.tipVX, blade.tipVY);
     hooks.noteFirstDamage(enemy, firstDamage); blade.recordHit(enemy); blade.recordHeldHit?.(enemy);
     blade.applyHeldResistance?.(enemy); run.weaponStats.heldHits++;
@@ -129,7 +129,8 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     }
     if (strike.empoweredLaunch && run.mods.tempest) applyTempest(input, enemy, baseDamage);
 
-    fx.burst(point.px, point.py, blade.tipVX, blade.tipVY, t.juice.sparkCount, enemy.color);
+    const presentedAttack = emitHeldAttackPresentation(input, enemy, point, weaponEffect, attackId, quality);
+    if (!presentedAttack) fx.burst(point.px, point.py, blade.tipVX, blade.tipVY, t.juice.sparkCount, enemy.color);
     if (strike.slam || strike.empoweredLaunch) fx.ring(enemy.x, enemy.y, strike.empoweredSlam ? 13 : 8, t.colors.slam);
     const tag = strike.spike ? "▼" : strike.empoweredSlam ? "⇊" : strike.slam ? "!" : strike.launch ? strike.empoweredLaunch ? "⇈" : "↑" : "";
     fx.floater(enemy.x, enemy.y - 26, `${String(Math.round(strike.damage))}${tag}`, strike.big || strike.launch);
@@ -164,14 +165,46 @@ function applyWeaponEffect(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy
   if (effect.hitIframe != null) enemy.hitCd = Math.min(enemy.hitCd, effect.hitIframe);
   if (effect.mechanic === "reversal") {
     run.weaponStats.reversals++; enemy.stun = Math.max(enemy.stun, enemy.isBoss ? 0 : effect.stun ?? 0);
-    fx.ribbon(blade.x, blade.y, blade.tipX, blade.tipY, t.colors.perfect); fx.floater(enemy.x, enemy.y - 42, "REVERSAL", true, t.colors.perfect);
+    if (fx.presentAttack === undefined) {
+      fx.ribbon(blade.x, blade.y, blade.tipX, blade.tipY, t.colors.perfect);
+      fx.floater(enemy.x, enemy.y - 42, "REVERSAL", true, t.colors.perfect);
+    }
   } else if (effect.mechanic === "break" && enemy.applyBreak && effect.breakPower !== undefined) {
-    if (enemy.applyBreak(effect.breakPower)) { effect.broke = true; run.weaponStats.breakTriggers++; fx.floater(enemy.x, enemy.y - 42, "BREAK", true, t.colors.armoredShield); fx.ring(enemy.x, enemy.y, 15, t.colors.armoredShield); }
+    if (enemy.applyBreak(effect.breakPower)) {
+      effect.broke = true; run.weaponStats.breakTriggers++;
+      if (fx.presentAttack === undefined) {
+        fx.floater(enemy.x, enemy.y - 42, "BREAK", true, t.colors.armoredShield);
+        fx.ring(enemy.x, enemy.y, 15, t.colors.armoredShield);
+      }
+    }
   } else if (effect.mechanic === "lash" && !enemy.anchored) {
     const magnitude = input.distance(blade.tipVX, blade.tipVY) || 1, resistance = enemy.isBoss ? 0.16 : 1 / enemy.weight;
     enemy.vx += blade.tipVX / magnitude * (effect.force ?? 0) * resistance; enemy.vy += blade.tipVY / magnitude * (effect.force ?? 0) * resistance; enemy.boundT = 0.25;
-    fx.floater(enemy.x, enemy.y - 40, "LASH", false, t.colors.perfect);
+    if (fx.presentAttack === undefined) fx.floater(enemy.x, enemy.y - 40, "LASH", false, t.colors.perfect);
   }
+}
+
+function emitHeldAttackPresentation(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy, point: PointDistance,
+  effect: ReturnType<HeldBladeCollisionInput["hooks"]["weaponHit"]>, attackId: number, intensity: number): boolean {
+  if (effect?.mechanic === undefined || input.effects.presentAttack === undefined) return false;
+  const identity = input.run.weaponId === "sword" && effect.mechanic === "reversal"
+    ? { weaponId: "sword" as const, variant: "reversal" }
+    : input.run.weaponId === "hammer" && effect.mechanic === "break" && effect.broke
+      ? { weaponId: "hammer" as const, variant: "break" }
+      : input.run.weaponId === "greatsword" && effect.mechanic === "cleave"
+        ? { weaponId: "greatsword" as const, variant: "cleave" }
+        : input.run.weaponId === "chainblade" && effect.mechanic === "lash"
+          ? { weaponId: "chainblade" as const, variant: "lash" }
+          : input.run.weaponId === "riftlock" && ["recoilCut", "chamberCut", "bayonet"].includes(effect.mechanic)
+            ? { weaponId: "riftlock" as const, variant: effect.mechanic }
+            : null;
+  if (identity === null) return false;
+  const { blade } = input;
+  input.effects.presentAttack({ ...identity, attackId, swingId: blade.swingId, throwId: blade.throwId,
+    action: "held", phase: "contact", sourceX: blade.x, sourceY: blade.y,
+    x: point.px, y: point.py, directionX: blade.tipVX, directionY: blade.tipVY,
+    normalX: point.px - enemy.x, normalY: point.py - enemy.y, material: "flesh", intensity });
+  return true;
 }
 
 function applyTempest(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy, baseDamage: number): void {

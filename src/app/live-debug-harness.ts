@@ -9,6 +9,7 @@ import { eligibleTierChoices } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import type { LegacyAppScreen, LegacyTransitionContext } from "./legacy-state-controller";
 import { WHITE_HART_PHASE_ATTACKS, type WhiteHartAttackId } from "../gameplay/entities/enemy-types/white-hart";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 
 export interface DebugLifecycle {
   readonly phase: RunPhase;
@@ -29,6 +30,7 @@ export interface LiveDebugHarnessContext {
   readonly lifecycle: DebugLifecycle;
   readonly cinema: DebugCinema;
   readonly stage: DebugStage;
+  readonly environment?: Pick<EnvironmentRuntimeState, "fields" | "combatObjects" | "routes">;
   readonly width: number;
   readonly height: number;
   readonly spawnExplicitVariant?: (kind: ExplicitVariantKind, variantId: string) => void;
@@ -78,9 +80,23 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     if (player === undefined) throw new Error("Current gameplay scenario requires a live player");
     Object.assign(player, { y: d.CONFIG.world.groundY - player.hh, vy: 0, onGround: true });
   };
+  const performanceEnvironmentSnapshot = () => {
+    if (context.environment === undefined) throw new Error("Performance environment diagnostics are unavailable");
+    const fields = context.environment.fields();
+    const combatObjects = context.environment.combatObjects();
+    const routes = context.environment.routes();
+    const kinds: Record<string, number> = {};
+    for (const entry of [...fields, ...combatObjects, ...routes]) {
+      const key = `${entry.kind}:${entry.state}`;
+      kinds[key] = (kinds[key] ?? 0) + 1;
+    }
+    return Object.freeze({ fields: fields.length, combatObjects: combatObjects.length, routes: routes.length,
+      kinds: Object.freeze(kinds) });
+  };
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
     prepareCurrentGameplayScenario: prepareCurrentGameplay,
+    performanceEnvironmentSnapshot,
     prepareVariantSelectionScenario(kind: ExplicitVariantKind, variantId: string) {
       const run = runOf(context.state);
       if (run.mode !== "playground" && run.mode !== "sandbox") throw new Error("explicit variant selection is limited to Playground/Enemy Test");

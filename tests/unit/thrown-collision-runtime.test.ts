@@ -75,4 +75,23 @@ describe("thrown collision runtime", () => {
     expect(weapon.vy).toBeGreaterThan(0);
     expect(weapon.angle).toBe(0.75);
   });
+
+  it.each([
+    ["sword", "threadcut", "return"], ["hammer", "meteor", "impact"], ["hammer", "hammerReturn", "return"],
+    ["greatsword", "wheelCut", "contact"], ["greatsword", "wheelReturn", "return"],
+    ["chainblade", "hook", "contact"], ["chainblade", "sling", "return"],
+    ["riftlock", "capture", "contact"], ["riftlock", "backblast", "return"],
+  ] as const)("emits the %s %s semantic presentation cue", (weaponId, mechanic, phase) => {
+    const weapon = blade();
+    if (phase === "return") weapon.state = "returning";
+    const presentAttack = vi.fn(); const fx = hooks();
+    fx.weaponHit = () => ({ mechanic, ...(["meteor", "hook", "capture"].includes(mechanic) ? { stop: true } : {}) });
+    fx.presentAttack = presentAttack;
+    const weaponRun: ThrownRun = { weaponId, mods: {}, weaponStats: { throwHits: 0 } };
+
+    resolveThrownCollisions(weapon, player, [enemy()], [], weaponRun, tuning, fx);
+
+    expect(presentAttack).toHaveBeenCalledOnce();
+    expect(presentAttack).toHaveBeenCalledWith(expect.objectContaining({ weaponId, variant: mechanic, phase }));
+  });
 });

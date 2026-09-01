@@ -15,12 +15,18 @@ export type GameConfig = typeof GAME_CONFIG;
 
 export interface BladePoint { x: number; y: number }
 export interface BladeThreadcutWaypoint extends BladePoint { target: BladeEnemyPort }
-export interface BladeWeaponEvent {
+export interface BladeWeaponProjectileEvent {
   readonly type: "razorRound" | "backblastRound";
   readonly x: number; readonly y: number; readonly vx: number; readonly vy: number;
   readonly damage: number; readonly attackId: number; readonly throwId: number; readonly remote: boolean;
   readonly secondary: boolean;
 }
+export interface BladeSlingReleaseEvent {
+  readonly type: "slingRelease";
+  readonly sourceX: number; readonly sourceY: number; readonly x: number; readonly y: number;
+  readonly vx: number; readonly vy: number; readonly attackId: number; readonly throwId: number;
+}
+export type BladeWeaponEvent = BladeWeaponProjectileEvent | BladeSlingReleaseEvent;
 export type BladeActionResult = WeaponActionResult;
 export interface BladeChannels {
   throwPower: number; throwSpeed: number; remoteRange: number;

@@ -470,6 +470,8 @@ class Blade extends BladeCore {
       if (e.isBoss) { player.vx -= tangentX * releaseSpeed * 0.18; player.vy -= tangentY * releaseSpeed * 0.12; }
       else e.stun = Math.max(e.stun, W.releaseStun * (e.weight > 2 ? 0.55 : 1));
       if ((e.isBoss || e.weight > 2) && e.applyBreak) e.applyBreak(W.heavyBreak);
+      this.weaponEvents.push(Object.freeze({ type: "slingRelease", sourceX: this.x, sourceY: this.y,
+        x: e.x, y: e.y, vx: e.vx, vy: e.vy, attackId: this.attackId, throwId: this.throwId }));
       this.pierced = new Set(); this.secondaryActive = true; this.hookTarget = null; this.state = "returning";
       return "recalled";
     }

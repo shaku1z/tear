@@ -71,7 +71,7 @@ export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
         dragged.vy = (dragged.vy - 1.6 * dot * normalY) * 0.58;
         blade.slingWorldCooldown = options.worldCollisionCooldown;
         options.burst(dragged, normalX * speed, normalY * speed);
-        options.floater(dragged, `IMPACT ${String(Math.round(damage))}`);
+        options.floater(dragged, String(Math.round(damage)));
         if (options.didDie(dragged)) options.onKill(dragged);
       }
     }

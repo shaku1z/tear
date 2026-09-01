@@ -21,7 +21,8 @@ describe("live presentation host", () => {
       dimensions: { width: 80, height: 60, overscan: () => ({ x: 10, y: 20 }) },
       framePorts: (runtime) => ({
         canvas, context, logicalWidth: 80, logicalHeight: 60, overscan: () => ({ x: 10, y: 20 }),
-        screen: () => "playing", previousScreen: () => "playing", setPreviousScreen: vi.fn(), resize: vi.fn(),
+        screen: () => "playing", previousScreen: () => "playing", setPreviousScreen: vi.fn(),
+        resizeIfNeeded: vi.fn(),
         screenRectangle: runtime.screenRectangle, touchActive: () => false, cssPerLogicalPixel: () => 1,
         uiZoom: () => 1, setUiZoom: vi.fn(), deltaSeconds: () => 1 / 60,
         clamp: (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value)), resetControls: vi.fn(),

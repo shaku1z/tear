@@ -69,6 +69,6 @@ export function createLiveCombatHost<State>(options: LiveCombatHostFactoryOption
     startFrameLoop() {
       if (started) return;
       started = true;
-      options.frameDriver.start(({ deltaSeconds }) => { frameCoordinator.run(deltaSeconds); });
+      options.frameDriver.start(({ deltaSeconds, intervalSeconds }) => { frameCoordinator.run(deltaSeconds, intervalSeconds); });
     } });
 }

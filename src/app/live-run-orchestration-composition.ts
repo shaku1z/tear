@@ -24,6 +24,7 @@ import type { EnvironmentRuntimeState } from "../gameplay/environment/environmen
 import { activateStageEnvironment } from "../gameplay/environment/stage-environment-activation";
 import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import { stageIdAtRuntimeIndex } from "../gameplay/stages";
+import type { AttackPresentationCueSink } from "../gameplay/combat/attack-presentation-cue";
 
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -55,6 +56,7 @@ export interface LiveRunOrchestrationOptions {
   readonly selectedBoss: () => string;
   readonly worldServices: Pick<LiveWorldServices, "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback">;
   readonly environment: EnvironmentRuntimeState;
+  readonly attackPresentation: AttackPresentationCueSink;
   readonly applySettings: () => void;
   readonly prepareWorld: () => void;
   readonly resetTransientWorld: () => void;
@@ -147,6 +149,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     bigZoom: () => d.CONFIG.juice.zoomBig, distance: d.len, clamp: d.clamp,
     explode: (...args) => { d.FX.explode(...args); }, ribbon: (...args) => { d.FX.ribbon(...args); },
     shake: addShake, zoom: addZoom, boom: () => { d.SFX.boom(); }, areaDamage: dealArea,
+    presentAttack: (cue) => { options.attackPresentation.emit(cue); },
   });
 
   createLiveWaveComposition({

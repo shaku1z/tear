@@ -37,7 +37,7 @@ interface CinemaPort {
 }
 
 interface RuntimeFrameDiagnostics {
-  record(name: "simulation" | "render" | "frame", milliseconds: number): void;
+  record(name: "simulation" | "render" | "frame" | "frameInterval" | "outsideFrameWork", milliseconds: number): void;
   gauge(name: "enemies" | "projectiles" | "effects", value: number): void;
 }
 
@@ -90,12 +90,13 @@ export class RuntimeFrameCoordinator {
   #wasPointerLocked = false;
   #gameplayActive = false;
   #uiDensity: "desktop" | "touch" = "desktop";
+  #previousFrameWorkMilliseconds = 0;
 
   constructor(options: RuntimeFrameCoordinatorOptions) {
     this.#options = options;
   }
 
-  run(deltaSeconds: number): void {
+  run(deltaSeconds: number, frameIntervalSeconds = deltaSeconds): void {
     const frameStarted = this.#options.now();
     const startedPlaying = this.#options.state() === "playing";
     this.#prepareInput(deltaSeconds);
@@ -113,7 +114,7 @@ export class RuntimeFrameCoordinator {
     // tick can observe them; otherwise a valid tap is randomly discarded.
     const preserveSimulationEdges = startedPlaying && this.#options.state() === "playing" && simulationSteps === 0;
     this.#options.input.endFrame(preserveSimulationEdges);
-    this.#recordDiagnostics(frameStarted, simulationFinished, renderFinished);
+    this.#recordDiagnostics(frameStarted, simulationFinished, renderFinished, frameIntervalSeconds);
   }
 
   #prepareInput(deltaSeconds: number): void {
@@ -199,11 +200,18 @@ export class RuntimeFrameCoordinator {
     this.#options.syncMusic();
   }
 
-  #recordDiagnostics(frameStarted: number, simulationFinished: number, renderFinished: number): void {
+  #recordDiagnostics(frameStarted: number, simulationFinished: number, renderFinished: number,
+    frameIntervalSeconds: number): void {
     const now = this.#options.now();
+    const frameWorkMilliseconds = now - frameStarted;
+    const frameIntervalMilliseconds = Math.max(0, frameIntervalSeconds * 1000);
     this.#options.diagnostics.record("simulation", simulationFinished - frameStarted);
     this.#options.diagnostics.record("render", renderFinished - simulationFinished);
-    this.#options.diagnostics.record("frame", now - frameStarted);
+    this.#options.diagnostics.record("frame", frameWorkMilliseconds);
+    this.#options.diagnostics.record("frameInterval", frameIntervalMilliseconds);
+    this.#options.diagnostics.record("outsideFrameWork",
+      Math.max(0, frameIntervalMilliseconds - this.#previousFrameWorkMilliseconds));
+    this.#previousFrameWorkMilliseconds = frameWorkMilliseconds;
     const counts = this.#options.entityCounts();
     this.#options.diagnostics.gauge("enemies", counts.enemies);
     this.#options.diagnostics.gauge("projectiles", counts.projectiles);

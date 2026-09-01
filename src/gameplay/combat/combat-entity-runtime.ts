@@ -1,4 +1,4 @@
-import { resolveSupportAuras } from "./support-aura-resolver";
+import { createProjectedSupportWorkspace, resolveProjectedSupportAuras } from "./support-aura-resolver";
 import { resolveWorldHazards, type WorldHazardTuning } from "./world-hazard-resolver";
 import { planBomberDeathExplosion, planBossZoneCollision, planProjectileCollisions,
   resolveProjectileCurves, resolveSpecialProjectiles } from "./combat-entity-resolver";
@@ -79,11 +79,15 @@ function legacyZero(value: number | undefined): number {
   return value === undefined || value === 0 || Number.isNaN(value) ? 0 : value;
 }
 function isDead(entity: LiveCombatEntity): boolean { return entity.dead; }
+type MutableActorSnapshot = { -readonly [Key in keyof CombatActorState]: CombatActorState[Key] };
 
 export class CombatEntityRuntime {
   readonly #hooks: CombatEntityRuntimeHooks;
   #ids = new WeakMap<object, string>();
   readonly #claimedIds = new Set<string>();
+  readonly #supportObjects = new Map<string, LiveCombatEntity>();
+  readonly #supportSnapshots: CombatActorState[] = [];
+  readonly #supportWorkspace = createProjectedSupportWorkspace();
   #nextEntityId = 1; #nextWallSequence = 1; #nextSlowZoneSequence = 1;
 
   constructor(hooks: CombatEntityRuntimeHooks) { this.#hooks = hooks; }
@@ -94,6 +98,8 @@ export class CombatEntityRuntime {
   resetIdentity(): void {
     this.#ids = new WeakMap<object, string>();
     this.#claimedIds.clear();
+    this.#supportObjects.clear(); this.#supportSnapshots.length = 0;
+    this.#supportWorkspace.byId.clear(); this.#supportWorkspace.intents.length = 0;
     this.#nextEntityId = 1;
     this.#nextWallSequence = 1;
     this.#nextSlowZoneSequence = 1;
@@ -186,24 +192,34 @@ export class CombatEntityRuntime {
   }
 
   updateSupports(dt: number, tuning: SupportTuning, anchorColor: string): void {
-    const objects = new Map<string, LiveCombatEntity>();
-    const result = resolveSupportAuras(this.actorSnapshots(objects), dt, tuning, anchorColor);
+    const objects = this.#supportObjects;
+    const result = resolveProjectedSupportAuras(this.#projectSupportActors(objects), dt, tuning, anchorColor, this.#supportWorkspace);
     for (const state of result.actors) {
       const actor = objects.get(state.id); if (!actor) continue;
-      Object.assign(actor, { hp: state.hp, dead: state.dead, auraDR: state.auraDR, auraDmg: state.auraDmg,
-        auraSpeed: state.auraSpeed, auraHaste: state.auraHaste, tetherDR: state.tetherDR,
-        anchored: state.anchored, buffs: Array.from(state.buffs) });
-      if (state.kind === "support") actor.links = state.links.map((id) => objects.get(id)).filter((item): item is LiveCombatEntity => item !== undefined);
+      actor.hp = state.hp; actor.dead = state.dead; actor.auraDR = state.auraDR; actor.auraDmg = state.auraDmg;
+      actor.auraSpeed = state.auraSpeed; actor.auraHaste = state.auraHaste; actor.tetherDR = state.tetherDR;
+      actor.anchored = state.anchored;
+      const buffs = actor.buffs ?? []; buffs.length = 0; buffs.push(...state.buffs); actor.buffs = buffs;
+      if (state.kind === "support") {
+        const links = actor.links ?? []; links.length = 0;
+        for (const id of state.links) { const linked = objects.get(id); if (linked !== undefined) links.push(linked); }
+        actor.links = links;
+      }
       if (state.supportType === "anchor") actor.bonded = state.bondedId ? objects.get(state.bondedId) ?? null : null;
     }
     this.execute(result.intents, objects);
   }
 
   updateWorldHazards(dt: number, tuning: WorldHazardTuning): void {
+    if (!Number.isFinite(dt) || dt < 0) throw new RangeError("dt must be finite and non-negative");
+    const liveZones = this.#hooks.slowZones(), liveWalls = this.#hooks.walls(), liveActors = this.#hooks.actors();
+    if (liveZones.length === 0 && liveWalls.length === 0 && !liveActors.some((actor) => actor.wallRequest !== null && actor.wallRequest !== undefined)) {
+      this.#bindActorIdentities(liveActors); this.#hooks.player().slowMult = 1; return;
+    }
     const objects = new Map<string, LiveCombatEntity>(), wallById = new Map<string, RuntimeWall>();
     const actors = this.actorSnapshots(objects);
-    const zones = this.#hooks.slowZones().map((zone) => ({ ...zone, id: zone.id ?? this.id(zone, "zone") }));
-    const walls = this.#hooks.walls().map((wall) => { const id = wall.id ?? this.id(wall, "wall"); wallById.set(id, wall); return { ...wall, id }; });
+    const zones = liveZones.map((zone) => ({ ...zone, id: zone.id ?? this.id(zone, "zone") }));
+    const walls = liveWalls.map((wall) => { const id = wall.id ?? this.id(wall, "wall"); wallById.set(id, wall); return { ...wall, id }; });
     const wallRequests = actors.flatMap((state) => { const actor = objects.get(state.id); return actor?.wallRequest ? [{ actorId: state.id, x: actor.wallRequest.x }] : []; });
     const player = this.#hooks.player();
     const result = resolveWorldHazards({ dt, slowZones: zones, walls, wallRequests, nextWallSequence: this.#nextWallSequence,
@@ -225,6 +241,10 @@ export class CombatEntityRuntime {
   }
 
   resolveBossZones(tuning: BossZonePhaseTuning): void {
+    const actors = this.#hooks.actors();
+    if (!actors.some((actor) => actor.isBoss && actor.zones !== undefined && actor.zones.length > 0)) {
+      this.#bindActorIdentities(actors); return;
+    }
     const objects = new Map<string, LiveCombatEntity>(), player = this.#hooks.player();
     this.execute(planBossZoneCollision(this.actorSnapshots(objects), { x: player.x, y: player.y,
       hw: player.hw, hh: player.hh, invulnerable: !!player.invulnerable, hazardT: player.hazardT,
@@ -232,6 +252,7 @@ export class CombatEntityRuntime {
   }
 
   resolveProjectilePhases(dt: number, tuning: ProjectilePhaseTuning): void {
+    if (!Number.isFinite(dt) || dt < 0) throw new RangeError("dt must be finite and non-negative");
     const player = this.#hooks.player();
     {
       const objects = new Map<string, LiveCombatEntity>(), actors = this.actorSnapshots(objects);
@@ -239,13 +260,14 @@ export class CombatEntityRuntime {
         player: { x: player.x, y: player.y, hw: player.hw, hh: player.hh, dashTimer: player.dashTimer,
           dashX: player.dashX, dashY: player.dashY, facing: player.facing }, tuning }), objects);
     }
-    {
+    if (this.#hooks.projectiles().some((projectile) => !projectile.dead && projectile.curve && !projectile.curved)) {
       const objects = new Map<string, LiveCombatEntity>();
       this.execute(resolveProjectileCurves({ projectiles: this.projectileSnapshots(objects),
         player: { x: player.x, y: player.y }, dt, defaultSpeed: tuning.projectileSpeed,
         enemyShotColor: tuning.enemyShotColor }), objects);
     }
-    {
+    if (this.#hooks.projectiles().some((projectile) => !projectile.dead &&
+      (projectile.bomb === true || projectile.mud === true || projectile.mine === true))) {
       const objects = new Map<string, LiveCombatEntity>(), actors = this.actorSnapshots(objects);
       const result = resolveSpecialProjectiles({ projectiles: this.projectileSnapshots(objects), actors,
         player: { x: player.x, y: player.y, hw: player.hw, hh: player.hh }, dt, tuning,
@@ -264,6 +286,44 @@ export class CombatEntityRuntime {
       if (bomber) this.execute(planBomberDeathExplosion(bomber, { x: player.x, y: player.y, hw: player.hw }, tuning,
         tuning.achievementTracking), objects);
     }
+  }
+
+  #bindActorIdentities(actors: readonly LiveCombatEntity[]): void {
+    for (const actor of actors) {
+      this.id(actor, "enemy");
+      if (actor.bonded) this.id(actor.bonded, "enemy");
+    }
+  }
+
+  #projectSupportActors(objects: Map<string, LiveCombatEntity>): CombatActorState[] {
+    objects.clear();
+    const source = this.#hooks.actors(), snapshots = this.#supportSnapshots;
+    for (let index = 0; index < source.length; index += 1) {
+      const actor = source[index];
+      if (actor === undefined) throw new TypeError("combat actor collection must be dense");
+      const id = this.id(actor, "enemy"); objects.set(id, actor);
+      const bondedId = actor.bonded ? this.id(actor.bonded, "enemy") : null;
+      if (bondedId !== null && actor.bonded) objects.set(bondedId, actor.bonded);
+      let snapshot = snapshots[index] as MutableActorSnapshot | undefined;
+      if (snapshot === undefined) {
+        snapshot = { id, kind: "enemy", x: 0, y: 0, radius: 0, hp: 0, maxHp: 0,
+          dead: false, spawnT: 0, stun: 0 };
+        snapshots[index] = snapshot;
+      }
+      snapshot.id = id; snapshot.kind = actor.kind ?? "enemy"; snapshot.x = actor.x; snapshot.y = actor.y;
+      snapshot.radius = actor.radius ?? 0;
+      if (actor.color === undefined) delete snapshot.color; else snapshot.color = actor.color;
+      snapshot.hp = actor.hp ?? 0;
+      snapshot.maxHp = actor.maxHp ?? 0; snapshot.dead = actor.dead; snapshot.dying = !!actor.dying;
+      snapshot.spawnT = actor.spawnT ?? 0; snapshot.stun = legacyZero(actor.stun); snapshot.isBoss = !!actor.isBoss;
+      snapshot.isBomber = !!actor.isBomber;
+      if (actor.supportType === undefined) delete snapshot.supportType; else snapshot.supportType = actor.supportType;
+      if (actor.range === undefined) delete snapshot.range; else snapshot.range = actor.range;
+      snapshot.bondedId = bondedId;
+      if (actor.zones === undefined) delete snapshot.zones; else snapshot.zones = actor.zones;
+    }
+    snapshots.length = source.length;
+    return snapshots;
   }
 
   #patch(projectile: LiveCombatEntity | null, patch: ProjectilePatch | undefined, objects: Map<string, LiveCombatEntity>): void {

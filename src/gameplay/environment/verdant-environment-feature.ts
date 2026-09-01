@@ -85,6 +85,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       }
       this.#applyGraftEffects(environment, actor.id);
       const patternId = actor.state.bloomPattern; const arena = actor.state.arena;
+      this.#pruneDormantBloomPatterns(environment, actor.id, patternId);
       if (patternId !== null && patternId !== undefined && arena !== undefined) installRootboundBloomPattern(environment, { patternId, bossOwnerId: actor.id, startTick: tick, arenaWidth: arena.width, groundY: arena.groundY });
       this.#advanceCage(environment, actor, tick);
       this.#advanceRegrowth(environment, actor, tick);
@@ -120,6 +121,13 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
   #refresh(environment: EnvironmentFeatureContext, segment: EnvironmentCombatObjectState, actor: RootbinderEnvironmentActor, candidate: RootbinderCandidate, tick: number, seconds: number): boolean { if (segment.state === "destroyed" || segment.state === "expired") return false; const valid = isRootbinderLineValid({ worldId: environment.worldId, stageId: environment.stageId, targetWorldId: candidate.worldId, targetStageId: candidate.stageId, sourceX: actor.state.x, sourceY: actor.state.y, targetX: candidate.x, targetY: candidate.y, maxLength: actor.state.tuning.lineMaxLength }); if (!valid || candidate.dead || candidate.dying || candidate.geometryValid === false) { environment.cleanupCombatObject(segment.id, "natural-expiry", tick); return false; } environment.updateCombatObject(segment.id, { geometry: { x: actor.state.x, y: actor.state.y, points: [{ x: actor.state.x, y: actor.state.y }, { x: candidate.x, y: candidate.y }] } }); const edgeDistance = Math.max(0, Math.hypot(candidate.x - actor.state.x, candidate.y - actor.state.y) - actor.state.tuning.lineMaxLength * 0.75); if (edgeDistance === 0) this.#rootbinderRedistribution.delete(segment.id); if (edgeDistance > 0 && candidate.applyVelocity !== undefined) { const prior = this.#rootbinderRedistribution.get(segment.id); const result = redistributeRootNetworkKnockback({ x: candidate.x, y: candidate.y, vx: candidate.vx ?? 0, vy: candidate.vy ?? 0, weight: candidate.weight ?? 1, maxRedistribution: actor.state.tuning.maxNetworkRedistribution, edgeDistance, seconds, ...(prior === undefined ? {} : { appliedImpulseX: prior.x, appliedImpulseY: prior.y }), directionX: actor.state.x - candidate.x, directionY: actor.state.y - candidate.y }); candidate.applyVelocity(result.vx, result.vy); this.#rootbinderRedistribution.set(segment.id, Object.freeze({ x: result.appliedImpulseX, y: result.appliedImpulseY })); } return true; }
   #nextId(ownerId: string, kind: "network" | "leash"): string { const generation = (this.#rootbinderGenerations.get(ownerId) ?? 0) + 1; this.#rootbinderGenerations.set(ownerId, generation); return `${ownerId}:${kind}:g${String(generation)}`; }
   #prune(environment: EnvironmentFeatureContext, ownerId: string): void { for (const object of [...environment.combatObjects()]) if (object.kind === "root-link" && object.ownerId === ownerId && (object.state === "destroyed" || object.state === "expired")) environment.removeCombatObject(object.id); }
+  #pruneDormantBloomPatterns(environment: EnvironmentFeatureContext, ownerId: string, selectedPattern: RootboundBloomPatternId | null | undefined): void {
+    const selectedPrefix = selectedPattern === null || selectedPattern === undefined ? null : `bloom-well/rootbound/${selectedPattern}/`;
+    for (const field of [...environment.fields()]) {
+      if (!isBloomWellState(field) || field.variant !== "boss" || field.bossOwnerId !== ownerId || field.state !== "dormant") continue;
+      if (selectedPrefix === null || field.patternId?.startsWith(selectedPrefix) !== true) environment.removeField(field.id);
+    }
+  }
   #applyGraftEffects(environment: EnvironmentFeatureContext, ownerId: string): void {
     const actor = this.#rootboundActors?.().find((candidate) => candidate.id === ownerId);
     actor?.applyGraftEffects?.(resolveRootboundGraftEffects(environment.combatObjects(), ownerId));

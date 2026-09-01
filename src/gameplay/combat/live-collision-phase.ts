@@ -42,6 +42,7 @@ export interface LiveCollisionPhaseHost {
   readonly config: typeof GameConfiguration;
   readonly player: LivePlayer; readonly blade: LiveBlade; readonly run: LiveRun;
   readonly combat: CombatEntityRuntime; readonly width: number;
+  readonly reducedMotion?: () => boolean;
   readonly state: LiveCollisionPhaseState;
   readonly environment?: EnvironmentWeaponContactPort;
   readonly environmentTick?: () => number;
@@ -109,7 +110,8 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
   markFallenEnemies(state.enemies, config.view.h + 40); host.combat.resolveBomberDeaths(projectileTuning(host));
   for (const projectile of state.projectiles) if (projectile.dead) host.projectileExpired(projectile);
   const tail = finalizeCombatTick({ dt, enemies: state.enemies, projectiles: state.projectiles, floaters: state.floaters,
-    shake: state.shake, shakeDecay: config.juice.shakeDecay, player, run, hooks: tailHooks(host) });
+    shake: state.shake, shakeDecay: config.juice.shakeDecay, floaterMotionScale: host.reducedMotion?.() ? 0 : 1,
+    player, run, hooks: tailHooks(host) });
   state.enemies = tail.enemies as LiveEnemy[]; state.projectiles = tail.projectiles as LiveProjectile[];
   state.floaters = tail.floaters; state.shake = tail.shake;
   // Only now that the surviving lists are installed may training spawn onto them.
@@ -169,7 +171,8 @@ function runThrown(host: LiveCollisionPhaseHost): void {
     recordThrowAchievement: (enemy, pierces, damage) => { host.profileMax("maxDamageHit", Math.round(damage)); host.achievement("throw", enemy as LiveEnemy); host.profileMax("bladeBounces", pierces); },
     recordPierceKill: () => { host.profileMax("throwPierceKills", 1); host.checkAchievements(); },
     fireHit: (enemy) => { host.makeHitEvent(enemy as LiveEnemy, enemy.x, enemy.y); }, fireReturnHit: (enemy, damage) => { host.makeReturnEvent(enemy as LiveEnemy, damage); },
-    lobExplode: host.lobExplode });
+    lobExplode: host.lobExplode,
+    ...(host.effects.presentAttack === undefined ? {} : { presentAttack: (cue) => { host.effects.presentAttack?.(cue); } }) });
 }
 
 function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput["segment"]): void {

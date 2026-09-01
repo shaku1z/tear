@@ -60,7 +60,7 @@ export interface HeldBladeMods {
 }
 
 export interface HeldBladeRun {
-  mult: number; mods: HeldBladeMods; lifestealCd: number;
+  mult: number; mods: HeldBladeMods; lifestealCd: number; weaponId?: string;
   weaponStats: { heldHits: number; reversals: number; breakTriggers: number };
   _updraftChain?: number; _aldricSlams?: number;
 }
@@ -90,6 +90,7 @@ export interface HeldBladeCollisionEffects {
   shake(amount: number): void; zoom(amount: number): void; buzz(milliseconds: number): void;
   sound(name: "deflect" | "hit" | "slam" | "updraft" | "launch", big?: boolean): void;
   style(name: string): void; tutorial(name: "strike" | "airHit"): void;
+  presentAttack?(cue: AttackPresentationCue): void;
 }
 
 export interface HeldBladeCollisionHooks {
@@ -122,3 +123,4 @@ export interface HeldBladeCollisionInput {
   weaponSegmentContact(segment: BatonSegment, x1: number, y1: number, x2: number, y2: number): boolean;
   distance(x: number, y: number): number;
 }
+import type { AttackPresentationCue } from "./attack-presentation-cue";

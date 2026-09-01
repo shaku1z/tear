@@ -9,7 +9,7 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly screen: () => Screen;
   readonly previousScreen: () => Screen;
   readonly setPreviousScreen: (screen: Screen) => void;
-  readonly resize: () => void;
+  readonly resizeIfNeeded: () => void;
   readonly screenRectangle: () => ScreenRectangle;
   readonly touchActive: () => boolean;
   readonly cssPerLogicalPixel: () => number;
@@ -47,7 +47,7 @@ const worldScreens = new Set(["playing", "draft", "tierup", "paused", "gameover"
 
 /** Stable, testable ordering for the canvas presentation frame. */
 export function renderPresentationFrame<Screen extends string>(ports: RenderPipelinePorts<Screen>): void {
-  ports.resize();
+  ports.resizeIfNeeded();
   const overscan = ports.overscan();
   const scale = ports.canvas.width / (ports.logicalWidth + overscan.x * 2);
   ports.context.setTransform(scale, 0, 0, scale, overscan.x * scale, overscan.y * scale);
@@ -63,9 +63,12 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
     ports.context.translate(-ports.logicalWidth / 2, -ports.logicalHeight / 2);
   }
   const rectangle = ports.screenRectangle();
-  ports.context.clearRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
   const playLike = worldScreens.has(screen);
   const background = ports.background(playLike);
+  // This opaque full-surface fill replaces every pixel. A preceding clear
+  // doubles the high-DPI raster work and cannot affect the resulting image.
+  ports.context.globalAlpha = 1;
+  ports.context.globalCompositeOperation = "source-over";
   ports.context.fillStyle = background;
   ports.context.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
   ports.resetControls();

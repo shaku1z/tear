@@ -5,7 +5,7 @@ import { createEnvironmentRuntime } from "../../src/gameplay/environment/environ
 import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { GRAFT_ANCHOR_TIMING, GRAFT_ANCHOR_TYPES, isGraftAnchorState, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../src/gameplay/environment/graft-anchor";
 import { ROOTBOUND_GRAFT_ANCHOR_GEOMETRY, ROOTBOUND_MEMORY_CHOIR, ROOTBOUND_PHASE_TWO_CADENCE, type RootboundPhaseTwoAttack } from "../../src/gameplay/entities/enemy-types/rootbound";
-import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../src/gameplay/environment/bloom-well";
+import { BLOOM_WELL_TIMING, ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../src/gameplay/environment/bloom-well";
 import { ROOT_CAGE_GEOMETRY, ROOT_CAGE_TIMING, isRootCageState, type RootCagePlacementRequest } from "../../src/gameplay/environment/root-cage";
 import { createEnemyHarness } from "./enemy-test-harness";
 import { environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
@@ -190,6 +190,34 @@ describe("Rootbound Phase II Graft creation", () => {
     actor.bloomPatternIndex = 2;
     environment.step(242, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
     expect(environment.fields().filter((field) => field.patternId?.startsWith("bloom-well/rootbound/cage-route") === true)).toHaveLength(3);
+  });
+
+  it("prunes completed boss Bloom patterns after selection moves on without restarting the selected pattern", () => {
+    const harness = createEnemyHarness();
+    const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseTwoBoss;
+    actor.hp = actor.maxHp * 0.5;
+    actor.update(1 / 120, harness.platforms, harness.player, []);
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom-pruning" });
+    bindVerdantEnvironmentActors(environment, "rootbound", () => [Object.freeze({
+      id: "enemy:rootbound-live", source: actor,
+      state: Object.freeze({ stage: null, geometry: actor.rootlineGeometry(), damage: 0, cleanupReason: null,
+        bloomPattern: actor.bossBloomPattern(), arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }) }),
+    })]);
+
+    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    const firstPatternCompleteTick = 240 + 120 + BLOOM_WELL_TIMING.totalTicks;
+    environment.step(firstPatternCompleteTick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(environment.fields()).toHaveLength(2);
+    expect(environment.fields().every((field) => field.state === "dormant")).toBe(true);
+
+    actor.bloomPatternIndex = 1;
+    environment.step(firstPatternCompleteTick + 1, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(environment.fields()).toHaveLength(1);
+    expect(environment.fields()[0]).toMatchObject({ state: "warning", patternId: "bloom-well/rootbound/central-safe-lanes/1" });
+
+    environment.step(firstPatternCompleteTick + 2, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    expect(environment.fields()).toHaveLength(1);
+    expect(environment.fields()[0]).toMatchObject({ state: "warning", stateTick: firstPatternCompleteTick + 1 });
   });
 
   it("runs Memory Choir as three bounded boss-owned attack manifestations rather than enemy clones", () => {
@@ -399,7 +427,7 @@ describe("Rootbound Phase II Graft creation", () => {
       expect(actor.rootCagePlacement()).toBeNull();
       tick += 1;
     }
-    expect(environment.fields()).toHaveLength(6);
+    expect(environment.fields()).toHaveLength(5);
     expect(environment.combatObjects().filter(isRootCageState)).toHaveLength(2);
 
     const undersized = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-cap-negative",

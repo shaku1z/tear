@@ -16,15 +16,23 @@ const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
 });
 
 function freezeData(value: unknown): unknown {
-  if (Array.isArray(value)) return Object.freeze(value.map(freezeData));
+  if (Array.isArray(value)) {
+    const copy = new Array<unknown>(value.length);
+    for (let index = 0; index < value.length; index += 1) {
+      if (index in value) copy[index] = freezeData(value[index]);
+    }
+    return Object.freeze(copy);
+  }
   if (typeof value !== "object" || value === null) return value;
-  const copy = Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, freezeData(entry)]));
+  const source = value as Record<string, unknown>;
+  const copy: Record<string, unknown> = {};
+  for (const key of Object.keys(source)) copy[key] = freezeData(source[key]);
   return Object.freeze(copy);
 }
 
 /** Clone/freeze every data-only authored extension without teaching the kernel biome vocabulary. */
 function copyState<T extends EnvironmentFieldState | EnvironmentCombatObjectState | EnvironmentRouteState>(value: T): T {
-  return freezeData(structuredClone(value)) as T;
+  return freezeData(value) as T;
 }
 const copyField = (value: EnvironmentFieldState): EnvironmentFieldState => copyState(value);
 const copyCombatObject = (value: EnvironmentCombatObjectState): EnvironmentCombatObjectState => copyState(value);
@@ -51,6 +59,8 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   #routes: EnvironmentRouteState[] = [];
   #nextSequence = 1;
   #revision = 0;
+  #snapshotRevision = -1;
+  #snapshotCache: EnvironmentSnapshot | null = null;
   #lastClearReason: EnvironmentClearReason | null = null;
   readonly #validators: readonly EnvironmentObjectValidationPort[];
 
@@ -75,8 +85,15 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   routes(): readonly EnvironmentRouteState[] { return this.#routes; }
 
   snapshot(): EnvironmentSnapshot {
-    return Object.freeze({ worldId: this.worldId, stageId: this.#stageId, fields: Object.freeze(this.#fields.map(copyField)),
-      combatObjects: Object.freeze(this.#combatObjects.map(copyCombatObject)), routes: Object.freeze(this.#routes.map(copyRoute)) });
+    if (this.#snapshotCache !== null && this.#snapshotRevision === this.#revision) return this.#snapshotCache;
+    // Entries are copied and deeply frozen on admission/update. Snapshot only
+    // needs new owning arrays: later updates replace entries, so older snapshots
+    // retain their immutable objects without cloning every graph each revision.
+    const snapshot = Object.freeze({ worldId: this.worldId, stageId: this.#stageId, fields: Object.freeze([...this.#fields]),
+      combatObjects: Object.freeze([...this.#combatObjects]), routes: Object.freeze([...this.#routes]) });
+    this.#snapshotRevision = this.#revision;
+    this.#snapshotCache = snapshot;
+    return snapshot;
   }
 
   simulationView(): EnvironmentSimulationView {

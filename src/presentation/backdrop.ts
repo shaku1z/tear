@@ -39,6 +39,7 @@ export type Stage = (typeof StageValues)[number];
 export interface ViewRect { left: number; top: number; right: number; bottom: number }
 interface CameraPort { scale: number; cx: number; cy: number; ox: number; oy: number }
 interface Mote { x: number; y: number; z: number; r: number; ph: number; sp: number }
+type RGB = readonly [number, number, number];
 export interface BackdropCache { vign: HTMLCanvasElement; dark: boolean; parts: Mote[]; accent: string; _vw: number; _vh: number }
 interface MoteStyle { rgb?: string; dir?: number; glow?: boolean; twinkle?: boolean; drift?: number; aMul?: number; sizeMul?: number }
 interface PlatformPort {
@@ -65,7 +66,7 @@ export interface BackdropController {
   metrics(): BackdropPresentationMetrics;
   _cache: Partial<Record<Stage["id"], BackdropCache>>; _fx: BackdropEffect[];
   fillFull(context: CanvasRenderingContext2D, view?: ViewRect): void; resetFx(): void;
-  _rgb(hex?: string): [number, number, number]; _mix(a: string, b: string, amount: number): string;
+  _rgb(hex?: string): RGB; _mix(a: string, b: string, amount: number): string;
   _lighten(color: string, amount: number): string; _darken(color: string, amount: number): string;
   _rgba(hex: string, alpha: number): string; _rng(seed: number): () => number;
   _cellRand(x: number, y: number, salt: number): number;
@@ -117,6 +118,14 @@ export interface BiomeArt {
  */
 export function createBackdrop(policy: BackdropPolicy): BackdropController {
   const { accessibility, clock, config, createCanvas, graphics, overscan, performance, theme } = policy;
+  // Stage palettes repeat every frame. Keep these caches presentation-local and
+  // hard-bounded so identical CSS strings do not have to be parsed/formatted on
+  // every draw without turning transient effect colours into retained history.
+  const rgbCache = new Map<string, RGB>();
+  const mixCache = new Map<string, Map<string, Map<number, string>>>();
+  const rgbaCache = new Map<string, Map<number, string>>();
+  let mixedColorCount = 0, rgbaColorCount = 0;
+  const rgbLimit = 64, mixedColorLimit = 128, rgbaColorLimit = 128;
   return {
   get W() { return config.view.w; },
   get H() { return config.view.h; },
@@ -149,11 +158,46 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
   resetFx() { this._fx.length = 0; },
 
   // --- self-contained colour utils (game.js's blendCol is IIFE-local) ---
-  _rgb(hex) { hex = truthyString(hex, "#000").replace("#", ""); if (hex.length === 3) hex = hex.split("").map((c) => c + c).join(""); return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)]; },
-  _mix(a, b, t) { const x = this._rgb(a), y = this._rgb(b); return `rgb(${String(Math.round(lerp(x[0], y[0], t)))},${String(Math.round(lerp(x[1], y[1], t)))},${String(Math.round(lerp(x[2], y[2], t)))})`; },
+  _rgb(hex) {
+    const source = truthyString(hex, "#000"), cached = rgbCache.get(source);
+    if (cached) return cached;
+    let normalized = source.replace("#", "");
+    if (normalized.length === 3) normalized = normalized.split("").map((c) => c + c).join("");
+    const parsed = Object.freeze([parseInt(normalized.slice(0, 2), 16), parseInt(normalized.slice(2, 4), 16),
+      parseInt(normalized.slice(4, 6), 16)] as const);
+    if (rgbCache.size < rgbLimit) rgbCache.set(source, parsed);
+    return parsed;
+  },
+  _mix(a, b, t) {
+    const bySecond = mixCache.get(a), byAmount = bySecond?.get(b), cached = byAmount?.get(t);
+    if (cached !== undefined) return cached;
+    const x = this._rgb(a), y = this._rgb(b);
+    const mixed = `rgb(${String(Math.round(lerp(x[0], y[0], t)))},${String(Math.round(lerp(x[1], y[1], t)))},${String(Math.round(lerp(x[2], y[2], t)))})`;
+    if (mixedColorCount < mixedColorLimit) {
+      const targetBySecond = bySecond ?? new Map<string, Map<number, string>>();
+      if (!bySecond) mixCache.set(a, targetBySecond);
+      const targetByAmount = byAmount ?? new Map<number, string>();
+      if (!byAmount) targetBySecond.set(b, targetByAmount);
+      targetByAmount.set(t, mixed); mixedColorCount += 1;
+    }
+    return mixed;
+  },
   _lighten(c, t) { return this._mix(c, "#ffffff", t); },
   _darken(c, t) { return this._mix(c, "#000000", t); },
-  _rgba(hex, a) { const c = this._rgb(hex); return `rgba(${String(c[0])},${String(c[1])},${String(c[2])},${String(a)})`; },
+  _rgba(hex, a) {
+    // Cache authored hundredth-step alphas; continuous flare falloff remains
+    // uncached so animation cannot grow retained presentation state.
+    const authoredAlpha = Math.abs(a * 100 - Math.round(a * 100)) < 1e-9;
+    const byAlpha = authoredAlpha ? rgbaCache.get(hex) : undefined, cached = byAlpha?.get(a);
+    if (cached !== undefined) return cached;
+    const c = this._rgb(hex), rgba = `rgba(${String(c[0])},${String(c[1])},${String(c[2])},${String(a)})`;
+    if (authoredAlpha && rgbaColorCount < rgbaColorLimit) {
+      const target = byAlpha ?? new Map<number, string>();
+      if (!byAlpha) rgbaCache.set(hex, target);
+      target.set(a, rgba); rgbaColorCount += 1;
+    }
+    return rgba;
+  },
   _rng(seed) { let s = (seed >>> 0) || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; },
   // Allocation-free signed-cell hash.  Biome dressing uses it instead of frame
   // RNG, so easing the camera in/out only reveals more of the same world.
@@ -241,14 +285,14 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
     if (graphics.low) return;   // skip ambient motes on low-end
     ctx.save();
     if (s.glow) { ctx.shadowColor = `rgba(${rgb},0.9)`; ctx.shadowBlur = 8; }
+    const moteColor = `rgba(${rgb},1)`, sizeMultiplier = truthyNumber(s.sizeMul, 1);
+    ctx.fillStyle = moteColor;
     for (const p of c.parts) {
       const y = ((p.y - vt + dir * t * p.sp) % Hp + Hp) % Hp + vt - 40;
       let x = p.x - px * 38 * p.z + Math.sin(t * 0.3 + p.ph) * drift;
       x = ((x - vl) % Wp + Wp) % Wp + vl;
       const tw = s.twinkle ? (0.25 + 0.75 * Math.abs(Math.sin(t * 1.4 + p.ph))) : (0.45 + 0.55 * Math.sin(t * 0.6 + p.ph));
       ctx.globalAlpha = (c.dark ? 0.5 : 0.28) * p.z * tw * aMul;
-      ctx.fillStyle = `rgba(${rgb},1)`;
-      const sizeMultiplier = truthyNumber(s.sizeMul, 1);
       ctx.beginPath(); ctx.arc(x, y, p.r * p.z * sizeMultiplier, 0, 6.2832); ctx.fill();
     }
     ctx.globalAlpha = 1; ctx.restore();

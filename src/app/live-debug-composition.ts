@@ -8,6 +8,7 @@ import type { BossId } from "../gameplay/run/content-director";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import { installLiveDebugHarness } from "./live-debug-harness";
 import { auditLiveEffects, createLiveDebugSnapshot } from "./live-debug-snapshot";
+import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
 
 export interface LiveDebugCompositionOptions {
   readonly enabled: boolean;
@@ -18,6 +19,7 @@ export interface LiveDebugCompositionOptions {
   readonly cinema: Parameters<typeof installLiveDebugHarness>[0]["cinema"] &
     Readonly<{ id: string | undefined; beatId: string | undefined; elapsed: number }>;
   readonly stage: Parameters<typeof installLiveDebugHarness>[0]["stage"];
+  readonly environment: Pick<EnvironmentRuntimeState, "fields" | "combatObjects" | "routes">;
   readonly width: number;
   readonly height: number;
   readonly spawnExplicitVariant?: Parameters<typeof installLiveDebugHarness>[0]["spawnExplicitVariant"];
@@ -54,7 +56,8 @@ export function installLiveGameDebug(options: LiveDebugCompositionOptions): void
   const d = options.dependencies;
   installLiveDebugHarness({
     enabled: options.enabled, dependencies: d, entities: options.entities, state: options.state, lifecycle: options.lifecycle,
-    cinema: options.cinema, stage: options.stage, width: options.width, height: options.height,
+    cinema: options.cinema, stage: options.stage, environment: options.environment,
+    width: options.width, height: options.height,
     ...(options.spawnExplicitVariant === undefined ? {} : { spawnExplicitVariant: options.spawnExplicitVariant }),
     startRun: options.startRun, selectBoss: options.selectBoss, setScreen: options.setScreen, screen: options.screen,
     setContinueSeconds: options.setContinueSeconds, openDraft: options.openDraft, openTier: options.openTier,

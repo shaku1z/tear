@@ -21,10 +21,13 @@ function authoredDetails(value: Readonly<Record<string, unknown>>, excluded: Rea
 const FIELD_BASE = new Set(["id", "kind", "state", "geometry", "stateTick", "timer", "ownerId", "schedule", "eligibility", "force", "cleanupReason"]);
 const COMBAT_BASE = new Set(["id", "kind", "state", "geometry", "stateTick", "ownerId", "targetId", "integrity", "maxIntegrity", "counterplayTags", "procEligible", "damageDedupeId", "cleanupReason"]);
 const ROUTE_BASE = new Set(["id", "kind", "state", "points", "stateTick", "ownerId", "cleanupReason"]);
+const PRESENTATION_CACHE = new WeakMap<EnvironmentSnapshot, EnvironmentPresentationSnapshot>();
 
 /** Data-only environment view. It has no renderer, audio, DOM, or mutable runtime handles. */
 export function buildEnvironmentPresentationSnapshot(snapshot: EnvironmentSnapshot): EnvironmentPresentationSnapshot {
-  return Object.freeze({
+  const cached = Object.isFrozen(snapshot) ? PRESENTATION_CACHE.get(snapshot) : undefined;
+  if (cached !== undefined) return cached;
+  const presentation = Object.freeze({
     stageId: snapshot.stageId,
     fields: Object.freeze(snapshot.fields.map((field) => { const extension = field as unknown as Readonly<Record<string, unknown>>; return Object.freeze({
       id: field.id, kind: field.kind, state: field.state, active: field.state === "active", bounds: bounds(field.geometry),
@@ -40,4 +43,6 @@ export function buildEnvironmentPresentationSnapshot(snapshot: EnvironmentSnapsh
       ...authoredDetails(extension, ROUTE_BASE),
     }); })),
   });
+  if (Object.isFrozen(snapshot)) PRESENTATION_CACHE.set(snapshot, presentation);
+  return presentation;
 }

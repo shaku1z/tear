@@ -4,6 +4,7 @@ export interface HammerMeteorEnemy {
   vx: number; vy: number; stun: number; applyBreak?(amount: number): void;
 }
 export interface HammerMeteorBlade {
+  readonly attackId?: number; readonly swingId?: number; readonly throwId?: number;
   vx: number; vy: number; impactVX?: number | null; impactVY?: number | null;
   throwOrigin?: Readonly<{ x: number; y: number }> | null; throwDmg: number;
 }
@@ -27,6 +28,7 @@ export interface LiveHammerMeteorOptions {
   zoom(value: number): void;
   boom(): void;
   areaDamage(x: number, y: number, radius: number, damage: number): number;
+  presentAttack?(cue: AttackPresentationCue): void;
 }
 
 export function bindLiveHammerMeteor(options: LiveHammerMeteorOptions): (x: number, y: number) => void {
@@ -37,6 +39,13 @@ export function bindLiveHammerMeteor(options: LiveHammerMeteorOptions): (x: numb
     const travel = blade.throwOrigin ? options.distance(x - blade.throwOrigin.x, y - blade.throwOrigin.y) : 0;
     const commitment = options.clamp(impactSpeed / options.maximumThrowSpeed() + downward / 5000 +
       options.clamp(travel / 720, 0, 1) * 0.24, 0.55, 1.35);
+    options.presentAttack?.({ weaponId: "hammer", attackId: blade.attackId ?? blade.throwId ?? 0,
+      ...(blade.swingId === undefined ? {} : { swingId: blade.swingId }),
+      ...(blade.throwId === undefined ? {} : { throwId: blade.throwId }),
+      action: "impact", phase: "impact", variant: "meteor",
+      sourceX: blade.throwOrigin?.x ?? x, sourceY: blade.throwOrigin?.y ?? y,
+      x, y, directionX: horizontal, directionY: vertical,
+      normalX: 0, normalY: -1, material: "stone", intensity: options.clamp(commitment / 1.35, 0, 1) });
     options.explode(x, y, options.slamColor(), 1.25); options.shake(options.bigShake()); options.zoom(options.bigZoom()); options.boom();
     options.areaDamage(x, y, tuning.meteorRadius * commitment, Math.round(blade.throwDmg * 0.72 * commitment));
     for (const enemy of options.enemies()) {
@@ -53,3 +62,5 @@ export function bindLiveHammerMeteor(options: LiveHammerMeteorOptions): (x: numb
     options.ribbon(x, y, cluster.x, cluster.y, options.slamColor());
   };
 }
+
+import type { AttackPresentationCue } from "./attack-presentation-cue";

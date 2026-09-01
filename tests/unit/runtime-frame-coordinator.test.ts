@@ -89,8 +89,8 @@ describe("RuntimeFrameCoordinator", () => {
       "pad", "input", "prelude", "simulation", "clocks", "gameplay-start",
       "continue", "attract:false", "music", "render", "ui", "end-input",
     ]);
-    expect(harness.events.slice(-6)).toEqual([
-      "record:simulation", "record:render", "record:frame",
+    expect(harness.events.slice(-8)).toEqual([
+      "record:simulation", "record:render", "record:frame", "record:frameInterval", "record:outsideFrameWork",
       "gauge:enemies", "gauge:projectiles", "gauge:effects",
     ]);
     expect(harness.input.allowLock).toBe(true);

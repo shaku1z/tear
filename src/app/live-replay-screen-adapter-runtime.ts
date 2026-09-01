@@ -9,8 +9,10 @@ import { createReplayPuppet } from "../presentation/replay-puppet-factory";
 import { renderReplayWorldFrame } from "../presentation/replay-world-frame";
 import { buildReplayScreenSnapshot } from "../presentation/replay-snapshots";
 import { handleReplayTransport } from "./replay-transport-controller";
+import { AttackPresentationDirector } from "../presentation/combat/attack-presentation-director";
+import { decodeAttackPresentationEffect } from "../presentation/combat/attack-presentation-effect-codec";
 
-type Dependencies = Pick<GameRuntimeDependencies, "APP" | "Armored" | "Backdrop" | "Bomber" | "Charger" | "Chimera" |
+type Dependencies = Pick<GameRuntimeDependencies, "A11Y" | "APP" | "Armored" | "Backdrop" | "Bomber" | "Charger" | "Chimera" |
   "CONFIG" | "FX" | "Flyer" | "GFX" | "GHOST" | "Input" | "Ranged" | "Rootbinder" | "SAFE" | "STAGES" | "Support" | "THEME" |
   "UI" | "UPGRADES" | "VARIANTS" | "Wraith" | "applyVariant" | "stageAt" | "stagePlatforms">;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
@@ -53,6 +55,14 @@ function isVariantPuppet(value: unknown): value is VariantPuppet {
 export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServices): ReplayScreenAdapter {
   const d = services.dependencies;
   let context: ReplayContext | null = null;
+  const replayAttackPresentation = new AttackPresentationDirector({
+    scope: () => context, tick: () => Math.max(0, Math.round((d.GHOST.play?.t ?? 0) * 120)),
+    lowGraphics: () => d.GFX.low, reducedMotion: () => d.A11Y.reducedMotion,
+    highContrast: () => d.A11Y.highContrast, contrastColor: () => d.THEME.ink,
+    edgeTrace: (...args) => { d.FX.edgeTrace(...args); }, contactMark: (...args) => { d.FX.contactMark(...args); },
+    groundPulse: (...args) => { d.FX.groundPulse(...args); }, muzzleWedge: (...args) => { d.FX.muzzleWedge(...args); },
+    burst: (...args) => { d.FX.burst(...args); },
+  });
   const supportKind = (kind: string): "anchor" | "priest" | "herald" | "mender" =>
     kind === "anchor" || kind === "herald" || kind === "mender" ? kind : "priest";
   const puppetFor = (spawn: VisualSpawnEvent): ReplayPuppet | null => createReplayPuppet<VariantPuppet, GameRuntimeDependencies["VARIANTS"][string][number]>(spawn, {
@@ -80,7 +90,12 @@ export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServi
       platforms: replay.platforms, platformIsFloor: (platform) => "floor" in platform && platform.floor, backdrop: d.Backdrop, effects: d.FX,
       ghost: d.GHOST, ...(pose === null ? {} : { pose }), puppets: replay.puppets, createPuppet: puppetFor,
       fallbackPlayer: services.fallbackPlayer(), themeInk: d.THEME.ink, perfectColor: d.CONFIG.colors.perfect,
-      slamColor: d.CONFIG.colors.slam, lowGraphics: d.GFX.low, time: services.time(), deltaSeconds: services.deltaSeconds() });
+      slamColor: d.CONFIG.colors.slam, lowGraphics: d.GFX.low, time: services.time(), deltaSeconds: services.deltaSeconds(),
+      presentAttack: (effect, x, y, attackId) => {
+        const cue = decodeAttackPresentationEffect(effect, x, y, attackId);
+        if (cue === null) return false;
+        replayAttackPresentation.emit(cue); return true;
+      } });
     const modeId = String(data.mode), mode = d.CONFIG.modes.find((entry) => entry.id === modeId)?.label ?? modeId;
     const playback = d.GHOST.play, duration = d.GHOST.duration(); if (playback === null) return;
     const scrubY = services.height - 96 - d.SAFE.b, scrubX = 220 + d.SAFE.l;

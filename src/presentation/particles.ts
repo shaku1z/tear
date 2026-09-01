@@ -2,10 +2,15 @@
 import { clamp } from "../domain/geometry";
 
 interface ViewRect { left: number; top: number; right: number; bottom: number }
-interface ParticleBase { type: string; x: number; y: number; life: number; max: number; col?: string | null; critical?: boolean }
+export type EffectPriority = "cosmetic" | "combat" | "hazard";
+interface ParticleBase { type: string; x: number; y: number; life: number; max: number; col?: string | null; priority?: EffectPriority }
 interface SparkParticle extends ParticleBase { type: "spark"; vx: number; vy: number }
 interface RingParticle extends ParticleBase { type: "ring"; r: number }
 interface RibbonParticle extends ParticleBase { type: "ribbon"; x1: number; y1: number }
+interface EdgeTraceParticle extends ParticleBase { type: "edgeTrace"; x1: number; y1: number; thickness: number }
+interface ContactMarkParticle extends ParticleBase { type: "contactMark"; tx: number; ty: number; length: number; thickness: number }
+interface GroundPulseParticle extends ParticleBase { type: "groundPulse"; nx: number; ny: number; halfWidth: number }
+interface MuzzleWedgeParticle extends ParticleBase { type: "muzzleWedge"; dx: number; dy: number; length: number; halfWidth: number }
 interface ShardParticle extends ParticleBase { type: "shard"; vx: number; vy: number; rot: number; spin: number; size: number }
 interface FlashParticle extends ParticleBase { type: "flash"; r: number }
 interface ShockParticle extends ParticleBase { type: "shock"; r: number; vr: number; thick: number }
@@ -13,7 +18,9 @@ interface SmokeParticle extends ParticleBase { type: "smoke"; vx: number; vy: nu
 interface GhostParticle extends ParticleBase { type: "ghost"; hw: number; hh: number }
 interface EmberParticle extends ParticleBase { type: "ember"; vx: number; vy: number; size: number }
 interface DripParticle extends ParticleBase { type: "drip"; vx: number; vy: number; size: number }
-type Particle = SparkParticle | RingParticle | RibbonParticle | ShardParticle | FlashParticle | ShockParticle | SmokeParticle | GhostParticle | EmberParticle | DripParticle;
+type Particle = SparkParticle | RingParticle | RibbonParticle | EdgeTraceParticle | ContactMarkParticle
+  | GroundPulseParticle | MuzzleWedgeParticle | ShardParticle | FlashParticle | ShockParticle
+  | SmokeParticle | GhostParticle | EmberParticle | DripParticle;
 
 export type ParticleEmissionDisposition = "emitted" | "culled" | "budget";
 
@@ -62,15 +69,19 @@ function emissionReceipt(
 export interface ParticleSystem {
   list: Particle[];
   view: ViewRect | null;
-  _criticalCursor: number;
+  _replacementCursor: number;
   reset(): void;
   setViewRect(view: ViewRect | null): void;
   _visible(particle: Particle, extra: number): boolean;
-  _emit(particle: Particle, critical: boolean): ParticleEmissionDisposition;
+  _emit(particle: Particle, priority: EffectPriority): ParticleEmissionDisposition;
   spark(x: number, y: number, dirX: number, dirY: number, color?: string): ParticleEmissionDisposition;
   burst(x: number, y: number, dirX: number, dirY: number, count: number, color?: string): ParticleEmissionReceipt;
   ring(x: number, y: number, radius?: number, color?: string): ParticleEmissionReceipt;
   ribbon(x0: number, y0: number, x1: number, y1: number, color?: string): void;
+  edgeTrace(x0: number, y0: number, x1: number, y1: number, thickness: number, life: number, color: string): void;
+  contactMark(x: number, y: number, tangentX: number, tangentY: number, length: number, thickness: number, life: number, color: string): void;
+  groundPulse(x: number, y: number, normalX: number, normalY: number, halfWidth: number, life: number, color: string): void;
+  muzzleWedge(x: number, y: number, directionX: number, directionY: number, length: number, halfWidth: number, life: number, color: string): void;
   shard(x: number, y: number, color?: string): void;
   death(x: number, y: number, count?: number, color?: string): void;
   flash(x: number, y: number, radius?: number, color?: string): void;
@@ -96,9 +107,9 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
   return {
     list: [],
     view: null,
-    _criticalCursor: 0,
+    _replacementCursor: 0,
 
-    reset() { this.list.length = 0; this.view = null; this._criticalCursor = 0; },
+    reset() { this.list.length = 0; this.view = null; this._replacementCursor = 0; },
     setViewRect(view) {
       if (!view) { this.view = null; return; }
       this.view ??= { left: 0, top: 0, right: 0, bottom: 0 };
@@ -107,24 +118,34 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
     _visible(p, extra) {
       if (!this.view) return true;
       const radius = "r" in p ? p.r : "size" in p ? p.size : 0;
-      const endX = p.type === "ribbon" ? p.x1 : p.x;
-      const endY = p.type === "ribbon" ? p.y1 : p.y;
-      const m = extra + radius, x0 = Math.min(p.x, endX), x1 = Math.max(p.x, endX);
+      let endX = p.x, endY = p.y, primitiveRadius = radius;
+      if (p.type === "ribbon" || p.type === "edgeTrace") { endX = p.x1; endY = p.y1; }
+      else if (p.type === "contactMark") primitiveRadius = Math.max(primitiveRadius, p.length * 0.5);
+      else if (p.type === "groundPulse") primitiveRadius = Math.max(primitiveRadius, p.halfWidth);
+      else if (p.type === "muzzleWedge") {
+        endX = p.x + p.dx * p.length; endY = p.y + p.dy * p.length;
+        primitiveRadius = Math.max(primitiveRadius, p.halfWidth);
+      }
+      const m = extra + primitiveRadius, x0 = Math.min(p.x, endX), x1 = Math.max(p.x, endX);
       const y0 = Math.min(p.y, endY), y1 = Math.max(p.y, endY);
       return x1 + m >= this.view.left && x0 - m <= this.view.right && y1 + m >= this.view.top && y0 - m <= this.view.bottom;
     },
-    _emit(p, critical) {
+    _emit(p, priority) {
       const E = policy.effects, budget = policy.lowGraphics() ? E.lowBudget : E.highBudget;
       if (!this._visible(p, E.cullMargin)) return "culled";
-      p.critical = critical;
+      p.priority = priority;
       if (this.list.length >= budget) {
-        if (!critical) return "budget";
         let replace = -1;
-        for (let i = 0; i < this.list.length; i++) {
-          const particle = this.list[i];
-          if (particle && !particle.critical) { replace = i; break; }
+        const incomingRank = priority === "hazard" ? 2 : priority === "combat" ? 1 : 0;
+        for (let offset = 0; offset < this.list.length; offset++) {
+          const index = (this._replacementCursor + offset) % this.list.length;
+          const particle = this.list[index];
+          const existing = particle?.priority ?? "cosmetic";
+          const existingRank = existing === "hazard" ? 2 : existing === "combat" ? 1 : 0;
+          if (existingRank < incomingRank) { replace = index; break; }
         }
-        if (replace < 0) replace = this._criticalCursor++ % this.list.length;
+        if (replace < 0) return "budget";
+        this._replacementCursor = (replace + 1) % this.list.length;
         this.list[replace] = p; return "emitted";
       }
       this.list.push(p); return "emitted";
@@ -138,7 +159,7 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
         vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
         col: col ?? "#000",
         life: 0.22 + policy.random() * 0.12, max: 0.34,
-      }, false);
+      }, "cosmetic");
     },
 
     burst(x, y, dirX, dirY, n, col) {
@@ -156,13 +177,40 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
 
     ring(x, y, r0, col) {
       const before = this.list.length;
-      const result = this._emit({ type: "ring", x, y, r: r0 ?? 6, col: col ?? "#000", life: 0.32, max: 0.32 }, false);
+      const result = this._emit({ type: "ring", x, y, r: r0 ?? 6, col: col ?? "#000", life: 0.32, max: 0.32 }, "cosmetic");
       return emissionReceipt(1, result === "emitted" ? 1 : 0, result === "culled" ? 1 : 0,
         result === "budget" ? 1 : 0, this.list.length - before);
     },
 
     ribbon(x0, y0, x1, y1, col) {
-      this._emit({ type: "ribbon", x: x0, y: y0, x1, y1, col: col ?? "#ff8a1e", life: 0.34, max: 0.34 }, true);
+      this._emit({ type: "ribbon", x: x0, y: y0, x1, y1, col: col ?? "#ff8a1e", life: 0.34, max: 0.34 }, "combat");
+    },
+
+    edgeTrace(x0, y0, x1, y1, thickness, life, col) {
+      const duration = clamp(life, 0.04, 0.2);
+      this._emit({ type: "edgeTrace", x: x0, y: y0, x1, y1,
+        thickness: clamp(thickness, 1, 8), col, life: duration, max: duration }, "combat");
+    },
+
+    contactMark(x, y, tangentX, tangentY, length, thickness, life, col) {
+      const magnitude = Math.hypot(tangentX, tangentY) || 1;
+      const duration = clamp(life, 0.04, 0.14);
+      this._emit({ type: "contactMark", x, y, tx: tangentX / magnitude, ty: tangentY / magnitude,
+        length: clamp(length, 4, 32), thickness: clamp(thickness, 1, 6), col, life: duration, max: duration }, "combat");
+    },
+
+    groundPulse(x, y, normalX, normalY, halfWidth, life, col) {
+      const magnitude = Math.hypot(normalX, normalY) || 1;
+      const duration = clamp(life, 0.08, 0.22);
+      this._emit({ type: "groundPulse", x, y, nx: normalX / magnitude, ny: normalY / magnitude,
+        halfWidth: clamp(halfWidth, 8, 40), col, life: duration, max: duration }, "combat");
+    },
+
+    muzzleWedge(x, y, directionX, directionY, length, halfWidth, life, col) {
+      const magnitude = Math.hypot(directionX, directionY) || 1;
+      const duration = clamp(life, 0.035, 0.1);
+      this._emit({ type: "muzzleWedge", x, y, dx: directionX / magnitude, dy: directionY / magnitude,
+        length: clamp(length, 8, 32), halfWidth: clamp(halfWidth, 2, 8), col, life: duration, max: duration }, "combat");
     },
 
     // a spinning shard (used for enemy death shatter)
@@ -175,7 +223,7 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
         rot: policy.random() * Math.PI, spin: (policy.random() - 0.5) * 18,
         size: 5 + policy.random() * 7, col: col ?? "#000",
         life: 0.4 + policy.random() * 0.25, max: 0.65,
-      }, false);
+      }, "cosmetic");
     },
 
     death(x, y, n, col) {
@@ -185,13 +233,13 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
     },
 
     // ---- explosion kit: a bright flash, expanding shockwave rings, smoke ----
-    flash(x, y, r, col) { this._emit({ type: "flash", x, y, r: r ?? 50, col: col ?? "#fff", life: 0.18, max: 0.18 }, true); },
+    flash(x, y, r, col) { this._emit({ type: "flash", x, y, r: r ?? 50, col: col ?? "#fff", life: 0.18, max: 0.18 }, "combat"); },
     shockwave(x, y, r0, col, maxR, thick) {
       const life = 0.42, radius = r0 ?? 10;
-      this._emit({ type: "shock", x, y, r: radius, vr: ((maxR ?? 160) - radius) / life, col: col ?? "#fff", thick: thick ?? 6, life, max: life }, true);
+      this._emit({ type: "shock", x, y, r: radius, vr: ((maxR ?? 160) - radius) / life, col: col ?? "#fff", thick: thick ?? 6, life, max: life }, "combat");
     },
     smoke(x, y, col) {
-      this._emit({ type: "smoke", x: x + (policy.random() - 0.5) * 16, y, vx: (policy.random() - 0.5) * 40, vy: -30 - policy.random() * 55, size: 9 + policy.random() * 13, col: col ?? "#33323a", life: 0.5 + policy.random() * 0.45, max: 0.95 }, false);
+      this._emit({ type: "smoke", x: x + (policy.random() - 0.5) * 16, y, vx: (policy.random() - 0.5) * 40, vy: -30 - policy.random() * 55, size: 9 + policy.random() * 13, col: col ?? "#33323a", life: 0.5 + policy.random() * 0.45, max: 0.95 }, "cosmetic");
     },
     // a full explosion: flash core + double shockwave + sparks + shards + embers + smoke.
     explode(x, y, col, scale) {
@@ -207,7 +255,7 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
 
     // a fading silhouette (dash afterimage). col tints it (e.g. fire for Cinder Trail)
     ghost(x, y, hw, hh, col) {
-      this._emit({ type: "ghost", x, y, hw, hh, col: col ?? null, life: 0.22, max: 0.22 }, false);
+      this._emit({ type: "ghost", x, y, hw, hh, col: col ?? null, life: 0.22, max: 0.22 }, "cosmetic");
     },
 
     // a rising, flickering fire ember (burn / flame dash)
@@ -217,7 +265,7 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
         vx: (policy.random() - 0.5) * 50, vy: -70 - policy.random() * 120,
         col: col ?? (policy.random() < 0.5 ? "#ff8a1e" : "#ffd23e"),
         size: 2.5 + policy.random() * 3.5, life: 0.35 + policy.random() * 0.35, max: 0.7,
-      }, false);
+      }, "cosmetic");
     },
 
     // a falling blood drip (bleed)
@@ -226,7 +274,7 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
         type: "drip", x: x + (policy.random() - 0.5) * 10, y,
         vx: (policy.random() - 0.5) * 36, vy: 20 + policy.random() * 70,
         col: col ?? "#b81d1d", size: 3 + policy.random() * 3, life: 0.45 + policy.random() * 0.3, max: 0.75,
-      }, false);
+      }, "cosmetic");
     },
 
     update(dt) {
@@ -285,6 +333,35 @@ function createParticleSystem(policy: ParticleSystemPolicy): ParticleSystem {
           const mx = (p.x + p.x1) * 0.5, my = Math.min(p.y, p.y1) - 55 * (1 - a * 0.35);
           ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(mx, my, p.x1, p.y1); ctx.stroke();
           ctx.globalAlpha = a * 0.72; ctx.strokeStyle = "#fff1c2"; ctx.lineWidth = 1.5; ctx.stroke();
+        } else if (p.type === "edgeTrace") {
+          const dx = p.x1 - p.x, dy = p.y1 - p.y, magnitude = Math.hypot(dx, dy) || 1;
+          const nx = -dy / magnitude, ny = dx / magnitude, startWidth = p.thickness * 0.2, endWidth = p.thickness * 0.5;
+          ctx.save(); ctx.globalAlpha = a * 0.72; ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.moveTo(p.x + nx * startWidth, p.y + ny * startWidth);
+          ctx.lineTo(p.x1 + nx * endWidth, p.y1 + ny * endWidth);
+          ctx.lineTo(p.x1 - nx * endWidth, p.y1 - ny * endWidth);
+          ctx.lineTo(p.x - nx * startWidth, p.y - ny * startWidth);
+          ctx.closePath(); ctx.fill(); ctx.restore();
+        } else if (p.type === "contactMark") {
+          const half = p.length * 0.5;
+          ctx.save(); ctx.globalAlpha = a * 0.82; ctx.strokeStyle = col;
+          ctx.lineWidth = Math.max(1, p.thickness * (0.55 + a * 0.45)); ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(p.x - p.tx * half, p.y - p.ty * half);
+          ctx.lineTo(p.x + p.tx * half, p.y + p.ty * half); ctx.stroke(); ctx.restore();
+        } else if (p.type === "groundPulse") {
+          const progress = 1 - a, width = p.halfWidth * (0.35 + progress * 0.65);
+          const tx = -p.ny, ty = p.nx;
+          ctx.save(); ctx.globalAlpha = a * 0.65; ctx.strokeStyle = col;
+          ctx.lineWidth = 1 + a * 4; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(p.x - tx * width, p.y - ty * width);
+          ctx.lineTo(p.x + tx * width, p.y + ty * width); ctx.stroke(); ctx.restore();
+        } else if (p.type === "muzzleWedge") {
+          const tx = -p.dy, ty = p.dx, tipX = p.x + p.dx * p.length, tipY = p.y + p.dy * p.length;
+          ctx.save(); ctx.globalAlpha = a * 0.78; ctx.fillStyle = col;
+          ctx.beginPath(); ctx.moveTo(p.x + tx * p.halfWidth, p.y + ty * p.halfWidth);
+          ctx.lineTo(tipX, tipY); ctx.lineTo(p.x - tx * p.halfWidth, p.y - ty * p.halfWidth);
+          ctx.closePath(); ctx.fill(); ctx.restore();
         } else if (p.type === "shard") {
           ctx.save();
           ctx.translate(p.x, p.y);

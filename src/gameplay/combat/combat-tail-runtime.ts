@@ -35,7 +35,7 @@ export function runTrainingTick(mode: string, dt: number, hooks: TrainingTickHoo
 }
 export interface CombatCleanupInput {
   dt: number; enemies: readonly TailEnemy[]; projectiles: readonly TailProjectile[]; floaters: readonly TailFloater[];
-  shake: number; shakeDecay: number; player: TailPlayer; run: TailRun; hooks: CombatCleanupHooks;
+  shake: number; shakeDecay: number; floaterMotionScale?: number; player: TailPlayer; run: TailRun; hooks: CombatCleanupHooks;
 }
 export interface CombatCleanupResult {
   enemies: TailEnemy[]; projectiles: TailProjectile[]; floaters: TailFloater[]; shake: number;
@@ -58,7 +58,8 @@ export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResu
   const enemies = input.enemies.filter((enemy) => !enemy.dead);
   const projectiles = input.projectiles.filter((projectile) => !projectile.dead);
   for (const projectile of projectiles) projectile.update(dt);
-  for (const floater of input.floaters) { floater.y -= 30 * dt; floater.life -= dt; }
+  const floaterMotionScale = input.floaterMotionScale ?? 1;
+  for (const floater of input.floaters) { floater.y -= 30 * dt * floaterMotionScale; floater.life -= dt; }
   const floaters = input.floaters.filter((floater) => floater.life > 0);
   const shake = input.shake > 0 ? Math.max(0, input.shake - input.shakeDecay * dt) : input.shake;
   run.runTime += dt; run.waveTime += dt; hooks.updateTrick(dt);

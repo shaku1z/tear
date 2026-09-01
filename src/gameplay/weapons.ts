@@ -226,6 +226,7 @@ const WEAPONS: readonly WeaponDefinition[] = [
     onThrowLaunch(ctx) { ctx.blade._launchWheelCut(); },
     updateThrown(ctx) { ctx.blade._updateWheelCut(ctx.dt, ctx.player, ctx.platforms); },
     onThrowHit(ctx) { const config = contextConfig(ctx); return { mechanic: ctx.secondary ? "wheelReturn" : "wheelCut", damageMult: ctx.secondary ? config.weapons.greatsword.wheelReturnMult : 1 }; },
+    onWorldImpact() { return { mechanic: "wheelCut" }; },
     onSecondaryThrowAction(ctx) { return ctx.blade._beginReturn(ctx.player, { retrace: false }); },
   },
   {

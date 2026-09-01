@@ -9,20 +9,24 @@ type OpeningValues = Pick<LiveOpeningPhaseHost,
 type OpeningActions = Omit<LiveOpeningPhaseHost, keyof OpeningValues | "state">;
 type CollisionValues = Pick<LiveCollisionPhaseHost, "player" | "blade" | "run" | "width">;
 type CollisionActions = Omit<LiveCollisionPhaseHost, keyof CollisionValues | "state" | "combat">;
+type ValuePort<T> = { readonly [Key in keyof T]: () => T[Key] };
 
 export interface LiveCombatAdapterContext {
   readonly entities: CombatEntityRuntimeHooks;
   readonly opening: Readonly<{
-    values(): OpeningValues;
+    values: ValuePort<OpeningValues>;
     actions: OpeningActions;
-    readState(): LiveOpeningState;
-    writeState(state: LiveOpeningState): void;
+    state: LiveOpeningState;
   }>;
   readonly collision: Readonly<{
-    values(): CollisionValues;
+    values: ValuePort<CollisionValues>;
     actions: CollisionActions;
-    readState(): LiveCollisionPhaseState;
-    writeState(state: LiveCollisionPhaseState): void;
+    /**
+     * Stable field-backed view of the owning world's collision state. The
+     * fields stay live, but reading one field must not materialize the full
+     * state or rewrite unrelated collections.
+     */
+    state: LiveCollisionPhaseState;
   }>;
   readonly kill: LiveKillHost;
 }
@@ -34,36 +38,63 @@ export interface LiveCombatAdapters {
   readonly kill: LiveKillHost;
 }
 
+export interface LiveCollisionStatePort {
+  readonly hitStop: () => number; readonly setHitStop: (value: number) => void;
+  readonly slowMotion: () => number; readonly setSlowMotion: (value: number) => void;
+  readonly shake: () => number; readonly setShake: (value: number) => void;
+  readonly enemies: () => LiveCollisionPhaseState["enemies"];
+  readonly setEnemies: (value: LiveCollisionPhaseState["enemies"]) => void;
+  readonly projectiles: () => LiveCollisionPhaseState["projectiles"];
+  readonly setProjectiles: (value: LiveCollisionPhaseState["projectiles"]) => void;
+  readonly floaters: () => LiveCollisionPhaseState["floaters"];
+  readonly setFloaters: (value: LiveCollisionPhaseState["floaters"]) => void;
+}
+
+/** Creates one allocation-stable mutable view over independently owned fields. */
+export function createLiveCollisionStateView(port: LiveCollisionStatePort): LiveCollisionPhaseState {
+  return Object.defineProperties({} as LiveCollisionPhaseState, {
+    hitStop: field(port.hitStop, port.setHitStop),
+    slowMotion: field(port.slowMotion, port.setSlowMotion),
+    shake: field(port.shake, port.setShake),
+    enemies: field(port.enemies, port.setEnemies),
+    projectiles: field(port.projectiles, port.setProjectiles),
+    floaters: field(port.floaters, port.setFloaters),
+  });
+}
+
 /**
  * Owns the mutable legacy state adapters at the strict-runtime boundary. Values
  * are read lazily so replacing a run, player, blade, or entity array never
  * leaves the fixed-step host holding a stale snapshot.
  */
 export function createLiveCombatAdapters(context: LiveCombatAdapterContext): LiveCombatAdapters {
-  const openingState = stateProxy(context.opening.readState, context.opening.writeState);
-  const collisionState = stateProxy(context.collision.readState, context.collision.writeState);
-  const opening = Object.defineProperties({ ...context.opening.actions, state: openingState }, {
-    player: lazy(() => context.opening.values().player),
-    blade: lazy(() => context.opening.values().blade),
-    run: lazy(() => context.opening.values().run),
-    enemies: lazy(() => context.opening.values().enemies),
-    projectiles: lazy(() => context.opening.values().projectiles),
-    platforms: lazy(() => context.opening.values().platforms),
-    width: lazy(() => context.opening.values().width),
-    blocking: lazy(() => context.opening.values().blocking),
-    playerMode: lazy(() => context.opening.values().playerMode),
-    protection: lazy(() => context.opening.values().protection),
-    lowGraphics: lazy(() => context.opening.values().lowGraphics),
-    transformationBlocked: lazy(() => context.opening.values().transformationBlocked),
+  let collisionOwner: CombatEntityRuntime | null = null;
+  let collisionHost: LiveCollisionPhaseHost | null = null;
+  const opening = Object.defineProperties({ ...context.opening.actions, state: context.opening.state }, {
+    player: lazy(context.opening.values.player),
+    blade: lazy(context.opening.values.blade),
+    run: lazy(context.opening.values.run),
+    enemies: lazy(context.opening.values.enemies),
+    projectiles: lazy(context.opening.values.projectiles),
+    platforms: lazy(context.opening.values.platforms),
+    width: lazy(context.opening.values.width),
+    blocking: lazy(context.opening.values.blocking),
+    playerMode: lazy(context.opening.values.playerMode),
+    protection: lazy(context.opening.values.protection),
+    lowGraphics: lazy(context.opening.values.lowGraphics),
+    transformationBlocked: lazy(context.opening.values.transformationBlocked),
   }) as LiveOpeningPhaseHost;
   return Object.freeze({ entities: context.entities, opening,
     collisionFor(combat: CombatEntityRuntime): LiveCollisionPhaseHost {
-      return Object.defineProperties({ ...context.collision.actions, state: collisionState, combat }, {
-        player: lazy(() => context.collision.values().player),
-        blade: lazy(() => context.collision.values().blade),
-        run: lazy(() => context.collision.values().run),
-        width: lazy(() => context.collision.values().width),
+      if (collisionHost !== null && collisionOwner === combat) return collisionHost;
+      collisionOwner = combat;
+      collisionHost = Object.defineProperties({ ...context.collision.actions, state: context.collision.state, combat }, {
+        player: lazy(context.collision.values.player),
+        blade: lazy(context.collision.values.blade),
+        run: lazy(context.collision.values.run),
+        width: lazy(context.collision.values.width),
       }) as LiveCollisionPhaseHost;
+      return collisionHost;
     },
     kill: context.kill });
 }
@@ -72,14 +103,6 @@ function lazy(get: () => unknown): PropertyDescriptor {
   return { configurable: false, enumerable: true, get };
 }
 
-function stateProxy<T extends object>(read: () => T, write: (state: T) => void): T {
-  return new Proxy({} as T, {
-    get(_target, key) { return Reflect.get(read(), key); },
-    set(_target, key, value) {
-      const current = read();
-      Reflect.set(current, key, value);
-      write(current);
-      return true;
-    },
-  });
+function field<T>(get: () => T, set: (value: T) => void): PropertyDescriptor {
+  return { configurable: false, enumerable: true, get, set };
 }

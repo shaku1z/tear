@@ -17,7 +17,8 @@ interface MusicObservationOptions {
   readonly enemies: () => readonly GameEnemy[];
   readonly projectiles: () => readonly GameProjectile[];
   readonly bossIntro: () => Readonly<{ boss: GameEnemy }> | null;
-  readonly stage: () => Readonly<{ name: string | null; index: number }>;
+  readonly stageName: () => string | null;
+  readonly stageIndex: () => number;
   readonly totalWaves: (mode: GameRun["mode"]) => number;
   readonly waveActive: () => boolean;
   readonly runPhase: () => string;
@@ -29,16 +30,14 @@ export function createLiveMusicObservation(options: MusicObservationOptions): ()
   return () => {
     const active = options.run(), run = projectLiveMusicRun(active);
     const enemies = options.enemies();
-    const actors = enemies.map((enemy) => ({ dead: enemy.dead, dying: enemy.dying,
-      ...(enemy.isBoss === undefined ? {} : { isBoss: enemy.isBoss }),
-      ...(typeof enemy.bossId === "string" ? { bossId: enemy.bossId } : {}),
-      hp: enemy.hp, maxHp: enemy.maxHp, phaseMarks: enemy.phaseMarks }));
-    const intro = options.bossIntro(), introIndex = intro === null ? -1 : enemies.indexOf(intro.boss);
-    const stage = options.stage();
-    return { director: options.director, appState: options.appState(), run, player: options.player() ?? null, actors,
-      projectiles: options.projectiles().map((projectile) => ({ dead: projectile.dead })), stageName: stage.name,
-      stageIndex: stage.index, totalWaves: options.totalWaves(active?.mode ?? "endless"), waveActive: options.waveActive(),
+    const intro = options.bossIntro();
+    // The music director only reads these structural views synchronously. Pass
+    // the owned collections through instead of cloning every actor/projectile
+    // on every display frame.
+    return { director: options.director, appState: options.appState(), run, player: options.player() ?? null,
+      actors: enemies, projectiles: options.projectiles(), stageName: options.stageName(),
+      stageIndex: options.stageIndex(), totalWaves: options.totalWaves(active?.mode ?? "endless"), waveActive: options.waveActive(),
       runPhase: options.runPhase(), topComboThreshold: options.topComboThreshold(),
-      bossIntroActor: introIndex < 0 ? null : actors[introIndex] ?? null };
+      bossIntroActor: intro?.boss ?? null };
   };
 }

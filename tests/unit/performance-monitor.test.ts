@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { PerformanceMonitor } from "../../src/diagnostics/performance-monitor";
 
 describe("PerformanceMonitor", () => {
   it("keeps bounded percentile samples and long-task counts", () => {
     const monitor = new PerformanceMonitor(4);
-    for (const value of [1, 2, 3, 100, 4]) monitor.record("frame", value);
+    for (const value of [100, 1, 2, 3, 4]) monitor.record("frame", value);
     const snapshot = monitor.snapshot();
-    expect(snapshot.frame).toEqual({ samples: 4, p50Ms: 3, p95Ms: 100, maxMs: 100 });
+    expect(snapshot.frame).toEqual({ samples: 4, p50Ms: 2, p95Ms: 4, p99Ms: 4, maxMs: 100 });
     expect(snapshot.longTasks).toBe(1);
   });
 
@@ -30,8 +31,25 @@ describe("PerformanceMonitor", () => {
     expect(monitor.snapshot()).toMatchObject({
       simulation: { samples: 0 },
       frame: { samples: 0 },
+      frameInterval: { samples: 0 },
+      outsideFrameWork: { samples: 0 },
       longTasks: 1,
       gauges: { enemies: 8 },
     });
+  });
+
+  it("keeps ring order independent from reusable percentile sorting", () => {
+    const monitor = new PerformanceMonitor(4);
+    for (const value of [4, 1, 3, 2]) monitor.record("render", value);
+    expect(monitor.snapshot().render).toEqual({ samples: 4, p50Ms: 2, p95Ms: 4, p99Ms: 4, maxMs: 4 });
+
+    monitor.record("render", 5);
+    expect(monitor.snapshot().render).toEqual({ samples: 4, p50Ms: 2, p95Ms: 5, p99Ms: 5, maxMs: 5 });
+  });
+
+  it("requires diagnostic traces to isolate one browser workload", () => {
+    const source = readFileSync(new URL("../browser-performance.js", import.meta.url), "utf8");
+    expect(source).toContain('assert.ok(traceOutput === null || selectedScenario !== "all"');
+    expect(source).toContain("TEAR_PERF_TRACE_PATH requires one selected scenario");
   });
 });

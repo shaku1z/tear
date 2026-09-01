@@ -9,7 +9,7 @@ export interface ReplayPuppet {
 
 export interface ReplayWorldGhost<SpawnInfo> {
   crossed(): Readonly<{
-    events: readonly Readonly<{ k: string; x: number; y: number }>[];
+    events: readonly Readonly<{ t: number; k: string; x: number; y: number }>[];
     deaths: readonly Readonly<{ id: string | number }>[];
   }>;
   enemiesAt(): readonly Readonly<{ id: string | number; x: number; y: number }>[];
@@ -48,6 +48,7 @@ export function renderReplayWorldFrame<Stage, Platform, SpawnInfo>(input: {
   readonly lowGraphics: boolean;
   readonly time: number;
   readonly deltaSeconds: number;
+  readonly presentAttack?: (effect: string, x: number, y: number, attackId: number) => boolean;
 }): void {
   const { canvas, stage, pose } = input;
   canvas.fillStyle = stage.bg;
@@ -59,6 +60,7 @@ export function renderReplayWorldFrame<Stage, Platform, SpawnInfo>(input: {
 
   const crossed = input.ghost.crossed();
   for (const event of crossed.events) {
+    if (input.presentAttack?.(event.k, event.x, event.y, Math.max(0, Math.round(event.t * 120))) === true) continue;
     if (event.k === "parry") input.effects.ring(event.x, event.y, 10, input.perfectColor);
     else if (event.k === "superslam" || event.k === "slam") input.effects.ring(event.x, event.y, 12, input.slamColor);
     else if (event.k === "bossKill") input.effects.explode(event.x, event.y, input.perfectColor, 1.6);

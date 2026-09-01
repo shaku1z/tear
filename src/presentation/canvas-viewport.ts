@@ -14,7 +14,9 @@ export interface LogicalOverscan {
 export class CanvasViewport {
   #started = false;
   #cssPerLogicalPixel = 1;
-  readonly #resizeListener = () => { this.resize(); };
+  #resizePending = false;
+  #resizeObserver: ResizeObserver | null = null;
+  readonly #resizeListener = () => { this.#resizePending = true; };
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -35,10 +37,19 @@ export class CanvasViewport {
     this.#started = true;
     this.browserWindow.addEventListener("resize", this.#resizeListener);
     this.browserDocument.addEventListener("fullscreenchange", this.#resizeListener);
+    const resizeObserverConstructor = (this.browserWindow as unknown as {
+      readonly ResizeObserver?: typeof ResizeObserver;
+    }).ResizeObserver;
+    if (typeof resizeObserverConstructor === "function") {
+      const observer = new resizeObserverConstructor(this.#resizeListener);
+      observer.observe(this.canvas);
+      this.#resizeObserver = observer;
+    }
     this.resize();
   }
 
   resize(): void {
+    this.#resizePending = false;
     const dpr = Math.min(this.browserWindow.devicePixelRatio || 1, 2.5);
     const clientWidth = this.canvas.clientWidth || this.logicalWidth;
     const clientHeight = this.canvas.clientHeight || this.logicalHeight;
@@ -61,9 +72,16 @@ export class CanvasViewport {
     this.safeArea.l = (Number.parseFloat(style.paddingLeft) || 0) * toLogical;
   }
 
+  /** Consumes event/observer dirtiness before draw without a steady-state layout read. */
+  resizeIfNeeded(): void {
+    if (this.#resizePending) this.resize();
+  }
+
   dispose(): void {
     if (!this.#started) return;
     this.#started = false;
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = null;
     this.browserWindow.removeEventListener("resize", this.#resizeListener);
     this.browserDocument.removeEventListener("fullscreenchange", this.#resizeListener);
   }
