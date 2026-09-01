@@ -41,9 +41,14 @@ their own.
 | Document | Role |
 | --- | --- |
 | [PHASE_F_MIRROR_PLAN.md](completed/PHASE_F_MIRROR_PLAN.md) | Completed historical record; not an active plan or typed-code authority. |
+| [GROUND_COMBAT_EFFECTS_PLAN_INDEX.md](completed/GROUND_COMBAT_EFFECTS_PLAN_INDEX.md) | Completed grounded combat-effects execution index and invariant record. |
+| [GROUND_COMBAT_EFFECTS_001_RECLASSIFY_LANGUAGE.md](completed/GROUND_COMBAT_EFFECTS_001_RECLASSIFY_LANGUAGE.md) | Completed art-direction reclassification record. |
+| [GROUND_COMBAT_EFFECTS_002_PHYSICAL_PRIMITIVES.md](completed/GROUND_COMBAT_EFFECTS_002_PHYSICAL_PRIMITIVES.md) | Completed physical attack-effect primitive implementation plan. |
+| [GROUND_COMBAT_EFFECTS_003_BUDGETS_AND_ACCESSIBILITY.md](completed/GROUND_COMBAT_EFFECTS_003_BUDGETS_AND_ACCESSIBILITY.md) | Completed effect-budget and accessibility implementation plan. |
+| [GROUND_COMBAT_EFFECTS_004_VALIDATION.md](completed/GROUND_COMBAT_EFFECTS_004_VALIDATION.md) | Completed grounded presentation and frame-pacing validation plan. |
 
-The `active/` and `completed/` directories now contain only the moved Economy
-and Phase F records listed above; `archive/` remains a future G5 destination.
+The `active/` and `completed/` directories contain only the classified records
+listed above; `archive/` remains a future G5 destination.
 Generated TearBench inputs and outputs remain at their current paths until an
 atomic scripts/tests/CI migration is authorized.
 
