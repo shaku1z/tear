@@ -367,6 +367,7 @@ jobs:
       - name: Aggregate serial receipts even after task failure
         shell: bash
         run: |
+          mkdir -p artifacts/tearbench/missions
           receipts="$(find artifacts/tearbench/missions -path '*/serial-*/*' -name 'attempt-*.json' -type f -print 2>/dev/null | sort | paste -sd, -)"
           set +e
           node scripts/tearbench-task-execution.mjs certify --plan artifacts/tearbench/generated/vap6-release-plan.json \
@@ -430,6 +431,7 @@ jobs:
       - name: Aggregate parallel receipts even after shard failure
         shell: bash
         run: |
+          mkdir -p artifacts/tearbench/missions
           receipts="$(find artifacts/tearbench/missions -path '*/parallel-*/*' -name 'attempt-*.json' -type f -print 2>/dev/null | sort | paste -sd, -)"
           set +e
           node scripts/tearbench-task-execution.mjs certify --plan artifacts/tearbench/generated/vap6-release-plan.json \
@@ -488,6 +490,12 @@ jobs:
           pattern: tearbench-canary-core-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: downloads/parallel/core
           merge-multiple: false
+      - uses: actions/download-artifact@v4
+        id: aggregate-provider
+        continue-on-error: true
+        with:
+          name: tearbench-canary-provider-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/provider
       - uses: actions/download-artifact@v4
         id: aggregate-serial-certificate
         continue-on-error: true

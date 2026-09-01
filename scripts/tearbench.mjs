@@ -9,6 +9,7 @@ import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 import { createReleaseCertificate, REQUIRED_CORRECTION_IDS, REQUIRED_RELEASE_EVIDENCE_IDS, verifyReleaseEvidenceManifest } from "./tearbench-release-evidence-verifier.mjs";
 import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
 import { createTearBenchShadowPlan } from "./tearbench-shadow-plan.mjs";
+import { executionEnvironmentBinding, executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
 import { dependencyOrderedTaskIds, registryTaskEnvironment } from "./tearbench-task-profile.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -1069,10 +1070,8 @@ async function writeShadowPlan(explain = false) {
   if (!["development", "pull-request", "protected-main", "release", "nightly", "endurance"].includes(profileId)) throw new TypeError(usage);
   const selection = evidenceForDiff(await changedFiles());
   selection.executionRequirements = Object.freeze({
-    toolchain: Object.freeze({ node: process.version, pnpm: process.env.npm_config_user_agent ?? packageSource.packageManager,
-      playwright: packageSource.devDependencies?.playwright ?? packageSource.dependencies?.playwright ?? "unknown" }),
-    environment: Object.freeze({ platform: process.platform, arch: process.arch,
-      runnerClass: process.env.RUNNER_ENVIRONMENT ?? "local", runnerImage: process.env.ImageOS ?? "local" }),
+    toolchain: executionToolchainBinding(packageSource),
+    environment: executionEnvironmentBinding(),
   });
   const requestedRevision = option("--revision");
   if (requestedRevision !== undefined) {
