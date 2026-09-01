@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { PerformanceMonitor } from "../../src/diagnostics/performance-monitor";
 
 describe("PerformanceMonitor", () => {
@@ -44,5 +45,11 @@ describe("PerformanceMonitor", () => {
 
     monitor.record("render", 5);
     expect(monitor.snapshot().render).toEqual({ samples: 4, p50Ms: 2, p95Ms: 5, p99Ms: 5, maxMs: 5 });
+  });
+
+  it("requires diagnostic traces to isolate one browser workload", () => {
+    const source = readFileSync(new URL("../browser-performance.js", import.meta.url), "utf8");
+    expect(source).toContain('assert.ok(traceOutput === null || selectedScenario !== "all"');
+    expect(source).toContain("TEAR_PERF_TRACE_PATH requires one selected scenario");
   });
 });

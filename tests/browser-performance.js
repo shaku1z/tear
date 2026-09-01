@@ -40,6 +40,8 @@ const allocationProfileOutput = process.env.TEAR_PERF_ALLOC_PROFILE_PATH
   : null;
 assert.ok(allocationProfileOutput === null || selectedScenario !== "all",
   "TEAR_PERF_ALLOC_PROFILE_PATH requires one selected scenario");
+assert.ok(traceOutput === null || selectedScenario !== "all",
+  "TEAR_PERF_TRACE_PATH requires one selected scenario");
 let traceStarted = false;
 let traceCompleted = false;
 const traceHitchThresholdMs = Number(process.env.TEAR_PERF_TRACE_HITCH_MS || "50");
