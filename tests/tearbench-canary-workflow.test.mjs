@@ -8,6 +8,8 @@ const validate = await readFile(new URL("../.github/workflows/ci.yml", import.me
 const registry = JSON.parse(await readFile(new URL("../src/tearbench/task-registry.json", import.meta.url), "utf8"));
 const shardRunner = await readFile(new URL("../scripts/tearbench-canary-run-shard.mjs", import.meta.url), "utf8");
 const detachedParityRunner = await readFile(new URL("../scripts/run-current-live-detached-parity.mjs", import.meta.url), "utf8");
+const performanceBrowserAction = await readFile(
+  new URL("../.github/actions/install-tear-performance-browser/action.yml", import.meta.url), "utf8");
 
 test("parallel canary is manual and non-required while Validate keeps plain browser entrypoints", () => {
   assert.match(workflow, /^name: TearBench Parallel Canary[\s\S]+?workflow_dispatch:/u);
@@ -40,8 +42,15 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.match(workflow, /Run isolated performance task after all parallel work/u);
   assert.match(workflow, /name: tearbench-canary-performance-1-/u);
   assert.match(workflow, /serial:\r?\n\s+needs: \[plan, performance\]/u);
-  assert.equal([...workflow.matchAll(/TEAR_PERF_BROWSER: stable/gu)].length, 2,
-    "parallel performance and serial comparison must use installed stable Chrome");
+  assert.match(workflow, /TEAR_PERF_BROWSER: pinned/u);
+  assert.match(workflow, /TEAR_PERF_BROWSER_VERSION: "152\.0\.7977\.64"/u);
+  assert.match(workflow, /TEAR_PERF_BROWSER_ARCHIVE_SHA256: 8b592f066af71f054aab2cc80fc26f73c775c6d44ebb99d16ade924b24756c2e/u);
+  assert.equal([...workflow.matchAll(/uses: \.\/\.github\/actions\/install-tear-performance-browser/gu)].length, 2,
+    "parallel performance and serial comparison must install the same pinned Chrome");
+  assert.match(performanceBrowserAction,
+    /https:\/\/storage\.googleapis\.com\/chrome-for-testing-public\/\$\{TEAR_PERF_BROWSER_VERSION\}\/linux64\/chrome-linux64\.zip/u);
+  assert.match(performanceBrowserAction, /sha256sum --check --strict/u);
+  assert.match(performanceBrowserAction, /TEAR_PERF_BROWSER_PATH=.*\$GITHUB_ENV/u);
   assert.match(aggregateJob, /steps\.aggregate-performance\.outcome == 'success'/u);
 });
 

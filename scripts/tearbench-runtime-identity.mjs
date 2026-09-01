@@ -36,6 +36,21 @@ export function executionEnvironmentBinding(task, environment = process.env) {
     runnerClass: environment.RUNNER_ENVIRONMENT ?? "local",
     runnerImage: environment.ImageOS ?? "local",
   };
+  const pinnedBrowserDeclared = environment.TEAR_PERF_BROWSER === "pinned"
+    || environment.TEAR_PERF_BROWSER_VERSION !== undefined
+    || environment.TEAR_PERF_BROWSER_ARCHIVE_SHA256 !== undefined;
+  if (pinnedBrowserDeclared) {
+    if (environment.TEAR_PERF_BROWSER !== "pinned"
+      || !/^\d+\.\d+\.\d+\.\d+$/u.test(environment.TEAR_PERF_BROWSER_VERSION ?? "")
+      || !/^[a-f0-9]{64}$/u.test(environment.TEAR_PERF_BROWSER_ARCHIVE_SHA256 ?? "")) {
+      throw new Error("pinned performance browser identity requires an exact version and lowercase SHA-256");
+    }
+    binding.performanceBrowser = {
+      preference: "pinned",
+      version: environment.TEAR_PERF_BROWSER_VERSION,
+      archiveSha256: environment.TEAR_PERF_BROWSER_ARCHIVE_SHA256,
+    };
+  }
   if (task !== undefined) {
     binding.resourceClass = task.resourceClass;
     binding.resourceKeys = [...task.resourceKeys].sort();
