@@ -32,13 +32,48 @@ function verifiedTimings(values, planDigest, shardPlanDigest) {
     return timing;
   });
 }
-function resultMap(receipts) {
-  const map = new Map();
+function resultMap(label, receipts, errors) {
+  const grouped = new Map(), map = new Map();
   for (const receipt of receipts) {
-    const id = receipt.task?.taskId; if (map.has(id)) throw new Error(`canary mission has duplicate task receipt ${id}`);
-    map.set(id, receipt);
+    const id = receipt.task?.taskId;
+    if (!grouped.has(id)) grouped.set(id, []);
+    grouped.get(id).push(receipt);
+  }
+  for (const [taskId, entries] of grouped) {
+    const attempts = entries.toSorted((left, right) => left.attemptNumber - right.attemptNumber);
+    if (attempts.length > 2) errors.push(`${label} task ${taskId} exceeds the one-retry limit`);
+    for (let index = 0; index < attempts.length; index++) {
+      const attempt = attempts[index], previous = attempts[index - 1];
+      if (attempt.attemptNumber !== index + 1
+        || attempt.missionId !== attempts[0]?.missionId
+        || attempt.executionKey !== attempts[0]?.executionKey
+        || (index === 0 ? attempt.retryOf !== null : attempt.retryOf !== previous?.receiptDigest)) {
+        errors.push(`${label} task ${taskId} has an incomplete or hidden retry chain`); break;
+      }
+    }
+    if (attempts.length === 2 && (attempts[0].result?.status !== "failed"
+      || typeof attempts[1].retryAuthorization !== "string" || attempts[1].retryAuthorization.length === 0)) {
+      errors.push(`${label} task ${taskId} has an unauthorized or unnecessary retry`);
+    }
+    map.set(taskId, attempts.at(-1));
   }
   return map;
+}
+function retryHistory(receipts) {
+  const grouped = new Map();
+  for (const receipt of receipts) {
+    const taskId = receipt.task?.taskId;
+    if (!grouped.has(taskId)) grouped.set(taskId, []);
+    grouped.get(taskId).push(receipt);
+  }
+  return [...grouped].sort(([left], [right]) => left.localeCompare(right)).map(([taskId, entries]) => {
+    const attempts = entries.toSorted((left, right) => left.attemptNumber - right.attemptNumber);
+    return { taskId, disposition: attempts.length === 2 && attempts[0].result?.status === "failed"
+      && attempts[1].result?.status === "passed" ? "recovered-flaky"
+      : attempts.at(-1)?.result?.status === "passed" ? "passed-first-attempt" : "failed",
+    attempts: attempts.map((entry) => ({ attemptNumber: entry.attemptNumber, status: entry.result?.status,
+      receiptDigest: entry.receiptDigest, retryOf: entry.retryOf, retryAuthorization: entry.retryAuthorization })) };
+  });
 }
 function timingSummary(timings, kind) {
   if (timings.length === 0) return { queueMs: 0, setupMs: 0, criticalPathMs: 0, longestJobMs: 0, runnerMinutes: 0, wallMs: 0 };
@@ -69,11 +104,27 @@ function verifyOwnership(label, receipts, timings, expectedShards, errors) {
     if (expected === undefined || JSON.stringify(actualIds) !== JSON.stringify(expected.taskIds)) errors.push(`${label} timing ownership differs for ${timing.shardId}`);
   }
   for (const shard of expectedShards) if (!timingByShard.has(shard.shardId)) errors.push(`${label} is missing timing for ${shard.shardId}`);
+  const receiptsByTask = new Map();
   for (const receipt of receipts) {
-    const taskId = receipt.task?.taskId, shardId = expectedByTask.get(taskId);
+    const taskId = receipt.task?.taskId;
+    if (!receiptsByTask.has(taskId)) receiptsByTask.set(taskId, []);
+    receiptsByTask.get(taskId).push(receipt);
+  }
+  for (const [taskId, taskReceipts] of receiptsByTask) {
+    const shardId = expectedByTask.get(taskId);
     const timing = shardId === undefined ? undefined : timingByShard.get(shardId);
-    if (timing?.missionId !== receipt.missionId
-      || !timing.taskResults?.some((entry) => entry.taskId === taskId && entry.status === receipt.result?.status)) {
+    const taskTiming = timing?.taskResults?.find((entry) => entry.taskId === taskId);
+    const attempts = taskReceipts.toSorted((left, right) => left.attemptNumber - right.attemptNumber);
+    const timingAttempts = taskTiming?.attempts;
+    const attemptsMatch = Array.isArray(timingAttempts)
+      ? attempts.length === timingAttempts.length && attempts.every((receipt, index) => {
+        const attempt = timingAttempts[index];
+        return attempt?.attemptNumber === receipt.attemptNumber && attempt.status === receipt.result?.status
+          && attempt.receiptPath === receipt.immutablePath;
+      })
+      : attempts.length === 1 && taskTiming?.status === attempts[0]?.result?.status;
+    if (taskReceipts.some((receipt) => timing?.missionId !== receipt.missionId) || !attemptsMatch
+      || taskTiming?.status !== attempts.at(-1)?.result?.status) {
       errors.push(`${label} receipt ${taskId} was not produced by its assigned shard`);
     }
   }
@@ -111,7 +162,8 @@ function verifyProviderBundle(bundle, parallelReceipts, plan, errors) {
 
 export function createCanaryParityReport({ plan, shardPlan, serialReceipts, parallelReceipts, serialTimings, parallelTimings,
   serialCertificate, parallelCertificate, providerBundle, plantedFailureTaskId = null, generatedAt }) {
-  const serial = resultMap(serialReceipts), parallel = resultMap(parallelReceipts), errors = [];
+  const errors = [], serial = resultMap("serial", serialReceipts, errors),
+    parallel = resultMap("parallel", parallelReceipts, errors);
   verifyOwnership("serial", serialReceipts, serialTimings, [shardPlan.serialShard], errors);
   verifyOwnership("parallel", parallelReceipts, parallelTimings,
     [shardPlan.buildShard, ...shardPlan.browserShards, ...shardPlan.coreShards], errors);
@@ -146,6 +198,7 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
     plantedFailureTaskId, taskParity: { required: plan.requiredTaskIds.length, serial: serial.size, parallel: parallel.size },
     claimParity: { serial: [...new Set(serialReceipts.flatMap((receipt) => receipt.task.claimIds))].sort(),
       parallel: [...new Set(parallelReceipts.flatMap((receipt) => receipt.task.claimIds))].sort() },
+    retryHistory: { serial: retryHistory(serialReceipts), parallel: retryHistory(parallelReceipts) },
     metrics: { serial: serialMetrics, parallel: parallelMetrics,
       browserShardBalanceRatio: browser.length === 0 ? null : Number((Math.max(...browser.map((entry) => entry.taskWallMs)) / minBrowser).toFixed(3)),
       wallTimeReductionRatio: serialMetrics.wallMs === 0 ? null : Number((parallelMetrics.wallMs / serialMetrics.wallMs).toFixed(3)) },

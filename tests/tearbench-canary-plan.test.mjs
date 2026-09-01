@@ -44,7 +44,11 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
   const produced = Array.from({ length: 4 }, (_, index) => ({ taskId: `build.${String(index)}`, outputId: "build-artifact",
     recordDigest: String(index + 1).repeat(64), buildIdentityDigest: String(index + 5).repeat(64) }));
   const origin = { kind: "github-actions", repository: "shaku1z/tear", workflow: "Canary", runId: "123", job: "job", attempt: 1 };
-  const makeReceipt = (taskId, missionId, status = "passed", build = {}) => ({ missionId, origin,
+  const makeReceipt = (taskId, missionId, status = "passed", build = {}, attempt = {}) => ({ missionId, origin,
+    attemptNumber: attempt.attemptNumber ?? 1, executionKey: attempt.executionKey ?? `${missionId}:${taskId}`,
+    immutablePath: attempt.immutablePath ?? `${missionId}/${taskId}/${String(attempt.attemptNumber ?? 1)}.json`,
+    retryOf: attempt.retryOf ?? null, retryAuthorization: attempt.retryAuthorization ?? null,
+    receiptDigest: attempt.receiptDigest ?? `${missionId}:${taskId}:${String(attempt.attemptNumber ?? 1)}`,
     task: { taskId, claimIds: [`claim.${taskId}`] }, result: { status }, bindings: { build } });
   const timing = (shardId, missionId, taskIds, wall) => ({ shardId, missionId, queueMs: 10, workflowWaitMs: 30,
     setupMs: 20, jobWallMs: wall, taskWallMs: wall - 20, taskResults: taskIds.map((taskId) => ({ taskId, status: "passed" })),
@@ -79,6 +83,23 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
   const mixedOrigin = parallel.map((receipt, index) => index === 0
     ? { ...receipt, origin: { ...receipt.origin, workflow: "Sibling", attempt: 2 } } : receipt);
   assert.equal(createCanaryParityReport({ ...common, parallelReceipts: mixedOrigin }).status, "mismatched");
+
+  const failed = makeReceipt("task.a", "browser", "failed");
+  const recovered = makeReceipt("task.a", "browser", "passed", {}, { attemptNumber: 2,
+    retryOf: failed.receiptDigest, retryAuthorization: "canary-retry" });
+  const recoveredTiming = timing("browser-1", "browser", ["task.a"], 5000);
+  recoveredTiming.taskResults[0] = { taskId: "task.a", status: "passed", receiptPath: recovered.immutablePath,
+    attempts: [failed, recovered].map((receipt) => ({ attemptNumber: receipt.attemptNumber,
+      status: receipt.result.status, receiptPath: receipt.immutablePath })) };
+  const recoveredReport = createCanaryParityReport({ ...common,
+    parallelReceipts: [failed, recovered, makeReceipt("task.b", "build", "passed", { produced })],
+    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), recoveredTiming] });
+  assert.equal(recoveredReport.status, "equivalent");
+  assert.equal(recoveredReport.retryHistory.parallel.find((entry) => entry.taskId === "task.a").disposition, "recovered-flaky");
+  const unauthorized = { ...recovered, retryAuthorization: null };
+  assert.equal(createCanaryParityReport({ ...common,
+    parallelReceipts: [failed, unauthorized, makeReceipt("task.b", "build", "passed", { produced })],
+    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), recoveredTiming] }).status, "mismatched");
 });
 
 test("canary packing rejects altered plans, unsupported classes, and missing duration policy", () => {
