@@ -537,6 +537,10 @@ async function repeatedRunScenario(browser, pageErrors) {
       args: ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--enable-precise-memory-info"],
       ...(chromePath ? { executablePath: chromePath } : {}),
     });
+    const browserRuntime = { version: browser.version(), executable: chromePath || "playwright-bundled-chromium" };
+    // Emit the runtime identity before any scenario assertion so failed attempt
+    // receipts remain attributable to the exact browser under measurement.
+    console.log(JSON.stringify({ browserRuntime }));
     const pageErrors = [];
     assert.ok(["all", "active", "constrained", "verdant", "pale", "cycles"].includes(selectedScenario),
       `unknown TEAR_PERF_SCENARIO: ${selectedScenario}`);
@@ -559,7 +563,7 @@ async function repeatedRunScenario(browser, pageErrors) {
     const report = { capturedAt: new Date().toISOString(),
       referenceProfile: { ...budgets.referenceProfile, durationMultiplier, deviceScaleFactor, graphicsPreference },
       build: buildInfo,
-      browserRuntime: { version: browser.version(), executable: chromePath || "playwright-bundled-chromium" },
+      browserRuntime,
       ...(activeGameplay && { activeGameplay }), ...(constrainedGameplay && { constrainedGameplay }),
       ...(verdantGameplay && { verdantGameplay }), ...(paleGameplay && { paleGameplay }),
       ...(runCycles && { runCycles }) };

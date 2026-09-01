@@ -36,10 +36,12 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.ok([...workflow.matchAll(/uses: actions\/upload-artifact@v4/gu)].length >= 8);
   assert.ok([...workflow.matchAll(/if: always\(\)/gu)].length >= 6);
   for (const job of ["browser", "core"]) assert.match(workflow, new RegExp(`name: tearbench-canary-\\$\\{\\{ matrix\\.shardId \\}\\}`), job);
-  assert.match(workflow, /performance:\n\s+needs: \[plan, build, browser, core\]/u);
+  assert.match(workflow, /performance:\r?\n\s+needs: \[plan, build, browser, core\]/u);
   assert.match(workflow, /Run isolated performance task after all parallel work/u);
   assert.match(workflow, /name: tearbench-canary-performance-1-/u);
-  assert.match(workflow, /serial:\n\s+needs: \[plan, performance\]/u);
+  assert.match(workflow, /serial:\r?\n\s+needs: \[plan, performance\]/u);
+  assert.equal([...workflow.matchAll(/TEAR_PERF_BROWSER: stable/gu)].length, 2,
+    "parallel performance and serial comparison must use installed stable Chrome");
   assert.match(aggregateJob, /steps\.aggregate-performance\.outcome == 'success'/u);
 });
 
