@@ -32,7 +32,6 @@ function finite(value) { return typeof value === "number" && Number.isFinite(val
 function hasContentionSensitiveTerminalAssertion(stderr, scenario) {
   if (typeof stderr !== "string") return false;
   const labels = [
-    `${scenario} simulation p95 ms`,
     `${scenario} frame-interval p99 ms`,
     `${scenario} frame-interval max ms`,
   ];
@@ -62,8 +61,10 @@ function invalidEvidence(entry) {
 }
 
 /**
- * Classifies only the performance task's own emitted measurements. A Tear
- * frame-work or long-task regression can never be relabeled as infrastructure.
+ * Classifies only the performance task's own emitted measurements. Only a
+ * directly asserted frame-interval tail can be attributed to outside-frame
+ * runner contention; simulation, render, frame-work, and long-task regressions
+ * can never be relabeled as infrastructure.
  */
 export function classifyPerformanceSample({ taskId, status, stdout, stderr }) {
   if (taskId !== PERFORMANCE_TASK_ID) return null;

@@ -16,7 +16,7 @@ function output(overrides = {}) {
   };
   return `${JSON.stringify({ scenario: "4x constrained gameplay", measurements })}\n`;
 }
-const failure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n";
+const failure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay frame-interval p99 ms: 150 exceeded budget 50\n";
 
 test("classifies only directly evidenced outside-frame contention", () => {
   const sample = classifyPerformanceSample({ taskId: PERFORMANCE_TASK_ID, status: "failed", stdout: output(), stderr: failure });
@@ -33,6 +33,17 @@ test("never relabels Tear frame-work or long-task regressions as infrastructure"
     output({ frameInterval: { p99Ms: 60 }, outsideFrameWork: { p99Ms: 58 } }),
   ]) {
     const sample = classifyPerformanceSample({ taskId: PERFORMANCE_TASK_ID, status: "failed", stdout, stderr: failure });
+    assert.equal(sample.classification, "product-or-unclassified-failure");
+    assert.equal(performanceSampleAllowsRetry(sample), false);
+  }
+});
+
+test("never relabels simulation or render regressions using uncorrelated outside-frame contention", () => {
+  for (const stderr of [
+    "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n",
+    "AssertionError [ERR_ASSERTION]: 4x constrained gameplay render p95 ms: 15 exceeded budget 14\n",
+  ]) {
+    const sample = classifyPerformanceSample({ taskId: PERFORMANCE_TASK_ID, status: "failed", stdout: output(), stderr });
     assert.equal(sample.classification, "product-or-unclassified-failure");
     assert.equal(performanceSampleAllowsRetry(sample), false);
   }
