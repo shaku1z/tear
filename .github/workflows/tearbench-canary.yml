@@ -108,6 +108,8 @@ jobs:
     if: ${{ always() && !cancelled() && needs.plan.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      TEAR_PERF_BROWSER: stable
     steps:
       - id: clock
         run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
@@ -353,6 +355,8 @@ jobs:
     if: ${{ always() && !cancelled() && needs.plan.result == 'success' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      TEAR_PERF_BROWSER: stable
     steps:
       - id: clock
         run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
