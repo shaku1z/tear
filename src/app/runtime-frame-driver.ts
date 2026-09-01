@@ -6,6 +6,8 @@ export interface AnimationFrameSource {
 export interface RuntimeFrame {
   readonly timestampMs: number;
   readonly deltaSeconds: number;
+  /** Unclamped requestAnimationFrame interval used only for pacing diagnostics. */
+  readonly intervalSeconds: number;
 }
 
 export type RuntimeFrameCallback = (frame: RuntimeFrame) => void;
@@ -35,6 +37,7 @@ export class RuntimeFrameDriver {
       callback(Object.freeze({
         timestampMs,
         deltaSeconds: Math.min(rawDelta, this.#maximumDeltaSeconds),
+        intervalSeconds: rawDelta,
       }));
       if (this.#handle !== null) this.#handle = this.#source.requestAnimationFrame(step);
     };

@@ -95,6 +95,21 @@ describe("visual replay migration", () => {
 });
 
 describe("LegacyGhostEngine", () => {
+  it("records attack presentation separately from causal gameplay events", () => {
+    const ghost = new LegacyGhostEngine({
+      store: { get: () => null, set: () => undefined }, document: {} as Document, now: () => 1, random: () => 0.5,
+      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120,
+        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
+    });
+    ghost.startRec({ runId: "presentation-run", seed: "presentation-seed" });
+    ghost.presentationEvent("attack:v1:sword:held:contact:reversal:0:0:10:0:100", 10.2, 20.8);
+    for (let index = 0; index < 20; index += 1) ghost.sample(0.1, { x: index, y: 0, facing: 1 }, null, []);
+    const packet = ghost.stopRec();
+    expect(packet?.events).toEqual([expect.objectContaining({
+      k: "attack:v1:sword:held:contact:reversal:0:0:10:0:100", x: 10, y: 21,
+    })]);
+  });
+
   it("notifies recorder sidecars with resolved, cloned Ghost 2 provenance", () => {
     const observed: VisualReplayProvenance[] = [];
     const suppliedBuild = { version: "observer-version", revision: "observer-revision", target: "observer-target" };

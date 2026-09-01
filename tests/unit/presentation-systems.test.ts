@@ -73,6 +73,45 @@ describe("presentation system boundaries", () => {
     FX.reset();
   });
 
+  it("keeps grounded attack primitives measured, bounded, and self-expiring", () => {
+    const effects = createParticleSystem(particlePolicy());
+    effects.setViewRect({ left: 0, top: 0, right: 200, bottom: 200 });
+
+    effects.edgeTrace(10, 20, 80, 40, 2, 0.09, "#abc");
+    effects.contactMark(80, 40, 0, 4, 14, 2, 0.07, "#def");
+    effects.groundPulse(100, 100, 0, -3, 34, 0.16, "#765");
+    effects.muzzleWedge(20, 30, 8, 0, 20, 5, 0.055, "#fff");
+
+    expect(effects.list).toEqual([
+      expect.objectContaining({ type: "edgeTrace", x: 10, y: 20, x1: 80, y1: 40, thickness: 2, max: 0.09 }),
+      expect.objectContaining({ type: "contactMark", x: 80, y: 40, tx: 0, ty: 1, length: 14, max: 0.07 }),
+      expect.objectContaining({ type: "groundPulse", x: 100, y: 100, nx: 0, ny: -1, halfWidth: 34, max: 0.16 }),
+      expect.objectContaining({ type: "muzzleWedge", x: 20, y: 30, dx: 1, dy: 0, length: 20, halfWidth: 5, max: 0.055 }),
+    ]);
+
+    effects.update(0.17);
+    expect(effects.list).toHaveLength(0);
+
+    effects.edgeTrace(1000, 1000, 1100, 1100, 2, 0.09, "#abc");
+    expect(effects.list).toHaveLength(0);
+  });
+
+  it("admits combat silhouettes over cosmetic saturation without evicting combat peers", () => {
+    const effects = createParticleSystem({
+      effects: { highBudget: 2, lowBudget: 2, cullMargin: 0 },
+      lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5,
+    });
+    effects.ring(10, 10); effects.ring(20, 20);
+    effects.contactMark(30, 30, 1, 0, 12, 2, 0.08, "#fff");
+    expect(effects.list).toHaveLength(2);
+    expect(effects.list.some((particle) => particle.type === "contactMark")).toBe(true);
+
+    effects.contactMark(40, 40, 1, 0, 12, 2, 0.08, "#fff");
+    effects.contactMark(50, 50, 1, 0, 12, 2, 0.08, "#fff");
+    expect(effects.list).toHaveLength(2);
+    expect(effects.list.every((particle) => particle.type === "contactMark")).toBe(true);
+  });
+
   it("returns immutable admission receipts without claiming randomized particle state", () => {
     const effects = createParticleSystem(particlePolicy());
     const ring = effects.ring(100, 100, 8, "#abc");

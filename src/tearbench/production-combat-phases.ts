@@ -277,6 +277,10 @@ export function createProductionCombatPhases(
     },
     flushWeaponActions: (events: readonly BladeWeaponEvent[]) => {
       for (const event of events) {
+        if (event.type === "slingRelease") {
+          outward.push(`weapon:${event.type}`);
+          continue;
+        }
         const shot = world.entities.createProjectile(event.x, event.y, event.vx, event.vy) as never as Record<string, unknown>;
         shot.family = "weaponProjectile"; shot.playerOwned = true; shot.weaponId = "riftlock";
         shot.attackId = event.attackId; shot.throwId = event.throwId; shot.remote = event.remote;

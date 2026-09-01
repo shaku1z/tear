@@ -7,6 +7,7 @@ import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { resolveTearSdl } from "../../src/tearbench/tearsdl";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 
 const field: EnvironmentFieldState = {
   id: "field-test", kind: "bloom-well", geometry: { x: 10, y: 20, radius: 5 }, state: "scheduled", stateTick: 0,
@@ -14,6 +15,12 @@ const field: EnvironmentFieldState = {
 };
 
 describe("generic environment field kernel", () => {
+  it("reuses presentation projections for one immutable environment snapshot", () => {
+    const runtime = createEnvironmentRuntime({ stageId: "stage", worldId: "presentation-cache" });
+    const source = runtime.snapshot();
+    expect(buildEnvironmentPresentationSnapshot(source)).toBe(buildEnvironmentPresentationSnapshot(source));
+  });
+
   it("advances bounded lifecycle and answers active geometry queries", () => {
     const active = advanceEnvironmentField(field, 3, 1 / 60);
     expect(active.transition).toMatchObject({ previousState: "scheduled", nextState: "active" });

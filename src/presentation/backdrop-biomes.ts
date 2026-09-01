@@ -24,6 +24,19 @@ export const PALE_BACKDROP_LIMITS = Object.freeze({
   lowGraphicsReflectionBands: 2,
 });
 
+const MOTE_STYLES = Object.freeze({
+  default: Object.freeze({}),
+  grounds: Object.freeze({ drift: 20, aMul: 0.8 }),
+  undercroft: Object.freeze({ rgb: "255,150,70", dir: -1, glow: true, sizeMul: 0.8, aMul: 1.2 }),
+  crimson: Object.freeze({ rgb: "255,140,70", dir: -1, glow: true, drift: 30, aMul: 1.1 }),
+  verdant: Object.freeze({ rgb: "228,201,90", dir: -1, twinkle: true, drift: 8, aMul: 0.62, sizeMul: 0.72 }),
+  verdantReduced: Object.freeze({ rgb: "228,201,90", dir: -1, twinkle: false, drift: 0, aMul: 0.62, sizeMul: 0.72 }),
+  pale: Object.freeze({ rgb: "216,234,255", dir: 1, twinkle: false, drift: 5, aMul: 0.48, sizeMul: 0.66 }),
+  paleReduced: Object.freeze({ rgb: "216,234,255", dir: 1, twinkle: false, drift: 0, aMul: 0.48, sizeMul: 0.66 }),
+  voidspire: Object.freeze({ rgb: "180,120,220", twinkle: true, drift: 24, aMul: 0.9 }),
+  tear: Object.freeze({ rgb: "190,230,255", twinkle: true, drift: 6, aMul: 1.1 }),
+});
+
 const BIOME_ART: BiomeArtCatalog = {
   _default: {
     sky(B, ctx, stage, c, _t, gy, view) { B.baseSky(ctx, stage, c, gy, undefined, view); },
@@ -31,7 +44,7 @@ const BIOME_ART: BiomeArtCatalog = {
       B.ridge(ctx, gy, -px * 16, 120, 52, 0.004, 1.3, c.dark ? B._lighten(stage.bg, 0.07) : B._darken(stage.bg, 0.09), 0.5, view);
       B.ridge(ctx, gy, -px * 40, 74, 40, 0.006, 4.1, c.dark ? B._lighten(stage.bg, 0.03) : B._darken(stage.bg, 0.15), 0.5, view);
     },
-    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, {}, view); },
+    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, MOTE_STYLES.default, view); },
   },
 
   // The Grounds — clean dawn, disciplined order: warm light, a colonnade, light shafts
@@ -60,7 +73,7 @@ const BIOME_ART: BiomeArtCatalog = {
       for (let x = first; x + off < vr + 175; x += 175) { const cx = x + off; ctx.fillRect(cx, top, cw, ch); ctx.fillRect(cx - 6, top - 10, cw + 12, 12); ctx.fillRect(cx - 6, gy - 8, cw + 12, 8); }
       ctx.restore();
     },
-    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { drift: 20, aMul: 0.8 }, view); },
+    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, MOTE_STYLES.grounds, view); },
   },
 
   // The Undercroft — gray steel industry: furnace glow, girders, a slow-turning gear, embers
@@ -105,7 +118,7 @@ const BIOME_ART: BiomeArtCatalog = {
         ctx.restore();
       }
     },
-    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "255,150,70", dir: -1, glow: true, sizeMul: 0.8, aMul: 1.2 }, view); },
+    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, MOTE_STYLES.undercroft, view); },
   },
 
   // The Crimson Fields — golden-hour battlefield: warm sky, hills, burning banners, ash
@@ -136,7 +149,7 @@ const BIOME_ART: BiomeArtCatalog = {
       }
       ctx.restore();
     },
-    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "255,140,70", dir: -1, glow: true, drift: 30, aMul: 1.1 }, view); },
+    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, MOTE_STYLES.crimson, view); },
   },
 
   // Verdant Sanctum — a flooded sanctuary-city held beneath one ancient healing tree.
@@ -237,10 +250,8 @@ const BIOME_ART: BiomeArtCatalog = {
       ctx.restore();
     },
     motes(B, ctx, _stage, c, t, px, view) {
-      B.motes(ctx, c, B.reducedMotion() ? 0 : t, px, {
-        rgb: "228,201,90", dir: -1, twinkle: !B.reducedMotion(),
-        drift: B.reducedMotion() ? 0 : 8, aMul: 0.62, sizeMul: 0.72,
-      }, view);
+      const reduced = B.reducedMotion();
+      B.motes(ctx, c, reduced ? 0 : t, px, reduced ? MOTE_STYLES.verdantReduced : MOTE_STYLES.verdant, view);
     },
   },
 
@@ -350,10 +361,8 @@ const BIOME_ART: BiomeArtCatalog = {
       ctx.restore();
     },
     motes(B, ctx, _stage, c, t, px, view) {
-      B.motes(ctx, c, B.reducedMotion() ? 0 : t, px, {
-        rgb: "216,234,255", dir: 1, twinkle: false,
-        drift: B.reducedMotion() ? 0 : 5, aMul: 0.48, sizeMul: 0.66,
-      }, view);
+      const reduced = B.reducedMotion();
+      B.motes(ctx, c, reduced ? 0 : t, px, reduced ? MOTE_STYLES.paleReduced : MOTE_STYLES.pale, view);
     },
   },
 
@@ -388,7 +397,7 @@ const BIOME_ART: BiomeArtCatalog = {
       ctx.restore();
       B.ridge(ctx, gy, -px * 30, 90, 40, 0.006, 2.0, B._darken(stage.bg, 0.12), 0.4, view);
     },
-    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "180,120,220", twinkle: true, drift: 24, aMul: 0.9 }, view); },
+    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, MOTE_STYLES.voidspire, view); },
   },
 
   // The Tear — the void: a central glowing rift that pulses and lights the scene, a starfield
@@ -477,7 +486,7 @@ const BIOME_ART: BiomeArtCatalog = {
       }
       ctx.restore();
     },
-    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, { rgb: "190,230,255", twinkle: true, drift: 6, aMul: 1.1 }, view); },
+    motes(B, ctx, _stage, c, t, px, view) { B.motes(ctx, c, t, px, MOTE_STYLES.tear, view); },
   },
 };
 

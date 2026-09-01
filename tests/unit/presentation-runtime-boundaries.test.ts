@@ -58,7 +58,8 @@ describe("presentation runtime boundaries", () => {
       canvas: { width: 1600, clientWidth: 1600, clientHeight: 900 } as HTMLCanvasElement,
       context, logicalWidth: 1600, logicalHeight: 900, overscan: () => ({ x: 0, y: 0 }),
       screen: () => "menu", previousScreen: () => previous, setPreviousScreen: (value) => { previous = value; },
-      resize: () => events.push("resize"), screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
+      resizeIfNeeded: () => { events.push("resize-check"); },
+      screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
       touchActive: () => false, cssPerLogicalPixel: () => 1, uiZoom: () => zoom, setUiZoom: (value) => { zoom = value; },
       deltaSeconds: () => 1 / 60, clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
       resetControls: () => events.push("controls"), background: () => "#fff", setTheme: () => events.push("theme"),
@@ -71,6 +72,7 @@ describe("presentation runtime boundaries", () => {
       firstEnabledButton: () => 2, setFocus: (value) => { focus = value; }, updateDomHints: () => events.push("hints"),
     };
     renderPresentationFrame(ports);
+    expect(events).not.toContain("clear");
     expect(events.indexOf("background")).toBeLessThan(events.indexOf("screen"));
     expect(events.indexOf("screen")).toBeLessThan(events.indexOf("post"));
     expect(previous).toBe("menu");

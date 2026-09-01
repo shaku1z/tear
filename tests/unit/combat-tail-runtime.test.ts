@@ -46,6 +46,12 @@ describe("combat tick tail", () => {
     expect(result.enemies).toEqual([alive]); expect(update).toHaveBeenCalledWith(0.25); expect(result.shake).toBe(4);
     expect(r).toMatchObject({ runTime: 0.25, waveTime: 0.25, _dmgThisWave: true, _airT: 0.25 });
   });
+  it("fades factual floaters in place when reduced motion disables displacement", () => {
+    const floater = { y: 10, life: 0.8 };
+    const result = finalizeCombatTick({ dt: 0.25, enemies: [], projectiles: [], floaters: [floater], shake: 0,
+      shakeDecay: 4, floaterMotionScale: 0, player: player(), run: run(), hooks: cleanupHooks() });
+    expect(result.floaters[0]).toMatchObject({ y: 10, life: 0.55 });
+  });
   it("keeps the training tick out of the tail so late spawns survive", () => {
     // The tail must not run training itself: its filtered lists are installed by the
     // caller afterwards, so a playground spawn issued here would be discarded.

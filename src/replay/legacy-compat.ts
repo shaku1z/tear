@@ -302,6 +302,11 @@ export class LegacyGhostEngine {
     this.#emit({ kind: "effect", effect: kind, x, y });
   }
 
+  /** Records a cosmetic-only visual cue without promoting it to causal gameplay truth. */
+  presentationEvent(kind: string, x = 0, y = 0): void {
+    this.rec?.events.push({ t: this.#time(), k: kind, x: Math.round(x), y: Math.round(y) });
+  }
+
   loadoutPick(id: string, tier = 1, wave = 0): void {
     this.#emit({ kind: "loadout", choiceId: id, tier, wave });
   }

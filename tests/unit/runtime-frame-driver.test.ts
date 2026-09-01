@@ -21,13 +21,14 @@ class ManualFrames implements AnimationFrameSource {
 describe("runtime frame driver", () => {
   it("normalizes and bounds browser frame deltas", () => {
     const source = new ManualFrames();
-    const deltas: number[] = [];
+    const deltas: number[] = [], intervals: number[] = [];
     const driver = new RuntimeFrameDriver(source, 0.1);
-    driver.start((frame) => { deltas.push(frame.deltaSeconds); });
+    driver.start((frame) => { deltas.push(frame.deltaSeconds); intervals.push(frame.intervalSeconds); });
     source.fire(1_000);
     source.fire(1_016);
     source.fire(2_000);
     expect(deltas).toEqual([0, 0.016, 0.1]);
+    expect(intervals).toEqual([0, 0.016, 0.984]);
   });
 
   it("starts idempotently and cancels the scheduled frame", () => {

@@ -88,7 +88,7 @@ export interface LivePresentationFrameServices<Screen extends string,
   readonly overscan: () => Readonly<{ x: number; y: number }>;
   readonly safeTop: () => number;
   readonly viewportScale: () => number;
-  readonly resize: () => void;
+  readonly resizeIfNeeded: () => void;
   readonly input: UiRuntimeInput;
   readonly ui: PresentationUi;
   readonly stage: StagePresentationState<Stage>;
@@ -139,7 +139,7 @@ export function createLivePresentationFrameHost<Screen extends string,
     framePorts: (host) => ({
       canvas: services.canvas, context, logicalWidth: services.width, logicalHeight: services.height,
       overscan: services.overscan, screen: state.screen, previousScreen: state.previousScreen,
-      setPreviousScreen: state.setPreviousScreen, resize: services.resize,
+      setPreviousScreen: state.setPreviousScreen, resizeIfNeeded: services.resizeIfNeeded,
       screenRectangle: host.screenRectangle, touchActive: services.touchActive,
       cssPerLogicalPixel: services.viewportScale, uiZoom: state.uiZoom, setUiZoom: state.setUiZoom,
       deltaSeconds: state.deltaSeconds, clamp: services.clamp, resetControls: state.resetControls,

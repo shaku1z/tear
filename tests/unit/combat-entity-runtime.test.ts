@@ -65,5 +65,38 @@ describe("combat entity runtime", () => {
     runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
       menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
     expect(target.auraDR).toBe(0.5); expect(support.links).toEqual([target]);
+    const buffs = target.buffs, links = support.links;
+    runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
+      menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
+    expect(target.buffs).toBe(buffs); expect(target.buffs).toEqual(["priest"]);
+    expect(support.links).toBe(links); expect(support.links).toEqual([target]);
+    delete support.supportType;
+    runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
+      menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
+    expect(target.auraDR).toBe(1); expect(target.buffs).toEqual([]); expect(support.links).toEqual([]);
+  });
+
+  it("skips irrelevant projection passes while preserving neutral state and identity order", () => {
+    const actor = entity(), shot = entity({ kind: "projectile", family: "ordinaryProjectile" });
+    const { runtime, player } = harness([actor], [shot]);
+    const actorSnapshots = vi.spyOn(runtime, "actorSnapshots");
+    const projectileSnapshots = vi.spyOn(runtime, "projectileSnapshots");
+    player.slowMult = 0.5;
+
+    runtime.updateWorldHazards(1 / 120, { groundY: 800, sludgeSlow: 0.5,
+      geoWallW: 20, geoWallH: 100, geoWallLife: 5, sludgeColor: "green" });
+    expect(player.slowMult).toBe(1);
+    expect(runtime.captureIdentityState().nextEntityId).toBe(2);
+    runtime.resolveBossZones({ groundY: 800, defaultWidth: 100, defaultDamage: 1, defaultTickCooldown: 1 });
+    expect(actorSnapshots).not.toHaveBeenCalled();
+
+    runtime.resolveProjectilePhases(1 / 120, { projectileDamage: 1, projectileSpeed: 1,
+      deflectBoost: 1, deflectDamageMultiplier: 1, runDamageMultiplier: 1, phaseStep: false,
+      parryStun: false, aegisParry: false, sparkCount: 0, deflectedColor: "blue", rootColor: "green",
+      shakeBig: 0, shakeSmall: 0, achievementTracking: false, groundY: 800, mineTrigger: 10,
+      blastRadius: 10, blastDamage: 1, sludgeZoneRadius: 10, sludgeZoneLife: 1,
+      bomberColor: "red", perfectColor: "white", sludgeColor: "green", flashParry: 0,
+      enemyShotColor: "red" });
+    expect(projectileSnapshots).toHaveBeenCalledTimes(1);
   });
 });

@@ -12,11 +12,26 @@ export interface SupportResolution {
   readonly intents: readonly CombatEntityIntent[];
 }
 
+export interface ProjectedSupportWorkspace {
+  readonly byId: Map<EntityId, number>;
+  readonly intents: CombatEntityIntent[];
+}
+
+export function createProjectedSupportWorkspace(): ProjectedSupportWorkspace {
+  return { byId: new Map<EntityId, number>(), intents: [] };
+}
+
+type Mutable<T> = { -readonly [Key in keyof T]: T[Key] };
+type WorkingActor = Omit<Mutable<ResolvedCombatActorState>, "buffs" | "links"> & {
+  buffs: SupportType[];
+  links: EntityId[];
+};
+
 function distance(a: CombatActorState, b: CombatActorState): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function resetActor(actor: CombatActorState): ResolvedCombatActorState {
+function resetActor(actor: CombatActorState): WorkingActor {
   return {
     ...actor,
     auraDR: 1,
@@ -30,10 +45,6 @@ function resetActor(actor: CombatActorState): ResolvedCombatActorState {
   };
 }
 
-function addBuff(actor: ResolvedCombatActorState, buff: SupportType): ResolvedCombatActorState {
-  return { ...actor, buffs: [...actor.buffs, buff] };
-}
-
 export function resolveSupportAuras(
   sourceActors: readonly CombatActorState[],
   dt: number,
@@ -41,33 +52,75 @@ export function resolveSupportAuras(
   anchorFxColor: string,
 ): SupportResolution {
   if (!Number.isFinite(dt) || dt < 0) throw new RangeError("dt must be finite and non-negative");
-  const actors = sourceActors.map(resetActor);
-  const byId = new Map<EntityId, number>(actors.map((actor, index) => [actor.id, index]));
-  const intents: CombatEntityIntent[] = [];
-  const replace = (index: number, actor: ResolvedCombatActorState): void => { actors[index] = actor; };
+  const actors = new Array<WorkingActor>(sourceActors.length);
+  for (let index = 0; index < sourceActors.length; index += 1) {
+    const source = sourceActors[index];
+    if (source === undefined) continue;
+    actors[index] = resetActor(source);
+  }
+  return resolveWorkingActors(actors, dt, tuning, anchorFxColor);
+}
 
-  for (let supportIndex = 0; supportIndex < actors.length; supportIndex += 1) {
-    let support = actors[supportIndex];
-    if (support?.kind !== "support") continue;
-    support = { ...support, links: [] };
-    replace(supportIndex, support);
+/**
+ * Resolves freshly projected runtime snapshots in place. The caller owns the
+ * snapshots and discards them after applying the result, avoiding a redundant
+ * second full-roster clone while keeping the public pure resolver unchanged.
+ */
+export function resolveProjectedSupportAuras(
+  projectedActors: CombatActorState[],
+  dt: number,
+  tuning: SupportTuning,
+  anchorFxColor: string,
+  workspace?: ProjectedSupportWorkspace,
+): SupportResolution {
+  if (!Number.isFinite(dt) || dt < 0) throw new RangeError("dt must be finite and non-negative");
+  const actors = projectedActors as WorkingActor[];
+  for (const actor of actors) {
+    actor.auraDR = 1; actor.auraDmg = 1; actor.auraSpeed = 1; actor.auraHaste = 1;
+    actor.tetherDR = 1; actor.anchored = false;
+    const existingBuffs: unknown = Reflect.get(actor, "buffs");
+    const buffs = Array.isArray(existingBuffs) ? existingBuffs as SupportType[] : [];
+    buffs.length = 0; actor.buffs = buffs;
+    const existingLinks: unknown = Reflect.get(actor, "links");
+    const links = Array.isArray(existingLinks) ? existingLinks as EntityId[] : [];
+    links.length = 0; actor.links = links;
+  }
+  return resolveWorkingActors(actors, dt, tuning, anchorFxColor, workspace);
+}
+
+function resolveWorkingActors(
+  actors: WorkingActor[],
+  dt: number,
+  tuning: SupportTuning,
+  anchorFxColor: string,
+  workspace?: ProjectedSupportWorkspace,
+): SupportResolution {
+  const byId = workspace?.byId ?? new Map<EntityId, number>(); byId.clear();
+  for (let index = 0; index < actors.length; index += 1) {
+    const actor = actors[index]; if (actor !== undefined) byId.set(actor.id, index);
+  }
+  const intents = workspace?.intents ?? []; intents.length = 0;
+
+  for (const support of actors) {
+    if (support.kind !== "support") continue;
     if (support.dead || support.spawnT > 0 || support.stun > 0 || support.supportType === undefined) continue;
     const supportType = support.supportType;
     const range = support.range ?? 0;
 
     if (supportType === "priest" || supportType === "herald") {
-      const links: EntityId[] = [];
-      for (let actorIndex = 0; actorIndex < actors.length; actorIndex += 1) {
-        const actor = actors[actorIndex];
-        if (actor === undefined || actor.id === support.id || actor.dead || actor.kind === "support") continue;
+      for (const actor of actors) {
+        if (actor.id === support.id || actor.dead || actor.kind === "support") continue;
         if (distance(actor, support) > range + actor.radius) continue;
-        const buffed = supportType === "priest"
-          ? { ...actor, auraDR: Math.min(actor.auraDR, tuning.drMult), auraDmg: Math.max(actor.auraDmg, tuning.dmgBuff) }
-          : { ...actor, auraSpeed: Math.max(actor.auraSpeed, tuning.speedBuff), auraHaste: Math.max(actor.auraHaste, tuning.hasteBuff) };
-        replace(actorIndex, addBuff(buffed, supportType));
-        links.push(actor.id);
+        if (supportType === "priest") {
+          actor.auraDR = Math.min(actor.auraDR, tuning.drMult);
+          actor.auraDmg = Math.max(actor.auraDmg, tuning.dmgBuff);
+        } else {
+          actor.auraSpeed = Math.max(actor.auraSpeed, tuning.speedBuff);
+          actor.auraHaste = Math.max(actor.auraHaste, tuning.hasteBuff);
+        }
+        actor.buffs.push(supportType);
+        support.links.push(actor.id);
       }
-      replace(supportIndex, { ...support, links });
       continue;
     }
 
@@ -82,8 +135,8 @@ export function resolveSupportAuras(
       }
       const best = actors[bestIndex];
       if (best !== undefined) {
-        replace(bestIndex, addBuff({ ...best, hp: Math.min(best.maxHp, best.hp + tuning.menderRate * dt) }, "mender"));
-        replace(supportIndex, { ...support, links: [best.id] });
+        best.hp = Math.min(best.maxHp, best.hp + tuning.menderRate * dt);
+        best.buffs.push("mender"); support.links.push(best.id);
       }
       continue;
     }
@@ -92,7 +145,7 @@ export function resolveSupportAuras(
     const bondedIndex = bondedId === null ? undefined : byId.get(bondedId);
     const bonded = bondedIndex === undefined ? undefined : actors[bondedIndex];
     if (bondedId !== null && (bonded === undefined || bonded.dead)) {
-      replace(supportIndex, { ...support, dead: true });
+      support.dead = true;
       const color = support.color ?? anchorFxColor;
       intents.push(
         { type: "fx-ring", x: support.x, y: support.y, radius: 16, color },
@@ -109,20 +162,15 @@ export function resolveSupportAuras(
         if (actor.maxHp > bestHp) { bestHp = actor.maxHp; bestIndex = actorIndex; }
       }
       bondedId = actors[bestIndex]?.id ?? null;
-      support = { ...support, bondedId };
-      replace(supportIndex, support);
+      support.bondedId = bondedId;
     }
     if (bondedId !== null) {
       const targetIndex = byId.get(bondedId);
       const target = targetIndex === undefined ? undefined : actors[targetIndex];
       if (targetIndex !== undefined && target !== undefined && !target.dead) {
-        replace(targetIndex, addBuff({
-          ...target,
-          tetherDR: Math.min(target.tetherDR, tuning.anchorDR),
-          hp: Math.min(target.maxHp, target.hp + tuning.anchorRegen * dt),
-          anchored: true,
-        }, "anchor"));
-        replace(supportIndex, { ...support, links: [target.id] });
+        target.tetherDR = Math.min(target.tetherDR, tuning.anchorDR);
+        target.hp = Math.min(target.maxHp, target.hp + tuning.anchorRegen * dt);
+        target.anchored = true; target.buffs.push("anchor"); support.links.push(target.id);
       }
     }
   }

@@ -5,8 +5,7 @@ import { createLiveCombatComposition } from "./live-combat-composition"; import 
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition"; import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration"; import { commitBossIntroSnapshot } from "./live-frame-runtime";
-import { RuntimeFrameDriver } from "./runtime-frame-driver";
-import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
+import { RuntimeFrameDriver } from "./runtime-frame-driver"; import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
 import { createLiveProductionWorld } from "./live-production-world";
 import { createLiveHudFeedbackState } from "./live-hud-feedback-state";
@@ -41,8 +40,9 @@ import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller
 import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch"; import { bindLiveBloomWellActors } from "./live-bloom-well-wiring"; import { bindLiveAuroraTrackActors } from "./live-aurora-track-wiring";
 import { bindLiveWhiteHartActors } from "./live-white-hart-wiring"; import { projectLiveCanonicalEnemy } from "./live-canonical-enemy-projection";
 import { LiveGhostPublicationController } from "./live-ghost-publication-controller"; import { LiveGhostSupportController } from "./live-ghost-support-controller";
+import { createLiveAttackPresentation } from "./live-attack-presentation"; import { createLiveCollisionStateView } from "./live-combat-adapter-context";
 type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
-  const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, ghostPublication, lerp, weaponCapsuleIntersectsSegment } = dependencies;
+  const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CLOCK, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, ghostPublication, lerp, weaponCapsuleIntersectsSegment } = dependencies;
 (function () {
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl,
@@ -239,8 +239,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   const { campaign: campaignHost, training: trainingHost, cinematic: cinematicHost,
     style: styleAchievementRuntime, weapon: weaponRuntime, addFloater } = campaignTraining;
-  const CINEMA = worldContext.cinema;
-  const { stage: stageRuntime, story, runtime: campaignRuntime } = campaignHost;
+  const CINEMA = worldContext.cinema; const { stage: stageRuntime, story, runtime: campaignRuntime } = campaignHost;
   const startRunWithPreflight = (mode: RunMode, difficulty: RunDifficulty): void => {
     if (!trainingRunRequiresPreflight(mode)) { startRunImmediate(mode, difficulty); return; }
     void trainingHost.ensureLoaded().then(() => { startRunImmediate(mode, difficulty); }).catch((error: unknown) => {
@@ -252,19 +251,18 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     updateAbilities: updateWeaponAbilities, emitThrowResolve,
     activateThrowSecondary, hook: weaponHook, shieldAbsorb: onShieldAbsorb, dealArea: dealAoE,
     addKillScore, fire, makeEvent: makeEv } = weaponRuntime;
-  const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost;
-  const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
-  const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => sourceVoidRuntime.syncPlayer(...args);
-  const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { sourceVoidRuntime.update(...args); };
+  const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost; const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
+  const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => sourceVoidRuntime.syncPlayer(...args); const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { sourceVoidRuntime.update(...args); };
   const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = cinematicRuntime;
-  const dispatchPlaygroundAction = (...args: Parameters<typeof playgroundRuntime.dispatchAction>) => { playgroundRuntime.dispatchAction(...args); };
-  const stepPlayground = (...args: Parameters<typeof playgroundRuntime.step>) => { playgroundRuntime.step(...args); };
-  const { renderMenu: renderPgMenu, renderLab: renderPgLab } = playgroundPresentation;
-  const {
-    achievements: AT, addStyle, tracks: achTracks, check: achCheck, loseStyle,
-    update: updateTrick, color: trickColor,
-    splitProjectile: spawnSplitShards, formatTime: fmtTime,
-  } = styleAchievementRuntime;
+  const dispatchPlaygroundAction = (...args: Parameters<typeof playgroundRuntime.dispatchAction>) => { playgroundRuntime.dispatchAction(...args); }; const stepPlayground = (...args: Parameters<typeof playgroundRuntime.step>) => { playgroundRuntime.step(...args); };
+  const { renderMenu: renderPgMenu, renderLab: renderPgLab } = playgroundPresentation; const { achievements: AT, addStyle, tracks: achTracks, check: achCheck, loseStyle, update: updateTrick, color: trickColor, splitProjectile: spawnSplitShards, formatTime: fmtTime } = styleAchievementRuntime;
+  const attackPresentation = createLiveAttackPresentation({ scope: liveBlade,
+    tick: () => Math.max(0, Math.round(CLOCK.sim * 120)), lowGraphics: () => GFX.low, reducedMotion: () => A11Y.reducedMotion,
+    highContrast: () => A11Y.highContrast, contrastColor: () => THEME.ink,
+    edgeTrace: (...args) => { FX.edgeTrace(...args); }, contactMark: (...args) => { FX.contactMark(...args); }, groundPulse: (...args) => { FX.groundPulse(...args); }, muzzleWedge: (...args) => { FX.muzzleWedge(...args); },
+    burst: (...args) => { FX.burst(...args); },
+    shouldRecord: () => GHOST.recording(),
+    recordEffect: (effect, x, y) => { GHOST.presentationEvent(effect, x, y); } });
   const { modeWaves, bossById, spawn: spawnOne,
     updateBossArenaPlatforms, lobExplode, loadTransitionStage } = createLiveRunOrchestration({
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
@@ -274,6 +272,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
     setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
     selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
+    attackPresentation,
     environment, prepareWorld: () => { if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
     resetTransientWorld: () => { impact.hitStop = 0; impact.shake = 0; },
     finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
@@ -303,7 +302,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     "cinematicT" in value && typeof value.cinematicT === "number";
   const musicObservation = createLiveMusicObservation({ director: musicDirector, appState: () => state,
     run: () => hostState.run(), player: () => hostState.player(), enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(),
-    bossIntro: () => hostState.bossIntro(), stage: () => ({ name: stageRuntime.current.name, index: stageRuntime.index }),
+    bossIntro: () => hostState.bossIntro(), stageName: () => stageRuntime.current.name, stageIndex: () => stageRuntime.index,
     totalWaves: modeWaves, waveActive: () => RUN_LIFECYCLE.isWaveActive, runPhase: () => RUN_LIFECYCLE.phase,
     topComboThreshold: () => CONFIG.trick.tiers.at(-1)?.at ?? 1 });
   const isLegacyScreen = (screen: string): screen is LegacyAppScreen =>
@@ -319,7 +318,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     temporaryWalls: () => hostState.temporaryWalls(), setTemporaryWalls: (value) => { hostState.setTemporaryWalls(value); },
   }, transient);
   const combatActions: ReturnType<typeof createLiveCombatActions> = createLiveCombatActions({
-    dependencies, canvas, width: W, bossRosterSize: BOSS_ROSTER.length, environment,
+    dependencies, canvas, width: W, bossRosterSize: BOSS_ROSTER.length, environment, attackPresentation,
     live: combatWorldState,
     ports: {
       stage: stageRuntime, story, cinema: CINEMA, tutorial: TUT,
@@ -397,28 +396,28 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     releaseCamera: () => { feel.worldZoomTarget = 1; },
     requestContinue: () => { setState("continue"); reviveCountdown.setSeconds(8); browserDocument.exitPointerLock(); },
   });
+  const collisionPhaseState = createLiveCollisionStateView({
+    hitStop: () => impact.hitStop, setHitStop: (value) => { impact.hitStop = value; },
+    slowMotion: () => impact.slowMotion, setSlowMotion: (value) => { impact.slowMotion = value; },
+    shake: () => impact.shake, setShake: (value) => { impact.shake = value; },
+    enemies: () => combatWorldState.enemies(), setEnemies: (value) => { combatWorldState.setEnemies(value.filter(isGameEnemy)); },
+    projectiles: () => combatWorldState.projectiles(), setProjectiles: (value) => { combatWorldState.setProjectiles(value.filter(isGameProjectile)); },
+    floaters: () => combatWorldState.floaters(), setFloaters: (value) => { combatWorldState.setFloaters(value.filter(isGameFloater)); },
+  });
   const combatAdapterContext: CombatCompositionInput["adapters"] = {
     entities: combatActions.entities,
     opening: {
-      values: () => ({ player: combatWorldState.player(), blade: combatWorldState.blade(), run: combatWorldState.run(),
-        enemies: combatWorldState.enemies(), projectiles: combatWorldState.projectiles(), platforms: stageRuntime.platforms, width: W,
-        blocking: CINEMA.active && CINEMA.blocksCombat, playerMode: CINEMA.playerMode,
-        protection: combatWorldState.openingProtection(), lowGraphics: GFX.low,
-        transformationBlocked: CINEMA.active && CINEMA.blocksCombat }),
+      values: { player: () => combatWorldState.player(), blade: () => combatWorldState.blade(), run: () => combatWorldState.run(),
+        enemies: () => combatWorldState.enemies(), projectiles: () => combatWorldState.projectiles(), platforms: () => stageRuntime.platforms, width: () => W,
+        blocking: () => CINEMA.active && CINEMA.blocksCombat, playerMode: () => CINEMA.playerMode,
+        protection: () => combatWorldState.openingProtection(), lowGraphics: () => GFX.low, transformationBlocked: () => CINEMA.active && CINEMA.blocksCombat },
       actions: combatActions.opening,
-      readState: () => combatWorldState.openingState(),
-      writeState: (value) => { combatWorldState.setOpeningState(value); },
+      state: openingCarry,
     },
     collision: {
-      values: () => ({ player: combatWorldState.player(), blade: combatWorldState.blade(), run: combatWorldState.run(), width: W }), actions: combatActions.collision,
-      readState: () => ({ ...combatWorldState.collisionState(), enemies: combatWorldState.enemies(),
-        projectiles: combatWorldState.projectiles(), floaters: combatWorldState.floaters() }),
-      writeState(value) {
-        combatWorldState.setCollisionState(value);
-        combatWorldState.setEnemies(value.enemies.filter(isGameEnemy));
-        combatWorldState.setProjectiles(value.projectiles.filter(isGameProjectile));
-        combatWorldState.setFloaters(value.floaters.filter(isGameFloater));
-      },
+      values: { player: () => combatWorldState.player(), blade: () => combatWorldState.blade(), run: () => combatWorldState.run(), width: () => W },
+      actions: combatActions.collision,
+      state: collisionPhaseState,
     },
     kill: combatActions.kill,
   };
@@ -628,7 +627,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       ghostSupport: ghostSupportScreen.snapshot,
     },
     frameState: { screen: () => state, previousScreen: interfaceFrame.previousScreen, setPreviousScreen: interfaceFrame.setPreviousScreen, uiZoom: interfaceFrame.uiZoom, setUiZoom: (value) => { interfaceFrame.setUiZoom(value); Input.uiZoom = value; }, deltaSeconds: interfaceFrame.deltaSeconds, enterSeconds: interfaceFrame.enterSeconds, setEnterSeconds: interfaceFrame.setEnterSeconds, enterAmount: interfaceFrame.enterAmount, setEnterAmount: interfaceFrame.setEnterAmount, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus, controls: interfaceInteraction.buttons, resetControls: interfaceInteraction.resetButtons, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: interfaceFrame.seconds },
-    frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resize: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: interfaceInteraction.hoverAnimations(), trickColor },
+    frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, viewportScale: () => viewport.cssPerLogicalPixel, resizeIfNeeded: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: interfaceInteraction.hoverAnimations(), trickColor },
     worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), environment: () => environment.snapshot(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: interfaceFrame.deltaSeconds, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: () => hudFeedback.snapshot(), setHud: (value) => { hudFeedback.set(value); } },
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
   }); const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
@@ -663,7 +662,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { session.setSelectedBoss(bossId); },
       selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { session.setRunSeed(seed); }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
-      stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
+      stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds, intervalSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
       setSemanticInputAuthority: inputAuthority.setSemanticInputAuthority, routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
       activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = interfaceInteraction.buttons().find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { abandonLiveRun("tearbench-terminated", { tearBenchTerminated: true }); setState("paused"); },
@@ -682,7 +681,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("./live-debug-composition").then(({ installLiveGameDebug }) => {
     installLiveGameDebug({
-      enabled: PANTHEON_DEBUG, dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, cinema: CINEMA, stage: stageRuntime, width: W, height: H,
+      enabled: PANTHEON_DEBUG, dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
+      cinema: CINEMA, stage: stageRuntime, environment, width: W, height: H,
       spawnExplicitVariant: (kind, variantId) => { spawnOne({ type: kind, variantId }); },
       startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: reviveCountdown.setSeconds,
       openDraft: openRewardDraft, openTier: openRewardTier, run: liveRun, player: livePlayer, blade: liveBlade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
@@ -695,5 +695,5 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       authoritative: () => authoritativeStep.lastResult, startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),
     });
   });
-  frameDriver.start(({ deltaSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds); });
+  frameDriver.start(({ deltaSeconds, intervalSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds); });
 })(); }

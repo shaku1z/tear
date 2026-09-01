@@ -1,16 +1,42 @@
 import { describe, expect, it } from "vitest";
+
 import { canonicalStringify, stableVerificationHash } from "../../src/replay/hash";
 
-describe("stable verification hashing", () => {
-  it("is independent of object insertion order", () => {
-    const left = { player: { health: 4, x: -0 }, enemies: [{ id: "e2", health: 7 }], tick: 120 };
-    const right = { tick: 120, enemies: [{ health: 7, id: "e2" }], player: { x: 0, health: 4 } };
-    expect(canonicalStringify(left)).toBe(canonicalStringify(right));
-    expect(stableVerificationHash(left)).toBe(stableVerificationHash(right));
+function hashCanonicalText(canonical: string): string {
+  let hash = 0xcbf29ce484222325n;
+  for (let index = 0; index < canonical.length; index += 1) {
+    const codeUnit = canonical.charCodeAt(index);
+    hash ^= BigInt(codeUnit & 0xff);
+    hash = (hash * 0x100000001b3n) & 0xffffffffffffffffn;
+    hash ^= BigInt(codeUnit >>> 8);
+    hash = (hash * 0x100000001b3n) & 0xffffffffffffffffn;
+  }
+  return hash.toString(16).padStart(16, "0");
+}
+
+describe("stable verification hash", () => {
+  it("matches the materialized canonical encoding without allocating that full encoding", () => {
+    const sparse = new Array<unknown>(4);
+    sparse[1] = "present";
+    sparse[3] = null;
+    const values: readonly unknown[] = [
+      null, true, false, 0, -0, 1.25, 1e30,
+      "plain", "quote\"slash\\", "\b\t\n\f\r\u0000\u001f", "\u2028\u2029", "emoji 💧", "lone \ud800 \udfff",
+      sparse,
+      { z: [3, 2, 1], a: { nested: "value", controls: "\u0001" }, unicode: "🌸" },
+      { payload: "encoded-like-value/with+base64=".repeat(4_096) },
+    ];
+
+    for (const value of values) {
+      expect(stableVerificationHash(value)).toBe(hashCanonicalText(canonicalStringify(value)));
+    }
   });
 
-  it("rejects values that JSON replays cannot represent deterministically", () => {
-    expect(() => stableVerificationHash({ health: Number.NaN })).toThrow(/non-finite/);
-    expect(() => stableVerificationHash({ missing: undefined })).toThrow(/undefined/);
+  it("preserves canonical validation failures", () => {
+    expect(() => stableVerificationHash({ bad: Number.NaN })).toThrow("$.bad contains a non-finite number");
+    expect(() => stableVerificationHash({ bad: undefined })).toThrow("$.bad is undefined");
+    expect(() => stableVerificationHash({ bad: () => undefined })).toThrow("$.bad is not canonical JSON data");
+    expect(() => stableVerificationHash({ nested: [{ bad: Number.POSITIVE_INFINITY }] }))
+      .toThrow("$.nested[0].bad contains a non-finite number");
   });
 });

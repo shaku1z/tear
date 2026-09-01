@@ -12,6 +12,25 @@ const field = (state: EnvironmentFieldState["state"] = "scheduled") => ({
 });
 
 describe("environment runtime", () => {
+  it("reuses immutable snapshots until the environment revision changes", () => {
+    const runtime = createEnvironmentRuntime({ stageId: "test", worldId: "snapshot-cache" });
+    const first = runtime.snapshot();
+    expect(runtime.snapshot()).toBe(first);
+    const authored = field("active");
+    runtime.addField(authored);
+    authored.geometry.x = 999;
+    expect(runtime.fields()[0]?.geometry.x).toBe(10);
+    expect(Object.isFrozen(runtime.fields()[0]?.geometry)).toBe(true);
+    const changed = runtime.snapshot();
+    expect(changed).not.toBe(first);
+    expect(runtime.snapshot()).toBe(changed);
+    const fieldId = changed.fields[0]?.id;
+    if (fieldId === undefined) throw new Error("expected the admitted environment field");
+    runtime.updateField(fieldId, { timer: 2 });
+    expect(changed.fields[0]?.timer).toBe(0);
+    expect(runtime.snapshot().fields[0]?.timer).toBe(2);
+  });
+
   it("owns data-only fields, combat objects, and routes with bounded deterministic IDs", () => {
     const first = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "alpha" });
     const second = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "beta" });

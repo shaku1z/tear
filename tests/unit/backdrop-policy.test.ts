@@ -77,4 +77,40 @@ describe("Backdrop policy", () => {
       transientLights: BACKDROP_RESOURCE_LIMITS.transientLights,
     });
   });
+
+  it("reuses bounded palette parsing while preserving exact authored CSS colours", () => {
+    const controller = createBackdrop(policy({ sim: 0 }, 1_600));
+    const expanded = controller._rgb("#abc");
+
+    expect(expanded).toEqual([170, 187, 204]);
+    expect(Object.isFrozen(expanded)).toBe(true);
+    expect(controller._rgb("#abc")).toBe(expanded);
+    expect(controller._mix("#000", "#fff", 0.5)).toBe("rgb(128,128,128)");
+    expect(controller._rgba("#abc", 0.22)).toBe("rgba(170,187,204,0.22)");
+  });
+
+  it("binds the unchanged mote colour once per draw instead of rebuilding it per particle", () => {
+    const controller = createBackdrop(policy({ sim: 0 }, 1_600));
+    const stage = STAGES[0];
+    if (stage === undefined) throw new Error("backdrop policy test requires a stage");
+    const cache = controller._get(stage);
+    let fillStyle = "", fillStyleWrites = 0, globalAlpha = 1;
+    const filledColors: string[] = [], filledAlphas: number[] = [];
+    const context = {
+      save: () => undefined, restore: () => undefined, beginPath: () => undefined,
+      arc: () => undefined,
+      fill: () => { filledColors.push(fillStyle); filledAlphas.push(globalAlpha); },
+      set fillStyle(value: string) { fillStyle = value; fillStyleWrites += 1; },
+      get fillStyle() { return fillStyle; },
+      set globalAlpha(value: number) { globalAlpha = value; },
+      get globalAlpha() { return globalAlpha; },
+    } as unknown as CanvasRenderingContext2D;
+
+    controller.motes(context, cache, 1.25, 0, { rgb: "228,201,90", aMul: 0.62 });
+
+    expect(fillStyleWrites).toBe(1);
+    expect(filledColors).toHaveLength(BACKDROP_RESOURCE_LIMITS.motesPerStage);
+    expect(filledColors.every((color) => color === "rgba(228,201,90,1)")).toBe(true);
+    expect(filledAlphas.every((alpha) => Number.isFinite(alpha))).toBe(true);
+  });
 });

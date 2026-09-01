@@ -62,7 +62,11 @@ export function createLiveCombatActions<
         }
       }
       if (run().mods.razorStun && !enemy.isBoss) enemy.stun = Math.max(enemy.stun, 0.45);
-      d.FX.burst(enemy.x, enemy.y, hit.dx, hit.dy, 7, enemy.color);
+      context.attackPresentation.emit({ weaponId: "riftlock", attackId: hit.attackId, throwId: hit.throwId,
+        action: "projectile", phase: "contact", variant: hit.secondary ? "backblastRound" : "razorRound",
+        sourceX: projectile.x, sourceY: projectile.y, x: enemy.x, y: enemy.y,
+        directionX: hit.dx, directionY: hit.dy, normalX: -hit.dx, normalY: -hit.dy, material: "flesh",
+        intensity: d.clamp(Math.hypot(hit.dx, hit.dy) / Math.max(1, d.CONFIG.proj.speed), 0, 1) });
       f.addFloater(enemy.x, enemy.y - 28, String(Math.round(damage)), true, d.CONFIG.colors.perfect);
       f.logWeaponEvent(hit.secondary ? "backblastRoundHit" : "razorRoundHit",
         { attackId: hit.attackId, throwId: hit.throwId, remote: hit.remote, damage });
@@ -88,6 +92,15 @@ export function createLiveCombatActions<
     updateWeaponAbilities: f.updateWeaponAbilities,
     flushWeaponActions(events) {
       for (const event of events) {
+        if (event.type === "slingRelease") {
+          context.attackPresentation.emit({ weaponId: "chainblade", attackId: event.attackId, throwId: event.throwId,
+            action: "secondary", phase: "return", variant: "sling", sourceX: event.sourceX, sourceY: event.sourceY,
+            x: event.x, y: event.y, directionX: event.vx, directionY: event.vy,
+            normalX: -event.vy, normalY: event.vx, material: "air",
+            intensity: d.clamp(Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.weapons.chainblade.maxReleaseSpeed), 0, 1) });
+          f.logWeaponEvent(event.type, { attackId: event.attackId, throwId: event.throwId });
+          continue;
+        }
         const shot = new d.Projectile(event.x, event.y, event.vx, event.vy);
         shot.setFamily("weaponProjectile"); shot.playerOwned = true; shot.weaponId = "riftlock";
         shot.attackId = event.attackId; shot.throwId = event.throwId; shot.remote = event.remote;
@@ -95,7 +108,11 @@ export function createLiveCombatActions<
         shot.life = d.CONFIG.weapons.riftlock.razorLife; shot.dmg = event.damage;
         shot.tint = d.CONFIG.colors.perfect; shot.unparryable = true; shot.counterplay = "weapon";
         projectiles().push(shot as unknown as Projectile);
-        d.FX.burst(event.x, event.y, event.vx, event.vy, 5, d.CONFIG.colors.perfect);
+        context.attackPresentation.emit({ weaponId: "riftlock", attackId: event.attackId, throwId: event.throwId,
+          action: "projectile", phase: "start", variant: event.secondary ? "backblastRound" : "razorRound",
+          sourceX: event.x, sourceY: event.y, x: event.x, y: event.y,
+          directionX: event.vx, directionY: event.vy, material: "air",
+          intensity: d.clamp(Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.proj.speed), 0, 1) });
         f.logWeaponEvent(event.type, { attackId: event.attackId, throwId: event.throwId,
           remote: event.remote, secondary: event.secondary });
       }
@@ -140,7 +157,20 @@ export function createLiveCombatActions<
         { type: "throwLaunch", throwId, weaponId: activeRun.weaponId, attackId: activeBlade.attackId }));
     },
     logThrowLaunch: (throwId) => { f.logWeaponEvent("throwLaunch", { throwId }); },
-    weaponWorldImpact: f.weaponWorldImpact, lobExplode: () => { f.lobExplode(blade().x, blade().y); },
+    weaponWorldImpact() {
+      const effect = f.weaponWorldImpact(), activeBlade = blade(), weaponId = run().weaponId;
+      if (effect?.mechanic === "meteor" && weaponId === "hammer" || effect?.mechanic === "wheelCut" && weaponId === "greatsword") {
+        context.attackPresentation.emit({ weaponId, attackId: activeBlade.attackId, swingId: activeBlade.swingId,
+          throwId: activeBlade.throwId, action: "impact", phase: "impact", variant: effect.mechanic,
+          sourceX: activeBlade.throwOrigin?.x ?? activeBlade.x, sourceY: activeBlade.throwOrigin?.y ?? activeBlade.y,
+          x: activeBlade.x, y: activeBlade.y, directionX: activeBlade.impactVX ?? activeBlade.vx,
+          directionY: activeBlade.impactVY ?? activeBlade.vy,
+          normalX: 0, normalY: -1, material: "stone",
+          intensity: d.clamp(d.len(activeBlade.impactVX ?? activeBlade.vx, activeBlade.impactVY ?? activeBlade.vy)
+            / Math.max(1, d.CONFIG.blade.throw.maxSpeed), 0, 1) });
+      }
+      return effect;
+    }, lobExplode: () => { f.lobExplode(blade().x, blade().y); },
     emitThrowResolve: () => { f.emitThrowResolve(null, blade().throwDmg); }, nearestEnemy: () => f.openingNearestEnemy(),
     updateFeedback: (seconds) => { updateRuntimeFeedback(context, seconds); }, consumeThrow: f.consumeThrow, updateWave: f.updateWave,
     startTransformation: f.startTransformation, updateSupports: (seconds) => { updateSupports(context, seconds); },
@@ -203,6 +233,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
   };
   return {
     config: d.CONFIG,
+    reducedMotion: () => d.A11Y.reducedMotion,
     environment: context.environment,
     environmentTick: () => Math.max(0, Math.round(d.CLOCK.sim * 120)),
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
@@ -214,7 +245,8 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     effects: { burst: (...args) => { d.FX.burst(...args); }, ring: (...args) => { d.FX.ring(...args); }, flash: (...args) => { d.FX.flash(...args); },
       ribbon: (...args) => { d.FX.ribbon(...args); }, explode: (...args) => { d.FX.explode(...args); }, floater: f.addFloater,
       shake: f.addShake, zoom: f.addZoom, buzz: (milliseconds) => { d.Input.buzz(milliseconds); },
-      sound: (name, big) => { f.playSound(name, big); }, style: f.addStyle, tutorial: (name) => { ports.tutorial.mark(name); } },
+      sound: (name, big) => { f.playSound(name, big); }, style: f.addStyle, tutorial: (name) => { ports.tutorial.mark(name); },
+      presentAttack: (cue) => { context.attackPresentation.emit(cue); } },
     sound: (cue, big) => { f.playSound(cue, big); }, flare: (...args) => { d.Backdrop.flare(...args); },
     segmentCircle: d.segCircle, segmentPointDistance: d.segPointDist,
     weaponSegmentContact: f.weaponSegmentContact,

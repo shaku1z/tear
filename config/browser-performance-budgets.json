@@ -17,6 +17,8 @@
     "simulationP95Ms": 4,
     "renderP95Ms": 14,
     "frameP95Ms": 16.67,
+    "frameIntervalP99Ms": 34,
+    "frameIntervalMaxMs": 50,
     "newLongTasksMax": 0
   },
   "constrainedGameplay": {
@@ -29,6 +31,8 @@
     "simulationP95Ms": 10,
     "renderP95Ms": 14,
     "frameP95Ms": 20,
+    "frameIntervalP99Ms": 50,
+    "frameIntervalMaxMs": 75,
     "newLongTasksMax": 0
   },
   "verdantGameplay": {
@@ -39,6 +43,8 @@
     "simulationP95Ms": 6,
     "renderP95Ms": 14,
     "frameP95Ms": 16.67,
+    "frameIntervalP99Ms": 34,
+    "frameIntervalMaxMs": 50,
     "newLongTasksMax": 0,
     "ceilings": {
       "enemies": 8,
@@ -57,6 +63,8 @@
     "simulationP95Ms": 6,
     "renderP95Ms": 14,
     "frameP95Ms": 16.67,
+    "frameIntervalP99Ms": 34,
+    "frameIntervalMaxMs": 50,
     "newLongTasksMax": 0,
     "ceilings": {
       "enemies": 8,

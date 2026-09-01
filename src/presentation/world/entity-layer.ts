@@ -120,8 +120,10 @@ export function renderFloaters(canvas: CanvasRenderingContext2D, floaters: reado
   canvas.textAlign = "center";
   for (const floater of floaters) {
     canvas.globalAlpha = clamp(floater.life / 0.8, 0, 1); canvas.fillStyle = floater.color;
-    const age = 0.8 - floater.life, pop = age < 0.12 ? 1.5 - 0.5 * (age / 0.12) : 1, base = floater.big ? 26 : 16;
-    canvas.font = `${floater.big ? "bold " : ""}${String(Math.round(base * pop))}px 'Courier New', monospace`;
+    const damage = /^[+-]?\d+(?:[▼⇊!⇈↑])?$/.test(floater.text);
+    const age = 0.8 - floater.life, pop = damage ? 1 : age < 0.12 ? 1.2 - 0.2 * (age / 0.12) : 1;
+    const base = damage ? 16 : floater.big ? 22 : 16;
+    canvas.font = `${!damage && floater.big ? "bold " : ""}${String(Math.round(base * pop))}px 'Courier New', monospace`;
     canvas.fillText(floater.text, floater.x, floater.y);
   }
   canvas.globalAlpha = 1;

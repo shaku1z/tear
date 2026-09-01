@@ -9,6 +9,7 @@ export interface ThrownBlade {
   x: number; y: number; vx: number; vy: number; angle: number; state: string; thrown: boolean;
   readonly preserveRedirectAngle?: boolean;
   throwDmg: number; throwBaseDmg?: number; throwId: number; secondaryActive: boolean;
+  attackId?: number; swingId?: number;
   throwOrigin?: { x: number; y: number } | null; pierced: Set<object>; hookTarget?: object | null; slingCollided?: Set<object>;
   linkT?: number;
   thrownCollisionSegment(): { x1: number; y1: number; x2: number; y2: number };
@@ -56,6 +57,7 @@ export interface ThrownCollisionHooks {
   achievementsEnabled(): boolean; recordThrowAchievement(enemy: ThrownEnemy, pierces: number, damage: number): void;
   recordPierceKill(): void; fireHit(enemy: ThrownEnemy): void; fireReturnHit(enemy: ThrownEnemy, damage: number): void;
   lobExplode(x: number, y: number): void;
+  presentAttack?(cue: AttackPresentationCue): void;
 }
 
 /** Resolves sweeper interception followed by thrown-enemy hits in stable array order. */
@@ -106,13 +108,14 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
   damage *= hooks.runDamageMultiplier() * enemy.damageTakenMult();
   const first = enemy.firstPlayerDamageAt == null; enemy.hit(damage, blade.vx, blade.vy); hooks.noteFirstDamage(enemy, first);
   blade.recordHit(enemy); run.weaponStats.throwHits++; hooks.logHit(blade.throwId, damage, secondary, effect?.mechanic);
-  applyThrowEffect(blade, enemy, effect, t, hooks); hooks.emitResolve(enemy, damage);
+  const presentedAttack = applyThrowEffect(blade, enemy, effect, run, t, hooks); hooks.emitResolve(enemy, damage);
   if (player.rallySource === enemy) {
     const healed = player.claimRally(damage);
     if (healed > 0) { hooks.floater(player.x, player.y - 44, `+${String(Math.round(healed))}`, false, "#e8a32e"); hooks.ribbon(enemy.x, enemy.y - 12, player.x, player.y - 10, "#e8a32e"); }
   }
   applyThrowMods(blade, player, enemy, run, t, hooks);
-  hooks.burst(enemy.x, enemy.y, blade.vx, blade.vy, t.sparkCount, enemy.color); hooks.floater(enemy.x, enemy.y - 26, Math.round(damage).toString(), true);
+  if (!presentedAttack) hooks.burst(enemy.x, enemy.y, blade.vx, blade.vy, t.sparkCount, enemy.color);
+  hooks.floater(enemy.x, enemy.y - 26, Math.round(damage).toString(), true);
   hooks.setHitStop(t.hitStopSmall); hooks.shake(t.shakeSmall); hooks.style(effect?.mechanic === "threadcut" ? "threadcut" : effect?.mechanic === "wheelCut" || effect?.mechanic === "wheelReturn" ? "wheelCut" : "throwHit");
   if (hooks.achievementsEnabled()) hooks.recordThrowAchievement(enemy, blade.pierced.size, damage);
   hooks.fireHit(enemy); if (secondary) hooks.fireReturnHit(enemy, damage);
@@ -133,11 +136,35 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
 }
 
 function applyThrowEffect(blade: ThrownBlade, enemy: ThrownEnemy, effect: ThrowEffect | null | undefined,
-  t: ThrownCollisionTuning, hooks: ThrownCollisionHooks): void {
-  if (effect?.mechanic === "threadcut") {
+  run: ThrownRun, t: ThrownCollisionTuning, hooks: ThrownCollisionHooks): boolean {
+  const mechanic = effect?.mechanic;
+  const identity = mechanic === undefined ? null : throwPresentationIdentity(run.weaponId, mechanic);
+  if (identity !== null && hooks.presentAttack !== undefined) {
+    const returning = blade.state === "returning" || blade.secondaryActive;
+    hooks.presentAttack({ ...identity, attackId: blade.attackId ?? blade.throwId,
+      ...(blade.swingId === undefined ? {} : { swingId: blade.swingId }), throwId: blade.throwId,
+      action: returning ? "secondary" : identity.variant === "meteor" ? "impact" : "throw",
+      phase: returning ? "return" : identity.variant === "meteor" ? "impact" : "contact",
+      sourceX: blade.throwOrigin?.x ?? blade.x, sourceY: blade.throwOrigin?.y ?? blade.y,
+      x: enemy.x, y: enemy.y, directionX: blade.vx, directionY: blade.vy,
+      normalX: -blade.vx, normalY: -blade.vy, material: "flesh",
+      intensity: hooks.clamp(hooks.distance(blade.vx, blade.vy) / Math.max(1, t.maxThrowSpeed), 0, 1) });
+    return true;
+  } else if (mechanic === "threadcut") {
     hooks.ribbon(blade.throwOrigin?.x ?? blade.x, blade.throwOrigin?.y ?? blade.y, enemy.x, enemy.y, t.colors.perfect);
     hooks.floater(enemy.x, enemy.y - 44, "THREADCUT", true, t.colors.perfect);
   }
+  return false;
+}
+
+function throwPresentationIdentity(weaponId: string, mechanic: string):
+Readonly<{ weaponId: "sword" | "hammer" | "greatsword" | "chainblade" | "riftlock"; variant: string }> | null {
+  if (weaponId === "sword" && mechanic === "threadcut") return { weaponId, variant: mechanic };
+  if (weaponId === "hammer" && ["meteor", "hammerReturn"].includes(mechanic)) return { weaponId, variant: mechanic };
+  if (weaponId === "greatsword" && ["wheelCut", "wheelReturn"].includes(mechanic)) return { weaponId, variant: mechanic };
+  if (weaponId === "chainblade" && ["hook", "sling"].includes(mechanic)) return { weaponId, variant: mechanic };
+  if (weaponId === "riftlock" && ["capture", "backblast"].includes(mechanic)) return { weaponId, variant: mechanic };
+  return null;
 }
 
 function applyThrowMods(blade: ThrownBlade, player: ThrownPlayer, enemy: ThrownEnemy, run: ThrownRun,
@@ -165,3 +192,4 @@ function redirectBlade(blade: ThrownBlade, enemies: readonly ThrownEnemy[],
 }
 
 function projectileIsDead(projectile: SweeperProjectile): boolean { return projectile.dead; }
+import type { AttackPresentationCue } from "./attack-presentation-cue";
