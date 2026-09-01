@@ -13,6 +13,7 @@ test("parallel canary is manual and non-required while Validate keeps plain brow
   assert.match(workflow, /^name: TearBench Parallel Canary[\s\S]+?workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /\n\s+(?:pull_request|push):/u);
   assert.match(validate, /xvfb-run -a pnpm check:functional/u);
+  assert.match(validate, /timeout-minutes: 30/u);
   assert.match(workflow, /pnpm exec playwright install --with-deps chromium/u);
   assert.doesNotMatch(workflow, /playwright[^\n]*--shard|--workers(?:=|\s)/u);
   assert.ok(!registry.profiles.release.includes("certify.release"), "aggregate certification must not recursively certify itself as a task");
@@ -30,17 +31,24 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.equal([...workflow.matchAll(/mkdir -p artifacts\/tearbench\/missions/gu)].length, 2);
   const aggregateJob = workflow.slice(workflow.indexOf("\n  aggregate:"));
   assert.match(aggregateJob, /id: aggregate-provider[\s\S]+?name: tearbench-canary-provider-/u);
-  assert.equal([...workflow.matchAll(/--ready-at/gu)].length, 4);
+  assert.equal([...workflow.matchAll(/--ready-at/gu)].length, 5);
   assert.equal([...workflow.matchAll(/^\s+- id: ready$/gmu)].length, 2);
   assert.ok([...workflow.matchAll(/uses: actions\/upload-artifact@v4/gu)].length >= 8);
   assert.ok([...workflow.matchAll(/if: always\(\)/gu)].length >= 6);
   for (const job of ["browser", "core"]) assert.match(workflow, new RegExp(`name: tearbench-canary-\\$\\{\\{ matrix\\.shardId \\}\\}`), job);
+  assert.match(workflow, /performance:\n\s+needs: \[plan, build, browser, core\]/u);
+  assert.match(workflow, /Run isolated performance task after all parallel work/u);
+  assert.match(workflow, /name: tearbench-canary-performance-1-/u);
+  assert.match(workflow, /serial:\n\s+needs: \[plan, performance\]/u);
+  assert.match(aggregateJob, /steps\.aggregate-performance\.outcome == 'success'/u);
 });
 
 test("parallel canary retries only the failed atomic task and records authorization", () => {
   assert.match(shardRunner, /result\.receipt\.result\.status !== "passed"/u);
   assert.match(shardRunner, /attemptNumber: 2/u);
-  assert.match(shardRunner, /TEARBENCH_RETRY_AUTHORIZATION = `bounded-canary-single-retry:/u);
+  assert.match(shardRunner, /performanceSampleAllowsRetry\(result\.receipt\.result\.sampleValidity\)/u);
+  assert.match(shardRunner, /`bounded-canary-invalid-sample-retry:\$\{values\["--mission"\]\}:\$\{taskId\}`/u);
+  assert.match(shardRunner, /`bounded-canary-single-retry:\$\{values\["--mission"\]\}:\$\{taskId\}`/u);
   assert.match(shardRunner, /delete process\.env\.TEARBENCH_RETRY_AUTHORIZATION/u);
 });
 

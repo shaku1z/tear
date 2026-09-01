@@ -11,6 +11,8 @@ function fixture() {
     { taskId: "browser.b", resourceClass: "browser", dependencies: [{ taskId: "build.one", outputId: "build-artifact" }], timeoutMs: 10 },
     { taskId: "browser.c", resourceClass: "browser", dependencies: [{ taskId: "build.one", outputId: "build-artifact" }], timeoutMs: 10 },
     { taskId: "browser.d", resourceClass: "browser", dependencies: [{ taskId: "build.one", outputId: "build-artifact" }], timeoutMs: 10 },
+    { taskId: "browser.test-browser-performance", resourceClass: "browser",
+      dependencies: [{ taskId: "build.one", outputId: "build-artifact" }], timeoutMs: 10 },
     { taskId: "unit.a", resourceClass: "unit", dependencies: [], timeoutMs: 10 },
     { taskId: "headless.a", resourceClass: "headless", dependencies: [], timeoutMs: 10 },
   ];
@@ -29,18 +31,23 @@ test("canary packing is deterministic, bounded, dependency ordered, and exact", 
   assert.equal(first.constraints.nativePlaywrightSharding, false);
   assert.equal(first.browserShards.length, 4);
   assert.equal(first.parity.status, "exact");
-  assert.deepEqual(first.serialShard.taskIds, ["build.one", "browser.a", "browser.b", "browser.c", "browser.d", "headless.a", "unit.a"]);
-  assert.deepEqual(new Set([first.buildShard, ...first.browserShards, ...first.coreShards].flatMap((shard) => shard.taskIds)),
+  assert.deepEqual(first.serialShard.taskIds, ["build.one", "browser.a", "browser.b", "browser.c", "browser.d",
+    "browser.test-browser-performance", "headless.a", "unit.a"]);
+  assert.deepEqual(first.performanceShard.taskIds, ["browser.test-browser-performance"]);
+  assert.ok(first.browserShards.every((shard) => !shard.taskIds.includes("browser.test-browser-performance")));
+  assert.deepEqual(new Set([first.buildShard, ...first.browserShards, ...first.coreShards, first.performanceShard].flatMap((shard) => shard.taskIds)),
     new Set(plan.requiredTaskIds));
   assert.equal(first.browserShards.find((shard) => shard.taskIds.includes("browser.a")).estimatedMs, 100);
 });
 
 test("canary parity proves exact equivalence and a planted aggregate rejection", () => {
-  const plan = { planDigest: "a".repeat(64), requiredTaskIds: ["task.a", "task.b"],
+  const performanceTaskId = "browser.test-browser-performance";
+  const plan = { planDigest: "a".repeat(64), requiredTaskIds: ["task.a", "task.b", performanceTaskId],
     source: { revision: "b".repeat(40), state: "clean", fingerprint: "f".repeat(64) } };
   const shardPlan = { shardPlanDigest: "c".repeat(64),
     buildShard: { shardId: "build-1", taskIds: ["task.b"] }, browserShards: [{ shardId: "browser-1", taskIds: ["task.a"] }],
-    coreShards: [], serialShard: { shardId: "serial-1", taskIds: ["task.a", "task.b"] } };
+    coreShards: [], performanceShard: { shardId: "performance-1", taskIds: [performanceTaskId] },
+    serialShard: { shardId: "serial-1", taskIds: ["task.a", "task.b", performanceTaskId] } };
   const produced = Array.from({ length: 4 }, (_, index) => ({ taskId: `build.${String(index)}`, outputId: "build-artifact",
     recordDigest: String(index + 1).repeat(64), buildIdentityDigest: String(index + 5).repeat(64) }));
   const origin = { kind: "github-actions", repository: "shaku1z/tear", workflow: "Canary", runId: "123", job: "job", attempt: 1 };
@@ -54,8 +61,10 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
     setupMs: 20, jobWallMs: wall, taskWallMs: wall - 20, taskResults: taskIds.map((taskId) => ({ taskId, status: "passed" })),
     runCreatedAt: "2026-08-31T00:00:00.000Z", readyAt: "2026-08-31T00:00:00.020Z",
     finishedAt: `2026-08-31T00:00:${String(wall / 1000).padStart(2, "0")}.000Z` });
-  const serial = [makeReceipt("task.a", "serial"), makeReceipt("task.b", "serial", "passed", { produced })];
-  const parallel = [makeReceipt("task.a", "browser"), makeReceipt("task.b", "build", "passed", { produced })];
+  const serial = [makeReceipt("task.a", "serial"), makeReceipt("task.b", "serial", "passed", { produced }),
+    makeReceipt(performanceTaskId, "serial")];
+  const parallel = [makeReceipt("task.a", "browser"), makeReceipt("task.b", "build", "passed", { produced }),
+    makeReceipt(performanceTaskId, "performance")];
   const providerReceipts = produced.map((entry) => { const unsigned = { format: "tear-build-provider-receipt", schemaVersion: 1,
     provider: "github-actions", artifactId: "789",
     artifactDigest: "d".repeat(64), artifactUrl: "https://github.com/shaku1z/tear/actions/runs/123/artifacts/789",
@@ -65,17 +74,22 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
     artifactId: "789", artifactDigest: "d".repeat(64), artifactUrl: "https://github.com/shaku1z/tear/actions/runs/123/artifacts/789", receipts: providerReceipts };
   const providerBundle = { ...providerUnsigned, bundleDigest: receiptSha256(providerUnsigned) };
   const common = { plan, shardPlan, serialReceipts: serial, parallelReceipts: parallel,
-    serialTimings: [timing("serial-1", "serial", ["task.a", "task.b"], 10000)],
-    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), timing("browser-1", "browser", ["task.a"], 5000)],
+    serialTimings: [timing("serial-1", "serial", ["task.a", "task.b", performanceTaskId], 10000)],
+    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), timing("browser-1", "browser", ["task.a"], 5000),
+      timing("performance-1", "performance", [performanceTaskId], 3000)],
     serialCertificate: { status: "certified", planDigest: plan.planDigest },
     parallelCertificate: { status: "certified", planDigest: plan.planDigest }, providerBundle,
     generatedAt: "2026-08-31T00:01:00.000Z" };
   assert.equal(createCanaryParityReport(common).status, "equivalent");
+  assert.deepEqual(createCanaryParityReport(common).metrics.isolatedPerformance,
+    { queueMs: 10, setupMs: 20, taskWallMs: 2980, jobWallMs: 3000 });
   const failedBrowserTiming = timing("browser-1", "browser", ["task.a"], 5000);
   failedBrowserTiming.taskResults[0].status = "failed";
   const planted = createCanaryParityReport({ ...common,
-    parallelReceipts: [makeReceipt("task.a", "browser", "failed"), makeReceipt("task.b", "build", "passed", { produced })],
-    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), failedBrowserTiming],
+    parallelReceipts: [makeReceipt("task.a", "browser", "failed"), makeReceipt("task.b", "build", "passed", { produced }),
+      makeReceipt(performanceTaskId, "performance")],
+    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), failedBrowserTiming,
+      timing("performance-1", "performance", [performanceTaskId], 3000)],
     parallelCertificate: { status: "rejected", planDigest: plan.planDigest }, plantedFailureTaskId: "task.a" });
   assert.equal(planted.status, "expected-rejection-proved");
   assert.equal(createCanaryParityReport({ ...common, parallelReceipts: [makeReceipt("task.a", "browser")],
@@ -92,14 +106,18 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
     attempts: [failed, recovered].map((receipt) => ({ attemptNumber: receipt.attemptNumber,
       status: receipt.result.status, receiptPath: receipt.immutablePath })) };
   const recoveredReport = createCanaryParityReport({ ...common,
-    parallelReceipts: [failed, recovered, makeReceipt("task.b", "build", "passed", { produced })],
-    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), recoveredTiming] });
+    parallelReceipts: [failed, recovered, makeReceipt("task.b", "build", "passed", { produced }),
+      makeReceipt(performanceTaskId, "performance")],
+    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), recoveredTiming,
+      timing("performance-1", "performance", [performanceTaskId], 3000)] });
   assert.equal(recoveredReport.status, "equivalent");
   assert.equal(recoveredReport.retryHistory.parallel.find((entry) => entry.taskId === "task.a").disposition, "recovered-flaky");
   const unauthorized = { ...recovered, retryAuthorization: null };
   assert.equal(createCanaryParityReport({ ...common,
-    parallelReceipts: [failed, unauthorized, makeReceipt("task.b", "build", "passed", { produced })],
-    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), recoveredTiming] }).status, "mismatched");
+    parallelReceipts: [failed, unauthorized, makeReceipt("task.b", "build", "passed", { produced }),
+      makeReceipt(performanceTaskId, "performance")],
+    parallelTimings: [timing("build-1", "build", ["task.b"], 4000), recoveredTiming,
+      timing("performance-1", "performance", [performanceTaskId], 3000)] }).status, "mismatched");
 });
 
 test("canary packing rejects altered plans, unsupported classes, and missing duration policy", () => {

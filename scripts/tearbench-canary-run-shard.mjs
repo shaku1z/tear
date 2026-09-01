@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { executePlanTask } from "./tearbench-task-execution.mjs";
+import { performanceSampleAllowsRetry, PERFORMANCE_TASK_ID } from "./tearbench-performance-sample.mjs";
 import { receiptSha256 } from "./tearbench-task-receipts.mjs";
 
 const usage = "usage: node scripts/tearbench-canary-run-shard.mjs --plan path --shard-plan path --shard id --mission id --timing path --run-created iso --ready-at iso --job-start iso --plant-failure task|none";
@@ -15,7 +16,8 @@ const plan = JSON.parse(await readFile(resolve(values["--plan"]), "utf8"));
 const shardPlan = JSON.parse(await readFile(resolve(values["--shard-plan"]), "utf8"));
 const { shardPlanDigest, ...shardPayload } = shardPlan;
 if (receiptSha256(shardPayload) !== shardPlanDigest || shardPlan.planDigest !== plan.planDigest) throw new TypeError("canary shard plan is stale or malformed");
-const shards = [shardPlan.buildShard, ...shardPlan.browserShards, ...shardPlan.coreShards, shardPlan.serialShard];
+const shards = [shardPlan.buildShard, ...shardPlan.browserShards, ...shardPlan.coreShards,
+  shardPlan.performanceShard, shardPlan.serialShard];
 const shard = shards.find((entry) => entry.shardId === values["--shard"]);
 if (shard === undefined) throw new RangeError(`unknown canary shard ${values["--shard"]}`);
 const runCreatedAt = new Date(values["--run-created"]), readyAt = new Date(values["--ready-at"]),
@@ -30,10 +32,15 @@ for (const taskId of shard.taskIds) {
     let result = await executePlanTask({ planPath: values["--plan"], taskId, missionId: values["--mission"],
       attemptNumber: 1, plantedFailureTaskId: planted });
     attempts.push({ attemptNumber: 1, status: result.receipt.result.status,
-      durationMs: result.receipt.result.durationMs, receiptPath: result.receipt.immutablePath });
-    if (result.receipt.result.status !== "passed") {
+      durationMs: result.receipt.result.durationMs, receiptPath: result.receipt.immutablePath,
+      sampleValidity: result.receipt.result.sampleValidity });
+    const invalidPerformanceSample = taskId === PERFORMANCE_TASK_ID
+      && performanceSampleAllowsRetry(result.receipt.result.sampleValidity);
+    if (result.receipt.result.status !== "passed" && (taskId !== PERFORMANCE_TASK_ID || invalidPerformanceSample)) {
       const priorRetryAuthorization = process.env.TEARBENCH_RETRY_AUTHORIZATION;
-      process.env.TEARBENCH_RETRY_AUTHORIZATION = `bounded-canary-single-retry:${values["--mission"]}:${taskId}`;
+      process.env.TEARBENCH_RETRY_AUTHORIZATION = taskId === PERFORMANCE_TASK_ID
+        ? `bounded-canary-invalid-sample-retry:${values["--mission"]}:${taskId}`
+        : `bounded-canary-single-retry:${values["--mission"]}:${taskId}`;
       try {
         result = await executePlanTask({ planPath: values["--plan"], taskId, missionId: values["--mission"],
           attemptNumber: 2, plantedFailureTaskId: planted });
@@ -42,7 +49,8 @@ for (const taskId of shard.taskIds) {
         else process.env.TEARBENCH_RETRY_AUTHORIZATION = priorRetryAuthorization;
       }
       attempts.push({ attemptNumber: 2, status: result.receipt.result.status,
-        durationMs: result.receipt.result.durationMs, receiptPath: result.receipt.immutablePath });
+        durationMs: result.receipt.result.durationMs, receiptPath: result.receipt.immutablePath,
+        sampleValidity: result.receipt.result.sampleValidity });
     }
     const status = result.receipt.result.status;
     taskResults.push({ taskId, status, durationMs: attempts.reduce((sum, attempt) => sum + attempt.durationMs, 0),
