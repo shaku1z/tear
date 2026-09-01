@@ -6,6 +6,8 @@ import { URL } from "node:url";
 const workflow = await readFile(new URL("../.github/workflows/tearbench-canary.yml", import.meta.url), "utf8");
 const validate = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
 const registry = JSON.parse(await readFile(new URL("../src/tearbench/task-registry.json", import.meta.url), "utf8"));
+const shardRunner = await readFile(new URL("../scripts/tearbench-canary-run-shard.mjs", import.meta.url), "utf8");
+const detachedParityRunner = await readFile(new URL("../scripts/run-current-live-detached-parity.mjs", import.meta.url), "utf8");
 
 test("parallel canary is manual and non-required while Validate keeps plain browser entrypoints", () => {
   assert.match(workflow, /^name: TearBench Parallel Canary[\s\S]+?workflow_dispatch:/u);
@@ -33,4 +35,18 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.ok([...workflow.matchAll(/uses: actions\/upload-artifact@v4/gu)].length >= 8);
   assert.ok([...workflow.matchAll(/if: always\(\)/gu)].length >= 6);
   for (const job of ["browser", "core"]) assert.match(workflow, new RegExp(`name: tearbench-canary-\\$\\{\\{ matrix\\.shardId \\}\\}`), job);
+});
+
+test("parallel canary retries only the failed atomic task and records authorization", () => {
+  assert.match(shardRunner, /result\.receipt\.result\.status !== "passed"/u);
+  assert.match(shardRunner, /attemptNumber: 2/u);
+  assert.match(shardRunner, /TEARBENCH_RETRY_AUTHORIZATION = `bounded-canary-single-retry:/u);
+  assert.match(shardRunner, /delete process\.env\.TEARBENCH_RETRY_AUTHORIZATION/u);
+});
+
+test("detached parity resolves pnpm from PATH outside a parent pnpm process", () => {
+  assert.doesNotMatch(detachedParityRunner, /npm_execpath/u);
+  assert.match(detachedParityRunner, /else run\("pnpm", parityArgs\)/u);
+  assert.match(detachedParityRunner, /process\.env\.ComSpec \?\? "cmd\.exe"/u);
+  assert.doesNotMatch(detachedParityRunner, /shell:/u);
 });

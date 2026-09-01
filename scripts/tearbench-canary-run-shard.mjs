@@ -26,10 +26,27 @@ let failed = false;
 for (const taskId of shard.taskIds) {
   const started = Date.now();
   try {
-    const result = await executePlanTask({ planPath: values["--plan"], taskId, missionId: values["--mission"],
+    const attempts = [];
+    let result = await executePlanTask({ planPath: values["--plan"], taskId, missionId: values["--mission"],
       attemptNumber: 1, plantedFailureTaskId: planted });
+    attempts.push({ attemptNumber: 1, status: result.receipt.result.status,
+      durationMs: result.receipt.result.durationMs, receiptPath: result.receipt.immutablePath });
+    if (result.receipt.result.status !== "passed") {
+      const priorRetryAuthorization = process.env.TEARBENCH_RETRY_AUTHORIZATION;
+      process.env.TEARBENCH_RETRY_AUTHORIZATION = `bounded-canary-single-retry:${values["--mission"]}:${taskId}`;
+      try {
+        result = await executePlanTask({ planPath: values["--plan"], taskId, missionId: values["--mission"],
+          attemptNumber: 2, plantedFailureTaskId: planted });
+      } finally {
+        if (priorRetryAuthorization === undefined) delete process.env.TEARBENCH_RETRY_AUTHORIZATION;
+        else process.env.TEARBENCH_RETRY_AUTHORIZATION = priorRetryAuthorization;
+      }
+      attempts.push({ attemptNumber: 2, status: result.receipt.result.status,
+        durationMs: result.receipt.result.durationMs, receiptPath: result.receipt.immutablePath });
+    }
     const status = result.receipt.result.status;
-    taskResults.push({ taskId, status, durationMs: result.receipt.result.durationMs, receiptPath: result.receipt.immutablePath });
+    taskResults.push({ taskId, status, durationMs: attempts.reduce((sum, attempt) => sum + attempt.durationMs, 0),
+      receiptPath: result.receipt.immutablePath, attempts });
     failed ||= status !== "passed";
   } catch (error) {
     failed = true;

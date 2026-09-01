@@ -11,13 +11,14 @@ const environment = {
   TEAR_C27A_PARITY_REQUIRED: "1",
 };
 
-function run(command, args) {
-  const result = spawnSync(command, args, { cwd: resolve("."), env: environment, stdio: "inherit" });
+function run(command, args, options = {}) {
+  const result = spawnSync(command, args, { cwd: resolve("."), env: environment, stdio: "inherit", ...options });
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
 run(process.execPath, ["tests/browser-c27a-live-parity-trace.js"]);
-const pnpmCli = process.env.npm_execpath;
-if (pnpmCli === undefined) throw new Error("pnpm execution path is unavailable");
-run(process.execPath, [pnpmCli, "exec", "vitest", "run", "tests/unit/current-live-detached-mechanic-parity.test.ts"]);
+const parityArgs = ["exec", "vitest", "run", "tests/unit/current-live-detached-mechanic-parity.test.ts"];
+if (process.platform === "win32") {
+  run(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `pnpm ${parityArgs.join(" ")}`]);
+} else run("pnpm", parityArgs);
