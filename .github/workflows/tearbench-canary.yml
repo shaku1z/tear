@@ -23,6 +23,11 @@ concurrency:
   group: tearbench-parallel-canary-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TEAR_PERF_BROWSER: pinned
+  TEAR_PERF_BROWSER_VERSION: "152.0.7977.64"
+  TEAR_PERF_BROWSER_ARCHIVE_SHA256: 8b592f066af71f054aab2cc80fc26f73c775c6d44ebb99d16ade924b24756c2e
+
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -108,8 +113,6 @@ jobs:
     if: ${{ always() && !cancelled() && needs.plan.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    env:
-      TEAR_PERF_BROWSER: stable
     steps:
       - id: clock
         run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
@@ -131,6 +134,7 @@ jobs:
           path: downloads/control
       - run: node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
       - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/install-tear-performance-browser
       - id: tasks
         name: Run exact serial comparison mission
         shell: bash
@@ -355,8 +359,6 @@ jobs:
     if: ${{ always() && !cancelled() && needs.plan.result == 'success' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      TEAR_PERF_BROWSER: stable
     steps:
       - id: clock
         run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
@@ -383,6 +385,7 @@ jobs:
           node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
           node scripts/tearbench-canary-compose.mjs --input downloads/build --workspace .
       - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/install-tear-performance-browser
       - id: tasks
         name: Run isolated performance task after all parallel work
         run: >-

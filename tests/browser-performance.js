@@ -27,8 +27,11 @@ const graphicsPreference = process.env.TEAR_PERF_GFX || "auto";
 assert.ok(["auto", "high", "low"].includes(graphicsPreference),
   "TEAR_PERF_GFX must be auto, high, or low");
 const browserPreference = process.env.TEAR_PERF_BROWSER || "auto";
-assert.ok(["auto", "stable", "bundled"].includes(browserPreference),
-  "TEAR_PERF_BROWSER must be auto, stable, or bundled");
+assert.ok(["auto", "stable", "bundled", "pinned"].includes(browserPreference),
+  "TEAR_PERF_BROWSER must be auto, stable, bundled, or pinned");
+const pinnedBrowserPath = process.env.TEAR_PERF_BROWSER_PATH;
+const pinnedBrowserVersion = process.env.TEAR_PERF_BROWSER_VERSION;
+const pinnedBrowserArchiveSha256 = process.env.TEAR_PERF_BROWSER_ARCHIVE_SHA256;
 const deviceScaleFactor = Number(process.env.TEAR_PERF_DEVICE_SCALE_FACTOR || "1");
 assert.ok(Number.isFinite(deviceScaleFactor) && deviceScaleFactor >= 1 && deviceScaleFactor <= 3,
   "TEAR_PERF_DEVICE_SCALE_FACTOR must be between 1 and 3");
@@ -57,8 +60,17 @@ function installedStableChromePath() {
   return candidates.find((candidate) => fs.existsSync(candidate));
 }
 
-function selectedStableChromePath() {
+function selectedChromePath() {
   if (browserPreference === "bundled") return undefined;
+  if (browserPreference === "pinned") {
+    assert.ok(pinnedBrowserPath && path.isAbsolute(pinnedBrowserPath) && fs.existsSync(pinnedBrowserPath),
+      "TEAR_PERF_BROWSER=pinned requires an existing absolute TEAR_PERF_BROWSER_PATH");
+    assert.match(pinnedBrowserVersion || "", /^\d+\.\d+\.\d+\.\d+$/u,
+      "TEAR_PERF_BROWSER=pinned requires an exact TEAR_PERF_BROWSER_VERSION");
+    assert.match(pinnedBrowserArchiveSha256 || "", /^[a-f0-9]{64}$/u,
+      "TEAR_PERF_BROWSER=pinned requires a lowercase TEAR_PERF_BROWSER_ARCHIVE_SHA256");
+    return pinnedBrowserPath;
+  }
   const chromePath = installedStableChromePath();
   assert.ok(browserPreference !== "stable" || chromePath,
     "TEAR_PERF_BROWSER=stable requires an installed stable Chrome executable");
@@ -531,16 +543,26 @@ async function repeatedRunScenario(browser, pageErrors) {
   let browser;
   try {
     await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
-    const chromePath = selectedStableChromePath();
+    const chromePath = selectedChromePath();
     browser = await chromium.launch({
       headless: budgets.referenceProfile.headless,
       args: ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--enable-precise-memory-info"],
       ...(chromePath ? { executablePath: chromePath } : {}),
     });
-    const browserRuntime = { version: browser.version(), executable: chromePath || "playwright-bundled-chromium" };
+    const browserRuntime = {
+      version: browser.version(),
+      executable: chromePath || "playwright-bundled-chromium",
+      archiveSha256: browserPreference === "pinned" ? pinnedBrowserArchiveSha256 : null,
+    };
     // Emit the runtime identity before any scenario assertion so failed attempt
     // receipts remain attributable to the exact browser under measurement.
     console.log(JSON.stringify({ browserRuntime }));
+    if (browserPreference === "pinned") {
+      assert.equal(browserRuntime.version, pinnedBrowserVersion,
+        "pinned performance evidence launched a different browser version");
+      assert.equal(browserRuntime.executable, pinnedBrowserPath,
+        "pinned performance evidence launched a different browser executable");
+    }
     const pageErrors = [];
     assert.ok(["all", "active", "constrained", "verdant", "pale", "cycles"].includes(selectedScenario),
       `unknown TEAR_PERF_SCENARIO: ${selectedScenario}`);

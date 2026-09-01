@@ -25,6 +25,31 @@ test("task environment adds only task-owned resource identity to the plan-stable
   assert.deepEqual(executed, { ...planned, resourceClass: "browser", resourceKeys: ["browser:chromium", "port:4173"] });
 });
 
+test("task environment binds an exact pinned performance browser", () => {
+  const environment = {
+    RUNNER_ENVIRONMENT: "github-hosted",
+    ImageOS: "ubuntu24",
+    TEAR_PERF_BROWSER: "pinned",
+    TEAR_PERF_BROWSER_VERSION: "152.0.7977.64",
+    TEAR_PERF_BROWSER_ARCHIVE_SHA256: "8b592f066af71f054aab2cc80fc26f73c775c6d44ebb99d16ade924b24756c2e",
+  };
+  assert.deepEqual(executionEnvironmentBinding(undefined, environment), {
+    platform: process.platform,
+    arch: process.arch,
+    runnerClass: "github-hosted",
+    runnerImage: "ubuntu24",
+    performanceBrowser: {
+      preference: "pinned",
+      version: "152.0.7977.64",
+      archiveSha256: "8b592f066af71f054aab2cc80fc26f73c775c6d44ebb99d16ade924b24756c2e",
+    },
+  });
+  assert.throws(() => executionEnvironmentBinding(undefined, { ...environment,
+    TEAR_PERF_BROWSER_ARCHIVE_SHA256: "missing" }), /pinned performance browser identity/u);
+  assert.throws(() => executionEnvironmentBinding(undefined, { ...environment,
+    TEAR_PERF_BROWSER_VERSION: "" }), /pinned performance browser identity/u);
+});
+
 test("typed task execution emits one immutable local attempt and refuses overwrite", async () => {
   const missionId = `vap4-executor-${String(process.pid)}`;
   const planPath = resolve(root, "artifacts/tearbench/generated/vap4-executor-test-plan.json");

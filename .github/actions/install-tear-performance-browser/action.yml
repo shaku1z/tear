@@ -1,0 +1,21 @@
+name: Install exact Tear performance browser
+description: Download and verify the owner-reviewed Chrome for Testing binary used by Tear performance evidence
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        : "${TEAR_PERF_BROWSER_VERSION:?missing exact performance browser version}"
+        : "${TEAR_PERF_BROWSER_ARCHIVE_SHA256:?missing performance browser archive SHA-256}"
+        archive="$RUNNER_TEMP/tear-performance-chrome-${TEAR_PERF_BROWSER_VERSION}.zip"
+        install_root="$RUNNER_TEMP/tear-performance-chrome-${TEAR_PERF_BROWSER_VERSION}"
+        url="https://storage.googleapis.com/chrome-for-testing-public/${TEAR_PERF_BROWSER_VERSION}/linux64/chrome-linux64.zip"
+        curl --proto '=https' --tlsv1.2 --fail --location --retry 3 --retry-all-errors --output "$archive" "$url"
+        printf '%s  %s\n' "$TEAR_PERF_BROWSER_ARCHIVE_SHA256" "$archive" | sha256sum --check --strict
+        mkdir "$install_root"
+        unzip -q "$archive" -d "$install_root"
+        executable="$install_root/chrome-linux64/chrome"
+        test -x "$executable"
+        echo "TEAR_PERF_BROWSER_PATH=$executable" >> "$GITHUB_ENV"
