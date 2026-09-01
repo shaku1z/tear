@@ -11,8 +11,8 @@ This acceptance is not a claim of universal zero stutter on every driver/host, p
 ## Source-bound evidence
 
 - Branch: `codex/performance-combat-effects`
-- Reference commit: `9e7d6a701ca0b992c8d78cccc2af329d698778c0`
-- Source state: dirty isolated worktree; no commit, push, merge, or deployment
+- Protected-main reconciliation base: `3b5ce7c8e1aef0652e3d155e0d012591e8361250`
+- Source state: clean isolated task branch; no push, pull request, merge to protected `main`, or deployment
 - Exact source fingerprint, artifact hash, browser version, and capture time are read from each generated performance report rather than duplicated here as mutable prose.
 - Capture manifest: `artifacts/tearbench/generated/attack-presentation/evidence.json`
 - Performance artifact: `artifacts/tearbench/generated/browser-performance.json`
@@ -48,7 +48,7 @@ The prior cel/anime captures remain historical rejection evidence. Generated con
 
 These C40 journeys are weapon engineering evidence only; they do not constitute full C40 release certification.
 
-## Final exact-source performance evidence
+## Accepted pre-integration exact-source performance evidence
 
 | Scenario | Simulation p95 | Render p95 | Frame work p95 / p99 / max | Frame interval p99 / max | Long tasks | Peak effects |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -71,6 +71,10 @@ The live combat boundary now exposes stable, field-backed opening and collision 
 
 The 4× constrained roster then exposed redundant strict-runtime projection work under support-heavy combat. Support resolution now mutates only private result copies, while the live adapter reuses one per-world snapshot/identity workspace and the existing live buff/link arrays. Empty world-hazard and boss-zone paths and absent projectile categories avoid resolver projections while still validating time input, restoring neutral slow state, and binding deterministic actor identities in the original order. On Playwright's same bundled Chromium path, sampled constrained allocation fell from 165.32 MiB to 114.23 MiB (30.9%). The prior support projection/clone stacks dropped from approximately 42.6 MiB combined to 10.2 MiB, and `updateSupports` self-allocation fell from 4.20 MiB to 1.85 MiB. Three exact-source isolated stable-Chrome constrained runs passed the unchanged 10 ms simulation ceiling at 4.5, 5.8, and 4.6 ms p95 with zero long tasks. Support composition, Mender selection, Anchor shared fate, live-link projection, workspace reuse, hazard neutralization, category skips, identity ordering, production combat parity, and type gates pass unchanged.
 
+After reconciliation onto protected `main`, three clean stable-Chrome 4× constrained repeats also passed unchanged budgets: simulation p95 was 4.2, 4.6, and 4.7 ms; frame-work p95 was 7.8, 8.8, and 8.6 ms; all three recorded zero long tasks. The canonical `pnpm check` profile then passed tasks 1–84 of 85, including 2,014 unit tests and all gameplay, browser, build, packaging, responsive, input, audio, persistence, and live/detached parity gates. Its final desktop performance task failed only frame-delivery p99 at 61.4 ms against 34 ms while Tear frame work remained 2.0 ms p95, 5.8 ms maximum, and zero long tasks; outside-frame p99 was 59.8 ms.
+
+The opt-in trace lifecycle now checks active, constrained, Verdant, and Pale samples and stops at the first sampled threshold crossing instead of unintentionally tracing later scenarios. Projected support resolution rejects a sparse live actor array at its boundary, and equal-priority pool saturation intentionally preserves already-admitted combat silhouettes rather than replacing them mid-lifetime.
+
 ## Known limits and residual risk
 
 - The completed capture matrix covers four policies at normal gameplay distance, not the originally proposed close/medium/normal 60-image matrix or temporal contact frame sequences.
@@ -79,6 +83,7 @@ The 4× constrained roster then exposed redundant strict-runtime projection work
 - Under intentional 4× CPU throttling, that Windows bundled path falls further to roughly 6-8 Hz and batches many fixed steps into each animation callback; its constrained simulation p95 therefore remains above 10 ms and its frame intervals reach roughly 133-183 ms. This is recorded as a non-passing host/browser condition, not hidden or converted into a weaker budget. Current protected-main evidence is likewise runner-sensitive: parallel canary `33466031200` measured the clean-main constrained simulation p95 at 13.6 ms twice, while the same head's 97-task serial certificate passed the browser performance task. Reconciliation must repeat both isolated and protected parallel evidence before merge readiness is claimed.
 - The original 57–59 ms Verdant pauses were traced to the performance fixture transferring full environment snapshots through browser automation every sample, not production gameplay. Lightweight direct count sampling removes that observer effect.
 - Measured-window Chrome traces attribute remaining rare outside-frame intervals to GPU command/raster flushes while Tear frame work remains short. Low-effects A/B testing did not reduce them, so authored effects were retained. A single machine cannot prove absence of OS, driver, compositor, or host-contention stalls.
+- On the final clean task head, one traced and three untraced stable-Chrome desktop attempts all missed the unchanged 34 ms interval-p99 budget at 58.2, 37.0, 46.0, and 40.9 ms. Their Tear frame-work p95 values remained 1.6–2.0 ms, maxima remained 5.5–7.0 ms, and all recorded zero long tasks. A low-effects A/B attempt also missed at 46.4 ms while Tear work remained 1.8 ms p95, so visual reduction is neither an accepted workaround nor an evidenced remedy. The traced run attributes the delay to hardware-accelerated ANGLE/D3D11 GPU raster/command-buffer work and frame delivery outside Tear's callback. This host is therefore not accepted as final merge-authorizing interval evidence; the unchanged profile must pass on the controlled reference host before promotion.
 - Exact-main canary `33463144114` observed one browser `LongTask` during active gameplay on clean `9df6c5c`, but that main revision does not contain this optimization branch and its pre-optimization harness aborted before emitting frame-work values. The optimized harness now prints measurements before assertions and can select the bundled browser explicitly; integration evidence must repeat that canary after the branch is reconciled rather than claiming the isolated main failure is already fixed.
 - Canvas diagnostics now separate end-to-end frame interval from preceding Tear frame work; direct GPU attribution still requires an opt-in Chrome trace.
 - Legacy replay packets cannot reconstruct presentation facts they never recorded.
