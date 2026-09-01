@@ -32,7 +32,6 @@ function finite(value) { return typeof value === "number" && Number.isFinite(val
 function hasContentionSensitiveTerminalAssertion(stderr, scenario) {
   if (typeof stderr !== "string") return false;
   const labels = [
-    `${scenario} simulation p95 ms`,
     `${scenario} frame-interval p99 ms`,
     `${scenario} frame-interval max ms`,
   ];

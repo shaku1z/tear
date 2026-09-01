@@ -16,7 +16,7 @@ function output(overrides = {}) {
   };
   return `${JSON.stringify({ scenario: "4x constrained gameplay", measurements })}\n`;
 }
-const failure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n";
+const failure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay frame-interval p99 ms: 150 exceeded budget 50\n";
 
 test("classifies only directly evidenced outside-frame contention", () => {
   const sample = classifyPerformanceSample({ taskId: PERFORMANCE_TASK_ID, status: "failed", stdout: output(), stderr: failure });
@@ -36,6 +36,14 @@ test("never relabels Tear frame-work or long-task regressions as infrastructure"
     assert.equal(sample.classification, "product-or-unclassified-failure");
     assert.equal(performanceSampleAllowsRetry(sample), false);
   }
+});
+
+test("never relabels a simulation regression from unrelated outside-frame contention", () => {
+  const stderr = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n";
+  const sample = classifyPerformanceSample({ taskId: PERFORMANCE_TASK_ID, status: "failed",
+    stdout: output({ simulation: { p95Ms: 12 } }), stderr });
+  assert.equal(sample.classification, "product-or-unclassified-failure");
+  assert.equal(performanceSampleAllowsRetry(sample), false);
 });
 
 test("missing, malformed, passing, and unrelated evidence cannot authorize an invalid-sample retry", () => {

@@ -70,7 +70,7 @@ function resign(value) {
 const contendedOutput = `${JSON.stringify({ scenario: "4x constrained gameplay", measurements: {
   frame: { p95Ms: 14.6 }, frameInterval: { p99Ms: 150 }, outsideFrameWork: { p99Ms: 140.9 }, newLongTasks: 0,
 } })}\n`;
-const contendedFailure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n";
+const contendedFailure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay frame-interval p99 ms: 150 exceeded budget 50\n";
 function performanceReceipt(overrides = {}) {
   const bindings = expectedTaskBindings(performancePlan, PERFORMANCE_TASK_ID);
   return createTaskAttemptReceipt({ missionId: "performance", plan: performancePlan, taskId: PERFORMANCE_TASK_ID,
