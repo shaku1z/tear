@@ -2,13 +2,13 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { lstat, mkdir, readFile, readdir, realpath, stat, writeFile } from "node:fs/promises";
-import { arch, platform } from "node:os";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { calculateArtifactHash, readSourceIdentitySync } from "./release-artifact.mjs";
 import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 import { shadowTaskDefinitionDigest } from "./tearbench-shadow-plan.mjs";
+import { executionEnvironmentBinding, executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
 import { canonicalJson, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256 } from "./tearbench-task-receipts.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -110,14 +110,6 @@ async function artifactDescriptor(output) {
   return { path: value.stored, kind: metadata.isDirectory() ? "directory-manifest" : "file",
     sha256: receiptSha256(bytes), size: bytes.length, outputId: output.outputId, bytes };
 }
-function toolchainBinding() {
-  return Object.freeze({ node: process.version, pnpm: process.env.npm_config_user_agent ?? packageSource.packageManager,
-    playwright: packageSource.devDependencies?.playwright ?? packageSource.dependencies?.playwright ?? "unknown" });
-}
-function environmentBinding(task) {
-  return Object.freeze({ platform: platform(), arch: arch(), runnerClass: process.env.RUNNER_ENVIRONMENT ?? "local",
-    runnerImage: process.env.ImageOS ?? "local", resourceClass: task.resourceClass, resourceKeys: [...task.resourceKeys].sort() });
-}
 async function buildBinding(requirement, plan) {
   const attestations = [];
   for (const dependency of requirement.dependencies) {
@@ -184,8 +176,8 @@ export async function executePlanTask({ planPath, taskId, missionId, attemptNumb
   if (!Number.isSafeInteger(attemptNumber) || attemptNumber < 1 || attemptNumber > 2) throw new TypeError("task attempts are limited to one initial run and one retry");
   const origin = originFromEnvironment();
   const bindings = expectedTaskBindings(plan, taskId);
-  if (canonicalJson(toolchainBinding()) !== canonicalJson(bindings.toolchain)
-    || canonicalJson(environmentBinding(task)) !== canonicalJson(bindings.environment)) {
+  if (canonicalJson(executionToolchainBinding(packageSource)) !== canonicalJson(bindings.toolchain)
+    || canonicalJson(executionEnvironmentBinding(task)) !== canonicalJson(bindings.environment)) {
     throw new Error(`task ${taskId} toolchain or environment drifted from its plan`);
   }
   let verifiedBuild = await buildBinding(bindings.build, plan);

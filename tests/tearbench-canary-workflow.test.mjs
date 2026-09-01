@@ -25,6 +25,9 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.match(workflow, /id: aggregate-provider[\s\S]+?tearbench-canary-provider-/u);
   assert.match(workflow, /--provider-bundle downloads\/parallel\/provider\/provider-build-bundle\.json/u);
   assert.match(workflow, /steps\.aggregate-provider\.outcome == 'success'/u);
+  assert.equal([...workflow.matchAll(/mkdir -p artifacts\/tearbench\/missions/gu)].length, 2);
+  const aggregateJob = workflow.slice(workflow.indexOf("\n  aggregate:"));
+  assert.match(aggregateJob, /id: aggregate-provider[\s\S]+?name: tearbench-canary-provider-/u);
   assert.equal([...workflow.matchAll(/--ready-at/gu)].length, 4);
   assert.equal([...workflow.matchAll(/^\s+- id: ready$/gmu)].length, 2);
   assert.ok([...workflow.matchAll(/uses: actions\/upload-artifact@v4/gu)].length >= 8);
