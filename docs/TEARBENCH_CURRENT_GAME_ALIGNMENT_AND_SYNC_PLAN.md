@@ -1,11 +1,16 @@
 # TearBench current-game alignment and permanent synchronization plan
 
+<!-- tearbench-current-program-state: tc8-current-program-state-2026-08-30 -->
+
+- **Current program-state authority:** `../config/tearbench-current-program-state.json`; its protected receipt chain and conservative checkpoint state govern current release wording.
+- **Current program-state summary:** Source `9e7d6a701ca0b992c8d78cccc2af329d698778c0`; C25 open; C27 open; C28 complete; C29 narrow-complete; C30 active; C31 active; C32 foundation-only; C33 active; C34 active; C35 active; C36 open; C37 partial; C38 bounded-partial; C39 local-only; C40 incomplete; production attributable; G7 eligible/open; certificate absent; dashboard certified count 0. Capability evidence is `artifacts/tearbench/generated/diff-capability.json`, last-run and non-cumulative.
+
 - **Document role:** implementation directive supporting the existing TearBench program charter and completion authorities; this document does not create an eighth governed active plan.
 - **Owner:** TearBench and current-game integration owner.
-- **Baseline:** protected game `main` at `a8a476c6171d913581c01bb0e4432f53cf44f9e4`, audited 2026-08-25. Re-resolve current `origin/main` before every implementation slice; this historical SHA is not a future target.
+- **Baseline:** protected game `main` at `9e7d6a701ca0b992c8d78cccc2af329d698778c0`, with successful Validate run `33316839231` and production run `33317506163`. Re-resolve current `origin/main` before every implementation slice; this receipt-bound SHA is not a C40 certificate.
 - **Scope:** the Tear game repository, its typed game runtime, TearBench, replay/headless execution, game-owned player surfaces, evidence routing, documentation, and existing required checks.
 - **Success condition:** TearBench executes and observes the current game truthfully, and every relevant future game change updates or invalidates its corresponding TearBench evidence in the same reviewed change.
-- **Post-review status:** `TB-F0` through `TB-F7` are accepted, subject to the exact acceptance commit retaining a passing canonical gate. Repeated review reopened and corrected two deeper gaps: the direct Sword live-to-detached proof is now mandatory, clean-source/build-bound, and requires an exercised throw/recall/catch lifecycle; the live wave proof now distinguishes real source-spawned current-wave actors from a simultaneous unrelated production actor and preserves the live wave-before-run event order. Protected integration, music re-vendoring, wiki publication, deployment, C25/C27/C30/C31/C33-C40 work, and C40 release certification remain separate unperformed actions.
+- **Post-review status:** `TB-F0` through `TB-F7` are accepted, subject to the exact acceptance commit retaining a passing canonical gate. Repeated review reopened and corrected two deeper gaps: the direct Sword live-to-detached proof is now mandatory, clean-source/build-bound, and requires an exercised throw/recall/catch lifecycle; the live wave proof now distinguishes real source-spawned current-wave actors from a simultaneous unrelated production actor and preserves the live wave-before-run event order. Protected integration, music re-vendoring, wiki publication, C25/C27/C30/C31/C33-C40 work, and C40 release certification remain separate unmet gates; current production deployment is attributable through the recorded receipt chain.
 - **Non-goals:** a second simulator, engine migration, another repository, external deployment, a new test framework, speculative abstractions, bulk historical rewrites, or long-running tests during ordinary development.
 
 ## 1. Read this before touching code
@@ -348,7 +353,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 - [x] Record current checkpoint statuses, partial capabilities, and actual normal-player visibility in the existing handoff/evidence catalog/dashboard.
 - [x] Reconcile closed C32 and partial C37 evidence without promoting a local foundation to a finished player product.
 - [x] Record current release/deployment identity truthfully; remove present-tense frozen/no-public-SHA claims once contradicted by protected release evidence.
-- [x] Add source commit, evidence timestamp, artifact identity, and scope to generated current-capability reporting where existing generators already own those outputs.
+- [x] Add source commit, evidence timestamp, artifact identity, and canonical diff scope to generated last-run diff-capability reporting where existing generators already own those outputs; keep cumulative truth in release certification/C40.
 - [x] Keep the governed seven-plan index stable unless a separately authorized change intentionally updates its checker and metadata contracts.
 - [x] Treat C40 as incomplete until a real clean-commit release certificate passes every named current-game requirement.
 
@@ -381,8 +386,10 @@ The full clean-source `pnpm check` has passed on the owner-authored feature
 branch, including source-bound builds, production/test isolation, all current
 weapons, soundtrack and game-reference provenance, real browser journeys, and
 performance evidence. The final checkpoint commit must repeat that exact gate
-from its own clean source. Protected integration, deployment, publication, and
-C40 release certification remain unperformed and require separate authorization.
+from its own clean source. Protected integration remains an unmet gate and
+requires separate authorization; current game/wiki deployment and publication
+are attributable through the recorded receipt chain, while C40 release
+certification remains an unmet gate.
 The original checked items above describe the first implementation pass; the
 post-review checkpoints below supersede any completion claim contradicted by
 their unchecked work.
@@ -458,7 +465,7 @@ release boundaries.
 - [x] Run the final canonical `pnpm check` from the final intended clean owner-authored feature commit before asserting repository-wide readiness.
 - [x] Perform an independent adversarial review of the exact final diff and resolve every acceptance-blocking issue.
 - [x] Preserve the existing canonical checkout, dirty auxiliary worktrees, unrelated user files, music repository, wiki repository, and locked legacy oracle.
-- [x] Report protected PR/merge, publication, deployment, music re-vendoring, wiki update, and C40 release certification as not performed unless separately authorized.
+- [x] Report protected PR/merge and music re-vendoring as separately authorized gates; bind current game/wiki publication and deployment claims to the recorded receipt chain, and retain C40 release certification as an unmet gate.
 
 **Exit:** No corrective item remains unchecked, every required proof is current and honest, and the persistent goal closes only after actual acceptance.
 
@@ -554,9 +561,9 @@ post-review with no in-scope acceptance-blocking findings.
 - [x] If that review finds an in-scope acceptance blocker, reopen its exact checkbox or add a narrowly scoped corrective checkbox, implement the fix, and repeat the same review before claiming completion.
 - [x] Commit only clean owner-authored game changes and run `pnpm check` against the exact final intended clean commit, including mandatory selector and current-game parity evidence.
 - [x] Recheck the clean final artifact/source identity, every checklist item, and final independent review; complete the persistent goal only when no in-scope acceptance blocker remains.
-- [x] Explicitly report that protected merge, deployment, publication, music re-vendoring, wiki edits, and C40 certification were not performed unless separately authorized.
+- [x] Explicitly report protected merge and music re-vendoring as separately authorized gates; report current deployment/publication only through the recorded receipt chain, and retain C40 certification as absent unless separately authorized and evidenced.
 
-**Acceptance record (2026-08-25):** The first canonical gate passed on clean implementation commit `59af354cf134da9dcef1a7afa605fabb4647cc7e`. Review correctly rejected the first acceptance attempt, then drove the mandatory source-bound Sword proof, real integrated wave-ownership proof, and production event-order correction through clean commit `08f586b508192b72bfcfe7fcc92cbce626dc9505`; focused gates and repeated Luna High review found no remaining blocker in those corrections. This acceptance is valid only if `pnpm check` passes on the exact clean documentation acceptance commit and regenerates all source-bound artifacts there; failure reopens the owning checkbox. Five direct live-to-ordinary-headless weapon traces, broader C21-C40 completion, protected integration, publication, deployment, and C40 certification are not claimed.
+**Historical acceptance record (2026-08-25):** The first canonical gate passed on clean implementation commit `59af354cf134da9dcef1a7afa605fabb4647cc7e`. Review correctly rejected the first acceptance attempt, then drove the mandatory source-bound Sword proof, real integrated wave-ownership proof, and production event-order correction through clean commit `08f586b508192b72bfcfe7fcc92cbce626dc9505`; focused gates and repeated Luna High review found no remaining blocker in those corrections. This historical acceptance is valid only if `pnpm check` passes on the exact clean documentation acceptance commit and regenerates all source-bound artifacts there; failure reopens the owning checkbox. Five direct live-to-ordinary-headless weapon traces and broader C21-C40 completion remain unclaimed. That historical acceptance record did not claim protected integration, publication, deployment, or C40 certification; the later current game/wiki receipt chain is recorded by the current program-state authority.
 
 **Exit:** The final implementation, mandatory evidence, documentation, protected boundaries, and repeated independent post-review agree. No optimistic checked box, manually run optional test, stale artifact, or partial product claim can close the goal.
 
@@ -576,7 +583,7 @@ Compatibility preserved:
 What remains unsupported or unverified:
 Exact next incomplete checkpoint:
 Full release gate: not run / failed / passed from exact clean commit:
-Merge / deploy / publication: not performed unless explicitly authorized:
+Merge / deploy / publication: identify the governing receipt or state that the gate was not run:
 ```
 
 If a short reproducer fails, stop at the first material divergence, fix the owning game/TearBench boundary, and repeat only the relevant proof. Do not compensate with more scaffolding, broader loops, optimistic checklist marks, or an unrelated green test suite.

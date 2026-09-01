@@ -1,11 +1,24 @@
 # TearBench / Scenario Console / Game Agent / Ghost 3.0 Master Continuation Handoff
 
+<!-- tearbench-current-program-state: tc8-current-program-state-2026-08-30 -->
+
+**Current program-state authority:** `config/tearbench-current-program-state.json`.
+It records the exact protected source, successful game/wiki receipt chain,
+non-cumulative diff evidence path, and conservative C25/C27-C40/G7 state.
+**Current program-state summary:** Source `9e7d6a701ca0b992c8d78cccc2af329d698778c0`;
+C25 open; C27 open; C28 complete; C29 narrow-complete; C30 active; C31 active;
+C32 foundation-only; C33 active; C34 active; C35 active; C36 open; C37 partial;
+C38 bounded-partial; C39 local-only; C40 incomplete; production attributable;
+G7 eligible/open; certificate absent; dashboard certified count 0.
+Capability evidence is `artifacts/tearbench/generated/diff-capability.json`,
+last-run and non-cumulative.
+
 **Branch:** short-lived `codex/*` branch from protected canonical `main` (historical source boundary: `codex/ghost3-autonomous-completion-plan`)
 **State:** Current-game alignment `TB-F0` through `TB-F7` is accepted after repeated review corrected the skippable/unbound direct Sword trace and fixture-only wave distinction. The direct trace is mandatory and exact-source/build-bound; the integrated live proof retains wave-before-run source ordering and distinguishes source-spawned wave actors from an unrelated production actor. Acceptance remains conditional on the exact documentation commit's canonical gate. This does not claim protected integration or broader product completion: C28/C29 passed their named gates, C30/C31 remain active, C32 passed its named gate, and C33-C40 remain partial, active, or uncertified as recorded below.
 **Purpose:** Enable a succeeding agent to continue the complete TearBench program through C40 without losing requirements, repeating architectural mistakes, or overstating evidence.
 **Current alignment authority:** [`docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md`](../docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md)
-**Last reconciled protected baseline:** `a8a476c6171d913581c01bb0e4432f53cf44f9e4` on 2026-08-25. Re-resolve current protected `main` before every new slice.
-**Release identity boundary:** The SHA above identifies the locally inspected protected source baseline, not the separately committed alignment feature head or a newly verified deployment. Development builds and selected evidence record their actual source SHA, dirty/clean state, source fingerprint, and artifact identity. Public deployment identity is unverified unless a current protected release receipt proves it; C40 release certification remains incomplete.
+**Last reconciled protected baseline:** `9e7d6a701ca0b992c8d78cccc2af329d698778c0`, with successful Validate run `33316839231` and production run `33317506163`. Re-resolve current protected `main` before every new slice.
+**Release identity boundary:** The recorded receipts establish source/deployment provenance only for their exact protected release chain; they do not complete C40. Development builds and selected evidence record their actual source SHA, dirty/clean state, source fingerprint, and artifact identity. G7 remains open, current production is attributable through the receipt chain, and no C40 release certificate exists.
 
 ## Authority metadata
 
@@ -145,13 +158,13 @@ including source-bound live-to-fresh-Ghost proof for Sword, Hammer,
 Greatsword, Chainblade, and Riftlock; that historical gate does not establish
 the reopened ordinary-headless or causal acceptance claims. Every subsequent
 checkpoint commit must repeat the canonical clean-source gate before
-acceptance. Wiki
-synchronization follows authorized protected game-main
+acceptance. Wiki synchronization follows authorized protected game-main
 integration. Adaptive Soundtrack remains intentionally pinned to approved
 music release `7662fc95769d2ed022593c10f308ec10f054edfc`, not the newest music
-HEAD. Protected integration, music re-vendoring, wiki edits, deployment,
-publication, and C40 release certification remain unperformed; no C40 release
-certificate or protected release claim exists.
+HEAD. Protected integration and music re-vendoring remain separate unmet gates;
+the current game/wiki edits, deployment, and publication are attributable
+through the recorded receipt chain, and no C40 release certificate or broader
+protected release claim exists.
 
 Named status:
 

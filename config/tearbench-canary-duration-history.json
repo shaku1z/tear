@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "statistic": "p95",
+  "minimumSamples": 5,
+  "source": "VAP-0 protected serial baseline plus VAP-5 local task measurements",
+  "fallbackMs": {
+    "static": 30000,
+    "unit": 45000,
+    "headless": 60000,
+    "build": 90000,
+    "browser": 120000,
+    "endurance": 300000
+  },
+  "tasks": {
+    "build.test-standalone": { "samples": 2, "p50Ms": 7600, "p95Ms": 7600 },
+    "browser.test-browser-current-gameplay-scenarios": { "samples": 1, "p50Ms": 9600, "p95Ms": 9600 },
+    "browser.test-browser-performance": { "samples": 1, "p50Ms": 92300, "p95Ms": 92300 }
+  }
+}

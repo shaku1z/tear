@@ -16,6 +16,8 @@ const { withJourney } = require("./browser-journey-harness");
 
 const root = path.resolve(__dirname, "..");
 const catalog = JSON.parse(fs.readFileSync(path.join(root, "src", "tearbench", "canonical-scenarios.json"), "utf8"));
+const BLOOM_WELL_SCENARIO_ID = "verdant-bloom-well-cycle";
+const BLOOM_WELL_LIFECYCLE_TICKS = 744;
 
 function option(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -43,10 +45,10 @@ function gitRevision() {
   }
 }
 
-function parseMaxTicks(value) {
+function parseMaxTicks(value, maximum) {
   const ticks = Number.parseInt(value, 10);
-  if (!Number.isSafeInteger(ticks) || ticks < 1 || ticks > 720) {
-    throw new RangeError("--max-ticks must be an integer from 1 through 720");
+  if (!Number.isSafeInteger(ticks) || ticks < 1 || ticks > maximum) {
+    throw new RangeError(`--max-ticks must be an integer from 1 through the selected scenario horizon ${String(maximum)}`);
   }
   return ticks;
 }
@@ -182,6 +184,35 @@ async function validateLiveObservations(observations, assertions) {
   }
 }
 
+async function validateCanonicalStructuredAssertions(observations, assertions) {
+  if (assertions.length === 0) return;
+  const { createServer } = await import("vite");
+  const server = await createServer({ root, server: { middlewareMode: true } });
+  try {
+    const { assertCanonicalStructuredObservations } = await server.ssrLoadModule("/src/tearbench/canonical-structured-assertions.ts");
+    assertCanonicalStructuredObservations(assertions, observations);
+  } finally {
+    await server.close();
+  }
+}
+
+/** Resolve the source-owned canonical scenario so browser artifacts carry the
+ * same effective assertions as the typed runner. */
+async function loadCanonicalScenario(entry) {
+  const { createServer } = await import("vite");
+  const server = await createServer({ root, server: { middlewareMode: true } });
+  try {
+    const { materializeCanonicalScenario } = await server.ssrLoadModule("/src/tearbench/canonical-scenarios.ts");
+    const { paleCanonicalDocumentForScenario } = await server.ssrLoadModule("/src/tearbench/pale-canonical-scenario-bridge.ts");
+    const { resolveTearSdl } = await server.ssrLoadModule("/src/tearbench/tearsdl.ts");
+    const scenario = materializeCanonicalScenario(entry);
+    const document = paleCanonicalDocumentForScenario(scenario.id);
+    return Object.freeze({ scenario, resolved: document === undefined ? undefined : resolveTearSdl(document) });
+  } finally {
+    await server.close();
+  }
+}
+
 const requestedDirectory = process.env.TEAR_BROWSER_BUILD_DIR;
 if (requestedDirectory !== undefined && requestedDirectory !== "test-standalone") {
   throw new Error("C26 live materialization only accepts dist/test-standalone; production and non-test builds are forbidden");
@@ -199,7 +230,11 @@ if (!scenarioId) throw new TypeError("usage: node tests/browser-tearbench-live-m
 const catalogEntry = catalog.find((entry) => entry.id === scenarioId);
 if (!catalogEntry) throw new RangeError(`unknown canonical TearBench scenario: ${scenarioId}`);
 const seed = headlessTerminal?.scenario.seed ?? option("--seed", "1001");
-const maxTicks = headlessTerminal?.scenario.maxTicks ?? parseMaxTicks(option("--max-ticks", String(Math.min(catalogEntry.maxTicks, 120))));
+const maxTicks = headlessTerminal?.scenario.maxTicks
+  ?? parseMaxTicks(option("--max-ticks", String(Math.min(catalogEntry.maxTicks, 120))), catalogEntry.maxTicks);
+if (catalogEntry.id === BLOOM_WELL_SCENARIO_ID && maxTicks !== BLOOM_WELL_LIFECYCLE_TICKS) {
+  throw new RangeError(`${BLOOM_WELL_SCENARIO_ID} requires its complete ${String(BLOOM_WELL_LIFECYCLE_TICKS)}-tick live lifecycle`);
+}
 const submittedActions = headlessTerminal?.actions ?? readActionTrace(option("--actions"), maxTicks);
 const replayContextArtifact = readJsonOption("--replay-context");
 if (replayContextArtifact !== undefined && (replayContextArtifact.format !== "tearbench-run" || replayContextArtifact.replayContext === undefined)) {
@@ -233,15 +268,26 @@ const runtimeScenario = {
   seed,
   start: scenarioStart,
   maxTicks,
-  assertions: [
-    "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
-    "entity.unique-id", "entity.valid-owner", "player.valid-health", "world.legal-bounds",
-    "wave.valid-completion", "boss.valid-phase", "ui.valid-focus",
-  ],
+  assertions: [],
   tags: [...catalogEntry.tags, ...(headlessTerminal === undefined ? ["c26"] : ["c30", "headless-terminal-rerun"]), "live-runtime-materialized"],
 };
 
 async function main() {
+const { materializedRunStatus } = await import("../scripts/tearbench-run-artifact.mjs");
+const canonicalLaunch = await loadCanonicalScenario(catalogEntry);
+const canonicalScenario = canonicalLaunch.scenario;
+if (catalogEntry.stateForge !== undefined && seed !== canonicalScenario.seed) {
+  throw new RangeError(`canonical State Forge scenario ${scenarioId} requires its authoritative catalog seed ${canonicalScenario.seed}`);
+}
+Object.assign(runtimeScenario, {
+  subject: canonicalScenario.subject,
+  backends: canonicalScenario.backends,
+  stateClass: canonicalScenario.stateClass,
+  seed: canonicalScenario.seed,
+  // The typed canonical materializer owns assertion applicability. Adding
+  // privileged checks here would make ordinary non-boss/non-UI subjects lie.
+  assertions: canonicalScenario.assertions,
+});
 let materialized;
 await withJourney({
   name: `C26 live TearBench materialization (${scenarioId})`, port: 8166,
@@ -249,11 +295,25 @@ await withJourney({
   colorScheme: presentation.colorScheme,
   reducedMotion: presentation.reducedMotion,
 }, async ({ page }) => {
-  const result = await page.evaluate(({ scenario, schedule, actions, snapshot }) => {
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+  const result = await page.evaluate(({ scenario, resolved, schedule, actions, snapshot }) => {
     if (!window.__TEAR_RUNTIME_ENVIRONMENT__) throw new Error("test-only Tear runtime bridge was not installed");
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-    environment.reset(scenario);
-    const initialSnapshot = snapshot ?? environment.captureSnapshot(`c26-${scenario.id}-initial`, "recorded-canonical");
+    if (resolved !== undefined) {
+      const forged = environment.forgeResolvedScenario(resolved);
+      if (!forged.ok) throw new Error(`canonical State Forge launch failed for ${scenario.id}: ${forged.phase} ${JSON.stringify(forged.issues)}`);
+    } else {
+      environment.reset(scenario);
+    }
+    const expectedSnapshotClass = scenario.stateClass;
+    const expectedSnapshotSeed = resolved === undefined ? undefined : scenario.seed;
+    const initialSnapshot = snapshot ?? environment.captureSnapshot(
+      `c26-${scenario.id}-initial`, expectedSnapshotClass,
+      resolved === undefined ? undefined : expectedSnapshotSeed,
+    );
+    if (resolved !== undefined && (initialSnapshot.stateClass !== expectedSnapshotClass || initialSnapshot.seed !== expectedSnapshotSeed)) {
+      throw new Error(`initial snapshot provenance does not match canonical scenario ${scenario.id}`);
+    }
     if (snapshot) {
       const restored = environment.restoreSnapshot(snapshot);
       if (!restored.ok) throw new Error(`State Forge snapshot restore failed during materialization: ${restored.phase}`);
@@ -285,7 +345,7 @@ await withJourney({
       screenshot,
       initialSnapshot,
     };
-  }, { scenario: runtimeScenario, schedule: actionSchedule(submittedActions), actions: submittedActions, snapshot: requestedSnapshot });
+  }, { scenario: runtimeScenario, resolved: canonicalLaunch.resolved, schedule: actionSchedule(submittedActions), actions: submittedActions, snapshot: requestedSnapshot });
   materialized = result;
 });
 
@@ -346,6 +406,7 @@ const actionTrace = {
   actionsHash: sha256(canonicalJson(submittedActions)),
 };
 const failures = await validateLiveObservations(materialized.observations, runtimeScenario.assertions);
+await validateCanonicalStructuredAssertions(materialized.observations, catalogEntry.structuredAssertions ?? []);
 const artifact = {
   format: "tearbench-run",
   schemaVersion: 1,
@@ -357,7 +418,12 @@ const artifact = {
   build,
   resolvedScenario: runtimeScenario,
   seed,
-  status: failures.length > 0 ? "failed" : terminalTransition?.terminated ? "passed" : "truncated",
+  status: materializedRunStatus({
+    failures, finalTick: finalObservation.tick, maxTicks,
+    fixedTicks: materialized.metrics.fixedTicks,
+    surgical: runtimeScenario.stateClass === "surgical-valid" && catalogEntry.stateForge !== undefined,
+    terminated: terminalTransition?.terminated === true,
+  }),
   ticks: finalObservation.tick,
   actions: submittedActions,
   events: materialized.events,

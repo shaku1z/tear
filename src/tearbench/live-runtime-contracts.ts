@@ -116,7 +116,7 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   /** Immutable terminal-outcome and finale outward receipts since reset. */
   outcomeChronologyProjection(): readonly OutcomeChronologyEntry[];
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
-  captureSnapshot(id: string, stateClass?: TearStateClass): TearSnapshotV1;
+  captureSnapshot(id: string, stateClass?: TearStateClass, seed?: string): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
   forgeExitLaunch(launch: StateForgeExitLaunch): TearLiveRestoreResult;
   forgeWave99Hammer(): TearLiveRestoreResult;

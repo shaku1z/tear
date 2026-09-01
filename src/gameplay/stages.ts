@@ -8,14 +8,62 @@
 // readable; dramatic inversions (e.g. a true dark Voidspire) are a later polish pass.
 
 import type { CONFIG as GAME_CONFIG } from "../config/game-config";
+import publicationBoundary from "../../config/campaign-publication-boundary.json";
 import type { ChapterTransitionId } from "./campaign/chapter-controller";
 import type { BossId, EnemyKind } from "./run/content-director";
+import { CURRENT_RULESET_VERSION } from "./run/ruleset-version";
 
 /** Stable authored stage identifiers used by the game-reference projection. */
 export const STAGE_IDS = Object.freeze([
   "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "pale-traverse", "voidspire", "tear",
 ] as const);
 export type StageId = typeof STAGE_IDS[number];
+
+interface PublicationBoundary {
+  readonly status: unknown;
+  readonly rulesetVersion: unknown;
+  readonly activeStageIds: unknown;
+  readonly previewStageIds: unknown;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id: unknown): id is string => typeof id === "string");
+}
+
+function sameStageOrder(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
+/**
+ * The tracked JSON boundary is the only publication input. The authored stage
+ * order supplies the cross-check, so a dropped/reordered stage or a Pale
+ * promotion fails closed while this module is being loaded.
+ */
+function readCurrentPublicationBoundary(value: PublicationBoundary) {
+  if (value.status !== "public" || value.rulesetVersion !== CURRENT_RULESET_VERSION) {
+    throw new Error("current campaign publication boundary is not the public ruleset");
+  }
+  if (!isStringArray(value.activeStageIds) || !isStringArray(value.previewStageIds)) {
+    throw new TypeError("current campaign publication boundary stage IDs are invalid");
+  }
+  const activeStageIds = value.activeStageIds;
+  const previewStageIds = value.previewStageIds;
+  const authoredPublishedStageIds = STAGE_IDS.filter((id) => activeStageIds.includes(id));
+  if (activeStageIds.length !== 6 || !sameStageOrder(activeStageIds, authoredPublishedStageIds)) {
+    throw new Error("current campaign publication boundary must contain the exact six authored stages in order");
+  }
+  if (previewStageIds.length !== 1 || previewStageIds[0] !== "pale-traverse"
+    || activeStageIds.includes("pale-traverse") || new Set(previewStageIds).size !== previewStageIds.length) {
+    throw new Error("current campaign publication boundary must reserve Pale as the sole preview");
+  }
+  const authoredIds = new Set<string>(STAGE_IDS);
+  if (activeStageIds.some((id) => !authoredIds.has(id)) || previewStageIds.some((id) => !authoredIds.has(id))) {
+    throw new Error("current campaign publication boundary references an unknown authored stage");
+  }
+  return Object.freeze({ activeStageIds: Object.freeze([...activeStageIds]), previewStageIds: Object.freeze([...previewStageIds]) });
+}
+
+const CURRENT_PUBLICATION_BOUNDARY = readCurrentPublicationBoundary(publicationBoundary);
 
 /** Stable identity mapping; reserved identities may precede their runtime STAGES entry. */
 export const STAGE_BOSS_HOME = Object.freeze({
@@ -272,19 +320,54 @@ const PUBLISHED_AVAILABILITY: StageContentAvailability = Object.freeze({
   "enemy-test": true, tutorial: true, playground: true, published: true,
 });
 
-/** Source-owned policy: ordinary surfaces derive from this table, never stage-name conditionals. */
-export const STAGE_CONTENT_AVAILABILITY = Object.freeze({
-  grounds: PUBLISHED_AVAILABILITY,
-  undercroft: PUBLISHED_AVAILABILITY,
-  "crimson-fields": PUBLISHED_AVAILABILITY,
-  "verdant-sanctum": PUBLISHED_AVAILABILITY,
-  "pale-traverse": Object.freeze({
-    adventure: false, endless: false, gauntlet: false, "boss-test": false,
-    "enemy-test": false, tutorial: false, playground: true, published: false,
-  }),
-  voidspire: PUBLISHED_AVAILABILITY,
-  tear: PUBLISHED_AVAILABILITY,
-} as const satisfies Readonly<Record<StageId, StageContentAvailability>>);
+const PREVIEW_AVAILABILITY: StageContentAvailability = Object.freeze({
+  adventure: false, endless: false, gauntlet: false, "boss-test": false,
+  "enemy-test": false, tutorial: false, playground: true, published: false,
+});
+
+/** Source-owned policy: every surface derives from the tracked boundary. */
+export const STAGE_CONTENT_AVAILABILITY = Object.freeze(Object.fromEntries(
+  STAGE_IDS.map((id) => [
+    id,
+    CURRENT_PUBLICATION_BOUNDARY.previewStageIds.includes(id)
+      ? PREVIEW_AVAILABILITY
+      : CURRENT_PUBLICATION_BOUNDARY.activeStageIds.includes(id)
+        ? PUBLISHED_AVAILABILITY
+        : (() => { throw new Error(`stage ${id} is absent from the current publication boundary`); })(),
+  ]),
+) as Readonly<Record<StageId, StageContentAvailability>>);
+
+/** Source-derived display projection; IDs and names remain owned by AUTHORED_STAGES. */
+export const STAGE_DISPLAY_NAMES = Object.freeze(Object.fromEntries(
+  AUTHORED_STAGES.map(({ id, name }) => [id, name]),
+) as Readonly<Record<StageId, string>>);
+
+export type StagePublicationState = "published" | "preview";
+
+/** Source-derived publication projection; the tracked boundary remains authoritative. */
+export const STAGE_PUBLICATION_STATE = Object.freeze(Object.fromEntries(
+  STAGE_IDS.map((id) => [id, STAGE_CONTENT_AVAILABILITY[id].published ? "published" : "preview"]),
+) as Readonly<Record<StageId, StagePublicationState>>);
+
+export function stagePublicationState(stageId: StageId): StagePublicationState {
+  return STAGE_PUBLICATION_STATE[stageId];
+}
+
+export interface StageAuthorityProjection {
+  readonly displayNames: Readonly<Record<string, string>>;
+  readonly bossHomes: Readonly<Record<string, string>>;
+  readonly publication: Readonly<Record<string, StagePublicationState>>;
+}
+
+/** Validate an injected content projection against the authored stage owner. */
+export function assertStageAuthorityProjection(projection: StageAuthorityProjection): void {
+  for (const stage of AUTHORED_STAGES) {
+    if (projection.displayNames[stage.id] !== stage.name) throw new Error(`stage display drift for ${stage.id}`);
+    if (projection.bossHomes[stage.id] !== STAGE_BOSS_HOME[stage.id]) throw new Error(`boss home drift for ${stage.id}`);
+    const expectedPublication = STAGE_CONTENT_AVAILABILITY[stage.id].published ? "published" : "preview";
+    if (projection.publication[stage.id] !== expectedPublication) throw new Error(`publication drift for ${stage.id}`);
+  }
+}
 
 export function stageIdsAvailableOn(surface: ContentAvailabilitySurface): readonly StageId[] {
   return Object.freeze(STAGE_IDS.filter((id) => STAGE_CONTENT_AVAILABILITY[id][surface]));

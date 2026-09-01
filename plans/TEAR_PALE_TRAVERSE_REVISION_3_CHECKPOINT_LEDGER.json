@@ -8,6 +8,16 @@
   "sourceFoundation": "25c589844ec2cfe85a8a6deead881ebb3d699198",
   "sourceFoundationRule": "Pale is rooted at the frozen Verdant C21 identity and must reuse its shared contracts. Re-resolve protected origin/main only for drift awareness; do not discard the required Verdant foundation.",
   "publicationBoundary": "No joint integration, reference/wiki dispatch, publication, deployment, or C40 claim is authorized.",
+  "currentPublicationOverlay": {
+    "authority": "config/campaign-publication-boundary.json plus typed src/gameplay/stages.ts",
+    "status": "public",
+    "rulesetVersion": "tear-rules-six-biome-verdant-r3-pale-preview-v1",
+    "publishedStageIds": ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"],
+    "previewStageIds": ["pale-traverse"],
+    "publishedWaveCount": 60,
+    "historicalBoundaryPreserved": true,
+    "note": "This current overlay supersedes the historical publicationBoundary wording for current release and reference decisions; Pale remains an unpublished preview and checkpoint evidence is unchanged."
+  },
   "completedCheckpoints": ["PT3-C0", "PT3-C1", "PT3-C2", "PT3-C3", "PT3-C4", "PT3-C5", "PT3-C6", "PT3-C7", "PT3-C8", "PT3-C9", "PT3-C10", "PT3-C11"],
   "lastGreenCheckpoint": "PT3-C11",
   "lastEvidence": [

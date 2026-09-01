@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { TEAR_CONTRACT_FORMAT, type TearObservationV1 } from "../../src/tearbench/contracts";
-import { runInvariantChecks } from "../../src/tearbench/invariants";
+import {
+  ENVIRONMENT_REQUIRED_INVARIANT_IDS,
+  effectiveInvariantIdsForScenario,
+  requiredInvariantIdsForSubject,
+  runInvariantChecks,
+} from "../../src/tearbench/invariants";
 import { createSourceWaveOwnershipTracker } from "../../src/tearbench/observation-identity";
+import { CANONICAL_ENGINEERING_SCENARIOS } from "../../src/tearbench/canonical-scenarios";
+import { validateTearContract } from "../../src/tearbench/validation";
 
 function observation(patch: Partial<TearObservationV1> = {}): TearObservationV1 {
   return {
@@ -13,21 +20,87 @@ function observation(patch: Partial<TearObservationV1> = {}): TearObservationV1 
     run: { mode: "campaign", difficulty: "normal", weapon: "sword", stage: "grounds", wave: 1,
       score: 0, elapsedTicks: 10 },
     diagnostics: { worldBounds: { minX: 0, maxX: 100, minY: 0, maxY: 100 }, waveComplete: false,
-      livingWaveEnemies: 1, boss: { id: "warden", phase: "1", validPhases: ["1", "2", "3"], homeStage: "grounds" },
+      livingWaveEnemies: 1, waveOwnership: "source-events", boss: { id: "warden", phase: "1", validPhases: ["1", "2", "3"], homeStage: "grounds" },
       ui: { focusedId: "resume", focusableIds: ["resume"] }, progressTick: 9, softlockLimitTicks: 5 },
     availableActions: ["move", "weapon"], ...patch,
   };
 }
 
 describe("TearBench current-game invariants", () => {
+  it("binds the complete environment requirement set and leaves ordinary subjects unchanged", () => {
+    const explicit = ["runtime.finite-state", "player.valid-health"] as const;
+    expect(requiredInvariantIdsForSubject({ kind: "environment-field" })).toEqual(ENVIRONMENT_REQUIRED_INVARIANT_IDS);
+    expect(requiredInvariantIdsForSubject({ kind: "environment-combat-object" })).toEqual(ENVIRONMENT_REQUIRED_INVARIANT_IDS);
+    expect(effectiveInvariantIdsForScenario({ subject: { kind: "environment-field", id: "generic-field" }, assertions: explicit }))
+      .toEqual([...explicit, ...ENVIRONMENT_REQUIRED_INVARIANT_IDS.slice(1)]);
+    expect(effectiveInvariantIdsForScenario({ subject: { kind: "gameplay", id: "movement" }, assertions: explicit }))
+      .toEqual(explicit);
+  });
+
+  it("requires environment-owned invariants and the live-only backend declaration", () => {
+    const scenario = CANONICAL_ENGINEERING_SCENARIOS.find((entry) => entry.subject.kind === "environment-field");
+    if (scenario === undefined) throw new Error("canonical environment scenario fixture is unavailable");
+    expect(validateTearContract(scenario).ok).toBe(true);
+
+    const missingEnvironmentAssertions = validateTearContract({
+      ...scenario,
+      assertions: ["runtime.finite-state"],
+    });
+    expect(missingEnvironmentAssertions.ok).toBe(false);
+    if (missingEnvironmentAssertions.ok) return;
+    expect(missingEnvironmentAssertions.issues.filter((entry) => entry.path === "assertions")).toHaveLength(
+      ENVIRONMENT_REQUIRED_INVARIANT_IDS.length - 1,
+    );
+
+    const headlessEnvironment = validateTearContract({ ...scenario, backends: ["headless"] });
+    expect(headlessEnvironment.ok).toBe(false);
+    if (headlessEnvironment.ok) return;
+    expect(headlessEnvironment.issues.some((entry) => entry.message.includes("supported live backend"))).toBe(true);
+  });
+
   it("fails closed for assertions without an applicable real implementation", () => {
     expect(() => runInvariantChecks(observation(), ["replay.branch-equivalence"])).toThrow(/comparison inputs/u);
-    expect(() => runInvariantChecks(observation(), ["test.production-isolation"])).toThrow(/implementation/u);
+    expect(() => runInvariantChecks(observation(), ["test.production-isolation"])).toThrow(/unsupported/u);
     const { diagnostics, ...withoutDiagnostics } = observation();
     expect(diagnostics).toBeDefined();
     const structured: TearObservationV1 = { ...withoutDiagnostics, observationClass: "structured-state" };
     expect(() => runInvariantChecks(structured, ["runtime.no-softlock"])).toThrow(/privileged diagnostic/u);
     expect(() => runInvariantChecks(structured, ["ui.valid-focus"])).toThrow(/privileged diagnostic/u);
+  });
+
+  it("fails closed when a requested privileged diagnostic field is absent", () => {
+    const current = observation();
+    const currentDiagnostics = current.diagnostics;
+    if (currentDiagnostics === undefined) throw new Error("fixture diagnostics are unavailable");
+    const { worldBounds, ...withoutWorldBounds } = currentDiagnostics;
+    const { boss, ...withoutBoss } = currentDiagnostics;
+    const { ui, ...withoutUi } = currentDiagnostics;
+    const { progressTick, ...withoutProgressTick } = currentDiagnostics;
+    const { waveOwnership, ...withoutWaveOwnership } = currentDiagnostics;
+    expect(worldBounds).toBeDefined();
+    expect(boss).toBeDefined();
+    expect(ui).toBeDefined();
+    expect(progressTick).toBeDefined();
+    expect(waveOwnership).toBeDefined();
+    expect(() => runInvariantChecks({ ...current, diagnostics: withoutWorldBounds }, ["world.legal-bounds"]))
+      .toThrow(/worldBounds/u);
+    expect(() => runInvariantChecks({ ...current, diagnostics: withoutBoss }, ["boss.valid-phase"]))
+      .toThrow(/boss/u);
+    expect(() => runInvariantChecks({ ...current, diagnostics: withoutUi }, ["ui.valid-focus"]))
+      .toThrow(/ui/u);
+    expect(() => runInvariantChecks({ ...current, diagnostics: withoutProgressTick }, ["runtime.no-softlock"]))
+      .toThrow(/progressTick/u);
+    expect(() => runInvariantChecks({ ...current, diagnostics: withoutWaveOwnership }, ["wave.valid-completion"]))
+      .toThrow(/waveOwnership/u);
+  });
+
+  it("rejects registered but unsupported comparison claims at contract validation", () => {
+    const scenario = CANONICAL_ENGINEERING_SCENARIOS.find((entry) => entry.subject.kind === "gameplay");
+    if (scenario === undefined) throw new Error("canonical gameplay scenario fixture is unavailable");
+    const result = validateTearContract({ ...scenario, assertions: ["replay.branch-equivalence"] });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues.some((entry) => entry.message.includes("unsupported invariant"))).toBe(true);
   });
 
   it("accepts healthy Warden ordinal phases and rejects thresholds or unknown phases", () => {
@@ -57,8 +130,14 @@ describe("TearBench current-game invariants", () => {
       ui: { focusedId: "missing", focusableIds: ["resume"] } } }, ["ui.valid-focus"])).toHaveLength(1);
     expect(runInvariantChecks({ ...current, entities: [{ ...actor, ownerId: "missing" }] },
       ["entity.valid-owner"])).toHaveLength(1);
+    expect(runInvariantChecks({ ...current, entities: [{ ...actor, ownerId: actor.id }] },
+      ["entity.valid-owner"])).toHaveLength(1);
     expect(runInvariantChecks({ ...current, entities: [{ ...actor, vx: Number.NaN }] },
       ["runtime.finite-state"])).toHaveLength(1);
+    expect(runInvariantChecks({ ...current, navigation: { surfaces: [{
+      id: "surface:test", bounds: { minX: Number.NaN, maxX: 10, minY: 0, maxY: 10 },
+      oneWay: false, collidable: true, materializationState: "active", connectionIds: [],
+    }], hazards: [] } }, ["runtime.finite-state"])).toHaveLength(1);
   });
 
   it("tracks wave-owned actors from source events without counting unrelated living entities", () => {

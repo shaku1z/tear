@@ -24,3 +24,10 @@ test("rejects Pale in the published stage list or any non-Pale preview", () => {
   assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, previewStageIds: ["white-hart"] }), /sole Playground preview/u);
   assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: ["pale-traverse", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"] }), /exact six published/u);
 });
+
+test("fails closed on dropped, reordered, or obsolete joint-publication policies", () => {
+  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: engineering.activeStageIds.slice(0, 5) }), /exact six published/u);
+  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: ["grounds", "undercroft", "crimson-fields", "voidspire", "verdant-sanctum", "tear"] }), /exact six published/u);
+  assert.throws(() => assertCampaignPublicationAllowed({ ...engineering, status: "engineering-only" }), /publication prohibited/u);
+  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: [...engineering.activeStageIds, "pale-traverse"], previewStageIds: [] }), /exact six published/u);
+});

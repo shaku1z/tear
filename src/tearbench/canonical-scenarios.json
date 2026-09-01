@@ -2,374 +2,1795 @@
   {
     "id": "boot-start-run",
     "description": "Boot the application and enter the first run state.",
-    "subject": { "kind": "gameplay", "id": "boot" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
-    "tags": ["boot", "journey"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "boot"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "boot",
+      "journey"
+    ],
     "maxTicks": 240,
-    "testFiles": ["tests/unit/run-lifecycle.test.ts", "tests/unit/app-state-machine.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/run-lifecycle.test.ts",
+      "tests/unit/app-state-machine.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared bounded browser proof resets each canonical gameplay scenario and requires its real source-owned subject transition.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ],
+      "headless": [
+        "evidence.vitest"
+      ]
+    }
   },
   {
     "id": "movement-jump",
     "description": "Move and complete a grounded jump without invalid state.",
-    "subject": { "kind": "gameplay", "id": "movement" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
-    "tags": ["movement", "jump"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "movement"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "movement",
+      "jump"
+    ],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/player-locomotion.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/player-locomotion.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared bounded browser proof exercises this scenario's source-owned semantic jump and movement.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ],
+      "headless": [
+        "evidence.vitest.2"
+      ]
+    }
   },
   {
     "id": "dash-one-way-platform",
     "description": "Dash and resolve a one-way platform contact.",
-    "subject": { "kind": "gameplay", "id": "dash" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
-    "tags": ["movement", "dash", "platform"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "dash"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "movement",
+      "dash",
+      "platform"
+    ],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/player-locomotion.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/player-locomotion.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared bounded browser proof exercises this scenario's real semantic dash and source-owned dash timer.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ],
+      "headless": [
+        "evidence.vitest.2"
+      ]
+    }
   },
   {
     "id": "blade-valid-cut",
     "description": "Generate a blade contact above the valid cut threshold.",
-    "subject": { "kind": "gameplay", "id": "blade" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["blade", "damage"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "blade"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "blade",
+      "damage"
+    ],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/gameplay-definitions.test.ts", "tests/unit/blade-parry-runtime.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/gameplay-definitions.test.ts",
+      "tests/unit/blade-parry-runtime.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared bounded browser proof resolves real blade damage through the source-owned live collision graph.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "projectile-parry-basic",
     "description": "Deflect a standard projectile without invalid player health.",
-    "subject": { "kind": "gameplay", "id": "parry" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["projectile", "parry"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "parry"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "projectile",
+      "parry"
+    ],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/blade-parry-runtime.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/blade-parry-runtime.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared bounded browser proof deflects one real source-owned hostile projectile; natural headless projectile injection is unavailable.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "wave-clear-to-draft",
     "description": "Clear a wave and enter the draft state.",
-    "subject": { "kind": "gameplay", "id": "wave" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["wave", "draft"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "wave"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "wave",
+      "draft"
+    ],
     "maxTicks": 360,
-    "testFiles": ["tests/unit/live-wave-controller.test.ts", "tests/unit/run-wave-clear-planner.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/live-wave-controller.test.ts",
+      "tests/unit/run-wave-clear-planner.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared bounded browser proof clears the scenario's current source-owned wave lifecycle and enters its real draft.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "draft-selection-to-gameplay",
     "description": "Select one legal draft choice and resume gameplay.",
-    "subject": { "kind": "gameplay", "id": "draft" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["draft", "journey"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "draft"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "draft",
+      "journey"
+    ],
     "maxTicks": 240,
-    "testFiles": ["tests/unit/reward-selection.test.ts", "tests/unit/reward-transition-adapter.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/reward-selection.test.ts",
+      "tests/unit/reward-transition-adapter.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "Shared bounded browser proof consumes an actual source-owned draft choice and returns this scenario's run to playing.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "verdant-variant-selection",
     "description": "Explicitly select a Verdant enemy variant through the Playground training spawn path.",
-    "subject": { "kind": "gameplay", "id": "variant-selection" },
-    "start": { "mode": "playground", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["variants", "training", "explicit-selection", "variant-selection"],
+    "subject": {
+      "kind": "gameplay",
+      "id": "variant-selection"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "variants",
+      "training",
+      "explicit-selection",
+      "variant-selection"
+    ],
     "maxTicks": 120,
-    "testFiles": ["tests/unit/verdant-variant-selection.test.ts", "tests/unit/live-enemy-spawn.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+    "testFiles": [
+      "tests/unit/verdant-variant-selection.test.ts",
+      "tests/unit/live-enemy-spawn.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
       "artifact": "The shared browser journey invokes the source-owned Playground explicit variant training spawn and observes the selected identity.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "warden-grounds-live-encounter",
     "description": "Launch the production Warden encounter in its authored Grounds biome and prove its live combat simulation advances.",
-    "subject": { "kind": "boss", "id": "warden" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "warden" },
-    "backends": ["live"],
-    "tags": ["warden", "grounds", "boss", "stage", "encounter"],
+    "subject": {
+      "kind": "boss",
+      "id": "warden"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "warden"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "warden",
+      "grounds",
+      "boss",
+      "stage",
+      "encounter"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "testFiles": [
+      "tests/unit/current-boss-observation-authority.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
       "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
       "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
     }
   },
   {
     "id": "colossus-undercroft-live-encounter",
     "description": "Launch the production Colossus encounter in its authored Undercroft biome and prove its live combat simulation advances.",
-    "subject": { "kind": "boss", "id": "colossus" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "colossus" },
-    "backends": ["live"],
-    "tags": ["colossus", "undercroft", "boss", "stage", "encounter"],
+    "subject": {
+      "kind": "boss",
+      "id": "colossus"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "colossus"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "colossus",
+      "undercroft",
+      "boss",
+      "stage",
+      "encounter"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "testFiles": [
+      "tests/unit/current-boss-observation-authority.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
       "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
       "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
     }
   },
   {
     "id": "aldric-crimson-fields-live-encounter",
     "description": "Launch the production Aldric encounter in its authored Crimson Fields biome and prove its live combat simulation advances.",
-    "subject": { "kind": "boss", "id": "aldric" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "aldric" },
-    "backends": ["live"],
-    "tags": ["aldric", "crimson-fields", "boss", "stage", "encounter"],
+    "subject": {
+      "kind": "boss",
+      "id": "aldric"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "aldric"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "aldric",
+      "crimson-fields",
+      "boss",
+      "stage",
+      "encounter"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "testFiles": [
+      "tests/unit/current-boss-observation-authority.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
       "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
       "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
     }
   },
   {
     "id": "rootbound-verdant-sanctum-live-encounter",
     "description": "Launch the production Rootbound encounter in Verdant Sanctum and prove its live simulation reaches the first authored Phase I attack transition.",
-    "subject": { "kind": "boss", "id": "rootbound" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "rootbound" },
-    "backends": ["live"],
-    "tags": ["rootbound", "verdant-sanctum", "boss", "stage", "encounter"],
+    "subject": {
+      "kind": "boss",
+      "id": "rootbound"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "rootbound"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "rootbound",
+      "verdant-sanctum",
+      "boss",
+      "stage",
+      "encounter"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts", "tests/unit/rootbound-phase-one.test.ts"],
+    "testFiles": [
+      "tests/unit/current-boss-observation-authority.test.ts",
+      "tests/unit/rootbound-phase-one.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
       "artifact": "The shared production boss journey starts Rootbound through Boss Test in its source-owned Verdant Sanctum stage and observes its first authored Phase I attack transition.",
       "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
     }
   },
   {
     "id": "white-hart-pale-traverse-foundation-live-encounter",
     "description": "Launch the unpublished White Hart engineering encounter in Pale Traverse and prove its deterministic route-first phases, direct projectiles, true/decoy route language, accessibility profile, canonical observation, restore, and cleanup paths.",
-    "subject": { "kind": "boss", "id": "white-hart" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "white-hart" },
-    "backends": ["live"],
-    "tags": ["white-hart", "pale-traverse", "boss", "stage", "route-first", "three-phase", "pt3-c7", "unpublished-preview", "engineering-only"],
+    "subject": {
+      "kind": "boss",
+      "id": "white-hart"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "white-hart"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "white-hart",
+      "pale-traverse",
+      "boss",
+      "stage",
+      "route-first",
+      "three-phase",
+      "pt3-c7",
+      "unpublished-preview",
+      "engineering-only"
+    ],
     "maxTicks": 1440,
-    "testFiles": ["tests/unit/white-hart-foundation.test.ts", "tests/unit/white-hart-phases.test.ts", "tests/unit/white-hart-route-runtime.test.ts", "tests/unit/white-hart-state-forge.test.ts"],
+    "testFiles": [
+      "tests/unit/white-hart-foundation.test.ts",
+      "tests/unit/white-hart-phases.test.ts",
+      "tests/unit/white-hart-route-runtime.test.ts",
+      "tests/unit/white-hart-state-forge.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-pale-white-hart-phases.js",
-      "artifact": "The dedicated engineering journey captures authored route facts for Antler Run, Aurora Volley, Ghost Tracks, and an accessible Endless Return; fixed-step and State Forge tests cover all twelve attacks and phase/environment restoration without publishing White Hart into ordinary Boss Test.",
+      "artifact": "The dedicated engineering journey captures authored route facts for Antler Run, Aurora Volley, Ghost Tracks, and an accessible Endless Return; fixed-step and Scenario Console tests cover all twelve attacks and phase/environment restoration without publishing White Hart into ordinary Boss Test.",
       "artifactRetention": "Regenerable local engineering screenshots and a source/build-bound evidence manifest are retained outside version control.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "evidence.browser-pale-white-hart-phases"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "evidence.browser-pale-white-hart-phases"
+      ]
     }
   },
   {
     "id": "echo-voidspire-live-encounter",
     "description": "Launch the production Echo encounter in its authored Voidspire biome and prove its live combat simulation advances.",
-    "subject": { "kind": "boss", "id": "echo" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "echo" },
-    "backends": ["live"],
-    "tags": ["echo", "voidspire", "boss", "stage", "encounter"],
+    "subject": {
+      "kind": "boss",
+      "id": "echo"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "echo"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "echo",
+      "voidspire",
+      "boss",
+      "stage",
+      "encounter"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/current-boss-observation-authority.test.ts"],
+    "testFiles": [
+      "tests/unit/current-boss-observation-authority.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-boss-parity.js",
       "artifact": "One shared browser journey starts every production boss in its authored biome and verifies live encounter simulation advances.",
       "artifactRetention": "The browser journey checks ephemeral isolated runtime state; no release artifact is retained.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-bosses"
+      ]
     }
   },
   {
     "id": "generic-environment-field-transition",
     "description": "Launch a generic environment field through the source-owned scheduled, active, and resolved lifecycle.",
-    "subject": { "kind": "environment-field", "id": "generic-field" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["environment", "field", "generic-field", "fixed-step", "c4"],
+    "subject": {
+      "kind": "environment-field",
+      "id": "generic-field"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "environment",
+      "field",
+      "generic-field",
+      "fixed-step",
+      "c4"
+    ],
     "maxTicks": 8,
-    "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved field, and observes its real fixed-step lifecycle transitions.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+    "testFiles": [
+      "tests/unit/environment-runtime.test.ts",
+      "tests/unit/environment-field-runtime.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic Scenario Console-approved field, and observes its real fixed-step lifecycle transitions.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "generic-environment-combat-object-transition",
     "description": "Launch a generic environment combat object through source-owned damage, dedupe, destruction, and cleanup transitions.",
-    "subject": { "kind": "environment-combat-object", "id": "generic-combat-object" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["environment", "combat-object", "generic-combat-object", "damage", "c4"],
+    "subject": {
+      "kind": "environment-combat-object",
+      "id": "generic-combat-object"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "environment",
+      "combat-object",
+      "generic-combat-object",
+      "damage",
+      "c4"
+    ],
     "maxTicks": 8,
-    "testFiles": ["tests/unit/environment-runtime.test.ts", "tests/unit/environment-combat-object-runtime.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic State Forge-approved combat object, and observes source-owned damage/dedupe/destruction facts.",
-      "artifactRetention": "Ephemeral isolated test-build observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+    "testFiles": [
+      "tests/unit/environment-runtime.test.ts",
+      "tests/unit/environment-combat-object-runtime.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared bounded browser proof launches a natural source run, installs one generic Scenario Console-approved combat object, and observes source-owned damage/dedupe/destruction facts.",
+      "artifactRetention": "Ephemeral isolated test-build observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "verdant-bloom-well-cycle",
-    "description": "Restore one authored Bloom Well through State Forge and prove deterministic warning, active lift, cooldown, and dormant boundaries without stage insertion.",
-    "subject": { "kind": "environment-field", "id": "verdant-bloom-well" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
-    "tags": ["environment", "field", "bloom-well", "verdant-bloom-well", "movement", "c5"],
-    "maxTicks": 760,
-    "testFiles": ["tests/unit/bloom-well-runtime.test.ts", "tests/unit/environment-field-runtime.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared current-game browser proof restores the Bloom Well through State Forge and records state/hash/observation boundaries; detached parity is covered by the production environment unit harness.",
-      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+    "description": "Restore one authored Bloom Well through Scenario Console and prove deterministic warning, active lift, cooldown, and dormant boundaries without stage insertion.",
+    "subject": {
+      "kind": "environment-field",
+      "id": "verdant-bloom-well"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "environment",
+      "field",
+      "bloom-well",
+      "verdant-bloom-well",
+      "movement",
+      "c5"
+    ],
+    "maxTicks": 744,
+    "testFiles": [
+      "tests/unit/bloom-well-runtime.test.ts",
+      "tests/unit/environment-field-runtime.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared current-game browser proof restores the Bloom Well through Scenario Console and records state/hash/observation boundaries; detached parity is covered by the production environment unit harness.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "verdant-root-network-sever",
-    "description": "Restore one Rootbinder and two ordinary allies through State Forge, prove source-owned root-link segments are severable and cleaned without proc or reward leakage.",
-    "subject": { "kind": "environment-combat-object", "id": "verdant-root-network" },
-    "start": { "mode": "campaign", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live"],
-    "tags": ["environment", "combat-object", "rootbinder", "root-network", "verdant-root-network", "sever", "c6"],
+    "description": "Restore one Rootbinder and two ordinary allies through Scenario Console, prove source-owned root-link segments are severable and cleaned without proc or reward leakage.",
+    "subject": {
+      "kind": "environment-combat-object",
+      "id": "verdant-root-network"
+    },
+    "start": {
+      "mode": "campaign",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "environment",
+      "combat-object",
+      "rootbinder",
+      "root-network",
+      "root-link",
+      "verdant-root-network",
+      "sever",
+      "c6"
+    ],
     "maxTicks": 24,
-    "testFiles": ["tests/unit/rootbinder-network.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared Class-A browser proof restores Rootbinder relationship state through State Forge, observes non-proc root-link segments, severs one segment, and verifies cleanup of the remaining links.",
-      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+    "testFiles": [
+      "tests/unit/rootbinder-network.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared Class-A browser proof restores Rootbinder relationship state through Scenario Console, observes non-proc root-link segments, severs one segment, and verifies cleanup of the remaining links.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "rootbound-graft-anchor-destruction",
-    "description": "Restore Rootbound with one canonical active Graft Anchor through State Forge, destroy it through the environment combat kernel, and prove valid ownership plus reward/proc exclusion.",
-    "subject": { "kind": "environment-combat-object", "id": "rootbound-graft-anchor" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "rootbound" },
-    "backends": ["live"],
-    "tags": ["environment", "combat-object", "rootbound", "rootbound-graft-anchor", "graft-anchor", "destruction", "phase-two", "c12"],
+    "description": "Restore Rootbound with one canonical active Graft Anchor through Scenario Console, destroy it through the environment combat kernel, and prove valid ownership plus reward/proc exclusion.",
+    "subject": {
+      "kind": "environment-combat-object",
+      "id": "rootbound-graft-anchor"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "rootbound"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "environment",
+      "combat-object",
+      "rootbound",
+      "rootbound-graft-anchor",
+      "graft-anchor",
+      "destruction",
+      "phase-two",
+      "c12"
+    ],
     "maxTicks": 24,
-    "testFiles": ["tests/unit/graft-anchor.test.ts", "tests/unit/rootbound-phase-two.test.ts"],
-    "evidence": { "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
-      "artifact": "Shared Class-A browser proof launches the real Rootbound encounter, restores one specialized Graft through State Forge, observes stable owner/target references, destroys it through the canonical combat-object kernel, and proves no enemy reward/proc leakage.",
-      "artifactRetention": "Ephemeral isolated engineering observations only.", "executionClass": "engineering", "certification": "non-certifying" }
+    "testFiles": [
+      "tests/unit/graft-anchor.test.ts",
+      "tests/unit/rootbound-phase-two.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
+      "artifact": "Shared Class-A browser proof launches the real Rootbound encounter, restores one specialized Graft through Scenario Console, observes stable owner/target references, destroys it through the canonical combat-object kernel, and proves no enemy reward/proc leakage.",
+      "artifactRetention": "Ephemeral isolated engineering observations only.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "browser.test-browser-current-gameplay-scenarios"
+      ]
+    }
   },
   {
     "id": "source-void-low-hp-rescue-seek",
     "description": "At one HP, trigger the real live Source void-fall rescue through semantic movement, retain its native evidence, verify a supported pre-rescue replay receipt, and explicitly refuse unsupported detached post-rescue void replay and mixed-capsule seeking.",
-    "subject": { "kind": "boss", "id": "source" },
-    "start": { "mode": "bossonly", "difficulty": "normal", "weapon": "sword", "boss": "source" },
-    "backends": ["live"],
-    "tags": ["source", "tear", "boss", "void", "hazard", "rescue", "one-hit", "ghost", "seek", "c40"],
+    "subject": {
+      "kind": "boss",
+      "id": "source"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "boss": "source"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "source",
+      "tear",
+      "boss",
+      "void",
+      "hazard",
+      "rescue",
+      "one-hit",
+      "ghost",
+      "seek",
+      "c40"
+    ],
     "maxTicks": 1200,
-    "testFiles": ["tests/unit/c40-source-void-evidence-registry.test.ts"],
+    "testFiles": [
+      "tests/unit/c40-source-void-evidence-registry.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js",
       "artifact": "An ephemeral sealed Ghost V3 capsule, including 60-tick canonical keyframes, a one-HP semantic void-fall rescue, its native world.void-rescue fact, a supported pre-rescue detached replay receipt, and explicit refusal of unsupported detached post-rescue void replay and mixed-capsule seeking.",
       "artifactRetention": "The browser proof verifies the capsule and receipts in its isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "evidence.browser-c40-source-void-ghost-seek"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "evidence.browser-c40-source-void-ghost-seek"
+      ]
     }
   },
   {
     "id": "chainblade-hook-sling-catch-seek",
     "description": "Forge one current Chainblade/charger encounter, prove its production Hook & Sling, recall, and catch lifecycle, seal it, and verify fresh production seeks at supported retained receipts.",
-    "subject": { "kind": "weapon", "id": "chainblade" },
-    "start": { "mode": "endless", "difficulty": "normal", "weapon": "chainblade" },
-    "backends": ["live", "headless"],
-    "tags": ["chainblade", "throw", "hook", "sling", "recall", "catch", "ghost", "seek", "c40"],
+    "subject": {
+      "kind": "weapon",
+      "id": "chainblade"
+    },
+    "start": {
+      "mode": "endless",
+      "difficulty": "normal",
+      "weapon": "chainblade"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "chainblade",
+      "throw",
+      "hook",
+      "sling",
+      "recall",
+      "catch",
+      "ghost",
+      "seek",
+      "c40"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/c40-chainblade-evidence-registry.test.ts"],
+    "testFiles": [
+      "tests/unit/c40-chainblade-evidence-registry.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-chainblade-bind-yank-ghost-seek.js",
       "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, production Hook & Sling state and native weapon transport facts, and fresh production-world seek receipts only at actually retained supported checkpoints.",
       "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "evidence.browser-c40-chainblade-bind-yank-ghost-seek"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "evidence.browser-c40-chainblade-bind-yank-ghost-seek"
+      ],
+      "headless": [
+        "evidence.vitest.3"
+      ]
     }
   },
   {
     "id": "hammer-meteor-terrain-catch-seek",
     "description": "Forge one normal Hammer state, throw down onto authored terrain, prove the real Meteor resolve and catch lifecycle, seal it, and verify fresh production seeks at each retained receipt.",
-    "subject": { "kind": "weapon", "id": "hammer" },
-    "start": { "mode": "endless", "difficulty": "normal", "weapon": "hammer" },
-    "backends": ["live", "headless"],
-    "tags": ["hammer", "throw", "meteor", "terrain", "catch", "ghost", "seek", "c40"],
+    "subject": {
+      "kind": "weapon",
+      "id": "hammer"
+    },
+    "start": {
+      "mode": "endless",
+      "difficulty": "normal",
+      "weapon": "hammer"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "hammer",
+      "throw",
+      "meteor",
+      "terrain",
+      "catch",
+      "ghost",
+      "seek",
+      "c40"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/c40-hammer-evidence-registry.test.ts"],
+    "testFiles": [
+      "tests/unit/c40-hammer-evidence-registry.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-hammer-meteor-ghost-seek.js",
       "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic down-aim/throw/recall commands, generic native launch/terrain-resolve/catch facts, and three fresh C29 production-world seek receipts at each retained prethrow, embedded-resolve, and postcatch state.",
       "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "evidence.browser-c40-hammer-meteor-ghost-seek"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "evidence.browser-c40-hammer-meteor-ghost-seek"
+      ],
+      "headless": [
+        "evidence.vitest.4"
+      ]
     }
   },
   {
     "id": "greatsword-wheelcut-catch-seek",
     "description": "Forge one normal Greatsword encounter, prove the live spinning Wheel Cut route into a controlled recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
-    "subject": { "kind": "weapon", "id": "greatsword" },
-    "start": { "mode": "endless", "difficulty": "normal", "weapon": "greatsword" },
-    "backends": ["live", "headless"],
-    "tags": ["greatsword", "throw", "wheelcut", "catch", "ghost", "seek", "c40"],
+    "subject": {
+      "kind": "weapon",
+      "id": "greatsword"
+    },
+    "start": {
+      "mode": "endless",
+      "difficulty": "normal",
+      "weapon": "greatsword"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "greatsword",
+      "throw",
+      "wheelcut",
+      "catch",
+      "ghost",
+      "seek",
+      "c40"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/c40-greatsword-evidence-registry.test.ts"],
+    "testFiles": [
+      "tests/unit/c40-greatsword-evidence-registry.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-greatsword-wheelcut-ghost-seek.js",
       "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, a live center-pivoting Wheel Cut collision/return route, generic native weapon transport facts, and fresh production-world seek receipts at each retained lifecycle state.",
       "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "evidence.browser-c40-greatsword-wheelcut-ghost-seek"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "evidence.browser-c40-greatsword-wheelcut-ghost-seek"
+      ],
+      "headless": [
+        "evidence.vitest.5"
+      ]
     }
   },
   {
     "id": "sword-reversal-threadcut-catch-seek",
     "description": "Forge one current Sword/charger encounter, prove its production Threadcut throw/recall and catch lifecycle, retain native weapon evidence, and verify fresh production seeks at supported retained checkpoints; Reversal has its separate source-owned contact proof.",
-    "subject": { "kind": "weapon", "id": "sword" },
-    "start": { "mode": "endless", "difficulty": "normal", "weapon": "sword" },
-    "backends": ["live", "headless"],
-    "tags": ["sword", "reversal", "threadcut", "throw", "recall", "catch", "ghost", "seek", "c40"],
+    "subject": {
+      "kind": "weapon",
+      "id": "sword"
+    },
+    "start": {
+      "mode": "endless",
+      "difficulty": "normal",
+      "weapon": "sword"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "sword",
+      "reversal",
+      "threadcut",
+      "throw",
+      "recall",
+      "catch",
+      "ghost",
+      "seek",
+      "c40"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/c40-sword-evidence-registry.test.ts"],
+    "testFiles": [
+      "tests/unit/c40-sword-evidence-registry.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-sword-crosscut-ghost-seek.js",
       "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, actual current Sword Threadcut transport facts, and fresh production-world seek receipts only at genuinely retained supported checkpoints.",
       "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "evidence.browser-c40-sword-crosscut-ghost-seek"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "evidence.browser-c40-sword-crosscut-ghost-seek"
+      ],
+      "headless": [
+        "evidence.vitest.6"
+      ]
     }
   },
   {
     "id": "riftlock-loose-cannon-catch-seek",
     "description": "Forge one normal Riftlock/charger encounter, prove Loose Cannon capture into a Backblast recall and catch, seal it, and verify fresh Ghost V3 production seeks at each retained receipt.",
-    "subject": { "kind": "weapon", "id": "riftlock" },
-    "start": { "mode": "endless", "difficulty": "normal", "weapon": "riftlock" },
-    "backends": ["live", "headless"],
-    "tags": ["riftlock", "throw", "capture", "backblast", "catch", "ghost", "seek", "c40"],
+    "subject": {
+      "kind": "weapon",
+      "id": "riftlock"
+    },
+    "start": {
+      "mode": "endless",
+      "difficulty": "normal",
+      "weapon": "riftlock"
+    },
+    "backends": [
+      "live",
+      "headless"
+    ],
+    "tags": [
+      "riftlock",
+      "throw",
+      "capture",
+      "backblast",
+      "catch",
+      "ghost",
+      "seek",
+      "c40"
+    ],
     "maxTicks": 720,
-    "testFiles": ["tests/unit/c40-riftlock-evidence-registry.test.ts"],
+    "testFiles": [
+      "tests/unit/c40-riftlock-evidence-registry.test.ts"
+    ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-riftlock-loose-cannon-ghost-seek.js",
       "artifact": "An ephemeral sealed and verified Ghost V3 capsule with semantic aim/throw/recall commands, a live captured target, Backblast secondary route, generic native weapon transport facts, and fresh production-world seek receipts at each retained lifecycle state.",
       "artifactRetention": "The browser proof verifies its capsule in an isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
-      "certification": "non-certifying"
+      "certification": "non-certifying",
+      "taskIds": [
+        "build.test-standalone",
+        "evidence.browser-c40-riftlock-loose-cannon-ghost-seek"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "build.test-standalone",
+        "evidence.browser-c40-riftlock-loose-cannon-ghost-seek"
+      ],
+      "headless": [
+        "evidence.vitest.7"
+      ]
+    }
+  },
+  {
+    "id": "pale-aurora-track-behavior",
+    "description": "Forge the source-owned Pale Aurora Track and observe its live directional field lifecycle.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-aurora-track"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 41
+    },
+    "seed": "pale-aurora-track-behavior-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-aurora-track-behavior"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-aurora-track",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "environment.finite-state",
+      "environment.unique-id",
+      "environment.valid-references",
+      "environment.legal-transition"
+    ],
+    "structuredAssertions": [
+      "environment.field.kind=aurora-track",
+      "environment.field.id=pale-traverse:aurora-track:surgical-east",
+      "environment.field.state=warning"
+    ],
+    "maxTicks": 180,
+    "testFiles": [
+      "tests/unit/pale-aurora-definitions.test.ts",
+      "tests/unit/pale-state-forge-scenarios.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-aurora-track-behavior",
+      "artifact": "Canonical live Scenario Console execution of the source-owned Aurora Track; browser presentation remains complementary.",
+      "artifactRetention": "Ephemeral isolated engineering evidence; not a publication artifact.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench"
+      ]
+    }
+  },
+  {
+    "id": "pale-rimehound-aurora-interaction",
+    "description": "Forge the source-owned Rimehound pack on an Aurora Track and observe their live interaction.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-rimehound-aurora"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 6
+    },
+    "seed": "pale-rimehound-aurora-interaction-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-rimehound-aurora-interaction"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-rimehound-aurora",
+      "rimehound",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "environment.finite-state",
+      "environment.unique-id",
+      "environment.valid-references",
+      "environment.legal-transition"
+    ],
+    "structuredAssertions": [
+      "environment.field.kind=aurora-track",
+      "environment.field.id=pale-traverse:aurora-track:rimehound-lane",
+      "environment.field.state=warning",
+      "entity.kind=rimehound"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/pale-aurora-runtime.test.ts",
+      "tests/unit/rimehound.test.ts",
+      "tests/unit/pale-state-forge-scenarios.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-rimehound-aurora-interaction",
+      "artifact": "Canonical live Scenario Console execution of Rimehound/Aurora interaction with structured environment and actor observations.",
+      "artifactRetention": "Ephemeral isolated engineering evidence; not a publication artifact.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.2"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.2"
+      ]
+    }
+  },
+  {
+    "id": "pale-rime-runner-behavior",
+    "description": "Forge the source-owned Rime Runner variant through its real Charger factory and observe counterplay.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-rime-runner"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 6
+    },
+    "seed": "pale-rime-runner-behavior-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-rime-runner-behavior"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-rime-runner",
+      "rime-runner",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "player.valid-health"
+    ],
+    "structuredAssertions": [
+      "entity.variantId=rime-runner"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/pale-variant-selection.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-rime-runner-behavior",
+      "artifact": "Canonical live Scenario Console variant execution.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.3"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.3"
+      ]
+    }
+  },
+  {
+    "id": "pale-prism-seer-behavior",
+    "description": "Forge the source-owned Prism Seer variant through its real Ranged factory and observe counterplay.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-prism-seer"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 6
+    },
+    "seed": "pale-prism-seer-behavior-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-prism-seer-behavior"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-prism-seer",
+      "prism-seer",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "player.valid-health"
+    ],
+    "structuredAssertions": [
+      "entity.variantId=prism-seer"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/pale-variant-selection.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-prism-seer-behavior",
+      "artifact": "Canonical live Scenario Console variant execution.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.4"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.4"
+      ]
+    }
+  },
+  {
+    "id": "pale-snowfall-kite-behavior",
+    "description": "Forge the source-owned Snowfall Kite variant through its real Flyer factory and observe counterplay.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-snowfall-kite"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 6
+    },
+    "seed": "pale-snowfall-kite-behavior-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-snowfall-kite-behavior"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-snowfall-kite",
+      "snowfall-kite",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "player.valid-health"
+    ],
+    "structuredAssertions": [
+      "entity.variantId=snowfall-kite"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/pale-variant-selection.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-snowfall-kite-behavior",
+      "artifact": "Canonical live Scenario Console variant execution.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.5"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.5"
+      ]
+    }
+  },
+  {
+    "id": "pale-hailcaster-behavior",
+    "description": "Forge the source-owned Hailcaster variant through its real Bomber factory and observe counterplay.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-hailcaster"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 6
+    },
+    "seed": "pale-hailcaster-behavior-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-hailcaster-behavior"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-hailcaster",
+      "hailcaster",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "player.valid-health"
+    ],
+    "structuredAssertions": [
+      "entity.variantId=hailcaster"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/pale-variant-selection.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-hailcaster-behavior",
+      "artifact": "Canonical live Scenario Console variant execution.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.6"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.6"
+      ]
+    }
+  },
+  {
+    "id": "pale-glacier-guard-behavior",
+    "description": "Forge the source-owned Glacier Guard variant through its real Armored factory and observe counterplay.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-glacier-guard"
+    },
+    "start": {
+      "mode": "playground",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 6
+    },
+    "seed": "pale-glacier-guard-behavior-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-glacier-guard-behavior"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-glacier-guard",
+      "glacier-guard",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "player.valid-health"
+    ],
+    "structuredAssertions": [
+      "entity.variantId=glacier-guard"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/pale-variant-selection.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-glacier-guard-behavior",
+      "artifact": "Canonical live Scenario Console variant execution.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.7"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.7"
+      ]
+    }
+  },
+  {
+    "id": "pale-white-hart-phase-1",
+    "description": "Forge White Hart phase 1 as an unpublished surgical boundary through the production boss factory.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-white-hart-phase-1"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 1,
+      "boss": "white-hart",
+      "bossPhase": "1"
+    },
+    "seed": "pale-white-hart-phase-1-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-white-hart-phase-1"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-white-hart-phase-1",
+      "white-hart",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "boss.valid-phase"
+    ],
+    "structuredAssertions": [
+      "entity.kind=white-hart",
+      "boss.phase=1"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/white-hart-state-forge.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-white-hart-phase-1",
+      "artifact": "Canonical live Scenario Console phase boundary; browser journey is complementary.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.8"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.8"
+      ]
+    }
+  },
+  {
+    "id": "pale-white-hart-phase-2",
+    "description": "Forge White Hart phase 2 as an unpublished surgical boundary through the production boss factory.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-white-hart-phase-2"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 1,
+      "boss": "white-hart",
+      "bossPhase": "2"
+    },
+    "seed": "pale-white-hart-phase-2-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-white-hart-phase-2"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-white-hart-phase-2",
+      "white-hart",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "boss.valid-phase"
+    ],
+    "structuredAssertions": [
+      "entity.kind=white-hart",
+      "boss.phase=2"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/white-hart-state-forge.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-white-hart-phase-2",
+      "artifact": "Canonical live Scenario Console phase boundary; browser journey is complementary.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.9"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.9"
+      ]
+    }
+  },
+  {
+    "id": "pale-white-hart-phase-3",
+    "description": "Forge White Hart phase 3 as an unpublished surgical boundary through the production boss factory.",
+    "subject": {
+      "kind": "gameplay",
+      "id": "pale-white-hart-phase-3"
+    },
+    "start": {
+      "mode": "bossonly",
+      "difficulty": "normal",
+      "weapon": "sword",
+      "stage": "pale-traverse",
+      "wave": 1,
+      "boss": "white-hart",
+      "bossPhase": "3"
+    },
+    "seed": "pale-white-hart-phase-3-seed",
+    "stateClass": "surgical-valid",
+    "stateForge": {
+      "documentId": "pale-white-hart-phase-3"
+    },
+    "backends": [
+      "live"
+    ],
+    "tags": [
+      "pale-white-hart-phase-3",
+      "white-hart",
+      "pale-traverse",
+      "state-forge",
+      "engineering-only",
+      "unpublished-preview",
+      "non-publishable",
+      "tc9"
+    ],
+    "assertions": [
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "boss.valid-phase"
+    ],
+    "structuredAssertions": [
+      "entity.kind=white-hart",
+      "boss.phase=3"
+    ],
+    "maxTicks": 240,
+    "testFiles": [
+      "tests/unit/white-hart-state-forge.test.ts"
+    ],
+    "evidence": {
+      "command": "pnpm tearbench run pale-white-hart-phase-3",
+      "artifact": "Canonical live Scenario Console phase boundary; browser journey is complementary.",
+      "artifactRetention": "Ephemeral engineering evidence; not publishable.",
+      "executionClass": "engineering",
+      "certification": "non-certifying",
+      "taskIds": [
+        "evidence.tearbench.10"
+      ]
+    },
+    "backendTaskIds": {
+      "live": [
+        "evidence.tearbench.10"
+      ]
     }
   }
 ]

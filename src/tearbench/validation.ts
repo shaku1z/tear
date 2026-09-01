@@ -14,6 +14,7 @@ import type {
   TearScenarioV1,
   TearSnapshotV1,
   TearCausalEventV1,
+  TearScenarioSubjectV1,
 } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import {
@@ -24,6 +25,7 @@ import {
   GAMEPLAY_SCENARIO_SUBJECT_REGISTRY,
   HEADLESS_GAMEPLAY_SCENARIO_SUBJECT_IDS,
   INVARIANT_REGISTRY,
+  UNSUPPORTED_INVARIANT_IDS,
   RUN_MODE_REGISTRY,
   STAGE_REGISTRY,
   WEAPON_REGISTRY,
@@ -32,6 +34,7 @@ import {
   ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY,
   ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY,
 } from "./registries";
+import { requiredInvariantIdsForSubject } from "./invariants";
 
 const MAX_COLLECTION = 100_000;
 const MAX_IDENTIFIER = 256;
@@ -273,6 +276,11 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
     if (start.wave !== undefined && !safeInteger(start.wave, 1)) issue(issues, "start.wave", "must be a positive integer");
   }
   if (!boundedArray(value.assertions) || value.assertions.some((entry) => typeof entry !== "string" || !INVARIANT_REGISTRY.has(entry))) issue(issues, "assertions", "contains an unregistered invariant");
+  else {
+    const unsupported = value.assertions.filter((entry): entry is typeof UNSUPPORTED_INVARIANT_IDS[number] =>
+      typeof entry === "string" && UNSUPPORTED_INVARIANT_IDS.includes(entry as typeof UNSUPPORTED_INVARIANT_IDS[number]));
+    if (unsupported.length > 0) issue(issues, "assertions", `contains unsupported invariant claim(s): ${unsupported.join(", ")}`);
+  }
   if (!boundedArray(value.tags) || value.tags.some((entry) => !stringValue(entry))) issue(issues, "tags", "must be a bounded identifier array");
   if (value.backends !== undefined) {
     if (!boundedArray(value.backends) || value.backends.length === 0
@@ -288,6 +296,7 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
       issue(issues, "subject", "must declare a recognized current scenario subject");
     } else if (isRecord(start) && start.boss !== undefined
       && subject.kind !== "environment-field" && subject.kind !== "environment-combat-object"
+      && !(subject.kind === "gameplay" && typeof value.id === "string" && value.id.startsWith("pale-white-hart-phase-"))
       && (subject.kind !== "boss" || subject.id !== start.boss)) {
       issue(issues, "subject", "a current boss start requires its matching authoritative boss subject");
     } else if (subject.kind === "weapon") {
@@ -310,8 +319,25 @@ function parseScenario(value: Record<string, unknown>, issues: TearContractValid
       }
     } else if (subject.kind === "environment-field") {
       if (!ENVIRONMENT_FIELD_SCENARIO_SUBJECT_REGISTRY.has(subject.id)) issue(issues, "subject", "environment field subject is not registered");
+      if (Array.isArray(value.backends) && (value.backends.length !== 1 || value.backends[0] !== "live")) {
+        issue(issues, "backends", "environment subjects require the supported live backend");
+      }
     } else if (subject.kind === "environment-combat-object") {
       if (!ENVIRONMENT_COMBAT_OBJECT_SCENARIO_SUBJECT_REGISTRY.has(subject.id)) issue(issues, "subject", "environment combat-object subject is not registered");
+      if (Array.isArray(value.backends) && (value.backends.length !== 1 || value.backends[0] !== "live")) {
+        issue(issues, "backends", "environment subjects require the supported live backend");
+      }
+    }
+    if (isRecord(subject)
+      && (subject.kind === "environment-field" || subject.kind === "environment-combat-object")) {
+      const required = requiredInvariantIdsForSubject(subject as TearScenarioSubjectV1);
+      if (Array.isArray(value.assertions)) {
+        for (const invariantId of required) {
+          if (!value.assertions.includes(invariantId)) {
+            issue(issues, "assertions", `environment subjects require source-owned invariant ${invariantId}`);
+          }
+        }
+      }
     }
   }
   return issues.length === 0 ? value as unknown as TearScenarioV1 : undefined;

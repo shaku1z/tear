@@ -24,7 +24,12 @@ async function withJourney(options, run) {
   const expectedTarget = buildDirectory.includes("crazygames") ? "crazygames" : "standalone";
   assert.equal(buildInfo.format, "tear-build-info", "served build-info format is unsupported");
   assert.equal(buildInfo.target, expectedTarget, "served build target does not match the journey target");
-  assert.equal(typeof buildInfo.mode, "string", "served build-info mode is required");
+  assert.equal(buildInfo.mode, buildDirectory, "served build mode does not match the journey directory");
+  assert.match(buildInfo.toolchain?.digest, /^[a-f0-9]{64}$/, "served build toolchain identity is required");
+  assert.match(buildInfo.configuration?.digest, /^[a-f0-9]{64}$/, "served build configuration identity is required");
+  assert.match(buildInfo.buildIdentityDigest, /^[a-f0-9]{64}$/, "served complete build identity is required");
+  assert.equal(buildInfo.contentAddressedPath, `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
+    "served content-addressed build path is stale");
   const artifact = await calculateArtifactHash(root);
   assert.equal(buildInfo.artifactHash, artifact.hash, "served build artifact hash is stale");
   assert.equal(buildInfo.artifactFiles, artifact.files, "served build artifact file count is stale");

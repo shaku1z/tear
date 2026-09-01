@@ -1,0 +1,4434 @@
+{
+  "schemaVersion": 1,
+  "definitionPolicyVersion": 2,
+  "tasks": [
+    {
+      "taskId": "static.requirements-check",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/tearbench-requirements.mjs",
+          "check"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "requirements:check"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-docs",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-docs.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:docs"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-docs",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/docs-authority-checker.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:docs"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-workspace",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/workspace-check.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:workspace"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-parent-layout",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/parent-layout.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:parent-layout"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-artifact-retention",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/artifact-retention.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:artifact-retention"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-artifact-disposition",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/artifact-disposition.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:artifact-disposition"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-artifact-disposition",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/validate-artifact-disposition.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:artifact-disposition"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-artifacts",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-artifact-layout.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:artifacts"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-parent-layout",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-parent-layout.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:parent-layout"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-workspace-recovery",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/workspace-recovery-report.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:workspace-recovery"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-workspace-recovery-second-wave",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/workspace-recovery-second-wave.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:workspace-recovery-second-wave"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-deferred-workspace-dependency",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/deferred-workspace-dependency.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:deferred-workspace-dependency"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-preserved-copy-comparison",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/preserved-copy-comparison.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:preserved-copy-comparison"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-remaining-workspace-inventory",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/remaining-workspace-inventory.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:remaining-workspace-inventory"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-workspace-quarantine",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/workspace-quarantine.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:workspace-quarantine"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-workspace-preservation-quarantine",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/workspace-preservation-quarantine.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:workspace-preservation-quarantine"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-serve",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/serve-contract.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:serve"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-tearbench-selection",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/tearbench-evidence-selection.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:tearbench-selection"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-terminology",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-terminology.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:terminology"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-active-roster",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-active-roster.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:active-roster"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-workspace",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-workspace.mjs",
+          "--ci"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:workspace"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.typecheck",
+      "version": 1,
+      "runner": {
+        "kind": "typescript",
+        "executable": "node_modules/typescript/bin/tsc",
+        "args": [
+          "-b"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "typecheck"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.lint",
+      "version": 1,
+      "runner": {
+        "kind": "eslint",
+        "executable": "node_modules/eslint/bin/eslint.js",
+        "args": [
+          "src",
+          "workers",
+          "scripts",
+          "tests/**/*.ts",
+          "vite.config.ts",
+          "vitest.config.ts",
+          "vitest.endurance.config.ts"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "lint"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-architecture",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-source-architecture.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:architecture"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-preservation-corpus",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/ghost-preservation-corpus.test.ts",
+          "--reporter=default",
+          "--reporter=json",
+          "--outputFile",
+          "artifacts/tearbench/checkpoints/core/C39/preservation/preservation-corpus-vitest.json"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:preservation-corpus"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-unit-without-preservation-corpus",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "--exclude",
+          "**/ghost-preservation-corpus.test.ts",
+          "--no-file-parallelism"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:unit:without-preservation-corpus"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-parity-unit",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/parity/parity-diff.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:parity:unit"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-weapons",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/final-five-weapon-roster.test.ts"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:weapons"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "headless.test-headless-current-weapon-parity",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/current-headless-weapon-parity.test.ts"
+        ]
+      },
+      "claimIds": [
+        "headless",
+        "test:headless:current-weapon-parity"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "headless.test-headless-current-gameplay-scenarios",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/current-headless-gameplay-scenarios.test.ts"
+        ]
+      },
+      "claimIds": [
+        "headless",
+        "test:headless:current-gameplay-scenarios"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-tear-score",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/verify-tear-score-provenance.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:tear-score"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-adaptive-soundtrack",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/verify-adaptive-soundtrack-provenance.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:adaptive-soundtrack"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-game-reference",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-game-reference.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:game-reference"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.standalone",
+      "version": 1,
+      "runner": {
+        "kind": "build-target",
+        "executable": "scripts/build-target.mjs",
+        "args": [
+          "standalone"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "build:standalone"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "build-artifact",
+          "path": "dist/standalone"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.crazygames",
+      "version": 1,
+      "runner": {
+        "kind": "build-target",
+        "executable": "scripts/build-target.mjs",
+        "args": [
+          "crazygames"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "build:crazygames"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "build-artifact",
+          "path": "dist/crazygames"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-test-isolation",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-production-test-isolation.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:test-isolation"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-production-isolation",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-production-runtime-isolation.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:production-isolation"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        },
+        {
+          "taskId": "build.crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.check-bundles",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-bundle-budget.mjs"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "check:bundles"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        },
+        {
+          "taskId": "build.crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.check-crazygames-package",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/package-crazygames.mjs"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "check:crazygames-package"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "package-artifact",
+          "path": "artifacts/packages/tear-crazygames.zip"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "certify.reproducible",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-reproducible-build.mjs",
+          "certify"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "check:reproducible"
+      ],
+      "dependencies": [
+        {
+          "taskId": "repro.standalone.a",
+          "outputId": "comparison-side"
+        },
+        {
+          "taskId": "repro.standalone.b",
+          "outputId": "comparison-side"
+        },
+        {
+          "taskId": "repro.crazygames.a",
+          "outputId": "comparison-side"
+        },
+        {
+          "taskId": "repro.crazygames.b",
+          "outputId": "comparison-side"
+        },
+        {
+          "taskId": "repro.crazygames-package.a",
+          "outputId": "comparison-side"
+        },
+        {
+          "taskId": "repro.crazygames-package.b",
+          "outputId": "comparison-side"
+        }
+      ],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "comparison-certificate",
+          "path": "artifacts/tearbench/generated/reproducibility/certificate.json"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.check-cloudflare",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-cloudflare-dry-run.mjs"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "check:cloudflare"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-ghost-types",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-ghost-worker-types.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:ghost-types"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.check-ghost-cloud",
+      "version": 1,
+      "runner": {
+        "kind": "typescript",
+        "executable": "node_modules/typescript/bin/tsc",
+        "args": [
+          "-p",
+          "tsconfig.worker.json"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "check:ghost-cloud"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.check-ghost-cloud.2",
+      "version": 1,
+      "runner": {
+        "kind": "wrangler",
+        "executable": "node_modules/wrangler/bin/wrangler.js",
+        "args": [
+          "deploy",
+          "--dry-run",
+          "--config",
+          "wrangler.ghost.jsonc"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "check:ghost-cloud"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.test-standalone",
+      "version": 1,
+      "runner": {
+        "kind": "build-target",
+        "executable": "scripts/build-target.mjs",
+        "args": [
+          "test-standalone"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "build:test:standalone"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "build-artifact",
+          "path": "dist/test-standalone"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "build.test-crazygames",
+      "version": 1,
+      "runner": {
+        "kind": "build-target",
+        "executable": "scripts/build-target.mjs",
+        "args": [
+          "test-crazygames"
+        ]
+      },
+      "claimIds": [
+        "build",
+        "build:test:crazygames"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "build-artifact",
+          "path": "dist/test-crazygames"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-current-live-detached-parity",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/run-current-live-detached-parity.mjs"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:current-live-detached-parity"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-current-weapon-parity",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "parity",
+          "current-weapons",
+          "--artifact",
+          "artifacts/tearbench/generated/current-weapon-parity.json"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:current-weapon-parity"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-current-gameplay-scenarios",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-current-gameplay-scenarios.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:current-gameplay-scenarios"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-smoke.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-features",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-feature-matrix.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:features"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-bosses",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-boss-parity.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:bosses"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-journeys",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-navigation-journeys.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:journeys"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-journeys.2",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-progression-journeys.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:journeys"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-journeys.3",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-playground-journeys.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:journeys"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-journeys.4",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-terminal-journeys.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:journeys"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-journeys.5",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-cinematic-preferences.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:journeys"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-fresh-run-meta",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-fresh-run-meta-progression.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:fresh-run-meta"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-agent-journey",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-agent-journey.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:agent-journey"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-tear-runtime",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-tear-runtime-environment.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:tear-runtime"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-state-forge",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-state-forge-runtime.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:state-forge"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-state-forge.2",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-state-forge-studio.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:state-forge"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-state-forge.3",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-state-forge-exit-matrix.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:state-forge"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-input",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-input-matrix.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:input"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-blade-lifecycle",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/parity/browser-blade-parity.js",
+          "--current-only"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:blade-lifecycle"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-player-locomotion",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/parity/browser-blade-parity.js",
+          "--current-only",
+          "--fixture=tests/parity/player-locomotion.json"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:player-locomotion"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-enemy-charge",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/parity/browser-blade-parity.js",
+          "--current-only",
+          "--fixture=tests/parity/enemy-charge-cycle.json"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:enemy-charge"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-combat-resolution",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/parity/browser-blade-parity.js",
+          "--current-only",
+          "--fixture=tests/parity/combat-resolution.json"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:combat-resolution"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-ranged-cycle",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/parity/browser-blade-parity.js",
+          "--current-only",
+          "--fixture=tests/parity/ranged-fire-cycle.json"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:ranged-cycle"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-projectile-parry",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/parity/browser-blade-parity.js",
+          "--current-only",
+          "--fixture=tests/parity/projectile-parry.json"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:projectile-parry"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-mirror-pursuit",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/parity/browser-blade-parity.js",
+          "--current-only",
+          "--fixture=tests/parity/mirror-pursuit.json"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:mirror-pursuit"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-responsive",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-responsive-matrix.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:responsive"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-audio",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-audio.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:audio"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-platform",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/platform-browser-smoke.js",
+          "standalone"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:platform"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-platform.2",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/platform-browser-smoke.js",
+          "crazygames"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:platform"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-crazygames-iframe",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-crazygames-iframe.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:crazygames-iframe"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-pwa",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/pwa-offline.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:pwa"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-performance",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-performance.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:performance"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "repro.standalone.a",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-reproducible-build.mjs",
+          "standalone-a"
+        ]
+      },
+      "claimIds": [
+        "reproducibility"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "comparison-side",
+          "path": "artifacts/tearbench/generated/reproducibility/standalone-a.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/standalone-a"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "reproducibility-a",
+      "replicaGroup": "repro.standalone"
+    },
+    {
+      "taskId": "repro.standalone.b",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-reproducible-build.mjs",
+          "standalone-b"
+        ]
+      },
+      "claimIds": [
+        "reproducibility"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "comparison-side",
+          "path": "artifacts/tearbench/generated/reproducibility/standalone-b.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/standalone-b"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "reproducibility-b",
+      "replicaGroup": "repro.standalone"
+    },
+    {
+      "taskId": "repro.crazygames.a",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-reproducible-build.mjs",
+          "crazygames-a"
+        ]
+      },
+      "claimIds": [
+        "reproducibility"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "comparison-side",
+          "path": "artifacts/tearbench/generated/reproducibility/crazygames-a.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/crazygames-a"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "reproducibility-a",
+      "replicaGroup": "repro.crazygames"
+    },
+    {
+      "taskId": "repro.crazygames.b",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-reproducible-build.mjs",
+          "crazygames-b"
+        ]
+      },
+      "claimIds": [
+        "reproducibility"
+      ],
+      "dependencies": [],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "comparison-side",
+          "path": "artifacts/tearbench/generated/reproducibility/crazygames-b.json"
+        },
+        {
+          "outputId": "comparison-build",
+          "path": "artifacts/tearbench/generated/reproducibility/payloads/crazygames-b"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "reproducibility-b",
+      "replicaGroup": "repro.crazygames"
+    },
+    {
+      "taskId": "repro.crazygames-package.a",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-reproducible-build.mjs",
+          "crazygames-package-a"
+        ]
+      },
+      "claimIds": [
+        "reproducibility"
+      ],
+      "dependencies": [
+        {
+          "taskId": "repro.crazygames.a",
+          "outputId": "comparison-build"
+        }
+      ],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "comparison-side",
+          "path": "artifacts/tearbench/generated/reproducibility/crazygames-package-a.json"
+        },
+        {
+          "outputId": "comparison-package",
+          "path": "artifacts/tearbench/generated/reproducibility/packages/crazygames-package-a.zip"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "reproducibility-a",
+      "replicaGroup": "repro.crazygames-package"
+    },
+    {
+      "taskId": "repro.crazygames-package.b",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-reproducible-build.mjs",
+          "crazygames-package-b"
+        ]
+      },
+      "claimIds": [
+        "reproducibility"
+      ],
+      "dependencies": [
+        {
+          "taskId": "repro.crazygames.b",
+          "outputId": "comparison-build"
+        }
+      ],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "comparison-side",
+          "path": "artifacts/tearbench/generated/reproducibility/crazygames-package-b.json"
+        },
+        {
+          "outputId": "comparison-package",
+          "path": "artifacts/tearbench/generated/reproducibility/packages/crazygames-package-b.zip"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "reproducibility-b",
+      "replicaGroup": "repro.crazygames-package"
+    },
+    {
+      "taskId": "deploy.game-dry-run",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-cloudflare-dry-run.mjs"
+        ]
+      },
+      "claimIds": [
+        "deploy-dry-run"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "build",
+      "resourceKeys": [
+        "resources/build"
+      ],
+      "outputs": [
+        {
+          "outputId": "dry-run-receipt",
+          "path": "artifacts/tearbench/generated/cloudflare-dry-run.json"
+        }
+      ],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "certify.release",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "certify"
+        ]
+      },
+      "claimIds": [
+        "release-certificate"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [
+        {
+          "outputId": "release-certificate",
+          "path": "artifacts/tearbench/generated/release-certificate.json"
+        }
+      ],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/run-lifecycle.test.ts",
+          "tests/unit/app-state-machine.test.ts"
+        ]
+      },
+      "claimIds": [
+        "scenario-headless"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-headless",
+      "replicaGroup": "evidence.vitest"
+    },
+    {
+      "taskId": "evidence.vitest.2",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/player-locomotion.test.ts"
+        ]
+      },
+      "claimIds": [
+        "scenario-headless"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-headless",
+      "replicaGroup": "evidence.vitest.2"
+    },
+    {
+      "taskId": "evidence.browser-pale-white-hart-phases",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-pale-white-hart-phases.js"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.browser-pale-white-hart-phases"
+    },
+    {
+      "taskId": "evidence.browser-c40-source-void-ghost-seek",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-c40-source-void-ghost-seek.js"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.browser-c40-source-void-ghost-seek"
+    },
+    {
+      "taskId": "evidence.browser-c40-chainblade-bind-yank-ghost-seek",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-c40-chainblade-bind-yank-ghost-seek.js"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.browser-c40-chainblade-bind-yank-ghost-seek"
+    },
+    {
+      "taskId": "evidence.vitest.3",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/c40-chainblade-evidence-registry.test.ts"
+        ]
+      },
+      "claimIds": [
+        "scenario-headless"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-headless",
+      "replicaGroup": "evidence.vitest.3"
+    },
+    {
+      "taskId": "evidence.browser-c40-hammer-meteor-ghost-seek",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-c40-hammer-meteor-ghost-seek.js"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.browser-c40-hammer-meteor-ghost-seek"
+    },
+    {
+      "taskId": "evidence.vitest.4",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/c40-hammer-evidence-registry.test.ts"
+        ]
+      },
+      "claimIds": [
+        "scenario-headless"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-headless",
+      "replicaGroup": "evidence.vitest.4"
+    },
+    {
+      "taskId": "evidence.browser-c40-greatsword-wheelcut-ghost-seek",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-c40-greatsword-wheelcut-ghost-seek.js"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.browser-c40-greatsword-wheelcut-ghost-seek"
+    },
+    {
+      "taskId": "evidence.vitest.5",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/c40-greatsword-evidence-registry.test.ts"
+        ]
+      },
+      "claimIds": [
+        "scenario-headless"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-headless",
+      "replicaGroup": "evidence.vitest.5"
+    },
+    {
+      "taskId": "evidence.browser-c40-sword-crosscut-ghost-seek",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-c40-sword-crosscut-ghost-seek.js"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.browser-c40-sword-crosscut-ghost-seek"
+    },
+    {
+      "taskId": "evidence.vitest.6",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/c40-sword-evidence-registry.test.ts"
+        ]
+      },
+      "claimIds": [
+        "scenario-headless"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-headless",
+      "replicaGroup": "evidence.vitest.6"
+    },
+    {
+      "taskId": "evidence.browser-c40-riftlock-loose-cannon-ghost-seek",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-c40-riftlock-loose-cannon-ghost-seek.js"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.browser-c40-riftlock-loose-cannon-ghost-seek"
+    },
+    {
+      "taskId": "evidence.vitest.7",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/c40-riftlock-evidence-registry.test.ts"
+        ]
+      },
+      "claimIds": [
+        "scenario-headless"
+      ],
+      "dependencies": [],
+      "resourceClass": "headless",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-headless",
+      "replicaGroup": "evidence.vitest.7"
+    },
+    {
+      "taskId": "evidence.tearbench",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-aurora-track-behavior"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench"
+    },
+    {
+      "taskId": "evidence.tearbench.2",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-rimehound-aurora-interaction"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.2"
+    },
+    {
+      "taskId": "evidence.tearbench.3",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-rime-runner-behavior"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.3"
+    },
+    {
+      "taskId": "evidence.tearbench.4",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-prism-seer-behavior"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.4"
+    },
+    {
+      "taskId": "evidence.tearbench.5",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-snowfall-kite-behavior"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.5"
+    },
+    {
+      "taskId": "evidence.tearbench.6",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-hailcaster-behavior"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.6"
+    },
+    {
+      "taskId": "evidence.tearbench.7",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-glacier-guard-behavior"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.7"
+    },
+    {
+      "taskId": "evidence.tearbench.8",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-white-hart-phase-1"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.8"
+    },
+    {
+      "taskId": "evidence.tearbench.9",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-white-hart-phase-2"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.9"
+    },
+    {
+      "taskId": "evidence.tearbench.10",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "run",
+          "pale-white-hart-phase-3"
+        ]
+      },
+      "claimIds": [
+        "scenario-live"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "backend-live",
+      "replicaGroup": "evidence.tearbench.10"
+    },
+    {
+      "taskId": "evidence.vitest.8",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/gameplay-causal-events.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.9",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/tearbench-current-game-authority.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.10",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/tear-world-context.test.ts",
+          "tests/unit/tear-world-composition.test.ts",
+          "tests/unit/environment-runtime.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.11",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/environment-state-codec.test.ts",
+          "tests/unit/production-replay-composition.test.ts",
+          "tests/unit/tearbench-state-codecs.test.ts",
+          "tests/unit/tearbench-invariants.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.12",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/environment-field-runtime.test.ts",
+          "tests/unit/environment-combat-object-runtime.test.ts",
+          "tests/unit/gameplay-causal-events.test.ts",
+          "tests/unit/tearbench-current-game-authority.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.13",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/bloom-well-runtime.test.ts",
+          "tests/unit/environment-field-runtime.test.ts",
+          "tests/unit/environment-runtime.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.14",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/rootbinder-network.test.ts",
+          "tests/unit/rootbinder-runtime.test.ts",
+          "tests/unit/environment-runtime.test.ts",
+          "tests/unit/gameplay-causal-events.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.15",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/enemy-variants.test.ts",
+          "tests/unit/verdant-variant-selection.test.ts",
+          "tests/unit/live-enemy-spawn.test.ts",
+          "tests/unit/tearbench-current-game-authority.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.16",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/game-reference.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.17",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/backdrop-biomes.test.ts",
+          "tests/unit/platform-materials.test.ts",
+          "tests/unit/verdant-presentation.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.browser-verdant-presentation",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-verdant-presentation.js"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.18",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/rootbound-phase-two.test.ts",
+          "tests/unit/graft-anchor.test.ts",
+          "tests/unit/bloom-well-runtime.test.ts",
+          "tests/unit/environment-state-codec.test.ts",
+          "tests/unit/verdant-final-five-conformance.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.19",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/campaign-stage-curve.test.ts",
+          "tests/unit/verdant-stage-state-forge.test.ts",
+          "tests/unit/verdant-wave-composition.test.ts",
+          "tests/unit/verdant-wave-economy.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.20",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/pale-aurora-definitions.test.ts",
+          "tests/unit/pale-aurora-runtime.test.ts",
+          "tests/unit/rimehound.test.ts",
+          "tests/unit/pale-state-forge-scenarios.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.browser-pale-rimehound",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-pale-rimehound.js"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.browser-pale-presentation",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-pale-presentation.js"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.21",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/pale-variant-selection.test.ts",
+          "tests/unit/pale-state-forge-scenarios.test.ts",
+          "tests/unit/live-codec-validation.test.ts",
+          "tests/unit/game-reference.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.browser-pale-variants",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-pale-variants.js"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.22",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/white-hart-foundation.test.ts",
+          "tests/unit/white-hart-phases.test.ts",
+          "tests/unit/white-hart-route-runtime.test.ts",
+          "tests/unit/white-hart-state-forge.test.ts",
+          "tests/unit/pale-state-forge-scenarios.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.23",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/game-reference.test.ts",
+          "tests/unit/enemy-reference.test.ts",
+          "tests/unit/boss-reference.test.ts",
+          "tests/unit/pale-wave-composition.test.ts",
+          "tests/unit/pale-stage-state-forge.test.ts",
+          "tests/unit/tearbench-current-game-authority.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.vitest.24",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/production-combat-parity.test.ts",
+          "tests/unit/production-replay-composition.test.ts",
+          "tests/unit/production-headless-environment.test.ts"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "evidence.browser-ghost-lab-home",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-ghost-lab-home.js"
+        ]
+      },
+      "claimIds": [
+        "route-evidence"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-terminology",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/terminology-checkers.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "documentation",
+        "terminology"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.tearbench-ci-core",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/tearbench-runner.test.ts",
+          "tests/unit/tearbench-regression-intelligence.test.ts",
+          "tests/unit/tearbench-graveyard.test.ts",
+          "tests/unit/tearbench-regression-minimization.test.ts",
+          "tests/unit/tearbench-bisection.test.ts",
+          "tests/unit/tearbench-release-certification.test.ts"
+        ]
+      },
+      "claimIds": [
+        "selected-evidence",
+        "tearbench-core"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.release-preflight-negative",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/release-preflight.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "protected-validation",
+        "release-preflight"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-game-reference-artifact",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/game-reference-artifact-publication.test.mjs",
+          "tests/dispatch-wiki-reference.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "protected-validation",
+        "game-reference"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "endurance.test-endurance",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "--config",
+          "vitest.endurance.config.ts"
+        ]
+      },
+      "claimIds": [
+        "endurance"
+      ],
+      "dependencies": [],
+      "resourceClass": "endurance",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 1800000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "endurance.test-weekly-ghost",
+      "version": 1,
+      "runner": {
+        "kind": "vitest",
+        "executable": "node_modules/vitest/vitest.mjs",
+        "args": [
+          "run",
+          "tests/unit/ghost-replay-world.test.ts",
+          "tests/unit/ghost-capsule-vault.test.ts"
+        ]
+      },
+      "claimIds": [
+        "endurance",
+        "preservation"
+      ],
+      "dependencies": [],
+      "resourceClass": "endurance",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "certify.game-reference-publication",
+      "version": 1,
+      "runner": {
+        "kind": "certifier",
+        "executable": "scripts/publish-game-reference-artifact.mjs",
+        "args": []
+      },
+      "claimIds": [
+        "protected-main",
+        "game-reference-publication"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.all-shared-runtime-history",
+      "version": 1,
+      "runner": {
+        "kind": "tearbench",
+        "executable": "scripts/tearbench.mjs",
+        "args": [
+          "graveyard",
+          "run",
+          "--cases",
+          "all-shared-runtime-history"
+        ]
+      },
+      "claimIds": [
+        "selected-evidence",
+        "graveyard"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.audio-lifecycle-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "audio-lifecycle-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.migration-and-corruption-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "migration-and-corruption-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.movement-boundary-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "movement-boundary-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.planted-downstream-divergence",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "planted-downstream-divergence"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.progression-ledger-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "progression-ledger-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    },
+    {
+      "taskId": "graveyard.screen-route-history",
+      "version": 1,
+      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "screen-route-history"] },
+      "claimIds": ["selected-evidence", "graveyard"],
+      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
+    }
+  ],
+  "profiles": {
+    "check.functional": [
+      "static.requirements-check",
+      "static.check-docs",
+      "unit.test-docs",
+      "unit.test-workspace",
+      "unit.test-parent-layout",
+      "unit.test-artifact-retention",
+      "unit.test-artifact-disposition",
+      "static.check-artifact-disposition",
+      "static.check-artifacts",
+      "static.check-parent-layout",
+      "unit.test-workspace-recovery",
+      "unit.test-workspace-recovery-second-wave",
+      "unit.test-deferred-workspace-dependency",
+      "unit.test-preserved-copy-comparison",
+      "unit.test-remaining-workspace-inventory",
+      "unit.test-workspace-quarantine",
+      "unit.test-workspace-preservation-quarantine",
+      "unit.test-serve",
+      "unit.test-tearbench-selection",
+      "static.check-terminology",
+      "static.check-active-roster",
+      "static.check-workspace",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit",
+      "unit.test-weapons",
+      "headless.test-headless-current-weapon-parity",
+      "headless.test-headless-current-gameplay-scenarios",
+      "static.check-tear-score",
+      "static.check-adaptive-soundtrack",
+      "static.check-game-reference",
+      "build.standalone",
+      "build.crazygames",
+      "static.check-test-isolation",
+      "browser.test-browser-production-isolation",
+      "build.check-bundles",
+      "build.check-crazygames-package",
+      "certify.reproducible",
+      "build.check-cloudflare",
+      "static.check-ghost-types",
+      "build.check-ghost-cloud",
+      "build.check-ghost-cloud.2",
+      "build.test-standalone",
+      "build.test-crazygames",
+      "browser.test-browser-current-live-detached-parity",
+      "browser.test-browser-current-weapon-parity",
+      "browser.test-browser-current-gameplay-scenarios",
+      "browser.test-browser",
+      "browser.test-browser-features",
+      "browser.test-browser-bosses",
+      "browser.test-browser-journeys",
+      "browser.test-browser-journeys.2",
+      "browser.test-browser-journeys.3",
+      "browser.test-browser-journeys.4",
+      "browser.test-browser-journeys.5",
+      "browser.test-browser-fresh-run-meta",
+      "browser.test-browser-agent-journey",
+      "browser.test-browser-tear-runtime",
+      "browser.test-browser-state-forge",
+      "browser.test-browser-state-forge.2",
+      "browser.test-browser-state-forge.3",
+      "browser.test-browser-input",
+      "browser.test-browser-blade-lifecycle",
+      "browser.test-browser-player-locomotion",
+      "browser.test-browser-enemy-charge",
+      "browser.test-browser-combat-resolution",
+      "browser.test-browser-ranged-cycle",
+      "browser.test-browser-projectile-parry",
+      "browser.test-browser-mirror-pursuit",
+      "browser.test-browser-responsive",
+      "browser.test-browser-audio",
+      "browser.test-browser-platform",
+      "browser.test-browser-platform.2",
+      "browser.test-browser-crazygames-iframe",
+      "browser.test-pwa"
+    ],
+    "check.performance": [
+      "build.test-standalone",
+      "browser.test-browser-performance"
+    ],
+    "check": [
+      "static.requirements-check",
+      "static.check-docs",
+      "unit.test-docs",
+      "unit.test-workspace",
+      "unit.test-parent-layout",
+      "unit.test-artifact-retention",
+      "unit.test-artifact-disposition",
+      "static.check-artifact-disposition",
+      "static.check-artifacts",
+      "static.check-parent-layout",
+      "unit.test-workspace-recovery",
+      "unit.test-workspace-recovery-second-wave",
+      "unit.test-deferred-workspace-dependency",
+      "unit.test-preserved-copy-comparison",
+      "unit.test-remaining-workspace-inventory",
+      "unit.test-workspace-quarantine",
+      "unit.test-workspace-preservation-quarantine",
+      "unit.test-serve",
+      "unit.test-tearbench-selection",
+      "static.check-terminology",
+      "static.check-active-roster",
+      "static.check-workspace",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit",
+      "unit.test-weapons",
+      "headless.test-headless-current-weapon-parity",
+      "headless.test-headless-current-gameplay-scenarios",
+      "static.check-tear-score",
+      "static.check-adaptive-soundtrack",
+      "static.check-game-reference",
+      "build.standalone",
+      "build.crazygames",
+      "static.check-test-isolation",
+      "browser.test-browser-production-isolation",
+      "build.check-bundles",
+      "build.check-crazygames-package",
+      "certify.reproducible",
+      "build.check-cloudflare",
+      "static.check-ghost-types",
+      "build.check-ghost-cloud",
+      "build.check-ghost-cloud.2",
+      "build.test-standalone",
+      "build.test-crazygames",
+      "browser.test-browser-current-live-detached-parity",
+      "browser.test-browser-current-weapon-parity",
+      "browser.test-browser-current-gameplay-scenarios",
+      "browser.test-browser",
+      "browser.test-browser-features",
+      "browser.test-browser-bosses",
+      "browser.test-browser-journeys",
+      "browser.test-browser-journeys.2",
+      "browser.test-browser-journeys.3",
+      "browser.test-browser-journeys.4",
+      "browser.test-browser-journeys.5",
+      "browser.test-browser-fresh-run-meta",
+      "browser.test-browser-agent-journey",
+      "browser.test-browser-tear-runtime",
+      "browser.test-browser-state-forge",
+      "browser.test-browser-state-forge.2",
+      "browser.test-browser-state-forge.3",
+      "browser.test-browser-input",
+      "browser.test-browser-blade-lifecycle",
+      "browser.test-browser-player-locomotion",
+      "browser.test-browser-enemy-charge",
+      "browser.test-browser-combat-resolution",
+      "browser.test-browser-ranged-cycle",
+      "browser.test-browser-projectile-parry",
+      "browser.test-browser-mirror-pursuit",
+      "browser.test-browser-responsive",
+      "browser.test-browser-audio",
+      "browser.test-browser-platform",
+      "browser.test-browser-platform.2",
+      "browser.test-browser-crazygames-iframe",
+      "browser.test-pwa",
+      "build.test-standalone",
+      "browser.test-browser-performance"
+    ],
+    "release": [
+      "static.requirements-check",
+      "static.check-docs",
+      "unit.test-docs",
+      "unit.test-workspace",
+      "unit.test-parent-layout",
+      "unit.test-artifact-retention",
+      "unit.test-artifact-disposition",
+      "static.check-artifact-disposition",
+      "static.check-artifacts",
+      "static.check-parent-layout",
+      "unit.test-workspace-recovery",
+      "unit.test-workspace-recovery-second-wave",
+      "unit.test-deferred-workspace-dependency",
+      "unit.test-preserved-copy-comparison",
+      "unit.test-remaining-workspace-inventory",
+      "unit.test-workspace-quarantine",
+      "unit.test-workspace-preservation-quarantine",
+      "unit.test-serve",
+      "unit.test-tearbench-selection",
+      "static.check-terminology",
+      "static.check-active-roster",
+      "static.check-workspace",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit",
+      "unit.test-weapons",
+      "headless.test-headless-current-weapon-parity",
+      "headless.test-headless-current-gameplay-scenarios",
+      "static.check-tear-score",
+      "static.check-adaptive-soundtrack",
+      "static.check-game-reference",
+      "build.standalone",
+      "build.crazygames",
+      "static.check-test-isolation",
+      "browser.test-browser-production-isolation",
+      "build.check-bundles",
+      "build.check-crazygames-package",
+      "certify.reproducible",
+      "build.check-cloudflare",
+      "static.check-ghost-types",
+      "build.check-ghost-cloud",
+      "build.check-ghost-cloud.2",
+      "build.test-standalone",
+      "build.test-crazygames",
+      "browser.test-browser-current-live-detached-parity",
+      "browser.test-browser-current-weapon-parity",
+      "browser.test-browser-current-gameplay-scenarios",
+      "browser.test-browser",
+      "browser.test-browser-features",
+      "browser.test-browser-bosses",
+      "browser.test-browser-journeys",
+      "browser.test-browser-journeys.2",
+      "browser.test-browser-journeys.3",
+      "browser.test-browser-journeys.4",
+      "browser.test-browser-journeys.5",
+      "browser.test-browser-fresh-run-meta",
+      "browser.test-browser-agent-journey",
+      "browser.test-browser-tear-runtime",
+      "browser.test-browser-state-forge",
+      "browser.test-browser-state-forge.2",
+      "browser.test-browser-state-forge.3",
+      "browser.test-browser-input",
+      "browser.test-browser-blade-lifecycle",
+      "browser.test-browser-player-locomotion",
+      "browser.test-browser-enemy-charge",
+      "browser.test-browser-combat-resolution",
+      "browser.test-browser-ranged-cycle",
+      "browser.test-browser-projectile-parry",
+      "browser.test-browser-mirror-pursuit",
+      "browser.test-browser-responsive",
+      "browser.test-browser-audio",
+      "browser.test-browser-platform",
+      "browser.test-browser-platform.2",
+      "browser.test-browser-crazygames-iframe",
+      "browser.test-pwa",
+      "build.test-standalone",
+      "browser.test-browser-performance"
+    ],
+    "deploy.dry-run": [
+      "build.standalone",
+      "deploy.game-dry-run"
+    ],
+    "development": [
+      "static.requirements-check",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit"
+    ],
+    "pull-request": [
+      "unit.release-preflight-negative",
+      "unit.test-game-reference-artifact",
+      "static.requirements-check",
+      "static.check-docs",
+      "unit.test-docs",
+      "unit.test-workspace",
+      "unit.test-parent-layout",
+      "unit.test-artifact-retention",
+      "unit.test-artifact-disposition",
+      "static.check-artifact-disposition",
+      "static.check-artifacts",
+      "static.check-parent-layout",
+      "unit.test-workspace-recovery",
+      "unit.test-workspace-recovery-second-wave",
+      "unit.test-deferred-workspace-dependency",
+      "unit.test-preserved-copy-comparison",
+      "unit.test-remaining-workspace-inventory",
+      "unit.test-workspace-quarantine",
+      "unit.test-workspace-preservation-quarantine",
+      "unit.test-serve",
+      "unit.test-tearbench-selection",
+      "static.check-terminology",
+      "static.check-active-roster",
+      "static.check-workspace",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit",
+      "unit.test-weapons",
+      "headless.test-headless-current-weapon-parity",
+      "headless.test-headless-current-gameplay-scenarios",
+      "static.check-tear-score",
+      "static.check-adaptive-soundtrack",
+      "static.check-game-reference",
+      "build.standalone",
+      "build.crazygames",
+      "static.check-test-isolation",
+      "browser.test-browser-production-isolation",
+      "build.check-bundles",
+      "build.check-crazygames-package",
+      "certify.reproducible",
+      "build.check-cloudflare",
+      "static.check-ghost-types",
+      "build.check-ghost-cloud",
+      "build.check-ghost-cloud.2",
+      "build.test-standalone",
+      "build.test-crazygames",
+      "browser.test-browser-current-live-detached-parity",
+      "browser.test-browser-current-weapon-parity",
+      "browser.test-browser-current-gameplay-scenarios",
+      "browser.test-browser",
+      "browser.test-browser-features",
+      "browser.test-browser-bosses",
+      "browser.test-browser-journeys",
+      "browser.test-browser-journeys.2",
+      "browser.test-browser-journeys.3",
+      "browser.test-browser-journeys.4",
+      "browser.test-browser-journeys.5",
+      "browser.test-browser-fresh-run-meta",
+      "browser.test-browser-agent-journey",
+      "browser.test-browser-tear-runtime",
+      "browser.test-browser-state-forge",
+      "browser.test-browser-state-forge.2",
+      "browser.test-browser-state-forge.3",
+      "browser.test-browser-input",
+      "browser.test-browser-blade-lifecycle",
+      "browser.test-browser-player-locomotion",
+      "browser.test-browser-enemy-charge",
+      "browser.test-browser-combat-resolution",
+      "browser.test-browser-ranged-cycle",
+      "browser.test-browser-projectile-parry",
+      "browser.test-browser-mirror-pursuit",
+      "browser.test-browser-responsive",
+      "browser.test-browser-audio",
+      "browser.test-browser-platform",
+      "browser.test-browser-platform.2",
+      "browser.test-browser-crazygames-iframe",
+      "browser.test-pwa"
+    ],
+    "protected-main": [
+      "unit.release-preflight-negative",
+      "unit.test-game-reference-artifact",
+      "static.requirements-check",
+      "static.check-docs",
+      "unit.test-docs",
+      "unit.test-workspace",
+      "unit.test-parent-layout",
+      "unit.test-artifact-retention",
+      "unit.test-artifact-disposition",
+      "static.check-artifact-disposition",
+      "static.check-artifacts",
+      "static.check-parent-layout",
+      "unit.test-workspace-recovery",
+      "unit.test-workspace-recovery-second-wave",
+      "unit.test-deferred-workspace-dependency",
+      "unit.test-preserved-copy-comparison",
+      "unit.test-remaining-workspace-inventory",
+      "unit.test-workspace-quarantine",
+      "unit.test-workspace-preservation-quarantine",
+      "unit.test-serve",
+      "unit.test-tearbench-selection",
+      "static.check-terminology",
+      "static.check-active-roster",
+      "static.check-workspace",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture",
+      "unit.test-preservation-corpus",
+      "unit.test-unit-without-preservation-corpus",
+      "unit.test-parity-unit",
+      "unit.test-weapons",
+      "headless.test-headless-current-weapon-parity",
+      "headless.test-headless-current-gameplay-scenarios",
+      "static.check-tear-score",
+      "static.check-adaptive-soundtrack",
+      "static.check-game-reference",
+      "build.standalone",
+      "build.crazygames",
+      "static.check-test-isolation",
+      "browser.test-browser-production-isolation",
+      "build.check-bundles",
+      "build.check-crazygames-package",
+      "certify.reproducible",
+      "build.check-cloudflare",
+      "static.check-ghost-types",
+      "build.check-ghost-cloud",
+      "build.check-ghost-cloud.2",
+      "build.test-standalone",
+      "build.test-crazygames",
+      "browser.test-browser-current-live-detached-parity",
+      "browser.test-browser-current-weapon-parity",
+      "browser.test-browser-current-gameplay-scenarios",
+      "browser.test-browser",
+      "browser.test-browser-features",
+      "browser.test-browser-bosses",
+      "browser.test-browser-journeys",
+      "browser.test-browser-journeys.2",
+      "browser.test-browser-journeys.3",
+      "browser.test-browser-journeys.4",
+      "browser.test-browser-journeys.5",
+      "browser.test-browser-fresh-run-meta",
+      "browser.test-browser-agent-journey",
+      "browser.test-browser-tear-runtime",
+      "browser.test-browser-state-forge",
+      "browser.test-browser-state-forge.2",
+      "browser.test-browser-state-forge.3",
+      "browser.test-browser-input",
+      "browser.test-browser-blade-lifecycle",
+      "browser.test-browser-player-locomotion",
+      "browser.test-browser-enemy-charge",
+      "browser.test-browser-combat-resolution",
+      "browser.test-browser-ranged-cycle",
+      "browser.test-browser-projectile-parry",
+      "browser.test-browser-mirror-pursuit",
+      "browser.test-browser-responsive",
+      "browser.test-browser-audio",
+      "browser.test-browser-platform",
+      "browser.test-browser-platform.2",
+      "browser.test-browser-crazygames-iframe",
+      "browser.test-pwa",
+      "certify.game-reference-publication"
+    ],
+    "nightly": [
+      "static.requirements-check",
+      "static.typecheck",
+      "static.lint",
+      "static.check-architecture"
+    ],
+    "endurance": [
+      "endurance.test-endurance",
+      "endurance.test-weekly-ghost"
+    ],
+    "pull-request-docs": [
+      "static.check-docs",
+      "unit.test-docs",
+      "static.check-terminology",
+      "unit.test-terminology",
+      "static.requirements-check"
+    ]
+  },
+  "compatibilityInventory": {
+    "check.functional": {
+      "expandedLeafCount": 78,
+      "taskIds": [
+        "static.requirements-check",
+        "static.check-docs",
+        "unit.test-docs",
+        "unit.test-workspace",
+        "unit.test-parent-layout",
+        "unit.test-artifact-retention",
+        "unit.test-artifact-disposition",
+        "static.check-artifact-disposition",
+        "static.check-artifacts",
+        "static.check-parent-layout",
+        "unit.test-workspace-recovery",
+        "unit.test-workspace-recovery-second-wave",
+        "unit.test-deferred-workspace-dependency",
+        "unit.test-preserved-copy-comparison",
+        "unit.test-remaining-workspace-inventory",
+        "unit.test-workspace-quarantine",
+        "unit.test-workspace-preservation-quarantine",
+        "unit.test-serve",
+        "unit.test-tearbench-selection",
+        "static.check-terminology",
+        "static.check-active-roster",
+        "static.check-workspace",
+        "static.typecheck",
+        "static.lint",
+        "static.check-architecture",
+        "unit.test-preservation-corpus",
+        "unit.test-unit-without-preservation-corpus",
+        "unit.test-parity-unit",
+        "unit.test-weapons",
+        "headless.test-headless-current-weapon-parity",
+        "headless.test-headless-current-gameplay-scenarios",
+        "static.check-tear-score",
+        "static.check-adaptive-soundtrack",
+        "static.check-game-reference",
+        "build.standalone",
+        "build.crazygames",
+        "static.check-test-isolation",
+        "browser.test-browser-production-isolation",
+        "build.check-bundles",
+        "build.check-crazygames-package",
+        "certify.reproducible",
+        "build.check-cloudflare",
+        "static.check-ghost-types",
+        "build.check-ghost-cloud",
+        "build.check-ghost-cloud.2",
+        "build.test-standalone",
+        "build.test-crazygames",
+        "browser.test-browser-current-live-detached-parity",
+        "browser.test-browser-current-weapon-parity",
+        "browser.test-browser-current-gameplay-scenarios",
+        "browser.test-browser",
+        "browser.test-browser-features",
+        "browser.test-browser-bosses",
+        "browser.test-browser-journeys",
+        "browser.test-browser-journeys.2",
+        "browser.test-browser-journeys.3",
+        "browser.test-browser-journeys.4",
+        "browser.test-browser-journeys.5",
+        "browser.test-browser-fresh-run-meta",
+        "browser.test-browser-agent-journey",
+        "browser.test-browser-tear-runtime",
+        "browser.test-browser-state-forge",
+        "browser.test-browser-state-forge.2",
+        "browser.test-browser-state-forge.3",
+        "browser.test-browser-input",
+        "browser.test-browser-blade-lifecycle",
+        "browser.test-browser-player-locomotion",
+        "browser.test-browser-enemy-charge",
+        "browser.test-browser-combat-resolution",
+        "browser.test-browser-ranged-cycle",
+        "browser.test-browser-projectile-parry",
+        "browser.test-browser-mirror-pursuit",
+        "browser.test-browser-responsive",
+        "browser.test-browser-audio",
+        "browser.test-browser-platform",
+        "browser.test-browser-platform.2",
+        "browser.test-browser-crazygames-iframe",
+        "browser.test-pwa"
+      ]
+    },
+    "check.performance": {
+      "expandedLeafCount": 2,
+      "taskIds": [
+        "build.test-standalone",
+        "browser.test-browser-performance"
+      ]
+    },
+    "check": {
+      "expandedLeafCount": 80,
+      "taskIds": [
+        "static.requirements-check",
+        "static.check-docs",
+        "unit.test-docs",
+        "unit.test-workspace",
+        "unit.test-parent-layout",
+        "unit.test-artifact-retention",
+        "unit.test-artifact-disposition",
+        "static.check-artifact-disposition",
+        "static.check-artifacts",
+        "static.check-parent-layout",
+        "unit.test-workspace-recovery",
+        "unit.test-workspace-recovery-second-wave",
+        "unit.test-deferred-workspace-dependency",
+        "unit.test-preserved-copy-comparison",
+        "unit.test-remaining-workspace-inventory",
+        "unit.test-workspace-quarantine",
+        "unit.test-workspace-preservation-quarantine",
+        "unit.test-serve",
+        "unit.test-tearbench-selection",
+        "static.check-terminology",
+        "static.check-active-roster",
+        "static.check-workspace",
+        "static.typecheck",
+        "static.lint",
+        "static.check-architecture",
+        "unit.test-preservation-corpus",
+        "unit.test-unit-without-preservation-corpus",
+        "unit.test-parity-unit",
+        "unit.test-weapons",
+        "headless.test-headless-current-weapon-parity",
+        "headless.test-headless-current-gameplay-scenarios",
+        "static.check-tear-score",
+        "static.check-adaptive-soundtrack",
+        "static.check-game-reference",
+        "build.standalone",
+        "build.crazygames",
+        "static.check-test-isolation",
+        "browser.test-browser-production-isolation",
+        "build.check-bundles",
+        "build.check-crazygames-package",
+        "certify.reproducible",
+        "build.check-cloudflare",
+        "static.check-ghost-types",
+        "build.check-ghost-cloud",
+        "build.check-ghost-cloud.2",
+        "build.test-standalone",
+        "build.test-crazygames",
+        "browser.test-browser-current-live-detached-parity",
+        "browser.test-browser-current-weapon-parity",
+        "browser.test-browser-current-gameplay-scenarios",
+        "browser.test-browser",
+        "browser.test-browser-features",
+        "browser.test-browser-bosses",
+        "browser.test-browser-journeys",
+        "browser.test-browser-journeys.2",
+        "browser.test-browser-journeys.3",
+        "browser.test-browser-journeys.4",
+        "browser.test-browser-journeys.5",
+        "browser.test-browser-fresh-run-meta",
+        "browser.test-browser-agent-journey",
+        "browser.test-browser-tear-runtime",
+        "browser.test-browser-state-forge",
+        "browser.test-browser-state-forge.2",
+        "browser.test-browser-state-forge.3",
+        "browser.test-browser-input",
+        "browser.test-browser-blade-lifecycle",
+        "browser.test-browser-player-locomotion",
+        "browser.test-browser-enemy-charge",
+        "browser.test-browser-combat-resolution",
+        "browser.test-browser-ranged-cycle",
+        "browser.test-browser-projectile-parry",
+        "browser.test-browser-mirror-pursuit",
+        "browser.test-browser-responsive",
+        "browser.test-browser-audio",
+        "browser.test-browser-platform",
+        "browser.test-browser-platform.2",
+        "browser.test-browser-crazygames-iframe",
+        "browser.test-pwa",
+        "build.test-standalone",
+        "browser.test-browser-performance"
+      ]
+    }
+  },
+  "commandProjections": {
+    "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js": [
+      "build.test-standalone",
+      "browser.test-browser-current-gameplay-scenarios"
+    ],
+    "pnpm exec vitest run tests/unit/run-lifecycle.test.ts tests/unit/app-state-machine.test.ts": [
+      "evidence.vitest"
+    ],
+    "pnpm exec vitest run tests/unit/player-locomotion.test.ts": [
+      "evidence.vitest.2"
+    ],
+    "pnpm build:test:standalone && node tests/browser-boss-parity.js": [
+      "build.test-standalone",
+      "browser.test-browser-bosses"
+    ],
+    "pnpm build:test:standalone && node tests/browser-pale-white-hart-phases.js": [
+      "build.test-standalone",
+      "evidence.browser-pale-white-hart-phases"
+    ],
+    "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js": [
+      "build.test-standalone",
+      "evidence.browser-c40-source-void-ghost-seek"
+    ],
+    "pnpm build:test:standalone && node tests/browser-c40-chainblade-bind-yank-ghost-seek.js": [
+      "build.test-standalone",
+      "evidence.browser-c40-chainblade-bind-yank-ghost-seek"
+    ],
+    "pnpm exec vitest run tests/unit/c40-chainblade-evidence-registry.test.ts": [
+      "evidence.vitest.3"
+    ],
+    "pnpm build:test:standalone && node tests/browser-c40-hammer-meteor-ghost-seek.js": [
+      "build.test-standalone",
+      "evidence.browser-c40-hammer-meteor-ghost-seek"
+    ],
+    "pnpm exec vitest run tests/unit/c40-hammer-evidence-registry.test.ts": [
+      "evidence.vitest.4"
+    ],
+    "pnpm build:test:standalone && node tests/browser-c40-greatsword-wheelcut-ghost-seek.js": [
+      "build.test-standalone",
+      "evidence.browser-c40-greatsword-wheelcut-ghost-seek"
+    ],
+    "pnpm exec vitest run tests/unit/c40-greatsword-evidence-registry.test.ts": [
+      "evidence.vitest.5"
+    ],
+    "pnpm build:test:standalone && node tests/browser-c40-sword-crosscut-ghost-seek.js": [
+      "build.test-standalone",
+      "evidence.browser-c40-sword-crosscut-ghost-seek"
+    ],
+    "pnpm exec vitest run tests/unit/c40-sword-evidence-registry.test.ts": [
+      "evidence.vitest.6"
+    ],
+    "pnpm build:test:standalone && node tests/browser-c40-riftlock-loose-cannon-ghost-seek.js": [
+      "build.test-standalone",
+      "evidence.browser-c40-riftlock-loose-cannon-ghost-seek"
+    ],
+    "pnpm exec vitest run tests/unit/c40-riftlock-evidence-registry.test.ts": [
+      "evidence.vitest.7"
+    ],
+    "pnpm tearbench run pale-aurora-track-behavior": [
+      "evidence.tearbench"
+    ],
+    "pnpm tearbench run pale-rimehound-aurora-interaction": [
+      "evidence.tearbench.2"
+    ],
+    "pnpm tearbench run pale-rime-runner-behavior": [
+      "evidence.tearbench.3"
+    ],
+    "pnpm tearbench run pale-prism-seer-behavior": [
+      "evidence.tearbench.4"
+    ],
+    "pnpm tearbench run pale-snowfall-kite-behavior": [
+      "evidence.tearbench.5"
+    ],
+    "pnpm tearbench run pale-hailcaster-behavior": [
+      "evidence.tearbench.6"
+    ],
+    "pnpm tearbench run pale-glacier-guard-behavior": [
+      "evidence.tearbench.7"
+    ],
+    "pnpm tearbench run pale-white-hart-phase-1": [
+      "evidence.tearbench.8"
+    ],
+    "pnpm tearbench run pale-white-hart-phase-2": [
+      "evidence.tearbench.9"
+    ],
+    "pnpm tearbench run pale-white-hart-phase-3": [
+      "evidence.tearbench.10"
+    ],
+    "pnpm exec vitest run tests/unit/gameplay-causal-events.test.ts": [
+      "evidence.vitest.8"
+    ],
+    "pnpm exec vitest run tests/unit/tearbench-current-game-authority.test.ts": [
+      "evidence.vitest.9"
+    ],
+    "pnpm exec vitest run tests/unit/tear-world-context.test.ts tests/unit/tear-world-composition.test.ts tests/unit/environment-runtime.test.ts": [
+      "evidence.vitest.10"
+    ],
+    "pnpm exec vitest run tests/unit/environment-state-codec.test.ts tests/unit/production-replay-composition.test.ts tests/unit/tearbench-state-codecs.test.ts tests/unit/tearbench-invariants.test.ts": [
+      "evidence.vitest.11"
+    ],
+    "pnpm exec vitest run tests/unit/environment-field-runtime.test.ts tests/unit/environment-combat-object-runtime.test.ts tests/unit/gameplay-causal-events.test.ts tests/unit/tearbench-current-game-authority.test.ts": [
+      "evidence.vitest.12"
+    ],
+    "pnpm exec vitest run tests/unit/bloom-well-runtime.test.ts tests/unit/environment-field-runtime.test.ts tests/unit/environment-runtime.test.ts": [
+      "evidence.vitest.13"
+    ],
+    "pnpm exec vitest run tests/unit/rootbinder-network.test.ts tests/unit/rootbinder-runtime.test.ts tests/unit/environment-runtime.test.ts tests/unit/gameplay-causal-events.test.ts": [
+      "evidence.vitest.14"
+    ],
+    "pnpm exec vitest run tests/unit/enemy-variants.test.ts tests/unit/verdant-variant-selection.test.ts tests/unit/live-enemy-spawn.test.ts tests/unit/tearbench-current-game-authority.test.ts": [
+      "evidence.vitest.15"
+    ],
+    "pnpm exec vitest run tests/unit/game-reference.test.ts": [
+      "evidence.vitest.16"
+    ],
+    "pnpm exec vitest run tests/unit/backdrop-biomes.test.ts tests/unit/platform-materials.test.ts tests/unit/verdant-presentation.test.ts": [
+      "evidence.vitest.17"
+    ],
+    "node tests/browser-verdant-presentation.js": [
+      "evidence.browser-verdant-presentation"
+    ],
+    "pnpm exec vitest run tests/unit/rootbound-phase-two.test.ts tests/unit/graft-anchor.test.ts tests/unit/bloom-well-runtime.test.ts tests/unit/environment-state-codec.test.ts tests/unit/verdant-final-five-conformance.test.ts": [
+      "evidence.vitest.18"
+    ],
+    "node tests/browser-current-gameplay-scenarios.js": [
+      "browser.test-browser-current-gameplay-scenarios"
+    ],
+    "pnpm exec vitest run tests/unit/campaign-stage-curve.test.ts tests/unit/verdant-stage-state-forge.test.ts tests/unit/verdant-wave-composition.test.ts tests/unit/verdant-wave-economy.test.ts": [
+      "evidence.vitest.19"
+    ],
+    "node tests/browser-progression-journeys.js": [
+      "browser.test-browser-journeys.2"
+    ],
+    "pnpm exec vitest run tests/unit/pale-aurora-definitions.test.ts tests/unit/pale-aurora-runtime.test.ts tests/unit/rimehound.test.ts tests/unit/pale-state-forge-scenarios.test.ts": [
+      "evidence.vitest.20"
+    ],
+    "node tests/browser-pale-rimehound.js": [
+      "evidence.browser-pale-rimehound"
+    ],
+    "node tests/browser-pale-presentation.js": [
+      "evidence.browser-pale-presentation"
+    ],
+    "pnpm exec vitest run tests/unit/pale-variant-selection.test.ts tests/unit/pale-state-forge-scenarios.test.ts tests/unit/live-codec-validation.test.ts tests/unit/game-reference.test.ts": [
+      "evidence.vitest.21"
+    ],
+    "node tests/browser-pale-variants.js": [
+      "evidence.browser-pale-variants"
+    ],
+    "pnpm exec vitest run tests/unit/white-hart-foundation.test.ts tests/unit/white-hart-phases.test.ts tests/unit/white-hart-route-runtime.test.ts tests/unit/white-hart-state-forge.test.ts tests/unit/pale-state-forge-scenarios.test.ts": [
+      "evidence.vitest.22"
+    ],
+    "node tests/browser-pale-white-hart-phases.js": [
+      "evidence.browser-pale-white-hart-phases"
+    ],
+    "pnpm exec vitest run tests/unit/game-reference.test.ts tests/unit/enemy-reference.test.ts tests/unit/boss-reference.test.ts tests/unit/pale-wave-composition.test.ts tests/unit/pale-stage-state-forge.test.ts tests/unit/tearbench-current-game-authority.test.ts": [
+      "evidence.vitest.23"
+    ],
+    "pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts": [
+      "evidence.vitest.24"
+    ],
+    "node tests/browser-ghost-lab-home.js": [
+      "evidence.browser-ghost-lab-home"
+    ],
+    "node scripts/check-docs.mjs": [
+      "static.check-docs"
+    ]
+  }
+}

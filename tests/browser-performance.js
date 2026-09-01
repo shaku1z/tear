@@ -12,7 +12,11 @@ const buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, "utf8"));
 assert.equal(buildInfo.format, "tear-build-info", "performance evidence requires an attributed Tear build");
 assert.equal(buildInfo.schemaVersion, 1, "performance evidence requires the supported build-info schema");
 assert.equal(buildInfo.target, "standalone", "performance evidence must exercise a standalone build");
+assert.equal(buildInfo.mode, process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone", "performance evidence has the wrong build mode");
 assert.match(buildInfo.artifactHash, /^[a-f0-9]{64}$/u, "performance evidence requires the served artifact hash");
+assert.match(buildInfo.buildIdentityDigest, /^[a-f0-9]{64}$/u, "performance evidence requires the complete build identity");
+assert.equal(buildInfo.contentAddressedPath, `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
+  "performance evidence requires the content-addressed build");
 const port = Number(process.env.TEAR_PERF_PORT || 8126);
 const baseUrl = `http://127.0.0.1:${port}`;
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";

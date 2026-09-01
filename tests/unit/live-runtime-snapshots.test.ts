@@ -54,6 +54,13 @@ describe("live State Forge snapshot provenance", () => {
     expect(snapshot.provenance.build.revision).not.toBe("working-tree");
   });
 
+  it("preserves the canonical surgical class and seed for a State Forge bootstrap", () => {
+    const snapshot = captureLiveStateForgeSnapshot({ ...input(), stateClass: "surgical-valid", seed: "pale-canonical-seed" });
+
+    expect(snapshot.stateClass).toBe("surgical-valid");
+    expect(snapshot.seed).toBe("pale-canonical-seed");
+  });
+
   it("accepts the composition buildIdentity alias and rejects disagreement", () => {
     const buildIdentity: StaticBuild = {
       version: "0.1.0", revision: "injected-revision", target: "test-standalone", rulesetVersion: "tear-rules-unit",

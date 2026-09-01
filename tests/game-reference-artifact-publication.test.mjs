@@ -50,10 +50,15 @@ function createPublisherFixture() {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-publisher-"));
   fs.writeFileSync(path.join(fixtureRoot, ".gitignore"), "artifacts/\ndist/\n", "utf8");
   fs.writeFileSync(path.join(fixtureRoot, "README.md"), "publisher fixture\n", "utf8");
+  fs.mkdirSync(path.join(fixtureRoot, "config"), { recursive: true });
+  fs.writeFileSync(path.join(fixtureRoot, "config", "campaign-publication-boundary.json"), `${JSON.stringify({
+    format: "tear-campaign-publication-boundary", schemaVersion: 1, status: "public", rulesetVersion: "test-public",
+    activeStageIds: ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"], previewStageIds: ["pale-traverse"],
+  })}\n`, "utf8");
   git(fixtureRoot, "init", "-b", "main");
   git(fixtureRoot, "config", "user.name", "Tear Artifact Test");
   git(fixtureRoot, "config", "user.email", "artifact-test@invalid.example");
-  git(fixtureRoot, "add", ".gitignore", "README.md");
+  git(fixtureRoot, "add", ".gitignore", "README.md", "config/campaign-publication-boundary.json");
   git(fixtureRoot, "commit", "-m", "fixture baseline");
   fs.mkdirSync(path.join(fixtureRoot, "artifacts", "tearbench"), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, "dist"), { recursive: true });
@@ -199,10 +204,37 @@ test("manifest, digest, and receipt are all required and source-bound", () => {
   assert.throws(() => validateArtifactFiles(["game-reference.v1.json", "game-reference.v1.receipt.json", "extra.txt"]), /exactly the manifest and receipt/u);
 });
 
+test("manifest validation consumes and fails closed on the target repository publication policy", () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-policy-"));
+  try {
+    fs.mkdirSync(path.join(fixtureRoot, "config"), { recursive: true });
+    const policyPath = path.join(fixtureRoot, "config", "campaign-publication-boundary.json");
+    const policy = {
+      format: "tear-campaign-publication-boundary",
+      schemaVersion: 1,
+      status: "engineering-only",
+      rulesetVersion: "test-policy",
+      activeStageIds: ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"],
+      previewStageIds: ["pale-traverse"],
+    };
+    fs.writeFileSync(policyPath, `${JSON.stringify(policy)}\n`, "utf8");
+    assert.throws(() => validateManifestEnvelope(validManifest(), { sourceSha, repositoryRoot: fixtureRoot }), /publication prohibited/u);
+
+    policy.status = "public";
+    [policy.activeStageIds[3], policy.activeStageIds[4]] = [policy.activeStageIds[4], policy.activeStageIds[3]];
+    fs.writeFileSync(policyPath, `${JSON.stringify(policy)}\n`, "utf8");
+    assert.throws(() => validateManifestEnvelope(validManifest(), { sourceSha, repositoryRoot: fixtureRoot }), /exact six published stage order/u);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test("artifact output is fixed-scope and the publisher performs the required checks", () => {
   assert.equal(assertSafeArtifactDirectory(path.join(repositoryRoot, "artifacts", "game-reference"), repositoryRoot), path.join(repositoryRoot, "artifacts", "game-reference"));
   assert.throws(() => assertSafeArtifactDirectory(path.join(repositoryRoot, "dist"), repositoryRoot), /artifacts\/game-reference/u);
   assert.match(publisher, /process\.env\.GITHUB_SHA/u);
+  assert.match(publisher, /assertCampaignPublicationAllowed/u, "publication must consume the tracked campaign boundary");
+  assert.match(publisher, /campaign-publication-boundary\.mjs/u, "publication must use the shared policy validator");
   assert.match(publisher, /"--expected-sha", sourceSha/u);
   assert.match(publisher, /createHash/u);
   assert.match(publisher, /game-reference\.v1\.json/u);

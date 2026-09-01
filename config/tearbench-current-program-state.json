@@ -1,0 +1,76 @@
+{
+  "format": "tearbench-current-program-state",
+  "schemaVersion": 1,
+  "stateId": "tc8-current-program-state-2026-08-30",
+  "marker": "<!-- tearbench-current-program-state: tc8-current-program-state-2026-08-30 -->",
+  "source": {
+    "repository": "shaku1z/tear",
+    "revision": "9e7d6a701ca0b992c8d78cccc2af329d698778c0",
+    "state": "protected-clean",
+    "fingerprint": "dc25c5bf203d2dc2cc6051b2cc43c251230906769089c01d2ec84a7053b98bbe"
+  },
+  "receipts": {
+    "gameValidate": {
+      "runId": "33316839231",
+      "status": "success",
+      "sourceSha": "9e7d6a701ca0b992c8d78cccc2af329d698778c0"
+    },
+    "gameProduction": {
+      "runId": "33317506163",
+      "status": "success",
+      "sourceSha": "9e7d6a701ca0b992c8d78cccc2af329d698778c0",
+      "sourceFingerprint": "dc25c5bf203d2dc2cc6051b2cc43c251230906769089c01d2ec84a7053b98bbe",
+      "artifactHash": "a15726da33816542174f45f86798a183e3fd78363dc1aacf07ab5908a68c716a"
+    },
+    "wikiSync": {
+      "runId": "33317579723",
+      "status": "success",
+      "sourceSha": "9e7d6a701ca0b992c8d78cccc2af329d698778c0",
+      "validationRunId": "33316839231",
+      "wikiMainSha": "7fa35d9b4aff9d00a658a3dc648d8512d649887b",
+      "manifestSha256": "37509fffbda7416d2686a33c9e5bfe64f1ed586eab7a551d1fc857484e1d6268"
+    },
+    "wikiProduction": {
+      "runId": "33317775693",
+      "status": "success",
+      "sourceSha": "9e7d6a701ca0b992c8d78cccc2af329d698778c0",
+      "wikiMainSha": "7fa35d9b4aff9d00a658a3dc648d8512d649887b"
+    }
+  },
+  "checkpoints": {
+    "C25": "open",
+    "C27": "open",
+    "C28": "complete",
+    "C29": "narrow-complete",
+    "C30": "active",
+    "C31": "active",
+    "C32": "foundation-only",
+    "C33": "active",
+    "C34": "active",
+    "C35": "active",
+    "C36": "open",
+    "C37": "partial",
+    "C38": "bounded-partial",
+    "C39": "local-only",
+    "C40": "incomplete"
+  },
+  "g7": {
+    "status": "open",
+    "certificate": "absent",
+    "production": "attributable"
+  },
+  "diffCapability": {
+    "path": "artifacts/tearbench/generated/diff-capability.json",
+    "format": "tearbench-diff-capability",
+    "status": "last-run",
+    "cumulative": false
+  },
+  "dashboard": {
+    "certifiedCount": 0,
+    "promote": false
+  },
+  "historical": {
+    "oldBaselineSha": "a8a476c6171d913581c01bb0e4432f53cf44f9e4",
+    "context": "historical pre-receipt documentation baseline; never current authority"
+  }
+}

@@ -1,0 +1,540 @@
+name: TearBench Parallel Canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run normal equivalence or prove aggregate rejection with one planted failed task
+        required: true
+        default: normal
+        type: choice
+        options: [normal, planted-failure]
+      planted_task:
+        description: Exact task ID to fail only in the parallel mission
+        required: true
+        default: static.check-docs
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tearbench-parallel-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      browser: ${{ steps.matrix.outputs.browser }}
+      core: ${{ steps.matrix.outputs.core }}
+      run_created: ${{ steps.clock.outputs.run_created }}
+      ready_at: ${{ steps.ready.outputs.ready_at }}
+    steps:
+      - id: clock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+          echo "run_created=$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID --jq .created_at)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate exact plan and frozen shard matrix
+        shell: bash
+        run: |
+          mkdir -p artifacts/tearbench/generated
+          root_commit="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          git diff --name-only "$root_commit" HEAD > artifacts/tearbench/generated/vap6-changed-files.txt
+          pnpm tearbench plan --profile release --revision "$GITHUB_SHA" \
+            --files-from artifacts/tearbench/generated/vap6-changed-files.txt \
+            --artifact artifacts/tearbench/generated/vap6-release-plan.json
+          node scripts/tearbench-canary-plan.mjs \
+            --plan artifacts/tearbench/generated/vap6-release-plan.json \
+            --history config/tearbench-canary-duration-history.json \
+            --artifact artifacts/tearbench/generated/vap6-canary-shards.json
+      - id: matrix
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_OUTPUT"
+          import { readFileSync } from "node:fs";
+          const plan = JSON.parse(readFileSync("artifacts/tearbench/generated/vap6-canary-shards.json", "utf8"));
+          console.log(`browser=${JSON.stringify(plan.browserShards.map(({ shardId }) => ({ shardId })))}`);
+          console.log(`core=${JSON.stringify(plan.coreShards.map(({ shardId }) => ({ shardId })))}`);
+          NODE
+      - name: Validate planted-failure target
+        if: inputs.mode == 'planted-failure'
+        env:
+          PLANTED_TASK: ${{ inputs.planted_task }}
+        run: >-
+          node --input-type=module -e
+          'import { readFileSync } from "node:fs";
+          const plan = JSON.parse(readFileSync("artifacts/tearbench/generated/vap6-release-plan.json", "utf8"));
+          const task = plan.taskNodes.find((entry) => entry.taskId === process.env.PLANTED_TASK);
+          if (task === undefined || task.resourceClass === "build") throw new Error("planted task must be one exact non-build task in the plan");'
+      - name: Prepare immutable control bundle
+        shell: bash
+        run: |
+          root=artifacts/tearbench/canary-bundles/control/root/artifacts/tearbench/generated
+          mkdir -p "$root"
+          cp artifacts/tearbench/generated/vap6-release-plan.json "$root/"
+          cp artifacts/tearbench/generated/vap6-canary-shards.json "$root/"
+          cp artifacts/tearbench/generated/vap6-changed-files.txt "$root/"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/canary-bundles/control/root
+          if-no-files-found: error
+          retention-days: 14
+      - id: ready
+        if: always()
+        run: echo "ready_at=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+
+  serial:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - id: clock
+        run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - run: node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+      - run: pnpm exec playwright install --with-deps chromium
+      - id: tasks
+        name: Run exact serial comparison mission
+        shell: bash
+        run: >-
+          xvfb-run -a node scripts/tearbench-canary-run-shard.mjs
+          --plan artifacts/tearbench/generated/vap6-release-plan.json
+          --shard-plan artifacts/tearbench/generated/vap6-canary-shards.json
+          --shard serial-1 --mission serial-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/serial-${{ github.run_id }}-${{ github.run_attempt }}/serial-1.json
+          --run-created '${{ needs.plan.outputs.run_created }}' --ready-at '${{ needs.plan.outputs.ready_at }}'
+          --job-start '${{ steps.clock.outputs.job_start }}'
+          --plant-failure none
+      - name: Bundle only mission-owned evidence
+        if: always()
+        run: >-
+          node scripts/tearbench-canary-bundle.mjs
+          --mission serial-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/serial-${{ github.run_id }}-${{ github.run_attempt }}/serial-1.json
+          --output artifacts/tearbench/canary-bundles/serial/root
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-serial-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/canary-bundles/serial/root
+          if-no-files-found: error
+          retention-days: 14
+
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+      artifact_url: ${{ steps.upload.outputs.artifact-url }}
+      ready_at: ${{ steps.ready.outputs.ready_at }}
+    steps:
+      - id: clock
+        run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - run: node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+      - id: tasks
+        name: Build once and run build-bound tasks
+        run: >-
+          node scripts/tearbench-canary-run-shard.mjs
+          --plan artifacts/tearbench/generated/vap6-release-plan.json
+          --shard-plan artifacts/tearbench/generated/vap6-canary-shards.json
+          --shard build-1 --mission parallel-build-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/build-1.json
+          --run-created '${{ needs.plan.outputs.run_created }}' --ready-at '${{ needs.plan.outputs.ready_at }}'
+          --job-start '${{ steps.clock.outputs.job_start }}'
+          --plant-failure ${{ inputs.mode == 'planted-failure' && inputs.planted_task || 'none' }}
+      - name: Bundle only build mission evidence and exact payloads
+        if: always()
+        run: >-
+          node scripts/tearbench-canary-bundle.mjs
+          --mission parallel-build-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/build-1.json
+          --output artifacts/tearbench/canary-bundles/build/root
+      - id: upload
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/canary-bundles/build/root
+          if-no-files-found: error
+          retention-days: 14
+      - name: Bind GitHub provider identity to every build record
+        if: steps.tasks.outcome == 'success' && steps.upload.outputs.artifact-id != ''
+        run: >-
+          pnpm tearbench:record-build-provider
+          --records artifacts/tearbench/generated/builds/standalone.json,artifacts/tearbench/generated/builds/crazygames.json,artifacts/tearbench/generated/builds/test-standalone.json,artifacts/tearbench/generated/builds/test-crazygames.json
+          --output artifacts/tearbench/canary/provider-build-bundle.json
+          --artifact-id '${{ steps.upload.outputs.artifact-id }}'
+          --artifact-digest '${{ steps.upload.outputs.artifact-digest }}'
+          --artifact-url '${{ steps.upload.outputs.artifact-url }}'
+      - uses: actions/upload-artifact@v4
+        if: steps.tasks.outcome == 'success'
+        with:
+          name: tearbench-canary-provider-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/canary/provider-build-bundle.json
+          if-no-files-found: error
+          retention-days: 14
+      - id: ready
+        if: always()
+        run: echo "ready_at=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+
+  browser:
+    needs: [plan, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.browser) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - id: clock
+        run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: tearbench-canary-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/build
+      - run: |
+          node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+          node scripts/tearbench-canary-compose.mjs --input downloads/build --workspace .
+      - run: pnpm exec playwright install --with-deps chromium
+      - id: tasks
+        run: >-
+          xvfb-run -a node scripts/tearbench-canary-run-shard.mjs
+          --plan artifacts/tearbench/generated/vap6-release-plan.json
+          --shard-plan artifacts/tearbench/generated/vap6-canary-shards.json
+          --shard ${{ matrix.shardId }} --mission parallel-${{ matrix.shardId }}-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.shardId }}.json
+          --run-created '${{ needs.plan.outputs.run_created }}' --ready-at '${{ needs.build.outputs.ready_at }}'
+          --job-start '${{ steps.clock.outputs.job_start }}'
+          --plant-failure ${{ inputs.mode == 'planted-failure' && inputs.planted_task || 'none' }}
+      - name: Bundle only shard-owned evidence
+        if: always()
+        run: >-
+          node scripts/tearbench-canary-bundle.mjs
+          --mission parallel-${{ matrix.shardId }}-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.shardId }}.json
+          --output artifacts/tearbench/canary-bundles/${{ matrix.shardId }}/root
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-${{ matrix.shardId }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/canary-bundles/${{ matrix.shardId }}/root
+          if-no-files-found: error
+          retention-days: 14
+
+  core:
+    needs: [plan, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.core) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - id: clock
+        run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/build
+      - run: |
+          node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+          node scripts/tearbench-canary-compose.mjs --input downloads/build --workspace .
+      - id: tasks
+        run: >-
+          node scripts/tearbench-canary-run-shard.mjs
+          --plan artifacts/tearbench/generated/vap6-release-plan.json
+          --shard-plan artifacts/tearbench/generated/vap6-canary-shards.json
+          --shard ${{ matrix.shardId }} --mission parallel-${{ matrix.shardId }}-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.shardId }}.json
+          --run-created '${{ needs.plan.outputs.run_created }}' --ready-at '${{ needs.build.outputs.ready_at }}'
+          --job-start '${{ steps.clock.outputs.job_start }}'
+          --plant-failure ${{ inputs.mode == 'planted-failure' && inputs.planted_task || 'none' }}
+      - name: Bundle only shard-owned evidence
+        if: always()
+        run: >-
+          node scripts/tearbench-canary-bundle.mjs
+          --mission parallel-${{ matrix.shardId }}-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.shardId }}.json
+          --output artifacts/tearbench/canary-bundles/${{ matrix.shardId }}/root
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-${{ matrix.shardId }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/canary-bundles/${{ matrix.shardId }}/root
+          if-no-files-found: error
+          retention-days: 14
+
+  certify-serial:
+    needs: [plan, serial]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-serial-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/serial
+      - run: |
+          node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+          node scripts/tearbench-canary-compose.mjs --input downloads/serial --workspace .
+      - name: Aggregate serial receipts even after task failure
+        shell: bash
+        run: |
+          mkdir -p artifacts/tearbench/missions
+          receipts="$(find artifacts/tearbench/missions -path '*/serial-*/*' -name 'attempt-*.json' -type f -print 2>/dev/null | sort | paste -sd, -)"
+          set +e
+          node scripts/tearbench-task-execution.mjs certify --plan artifacts/tearbench/generated/vap6-release-plan.json \
+            --receipts "$receipts" --artifact artifacts/tearbench/generated/vap6-serial-certificate.json
+          echo $? > artifacts/tearbench/generated/vap6-serial-certifier-exit.txt
+          set -e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-serial-certificate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/tearbench/generated/vap6-serial-certificate.json
+            artifacts/tearbench/generated/vap6-serial-certifier-exit.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  certify-parallel:
+    needs: [plan, build, browser, core]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: tearbench-canary-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/build
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: tearbench-canary-browser-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/browser
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: tearbench-canary-core-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/core
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        id: aggregate-provider
+        continue-on-error: true
+        with:
+          name: tearbench-canary-provider-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/provider
+      - name: Collision-check and compose parallel evidence
+        shell: bash
+        run: |
+          node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+          shopt -s nullglob
+          artifacts=(downloads/parallel/build downloads/parallel/browser/* downloads/parallel/core/*)
+          for artifact in "${artifacts[@]}"; do
+            node scripts/tearbench-canary-compose.mjs --input "$artifact" --workspace .
+          done
+      - name: Aggregate parallel receipts even after shard failure
+        shell: bash
+        run: |
+          mkdir -p artifacts/tearbench/missions
+          receipts="$(find artifacts/tearbench/missions -path '*/parallel-*/*' -name 'attempt-*.json' -type f -print 2>/dev/null | sort | paste -sd, -)"
+          set +e
+          node scripts/tearbench-task-execution.mjs certify --plan artifacts/tearbench/generated/vap6-release-plan.json \
+            --receipts "$receipts" --artifact artifacts/tearbench/generated/vap6-parallel-certificate.json
+          echo $? > artifacts/tearbench/generated/vap6-parallel-certifier-exit.txt
+          set -e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-parallel-certificate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/tearbench/generated/vap6-parallel-certificate.json
+            artifacts/tearbench/generated/vap6-parallel-certifier-exit.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  aggregate:
+    needs: [plan, serial, build, browser, core, certify-serial, certify-parallel]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize an explicit incomplete result
+        env:
+          TEARBENCH_JOB_RESULTS: ${{ toJson(needs) }}
+        run: >-
+          node scripts/tearbench-canary-incomplete-report.mjs
+          --artifact artifacts/tearbench/generated/vap6-canary-report.json
+          --results "$TEARBENCH_JOB_RESULTS"
+      - uses: actions/download-artifact@v4
+        id: aggregate-control
+        continue-on-error: true
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - uses: actions/download-artifact@v4
+        id: aggregate-serial
+        continue-on-error: true
+        with:
+          name: tearbench-canary-serial-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/serial
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: tearbench-canary-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/build
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: tearbench-canary-browser-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/browser
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: tearbench-canary-core-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/core
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        id: aggregate-provider
+        continue-on-error: true
+        with:
+          name: tearbench-canary-provider-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/provider
+      - uses: actions/download-artifact@v4
+        id: aggregate-serial-certificate
+        continue-on-error: true
+        with:
+          name: tearbench-canary-serial-certificate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/serial-certificate
+      - uses: actions/download-artifact@v4
+        id: aggregate-parallel-certificate
+        continue-on-error: true
+        with:
+          name: tearbench-canary-parallel-certificate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel-certificate
+      - if: steps.aggregate-control.outcome == 'success'
+        run: node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+      - name: Compare exact serial and parallel tasks, claims, results, identities, and timings
+        id: parity
+        if: >-
+          steps.aggregate-control.outcome == 'success' &&
+          steps.aggregate-serial.outcome == 'success' &&
+          steps.aggregate-provider.outcome == 'success' &&
+          steps.aggregate-serial-certificate.outcome == 'success' &&
+          steps.aggregate-parallel-certificate.outcome == 'success'
+        run: >-
+          node scripts/tearbench-canary-report.mjs
+          --plan artifacts/tearbench/generated/vap6-release-plan.json
+          --shard-plan artifacts/tearbench/generated/vap6-canary-shards.json
+          --serial-dir downloads/serial --parallel-dir downloads/parallel
+          --serial-certificate downloads/serial-certificate/vap6-serial-certificate.json
+          --parallel-certificate downloads/parallel-certificate/vap6-parallel-certificate.json
+          --provider-bundle downloads/parallel/provider/provider-build-bundle.json
+          --artifact artifacts/tearbench/generated/vap6-canary-report.json
+          --plant-failure ${{ inputs.mode == 'planted-failure' && inputs.planted_task || 'none' }}
+      - name: Reject incomplete aggregation
+        if: always() && steps.parity.outcome != 'success'
+        run: exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-aggregate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/generated/vap6-canary-report.json
+          if-no-files-found: error
+          retention-days: 30

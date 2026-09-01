@@ -2,6 +2,8 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
 
+const BOSS_PROGRESS_TIMEOUT_MS = 10_000;
+
 const BOSSES = canonicalScenarios.filter((entry) => entry.subject.kind === "boss"
     && !entry.tags?.includes("unpublished-preview"))
   .map((entry) => entry.subject.id);
@@ -44,27 +46,55 @@ async function moveCapturedPointer(page, from, to) {
   }, { previous: from, next: to });
 }
 
-async function waitForBossSimulationAdvance(page, bossId, initialAliveT, minimumAdvance, timeout = 5000) {
+function bossProgressSummary(boss) {
+  if (!boss) return null;
+  return {
+    aliveT: boss.aliveT,
+    atk: boss.atk,
+    introT: boss.introT,
+    mode: boss.mode,
+    phase: boss.phase,
+    spawnT: boss.spawnT,
+    x: boss.x,
+    y: boss.y,
+  };
+}
+
+async function waitForBossSimulationAdvance(page, bossId, initialAliveT, minimumAdvance,
+  timeout = BOSS_PROGRESS_TIMEOUT_MS) {
   // Fixed-step catch-up is deliberately capped, so a busy CI renderer may drop
   // wall time instead of converting a long frame into an unbounded tick burst.
   // Observe the authored simulation clock directly while retaining a hard
   // browser timeout and the caller's exact postcondition assertion.
-  await page.waitForFunction(({ id, threshold }) => {
-    const boss = window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id);
-    return boss?.aliveT > threshold;
-  }, { id: bossId, threshold: initialAliveT + minimumAdvance }, { timeout });
+  try {
+    await page.waitForFunction(({ id, threshold }) => {
+      const boss = window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id);
+      return boss?.aliveT > threshold;
+    }, { id: bossId, threshold: initialAliveT + minimumAdvance }, { timeout });
+  } catch (error) {
+    const current = bossProgressSummary(await bossSnapshot(page, bossId));
+    throw new Error(`${bossId} simulation did not advance within ${String(timeout)}ms; `
+      + `initialAliveT=${String(initialAliveT)} current=${JSON.stringify(current)}`, { cause: error });
+  }
   return bossSnapshot(page, bossId);
 }
 
-async function waitForBossCombatProgress(page, bossId, initial, minimumAdvance, timeout = 5000) {
-  await page.waitForFunction(({ id, threshold, origin }) => {
-    const boss = window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id);
-    return boss?.aliveT > threshold && Math.hypot(boss.x - origin.x, boss.y - origin.y) > 1;
-  }, {
-    id: bossId,
-    threshold: initial.aliveT + minimumAdvance,
-    origin: { x: initial.x, y: initial.y },
-  }, { timeout });
+async function waitForBossCombatProgress(page, bossId, initial, minimumAdvance,
+  timeout = BOSS_PROGRESS_TIMEOUT_MS) {
+  try {
+    await page.waitForFunction(({ id, threshold, origin }) => {
+      const boss = window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id);
+      return boss?.aliveT > threshold && Math.hypot(boss.x - origin.x, boss.y - origin.y) > 1;
+    }, {
+      id: bossId,
+      threshold: initial.aliveT + minimumAdvance,
+      origin: { x: initial.x, y: initial.y },
+    }, { timeout });
+  } catch (error) {
+    const current = bossProgressSummary(await bossSnapshot(page, bossId));
+    throw new Error(`${bossId} combat did not progress within ${String(timeout)}ms; `
+      + `initial=${JSON.stringify(bossProgressSummary(initial))} current=${JSON.stringify(current)}`, { cause: error });
+  }
   return bossSnapshot(page, bossId);
 }
 
@@ -89,7 +119,7 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page, waitScree
     const before = await bossSnapshot(page, bossId);
     const after = bossId === "rootbound" || bossId === "white-hart"
       ? await waitForBossSimulationAdvance(page, bossId, before.aliveT, 0.8)
-      : await waitForBossCombatProgress(page, bossId, before, 0.8, bossId === "echo" ? 7000 : 5000);
+      : await waitForBossCombatProgress(page, bossId, before, 0.8, bossId === "echo" ? 12_000 : BOSS_PROGRESS_TIMEOUT_MS);
     assert.ok(after.aliveT > before.aliveT + 0.8, `${bossId} AI must keep receiving fixed ticks after its intro`);
     if (bossId === "rootbound") {
       await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies

@@ -353,4 +353,28 @@ describe("C30 production headless environment", () => {
     });
     expect(terminal?.actions).toEqual([]);
   });
+
+  it("prioritizes natural termination when it lands exactly on the truncation horizon", () => {
+    const environment = createProductionHeadlessEnvironment();
+    const horizonScenario = Object.freeze({
+      ...scenario, id: "movement-jump", description: "C30 natural one-hit horizon failure candidate",
+      seed: "c30-onehit-natural-failure", maxTicks: 222,
+      start: Object.freeze({ mode: "endless", difficulty: "onehit", weapon: "sword" }),
+    }) satisfies TearScenarioV1;
+    let terminal: ProductionHeadlessTerminalArtifact | undefined;
+    environment.reset(horizonScenario);
+    for (let tick = 1; tick <= horizonScenario.maxTicks; tick += 1) {
+      const transition = environment.step([]);
+      if (transition.artifact !== undefined) {
+        terminal = transition.artifact as ProductionHeadlessTerminalArtifact;
+        break;
+      }
+    }
+    environment.dispose();
+
+    expect(terminal?.terminal.tick).toBe(222);
+    expect(terminal?.terminal.terminated).toBe(true);
+    expect(terminal?.terminal.truncated).toBe(false);
+    expect(terminal?.terminal.terminated && terminal.terminal.truncated).toBe(false);
+  });
 });

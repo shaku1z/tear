@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
   OPERATIONAL_METRICS,
   buildOperationalDashboard,
   createPreservationManifest,
   resolvePreservedRuntime,
   selectDiffAwareEvidence,
+  TEAR_EVIDENCE_SELECTOR_AUTHORITY,
+  type EvidenceSelection,
   type EvidenceRoute,
 } from "../../src/tearbench/release-certification";
 
@@ -27,20 +33,51 @@ function preservation() {
 const routes: readonly EvidenceRoute[] = [{
   id: "combat",
   prefixes: ["src/gameplay/combat/", "src/gameplay/entities/"],
-  scenarios: ["enemy-contact"],
+  scenarios: ["movement-jump"],
   graveyardCases: ["planted-downstream-divergence"],
   journeyCheckpoint: "normal-adventure-wave",
   baseComparison: "oracle-ee5e931",
-  interactionMatrices: ["input", "frame-rate"],
+  interactionMatrices: ["input", "frameRate"],
+  buildTargets: [],
 }, {
   id: "shared-runtime",
   prefixes: ["src/simulation/", "src/tearbench/"],
-  scenarios: ["deterministic-render-rate"],
+  scenarios: ["boot-start-run"],
   graveyardCases: ["all-shared-runtime"],
   journeyCheckpoint: "menu-to-menu-smoke",
   baseComparison: "main-base",
-  interactionMatrices: ["browser", "platform", "frame-rate"],
+  interactionMatrices: ["browser", "platform", "frameRate"],
+  buildTargets: [],
 }];
+
+function commonSelection(selection: {
+  changedFiles: readonly string[]; routes: readonly string[]; scenarios: readonly string[];
+  graveyardCases: readonly string[]; journeyCheckpoints: readonly string[]; baseComparisons: readonly string[];
+  interactionMatrices: readonly string[]; unrelatedUnitTestsAreGameplayEvidence: false;
+}) {
+  return {
+    changedFiles: [...selection.changedFiles], routes: [...selection.routes], scenarios: [...selection.scenarios],
+    graveyardCases: [...selection.graveyardCases], journeyCheckpoints: [...selection.journeyCheckpoints],
+    baseComparisons: [...selection.baseComparisons], interactionMatrices: [...selection.interactionMatrices],
+    unrelatedUnitTestsAreGameplayEvidence: selection.unrelatedUnitTestsAreGameplayEvidence,
+  };
+}
+
+function executableProjection(changedFiles: readonly string[], projectionRoutes: readonly EvidenceRoute[] = routes) {
+  const repositoryRoot = resolve(import.meta.dirname, "../..");
+  const temporaryRoot = mkdtempSync(join(tmpdir(), "tearbench-selector-boundary-"));
+  try {
+    const fixturePath = join(temporaryRoot, "routes.json");
+    const artifactPath = join(temporaryRoot, "selection.json");
+    writeFileSync(fixturePath, `${JSON.stringify(projectionRoutes)}\n`, "utf8");
+    execFileSync(process.execPath, [resolve(repositoryRoot, "scripts/tearbench.mjs"), "select",
+      "--files", changedFiles.join(","), "--routes", fixturePath, "--artifact", artifactPath],
+    { cwd: repositoryRoot, stdio: "pipe" });
+    return JSON.parse(readFileSync(artifactPath, "utf8")) as EvidenceSelection;
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+}
 
 describe("TearBench release certification", () => {
   it("preserves supported, retired, aliased, and tombstoned runtime identities honestly", () => {
@@ -84,13 +121,45 @@ describe("TearBench release certification", () => {
     const selection = selectDiffAwareEvidence(["src\\gameplay\\combat\\kill-runtime.ts"], routes);
     expect(selection).toMatchObject({
       routes: ["combat"],
-      scenarios: ["enemy-contact"],
+      scenarios: ["movement-jump"],
       graveyardCases: ["planted-downstream-divergence"],
       journeyCheckpoints: ["normal-adventure-wave"],
       baseComparisons: ["oracle-ee5e931"],
-      interactionMatrices: ["frame-rate", "input"],
+      interactionMatrices: ["frameRate", "input"],
       unrelatedUnitTestsAreGameplayEvidence: false,
     });
+  });
+
+  it.each([
+    [["src/gameplay/combat/kill-runtime.ts", "src/unmapped/new-runtime-boundary.ts"]],
+    [["docs/example.md", "src/unmapped/new-runtime-boundary.ts"]],
+  ])("keeps the TS compatibility projection aligned with executable selector for %j", (changedFiles) => {
+    const projection = selectDiffAwareEvidence(changedFiles, routes);
+    expect(commonSelection(projection)).toEqual(commonSelection(executableProjection(changedFiles)));
+  });
+
+  it("marks the TS API as a projection and keeps executable selector authority explicit", () => {
+    expect(TEAR_EVIDENCE_SELECTOR_AUTHORITY).toBe("scripts/tearbench.mjs");
+  });
+
+  it("fails closed instead of projecting dynamic scenario subjects without catalog authority", () => {
+    const fullRoutes = JSON.parse(readFileSync(
+      resolve(import.meta.dirname, "../../src/tearbench/evidence-routes.json"), "utf8",
+    )) as EvidenceRoute[];
+    expect(() => selectDiffAwareEvidence(["src/gameplay/weapon-selection.ts"], fullRoutes))
+      .toThrow(/dynamic scenario subjects.*scripts\/tearbench\.mjs/u);
+  });
+
+  it("uses repository path boundaries and rejects unsafe paths and invalid fallback registries", () => {
+    const firstRoute = routes[0];
+    if (firstRoute === undefined) throw new Error("static route fixture must not be empty");
+    expect(selectDiffAwareEvidence(["src/gameplay/entities-old/player.ts"], routes).routes)
+      .toEqual(["shared-runtime"]);
+    expect(() => selectDiffAwareEvidence(["../outside.ts"], routes)).toThrow(/repository-relative/u);
+    expect(() => selectDiffAwareEvidence(["src/gameplay/combat/kill-runtime.ts"], [...routes, firstRoute]))
+      .toThrow(/IDs must be unique/u);
+    expect(() => selectDiffAwareEvidence(["src/gameplay/combat/kill-runtime.ts"], routes.slice(0, 1)))
+      .toThrow(/shared-runtime fallback/u);
   });
 
 });
