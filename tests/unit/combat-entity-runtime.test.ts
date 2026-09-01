@@ -76,6 +76,15 @@ describe("combat entity runtime", () => {
     expect(target.auraDR).toBe(1); expect(target.buffs).toEqual([]); expect(support.links).toEqual([]);
   });
 
+  it("rejects sparse live actor collections before projected support resolution", () => {
+    const actors = new Array<LiveCombatEntity>(2); actors[1] = entity();
+    const { runtime } = harness(actors);
+    expect(() => {
+      runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
+        menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
+    }).toThrow("combat actor collection must be dense");
+  });
+
   it("skips irrelevant projection passes while preserving neutral state and identity order", () => {
     const actor = entity(), shot = entity({ kind: "projectile", family: "ordinaryProjectile" });
     const { runtime, player } = harness([actor], [shot]);

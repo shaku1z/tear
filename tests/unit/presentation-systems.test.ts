@@ -107,9 +107,12 @@ describe("presentation system boundaries", () => {
     expect(effects.list.some((particle) => particle.type === "contactMark")).toBe(true);
 
     effects.contactMark(40, 40, 1, 0, 12, 2, 0.08, "#fff");
+    const admittedPeers = [...effects.list];
     effects.contactMark(50, 50, 1, 0, 12, 2, 0.08, "#fff");
     expect(effects.list).toHaveLength(2);
     expect(effects.list.every((particle) => particle.type === "contactMark")).toBe(true);
+    expect(effects.list[0]).toBe(admittedPeers[0]);
+    expect(effects.list[1]).toBe(admittedPeers[1]);
   });
 
   it("returns immutable admission receipts without claiming randomized particle state", () => {

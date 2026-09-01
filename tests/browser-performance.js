@@ -287,15 +287,20 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   const longTasksBefore = (await diagnostics(page)).longTasks;
   const allocationSession = await startAllocationProfile(page);
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
+  const sampleMeasuredPeak = async (snapshot) => {
+    samplePeak(snapshot);
+    await stopTraceAfterHitch(browser, snapshot, label);
+  };
   const activeFrameSamples = await exerciseCombat(
     page,
     measuredDuration(scenario.durationMs),
-    samplePeak,
+    sampleMeasuredPeak,
     scenario.minimumSamples,
     scenario.minimumCollectionRateFps,
   );
   const snapshot = await diagnostics(page);
   await stopAllocationProfile(allocationSession);
+  await stopTraceAfterHitch(browser, snapshot, label);
   const result = {
     simulation: snapshot.simulation,
     render: snapshot.render,
@@ -444,11 +449,16 @@ async function paleGameplayScenario(browser, pageErrors) {
   const allocationSession = await startAllocationProfile(page);
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
   await markTrace(page, "tear-perf-pale-start");
-  const activeFrameSamples = await exerciseCombat(page, measuredDuration(scenario.durationMs), samplePeak,
+  const sampleMeasuredPeak = async (snapshot) => {
+    await samplePeak(snapshot);
+    await stopTraceAfterHitch(browser, snapshot, "Pale");
+  };
+  const activeFrameSamples = await exerciseCombat(page, measuredDuration(scenario.durationMs), sampleMeasuredPeak,
     scenario.minimumSamples, scenario.minimumCollectionRateFps);
   await markTrace(page, "tear-perf-pale-end");
   const snapshot = await diagnostics(page);
   await stopAllocationProfile(allocationSession);
+  await stopTraceAfterHitch(browser, snapshot, "Pale");
   await samplePeak();
   const result = { simulation: snapshot.simulation, render: snapshot.render, frame: snapshot.frame,
     frameInterval: snapshot.frameInterval,

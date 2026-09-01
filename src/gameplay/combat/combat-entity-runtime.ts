@@ -299,7 +299,8 @@ export class CombatEntityRuntime {
     objects.clear();
     const source = this.#hooks.actors(), snapshots = this.#supportSnapshots;
     for (let index = 0; index < source.length; index += 1) {
-      const actor = source[index]; if (actor === undefined) continue;
+      const actor = source[index];
+      if (actor === undefined) throw new TypeError("combat actor collection must be dense");
       const id = this.id(actor, "enemy"); objects.set(id, actor);
       const bondedId = actor.bonded ? this.id(actor.bonded, "enemy") : null;
       if (bondedId !== null && actor.bonded) objects.set(bondedId, actor.bonded);
