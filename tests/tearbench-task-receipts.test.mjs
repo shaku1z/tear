@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   certificateBindsPlan, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256, taskAttemptPath,
 } from "../scripts/tearbench-task-receipts.mjs";
+import { PERFORMANCE_TASK_ID } from "../scripts/tearbench-performance-sample.mjs";
 import { verifyProtectedPlanCertificate } from "../scripts/verify-plan-certificate.mjs";
 
 const origin = Object.freeze({ kind: "github-actions", repository: "shaku1z/tear", workflow: "Validate",
@@ -32,6 +33,17 @@ const planPayload = Object.freeze({
   diagnostics: { unsupported: ["invariant:unsupported"] },
 });
 const plan = Object.freeze({ ...planPayload, planDigest: receiptSha256(planPayload) });
+const performancePlanPayload = Object.freeze({
+  ...planPayload,
+  requiredTaskIds: [PERFORMANCE_TASK_ID],
+  requiredClaims: ["claim.performance"],
+  taskNodes: [{ taskId: PERFORMANCE_TASK_ID, taskDefinitionDigest: "8".repeat(16), claimIds: ["claim.performance"],
+    resourceClass: "browser", resourceKeys: [], dependencies: [], outputs: [] }],
+  obligations: [],
+  explanations: [{ taskId: PERFORMANCE_TASK_ID, unprovedWithout: ["claim.performance"] }],
+  diagnostics: { unsupported: [] },
+});
+const performancePlan = Object.freeze({ ...performancePlanPayload, planDigest: receiptSha256(performancePlanPayload) });
 const bytes = Buffer.from("artifact evidence\n", "utf8");
 const artifact = Object.freeze({ outputId: "proof", path: "artifacts/tearbench/missions/mission/task.a/proof.json", sha256: receiptSha256(bytes), size: bytes.length });
 
@@ -53,6 +65,24 @@ function certify(receipts, overrides = {}) {
 function resign(value) {
   const copy = structuredClone(value); delete copy.receiptDigest;
   return { ...copy, receiptDigest: receiptSha256(copy) };
+}
+
+const contendedOutput = `${JSON.stringify({ scenario: "4x constrained gameplay", measurements: {
+  frame: { p95Ms: 14.6 }, frameInterval: { p99Ms: 150 }, outsideFrameWork: { p99Ms: 140.9 }, newLongTasks: 0,
+} })}\n`;
+const contendedFailure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n";
+function performanceReceipt(overrides = {}) {
+  const bindings = expectedTaskBindings(performancePlan, PERFORMANCE_TASK_ID);
+  return createTaskAttemptReceipt({ missionId: "performance", plan: performancePlan, taskId: PERFORMANCE_TASK_ID,
+    attemptNumber: 1, source, authority: "protected-ci", origin,
+    build: { requirement: bindings.build, attestations: [], produced: [] }, toolchain: bindings.toolchain,
+    environment: bindings.environment, evidence: bindings.evidence, status: "passed", exitCode: 0,
+    startedAt: "2026-08-31T00:00:00.000Z", finishedAt: "2026-08-31T00:00:01.000Z",
+    artifacts: [], stdout: "", stderr: "", ...overrides });
+}
+function certifyPerformance(receipts) {
+  return createPlanCertificate({ plan: performancePlan, receipts, expectedOrigin: origin,
+    generatedAt: "2026-08-31T00:01:00.000Z" });
 }
 
 test("immutable task attempts and a plan-derived protected certificate are deterministic and complete", () => {
@@ -122,6 +152,45 @@ test("failed and authorized passing attempts are retained as recovered-flaky; hi
     status: "failed", exitCode: 2 });
   assert.equal(certify([failed, failedAgain, receipt("task.b")]).status, "rejected");
   assert.throws(() => receipt("task.a", { attemptNumber: 3 }), /initial run or one retry/u);
+});
+
+test("performance invalid-sample retries are receipt-proven, exact, bounded, and fail closed", () => {
+  const failed = performanceReceipt({ status: "failed", exitCode: 1, stdout: contendedOutput, stderr: contendedFailure });
+  assert.equal(failed.result.sampleValidity.classification, "infrastructure-invalid");
+  const authorization = `bounded-canary-invalid-sample-retry:performance:${PERFORMANCE_TASK_ID}`;
+  const recovered = performanceReceipt({ attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: authorization });
+  const accepted = certifyPerformance([failed, recovered]);
+  assert.equal(accepted.status, "certified", accepted.errors.join("\n"));
+  assert.equal(accepted.retryHistory[0].attempts[0].sampleValidity.classification, "infrastructure-invalid");
+
+  const wrongAuthorization = performanceReceipt({ attemptNumber: 2, retryOf: failed.receiptDigest,
+    retryAuthorization: "bounded-canary-single-retry:performance:browser.test-browser-performance" });
+  assert.equal(certifyPerformance([failed, wrongAuthorization]).status, "rejected");
+
+  const productFailure = performanceReceipt({ status: "failed", exitCode: 1, stdout: contendedOutput,
+    stderr: "AssertionError [ERR_ASSERTION]: 4x constrained gameplay did not exercise representative enemies\n" });
+  assert.equal(productFailure.result.sampleValidity.classification, "product-or-unclassified-failure");
+  const hiddenProductRetry = performanceReceipt({ attemptNumber: 2, retryOf: productFailure.receiptDigest,
+    retryAuthorization: authorization });
+  assert.equal(certifyPerformance([productFailure, hiddenProductRetry]).status, "rejected");
+
+  const exhausted = performanceReceipt({ attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: authorization,
+    status: "failed", exitCode: 1, stdout: contendedOutput, stderr: contendedFailure });
+  assert.equal(certifyPerformance([failed, exhausted]).status, "rejected");
+});
+
+test("performance sample classification is immutable and independently recomputed", () => {
+  const passed = performanceReceipt();
+  const missing = structuredClone(passed); delete missing.result.sampleValidity;
+  const missingCertificate = certifyPerformance([resign(missing)]);
+  assert.equal(missingCertificate.status, "rejected");
+  assert.ok(missingCertificate.errors.some((error) => error.includes("classification is missing or malformed")));
+
+  const tampered = structuredClone(passed);
+  tampered.result.sampleValidity = { classification: "infrastructure-invalid", policy: {}, evidence: [] };
+  const tamperedCertificate = certifyPerformance([resign(tampered)]);
+  assert.equal(tamperedCertificate.status, "rejected");
+  assert.ok(tamperedCertificate.errors.some((error) => error.includes("classification is missing or malformed")));
 });
 
 test("missing, extra, duplicate, and altered-artifact receipts fail closed", () => {

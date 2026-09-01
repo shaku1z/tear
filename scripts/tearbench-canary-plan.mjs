@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { receiptSha256 } from "./tearbench-task-receipts.mjs";
+import { PERFORMANCE_TASK_ID } from "./tearbench-performance-sample.mjs";
 
 function checkedPositiveInteger(value, label) {
   if (!Number.isSafeInteger(value) || value < 1 || value > 16) throw new TypeError(`${label} must be between 1 and 16`);
@@ -55,7 +56,11 @@ export function createCanaryShardPlan({ plan, durationHistory, browserShardCount
   if (unsupportedNodes.length > 0) throw new TypeError(`release canary has unsupported task classes: ${unsupportedNodes.map((task) => task.taskId).join(", ")}`);
   const estimated = plan.taskNodes.map((task) => ({ ...task, ...estimate(task, durationHistory) }));
   const builds = estimated.filter((task) => task.resourceClass === "build").sort((a, b) => position.get(a.taskId) - position.get(b.taskId));
-  const browsers = estimated.filter((task) => task.resourceClass === "browser");
+  const performance = estimated.find((task) => task.taskId === PERFORMANCE_TASK_ID);
+  if (performance === undefined || performance.resourceClass !== "browser") {
+    throw new TypeError(`release canary requires isolated task ${PERFORMANCE_TASK_ID}`);
+  }
+  const browsers = estimated.filter((task) => task.resourceClass === "browser" && task.taskId !== PERFORMANCE_TASK_ID);
   const core = estimated.filter((task) => ["static", "unit", "headless"].includes(task.resourceClass));
   const normalize = (shards) => shards.map((shard) => ({ ...shard,
     taskIds: shard.taskIds.sort((a, b) => position.get(a) - position.get(b)),
@@ -65,10 +70,13 @@ export function createCanaryShardPlan({ plan, durationHistory, browserShardCount
       estimateKind: task.estimateKind, samples: task.samples })) };
   const browserShards = normalize(pack(browsers, browserShardCount, "browser"));
   const coreShards = normalize(pack(core, coreShardCount, "core"));
+  const performanceShard = { shardId: "performance-1", estimatedMs: performance.estimatedMs,
+    taskIds: [performance.taskId], estimates: [{ taskId: performance.taskId, estimatedMs: performance.estimatedMs,
+      estimateKind: performance.estimateKind, samples: performance.samples }] };
   const serialShard = { shardId: "serial-1", estimatedMs: estimated.reduce((sum, task) => sum + task.estimatedMs, 0),
     taskIds: order, estimates: order.map((taskId) => { const task = estimated.find((entry) => entry.taskId === taskId);
       return { taskId, estimatedMs: task.estimatedMs, estimateKind: task.estimateKind, samples: task.samples }; }) };
-  const scheduled = [buildShard, ...browserShards, ...coreShards].flatMap((shard) => shard.taskIds);
+  const scheduled = [buildShard, ...browserShards, ...coreShards, performanceShard].flatMap((shard) => shard.taskIds);
   const missing = plan.requiredTaskIds.filter((id) => !scheduled.includes(id));
   const extra = scheduled.filter((id) => !plan.requiredTaskIds.includes(id));
   const duplicates = [...new Set(scheduled.filter((id, index) => scheduled.indexOf(id) !== index))].sort();
@@ -78,11 +86,13 @@ export function createCanaryShardPlan({ plan, durationHistory, browserShardCount
     source: plan.source, profileId: plan.profileId, durationPolicy: { statistic: durationHistory.statistic,
       minimumSamples: durationHistory.minimumSamples, source: durationHistory.source, digest: receiptSha256(historyPayload) },
     constraints: { browserShardCount: browserShards.length, coreShardCount: coreShards.length,
-      failFast: false, separateRunnerJobs: true, nativePlaywrightSharding: false },
-    buildShard, browserShards, coreShards, serialShard, exactTaskIds: [...plan.requiredTaskIds],
+      failFast: false, separateRunnerJobs: true, nativePlaywrightSharding: false,
+      isolatedPerformanceTaskId: PERFORMANCE_TASK_ID, performanceAfterParallelWork: true,
+      serialAfterParallelPerformance: true },
+    buildShard, browserShards, coreShards, performanceShard, serialShard, exactTaskIds: [...plan.requiredTaskIds],
     estimates: { serialTaskMs: estimated.reduce((sum, task) => sum + task.estimatedMs, 0),
       parallelCriticalPathMs: buildShard.estimatedMs + Math.max(0, ...browserShards.map((shard) => shard.estimatedMs),
-        ...coreShards.map((shard) => shard.estimatedMs)) },
+        ...coreShards.map((shard) => shard.estimatedMs)) + performanceShard.estimatedMs },
     parity: { missing, extra, duplicates, status: "exact" } };
   return Object.freeze({ ...payload, shardPlanDigest: receiptSha256(payload) });
 }
@@ -101,5 +111,5 @@ if (invoked === fileURLToPath(import.meta.url)) {
   const output = resolve(values["--artifact"]); await mkdir(dirname(output), { recursive: true });
   await writeFile(output, `${JSON.stringify(result, null, 2)}\n`, "utf8");
   console.log(JSON.stringify({ build: result.buildShard, browser: result.browserShards, core: result.coreShards,
-    serial: result.serialShard }));
+    performance: result.performanceShard, serial: result.serialShard }));
 }

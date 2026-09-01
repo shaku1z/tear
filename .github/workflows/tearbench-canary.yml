@@ -30,6 +30,7 @@ jobs:
     outputs:
       browser: ${{ steps.matrix.outputs.browser }}
       core: ${{ steps.matrix.outputs.core }}
+      performance: ${{ steps.matrix.outputs.performance }}
       run_created: ${{ steps.clock.outputs.run_created }}
       ready_at: ${{ steps.ready.outputs.ready_at }}
     steps:
@@ -71,6 +72,7 @@ jobs:
           const plan = JSON.parse(readFileSync("artifacts/tearbench/generated/vap6-canary-shards.json", "utf8"));
           console.log(`browser=${JSON.stringify(plan.browserShards.map(({ shardId }) => ({ shardId })))}`);
           console.log(`core=${JSON.stringify(plan.coreShards.map(({ shardId }) => ({ shardId })))}`);
+          console.log(`performance=${plan.performanceShard.shardId}`);
           NODE
       - name: Validate planted-failure target
         if: inputs.mode == 'planted-failure'
@@ -102,7 +104,8 @@ jobs:
         run: echo "ready_at=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
 
   serial:
-    needs: plan
+    needs: [plan, performance]
+    if: ${{ always() && !cancelled() && needs.plan.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -345,6 +348,64 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  performance:
+    needs: [plan, build, browser, core]
+    if: ${{ always() && !cancelled() && needs.plan.result == 'success' && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - id: clock
+        run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/control
+      - uses: actions/download-artifact@v4
+        with:
+          name: tearbench-canary-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/build
+      - run: |
+          node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
+          node scripts/tearbench-canary-compose.mjs --input downloads/build --workspace .
+      - run: pnpm exec playwright install --with-deps chromium
+      - id: tasks
+        name: Run isolated performance task after all parallel work
+        run: >-
+          xvfb-run -a node scripts/tearbench-canary-run-shard.mjs
+          --plan artifacts/tearbench/generated/vap6-release-plan.json
+          --shard-plan artifacts/tearbench/generated/vap6-canary-shards.json
+          --shard ${{ needs.plan.outputs.performance }}
+          --mission parallel-${{ needs.plan.outputs.performance }}-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/${{ needs.plan.outputs.performance }}.json
+          --run-created '${{ needs.plan.outputs.run_created }}' --ready-at '${{ needs.build.outputs.ready_at }}'
+          --job-start '${{ steps.clock.outputs.job_start }}'
+          --plant-failure ${{ inputs.mode == 'planted-failure' && inputs.planted_task || 'none' }}
+      - name: Bundle isolated performance evidence
+        if: always()
+        run: >-
+          node scripts/tearbench-canary-bundle.mjs
+          --mission parallel-${{ needs.plan.outputs.performance }}-${{ github.run_id }}-${{ github.run_attempt }}
+          --timing artifacts/tearbench/canary/timings/parallel-${{ github.run_id }}-${{ github.run_attempt }}/${{ needs.plan.outputs.performance }}.json
+          --output artifacts/tearbench/canary-bundles/${{ needs.plan.outputs.performance }}/root
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-canary-${{ needs.plan.outputs.performance }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/tearbench/canary-bundles/${{ needs.plan.outputs.performance }}/root
+          if-no-files-found: error
+          retention-days: 14
+
   certify-serial:
     needs: [plan, serial]
     if: ${{ always() && !cancelled() }}
@@ -385,7 +446,7 @@ jobs:
           retention-days: 14
 
   certify-parallel:
-    needs: [plan, build, browser, core]
+    needs: [plan, build, browser, core, performance]
     if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
@@ -414,6 +475,11 @@ jobs:
           path: downloads/parallel/core
           merge-multiple: false
       - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: tearbench-canary-performance-1-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/performance
+      - uses: actions/download-artifact@v4
         id: aggregate-provider
         continue-on-error: true
         with:
@@ -424,7 +490,7 @@ jobs:
         run: |
           node scripts/tearbench-canary-compose.mjs --input downloads/control --workspace .
           shopt -s nullglob
-          artifacts=(downloads/parallel/build downloads/parallel/browser/* downloads/parallel/core/*)
+          artifacts=(downloads/parallel/build downloads/parallel/browser/* downloads/parallel/core/* downloads/parallel/performance)
           for artifact in "${artifacts[@]}"; do
             node scripts/tearbench-canary-compose.mjs --input "$artifact" --workspace .
           done
@@ -449,7 +515,7 @@ jobs:
           retention-days: 14
 
   aggregate:
-    needs: [plan, serial, build, browser, core, certify-serial, certify-parallel]
+    needs: [plan, serial, build, browser, core, performance, certify-serial, certify-parallel]
     if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
@@ -491,6 +557,12 @@ jobs:
           path: downloads/parallel/core
           merge-multiple: false
       - uses: actions/download-artifact@v4
+        id: aggregate-performance
+        continue-on-error: true
+        with:
+          name: tearbench-canary-performance-1-${{ github.run_id }}-${{ github.run_attempt }}
+          path: downloads/parallel/performance
+      - uses: actions/download-artifact@v4
         id: aggregate-provider
         continue-on-error: true
         with:
@@ -515,6 +587,7 @@ jobs:
         if: >-
           steps.aggregate-control.outcome == 'success' &&
           steps.aggregate-serial.outcome == 'success' &&
+          steps.aggregate-performance.outcome == 'success' &&
           steps.aggregate-provider.outcome == 'success' &&
           steps.aggregate-serial-certificate.outcome == 'success' &&
           steps.aggregate-parallel-certificate.outcome == 'success'

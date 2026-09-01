@@ -1,4 +1,9 @@
 import { createHash } from "node:crypto";
+import {
+  classifyPerformanceSample,
+  performanceSampleAllowsRetry,
+  PERFORMANCE_TASK_ID,
+} from "./tearbench-performance-sample.mjs";
 
 const SAFE_ID = /^[a-z0-9][a-z0-9._-]*$/u;
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -176,6 +181,8 @@ export function createTaskAttemptReceipt(input) {
   };
   const executionKey = receiptSha256(identity);
   const attemptId = `${missionId}:${taskId}:${String(attemptNumber)}`;
+  const stdout = input.stdout ?? "", stderr = input.stderr ?? "";
+  const sampleValidity = classifyPerformanceSample({ taskId, status: input.status, stdout, stderr });
   const unsigned = {
     format: "tearbench-task-attempt-receipt", schemaVersion: 1, missionId, attemptId, attemptNumber,
     executionKey, immutablePath: taskAttemptPath({ missionId, taskId, attemptNumber, executionKey }),
@@ -187,7 +194,7 @@ export function createTaskAttemptReceipt(input) {
     task: { taskId, taskDefinitionDigest: task.taskDefinitionDigest, claimIds: canonicalStrings(task.claimIds) },
     bindings: { build: input.build, toolchain: input.toolchain, environment: input.environment, evidence: input.evidence },
     result: { status: input.status, exitCode: input.exitCode, startedAt, finishedAt,
-      durationMs: Date.parse(finishedAt) - Date.parse(startedAt), stdout: input.stdout ?? "", stderr: input.stderr ?? "" },
+      durationMs: Date.parse(finishedAt) - Date.parse(startedAt), stdout, stderr, sampleValidity },
     artifacts,
   };
   return Object.freeze({ ...unsigned, receiptDigest: receiptSha256(unsigned) });
@@ -264,6 +271,11 @@ function verifyReceipt(receipt, plan, task, expectedOrigin, artifactBytes, build
   }
   if (!['passed', 'failed'].includes(receipt.result?.status)
     || (receipt.result?.status === "passed") !== (receipt.result?.exitCode === 0)) errors.push(`${label} result is invalid`);
+  const expectedSampleValidity = classifyPerformanceSample({ taskId: task.taskId,
+    status: receipt.result?.status, stdout: receipt.result?.stdout, stderr: receipt.result?.stderr });
+  if (!same(receipt.result?.sampleValidity ?? null, expectedSampleValidity)) {
+    errors.push(`${label} performance sample classification is missing or malformed`);
+  }
   for (const artifact of receipt.artifacts ?? []) {
     const output = (task.outputs ?? []).find((entry) => entry.outputId === artifact.outputId);
     if (output === undefined || output.path !== artifact.path) errors.push(`${label} artifact is not owned by task output ${String(artifact.outputId)}`);
@@ -307,6 +319,13 @@ export function createPlanCertificate({ plan, receipts, expectedOrigin, artifact
     if (attempts.some((entry) => entry.executionKey !== attempts[0]?.executionKey)) errors.push(`task ${taskId} retry changed execution identity`);
     const failures = attempts.filter((entry) => entry.result?.status === "failed");
     const recovered = final?.result?.status === "passed" && failures.length > 0;
+    if (taskId === PERFORMANCE_TASK_ID && attempts.length === 2) {
+      const expectedAuthorization = `bounded-canary-invalid-sample-retry:${attempts[0].missionId}:${taskId}`;
+      if (!performanceSampleAllowsRetry(attempts[0].result?.sampleValidity)
+        || attempts[1].retryAuthorization !== expectedAuthorization) {
+        errors.push(`task ${taskId} retry lacks a receipt-proven infrastructure-invalid sample`);
+      }
+    }
     if (final?.result?.status !== "passed") errors.push(`task ${taskId} has no passing terminal attempt`);
     if (recovered && (typeof final.retryAuthorization !== "string" || final.retryAuthorization.length === 0)) {
       errors.push(`task ${taskId} recovered through an unauthorized retry`);
@@ -314,7 +333,8 @@ export function createPlanCertificate({ plan, receipts, expectedOrigin, artifact
     if (final?.result?.status === "passed") passed.push(taskId);
     retryHistory.push({ taskId, disposition: recovered ? "recovered-flaky" : final?.result?.status === "passed" ? "passed-first-attempt" : "failed",
       attempts: attempts.map((entry) => ({ attemptId: entry.attemptId, receiptDigest: entry.receiptDigest,
-        status: entry.result?.status, retryOf: entry.retryOf, retryAuthorization: entry.retryAuthorization })) });
+        status: entry.result?.status, retryOf: entry.retryOf, retryAuthorization: entry.retryAuthorization,
+        sampleValidity: entry.result?.sampleValidity ?? null })) });
   }
   if (missing.length > 0) errors.push(`required tasks are missing: ${missing.join(", ")}`);
   if (extras.length > 0) errors.push(`unexpected task receipts: ${canonicalStrings(extras).join(", ")}`);

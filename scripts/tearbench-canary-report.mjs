@@ -2,6 +2,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { receiptSha256 } from "./tearbench-task-receipts.mjs";
+import { performanceSampleAllowsRetry, PERFORMANCE_TASK_ID } from "./tearbench-performance-sample.mjs";
 
 async function jsonArtifacts(directory) {
   const values = [];
@@ -55,6 +56,11 @@ function resultMap(label, receipts, errors) {
       || typeof attempts[1].retryAuthorization !== "string" || attempts[1].retryAuthorization.length === 0)) {
       errors.push(`${label} task ${taskId} has an unauthorized or unnecessary retry`);
     }
+    if (taskId === PERFORMANCE_TASK_ID && attempts.length === 2
+      && (!performanceSampleAllowsRetry(attempts[0].result?.sampleValidity)
+        || attempts[1].retryAuthorization !== `bounded-canary-invalid-sample-retry:${attempts[0].missionId}:${taskId}`)) {
+      errors.push(`${label} task ${taskId} retry lacks receipt-proven infrastructure contention`);
+    }
     map.set(taskId, attempts.at(-1));
   }
   return map;
@@ -72,7 +78,8 @@ function retryHistory(receipts) {
       && attempts[1].result?.status === "passed" ? "recovered-flaky"
       : attempts.at(-1)?.result?.status === "passed" ? "passed-first-attempt" : "failed",
     attempts: attempts.map((entry) => ({ attemptNumber: entry.attemptNumber, status: entry.result?.status,
-      receiptDigest: entry.receiptDigest, retryOf: entry.retryOf, retryAuthorization: entry.retryAuthorization })) };
+      receiptDigest: entry.receiptDigest, retryOf: entry.retryOf, retryAuthorization: entry.retryAuthorization,
+      sampleValidity: entry.result?.sampleValidity ?? null })) };
   });
 }
 function timingSummary(timings, kind) {
@@ -120,7 +127,8 @@ function verifyOwnership(label, receipts, timings, expectedShards, errors) {
       ? attempts.length === timingAttempts.length && attempts.every((receipt, index) => {
         const attempt = timingAttempts[index];
         return attempt?.attemptNumber === receipt.attemptNumber && attempt.status === receipt.result?.status
-          && attempt.receiptPath === receipt.immutablePath;
+          && attempt.receiptPath === receipt.immutablePath
+          && JSON.stringify(attempt.sampleValidity ?? null) === JSON.stringify(receipt.result?.sampleValidity ?? null);
       })
       : attempts.length === 1 && taskTiming?.status === attempts[0]?.result?.status;
     if (taskReceipts.some((receipt) => timing?.missionId !== receipt.missionId) || !attemptsMatch
@@ -166,7 +174,7 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
     parallel = resultMap("parallel", parallelReceipts, errors);
   verifyOwnership("serial", serialReceipts, serialTimings, [shardPlan.serialShard], errors);
   verifyOwnership("parallel", parallelReceipts, parallelTimings,
-    [shardPlan.buildShard, ...shardPlan.browserShards, ...shardPlan.coreShards], errors);
+    [shardPlan.buildShard, ...shardPlan.browserShards, ...shardPlan.coreShards, shardPlan.performanceShard], errors);
   verifyProviderBundle(providerBundle, parallelReceipts, plan, errors);
   for (const taskId of plan.requiredTaskIds) {
     const left = serial.get(taskId), right = parallel.get(taskId);
@@ -191,6 +199,7 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
   }
   const serialMetrics = timingSummary(serialTimings, "serial"), parallelMetrics = timingSummary(parallelTimings, "parallel");
   const browser = parallelTimings.filter((entry) => entry.shardId.startsWith("browser-"));
+  const isolatedPerformance = parallelTimings.find((entry) => entry.shardId === shardPlan.performanceShard.shardId);
   const minBrowser = Math.min(...browser.map((entry) => Math.max(1, entry.taskWallMs)));
   const payload = { format: "tearbench-canary-parity-report", schemaVersion: 1, generatedAt,
     status: errors.length === 0 ? (plantedFailureTaskId === null ? "equivalent" : "expected-rejection-proved") : "mismatched",
@@ -200,6 +209,10 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
       parallel: [...new Set(parallelReceipts.flatMap((receipt) => receipt.task.claimIds))].sort() },
     retryHistory: { serial: retryHistory(serialReceipts), parallel: retryHistory(parallelReceipts) },
     metrics: { serial: serialMetrics, parallel: parallelMetrics,
+      isolatedPerformance: isolatedPerformance === undefined ? null : {
+        queueMs: isolatedPerformance.queueMs, setupMs: isolatedPerformance.setupMs,
+        taskWallMs: isolatedPerformance.taskWallMs, jobWallMs: isolatedPerformance.jobWallMs,
+      },
       browserShardBalanceRatio: browser.length === 0 ? null : Number((Math.max(...browser.map((entry) => entry.taskWallMs)) / minBrowser).toFixed(3)),
       wallTimeReductionRatio: serialMetrics.wallMs === 0 ? null : Number((parallelMetrics.wallMs / serialMetrics.wallMs).toFixed(3)) },
     errors };
