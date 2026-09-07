@@ -20,6 +20,41 @@ const timing: CampaignChapterTiming = Object.freeze({
 });
 
 describe("production replay composition", () => {
+  it("restores boss intro identity without claiming unsupported fixed-tick playback", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "replay-boss-intro", mode: "bossonly" });
+    const source = composition.create(undefined);
+    const boss = source.replay.world.entities.createEnemy("rootbound", 800, 520,
+      source.replay.world.state.run() as never);
+    boss.introT = 1.4;
+    source.replay.world.state.setEnemies([boss]);
+    source.replay.world.state.setBossIntro({ boss, delay: 0, t: 0, dur: 1.4 });
+    const { snapshot } = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "active-intro");
+    const target = createProductionReplayWorld({ seed: "replay-boss-intro-target", mode: "bossonly" });
+    restoreProductionReplaySnapshot(target, snapshot);
+    expect(target.world.state.bossIntro()?.boss).toBe(target.world.state.enemies()[0]);
+    expect(target.world.state.bossIntro()?.boss).not.toBe(boss);
+    expect(target.world.state.bossIntro()).toMatchObject({ delay: 0, t: 0, dur: 1.4 });
+    expect(() => composition.create(snapshot)).toThrow(/active boss intro playback is unsupported/);
+
+    const world = snapshot.state["tear.world.v1"] as Readonly<Record<string, unknown>>;
+    const runtime = world.runtime as Readonly<Record<string, unknown>>;
+    const legacyRuntime = Object.fromEntries(Object.entries(runtime)
+      .filter(([key]) => key !== "bossIntro" && key !== "bossIntroVersion"));
+    const legacy = { ...snapshot, state: { ...snapshot.state, "tear.world.v1": { ...world, runtime: legacyRuntime } } };
+    const priorBoss = target.world.state.enemies()[0];
+    const priorIntro = target.world.state.bossIntro();
+    expect(() => restoreProductionReplaySnapshot(target, legacy)).toThrow(/missing its intro binding/);
+    expect(target.world.state.enemies()[0]).toBe(priorBoss);
+    expect(target.world.state.bossIntro()).toBe(priorIntro);
+
+    source.replay.world.state.setBossIntro(null);
+    boss.introT = 0;
+    const completed = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "completed-intro");
+    restoreProductionReplaySnapshot(target, completed.snapshot);
+    expect(target.world.state.bossIntro()).toBeNull();
+    expect(() => composition.create(completed.snapshot)).not.toThrow();
+  });
+
   it("captures and restores active Rootbound Regrowth and Last Spring state through the shared transaction", () => {
     const composition = createProductionGhostReplayComposition({ seed: "rootbound-phase-three-transaction", mode: "bossonly" });
     const source = composition.create(undefined);

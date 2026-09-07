@@ -1,7 +1,8 @@
 import type { CinematicDirectorBinding, CinematicDirectorPort } from
   "../gameplay/runtime/cinematic-director";
 import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
-import type { GameRun } from "./game-runtime-state";
+import type { GameEnemy, GameRun } from "./game-runtime-state";
+import type { BossIntroState } from "./live-game-host-state";
 
 interface StagedChapterBinding {
   readonly binding: CinematicDirectorBinding;
@@ -14,6 +15,8 @@ interface StagedChapterBinding {
 }
 
 export interface LiveStateForgeRuntimeBridgeOptions {
+  readonly captureBossIntro: () => BossIntroState | null;
+  readonly restoreBossIntro: (intro: BossIntroState | null) => void;
   readonly captureTransient: () => Readonly<Record<string, unknown>>;
   readonly restoreTransient: (snapshot: Readonly<Record<string, unknown>>) => void;
   readonly captureLifecycle: () => RunLifecycleSnapshot;
@@ -37,7 +40,40 @@ export interface LiveStateForgeRuntimeBridge {
     snapshot: Readonly<Record<string, unknown>>,
     candidateRun: GameRun,
     candidateStageIndex: number,
+    candidateEnemies?: readonly GameEnemy[],
   ) => void;
+}
+
+function bossIntro(value: unknown, version: unknown): BossIntroState | null {
+  if (version !== undefined && version !== 1) throw new RangeError("unsupported boss intro snapshot version");
+  if (value === undefined || value === null) return null;
+  if (version !== 1 || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError("boss intro snapshot must be a versioned object");
+  }
+  const intro = value as Partial<Omit<BossIntroState, "boss">> & { boss?: GameEnemy | null };
+  if (typeof intro.delay !== "number" || !Number.isFinite(intro.delay) || intro.delay < 0 ||
+    typeof intro.t !== "number" || !Number.isFinite(intro.t) || intro.t < 0 ||
+    typeof intro.dur !== "number" || !Number.isFinite(intro.dur) || intro.dur <= 0 || intro.t > intro.dur ||
+    typeof intro.boss !== "object" || intro.boss?.isBoss !== true) {
+    throw new TypeError("boss intro snapshot has invalid timers or actor");
+  }
+  return { boss: intro.boss, delay: intro.delay, t: intro.t, dur: intro.dur };
+}
+
+/** Resolve ownership against staged actors before either restore path mutates its world. */
+export function resolveStateForgeBossIntro(
+  snapshot: Readonly<Record<string, unknown>>,
+  candidateEnemies: readonly GameEnemy[],
+): BossIntroState | null {
+  const intro = bossIntro(snapshot.bossIntro, snapshot.bossIntroVersion);
+  if (intro !== null && !candidateEnemies.includes(intro.boss)) {
+    throw new RangeError("boss intro actor is not owned by the restored world");
+  }
+  // Legacy snapshots must not inherit the current world's countdown controller.
+  if (intro === null && candidateEnemies.some((enemy) => enemy.isBoss === true && (enemy.introT ?? 0) > 0)) {
+    throw new RangeError("restored boss countdown is missing its intro binding");
+  }
+  return intro;
 }
 
 function stageBanner(value: unknown): Readonly<{ name: string; seconds: number }> {
@@ -115,12 +151,15 @@ export function createLiveStateForgeRuntimeBridge(
 ): LiveStateForgeRuntimeBridge {
   const capture = (): Readonly<Record<string, unknown>> => Object.freeze({
     ...options.captureTransient(),
+    bossIntroVersion: 1,
+    bossIntro: options.captureBossIntro(),
     lifecycle: options.captureLifecycle(),
     chapterBinding: options.captureChapterBinding(),
     stageBanner: options.captureStageBanner(),
     cinemaProtection: options.captureCinemaProtection(),
   });
   const restore = (snapshot: Readonly<Record<string, unknown>>): void => {
+    const intro = bossIntro(snapshot.bossIntro, snapshot.bossIntroVersion);
     const transient = normalizeTransient(snapshot);
     const banner = stageBanner(snapshot.stageBanner);
     const protection = cinemaProtection(snapshot.cinemaProtection);
@@ -128,6 +167,7 @@ export function createLiveStateForgeRuntimeBridge(
     options.restoreStageBanner(banner.name, banner.seconds);
     options.restoreLifecycle(snapshot.lifecycle as RunLifecycleSnapshot);
     options.restoreCinemaProtection(protection);
+    options.restoreBossIntro(intro);
     const binding = options.installChapterBinding(snapshot.chapterBinding);
     options.cinema.restoreState(snapshot.cinema, binding);
   };
@@ -135,7 +175,9 @@ export function createLiveStateForgeRuntimeBridge(
     snapshot: Readonly<Record<string, unknown>>,
     candidateRun: GameRun,
     candidateStageIndex: number,
+    candidateEnemies: readonly GameEnemy[] = [],
   ): void => {
+    resolveStateForgeBossIntro(snapshot, candidateEnemies);
     validateTransient(normalizeTransient(snapshot));
     stageBanner(snapshot.stageBanner);
     cinemaProtection(snapshot.cinemaProtection);
