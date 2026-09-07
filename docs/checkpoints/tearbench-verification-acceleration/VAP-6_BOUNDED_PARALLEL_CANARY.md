@@ -220,6 +220,12 @@ registry definition declared no dependency while its script reads both
 because its preceding production builds remained in that workspace. Version 2
 of this task now declares both exact build artifacts. Registry and canary-plan
 regressions require both producers and place them before the scan.
+At exact commit `e5589633962703d2ac5d5a4b173477ee04aec479`, local standalone
+and CrazyGames production builds passed source attribution and produced
+content-addressed identities `c8f230788d8d9f763fdb01c5073bbe078ed1ea738c5d5b9721417f7f3cbb5bfc`
+and `9380d53789cb06ab9202b377f5781263e743d97f5022306572ba93538e068517`.
+The production test-isolation scan then passed against both outputs. This is
+direct repair evidence, not a replacement for a protected canary.
 
 The run's isolated parallel performance attempt stopped on desktop frame-
 interval max 50.1 ms against 50 ms before reaching the constrained scenario.
