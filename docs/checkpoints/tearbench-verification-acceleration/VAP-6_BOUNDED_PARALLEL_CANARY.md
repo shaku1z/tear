@@ -146,6 +146,39 @@ expand infrastructure or repeat unchanged experiments.
 
 ## Completed-provider measurement contract
 
+### Resumed qualification: live task routing repair
+
+The owner authorized resuming bounded qualification on current protected main,
+without changing thresholds, provisioning infrastructure, or changing release
+authority. Normal canary `34160687282` uses source
+`aec4259aea0dfca41c1d6ba95c914fe2df8817f0`.
+
+Its ten `evidence.tearbench` live-run tasks failed at the launcher boundary in
+all four core shards: each was registered as static, with no browser resource
+or build dependency. The resulting receipts correctly recorded no applicable
+build binding. The direct CLI consequently attempted build materialization
+without the pinned package-manager entry. This is a registry contract defect,
+not permission to inject that entry and permit hidden builds.
+
+Repair contract: change those ten task definitions to browser resources and the
+shared `build.test-standalone:build-artifact` dependency, increment their task
+versions, and preserve IDs, commands, claims, intentional replicas and retry
+history. The existing executor then verifies the build and enables reuse while
+holding inherited browser/build leases. Prior plans and receipts are not reused
+across the changed definition digests. Scope is the registry, focused regression
+tests and this checkpoint; runtime behavior and release authority are unchanged.
+
+The canonical registry regression failed before repair (`static` rather than
+`browser`) and passed afterward. A planner regression checks one browser-shard
+owner per live task, no core-shard ownership, and the build preceding each live
+task in the serial comparison. These are local development proofs, not canary
+equivalence or VAP-6 acceptance.
+
+The same run's parallel performance job separately failed constrained-gameplay
+simulation p95 at 12.1 ms against the unchanged 10 ms budget. All four ordinary
+browser shards passed. The serial comparison and aggregate were still pending
+when this repair was prepared; no final outcome or timing acceptance is inferred.
+
 Run `34144556642` at `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`
 finished with all 98 required task IDs present in both paths, but performance,
 resource-lease and evidence-selection tasks failed in both paths. Its aggregate
