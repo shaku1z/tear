@@ -156,6 +156,18 @@ async function executeRevision({ worktree, revision, scenario, seed, repetitions
         attemptError(index + 1, "worktree was not clean before materialization"))),
     };
   }
+  // Each historical revision owns its package graph. A fresh Git worktree has
+  // no node_modules, and borrowing the invoking checkout's graph would silently
+  // test the wrong toolchain when the lockfile changes across revisions.
+  const install = spawnTask(process.execPath, [pnpmEntryPath(), "install", "--frozen-lockfile"], {
+    cwd: worktree, encoding: "utf8", windowsHide: true, maxBuffer: 10 * 1024 * 1024,
+  });
+  if (install.status !== 0) {
+    return {
+      record: modules.bisection.createBisectRevisionRecord(revision, Array.from({ length: repetitions }, (_, index) =>
+        attemptError(index + 1, `revision dependency setup failed: ${(install.stderr || install.stdout || install.error?.message || "unknown error").trim()}`))),
+    };
+  }
   const attempts = [];
   let firstInvestigation;
   for (let index = 0; index < repetitions; index += 1) {
