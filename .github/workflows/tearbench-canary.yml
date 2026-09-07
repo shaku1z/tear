@@ -4,15 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Run normal equivalence or prove aggregate rejection with one planted failed task
+        description: Run normal equivalence, planted rejection, or the bounded paired performance diagnostic
         required: true
         default: normal
         type: choice
-        options: [normal, planted-failure]
+        options: [normal, planted-failure, paired-performance]
       planted_task:
         description: Exact task ID to fail only in the parallel mission
         required: true
         default: static.check-docs
+        type: string
+      baseline_revision:
+        description: Exact baseline commit for paired-performance mode
+        required: false
+        type: string
+      candidate_revision:
+        description: Exact candidate commit for paired-performance mode
+        required: false
         type: string
 
 permissions:
@@ -20,7 +28,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: tearbench-parallel-canary-${{ github.ref }}
+  group: tearbench-parallel-canary-${{ github.ref }}-${{ inputs.mode }}
   cancel-in-progress: true
 
 env:
@@ -30,6 +38,7 @@ env:
 
 jobs:
   plan:
+    if: ${{ inputs.mode != 'paired-performance' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -422,9 +431,93 @@ jobs:
         if: always()
         run: echo "ready_at=$(date -u +%FT%T.%3NZ)" >> "$GITHUB_OUTPUT"
 
+  paired-performance:
+    if: ${{ inputs.mode == 'paired-performance' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASELINE_REVISION: ${{ inputs.baseline_revision }}
+      CANDIDATE_REVISION: ${{ inputs.candidate_revision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/install-tear-performance-browser
+      - name: Prepare exact clean baseline and candidate builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BASELINE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CANDIDATE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          test "$BASELINE_REVISION" != "$CANDIDATE_REVISION"
+          git cat-file -e "$BASELINE_REVISION^{commit}"
+          git cat-file -e "$CANDIDATE_REVISION^{commit}"
+          baseline="$RUNNER_TEMP/vap6-paired-baseline"
+          candidate="$RUNNER_TEMP/vap6-paired-candidate"
+          samples="$RUNNER_TEMP/vap6-paired-samples"
+          git worktree add --detach "$baseline" "$BASELINE_REVISION"
+          git worktree add --detach "$candidate" "$CANDIDATE_REVISION"
+          mkdir -p "$samples"
+          pnpm --dir "$baseline" install --frozen-lockfile
+          pnpm --dir "$candidate" install --frozen-lockfile
+          TEAR_BUILD_GIT_SHA="$BASELINE_REVISION" pnpm --dir "$baseline" build:test:standalone
+          TEAR_BUILD_GIT_SHA="$CANDIDATE_REVISION" pnpm --dir "$candidate" build:test:standalone
+          cp "$baseline/dist/test-standalone/build-info.json" "$samples/baseline-build-info.json"
+          cp "$candidate/dist/test-standalone/build-info.json" "$samples/candidate-build-info.json"
+      - name: Run three alternating constrained samples per revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$RUNNER_TEMP/vap6-paired-baseline"
+          candidate="$RUNNER_TEMP/vap6-paired-candidate"
+          samples="$RUNNER_TEMP/vap6-paired-samples"
+          run_sample() {
+            side="$1"; workspace="$2"; index="$3"; port="$4"
+            node -e 'const b=JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")); console.log(JSON.stringify({performanceBuild:{sourceRevision:b.sourceRevision,sourceFingerprint:b.sourceFingerprint,artifactHash:b.artifactHash,buildIdentityDigest:b.buildIdentityDigest}}))' \
+              "$samples/$side-build-info.json" > "$samples/$side-$index.stdout"
+            set +e
+            (cd "$workspace" && TEAR_PERF_BUILD_IDENTITY_EMITTED=1 TEAR_PERF_SCENARIO=constrained TEAR_PERF_PORT="$port" \
+              xvfb-run -a node tests/browser-performance.js) \
+              >> "$samples/$side-$index.stdout" 2> "$samples/$side-$index.stderr"
+            status=$?
+            set -e
+            printf '%s\n' "$status" > "$samples/$side-$index.status"
+          }
+          run_sample baseline "$baseline" 1 8211
+          run_sample candidate "$candidate" 1 8212
+          run_sample candidate "$candidate" 2 8213
+          run_sample baseline "$baseline" 2 8214
+          run_sample baseline "$baseline" 3 8215
+          run_sample candidate "$candidate" 3 8216
+      - name: Validate and classify the paired diagnostic
+        run: >-
+          node scripts/tearbench-paired-performance-report.mjs
+          --samples "$RUNNER_TEMP/vap6-paired-samples"
+          --baseline "$BASELINE_REVISION"
+          --candidate "$CANDIDATE_REVISION"
+          --artifact artifacts/tearbench/generated/vap6-paired-performance-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-paired-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/tearbench/generated/vap6-paired-performance-report.json
+            ${{ runner.temp }}/vap6-paired-samples
+          if-no-files-found: error
+          retention-days: 14
+
   certify-serial:
     needs: [plan, serial]
-    if: ${{ always() && !cancelled() }}
+    if: ${{ always() && !cancelled() && inputs.mode != 'paired-performance' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -463,7 +556,7 @@ jobs:
 
   certify-parallel:
     needs: [plan, build, browser, core, performance]
-    if: ${{ always() && !cancelled() }}
+    if: ${{ always() && !cancelled() && inputs.mode != 'paired-performance' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -532,7 +625,7 @@ jobs:
 
   aggregate:
     needs: [plan, serial, build, browser, core, performance, certify-serial, certify-parallel]
-    if: ${{ always() && !cancelled() }}
+    if: ${{ always() && !cancelled() && inputs.mode != 'paired-performance' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

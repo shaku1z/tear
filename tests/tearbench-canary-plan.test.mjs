@@ -179,6 +179,26 @@ test("canonical live TearBench tasks pack only onto browser shards after the sha
   }
 });
 
+test("production test-isolation scan is packed behind both production builds", async () => {
+  const registry = JSON.parse(await readFile(new URL("../src/tearbench/task-registry.json", import.meta.url), "utf8"));
+  const ids = ["build.standalone", "build.crazygames", "build.test-standalone",
+    "static.check-test-isolation", "browser.test-browser-performance"];
+  const taskNodes = ids.map((id) => registry.tasks.find((task) => task.taskId === id));
+  assert.ok(taskNodes.every(Boolean));
+  const payload = { format: "tearbench-shadow-plan", schemaVersion: 1, profileId: "release",
+    source: { revision: "a".repeat(40) }, requiredTaskIds: ids, taskNodes };
+  const plan = { ...payload, planDigest: receiptSha256(payload) };
+  const packed = createCanaryShardPlan({ plan, durationHistory: {
+    ...history, fallbackMs: { ...history.fallbackMs, static: 5 },
+  }, browserShardCount: 1, coreShardCount: 1 });
+  assert.deepEqual(new Set(packed.buildShard.taskIds),
+    new Set(["build.standalone", "build.crazygames", "build.test-standalone"]));
+  assert.deepEqual(packed.coreShards[0]?.taskIds, ["static.check-test-isolation"]);
+  const scan = packed.serialShard.taskIds.indexOf("static.check-test-isolation");
+  assert.ok(packed.serialShard.taskIds.indexOf("build.standalone") < scan);
+  assert.ok(packed.serialShard.taskIds.indexOf("build.crazygames") < scan);
+});
+
 function providerFixture() {
   const time = (seconds) => new Date(Date.parse("2026-09-07T00:00:00Z") + seconds * 1000).toISOString();
   const shardPayload = { format: "tearbench-canary-shard-plan", schemaVersion: 1,
