@@ -58,6 +58,34 @@ test("paired diagnostic distinguishes a persistent baseline miss from a candidat
   });
 });
 
+test("paired diagnostic accepts benchmark budget assertions captured on stdout", async () => fixture({
+  baseline: [11.5, 11.3, 11.2], candidate: [10.9, 11.9, 11.4],
+}, async (directory) => {
+  for (const side of ["baseline", "candidate"]) {
+    for (const index of [1, 2, 3]) {
+      const prefix = resolve(directory, `${side}-${index}`);
+      const assertion = await readFile(`${prefix}.stderr`, "utf8");
+      const stdout = await readFile(`${prefix}.stdout`, "utf8");
+      await writeFile(`${prefix}.stdout`, `${stdout}\n${assertion}\n`);
+      await writeFile(`${prefix}.stderr`, "");
+    }
+  }
+  const report = createPairedPerformanceReport({ directory, baselineRevision: baseline, candidateRevision: candidate,
+    browserVersion, browserArchiveSha256 });
+  assert.equal(report.outcome, "pre-existing-budget-miss");
+}));
+
+test("paired diagnostic rejects missing or stale budget assertions", async () => fixture({
+  baseline: [11, 11, 11], candidate: [12, 12, 12],
+}, async (directory) => {
+  const input = { directory, baselineRevision: baseline, candidateRevision: candidate, browserVersion, browserArchiveSha256 };
+  const stderr = resolve(directory, "baseline-1.stderr");
+  await writeFile(stderr, "");
+  assert.throws(() => createPairedPerformanceReport(input), /outside its measured simulation budget assertion/u);
+  await writeFile(stderr, "AssertionError: 4x constrained gameplay simulation p95 ms: 99 exceeded budget 10");
+  assert.throws(() => createPairedPerformanceReport(input), /outside its measured simulation budget assertion/u);
+}));
+
 test("paired diagnostic rejects wrong revisions, browsers, and incomplete samples", async () => fixture({
   baseline: [11, 11, 11], candidate: [12, 12, 12],
 }, async (directory) => {

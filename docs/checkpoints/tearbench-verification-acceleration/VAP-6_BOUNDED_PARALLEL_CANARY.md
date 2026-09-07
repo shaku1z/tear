@@ -177,6 +177,26 @@ plausible. If all samples on both sides fail, the miss predates the candidate.
 Mixed or straddling samples remain inconclusive and stop. A valid diagnostic
 report does not waive the 10 ms budget and is not VAP-6 acceptance.
 
+Protected-main run `34169267567` executed that one bounded comparison after
+PR #76 merged as `6d683d15774a700eb1f4cda226c074c8537b8c17`. Both detached
+builds were clean and exactly attributable. Baseline simulation p95 values were
+11.5, 11.3 and 11.2 ms; candidate values were 10.9, 11.9 and 11.4 ms. All six
+samples therefore exceeded the unchanged 10 ms budget, classifying the result
+as `pre-existing-budget-miss`, not a candidate-only regression. This is the
+predeclared stop condition, so the paired experiment is not repeated.
+
+The benchmark process wrote its assertion stack to captured stdout while the
+first reporter revision inspected stderr only. The raw bundle still retained
+all six statuses, exact build/runtime records and complete measurements. A
+fail-first fixture now reproduces the stdout-only shape; the reporter normalizes
+both streams while requiring the assertion to name that sample's exact measured
+simulation p95 and the configured budget. Missing and stale/mismatched assertion
+negatives remain rejected. Workflow artifact `10035264467` is the immutable raw
+input bundle; reclassification is deterministic in measurements and outcome,
+while each derived report has a new timestamp and therefore a new report digest.
+This parser repair does not change a threshold or convert the budget miss into
+qualification.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair
