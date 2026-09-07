@@ -2,7 +2,7 @@ import { applyWeapon } from "../gameplay/weapons";
 import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from "../gameplay/campaign/chapter-cinematic-binding";
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
 import { createLiveStateForgeAdapter } from "../app/live-state-forge-adapter";
-import { createLiveStateForgeRuntimeBridge } from "../app/live-state-forge-runtime-bridge";
+import { createLiveStateForgeRuntimeBridge, resolveStateForgeBossIntro } from "../app/live-state-forge-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
@@ -142,6 +142,8 @@ export function restoreProductionReplayChapterBinding(
 function productionRuntimeState(replay: ProductionReplayWorld) {
   const transient = replay.world.context.transient;
   return createLiveStateForgeRuntimeBridge({
+    captureBossIntro: () => replay.world.state.bossIntro(),
+    restoreBossIntro: (intro) => { replay.world.state.setBossIntro(intro); },
     captureTransient: () => Object.freeze({
       hitStop: transient.impact.hitStop, shake: transient.impact.shake,
       timeScale: transient.feel.timeScale, slowmo: transient.impact.slowMotion,
@@ -259,6 +261,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
     { requireIdentity: (id: string) => id },
   );
   if (staged.tick !== snapshot.tick) throw new TypeError("recorded snapshot tick does not match its run component");
+  const restoredBossIntro = resolveStateForgeBossIntro(staged.runtime, staged.enemies);
   const destinationWorldId = replay.world.context.environment.worldId;
   const rebasedEnvironment = rebaseEnvironmentSnapshot(staged.environment, destinationWorldId);
   const environmentIssues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...rebasedEnvironment });
@@ -302,6 +305,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
     rankPopupSeconds: Number(staged.runtime.rankPopT), rankPopupText: String(staged.runtime.rankPopText) });
   const protection = staged.runtime.cinemaProtection as Readonly<{ active?: unknown; lastMode?: unknown }> | undefined;
   transient.assignProtection({ active: Boolean(protection?.active), lastMode: typeof protection?.lastMode === "string" ? protection.lastMode : null });
+  replay.world.state.setBossIntro(restoredBossIntro);
   return staged;
 }
 
@@ -342,6 +346,9 @@ export function createProductionGhostReplayComposition(
         rng: replay.world.context.services.random.snapshot(),
       } satisfies ProductionReplayBootstrap);
       const staged = snapshot === undefined ? undefined : restoreProductionReplaySnapshot(replay, snapshot);
+      if (replay.world.state.bossIntro() !== null) {
+        throw new Error("production detached active boss intro playback is unsupported without application-frame timing; use the live backend");
+      }
       if (staged !== undefined) assertDetachedSourceVoidSupported(staged.run);
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let outcome: ProductionRunOutcomeRuntime | null = null;

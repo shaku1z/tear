@@ -132,6 +132,65 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page }) => {
     activeCinemaResult.afterCrossSessionAdvance,
     "non-finite transient runtime data must fail before mutating the reconstructed world");
 
+  const bossIntroResult = await page.evaluate((scenarioValue) => {
+    const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
+    environment.reset({ ...scenarioValue, id: "state-forge.boss-intro-rebinding",
+      seed: "state-forge-rootbound-intro", maxTicks: 2000,
+      start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" } });
+    let source = environment.captureSnapshot("boss-intro-source");
+    for (let frame = 0; source.state["tear.world.v1"].runtime.bossIntro === null && frame < 120; frame++) {
+      environment.advanceApplicationFrame(1 / 60);
+      source = environment.captureSnapshot("boss-intro-source");
+    }
+    if (source.state["tear.world.v1"].runtime.bossIntro === null) {
+      throw new Error("natural Rootbound startup did not produce an intro within 120 application frames");
+    }
+    const missingActor = structuredClone(source);
+    missingActor.state["tear.world.v1"].runtime.bossIntro.boss = { $ref: "missing-boss" };
+    const invalidReference = environment.restoreSnapshot(missingActor);
+    const afterInvalidReference = environment.captureSnapshot("boss-intro-after-invalid-reference");
+    const hostile = structuredClone(source);
+    hostile.state["tear.ui.v1"].screen = "invalid-state-forge-screen";
+    const commitFailure = environment.restoreSnapshot(hostile);
+    const afterRollback = environment.captureSnapshot("boss-intro-after-rollback");
+    const restored = environment.restoreSnapshot(source);
+    const afterRestore = environment.captureSnapshot("boss-intro-after-restore");
+    let completionFrame = null;
+    for (let frame = 1; frame <= 420; frame++) {
+      environment.advanceApplicationFrame(1 / 60);
+      const current = environment.captureSnapshot(`boss-intro-frame-${String(frame)}`);
+      if (current.state["tear.world.v1"].runtime.bossIntro === null) {
+        completionFrame = frame;
+        break;
+      }
+    }
+    const completed = environment.captureSnapshot("boss-intro-completed");
+    // A null intro must clear a previous active controller in the same host.
+    const reactivated = environment.restoreSnapshot(source);
+    const cleared = environment.restoreSnapshot(completed);
+    const afterClear = environment.captureSnapshot("boss-intro-null-restored");
+    return { source, invalidReference, afterInvalidReference, commitFailure, afterRollback,
+      restored, afterRestore, completionFrame, completed, reactivated, cleared, afterClear };
+  }, scenario);
+  const introSource = bossIntroResult.source.state["tear.world.v1"].runtime;
+  assert.equal(introSource.bossIntroVersion, 1);
+  assert.ok(introSource.bossIntro && introSource.bossIntro.dur > 0, "normal boss startup must capture an active intro");
+  assert.deepEqual(Object.keys(introSource.bossIntro.boss), ["$ref"], "intro ownership must use the canonical actor reference");
+  assert.equal(introSource.bossIntro.boss.$ref, bossIntroResult.source.state["tear.boss.v1"][0].id);
+  assert.equal(bossIntroResult.invalidReference.ok, false);
+  assert.deepEqual(bossIntroResult.afterInvalidReference.state, bossIntroResult.source.state);
+  assert.equal(bossIntroResult.commitFailure.ok, false);
+  assert.equal(bossIntroResult.commitFailure.rolledBack, true);
+  assert.deepEqual(bossIntroResult.afterRollback.state, bossIntroResult.source.state);
+  assert.equal(bossIntroResult.restored.ok, true, JSON.stringify(bossIntroResult.restored));
+  assert.deepEqual(bossIntroResult.afterRestore.state, bossIntroResult.source.state);
+  assert.ok(bossIntroResult.completionFrame > 0 && bossIntroResult.completionFrame <= 420,
+    "the real application frame must complete the restored boss intro");
+  assert.equal(bossIntroResult.completed.state["tear.boss.v1"][0].introT, 0);
+  assert.equal(bossIntroResult.reactivated.ok, true);
+  assert.equal(bossIntroResult.cleared.ok, true);
+  assert.equal(bossIntroResult.afterClear.state["tear.world.v1"].runtime.bossIntro, null);
+
   const sourceResult = await page.evaluate((scenarioValue) => {
     const source = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     source.reset(scenarioValue);
@@ -262,6 +321,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page }) => {
   ]);
   const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints", "core", "C23", "state-forge");
   fs.mkdirSync(artifactDirectory, { recursive: true });
+  fs.writeFileSync(path.join(artifactDirectory, "boss-intro-rebinding.json"), JSON.stringify(bossIntroResult, null, 2));
   fs.writeFileSync(path.join(artifactDirectory, "live-restore-600.json"), JSON.stringify({
     scenario: scenario.id,
     sourceSnapshotHash: sourceResult.snapshot.hashes.exact,

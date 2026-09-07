@@ -713,6 +713,20 @@ frozen evidence record.
   diffs, fork and transactionally watch a checkpoint, import/export TearSDL,
   and fail closed on malformed editor input.
 
+- [x] State Forge boss-intro ownership — the runtime bridge captures a versioned
+  intro and restores its boss through the existing stable actor-reference codec.
+  `live-state-forge-runtime-bridge.test.ts` checks candidate ownership, malformed
+  timers, explicit null restoration, and completion at 30/60/120 render Hz.
+  `browser-state-forge-runtime.js` checks natural Rootbound capture, exact
+  failed-commit rollback, intro completion on the restored actor, and clearing
+  a prior active intro. Legacy snapshots without a binding are rejected when
+  a boss still requires the external intro countdown. This is Class-A
+  engineering evidence, not gameplay mastery, replay certification, or C40 closure.
+  Direct production-replay restoration uses the same ownership validation and
+  retains the rebound intro. The fixed-tick replay runner explicitly rejects
+  active-intro playback because it does not own the application-frame timing
+  required to advance that controller; completed-intro checkpoints remain supported.
+
 - [x] Class-A semantic cinematic advancement — `live-runtime-application-frame.test.ts`
   exposes one test-build-only authored director beat through the typed live
   runtime, without a debug global, renderer clock, or synthetic fixed tick.
