@@ -248,15 +248,15 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 
 | Checkpoint | Purpose | Entry gate | State |
 | --- | --- | --- | --- |
-| VAP-0 | Baseline and authority | Gate A | Complete at local authority `b15fb19`; protected integration not claimed |
-| VAP-1 | Correct route/matrix/certification semantics | Gate A | Complete locally; protected integration not claimed |
-| VAP-2 | Atomic task registry | Gate B | Complete locally; protected integration not claimed |
-| VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Complete locally; protected integration not claimed |
-| VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Complete locally; protected integration not claimed |
-| VAP-5 | Build once and exact artifact fanout | VAP-4 | Complete locally; protected integration not claimed |
-| VAP-6 | Bounded parallel CI canary | VAP-5 | Local canary implementation complete; protected runs pending |
-| VAP-7 | Stable required-gate cutover | VAP-6 | Not started |
-| VAP-8 | TearSkills and Luna evidence protocol | VAP-4, VAP-7 | Local client-guidance preparation only; VAP-7 dependency and executable protocol proof remain open |
+| VAP-0 | Baseline and authority | Gate A | Baseline implementation integrated in PR #57; final measured acceptance remains separate |
+| VAP-1 | Correct route/matrix/certification semantics | Gate A | Implementation integrated in PR #57; retained evidence remains subject to final equivalence audit |
+| VAP-2 | Atomic task registry | Gate B | Implementation integrated in PR #57; new client regressions added locally to canonical profiles |
+| VAP-3 | Deterministic shadow planner and explain output | VAP-2 | Implementation integrated in PR #57; VAP-7 still requires the complete shadow-equivalence corpus |
+| VAP-4 | Claim-aware receipts and certificate | Gate C, VAP-3 | Implementation integrated in PR #57; status/reuse hardening integrated in PRs #70–71 |
+| VAP-5 | Build once and exact artifact fanout | VAP-4 | Implementation integrated in PR #57; protected canary qualification remains open |
+| VAP-6 | Bounded parallel CI canary | VAP-5 | Canary integrated; complete parity, robust timing and runner-cost acceptance still unproved |
+| VAP-7 | Stable required-gate cutover | VAP-6 | Not cut over; dependency and rehearsal requirements remain open |
+| VAP-8 | TearSkills and Luna evidence protocol | VAP-4, VAP-7 | Integrated status/reuse primitives; consolidated client workflow local, with dependency and full acceptance still open |
 | VAP-9 | Wiki exact-artifact promotion | VAP-7, separate wiki authorization | Not started |
 | VAP-10 | Measurement, acceptance, and retirement | VAP-7–VAP-9 dispositions | Not started |
 
@@ -460,6 +460,57 @@ VAP-7 required-check cutover.
 
 **Goal:** Agents accelerate diagnosis and implementation without duplicating gates, losing evidence context, or contending for local resources.
 
+### Current consolidated client milestone
+
+PR #57 merged the foundation at `3e8d46325e2773f39d9853678753651c53b5e4cc`.
+PR #70 merged source-bound receipt status at `9ec7339126fab73103aa6a31ebb241850998f552`;
+PR #71 merged leased task reuse at `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`.
+The following client changes are local and not yet protected-integrated:
+
+- `client-status --plan <path> --client <path>` validates a mission request and
+  returns current/stale context alongside canonical receipt assessment.
+- `ensure-client-task --plan <path> --client <path> --task <id>` executes a missing
+  assigned task or returns its verified receipt. Source, scope, deadline, input
+  replacement and unowned dependency-build leases stop the request. Output is
+  machine-readable JSON, including execution logs inside the receipt.
+- All seven Tear skills consume the shared client handoff and reserve final-gate
+  coordination for `tear-change-gate`. Supplied protected provenance stays
+  explicitly unverified until the existing certificate verifier accepts it.
+  Functional-only evidence never supplies missing performance evidence.
+- `unit.tearbench-evidence-clients` requires mission, benchmark, executor and
+  receipt regressions in functional/check/release/PR/protected-main profiles;
+  the historical 80-leaf compatibility inventory remains unchanged.
+- `validate-client-assignments` rejects overlapping child write scopes, requests
+  outside coordinator scope, differing mission context, and excess declared
+  concurrency before dispatch. It remains cooperative coordination, not a
+  filesystem sandbox or an independent runtime-capacity attestation.
+- `node scripts/benchmark-tearbench-clients.mjs --available-children <actual-allocation>`
+  retains 1/2/available CLI-process measurements, duplicate request and execution
+  counts, lease rejections, source identity and failed-run diagnostics. Capacity
+  is caller-declared; resource wait and model inference are not measured. This
+  is not a p50/p95 release speedup or an actual model-agent timing result.
+
+Focused local evidence includes combined client/executor/receipt tests, seven
+registry tests, schema/lint checks, seven skill-format validations and bounded
+read-only skill forward reviews. The controlled CLI benchmark has demonstrated
+one execution at each 1/2/3-client level; corrected digest agreement, duplicate
+request/execution accounting and retained planning-failure diagnostics have been
+validated locally. Actual Luna High 1/2/3-child observations additionally produced
+matching source, claim/scope and authority/retry handoffs. The lead served all
+requests with one verified reuse per round, no new executions and one unchanged
+receipt per mission. The retained observation is
+`artifacts/tearbench/generated/client-benchmark-caZUmi/agent-report.json`, bound to
+development source fingerprint `827b429c6920dc8d15a2f9b2bde9b0fc04fefd6e9d5caa054964287345f2643d`.
+Observed end-to-end walls were 72/167/185 seconds, including mixed fresh/reused
+agent startup and lead observation; these single samples are not a speedup
+comparison. Children were read-only and requested task IDs rather than executing
+them. No checklist below is closed solely by these local results. VAP-7,
+protected certificate reuse and final measured acceptance remain explicit
+obligations; these local observations do not claim a new protected authority.
+
+The following pilot and follow-on descriptions retain their historical scope;
+the current integration status above supersedes their original local-only state.
+
 Preparation may proceed under the owner's direction to continue independent
 work while performance acceptance is unavailable. The initial two-skill pilot
 shares an evidence handoff between `tear-change-gate` and
@@ -560,7 +611,7 @@ sequential reuse without another attempt, failure/stale stopping, and unchanged
 explicit retries/repetitions. This is a protocol implementation step, not VAP-8
 completion or authorization to skip protected CI.
 
-Local implementation: `node scripts/tearbench-task-execution.mjs ensure-task --plan <plan-path> --task <task-id> --mission <mission-id>`
+Protected-integrated primitive (PR #71): `node scripts/tearbench-task-execution.mjs ensure-task --plan <plan-path> --task <task-id> --mission <mission-id>`
 returns `REUSED` only after the shared verifier reports the current task valid;
 it returns `EXECUTED` for a missing first attempt and refuses failed or stale
 evidence. Both ensure-task and explicit run-task hold the same canonical
@@ -581,8 +632,7 @@ fixtures reject both plan and receipt replacement. The API returns the verified
 receipt JSON snapshot on reuse, and CLI output names both plan and receipt digests.
 A receipt path is a location, not durable proof: subsequent consumers must verify
 the named digest and source rather than trust whatever bytes later occupy that
-path. Protected integration and protocol-client wiring are
-not yet claimed for this follow-on.
+path. Protocol-client wiring is the separate local consolidated milestone above.
 
 Receipt-status follow-on contract: expose read-only mission/task status through
 the existing receipt and artifact verifier before enabling duplicate-work
@@ -597,7 +647,7 @@ reporting nor this verifier preparation is automatic receipt reuse or VAP-8
 completion. Release cutover, wiki mutation, and performance-policy changes are
 out of scope for this slice.
 
-Local status implementation (not yet protected-integrated):
+Protected-integrated status primitive (PR #70):
 `node scripts/tearbench-task-execution.mjs status --plan <plan-path> --mission <mission-id>`
 reads the complete mission attempt inventory and independently rechecks its
 artifacts through the same evaluator used by `createPlanCertificate`. The JSON
@@ -612,8 +662,8 @@ authority. It is a point-in-time status report, not a reservation or permission
 to skip a gate. Mission-specific identity and deliberate repetitions remain
 unchanged. Focused executor/receipt tests cover a real immutable local attempt,
 missing work, source and runner drift, malformed or omitted outputs, and existing
-protected-origin/retry rejection. Duplicate suppression, mission-schema client
-wiring, and controlled orchestration benchmarks remain open.
+protected-origin/retry rejection. Duplicate suppression subsequently integrated
+in PR #71; complete mission/client acceptance remains open as recorded above.
 
 Every skill and mission consumes:
 

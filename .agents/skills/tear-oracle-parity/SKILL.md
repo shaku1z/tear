@@ -15,7 +15,9 @@ The user considers oracle commit `ee5e93141d67cc02505b2227b3be0b10d1819e1c` ("fi
 4. Diff behavior, not just text. Classify the divergence using [references/divergence-triage.md](references/divergence-triage.md): systemic (dt model, frame order, state/cursor ownership, adapter plumbing, double-sampling) vs line-level (constant, token, string, layout).
 5. Port the oracle behavior into the redesign through the typed architecture per [references/porting-contract.md](references/porting-contract.md) — verbatim behavior, redesigned plumbing. Never resurrect classic-script globals, load-order coupling, or direct DOM/SDK reads in domain code.
 6. Prove parity: side-by-side twin-serve check, trace/screenshot comparison, or an oracle-conformance fixture whose expected values were generated from the oracle build. Route test placement through `$tear-combat-scenarios` (behavior) or `$tear-ui-regression` (screens), then `$tear-change-gate`.
-7. Update the parity plan / `docs/FEATURE_INVENTORY.md` status, commit per phase with an "ee5e931" reference, and push.
+7. Update the parity plan / `docs/FEATURE_INVENTORY.md` status. Commit, push, merge
+   and deployment remain separately authorized under repository governance;
+   parity evidence does not grant external-write permission.
 
 ## Rules
 
@@ -27,5 +29,11 @@ The user considers oracle commit `ee5e93141d67cc02505b2227b3be0b10d1819e1c` ("fi
 - Preserve the shipped weapons-overhaul (WA1+) layer when correcting physics/dt — rerun its conformance tests after any timing change.
 
 ## Completion
+
+Own immutable oracle A/B claims. Use the shared
+[client handoff](../tear-change-gate/references/evidence-handoff.md) and its
+`client-status` / `ensure-client-task` protocol for planned evidence. Bind both
+comparison identities, retain oracle/source/fixture invalidators and gaps, and
+leave final full-gate coordination to `tear-change-gate`.
 
 Report: oracle evidence (file:line at ee5e931), divergence classification, what was restored vs already-matching, parity proof gathered, and remaining unverified surfaces (e.g. user-owed feel playtests). Never claim "matches the source" from a text diff alone when feel or rendering is implicated.

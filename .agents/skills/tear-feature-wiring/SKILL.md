@@ -18,7 +18,9 @@ Route feature work through Tear's live typed architecture. Let TypeScript, contr
 3. Trace definition -> typed port/controller -> composition -> presentation/adapter. Keep dependencies pointing inward.
 4. Add the smallest deterministic unit/contract/conformance evidence first. Add built-browser evidence when the feature is visible, interactive, lifecycle-sensitive, or target-specific.
 5. Update `docs/FEATURE_INVENTORY.md` with the credible evidence that preserves the feature.
-6. Use `$tear-change-gate` to run targeted checks, then the required release gate when applicable.
+6. Declare affected downstream claims and their specialist owners. Use `$tear-change-gate`
+   to coordinate targeted checks and the final full gate when applicable; do not
+   independently launch every specialist or another full gate.
 7. If the feature existed in the pre-redesign monolith, verify the ported behavior against oracle `ee5e931` with `$tear-oracle-parity` before claiming the feature is preserved.
 
 ## Rules
@@ -30,5 +32,10 @@ Route feature work through Tear's live typed architecture. Let TypeScript, contr
 - Do not add a separate cache, boss, controller/mobile, wiki, audio, or TearScore workflow; route those concerns through the relevant feature kind and existing gates.
 
 ## Completion
+
+Own downstream claim declaration. Use the shared
+[client handoff](../tear-change-gate/references/evidence-handoff.md), including
+`client-status` and `ensure-client-task` for planned evidence, to retain exact
+receipts, source invalidators, ownership and remaining gaps.
 
 Report the feature path, contracts touched, tests added or updated, browser evidence, inventory update, and commands run. Call out any unsupported target or evidence gap explicitly.

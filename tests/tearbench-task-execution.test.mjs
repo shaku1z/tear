@@ -7,6 +7,7 @@ import test from "node:test";
 import { executionEnvironmentBinding, executionToolchainBinding } from "../scripts/tearbench-runtime-identity.mjs";
 import { receiptSha256 } from "../scripts/tearbench-task-receipts.mjs";
 import { missionTaskResourceKey, withResourceLeases } from "../scripts/tearbench-resource-leases.mjs";
+import { CLIENT_STOP_CONDITIONS } from "../scripts/tearbench-client-mission.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 
@@ -83,9 +84,11 @@ test("typed task execution emits one immutable local attempt and refuses overwri
   const missionPath = resolve(root, `artifacts/tearbench/missions/${missionId}`);
   const otherMissionId = `${missionId}-independent`;
   const otherMissionPath = resolve(root, `artifacts/tearbench/missions/${otherMissionId}`);
-  const planningEnvironment = { ...process.env,
+  const clientPath = resolve(root, `artifacts/tearbench/generated/client-${process.pid}.json`);
+  const childPath = resolve(root, `artifacts/tearbench/generated/client-child-${process.pid}.json`);
+  const planningEnvironment = { ...process.env, GITHUB_ACTIONS: "false",
     npm_config_user_agent: "pnpm/11.15.0 npm/? node/v24.19.0 linux x64" };
-  const executionEnvironment = { ...process.env };
+  const executionEnvironment = { ...process.env, GITHUB_ACTIONS: "false" };
   delete executionEnvironment.npm_config_user_agent;
   try {
     execFileSync(process.execPath, ["scripts/tearbench.mjs", "plan", "--profile", "development", "--files", "docs/README.md",
@@ -103,16 +106,61 @@ test("typed task execution emits one immutable local attempt and refuses overwri
     assert.equal(receipt.task.taskId, "static.requirements-check");
     const ensure = (environment = executionEnvironment, selectedMission = missionId) => spawnSync(process.execPath,
       ["scripts/tearbench-task-execution.mjs", "ensure-task", "--plan", planPath, "--task", receipt.task.taskId, "--mission", selectedMission],
-      { cwd: root, env: environment, encoding: "utf8", timeout: 30000 });
+      { cwd: root, env: environment, encoding: "utf8", timeout: 60000 });
     const receiptBytes = await readFile(resolve(taskPath, files[0]), "utf8");
     const reused = ensure();
     assert.equal(reused.status, 0, reused.stderr);
     assert.match(reused.stdout, /^REUSED PASSED/u);
     assert.deepEqual(await readdir(taskPath), files);
     assert.equal(await readFile(resolve(taskPath, files[0]), "utf8"), receiptBytes);
+    const plan = JSON.parse(await readFile(planPath, "utf8"));
+    const client = { protocolVersion: 1, missionId, parentMissionId: null, attemptId: "initial", owner: "tear-change-gate",
+      objective: "Validate the executor client contract", claimClass: "development",
+      repository: execFileSync("git", ["remote", "get-url", "origin"], { cwd: root, encoding: "utf8" }).trim(),
+      worktree: (await realpath(root)).replaceAll("\\", "/"),
+      branch: execFileSync("git", ["branch", "--show-current"], { cwd: root, encoding: "utf8" }).trim(),
+      source: plan.source, planDigest: plan.planDigest, policyDigest: plan.policyDigest, taskRegistryDigest: plan.taskRegistryDigest,
+      requiredTaskIds: [receipt.task.taskId], requiredClaimIds: plan.taskNodes.find((task) => task.taskId === receipt.task.taskId).claimIds,
+      changedFiles: plan.scope.changedFiles, readPaths: ["docs"], writePaths: [], routes: plan.scope.routes, scenarios: plan.scope.scenarios, resourceLeases: [],
+      stopConditions: [...CLIENT_STOP_CONDITIONS], deadline: new Date(Date.now() + 300000).toISOString(),
+      artifactNamespace: `artifacts/tearbench/missions/${missionId}`, canonicalReleaseAuthority: false, protectedEvidence: null };
+    const clientCall = (action, taskId = receipt.task.taskId) => spawnSync(process.execPath,
+      ["scripts/tearbench-task-execution.mjs", action, "--plan", planPath, "--client", clientPath,
+        ...(action === "ensure-client-task" ? ["--task", taskId] : [])],
+      { cwd: root, env: executionEnvironment, encoding: "utf8", timeout: 60000 });
+    await writeFile(clientPath, JSON.stringify(client));
+    const child = { ...client, owner: "read-only-child" };
+    await writeFile(childPath, JSON.stringify(child));
+    const inspectAssignments = () => spawnSync(process.execPath, ["scripts/tearbench-task-execution.mjs", "validate-client-assignments",
+      "--plan", planPath, "--coordinator", clientPath, "--clients", childPath, "--available-children", "1"],
+    { cwd: root, env: executionEnvironment, encoding: "utf8", timeout: 60000 });
+    const assignment = inspectAssignments();
+    assert.equal(assignment.status, 0, assignment.stderr);
+    assert.deepEqual(JSON.parse(assignment.stdout).owners, [child.owner]);
+    await writeFile(childPath, JSON.stringify({ ...child, writePaths: ["docs"] }));
+    const escapedAssignment = inspectAssignments();
+    assert.equal(escapedAssignment.error, undefined);
+    assert.notEqual(escapedAssignment.status, 0);
+    assert.match(escapedAssignment.stderr, /child writePaths exceeds assignment/u);
+    const handoff = clientCall("client-status");
+    assert.equal(handoff.status, 0, handoff.stderr);
+    assert.equal(JSON.parse(handoff.stdout).context.status, "current");
+    const clientReuse = clientCall("ensure-client-task");
+    assert.equal(clientReuse.status, 0, clientReuse.stderr);
+    assert.equal(JSON.parse(clientReuse.stdout).disposition, "reused");
+    assert.equal(JSON.parse(clientReuse.stdout).receipt.receiptDigest, receipt.receiptDigest);
+    assert.deepEqual(await readdir(taskPath), files);
+    assert.notEqual(clientCall("ensure-client-task", "static.lint").status, 0);
+    await writeFile(clientPath, JSON.stringify({ ...client, branch: "codex/stale-client" }));
+    assert.equal(JSON.parse(clientCall("client-status").stdout).context.status, "stale");
+    assert.match(clientCall("ensure-client-task").stderr, /client stopped: branch drift/u);
+    await writeFile(clientPath, JSON.stringify({ ...client, deadline: "2000-01-01T00:00:00Z" }));
+    assert.match(clientCall("ensure-client-task").stderr, /client stopped: deadline/u);
+    await writeFile(clientPath, JSON.stringify({ ...client, missionId: otherMissionId,
+      artifactNamespace: `artifacts/tearbench/missions/${otherMissionId}` }));
     const launchEnsure = () => new Promise((resolveDone, reject) => {
-      const child = spawn(process.execPath, ["scripts/tearbench-task-execution.mjs", "ensure-task", "--plan", planPath,
-        "--task", receipt.task.taskId, "--mission", otherMissionId], { cwd: root, env: executionEnvironment, timeout: 60000 });
+      const child = spawn(process.execPath, ["scripts/tearbench-task-execution.mjs", "ensure-client-task", "--plan", planPath,
+        "--task", receipt.task.taskId, "--client", clientPath], { cwd: root, env: executionEnvironment, timeout: 60000 });
       let stdout = "", stderr = "";
       child.stdout.on("data", (data) => { stdout += data; });
       child.stderr.on("data", (data) => { stderr += data; });
@@ -120,9 +168,14 @@ test("typed task execution emits one immutable local attempt and refuses overwri
       child.once("close", (status) => resolveDone({ status, stdout, stderr }));
     });
     const concurrent = await Promise.all([launchEnsure(), launchEnsure()]);
-    assert.equal(concurrent.filter((entry) => /EXECUTED PASSED/u.test(entry.stdout)).length, 1);
+    assert.equal(concurrent.filter((entry) => /"disposition": "executed"/u.test(entry.stdout)).length, 1);
     for (const result of concurrent) {
-      if (result.status === 0) assert.match(result.stdout, /(?:EXECUTED|REUSED) PASSED/u);
+      if (result.status === 0) {
+        const response = JSON.parse(result.stdout);
+        assert.ok(["executed", "reused"].includes(response.disposition));
+        assert.equal(response.receipt.result.status, "passed");
+        assert.equal(response.canonicalReleaseAuthority, false);
+      }
       else assert.match(result.stderr, /resource lease occupied: task-execution\//u);
     }
     assert.equal((await readdir(resolve(otherMissionPath, receipt.task.taskId))).length, 1);
@@ -183,6 +236,7 @@ test("typed task execution emits one immutable local attempt and refuses overwri
     const driftedEnvironment = inspect({ ...executionEnvironment, RUNNER_ENVIRONMENT: "different-status-runner" });
     assert.ok(driftedEnvironment.taskStatuses.every((entry) => entry.status === "stale"));
     const staleReuse = ensure({ ...executionEnvironment, RUNNER_ENVIRONMENT: "different-status-runner" });
+    assert.equal(staleReuse.error, undefined, "stale status inspection must finish before interpreting its verdict");
     assert.notEqual(staleReuse.status, 0);
     assert.match(staleReuse.stderr, /is stale; stop/u);
     const originalPlanBytes = await readFile(planPath, "utf8");
@@ -212,5 +266,7 @@ test("typed task execution emits one immutable local attempt and refuses overwri
     await rm(missionPath, { recursive: true, force: true });
     await rm(otherMissionPath, { recursive: true, force: true });
     await rm(planPath, { force: true });
+    await rm(clientPath, { force: true });
+    await rm(childPath, { force: true });
   }
 });

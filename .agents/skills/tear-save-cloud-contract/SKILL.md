@@ -29,4 +29,10 @@ Protect versioned persistence envelopes and adapter behavior using Tear's existi
 
 ## Completion
 
+Own migration, adapter, fallback and fake-provider claims. Use the shared
+[client handoff](../tear-change-gate/references/evidence-handoff.md) and its
+`client-status` / `ensure-client-task` protocol for planned evidence. Report
+schema/provider/source invalidators and unsupported claims. Only `tear-change-gate`
+coordinates the final full gate; provider access remains separately authorized.
+
 Report envelope/version changes, adapters affected, fixtures added, invariant coverage, compatibility behavior, fallback behavior, browser evidence, and exact commands run. Identify any migration or provider scenario that remains unproven.
