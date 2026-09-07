@@ -9,6 +9,7 @@ import { calculateArtifactHash, readSourceIdentitySync } from "./release-artifac
 import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 import { shadowTaskDefinitionDigest } from "./tearbench-shadow-plan.mjs";
 import { executionEnvironmentBinding, executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
+import { taskResourceKeys, withResourceLeases } from "./tearbench-resource-leases.mjs";
 import { canonicalJson, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256 } from "./tearbench-task-receipts.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -160,6 +161,14 @@ async function producedBuildAttestations(requirement, plan) {
   return Object.freeze(produced);
 }
 export async function executePlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId }) {
+  const task = registry.tasks.find((entry) => entry.taskId === taskId);
+  if (task === undefined) throw new RangeError(`unknown registered task ${taskId}`);
+  return await withResourceLeases(taskResourceKeys(task), () => executeLeasedPlanTask({
+    planPath, taskId, missionId, attemptNumber, plantedFailureTaskId,
+  }));
+}
+
+async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId }) {
   const planInput = await workspaceInput(planPath, "task plan");
   const plan = JSON.parse(await readFile(planInput.absolute, "utf8"));
   const task = registry.tasks.find((entry) => entry.taskId === taskId);
