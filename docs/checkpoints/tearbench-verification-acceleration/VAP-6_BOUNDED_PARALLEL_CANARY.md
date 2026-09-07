@@ -191,6 +191,14 @@ report's observed parallel/serial in-task wall ratio is 0.541 and its browser
 shard balance ratio is 1.426, but failed task parity and rejected certificates
 make those diagnostic observations, not acceptance evidence.
 
+The serial-only lease failure was isolated to the `parity current-weapons`
+cache-hit branch. Exact-source `diff-capability.json` reuse returned before
+browser/build admission, so a cached result could pass while another process
+held the build lease. The parity command now acquires both leases before cache
+inspection; fresh evidence retains its existing per-step leases. A deterministic
+cache-hit fixture failed before this repair and the complete lease-exclusion test
+passed afterward. Cache reuse therefore no longer bypasses host admission.
+
 Run `34144556642` at `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`
 finished with all 98 required task IDs present in both paths, but performance,
 resource-lease and evidence-selection tasks failed in both paths. Its aggregate

@@ -1155,28 +1155,37 @@ export function verifyCurrentWeaponParityExecution(selection, evidence) {
     weapons: [...selection.currentWeaponParity.weapons], scenarios: [...selection.currentWeaponParity.scenarios] } };
 }
 
-async function executeCurrentWeaponParity() {
+export function currentWeaponParitySelection() {
   const selected = evidenceForDiff(["src/gameplay/weapon-selection.ts"]);
   const scenarios = [...selected.currentWeaponParity.scenarios];
   const scope = canonicalDiffScope({ ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
     buildTargets: ["test-standalone"], journeyCommands: [], authorityCommands: [] });
-  const selection = { ...selected, scenarios, evidenceCommands: scenarios.flatMap((id) =>
+  return { ...selected, scenarios, evidenceCommands: scenarios.flatMap((id) =>
     evidenceCommandsForScenario(scenarioById(id)).map((evidence) => ({ id, ...evidence }))),
   journeyCommands: [], authorityCommands: [], scope, scopeDigest: diffScopeDigest(scope) };
+}
+
+async function executeCurrentWeaponParity() {
+  const selection = currentWeaponParitySelection();
+  const scope = selection.scope;
   const existingPath = resolve(root, "artifacts", "tearbench", "generated", "diff-capability.json");
-  if (existsSync(existingPath)) {
-    try {
-      const existing = JSON.parse(readFileSync(existingPath, "utf8"));
-      if (canReuseDiffCapabilityReport({ ...selection, scope }, existing)) {
-        return { ...selection, evidenceExecution: { ...verifyCurrentWeaponParityExecution(selection, existing),
-          reusedExactSourceEvidence: true } };
+  const reused = await withResourceLeases(["resources/browser", "resources/build"], async () => {
+    if (existsSync(existingPath)) {
+      try {
+        const existing = JSON.parse(readFileSync(existingPath, "utf8"));
+        if (canReuseDiffCapabilityReport({ ...selection, scope }, existing)) {
+          return { ...selection, evidenceExecution: { ...verifyCurrentWeaponParityExecution(selection, existing),
+            reusedExactSourceEvidence: true } };
+        }
+      } catch {
+        // Missing, incomplete, stale, or mismatched evidence is replaced by fresh real browser proof.
       }
-    } catch {
-      // Missing, incomplete, stale, or mismatched evidence is replaced by fresh real browser proof.
     }
-  }
+    return undefined;
+  });
+  if (reused !== undefined) return reused;
   return { ...selection, evidenceExecution: verifyCurrentWeaponParityExecution(selection,
-    await executeSelectedEvidence(scenarios, [], ["test-standalone"], [], scope)) };
+    await executeSelectedEvidence(selection.scenarios, [], ["test-standalone"], [], scope)) };
 }
 
 async function writeSelection(selection) {
