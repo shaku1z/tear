@@ -546,6 +546,37 @@ direct child.
 
 ### Shared evidence context
 
+Receipt-status follow-on contract: expose read-only mission/task status through
+the existing receipt and artifact verifier before enabling duplicate-work
+suppression. Scope is the task-receipt verifier, execution CLI, their contract
+tests, and this plan. Preserve mission-specific execution identities, immutable
+attempts, authorized retries, intentional A/B repetitions, and protected-origin
+checks. A passing receipt must independently bind every declared task output
+exactly once; a self-consistent receipt digest cannot excuse missing or duplicate
+output descriptors. Require negative tests for source/binding drift, incomplete
+artifacts, failed or hidden retries, and insufficient authority. Neither status
+reporting nor this verifier preparation is automatic receipt reuse or VAP-8
+completion. Release cutover, wiki mutation, and performance-policy changes are
+out of scope for this slice.
+
+Local status implementation (not yet protected-integrated):
+`node scripts/tearbench-task-execution.mjs status --plan <plan-path> --mission <mission-id>`
+reads the complete mission attempt inventory and independently rechecks its
+artifacts through the same evaluator used by `createPlanCertificate`. The JSON
+report distinguishes `valid`, `missing`, `failed`, `stale`, and currently
+unregistered (`unsupported`) tasks, and retains unsupported obligations and
+aggregate assessment errors. It also exposes the canonical retry history,
+including `recovered-flaky` and `passed-repeated` dispositions; it does not
+collapse a repeated pass into first-attempt success. It compares the current source, task registry,
+task definitions, toolchain, and environment with the plan, rechecks source and
+attempt inventory after inspection, and never writes a receipt or grants release
+authority. It is a point-in-time status report, not a reservation or permission
+to skip a gate. Mission-specific identity and deliberate repetitions remain
+unchanged. Focused executor/receipt tests cover a real immutable local attempt,
+missing work, source and runner drift, malformed or omitted outputs, and existing
+protected-origin/retry rejection. Duplicate suppression, mission-schema client
+wiring, and controlled orchestration benchmarks remain open.
+
 Every skill and mission consumes:
 
 ```text

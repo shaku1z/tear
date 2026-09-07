@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
-  certificateBindsPlan, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256, taskAttemptPath,
+  assessPlanTaskReceipts, certificateBindsPlan, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256, taskAttemptPath,
 } from "../scripts/tearbench-task-receipts.mjs";
 import { PERFORMANCE_TASK_ID } from "../scripts/tearbench-performance-sample.mjs";
 import { verifyProtectedPlanCertificate } from "../scripts/verify-plan-certificate.mjs";
@@ -66,6 +66,24 @@ function resign(value) {
   const copy = structuredClone(value); delete copy.receiptDigest;
   return { ...copy, receiptDigest: receiptSha256(copy) };
 }
+
+test("task assessment shares certificate validation without requiring unrelated task completion", () => {
+  const assess = (receipts) => assessPlanTaskReceipts({ plan, receipts, expectedOrigin: origin,
+    artifactBytes: { [artifact.path]: bytes }, generatedAt: "2026-08-31T00:01:00.000Z" });
+  const first = receipt("task.a");
+  assert.deepEqual(assess([first]).taskStatuses.map(({ status }) => status), ["valid", "missing"]);
+  assert.equal(certify([first]).status, "rejected");
+  assert.equal(assess([receipt("task.a", { status: "failed", exitCode: 1 })]).taskStatuses[0].status, "failed");
+  for (const changed of [resign({ ...first, artifacts: [] }),
+    resign({ ...first, source: { ...source, fingerprint: "f".repeat(64) } })]) {
+    const result = assess([changed]);
+    assert.equal(result.taskStatuses[0].status, "stale");
+    assert.ok(result.taskStatuses[0].reasons.length > 0);
+    assert.deepEqual(result.errors, certify([changed]).errors);
+  }
+  assert.equal(assess([first, first]).taskStatuses[0].status, "stale");
+  assert.deepEqual(assess([]).unsupported, plan.diagnostics.unsupported);
+});
 
 const contendedOutput = `${JSON.stringify({ scenario: "4x constrained gameplay", measurements: {
   frame: { p95Ms: 14.6 }, frameInterval: { p99Ms: 150 }, outsideFrameWork: { p99Ms: 140.9 }, newLongTasks: 0,
@@ -146,6 +164,9 @@ test("failed and authorized passing attempts are retained as recovered-flaky; hi
   const accepted = certify([failed, recovered, receipt("task.b")]);
   assert.equal(accepted.status, "certified");
   assert.equal(accepted.retryHistory.find((entry) => entry.taskId === "task.a").disposition, "recovered-flaky");
+  const assessment = assessPlanTaskReceipts({ plan, receipts: [failed, recovered, receipt("task.b")], expectedOrigin: origin,
+    artifactBytes: { [artifact.path]: bytes }, generatedAt: "2026-08-31T00:01:00.000Z" });
+  assert.deepEqual(assessment.retryHistory, accepted.retryHistory);
   const hidden = receipt("task.a", { attemptNumber: 2, retryOf: failed.receiptDigest });
   assert.equal(certify([failed, hidden, receipt("task.b")]).status, "rejected");
   const failedAgain = receipt("task.a", { attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: "retry-policy-1",
@@ -207,6 +228,55 @@ test("missing, extra, duplicate, and altered-artifact receipts fail closed", () 
   const extra = structuredClone(second); extra.task.taskId = "task.extra";
   assert.equal(certify([first, resign(extra), second]).status, "rejected");
   assert.equal(certify([first, second], { artifactBytes: { [artifact.path]: Buffer.from("altered") } }).status, "rejected");
+});
+
+test("independent verification rejects omitted and duplicate output descriptors even after receipt resigning", () => {
+  const first = receipt("task.a"), second = receipt("task.b");
+  for (const artifacts of [[], [artifact, artifact]]) {
+    const changed = resign({ ...first, artifacts });
+    assert.equal(certify([changed, second]).status, "rejected");
+  }
+});
+
+test("malformed artifact descriptors produce a rejected certificate without crashing", () => {
+  for (const artifacts of [null, {}, [null], ["invalid"]]) {
+    const changed = resign({ ...receipt("task.a"), artifacts });
+    const certificate = certify([changed, receipt("task.b")]);
+    assert.equal(certificate.status, "rejected");
+    assert.ok(certificate.errors.some((error) => /artifact descriptor/u.test(error)));
+  }
+});
+
+test("malformed failed exit codes cannot become a valid recovered task", () => {
+  for (const exitCode of ["not-an-exit-code", null, 1.5]) {
+    const original = receipt("task.a", { status: "failed", exitCode: 1 });
+    const failed = resign({ ...original, result: { ...original.result, exitCode } });
+    const retry = receipt("task.a", { attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: "owner-approved" });
+    const certificate = certify([failed, retry, receipt("task.b")]);
+    assert.equal(certificate.status, "rejected");
+    assert.ok(certificate.errors.some((error) => /result is invalid/u.test(error)));
+  }
+});
+
+test("malformed top-level receipts reject without hiding a passing repetition", () => {
+  for (const malformed of [null, undefined]) assert.equal(certify([malformed]).status, "rejected");
+  const first = receipt("task.a");
+  const repeated = receipt("task.a", { attemptNumber: 2, retryOf: first.receiptDigest, retryAuthorization: "intentional-proof" });
+  const certificate = certify([first, repeated, receipt("task.b")]);
+  assert.equal(certificate.status, "certified");
+  assert.equal(certificate.retryHistory[0].disposition, "passed-repeated");
+  assert.equal(certificate.retryHistory[0].attempts.length, 2);
+});
+
+test("attempt identity collisions invalidate every involved task, independent of order", () => {
+  const first = receipt("task.a");
+  const second = resign({ ...receipt("task.b"), attemptId: first.attemptId });
+  for (const receipts of [[first, second], [second, first]]) {
+    const assessment = assessPlanTaskReceipts({ plan, receipts, expectedOrigin: origin,
+      artifactBytes: { [artifact.path]: bytes }, generatedAt: "2026-08-31T00:01:00.000Z" });
+    assert.deepEqual(assessment.taskStatuses.map(({ status }) => status), ["stale", "stale"]);
+    assert.ok(assessment.errors.some((error) => /attempt identity/u.test(error)));
+  }
 });
 
 test("certificate digest binds exact plan and rejects certificate or plan mutation", () => {

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFile, readdir, rm } from "node:fs/promises";
+import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { executionEnvironmentBinding, executionToolchainBinding } from "../scripts/tearbench-runtime-identity.mjs";
+import { receiptSha256 } from "../scripts/tearbench-task-receipts.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 
@@ -72,6 +73,28 @@ test("typed task execution emits one immutable local attempt and refuses overwri
     assert.equal(receipt.authority, "local-engineering");
     assert.equal(receipt.canonicalReleaseAuthority, false);
     assert.equal(receipt.task.taskId, "static.requirements-check");
+    const inspect = (environment = executionEnvironment, selectedMission = missionId) => JSON.parse(execFileSync(process.execPath,
+      ["scripts/tearbench-task-execution.mjs", "status", "--plan", planPath, "--mission", selectedMission],
+      { cwd: root, env: environment, encoding: "utf8" }));
+    const status = inspect();
+    assert.equal(status.taskStatuses.find((entry) => entry.taskId === receipt.task.taskId).status, "valid");
+    assert.equal(status.canonicalReleaseAuthority, false);
+    assert.equal(status.retryHistory.find((entry) => entry.taskId === receipt.task.taskId).disposition, "passed-first-attempt");
+    assert.deepEqual(status.contextErrors, []);
+    assert.deepEqual(await readdir(taskPath), files, "status must not write receipts");
+    const absent = inspect(executionEnvironment, `${missionId}-absent`);
+    assert.ok(absent.taskStatuses.every((entry) => entry.status === "missing"));
+    const driftedEnvironment = inspect({ ...executionEnvironment, RUNNER_ENVIRONMENT: "different-status-runner" });
+    assert.ok(driftedEnvironment.taskStatuses.every((entry) => entry.status === "stale"));
+    const originalPlanBytes = await readFile(planPath, "utf8");
+    const alteredPlan = JSON.parse(originalPlanBytes);
+    alteredPlan.source.fingerprint = "f".repeat(64);
+    delete alteredPlan.planDigest;
+    await writeFile(planPath, JSON.stringify({ ...alteredPlan, planDigest: receiptSha256(alteredPlan) }));
+    const driftedSource = inspect();
+    assert.ok(driftedSource.taskStatuses.every((entry) => entry.status === "stale"));
+    assert.ok(driftedSource.contextErrors.includes("current source differs from the plan"));
+    await writeFile(planPath, originalPlanBytes);
     const duplicate = spawnSync(process.execPath, ["scripts/tearbench-task-execution.mjs", "run-task", "--plan", planPath,
       "--task", "static.requirements-check", "--mission", missionId, "--attempt", "1"], { cwd: root, encoding: "utf8" });
     assert.notEqual(duplicate.status, 0);
