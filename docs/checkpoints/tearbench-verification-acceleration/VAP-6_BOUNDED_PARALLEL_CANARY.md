@@ -144,6 +144,28 @@ work proceeds only when it has an explicit checkpoint obligation and a bounded
 discriminating test; uncertain performance acceptance is not permission to
 expand infrastructure or repeat unchanged experiments.
 
+### Bounded paired performance diagnostic
+
+Two valid protected-main samples missed the unchanged constrained simulation
+p95 budget on the same pinned browser: 11.3 ms at `b8d3b8d3` and 12.1 ms at
+`aec4259a`. That does not distinguish a pre-existing budget miss from a product
+regression. A current-only retry is therefore not an authorized experiment.
+
+The manual canary exposes an isolated `paired-performance` mode for exactly one
+discriminating run. It checks out explicit 40-character baseline and candidate
+commits into clean worktrees on one GitHub-hosted runner, builds each exact
+source, and alternates three constrained-only samples per side using pinned
+Chrome `152.0.7977.64`. Normal canary jobs are disabled in this mode. The
+reporter rejects missing samples or mismatched source, build, and browser
+identity and retains complete measurements plus raw stdout/stderr.
+
+The bounded comparison is `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`
+against repaired protected main `29ac61832daea599e5355cf2254cfb0c056cf616`.
+If all baseline samples pass and all candidate samples fail, a regression is
+plausible. If all samples on both sides fail, the miss predates the candidate.
+Mixed or straddling samples remain inconclusive and stop. A valid diagnostic
+report does not waive the 10 ms budget and is not VAP-6 acceptance.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair

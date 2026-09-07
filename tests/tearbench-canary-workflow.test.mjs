@@ -23,7 +23,7 @@ test("parallel canary is manual and non-required while Validate keeps plain brow
 
 test("parallel canary preserves bounded isolation, failure uploads, collision checks, and aggregate rejection", () => {
   assert.equal([...workflow.matchAll(/fail-fast: false/gu)].length, 2);
-  assert.match(workflow, /if: \$\{\{ always\(\) && !cancelled\(\) \}\}/u);
+  assert.match(workflow, /if: \$\{\{ always\(\) && !cancelled\(\) && inputs\.mode != 'paired-performance' \}\}/u);
   assert.match(workflow, /tearbench-canary-compose\.mjs/u);
   assert.match(workflow, /--plant-failure/u);
   assert.match(workflow, /tearbench:record-build-provider/u);
@@ -45,13 +45,28 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.match(workflow, /TEAR_PERF_BROWSER: pinned/u);
   assert.match(workflow, /TEAR_PERF_BROWSER_VERSION: "152\.0\.7977\.64"/u);
   assert.match(workflow, /TEAR_PERF_BROWSER_ARCHIVE_SHA256: 8b592f066af71f054aab2cc80fc26f73c775c6d44ebb99d16ade924b24756c2e/u);
-  assert.equal([...workflow.matchAll(/uses: \.\/\.github\/actions\/install-tear-performance-browser/gu)].length, 2,
-    "parallel performance and serial comparison must install the same pinned Chrome");
+  assert.equal([...workflow.matchAll(/uses: \.\/\.github\/actions\/install-tear-performance-browser/gu)].length, 3,
+    "parallel, serial and paired measurements must install the same pinned Chrome");
   assert.match(performanceBrowserAction,
     /https:\/\/storage\.googleapis\.com\/chrome-for-testing-public\/\$\{TEAR_PERF_BROWSER_VERSION\}\/linux64\/chrome-linux64\.zip/u);
   assert.match(performanceBrowserAction, /sha256sum --check --strict/u);
   assert.match(performanceBrowserAction, /TEAR_PERF_BROWSER_PATH=.*\$GITHUB_ENV/u);
   assert.match(aggregateJob, /steps\.aggregate-performance\.outcome == 'success'/u);
+});
+
+test("paired performance mode is isolated, exact-source bound, alternating, and artifact retaining", () => {
+  assert.match(workflow, /options: \[normal, planted-failure, paired-performance\]/u);
+  assert.match(workflow, /plan:\r?\n\s+if: \$\{\{ inputs\.mode != 'paired-performance' \}\}/u);
+  const paired = workflow.slice(workflow.indexOf("\n  paired-performance:"), workflow.indexOf("\n  certify-serial:"));
+  assert.match(paired, /if: \$\{\{ inputs\.mode == 'paired-performance' \}\}/u);
+  assert.match(paired, /\[\[ "\$BASELINE_REVISION" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
+  assert.match(paired, /git worktree add --detach "\$baseline" "\$BASELINE_REVISION"/u);
+  assert.match(paired, /git worktree add --detach "\$candidate" "\$CANDIDATE_REVISION"/u);
+  assert.equal([...paired.matchAll(/run_sample baseline/gu)].length, 3);
+  assert.equal([...paired.matchAll(/run_sample candidate/gu)].length, 3);
+  assert.match(paired, /TEAR_PERF_SCENARIO=constrained/u);
+  assert.match(paired, /tearbench-paired-performance-report\.mjs/u);
+  assert.match(paired, /tearbench-paired-performance-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/u);
 });
 
 test("parallel canary retries only the failed atomic task and records authorization", () => {
