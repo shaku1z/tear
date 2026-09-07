@@ -68,6 +68,11 @@ test("paired performance mode is isolated, exact-source bound, alternating, and 
   assert.match(paired, /TEAR_BUILD_GIT_SHA="\$CANDIDATE_REVISION" pnpm --dir "\$candidate" build:test:standalone/u);
   assert.equal([...paired.matchAll(/run_sample baseline/gu)].length, 3);
   assert.equal([...paired.matchAll(/run_sample candidate/gu)].length, 3);
+  assert.match(paired, /readFileSync\(process\.argv\[1\],"utf8"\)[\s\S]+?performanceBuild:[\s\S]+?sourceRevision:b\.sourceRevision/u);
+  assert.match(paired, /TEAR_PERF_BUILD_IDENTITY_EMITTED=1 TEAR_PERF_SCENARIO=constrained/u);
+  assert.match(paired, />> "\$samples\/\$side-\$index\.stdout"/u);
+  assert.match(browserPerformance,
+    /if \(process\.env\.TEAR_PERF_BUILD_IDENTITY_EMITTED !== "1"\) console\.log\(JSON\.stringify\(\{ performanceBuild \}\)\)/u);
   assert.match(paired, /TEAR_PERF_SCENARIO=constrained/u);
   assert.ok(browserPerformance.indexOf("JSON.stringify({ performanceBuild })")
     < browserPerformance.indexOf("JSON.stringify({ browserRuntime })"),

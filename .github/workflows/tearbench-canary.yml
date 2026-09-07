@@ -482,10 +482,12 @@ jobs:
           samples="$RUNNER_TEMP/vap6-paired-samples"
           run_sample() {
             side="$1"; workspace="$2"; index="$3"; port="$4"
+            node -e 'const b=JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")); console.log(JSON.stringify({performanceBuild:{sourceRevision:b.sourceRevision,sourceFingerprint:b.sourceFingerprint,artifactHash:b.artifactHash,buildIdentityDigest:b.buildIdentityDigest}}))' \
+              "$samples/$side-build-info.json" > "$samples/$side-$index.stdout"
             set +e
-            (cd "$workspace" && TEAR_PERF_SCENARIO=constrained TEAR_PERF_PORT="$port" \
+            (cd "$workspace" && TEAR_PERF_BUILD_IDENTITY_EMITTED=1 TEAR_PERF_SCENARIO=constrained TEAR_PERF_PORT="$port" \
               xvfb-run -a node tests/browser-performance.js) \
-              > "$samples/$side-$index.stdout" 2> "$samples/$side-$index.stderr"
+              >> "$samples/$side-$index.stdout" 2> "$samples/$side-$index.stderr"
             status=$?
             set -e
             printf '%s\n' "$status" > "$samples/$side-$index.status"

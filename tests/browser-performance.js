@@ -562,7 +562,7 @@ async function repeatedRunScenario(browser, pageErrors) {
     };
     // Emit the build identity before any scenario assertion so every failing
     // measurement remains bound to the exact detached build under test.
-    console.log(JSON.stringify({ performanceBuild }));
+    if (process.env.TEAR_PERF_BUILD_IDENTITY_EMITTED !== "1") console.log(JSON.stringify({ performanceBuild }));
     // Emit the runtime identity before any scenario assertion so failed attempt
     // receipts remain attributable to the exact browser under measurement.
     console.log(JSON.stringify({ browserRuntime }));

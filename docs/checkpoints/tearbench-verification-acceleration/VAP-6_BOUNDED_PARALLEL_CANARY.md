@@ -162,6 +162,11 @@ Each detached build explicitly overrides the workflow checkout SHA with its
 requested revision. Every sample emits source revision, source fingerprint,
 artifact hash and build-identity digest before any budget assertion, and the
 reporter requires all four fields to match that side's validated build record.
+The workflow seeds this identity from the copied build record before invoking
+the detached benchmark, so historical revisions that predate benchmark-side
+identity logging remain attributable; current revisions suppress only the
+duplicate line in paired mode. Ordinary performance runs still emit the same
+identity directly.
 Workflow concurrency includes the selected mode, so the one paired diagnostic
 cannot cancel a normal or planted-failure canary on the same ref.
 
