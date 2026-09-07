@@ -20,10 +20,13 @@ Use Tear's existing `package.json`, tests, scripts, and CI as the authority. Orc
 
 This skill owns skill-level gate coordination, not certification authority.
 Specialists hand off their claims, evidence and gaps using the shared reference;
-they do not independently launch the final full gate. Reuse requires the existing
-TearBench verifier to establish the exact identity and coverage. Until a supported
-status/reuse command is available, inspect existing canonical artifacts and report
-the missing capability; do not invent a scheduler, certificate, or reuse decision.
+they do not independently launch the final full gate. Use `client-status` to inspect
+the bound mission, then `ensure-client-task` for its missing registered task IDs,
+as described in the shared reference. A reused task stops duplicate execution;
+failed, stale, unsupported or occupied-lease results require resolution, not an
+automatic retry. Keep unregistered obligations explicit. Only this skill
+coordinates the final full gate; neither a client handoff nor a local receipt
+is a protected certificate.
 
 ## Boundaries
 

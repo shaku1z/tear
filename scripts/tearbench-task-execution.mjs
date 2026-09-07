@@ -10,6 +10,7 @@ import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 import { shadowTaskDefinitionDigest, shadowTaskRegistryDigest } from "./tearbench-shadow-plan.mjs";
 import { executionEnvironmentBinding, executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
 import { missionTaskResourceKey, taskResourceKeys, withResourceLeases } from "./tearbench-resource-leases.mjs";
+import { assessClientMissionContext, validateClientAssignments } from "./tearbench-client-mission.mjs";
 import { assessPlanTaskReceipts, canonicalJson, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256 } from "./tearbench-task-receipts.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -40,7 +41,7 @@ function originFromEnvironment() {
     workflow: process.env.GITHUB_WORKFLOW ?? "", runId: process.env.GITHUB_RUN_ID ?? "",
     job: process.env.GITHUB_JOB ?? "", attempt: Number(process.env.GITHUB_RUN_ATTEMPT ?? "0") });
 }
-function executeTask(task, spawnTask) {
+function executeTask(task, spawnTask, emitTaskOutput = true) {
   const runner = task.runner;
   const executable = runner.kind === "node" && runner.executable === "node" ? process.execPath : process.execPath;
   const args = runner.kind === "node" && runner.executable === "node"
@@ -48,7 +49,7 @@ function executeTask(task, spawnTask) {
   const result = spawnTask(executable, args, { cwd: root, encoding: "utf8", maxBuffer: 50 * 1024 * 1024,
     env: { ...process.env, TEARBENCH_TASK_ID: task.taskId,
       ...(task.dependencies.some((entry) => entry.outputId === "build-artifact") ? { TEARBENCH_REUSE_VERIFIED_BUILDS: "1" } : {}) } });
-  process.stdout.write(result.stdout ?? ""); process.stderr.write(result.stderr ?? "");
+  if (emitTaskOutput) { process.stdout.write(result.stdout ?? ""); process.stderr.write(result.stderr ?? ""); }
   return result;
 }
 async function workspacePath(stored) {
@@ -169,31 +170,114 @@ export async function executePlanTask({ planPath, taskId, missionId, attemptNumb
   }));
 }
 
-export async function ensurePlanTask({ planPath, taskId, missionId }) {
+export async function ensurePlanTask({ planPath, taskId, missionId, clientPath }) {
   const task = registry.tasks.find((entry) => entry.taskId === taskId);
   if (task === undefined) throw new RangeError(`unknown registered task ${taskId}`);
   const keys = [...taskResourceKeys(task), missionTaskResourceKey(await realpath(root), missionId, taskId)];
   return await withResourceLeases(keys, async (spawnTask) => {
+    const client = clientPath === undefined ? null : await readClientRequest({ planPath, clientPath });
+    if (client !== null) {
+      if (client.mission.missionId !== missionId || !client.mission.requiredTaskIds.includes(taskId)) {
+        throw new Error("client task is outside its mission assignment");
+      }
+      if (client.context.status !== "current") throw new Error(`client stopped: ${client.context.reasons.join("; ")}`);
+      if (taskResourceKeys(task).some((key) => !client.mission.resourceLeases.includes(key))) {
+        throw new Error("client stopped: unowned-lease");
+      }
+    }
     const { status, receipts, inputSnapshots } = await inspectCurrentMission({ planPath, missionId });
+    const clientSnapshots = client?.snapshots ?? [];
+    const clientErrors = await changedEvidenceInputs(clientSnapshots);
+    if (clientErrors.length > 0) throw new Error(clientErrors.join("; "));
     const assessment = status.taskStatuses.find((entry) => entry.taskId === taskId);
     if (assessment === undefined) throw new RangeError(`plan does not require task ${taskId}`);
     if (assessment.status === "missing") {
-      const executed = await executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber: 1, spawnTask });
+      const executed = await executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber: 1, spawnTask,
+        emitTaskOutput: client === null, beforeExecute: client === null ? undefined : async () => {
+          const current = await readClientRequest({ planPath, clientPath });
+          const errors = await changedEvidenceInputs(clientSnapshots);
+          if (current.context.status !== "current" || errors.length > 0) {
+            throw new Error(`client stopped before execution: ${[...current.context.reasons, ...errors].join("; ")}`);
+          }
+        } });
+      if (client !== null) {
+        const after = await readClientRequest({ planPath, clientPath });
+        const errors = await changedEvidenceInputs(clientSnapshots);
+        if (after.context.status !== "current" || errors.length > 0) {
+          throw new Error(`client result stale: ${[...after.context.reasons, ...errors].join("; ")}`);
+        }
+      }
       return { ...executed, disposition: "executed" };
     }
     if (assessment.status !== "valid") {
       throw new Error(`task ${taskId} is ${assessment.status}; stop and resolve evidence before another attempt: ${assessment.reasons.join("; ")}`);
     }
     const receipt = receipts.filter((entry) => entry.task.taskId === taskId).sort((a, b) => a.attemptNumber - b.attemptNumber).at(-1);
-    const inputErrors = await changedEvidenceInputs(inputSnapshots);
+    const inputErrors = await changedEvidenceInputs([...inputSnapshots, ...clientSnapshots]);
     if (inputErrors.length > 0) throw new Error(inputErrors.join("; "));
+    if (client !== null) {
+      const after = await readClientRequest({ planPath, clientPath });
+      if (after.context.status !== "current") throw new Error(`client stopped: ${after.context.reasons.join("; ")}`);
+      const errors = await changedEvidenceInputs(clientSnapshots);
+      if (errors.length > 0) throw new Error(errors.join("; "));
+    }
     const snapshot = inputSnapshots.find((entry) => entry.stored === receipt.immutablePath);
     return Object.freeze({ receipt, receiptJson: snapshot.bytes.toString("utf8"),
       path: resolve(root, receipt.immutablePath), disposition: "reused" });
   });
 }
 
-async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId, spawnTask }) {
+async function readClientRequest({ planPath, clientPath }) {
+  const snapshots = [];
+  for (const [path, label] of [[planPath, "client plan"], [clientPath, "client mission"]]) {
+    const input = await workspaceInput(path, label);
+    snapshots.push({ ...input, bytes: await readFile(input.absolute) });
+  }
+  const plan = JSON.parse(snapshots[0].bytes.toString("utf8"));
+  const mission = JSON.parse(snapshots[1].bytes.toString("utf8"));
+  const gitValue = (args) => {
+    const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+    if (result.status !== 0) throw new Error("unable to resolve client repository identity");
+    return result.stdout.trim();
+  };
+  const context = assessClientMissionContext(mission, plan, {
+    repository: gitValue(["remote", "get-url", "origin"]),
+    branch: gitValue(["branch", "--show-current"]) || null, worktree: (await realpath(root)).replaceAll("\\", "/"),
+    source: sourceIdentity(), now: new Date().toISOString(),
+  });
+  return { mission, plan, context, snapshots };
+}
+
+export async function inspectClientMission({ planPath, clientPath }) {
+  const client = await readClientRequest({ planPath, clientPath });
+  const status = await inspectPlanMission({ planPath, missionId: client.mission.missionId });
+  const after = await readClientRequest({ planPath, clientPath });
+  const errors = [...client.context.reasons, ...after.context.reasons, ...await changedEvidenceInputs(client.snapshots)];
+  return { format: "tearbench-client-handoff", protocolVersion: 1,
+    mission: client.mission, context: { status: errors.length === 0 ? "current" : "stale", reasons: [...new Set(errors)] },
+    evidence: status, canonicalReleaseAuthority: false };
+}
+
+export async function ensureClientTask({ planPath, clientPath, taskId }) {
+  // Only derive the lease key here. Validate the complete request under that
+  // lease, avoiding a redundant whole-source scan before acquiring it.
+  const input = await workspaceInput(clientPath, "client mission");
+  const { missionId } = JSON.parse(await readFile(input.absolute, "utf8"));
+  return ensurePlanTask({ planPath, clientPath, taskId, missionId });
+}
+
+export async function inspectClientAssignments({ planPath, coordinatorPath, clientPaths, availableChildren }) {
+  const coordinator = await readClientRequest({ planPath, clientPath: coordinatorPath });
+  const clients = [];
+  for (const clientPath of clientPaths) clients.push(await readClientRequest({ planPath, clientPath }));
+  const errors = [...coordinator.context.reasons, ...clients.flatMap((client) => client.context.reasons),
+    ...await changedEvidenceInputs([...coordinator.snapshots, ...clients.flatMap((client) => client.snapshots)])];
+  if (errors.length > 0) throw new Error(`client assignment stopped: ${[...new Set(errors)].join("; ")}`);
+  return validateClientAssignments({ coordinator: coordinator.mission, clients: clients.map((client) => client.mission),
+    plan: coordinator.plan, availableChildren });
+}
+
+async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId, spawnTask, emitTaskOutput = true, beforeExecute }) {
   const planInput = await workspaceInput(planPath, "task plan");
   const plan = JSON.parse(await readFile(planInput.absolute, "utf8"));
   const task = registry.tasks.find((entry) => entry.taskId === taskId);
@@ -227,10 +311,11 @@ async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumbe
     if (previous.stored !== `artifacts/tearbench/missions/${missionId}/${taskId}/${matches[0]}`) throw new TypeError("prior task attempt uses a symlink or alias");
     retryOf = JSON.parse(await readFile(previous.absolute, "utf8")).receiptDigest;
   }
+  await beforeExecute?.();
   const startedAt = new Date().toISOString();
   const result = plantedFailureTaskId === taskId
     ? { status: 97, stdout: "", stderr: `VAP-6 planted canary failure: ${taskId}\n` }
-    : executeTask(task, spawnTask);
+    : executeTask(task, spawnTask, emitTaskOutput);
   const finishedAt = new Date().toISOString();
   const after = sourceIdentity();
   if (canonicalJson(before) !== canonicalJson(after)) throw new Error(`task ${taskId} changed its source identity`);
@@ -391,6 +476,21 @@ if (invoked === fileURLToPath(import.meta.url)) {
     console.log(`receipt: ${result.path}`);
     console.log(`plan-digest: ${result.receipt.plan.digest}\nreceipt-digest: ${result.receipt.receiptDigest}`);
     if (result.receipt.result.status !== "passed") process.exitCode = result.receipt.result.exitCode;
+  } else if (action === "validate-client-assignments") {
+    const usage = "usage: node scripts/tearbench-task-execution.mjs validate-client-assignments --plan path --coordinator path --clients path,path --available-children number";
+    const values = strictOptions(process.argv.slice(3), ["--plan", "--coordinator", "--clients", "--available-children"], usage);
+    console.log(JSON.stringify(await inspectClientAssignments({ planPath: values["--plan"], coordinatorPath: values["--coordinator"],
+      clientPaths: values["--clients"].split(","), availableChildren: Number(values["--available-children"]) }), null, 2));
+  } else if (action === "client-status") {
+    const usage = "usage: node scripts/tearbench-task-execution.mjs client-status --plan path --client path";
+    const values = strictOptions(process.argv.slice(3), ["--plan", "--client"], usage);
+    console.log(JSON.stringify(await inspectClientMission({ planPath: values["--plan"], clientPath: values["--client"] }), null, 2));
+  } else if (action === "ensure-client-task") {
+    const usage = "usage: node scripts/tearbench-task-execution.mjs ensure-client-task --plan path --client path --task id";
+    const values = strictOptions(process.argv.slice(3), ["--plan", "--client", "--task"], usage);
+    const result = await ensureClientTask({ planPath: values["--plan"], clientPath: values["--client"], taskId: values["--task"] });
+    console.log(JSON.stringify({ disposition: result.disposition, receipt: result.receipt, canonicalReleaseAuthority: false }, null, 2));
+    if (result.receipt.result.status !== "passed") process.exitCode = result.receipt.result.exitCode;
   } else if (action === "status") {
     const usage = "usage: node scripts/tearbench-task-execution.mjs status --plan path --mission id";
     const values = strictOptions(process.argv.slice(3), ["--plan", "--mission"], usage);
@@ -402,5 +502,5 @@ if (invoked === fileURLToPath(import.meta.url)) {
     const result = await certifyPlanMission({ planPath: values["--plan"], receiptPaths: receipts, artifactPath: values["--artifact"] });
     console.log(`${result.certificate.status.toUpperCase()} ${result.certificate.planDigest}`); console.log(`certificate: ${result.path}`);
     if (result.certificate.status !== "certified") process.exitCode = 1;
-  } else throw new TypeError("usage: node scripts/tearbench-task-execution.mjs <run-task|ensure-task|status|certify> ...");
+  } else throw new TypeError("usage: node scripts/tearbench-task-execution.mjs <run-task|ensure-task|status|client-status|ensure-client-task|validate-client-assignments|certify> ...");
 }

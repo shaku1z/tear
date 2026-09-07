@@ -3,6 +3,22 @@
   "definitionPolicyVersion": 2,
   "tasks": [
     {
+      "taskId": "unit.tearbench-evidence-clients",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": ["--test", "--test-concurrency=1", "tests/tearbench-client-mission.test.mjs", "tests/benchmark-tearbench-clients.test.mjs", "tests/tearbench-task-execution.test.mjs", "tests/tearbench-task-receipts.test.mjs"]
+      },
+      "claimIds": ["unit", "evidence-client-contract"],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 600000,
+      "intentionalReplica": "none"
+    },
+    {
       "taskId": "unit.tearbench-resource-leases",
       "version": 1,
       "runner": {
@@ -3660,6 +3676,7 @@
   ],
   "profiles": {
     "check.functional": [
+      "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "static.requirements-check",
       "static.check-docs",
@@ -3745,6 +3762,7 @@
       "browser.test-browser-performance"
     ],
     "check": [
+      "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "static.requirements-check",
       "static.check-docs",
@@ -3828,6 +3846,7 @@
       "browser.test-browser-performance"
     ],
     "release": [
+      "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "static.requirements-check",
       "static.check-docs",
@@ -3924,6 +3943,7 @@
       "unit.test-parity-unit"
     ],
     "pull-request": [
+      "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "unit.release-preflight-negative",
       "unit.test-game-reference-artifact",
@@ -4007,6 +4027,7 @@
       "browser.test-pwa"
     ],
     "protected-main": [
+      "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "unit.release-preflight-negative",
       "unit.test-game-reference-artifact",

@@ -36,6 +36,18 @@ describe("TearBench atomic task registry", () => {
     expect(packageSource.scripts.check).toBe("pnpm tearbench tasks run-profile check");
   });
 
+  it("requires executable evidence-client and receipt regressions in every protected functional profile", () => {
+    const value = canonical();
+    for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {
+      expect(value.profiles[profile]?.filter((id) => id === "unit.tearbench-evidence-clients")).toHaveLength(1);
+    }
+    expect(requiredTask("unit.tearbench-evidence-clients").runner.args).toEqual([
+      "--test", "--test-concurrency=1", "tests/tearbench-client-mission.test.mjs", "tests/benchmark-tearbench-clients.test.mjs",
+      "tests/tearbench-task-execution.test.mjs", "tests/tearbench-task-receipts.test.mjs",
+    ]);
+    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
+  });
+
   it("rejects duplicate IDs, unknown dependencies, cycles, and missing outputs", () => {
     const first = firstTask();
     expect(() => validateTaskRegistry({ ...registrySource, tasks: [...registrySource.tasks, first] })).toThrow(/task IDs must be unique/u);
