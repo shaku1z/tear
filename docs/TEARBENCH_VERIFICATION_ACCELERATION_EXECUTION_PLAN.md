@@ -441,8 +441,11 @@ PR #72 integrated the lease/client corrections. The local completed-provider
 measurement correction distinguishes dependency wait from dispatch wait and
 counts full job intervals and certifier decisions; see the
 [VAP-6 checkpoint](checkpoints/tearbench-verification-acceleration/VAP-6_BOUNDED_PARALLEL_CANARY.md).
-No additional performance run or required-gate cutover is authorized by those
-diagnostic measurements, and robust accepted p50/p95 evidence remains absent.
+Bounded paired run `34169267567` subsequently established that the constrained
+simulation miss predates the candidate: all three baseline and all three
+candidate samples exceeded the unchanged 10 ms budget. It is diagnostic rather
+than qualification, and robust accepted p50/p95 evidence remains absent. No
+required-gate cutover is authorized by these measurements.
 
 ## 16. VAP-7 — Cut over one stable required gate
 

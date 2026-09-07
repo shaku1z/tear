@@ -39,7 +39,7 @@ function validateBuild(build, revision, side) {
     configurationDigest: build.configuration?.digest };
 }
 
-function readSample(directory, side, index, browserBinding, expectedBuild) {
+function readSample(directory, side, index, browserBinding, expectedBuild, budgetMs) {
   const prefix = resolve(directory, `${side}-${index}`);
   const stdout = readFileSync(`${prefix}.stdout`, "utf8"), stderr = readFileSync(`${prefix}.stderr`, "utf8");
   const exitCode = Number(readFileSync(`${prefix}.status`, "utf8").trim());
@@ -64,8 +64,11 @@ function readSample(directory, side, index, browserBinding, expectedBuild) {
     ["simulation p95", measured.simulation?.p95Ms], ["render p95", measured.render?.p95Ms],
     ["frame p95", measured.frame?.p95Ms], ["frame interval p99", measured.frameInterval?.p99Ms],
   ]) if (typeof value !== "number" || !Number.isFinite(value)) throw new TypeError(`${side} sample ${index} ${label} is invalid`);
-  if (exitCode !== 0 && (!stderr.includes(`AssertionError`) || !stderr.includes(`${scenario} `)
-    || !stderr.includes("exceeded budget"))) throw new TypeError(`${side} sample ${index} failed outside a measured budget assertion`);
+  const diagnosticOutput = `${stdout}\n${stderr}`;
+  const expectedBudgetAssertion = `${scenario} simulation p95 ms: ${measured.simulation.p95Ms} exceeded budget ${budgetMs}`;
+  if (exitCode !== 0 && (!diagnosticOutput.includes("AssertionError") || !diagnosticOutput.includes(expectedBudgetAssertion))) {
+    throw new TypeError(`${side} sample ${index} failed outside its measured simulation budget assertion`);
+  }
   return { index, exitCode, simulationP95Ms: measured.simulation.p95Ms, renderP95Ms: measured.render.p95Ms,
     frameP95Ms: measured.frame.p95Ms, frameIntervalP99Ms: measured.frameInterval.p99Ms,
     measurements: measured };
@@ -92,7 +95,7 @@ export function createPairedPerformanceReport({ directory, baselineRevision, can
   const budgetMs = budgets.constrainedGameplay.simulationP95Ms;
   const results = Object.fromEntries(["baseline", "candidate"].map((side) => [side,
     summarize(Array.from({ length: sampleCount }, (_, offset) => readSample(
-      directory, side, offset + 1, browser, build[side])), budgetMs)]));
+      directory, side, offset + 1, browser, build[side], budgetMs)), budgetMs)]));
   const outcome = results.baseline.allWithinBudget && results.candidate.allWithinBudget ? "both-within-budget"
     : results.baseline.allWithinBudget && results.candidate.allExceedBudget ? "candidate-regression-plausible"
       : results.baseline.allExceedBudget && results.candidate.allExceedBudget ? "pre-existing-budget-miss"
