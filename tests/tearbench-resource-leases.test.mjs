@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { relative, resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
-import { URL } from "node:url";
+import { pathToFileURL, URL } from "node:url";
 import { taskResourceKeys, withResourceLeases } from "../scripts/tearbench-resource-leases.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -57,6 +57,33 @@ async function writeGraveyardLeaseFixture(directory, replayRun) {
     await writeFile(path, JSON.stringify(registry));
     return path;
   } finally { await server.close(); }
+}
+
+async function writeCurrentWeaponParityCacheFixture(path) {
+  const previousArgv = process.argv, previousLog = globalThis.console.log;
+  process.argv = [process.execPath, resolve(root, "scripts", "tearbench.mjs"), "lease-test-import"];
+  globalThis.console.log = () => undefined;
+  let currentWeaponParitySelection;
+  try {
+    ({ currentWeaponParitySelection } = await import(pathToFileURL(resolve(root, "scripts", "tearbench.mjs")).href));
+  } finally {
+    globalThis.console.log = previousLog;
+    process.argv = previousArgv;
+  }
+  const selection = currentWeaponParitySelection();
+  const build = { target: "standalone", sha: selection.source.revision,
+    sourceRevision: selection.source.revision, sourceState: selection.source.state,
+    sourceFingerprint: selection.source.fingerprint };
+  const executions = selection.scenarios.map((id) => ({
+    id, status: "passed", command: selection.evidenceCommands.find((entry) => entry.id === id).command,
+    build, receipts: [{ kind: "node", status: "passed", source: selection.source, build }],
+  }));
+  await mkdir(resolve(path, ".."), { recursive: true });
+  await writeFile(path, `${JSON.stringify({
+    format: "tearbench-diff-capability", schemaVersion: 2, kind: "last-run-diff", cumulative: false,
+    status: "passed", source: selection.source, scope: selection.scope, scopeDigest: selection.scopeDigest,
+    routeDefinitionDigest: selection.routeDefinitionDigest, executions,
+  }, null, 2)}\n`);
 }
 
 test("build consumers reserve the same resource as producers without changing task identity", () => {
@@ -257,6 +284,11 @@ test("independent child processes in different workspaces cannot overlap", async
 test("planned-task, profile, selected-parity and live-run CLIs reject a held build lease before execution", async () => fixture(async (directory) => {
   const cliTimeout = 30000;
   const env = { ...process.env, TMPDIR: directory, TMP: directory, TEMP: directory };
+  const parityCache = resolve(root, "artifacts", "tearbench", "generated", "diff-capability.json");
+  let priorParityCache;
+  try { priorParityCache = await readFile(parityCache); }
+  catch (error) { if (error.code !== "ENOENT") throw error; }
+  await writeCurrentWeaponParityCacheFixture(parityCache);
   const moduleUrl = new URL("../scripts/tearbench-resource-leases.mjs", import.meta.url).href;
   const holder = spawn(process.execPath, ["--input-type=module", "-e", `
     import { withResourceLeases } from ${JSON.stringify(moduleUrl)};
@@ -280,7 +312,7 @@ test("planned-task, profile, selected-parity and live-run CLIs reject a held bui
       ["scripts/tearbench-task-execution.mjs", "run-task", "--plan", resolve(directory, "absent-plan.json"),
         "--task", "build.standalone", "--mission", "lease-negative", "--attempt", "1"],
       ["scripts/tearbench.mjs", "tasks", "run-profile", "deploy.dry-run"],
-      ["scripts/tearbench.mjs", "parity", "current-weapons"],
+      ["scripts/tearbench.mjs", "parity", "current-weapons", "--artifact", resolve(directory, "current-weapons.json")],
       ["scripts/tearbench.mjs", "run", "pale-aurora-track-behavior"],
       ["scripts/tearbench.mjs", "minimize"],
       ["scripts/tearbench.mjs", "bisect"],
@@ -314,5 +346,7 @@ test("planned-task, profile, selected-parity and live-run CLIs reject a held bui
   } finally {
     holder.stdin.end("release");
     assert.equal(await done, 0, stderr);
+    if (priorParityCache === undefined) await rm(parityCache, { force: true });
+    else await writeFile(parityCache, priorParityCache);
   }
 }));

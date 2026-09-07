@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
+import { URL } from "node:url";
 import { createCanaryShardPlan } from "../scripts/tearbench-canary-plan.mjs";
 import { createCanaryParityReport, createCanaryProviderMetrics } from "../scripts/tearbench-canary-report.mjs";
 import { receiptSha256 } from "../scripts/tearbench-task-receipts.mjs";
@@ -156,6 +157,26 @@ test("canary packing rejects altered plans, unsupported classes, and missing dur
   delete payload.planDigest; payload.planDigest = receiptSha256(payload);
   assert.throws(() => createCanaryShardPlan({ plan: payload, durationHistory: history }), /unsupported task classes/u);
   assert.throws(() => createCanaryShardPlan({ plan: fixture(), durationHistory: { ...history, fallbackMs: {} } }), /no valid estimate/u);
+});
+
+test("canonical live TearBench tasks pack only onto browser shards after the shared build", async () => {
+  const registry = JSON.parse(await readFile(new URL("../src/tearbench/task-registry.json", import.meta.url), "utf8"));
+  const liveTasks = registry.tasks.filter((task) => task.runner.kind === "tearbench" && task.runner.args[0] === "run");
+  assert.ok(liveTasks.length > 0);
+  const taskNodes = registry.tasks.filter((task) => liveTasks.includes(task)
+    || task.taskId === "build.test-standalone" || task.taskId === "browser.test-browser-performance");
+  const payload = { format: "tearbench-shadow-plan", schemaVersion: 1, profileId: "release",
+    source: { revision: "a".repeat(40) }, requiredTaskIds: taskNodes.map((task) => task.taskId), taskNodes };
+  const plan = { ...payload, planDigest: receiptSha256(payload) };
+  const packed = createCanaryShardPlan({ plan, durationHistory: history, browserShardCount: 4, coreShardCount: 2 });
+  const browserIds = packed.browserShards.flatMap((shard) => shard.taskIds);
+  const coreIds = packed.coreShards.flatMap((shard) => shard.taskIds);
+  for (const task of liveTasks) {
+    assert.equal(browserIds.filter((id) => id === task.taskId).length, 1, task.taskId);
+    assert.ok(!coreIds.includes(task.taskId), task.taskId);
+    assert.ok(packed.serialShard.taskIds.indexOf("build.test-standalone") < packed.serialShard.taskIds.indexOf(task.taskId));
+    assert.deepEqual(task.dependencies, [{ taskId: "build.test-standalone", outputId: "build-artifact" }]);
+  }
 });
 
 function providerFixture() {

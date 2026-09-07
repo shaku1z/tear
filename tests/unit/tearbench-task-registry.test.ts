@@ -16,6 +16,17 @@ function requiredTask(id: string) {
 }
 
 describe("TearBench atomic task registry", () => {
+  it("routes canonical live TearBench runs through browser ownership and the shared test build", () => {
+    const liveRuns = canonical().tasks.filter((task) => task.runner.kind === "tearbench" && task.runner.args[0] === "run");
+    expect(liveRuns.length).toBeGreaterThan(0);
+    for (const task of liveRuns) {
+      expect(task.resourceClass, task.taskId).toBe("browser");
+      expect(task.resourceKeys, task.taskId).toContain("resources/browser");
+      expect(task.dependencies, task.taskId).toContainEqual({ taskId: "build.test-standalone", outputId: "build-artifact" });
+      expect(task.claimIds, task.taskId).toContain("scenario-live");
+      expect(task.intentionalReplica, task.taskId).toBe("backend-live");
+    }
+  });
   it("runs canary parity, provider-clock and workflow contracts once per protected profile", () => {
     const value = canonical();
     for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {

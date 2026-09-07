@@ -146,6 +146,59 @@ expand infrastructure or repeat unchanged experiments.
 
 ## Completed-provider measurement contract
 
+### Resumed qualification: live task routing repair
+
+The owner authorized resuming bounded qualification on current protected main,
+without changing thresholds, provisioning infrastructure, or changing release
+authority. Normal canary `34160687282` uses source
+`aec4259aea0dfca41c1d6ba95c914fe2df8817f0`.
+
+Its ten `evidence.tearbench` live-run tasks failed at the launcher boundary in
+all four core shards: each was registered as static, with no browser resource
+or build dependency. The resulting receipts correctly recorded no applicable
+build binding. The direct CLI consequently attempted build materialization
+without the pinned package-manager entry. This is a registry contract defect,
+not permission to inject that entry and permit hidden builds.
+
+Repair contract: change those ten task definitions to browser resources and the
+shared `build.test-standalone:build-artifact` dependency, increment their task
+versions, and preserve IDs, commands, claims, intentional replicas and retry
+history. The existing executor then verifies the build and enables reuse while
+holding inherited browser/build leases. Prior plans and receipts are not reused
+across the changed definition digests. Scope is the registry, focused regression
+tests and this checkpoint; runtime behavior and release authority are unchanged.
+
+The canonical registry regression failed before repair (`static` rather than
+`browser`) and passed afterward. A planner regression checks one browser-shard
+owner per live task, no core-shard ownership, and the build preceding each live
+task in the serial comparison. Two representative repaired tasks then passed
+through the real executor in local mission `vap6-live-routing-canary-proof`.
+Both receipts bind browser resources and the same verified standalone build
+identity `c313161634ff1f2a3a04e3cc541c84e9741776ab78857e86397f539b519b290c`;
+their receipt digests are `a2edffaf88a776522b8b194aad5838a02d6fce932395a8e721a8ae1ba1062973`
+and `301e6e1333860c9d7a3b3bb92a75adafb2b6edb0e1e2f5553bffdb394f484868`.
+This proves the repaired launcher/build-binding path without executing a hidden
+rebuild. The structural tests cover all ten task definitions. These remain
+local repair proofs, not canary equivalence or VAP-6 acceptance.
+
+The same run finished `mismatched`. Its report contains all 122 required task
+IDs in both serial and parallel paths, but all ten live tasks failed in both
+paths at the launcher boundary. The parallel performance job separately failed
+constrained-gameplay simulation p95 at 12.1 ms against the unchanged 10 ms
+budget; the serial measurement failed at 11.6 ms. The serial path also failed
+the resource-lease unit task. All four ordinary browser shards passed. The
+report's observed parallel/serial in-task wall ratio is 0.541 and its browser
+shard balance ratio is 1.426, but failed task parity and rejected certificates
+make those diagnostic observations, not acceptance evidence.
+
+The serial-only lease failure was isolated to the `parity current-weapons`
+cache-hit branch. Exact-source `diff-capability.json` reuse returned before
+browser/build admission, so a cached result could pass while another process
+held the build lease. The parity command now acquires both leases before cache
+inspection; fresh evidence retains its existing per-step leases. A deterministic
+cache-hit fixture failed before this repair and the complete lease-exclusion test
+passed afterward. Cache reuse therefore no longer bypasses host admission.
+
 Run `34144556642` at `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`
 finished with all 98 required task IDs present in both paths, but performance,
 resource-lease and evidence-selection tasks failed in both paths. Its aggregate

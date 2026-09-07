@@ -2713,7 +2713,7 @@
     },
     {
       "taskId": "evidence.tearbench",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2725,9 +2725,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2735,7 +2742,7 @@
     },
     {
       "taskId": "evidence.tearbench.2",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2747,9 +2754,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2757,7 +2771,7 @@
     },
     {
       "taskId": "evidence.tearbench.3",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2769,9 +2783,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2779,7 +2800,7 @@
     },
     {
       "taskId": "evidence.tearbench.4",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2791,9 +2812,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2801,7 +2829,7 @@
     },
     {
       "taskId": "evidence.tearbench.5",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2813,9 +2841,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2823,7 +2858,7 @@
     },
     {
       "taskId": "evidence.tearbench.6",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2835,9 +2870,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2845,7 +2887,7 @@
     },
     {
       "taskId": "evidence.tearbench.7",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2857,9 +2899,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2867,7 +2916,7 @@
     },
     {
       "taskId": "evidence.tearbench.8",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2879,9 +2928,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2889,7 +2945,7 @@
     },
     {
       "taskId": "evidence.tearbench.9",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2901,9 +2957,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
@@ -2911,7 +2974,7 @@
     },
     {
       "taskId": "evidence.tearbench.10",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "tearbench",
         "executable": "scripts/tearbench.mjs",
@@ -2923,9 +2986,16 @@
       "claimIds": [
         "scenario-live"
       ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
+      "dependencies": [
+        {
+          "taskId": "build.test-standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
       "outputs": [],
       "timeoutMs": 120000,
       "intentionalReplica": "backend-live",
