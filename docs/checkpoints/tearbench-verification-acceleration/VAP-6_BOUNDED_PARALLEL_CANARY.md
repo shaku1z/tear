@@ -171,13 +171,25 @@ tests and this checkpoint; runtime behavior and release authority are unchanged.
 The canonical registry regression failed before repair (`static` rather than
 `browser`) and passed afterward. A planner regression checks one browser-shard
 owner per live task, no core-shard ownership, and the build preceding each live
-task in the serial comparison. These are local development proofs, not canary
-equivalence or VAP-6 acceptance.
+task in the serial comparison. Two representative repaired tasks then passed
+through the real executor in local mission `vap6-live-routing-canary-proof`.
+Both receipts bind browser resources and the same verified standalone build
+identity `c313161634ff1f2a3a04e3cc541c84e9741776ab78857e86397f539b519b290c`;
+their receipt digests are `a2edffaf88a776522b8b194aad5838a02d6fce932395a8e721a8ae1ba1062973`
+and `301e6e1333860c9d7a3b3bb92a75adafb2b6edb0e1e2f5553bffdb394f484868`.
+This proves the repaired launcher/build-binding path without executing a hidden
+rebuild. The structural tests cover all ten task definitions. These remain
+local repair proofs, not canary equivalence or VAP-6 acceptance.
 
-The same run's parallel performance job separately failed constrained-gameplay
-simulation p95 at 12.1 ms against the unchanged 10 ms budget. All four ordinary
-browser shards passed. The serial comparison and aggregate were still pending
-when this repair was prepared; no final outcome or timing acceptance is inferred.
+The same run finished `mismatched`. Its report contains all 122 required task
+IDs in both serial and parallel paths, but all ten live tasks failed in both
+paths at the launcher boundary. The parallel performance job separately failed
+constrained-gameplay simulation p95 at 12.1 ms against the unchanged 10 ms
+budget; the serial measurement failed at 11.6 ms. The serial path also failed
+the resource-lease unit task. All four ordinary browser shards passed. The
+report's observed parallel/serial in-task wall ratio is 0.541 and its browser
+shard balance ratio is 1.426, but failed task parity and rejected certificates
+make those diagnostic observations, not acceptance evidence.
 
 Run `34144556642` at `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`
 finished with all 98 required task IDs present in both paths, but performance,
