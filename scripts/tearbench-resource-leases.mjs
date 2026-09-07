@@ -68,6 +68,15 @@ export function taskResourceKeys(task) {
   ])].sort();
 }
 
+export function missionTaskResourceKey(canonicalWorkspace, missionId, taskId) {
+  for (const [label, value] of [["mission", missionId], ["task", taskId]]) {
+    if (typeof value !== "string" || !/^[a-z0-9][a-z0-9._-]*$/u.test(value)) throw new TypeError(`${label} ID must be a safe stable ID`);
+  }
+  const workspace = resolve(canonicalWorkspace).replaceAll("\\", "/");
+  const identity = [process.platform === "win32" ? workspace.toLowerCase() : workspace, missionId, taskId];
+  return `task-execution/${createHash("sha256").update(JSON.stringify(identity)).digest("hex")}`;
+}
+
 // Cooperative host/user-scoped exclusion, not evidence or release authority.
 // A crashed holder is never silently stolen: its retained lock requires review.
 export async function withResourceLeases(resourceKeys, callback, { directory = defaultDirectory } = {}) {

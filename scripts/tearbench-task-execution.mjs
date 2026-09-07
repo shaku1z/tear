@@ -9,7 +9,7 @@ import { calculateArtifactHash, readSourceIdentitySync } from "./release-artifac
 import { verifyContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 import { shadowTaskDefinitionDigest, shadowTaskRegistryDigest } from "./tearbench-shadow-plan.mjs";
 import { executionEnvironmentBinding, executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
-import { taskResourceKeys, withResourceLeases } from "./tearbench-resource-leases.mjs";
+import { missionTaskResourceKey, taskResourceKeys, withResourceLeases } from "./tearbench-resource-leases.mjs";
 import { assessPlanTaskReceipts, canonicalJson, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256 } from "./tearbench-task-receipts.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -163,9 +163,34 @@ async function producedBuildAttestations(requirement, plan) {
 export async function executePlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId }) {
   const task = registry.tasks.find((entry) => entry.taskId === taskId);
   if (task === undefined) throw new RangeError(`unknown registered task ${taskId}`);
-  return await withResourceLeases(taskResourceKeys(task), (spawnTask) => executeLeasedPlanTask({
+  const keys = [...taskResourceKeys(task), missionTaskResourceKey(await realpath(root), missionId, taskId)];
+  return await withResourceLeases(keys, (spawnTask) => executeLeasedPlanTask({
     planPath, taskId, missionId, attemptNumber, plantedFailureTaskId, spawnTask,
   }));
+}
+
+export async function ensurePlanTask({ planPath, taskId, missionId }) {
+  const task = registry.tasks.find((entry) => entry.taskId === taskId);
+  if (task === undefined) throw new RangeError(`unknown registered task ${taskId}`);
+  const keys = [...taskResourceKeys(task), missionTaskResourceKey(await realpath(root), missionId, taskId)];
+  return await withResourceLeases(keys, async (spawnTask) => {
+    const { status, receipts, inputSnapshots } = await inspectCurrentMission({ planPath, missionId });
+    const assessment = status.taskStatuses.find((entry) => entry.taskId === taskId);
+    if (assessment === undefined) throw new RangeError(`plan does not require task ${taskId}`);
+    if (assessment.status === "missing") {
+      const executed = await executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber: 1, spawnTask });
+      return { ...executed, disposition: "executed" };
+    }
+    if (assessment.status !== "valid") {
+      throw new Error(`task ${taskId} is ${assessment.status}; stop and resolve evidence before another attempt: ${assessment.reasons.join("; ")}`);
+    }
+    const receipt = receipts.filter((entry) => entry.task.taskId === taskId).sort((a, b) => a.attemptNumber - b.attemptNumber).at(-1);
+    const inputErrors = await changedEvidenceInputs(inputSnapshots);
+    if (inputErrors.length > 0) throw new Error(inputErrors.join("; "));
+    const snapshot = inputSnapshots.find((entry) => entry.stored === receipt.immutablePath);
+    return Object.freeze({ receipt, receiptJson: snapshot.bytes.toString("utf8"),
+      path: resolve(root, receipt.immutablePath), disposition: "reused" });
+  });
 }
 
 async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId, spawnTask }) {
@@ -232,14 +257,18 @@ async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumbe
 
 async function collectPlanEvidence({ planPath, receiptPaths }) {
   const planInput = await workspaceInput(planPath, "certificate plan");
-  const plan = JSON.parse(await readFile(planInput.absolute, "utf8"));
-  const receipts = await Promise.all(receiptPaths.map(async (path) => {
+  const planBytes = await readFile(planInput.absolute);
+  const plan = JSON.parse(planBytes.toString("utf8"));
+  const receiptInputs = await Promise.all(receiptPaths.map(async (path) => {
     const input = await workspaceInput(path, "task attempt receipt");
     if (!input.stored.startsWith("artifacts/tearbench/missions/")) throw new TypeError("task attempt receipt is outside the immutable mission store");
-    const receipt = JSON.parse(await readFile(input.absolute, "utf8"));
+    const bytes = await readFile(input.absolute);
+    const receipt = JSON.parse(bytes.toString("utf8"));
     if (input.stored !== receipt.immutablePath) throw new TypeError("task attempt receipt path does not match its immutable identity");
-    return receipt;
+    return { receipt, snapshot: { ...input, bytes } };
   }));
+  const receipts = receiptInputs.map((entry) => entry.receipt);
+  const inputSnapshots = [{ ...planInput, bytes: planBytes }, ...receiptInputs.map((entry) => entry.snapshot)];
   const artifactBytes = {}, buildArtifactHashes = {};
   for (const receipt of receipts) for (const artifact of Array.isArray(receipt.artifacts) ? receipt.artifacts : []) {
     try { artifactBytes[artifact.path] = (await artifactDescriptor({ path: artifact.path, outputId: artifact.outputId })).bytes; }
@@ -256,12 +285,26 @@ async function collectPlanEvidence({ planPath, receiptPaths }) {
     }
     catch { /* The pure certifier reports a missing/altered build attestation. */ }
   }
-  return { plan, receipts, expectedOrigin: originFromEnvironment(), artifactBytes,
+  return { plan, receipts, inputSnapshots, expectedOrigin: originFromEnvironment(), artifactBytes,
     buildArtifactHashes, generatedAt: new Date().toISOString() };
 }
 
+async function changedEvidenceInputs(snapshots) {
+  const errors = [];
+  for (const snapshot of snapshots) {
+    try {
+      const current = await workspaceInput(snapshot.absolute, "evidence input snapshot");
+      if (!snapshot.bytes.equals(await readFile(current.absolute))) errors.push(`input changed during inspection: ${snapshot.stored}`);
+    } catch { errors.push(`input changed during inspection: ${snapshot.stored}`); }
+  }
+  return errors;
+}
+
 export async function certifyPlanMission({ planPath, receiptPaths, artifactPath }) {
-  const certificate = createPlanCertificate(await collectPlanEvidence({ planPath, receiptPaths }));
+  const evidence = await collectPlanEvidence({ planPath, receiptPaths });
+  const inputErrors = await changedEvidenceInputs(evidence.inputSnapshots);
+  if (inputErrors.length > 0) throw new Error(inputErrors.join("; "));
+  const certificate = createPlanCertificate(evidence);
   const output = await workspaceOutput(artifactPath, "artifacts/tearbench/generated/", "plan certificate");
   await writeFile(output.absolute, `${JSON.stringify(certificate, null, 2)}\n`, { flag: "wx" });
   return Object.freeze({ certificate, path: output.absolute });
@@ -286,6 +329,10 @@ async function missionReceiptPaths(missionId) {
 }
 
 export async function inspectPlanMission({ planPath, missionId }) {
+  return (await inspectCurrentMission({ planPath, missionId })).status;
+}
+
+async function inspectCurrentMission({ planPath, missionId }) {
   const before = sourceIdentity();
   const receiptPaths = await missionReceiptPaths(missionId);
   const evidence = await collectPlanEvidence({ planPath, receiptPaths });
@@ -294,7 +341,7 @@ export async function inspectPlanMission({ planPath, missionId }) {
   const assessment = assessPlanTaskReceipts(evidence);
   const currentRegistry = JSON.parse(await readFile(resolve(root, "src/tearbench/task-registry.json"), "utf8"));
   const currentPackage = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
-  const contextErrors = [];
+  const contextErrors = await changedEvidenceInputs(evidence.inputSnapshots);
   if (canonicalJson(before) !== canonicalJson(plan.source)) contextErrors.push("current source differs from the plan");
   if (shadowTaskRegistryDigest(currentRegistry) !== plan.taskRegistryDigest) contextErrors.push("current task registry differs from the plan");
   if (canonicalJson(receiptPaths) !== canonicalJson(await missionReceiptPaths(missionId))) {
@@ -317,12 +364,13 @@ export async function inspectPlanMission({ planPath, missionId }) {
   });
   const after = sourceIdentity();
   if (canonicalJson(before) !== canonicalJson(after)) contextErrors.push("source changed during inspection");
-  return Object.freeze({ format: "tearbench-mission-receipt-status", schemaVersion: 1, missionId,
+  const status = Object.freeze({ format: "tearbench-mission-receipt-status", schemaVersion: 1, missionId,
     planDigest: plan.planDigest, source: after, canonicalReleaseAuthority: false,
     taskStatuses: taskStatuses.map((entry) => contextErrors.length === 0 ? entry : {
       ...entry, status: entry.status === "unsupported" ? "unsupported" : "stale", reasons: [...entry.reasons, ...contextErrors],
     }), unsupported: assessment.unsupported, retryHistory: assessment.retryHistory,
     contextErrors, assessmentErrors: assessment.errors });
+  return { status, receipts, inputSnapshots: evidence.inputSnapshots };
 }
 
 const invoked = process.argv[1] === undefined ? "" : resolve(process.argv[1]);
@@ -335,6 +383,14 @@ if (invoked === fileURLToPath(import.meta.url)) {
       missionId: values["--mission"], attemptNumber: Number(values["--attempt"]) });
     console.log(`${result.receipt.result.status.toUpperCase()} ${result.receipt.attemptId}`); console.log(`receipt: ${result.path}`);
     if (result.receipt.result.status !== "passed") process.exitCode = result.receipt.result.exitCode;
+  } else if (action === "ensure-task") {
+    const usage = "usage: node scripts/tearbench-task-execution.mjs ensure-task --plan path --task id --mission id";
+    const values = strictOptions(process.argv.slice(3), ["--plan", "--task", "--mission"], usage);
+    const result = await ensurePlanTask({ planPath: values["--plan"], taskId: values["--task"], missionId: values["--mission"] });
+    console.log(`${result.disposition.toUpperCase()} ${result.receipt.result.status.toUpperCase()} ${result.receipt.attemptId}`);
+    console.log(`receipt: ${result.path}`);
+    console.log(`plan-digest: ${result.receipt.plan.digest}\nreceipt-digest: ${result.receipt.receiptDigest}`);
+    if (result.receipt.result.status !== "passed") process.exitCode = result.receipt.result.exitCode;
   } else if (action === "status") {
     const usage = "usage: node scripts/tearbench-task-execution.mjs status --plan path --mission id";
     const values = strictOptions(process.argv.slice(3), ["--plan", "--mission"], usage);
@@ -346,5 +402,5 @@ if (invoked === fileURLToPath(import.meta.url)) {
     const result = await certifyPlanMission({ planPath: values["--plan"], receiptPaths: receipts, artifactPath: values["--artifact"] });
     console.log(`${result.certificate.status.toUpperCase()} ${result.certificate.planDigest}`); console.log(`certificate: ${result.path}`);
     if (result.certificate.status !== "certified") process.exitCode = 1;
-  } else throw new TypeError("usage: node scripts/tearbench-task-execution.mjs <run-task|status|certify> ...");
+  } else throw new TypeError("usage: node scripts/tearbench-task-execution.mjs <run-task|ensure-task|status|certify> ...");
 }
