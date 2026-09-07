@@ -26,7 +26,7 @@ Use the repository CLI and canonical gates as the authority. Do not equate unrel
 5. For a single scenario, use `pnpm tearbench run <scenario-id> --seed <seed>`. Preserve its JSON artifact. Use `pnpm tearbench rerun --artifact <path>` before minimization or attribution.
 6. If behavior diverges, establish the first material tick, minimize only with repeated reproduction, retain the minimal child in the Graveyard, and report product, policy, infrastructure, or inconclusive ownership.
 7. If the change affects browser-visible behavior, run the selected journey and relevant browser/input/platform matrix. A headless or unit result cannot substitute for this.
-8. Before release-readiness claims, run `pnpm check` from the final intended worktree. Require the preservation corpus and release certificate inputs as well.
+8. Before release-readiness claims, hand off to `tear-change-gate` using its [evidence handoff](../tear-change-gate/references/evidence-handoff.md). The coordinator must establish the full `pnpm check` obligation for the final intended source, preservation corpus, and release certificate inputs. Do not independently repeat the final gate or treat gameplay-only evidence as release proof.
 
 Read [references/evidence-contract.md](references/evidence-contract.md) when interpreting selection fields, choosing observation classes, or writing the final report.
 

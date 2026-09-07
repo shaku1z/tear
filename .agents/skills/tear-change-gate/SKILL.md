@@ -14,7 +14,16 @@ Use Tear's existing `package.json`, tests, scripts, and CI as the authority. Orc
 3. Read [references/gate-routing.md](references/gate-routing.md) and run the smallest checks that can disprove the change during development.
 4. If a gate fails, read [references/failure-interpretation.md](references/failure-interpretation.md), identify the owning contract, and fix the product or test evidence rather than weakening the gate.
 5. Re-run the failed gate, then any directly downstream gate.
-6. Before claiming release readiness, require `pnpm check` from the final intended commit/worktree state.
+6. Before claiming release readiness, require the existing full release gate for the final intended source. Coordinate that gate once: inspect any supplied evidence using [evidence-handoff.md](references/evidence-handoff.md) before scheduling execution. A protected functional `check` alone is not a full release result. If qualifying evidence is absent or invalid, the full `pnpm check` obligation remains; report a blocker when it cannot safely run.
+
+## Evidence coordination
+
+This skill owns skill-level gate coordination, not certification authority.
+Specialists hand off their claims, evidence and gaps using the shared reference;
+they do not independently launch the final full gate. Reuse requires the existing
+TearBench verifier to establish the exact identity and coverage. Until a supported
+status/reuse command is available, inspect existing canonical artifacts and report
+the missing capability; do not invent a scheduler, certificate, or reuse decision.
 
 ## Boundaries
 

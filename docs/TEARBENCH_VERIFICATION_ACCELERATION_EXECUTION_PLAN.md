@@ -256,7 +256,7 @@ Record defect-repair, candidate certification, production approval, deploy, and 
 | VAP-5 | Build once and exact artifact fanout | VAP-4 | Complete locally; protected integration not claimed |
 | VAP-6 | Bounded parallel CI canary | VAP-5 | Local canary implementation complete; protected runs pending |
 | VAP-7 | Stable required-gate cutover | VAP-6 | Not started |
-| VAP-8 | TearSkills and Luna evidence protocol | VAP-4, VAP-7 | Not started |
+| VAP-8 | TearSkills and Luna evidence protocol | VAP-4, VAP-7 | Local client-guidance preparation only; VAP-7 dependency and executable protocol proof remain open |
 | VAP-9 | Wiki exact-artifact promotion | VAP-7, separate wiki authorization | Not started |
 | VAP-10 | Measurement, acceptance, and retirement | VAP-7–VAP-9 dispositions | Not started |
 
@@ -459,6 +459,20 @@ VAP-7 required-check cutover.
 ## 17. VAP-8 — Make TearSkills and Luna evidence-aware clients
 
 **Goal:** Agents accelerate diagnosis and implementation without duplicating gates, losing evidence context, or contending for local resources.
+
+Preparation may proceed under the owner's direction to continue independent
+work while performance acceptance is unavailable. The initial two-skill pilot
+shares an evidence handoff between `tear-change-gate` and
+`tear-autonomous-playtester`. It preserves the existing full release obligation
+and separates protected functional evidence from full release proof. This is
+client guidance, not executable lease enforcement, a receipt-status command,
+VAP-7 cutover, or VAP-8 completion. All checklist proofs below remain required.
+
+The pilot's bounded read-only forward review correctly withheld release readiness
+for functional-only proof, reused an exact verifier-confirmed full result without
+another run, and stopped on source drift plus an occupied browser lease. These
+three instruction-level cases and skill-format validation support the guidance;
+they do not prove automatic duplicate suppression or lease enforcement.
 
 ### Shared evidence context
 
