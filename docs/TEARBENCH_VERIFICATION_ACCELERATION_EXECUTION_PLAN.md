@@ -474,6 +474,25 @@ another run, and stopped on source drift plus an occupied browser lease. These
 three instruction-level cases and skill-format validation support the guidance;
 they do not prove automatic duplicate suppression or lease enforcement.
 
+The first executable lease slice protects planned-task execution and
+`tasks run-profile` through a shared host/user temporary-directory namespace.
+It reserves declared resources plus the build resource for build consumers,
+holds them through dependency verification and execution (and through output
+capture and receipt writing for planned tasks), and rejects occupied leases
+without retrying or stealing them. Failure releases only unchanged owned locks;
+crash remnants or ownership changes require inspection. Receipt identities and
+intentional A/B executions are unchanged.
+
+Its canonical `unit.tearbench-resource-leases` task covers cross-process
+contention, failure cleanup, partial acquisition rollback, ownership changes,
+directory aliases, and collision rejection by both actual command entry points.
+The original compatibility inventory remains a historical baseline; functional
+and protected profiles add this regression obligation. This does not close
+VAP-8: direct scenario, selected-evidence, graveyard and minimization paths still
+need coordinated coverage, and equivalent-receipt suppression, mission schema,
+source-drift handoff proof and orchestration benchmarks remain open. A lease is
+cooperative exclusion, not evidence or protected release authority.
+
 ### Shared evidence context
 
 Every skill and mission consumes:

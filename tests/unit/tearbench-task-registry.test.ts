@@ -16,6 +16,14 @@ function requiredTask(id: string) {
 }
 
 describe("TearBench atomic task registry", () => {
+  it("runs resource lease regressions in functional and protected profiles without rewriting the compatibility baseline", () => {
+    const value = canonical();
+    for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {
+      expect(value.profiles[profile]).toContain("unit.tearbench-resource-leases");
+    }
+    expect(requiredTask("unit.tearbench-resource-leases").runner.args).toEqual(["--test", "tests/tearbench-resource-leases.test.mjs"]);
+    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
+  });
   it("preserves the exact VAP-0 inventory behind thin package aliases", () => {
     const value = canonical();
     expect(value.compatibilityInventory["check.functional"]?.expandedLeafCount).toBe(78);

@@ -11,6 +11,7 @@ import { isPassedTearBenchRunArtifact } from "./tearbench-run-artifact.mjs";
 import { createTearBenchShadowPlan } from "./tearbench-shadow-plan.mjs";
 import { executionEnvironmentBinding, executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
 import { dependencyOrderedTaskIds, registryTaskEnvironment } from "./tearbench-task-profile.mjs";
+import { taskResourceKeys, withResourceLeases } from "./tearbench-resource-leases.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BLOOM_WELL_LIFECYCLE_TICKS = 744;
@@ -1055,8 +1056,10 @@ async function runTaskProfile() {
   for (const [index, taskId] of ordered.entries()) {
     const task = taskById.get(taskId);
     console.log(`TASK ${String(index + 1)}/${String(ordered.length)} ${taskId}`);
-    await verifyRegistryBuildDependencies(task);
-    const result = executeRegistryTask(task);
+    const result = await withResourceLeases(taskResourceKeys(task), async () => {
+      await verifyRegistryBuildDependencies(task);
+      return executeRegistryTask(task);
+    });
     if (result.status !== 0) {
       process.exitCode = result.status ?? 1;
       return;
