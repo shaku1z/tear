@@ -16,6 +16,16 @@ function requiredTask(id: string) {
 }
 
 describe("TearBench atomic task registry", () => {
+  it("runs canary parity, provider-clock and workflow contracts once per protected profile", () => {
+    const value = canonical();
+    for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {
+      expect(value.profiles[profile]?.filter((id) => id === "unit.tearbench-canary-contract")).toHaveLength(1);
+    }
+    expect(requiredTask("unit.tearbench-canary-contract").runner.args).toEqual([
+      "--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-workflow.test.mjs",
+    ]);
+    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
+  });
   it("runs resource lease regressions in functional and protected profiles without rewriting the compatibility baseline", () => {
     const value = canonical();
     for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {

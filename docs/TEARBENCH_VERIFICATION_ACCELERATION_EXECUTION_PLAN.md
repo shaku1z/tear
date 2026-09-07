@@ -435,6 +435,15 @@ VAP-7 required-check cutover.
 
 **Reopen when:** Browser harness isolation, task durations, runner image, matrix limit, or artifact transfer changes.
 
+Current evidence: run `34144556642` retained all 98 tasks in each path but failed
+performance and two lease-affected task families; it is not qualification.
+PR #72 integrated the lease/client corrections. The local completed-provider
+measurement correction distinguishes dependency wait from dispatch wait and
+counts full job intervals and certifier decisions; see the
+[VAP-6 checkpoint](checkpoints/tearbench-verification-acceleration/VAP-6_BOUNDED_PARALLEL_CANARY.md).
+No additional performance run or required-gate cutover is authorized by those
+diagnostic measurements, and robust accepted p50/p95 evidence remains absent.
+
 ## 16. VAP-7 — Cut over one stable required gate
 
 **Goal:** One protected aggregate check becomes release authority while `pnpm check` remains a compatibility entrypoint to the same plan.
@@ -465,7 +474,8 @@ VAP-7 required-check cutover.
 PR #57 merged the foundation at `3e8d46325e2773f39d9853678753651c53b5e4cc`.
 PR #70 merged source-bound receipt status at `9ec7339126fab73103aa6a31ebb241850998f552`;
 PR #71 merged leased task reuse at `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`.
-The following client changes are local and not yet protected-integrated:
+PR #72 merged the following client changes at
+`9891399772f2461a761e821b9f65c816383f956f` after the exact protected check passed:
 
 - `client-status --plan <path> --client <path>` validates a mission request and
   returns current/stale context alongside canonical receipt assessment.

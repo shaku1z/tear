@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+import process from "node:process";
 import test from "node:test";
 import { createCanaryShardPlan } from "../scripts/tearbench-canary-plan.mjs";
-import { createCanaryParityReport } from "../scripts/tearbench-canary-report.mjs";
+import { createCanaryParityReport, createCanaryProviderMetrics } from "../scripts/tearbench-canary-report.mjs";
 import { receiptSha256 } from "../scripts/tearbench-task-receipts.mjs";
 
 function fixture() {
@@ -83,6 +88,15 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
     parallelCertificate: { status: "certified", planDigest: plan.planDigest }, providerBundle,
     generatedAt: "2026-08-31T00:01:00.000Z" };
   assert.equal(createCanaryParityReport(common).status, "equivalent");
+  assert.deepEqual(createCanaryParityReport(common).providerOrigin,
+    { kind: "github-actions", repository: "shaku1z/tear", workflow: "Canary", runId: "123", attempt: 1 });
+  const foreignSerial = serial.map((receipt) => ({ ...receipt, origin: { ...receipt.origin, attempt: 2 } }));
+  assert.equal(createCanaryParityReport({ ...common, serialReceipts: foreignSerial }).status, "mismatched");
+  const metrics = createCanaryParityReport(common).metrics;
+  assert.equal(metrics.parallel.queueMs, undefined);
+  assert.equal(metrics.parallel.runnerMinutes, undefined);
+  assert.equal(metrics.parallel.readinessWaitMs, 10);
+  assert.equal(metrics.parallel.taskStageRunnerMinutes, 0.2);
   for (const invalid of [
     { runCreatedAt: "2026-08-31T00:00:00.000Z" },
     { runCreatedAt: "invalid", readyAt: "invalid" },
@@ -96,7 +110,7 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
     assert.ok(report.errors.includes("serial comparison clock includes prior work or has invalid boundaries"));
   }
   assert.deepEqual(createCanaryParityReport(common).metrics.isolatedPerformance,
-    { queueMs: 10, setupMs: 20, taskWallMs: 2980, jobWallMs: 3000 });
+    { buildReadyToJobStartMs: 10, setupMs: 20, taskWallMs: 2980, jobWallMs: 3000 });
   const failedBrowserTiming = timing("browser-1", "browser", ["task.a"], 5000);
   failedBrowserTiming.taskResults[0].status = "failed";
   const planted = createCanaryParityReport({ ...common,
@@ -142,4 +156,125 @@ test("canary packing rejects altered plans, unsupported classes, and missing dur
   delete payload.planDigest; payload.planDigest = receiptSha256(payload);
   assert.throws(() => createCanaryShardPlan({ plan: payload, durationHistory: history }), /unsupported task classes/u);
   assert.throws(() => createCanaryShardPlan({ plan: fixture(), durationHistory: { ...history, fallbackMs: {} } }), /no valid estimate/u);
+});
+
+function providerFixture() {
+  const time = (seconds) => new Date(Date.parse("2026-09-07T00:00:00Z") + seconds * 1000).toISOString();
+  const shardPayload = { format: "tearbench-canary-shard-plan", schemaVersion: 1,
+    planDigest: "a".repeat(64), browserShards: [{ shardId: "browser-1" }], coreShards: [{ shardId: "core-1" }] };
+  const shardPlan = { ...shardPayload, shardPlanDigest: receiptSha256(shardPayload) };
+  const reportPayload = { format: "tearbench-canary-parity-report", schemaVersion: 2, status: "mismatched", errors: ["performance failed"],
+    providerOrigin: { kind: "github-actions", repository: "shaku1z/tear", workflow: "TearBench Parallel Canary", runId: "123", attempt: 1 },
+    source: { revision: "b".repeat(40) }, planDigest: shardPlan.planDigest, shardPlanDigest: shardPlan.shardPlanDigest };
+  const parityReport = { ...reportPayload, reportDigest: receiptSha256(reportPayload) };
+  const run = { id: 123, run_attempt: 1, name: "TearBench Parallel Canary", repository: { full_name: "shaku1z/tear" }, path: ".github/workflows/tearbench-canary.yml",
+    head_sha: parityReport.source.revision, event: "workflow_dispatch", status: "completed", conclusion: "failure",
+    created_at: time(0), updated_at: time(180) };
+  const entries = [["plan", 1, 5], ["build", 6, 15], ["browser (browser-1)", 16, 60], ["core (core-1)", 16, 80],
+    ["performance", 83, 100], ["certify-parallel", 101, 105], ["serial", 101, 170], ["certify-serial", 171, 175], ["aggregate", 176, 180]];
+  const jobs = { total_count: entries.length, jobs: entries.map(([name, start, end], index) => ({ id: index + 1, name,
+    run_id: run.id, run_attempt: run.run_attempt, head_sha: run.head_sha, status: "completed",
+    conclusion: name === "performance" ? "failure" : "success", started_at: time(start), completed_at: time(end) })) };
+  return { run, jobs, parityReport, shardPlan, generatedAt: time(181) };
+}
+
+test("provider clocks distinguish dependency wait, complete job cost and rejected decisions", () => {
+  const input = providerFixture(), report = createCanaryProviderMetrics(input);
+  const performance = report.jobs.find((job) => job.name === "performance");
+  assert.equal(performance.dependencyReadyElapsedMs, 80000);
+  assert.equal(performance.dispatchWaitMs, 3000);
+  assert.equal(report.parallelDecisionWallMs, 105000);
+  assert.equal(report.serialDecisionWallMs, 75000);
+  assert.equal(report.parallelJobWallMs, 142000);
+  assert.equal(report.serialJobWallMs, 73000);
+  assert.equal(report.experimentJobWallMs, 219000);
+  assert.equal(report.equivalenceReported, false);
+  assert.equal(report.canonicalReleaseAuthority, false);
+  assert.equal(report.providerJobsDigest, receiptSha256(input.jobs));
+  assert.deepEqual(createCanaryProviderMetrics(input), report);
+});
+
+test("provider measurement rejects mixed sources, attempts, omissions, overlap and mutable reports", () => {
+  const mutations = [
+    (input) => { input.run.status = "in_progress"; },
+    (input) => { input.run.conclusion = "success"; },
+    (input) => { input.run.head_sha = "c".repeat(40); },
+    (input) => { input.run.repository.full_name = "another/tear"; },
+    (input) => { input.run.path = ".github/workflows/ci.yml"; },
+    (input) => { input.jobs.jobs[0].run_attempt = 2; },
+    (input) => { input.jobs.jobs[0].run_id = 456; },
+    (input) => { input.jobs.jobs[0].head_sha = "c".repeat(40); },
+    (input) => { input.jobs.jobs[0].completed_at = "invalid"; },
+    (input) => { input.jobs.jobs[1].started_at = input.run.created_at; },
+    (input) => { input.jobs.jobs[1].id = input.jobs.jobs[0].id; },
+    (input) => { input.jobs.jobs[1].name = "unexpected"; },
+    (input) => { input.jobs.jobs[1].name = input.jobs.jobs[0].name; },
+    (input) => { input.jobs.jobs[1].conclusion = "cancelled"; },
+    (input) => { input.jobs.jobs.pop(); },
+    (input) => { input.jobs.jobs.pop(); input.jobs.total_count--; },
+    (input) => { input.parityReport.status = "equivalent"; },
+    (input) => { input.shardPlan.browserShards.pop(); },
+    (input) => { input.generatedAt = "invalid"; },
+    (input) => { input.generatedAt = input.run.created_at; },
+  ];
+  for (const mutate of mutations) {
+    const input = providerFixture(); mutate(input);
+    assert.throws(() => createCanaryProviderMetrics(input), /canary provider metrics:/u);
+  }
+});
+
+test("provider equivalence requires the same receipt-origin run and attempt, including across legacy reports", () => {
+  const input = providerFixture();
+  const resign = (value, key) => { const { [key]: ignored, ...payload } = value; assert.ok(ignored); value[key] = receiptSha256(payload); };
+  input.run.conclusion = "success";
+  for (const job of input.jobs.jobs) job.conclusion = "success";
+  input.parityReport.status = "equivalent"; input.parityReport.errors = [];
+  resign(input.parityReport, "reportDigest");
+  assert.equal(createCanaryProviderMetrics(input).equivalenceReported, true);
+  for (const field of ["run_attempt", "id"]) {
+    const crossAttempt = globalThis.structuredClone(input);
+    crossAttempt.run[field] += 1;
+    for (const job of crossAttempt.jobs.jobs) job[field === "id" ? "run_id" : "run_attempt"] = crossAttempt.run[field];
+    assert.throws(() => createCanaryProviderMetrics(crossAttempt), /provider run\/attempt mismatch/u);
+  }
+  const legacy = globalThis.structuredClone(input);
+  legacy.parityReport.schemaVersion = 1; delete legacy.parityReport.providerOrigin;
+  resign(legacy.parityReport, "reportDigest");
+  const diagnostic = createCanaryProviderMetrics(legacy);
+  assert.equal(diagnostic.parityOriginBound, false);
+  assert.equal(diagnostic.equivalenceReported, false);
+  const missing = globalThis.structuredClone(input); delete missing.parityReport.providerOrigin;
+  resign(missing.parityReport, "reportDigest");
+  assert.throws(() => createCanaryProviderMetrics(missing), /provider run\/attempt mismatch/u);
+  for (const shard of [null, { shardId: "foreign-1" }, { shardId: "browser-1" }]) {
+    const duplicate = globalThis.structuredClone(input); duplicate.shardPlan.browserShards.push(shard);
+    resign(duplicate.shardPlan, "shardPlanDigest");
+    duplicate.parityReport.shardPlanDigest = duplicate.shardPlan.shardPlanDigest;
+    resign(duplicate.parityReport, "reportDigest");
+    assert.throws(() => createCanaryProviderMetrics(duplicate), /shard identity/u);
+  }
+});
+
+test("provider metrics CLI retains a failed-run measurement without overwriting evidence", async () => {
+  const directory = await mkdtemp(resolve(tmpdir(), "tearbench-provider-metrics-"));
+  try {
+    const input = providerFixture(), args = ["scripts/tearbench-canary-report.mjs", "provider-metrics"];
+    for (const [flag, value] of [["--run", input.run], ["--jobs", input.jobs], ["--report", input.parityReport], ["--shard-plan", input.shardPlan]]) {
+      const path = resolve(directory, `${flag.slice(2)}.json`);
+      await writeFile(path, JSON.stringify(value)); args.push(flag, path);
+    }
+    const output = resolve(directory, "measurement.json"); args.push("--artifact", output);
+    const run = () => spawnSync(process.execPath, args, { cwd: resolve(import.meta.dirname, ".."), encoding: "utf8", timeout: 10000 });
+    const measured = run();
+    assert.equal(measured.error, undefined);
+    assert.equal(measured.status, 1, measured.stderr);
+    assert.match(measured.stdout, /^MEASURED mismatched /u);
+    const bytes = await readFile(output, "utf8"), report = JSON.parse(bytes);
+    assert.equal(report.canonicalReleaseAuthority, false);
+    assert.equal(report.jobs.find((job) => job.name === "performance").dispatchWaitMs, 3000);
+    const duplicate = run();
+    assert.notEqual(duplicate.status, 0);
+    assert.match(duplicate.stderr, /EEXIST/u);
+    assert.equal(await readFile(output, "utf8"), bytes);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
