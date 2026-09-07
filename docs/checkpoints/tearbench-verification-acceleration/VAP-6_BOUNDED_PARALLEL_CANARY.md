@@ -191,9 +191,9 @@ all six statuses, exact build/runtime records and complete measurements. A
 fail-first fixture now reproduces the stdout-only shape; the reporter normalizes
 both streams while requiring the assertion to name that sample's exact measured
 simulation p95 and the configured budget. Missing and stale/mismatched assertion
-negatives remain rejected. Reclassification of the retained immutable inputs
-produced report digest
-`990a1f295ae60c286ce89b77226075531b4e672ba2a4252564f0e2672d2d6ff3`.
+negatives remain rejected. Workflow artifact `10035264467` is the immutable raw
+input bundle; reclassification is deterministic in measurements and outcome,
+while each derived report has a new timestamp and therefore a new report digest.
 This parser repair does not change a threshold or convert the budget miss into
 qualification.
 
