@@ -73,7 +73,7 @@ export async function benchmarkClients({ availableChildren }) {
   const plan = JSON.parse(await readFile(planPath, "utf8"));
   const task = plan.taskNodes.find((entry) => entry.taskId === taskId);
   if (task === undefined) throw new Error("benchmark task is not in the canonical development plan");
-  const repository = sync("git", ["remote", "get-url", "origin"]), branch = sync("git", ["branch", "--show-current"]);
+  const repository = sync("git", ["remote", "get-url", "origin"]), branch = sync("git", ["branch", "--show-current"]) || null;
   for (const children of [...new Set([1, Math.min(2, availableChildren), availableChildren])]) {
     phase = `clients-${children}`;
     const missionId = `${benchmarkId}-${children}`, clientPath = resolve(outputDirectory, `client-${children}.json`);

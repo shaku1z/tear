@@ -55,6 +55,9 @@ pull-request plans also support candidate, and release/protected-main plans also
 support release. Publication needs a separate protected promotion contract and is
 not accepted by this client protocol. Supplied protected provenance must name the
 same exact repository URL and source revision; it remains unverified.
+`branch` is the exact branch name, or explicit JSON `null` for detached HEAD
+(including GitHub checkouts). Missing and empty branch fields are invalid;
+switching between detached and named states invalidates the client context.
 
 The deadline stops new execution and client acceptance, not an already-running
 canonical check. Execution rechecks the client immediately before starting work.

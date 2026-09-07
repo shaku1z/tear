@@ -35,7 +35,9 @@ export function validateClientMission(mission, plan) {
     ? ["development", "candidate", "release"]
     : plan.profileId === "pull-request" ? ["development", "candidate"] : ["development"];
   requireValue(allowedClaims.includes(mission.claimClass), "claimClass exceeds plan profile; publication requires a separate protected promotion contract");
-  for (const key of ["repository", "worktree", "branch"]) {
+  requireValue(mission.branch === null || (typeof mission.branch === "string" && mission.branch.trim().length > 0),
+    "branch must be a name or explicit null for detached HEAD");
+  for (const key of ["repository", "worktree"]) {
     requireValue(typeof mission[key] === "string" && mission[key].trim().length > 0, `${key} is required`);
   }
   const { planDigest, ...payload } = plan;

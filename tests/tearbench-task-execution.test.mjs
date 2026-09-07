@@ -118,7 +118,7 @@ test("typed task execution emits one immutable local attempt and refuses overwri
       objective: "Validate the executor client contract", claimClass: "development",
       repository: execFileSync("git", ["remote", "get-url", "origin"], { cwd: root, encoding: "utf8" }).trim(),
       worktree: (await realpath(root)).replaceAll("\\", "/"),
-      branch: execFileSync("git", ["branch", "--show-current"], { cwd: root, encoding: "utf8" }).trim(),
+      branch: execFileSync("git", ["branch", "--show-current"], { cwd: root, encoding: "utf8" }).trim() || null,
       source: plan.source, planDigest: plan.planDigest, policyDigest: plan.policyDigest, taskRegistryDigest: plan.taskRegistryDigest,
       requiredTaskIds: [receipt.task.taskId], requiredClaimIds: plan.taskNodes.find((task) => task.taskId === receipt.task.taskId).claimIds,
       changedFiles: plan.scope.changedFiles, readPaths: ["docs"], writePaths: [], routes: plan.scope.routes, scenarios: plan.scope.scenarios, resourceLeases: [],

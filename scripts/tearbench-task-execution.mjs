@@ -242,7 +242,7 @@ async function readClientRequest({ planPath, clientPath }) {
   };
   const context = assessClientMissionContext(mission, plan, {
     repository: gitValue(["remote", "get-url", "origin"]),
-    branch: gitValue(["branch", "--show-current"]), worktree: (await realpath(root)).replaceAll("\\", "/"),
+    branch: gitValue(["branch", "--show-current"]) || null, worktree: (await realpath(root)).replaceAll("\\", "/"),
     source: sourceIdentity(), now: new Date().toISOString(),
   });
   return { mission, plan, context, snapshots };

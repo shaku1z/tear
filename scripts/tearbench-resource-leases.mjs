@@ -38,10 +38,13 @@ async function inheritedLeases(root) {
 function synchronousChildRunner(root, leases) {
   // Never publish inheritance through global process.env or an asynchronous spawn.
   // The owner remains blocked until this child (and its synchronous descendants) exits.
+  // A mission/task reservation prevents duplicate execution, including recursive
+  // requests from descendants. Unlike physical resources it must not be borrowed.
+  const inheritable = leases.filter((lease) => !lease.key.startsWith("task-execution/"));
   return (command, args, options = {}) => {
     const env = { ...(options.env ?? process.env) };
     delete env.TEARBENCH_PARENT_RESOURCE_LEASES;
-    if (leases.length > 0) env[inheritanceVariable] = JSON.stringify({ version: 1, issuerPid: process.pid, directory: root, leases });
+    if (inheritable.length > 0) env[inheritanceVariable] = JSON.stringify({ version: 1, issuerPid: process.pid, directory: root, leases: inheritable });
     return spawnSync(command, args, { ...options, env });
   };
 }

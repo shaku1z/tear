@@ -194,6 +194,25 @@ test("child inheritance rejects wrong issuer and changed token", async () => fix
   }, { directory });
 }));
 
+test("task exclusion stays with the coordinator and is never borrowed by children", async () => fixture(async (directory) => {
+  const moduleUrl = new URL("../scripts/tearbench-resource-leases.mjs", import.meta.url).href;
+  const key = "task-execution/fixture";
+  const code = `import assert from 'node:assert/strict';
+    import { withResourceLeases } from ${JSON.stringify(moduleUrl)};
+    const inherited = JSON.parse(process.env.TEARBENCH_PARENT_RESOURCE_LEASES ?? '{"leases":[]}');
+    assert.ok(inherited.leases.every(lease => !lease.key.startsWith('task-execution/')));
+    await assert.rejects(withResourceLeases([${JSON.stringify(key)}], () => assert.fail('duplicate execution'),
+      { directory: ${JSON.stringify(directory)} }), /resource lease occupied/);`;
+  for (const keys of [[key], [key, "resources/browser"]]) {
+    await withResourceLeases(keys, async (runChild) => {
+      const child = runChild(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", timeout: 10000 });
+      assert.equal(child.status, 0, child.stderr);
+      assert.equal((await readdir(directory)).length, keys.length);
+    }, { directory });
+    assert.deepEqual(await readdir(directory), []);
+  }
+}));
+
 test("independent child processes in different workspaces cannot overlap", async () => fixture(async (directory) => {
   const workspaceA = resolve(directory, "workspace-a"), workspaceB = resolve(directory, "workspace-b");
   const leases = resolve(directory, "leases");

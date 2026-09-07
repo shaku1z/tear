@@ -61,6 +61,18 @@ test("context drift invalidates a handoff even when its original plan remains in
   }
 });
 
+test("detached HEAD is explicit and cannot silently match a named branch", () => {
+  const { mission, plan, context } = fixture();
+  mission.branch = null;
+  context.branch = null;
+  assert.equal(assessClientMissionContext(mission, plan, context).status, "current");
+  assert.equal(assessClientMissionContext(mission, plan, { ...context, branch: "main" }).status, "stale");
+  assert.throws(() => validateClientMission({ ...mission, branch: "" }, plan), /branch must/u);
+  const { branch: ignored, ...missingBranch } = mission;
+  assert.equal(ignored, null);
+  assert.throws(() => validateClientMission(missingBranch, plan), /branch must/u);
+});
+
 test("plan tampering and claims not covered by requested tasks fail closed", () => {
   const { mission, plan } = fixture();
   plan.requiredClaims.push("unowned.claim");
