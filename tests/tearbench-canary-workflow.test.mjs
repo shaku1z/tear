@@ -79,3 +79,16 @@ test("detached parity resolves pnpm from PATH outside a parent pnpm process", ()
   assert.match(detachedParityRunner, /process\.env\.ComSpec \?\? "cmd\.exe"/u);
   assert.doesNotMatch(detachedParityRunner, /shell:/u);
 });
+
+test("provider-clock accounting tracks the current workflow dependency topology", () => {
+  // Revisit provider accounting when a job dependency changes, even if its name stays stable.
+  const expected = { build: "plan", browser: "plan, build", core: "plan, build", performance: "plan, build, browser, core",
+    serial: "plan, performance", "certify-serial": "plan, serial", "certify-parallel": "plan, build, browser, core, performance",
+    aggregate: "plan, serial, build, browser, core, performance, certify-serial, certify-parallel" };
+  for (const [job, needs] of Object.entries(expected)) {
+    const section = workflow.slice(workflow.indexOf(`\n  ${job}:`));
+    const declared = section.match(new RegExp(`^\\n  ${job}:\\r?\\n\\s+needs: ([^\\r\\n]+)`, "u"));
+    assert.ok(declared, `missing dependency contract for ${job}`);
+    assert.deepEqual(declared[1].replaceAll("[", "").replaceAll("]", "").split(",").map((name) => name.trim()).sort(), needs.split(", ").sort());
+  }
+});

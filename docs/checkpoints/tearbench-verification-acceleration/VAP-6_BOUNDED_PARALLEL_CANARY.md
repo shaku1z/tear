@@ -143,3 +143,71 @@ Runner provisioning and additional performance retries are deferred. Remaining
 work proceeds only when it has an explicit checkpoint obligation and a bounded
 discriminating test; uncertain performance acceptance is not permission to
 expand infrastructure or repeat unchanged experiments.
+
+## Completed-provider measurement contract
+
+Run `34144556642` at `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`
+finished with all 98 required task IDs present in both paths, but performance,
+resource-lease and evidence-selection tasks failed in both paths. Its aggregate
+is `mismatched`, not qualified. PR #72 integrated the lease correction at
+`9891399772f2461a761e821b9f65c816383f956f`; that does not turn this earlier
+failed run into passing evidence. Performance remains unresolved.
+
+The retained provider clocks also disproved two measurement labels. Performance
+waited for all ordinary shards, but its in-task `readyAt` was build completion.
+The resulting 370,000 ms was dependency wait plus dispatch wait, not queue time.
+The last ordinary dependency completed at 16:51:09 UTC and performance started
+at 16:51:12 UTC: 3,000 ms of provider dispatch wait. Likewise, in-task job clocks
+exclude planning, certification, uploads and cleanup and cannot measure total
+runner usage.
+
+Parity report schema 2 therefore calls these fields `readinessWaitMs` and
+`taskStageRunnerMinutes`, with `buildReadyToJobStartMs` for the isolated
+performance field. It preserves the raw old timing inputs and states their
+limited scope. It does not relabel old schema-1 artifacts in place.
+
+After a workflow attempt is terminal, use the existing reporter's
+`provider-metrics` mode with the retained GitHub run JSON, complete jobs JSON
+for that exact attempt, parity report and frozen shard plan:
+
+```text
+node scripts/tearbench-canary-report.mjs provider-metrics --run <run.json> --jobs <jobs.json> --report <parity.json> --shard-plan <shards.json> --artifact <new-provider-metrics.json>
+```
+
+The jobs snapshot must include every job (`total_count` must match the supplied
+array). Missing pages, foreign source/run/attempts, duplicate or unknown jobs,
+unfinished/cancelled jobs, changed report digests and impossible dependency
+intervals fail closed. The topology regression binds this accounting to the
+current workflow; changes to job names or dependencies require a reporting
+contract update. Dispatch wait starts after **all** declared dependencies
+finish. Full job intervals include setup, artifact transfer and cleanup. The
+parallel and serial decision clocks include their certifier jobs, including
+when the decision rejects the candidate. Parallel cost includes planning and
+shared builds; serial cost counts its independently executed jobs. Total
+experiment cost also includes the final comparison aggregate.
+
+Schema-2 parity reports retain the common provider repository, workflow, run ID
+and attempt from **both** serial and parallel receipt sets. Provider metrics
+requires that origin to match the job snapshots. Old schema-1 reports may still
+produce clock diagnostics, but lack this origin binding and always report
+`parityOriginBound: false` and `equivalenceReported: false`. Pairing an old report
+with a later same-source attempt cannot manufacture accepted equivalence.
+`dependencyReadyElapsedMs` is elapsed time from run creation until all of a job's
+dependencies finish; it is not a queue duration. `dispatchWaitMs` measures only
+the following interval until provider job start.
+
+For the failed run above, supplied provider snapshots yield 1,606,000 ms
+(26.767 runner-wall minutes) for parallel jobs, 1,106,000 ms for serial jobs,
+and 2,732,000 ms for the entire experiment. Time to the **rejected** parallel
+decision was 621,000 ms; the serial comparison decision took 1,112,000 ms after
+parallel performance completed. These are one failed attempt's measurements,
+not p50/p95, a billing attestation, accepted speedup, or a protected certificate.
+The measurement retains snapshot digests and exits nonzero for a non-equivalent
+run while preserving the diagnostic output. Existing output is never overwritten.
+
+`unit.tearbench-canary-contract` runs parity, provider-clock and workflow
+regressions once in each protected functional/release profile. The historical
+80-leaf compatibility inventory is unchanged. This measurement correction does
+not dispatch another canary, change performance budgets, cut over a required
+gate, or close VAP-6. Repeated accepted samples, shard-history tuning, planted
+failure proof and owner cost acceptance remain required.

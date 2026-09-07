@@ -83,7 +83,7 @@ function retryHistory(receipts) {
   });
 }
 function timingSummary(timings, kind) {
-  if (timings.length === 0) return { queueMs: 0, setupMs: 0, criticalPathMs: 0, longestJobMs: 0, runnerMinutes: 0, wallMs: 0 };
+  if (timings.length === 0) return null;
   const start = Math.min(...timings.map((entry) => Date.parse(entry.runCreatedAt)));
   const finish = Math.max(...timings.map((entry) => Date.parse(entry.finishedAt)));
   const build = timings.find((entry) => entry.shardId === "build-1");
@@ -92,10 +92,10 @@ function timingSummary(timings, kind) {
       ...timings.filter((entry) => entry.shardId !== "build-1").map((entry) =>
         Math.max(0, Date.parse(entry.readyAt) - Date.parse(entry.runCreatedAt)) + entry.queueMs + entry.jobWallMs))
     : Math.max(...timings.map((entry) => entry.workflowWaitMs + entry.jobWallMs));
-  return { queueMs: Math.max(...timings.map((entry) => entry.queueMs)), workflowWaitMs: Math.max(...timings.map((entry) => entry.workflowWaitMs ?? 0)),
+  return { readinessWaitMs: Math.max(...timings.map((entry) => entry.queueMs)), workflowWaitMs: Math.max(...timings.map((entry) => entry.workflowWaitMs ?? 0)),
     setupMs: timings.reduce((sum, entry) => sum + entry.setupMs, 0), criticalPathMs,
     longestJobMs: Math.max(...timings.map((entry) => entry.jobWallMs)),
-    runnerMinutes: Number((timings.reduce((sum, entry) => sum + entry.jobWallMs, 0) / 60000).toFixed(3)), wallMs: finish - start };
+    taskStageRunnerMinutes: Number((timings.reduce((sum, entry) => sum + entry.jobWallMs, 0) / 60000).toFixed(3)), wallMs: finish - start };
 }
 function verifyOwnership(label, receipts, timings, expectedShards, errors) {
   const expectedByTask = new Map(), timingByShard = new Map();
@@ -176,6 +176,14 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
   verifyOwnership("parallel", parallelReceipts, parallelTimings,
     [shardPlan.buildShard, ...shardPlan.browserShards, ...shardPlan.coreShards, shardPlan.performanceShard], errors);
   verifyProviderBundle(providerBundle, parallelReceipts, plan, errors);
+  const origin = parallelReceipts[0]?.origin;
+  const originsMatch = origin?.kind === "github-actions" && Number.isSafeInteger(origin.attempt) && origin.attempt > 0
+    && typeof origin.repository === "string" && typeof origin.workflow === "string" && /^[1-9][0-9]*$/u.test(origin.runId)
+    && [...serialReceipts, ...parallelReceipts].every((receipt) => receipt.origin?.kind === "github-actions"
+      && ["repository", "workflow", "runId", "attempt"].every((key) => receipt.origin[key] === origin[key]));
+  if (!originsMatch) errors.push("serial and parallel receipt provider origins differ or are missing");
+  const providerOrigin = originsMatch ? { kind: origin.kind, repository: origin.repository,
+    workflow: origin.workflow, runId: origin.runId, attempt: origin.attempt } : null;
   for (const taskId of plan.requiredTaskIds) {
     const left = serial.get(taskId), right = parallel.get(taskId);
     if (left === undefined) errors.push(`serial mission is missing ${taskId}`);
@@ -208,16 +216,20 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
   const serialMetrics = comparisonClockValid ? timingSummary(serialTimings, "serial") : null;
   const parallelMetrics = comparisonClockValid ? timingSummary(parallelTimings, "parallel") : null;
   const minBrowser = Math.min(...browser.map((entry) => Math.max(1, entry.taskWallMs)));
-  const payload = { format: "tearbench-canary-parity-report", schemaVersion: 1, generatedAt,
+  const payload = { format: "tearbench-canary-parity-report", schemaVersion: 2, generatedAt,
     status: errors.length === 0 ? (plantedFailureTaskId === null ? "equivalent" : "expected-rejection-proved") : "mismatched",
-    planDigest: plan.planDigest, shardPlanDigest: shardPlan.shardPlanDigest, source: plan.source,
+    planDigest: plan.planDigest, shardPlanDigest: shardPlan.shardPlanDigest, source: plan.source, providerOrigin,
     plantedFailureTaskId, taskParity: { required: plan.requiredTaskIds.length, serial: serial.size, parallel: parallel.size },
     claimParity: { serial: [...new Set(serialReceipts.flatMap((receipt) => receipt.task.claimIds))].sort(),
       parallel: [...new Set(parallelReceipts.flatMap((receipt) => receipt.task.claimIds))].sort() },
     retryHistory: { serial: retryHistory(serialReceipts), parallel: retryHistory(parallelReceipts) },
-    metrics: { serial: serialMetrics, parallel: parallelMetrics,
+    metrics: { scope: "in-task clocks, not complete provider job or certificate clocks",
+      limitations: ["Readiness wait may include unfinished workflow dependencies; it is not runner queue time",
+        "Task-stage runner minutes exclude planning, certification, uploads and cleanup",
+        "A completed provider-metrics report is required for full job accounting"],
+      serial: serialMetrics, parallel: parallelMetrics,
       isolatedPerformance: isolatedPerformance === undefined ? null : {
-        queueMs: isolatedPerformance.queueMs, setupMs: isolatedPerformance.setupMs,
+        buildReadyToJobStartMs: isolatedPerformance.queueMs, setupMs: isolatedPerformance.setupMs,
         taskWallMs: isolatedPerformance.taskWallMs, jobWallMs: isolatedPerformance.jobWallMs,
       },
       browserShardBalanceRatio: browser.length === 0 ? null : Number((Math.max(...browser.map((entry) => entry.taskWallMs)) / minBrowser).toFixed(3)),
@@ -227,8 +239,116 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
   return Object.freeze({ ...payload, reportDigest: receiptSha256(payload) });
 }
 
+// Post-run accounting only. Supplied provider snapshots are not credentials,
+// independently verified task evidence, billing records, or release authority.
+export function createCanaryProviderMetrics({ run, jobs, parityReport, shardPlan, generatedAt }) {
+  const requireValue = (condition, message) => { if (!condition) throw new TypeError(`canary provider metrics: ${message}`); };
+  const date = (value) => {
+    requireValue(typeof value === "string" && Number.isFinite(Date.parse(value)), "invalid timestamp");
+    return Date.parse(value);
+  };
+  const verifyDigest = (value, field) => {
+    requireValue(value !== null && typeof value === "object", `missing ${field}`);
+    const { [field]: digest, ...unsigned } = value;
+    requireValue(receiptSha256(unsigned) === digest, `altered ${field}`);
+  };
+  verifyDigest(parityReport, "reportDigest"); verifyDigest(shardPlan, "shardPlanDigest");
+  requireValue(parityReport.format === "tearbench-canary-parity-report" && [1, 2].includes(parityReport.schemaVersion)
+    && ["equivalent", "expected-rejection-proved", "mismatched"].includes(parityReport.status) && Array.isArray(parityReport.errors)
+    && parityReport.planDigest === shardPlan.planDigest && parityReport.shardPlanDigest === shardPlan.shardPlanDigest,
+  "report/shard plan mismatch");
+  requireValue(run?.repository?.full_name === "shaku1z/tear" && run.path === ".github/workflows/tearbench-canary.yml"
+    && run.event === "workflow_dispatch" && run.status === "completed" && ["success", "failure"].includes(run.conclusion)
+    && Number.isSafeInteger(run.id) && run.id > 0 && Number.isSafeInteger(run.run_attempt) && run.run_attempt > 0
+    && /^[0-9a-f]{40}$/u.test(run.head_sha) && run.head_sha === parityReport.source?.revision, "run origin, source or completion mismatch");
+  requireValue(Array.isArray(jobs?.jobs) && jobs.total_count === jobs.jobs.length, "incomplete job pagination");
+  const parityOriginBound = parityReport.schemaVersion === 2;
+  if (parityOriginBound) {
+    const origin = parityReport.providerOrigin;
+    requireValue(origin?.kind === "github-actions" && origin.repository === run.repository.full_name
+      && origin.workflow === run.name && origin.runId === String(run.id) && origin.attempt === run.run_attempt,
+    "parity report provider run/attempt mismatch");
+  }
+  requireValue(shardPlan.format === "tearbench-canary-shard-plan" && shardPlan.schemaVersion === 1
+    && Array.isArray(shardPlan.browserShards) && Array.isArray(shardPlan.coreShards), "missing shard topology");
+  requireValue(shardPlan.browserShards.every((shard) => /^browser-[1-9][0-9]*$/u.test(shard?.shardId))
+    && shardPlan.coreShards.every((shard) => /^core-[1-9][0-9]*$/u.test(shard?.shardId)), "invalid shard identity");
+  const ordinary = [...shardPlan.browserShards.map((shard) => `browser (${shard.shardId})`),
+    ...shardPlan.coreShards.map((shard) => `core (${shard.shardId})`)];
+  requireValue(new Set(ordinary).size === ordinary.length, "duplicate shard identity");
+  const dependencies = new Map([
+    ["plan", []], ["build", ["plan"]], ...ordinary.map((name) => [name, ["plan", "build"]]),
+    ["performance", ["plan", "build", ...ordinary]], ["serial", ["plan", "performance"]],
+    ["certify-parallel", ["plan", "build", ...ordinary, "performance"]],
+    ["certify-serial", ["plan", "serial"]],
+    ["aggregate", ["plan", "build", ...ordinary, "performance", "serial", "certify-parallel", "certify-serial"]],
+  ]);
+  const indexed = new Map(), ids = new Set(), started = date(run.created_at), finished = date(run.updated_at);
+  requireValue(finished >= started, "reversed run clock");
+  for (const job of jobs.jobs) {
+    requireValue(dependencies.has(job.name) && !indexed.has(job.name) && !ids.has(job.id)
+      && Number.isSafeInteger(job.id) && job.id > 0 && job.run_id === run.id && job.run_attempt === run.run_attempt
+      && job.head_sha === run.head_sha && job.status === "completed"
+      && ["success", "failure"].includes(job.conclusion), "unknown, duplicate, incomplete or mismatched job");
+    const start = date(job.started_at), end = date(job.completed_at);
+    requireValue(start >= started && end >= start && end <= finished, "invalid job interval");
+    indexed.set(job.name, { job, start, end }); ids.add(job.id);
+  }
+  requireValue(indexed.size === dependencies.size, "missing workflow job");
+  requireValue(run.conclusion !== "success" || jobs.jobs.every((job) => job.conclusion === "success"), "successful run contains failed jobs");
+  requireValue(parityReport.status !== "equivalent" || parityReport.errors.length === 0, "equivalent report contains errors");
+  const rows = [...dependencies].map(([name, needs]) => {
+    const { job, start, end } = indexed.get(name);
+    const ready = Math.max(started, ...needs.map((dependency) => indexed.get(dependency).end));
+    requireValue(start >= ready, `job started before its dependencies: ${name}`);
+    return { name, jobId: job.id, conclusion: job.conclusion, dependencies: needs,
+      readyAt: new Date(ready).toISOString(), startedAt: job.started_at, completedAt: job.completed_at,
+      dependencyReadyElapsedMs: ready - started, dispatchWaitMs: start - ready, jobWallMs: end - start };
+  });
+  const parallelNames = ["plan", "build", ...ordinary, "performance", "certify-parallel"];
+  const sum = (names) => rows.filter((row) => names.includes(row.name)).reduce((total, row) => total + row.jobWallMs, 0);
+  const payload = { format: "tearbench-canary-provider-metrics", schemaVersion: 1, generatedAt,
+    repository: run.repository.full_name, runId: run.id, attempt: run.run_attempt, source: parityReport.source,
+    runConclusion: run.conclusion, parityStatus: parityReport.status,
+    parityOriginBound, equivalenceReported: parityOriginBound && parityReport.status === "equivalent" && run.conclusion === "success",
+    planDigest: parityReport.planDigest, shardPlanDigest: shardPlan.shardPlanDigest, parityReportDigest: parityReport.reportDigest,
+    providerRunDigest: receiptSha256(run), providerJobsDigest: receiptSha256(jobs),
+    parallelDecisionWallMs: indexed.get("certify-parallel").end - started,
+    serialDecisionWallMs: indexed.get("certify-serial").end - indexed.get("performance").end,
+    parallelJobWallMs: sum(parallelNames), serialJobWallMs: sum(["serial", "certify-serial"]),
+    experimentJobWallMs: rows.reduce((total, row) => total + row.jobWallMs, 0),
+    experimentWallMs: indexed.get("aggregate").end - started, jobs: rows,
+    canonicalReleaseAuthority: false,
+    limitations: ["Provider snapshots are supplied data, not an authenticated release certificate",
+      "Legacy schema-1 parity reports have no run/attempt origin binding and cannot report equivalence here",
+      "Dependency-ready elapsed time is measured from run creation, not per-job queue entry",
+      "Job wall time includes setup, uploads and cleanup but is not a billing attestation",
+      "Dispatch wait starts after all dependencies finish; it includes provider scheduling",
+      "Decision clocks include certification jobs even when the decision rejects the candidate",
+      "One run is not a p50/p95 qualification or speedup acceptance"] };
+  requireValue(date(generatedAt) >= finished, "measurement predates run completion");
+  return Object.freeze({ ...payload, reportDigest: receiptSha256(payload) });
+}
+
 const invoked = process.argv[1] === undefined ? "" : resolve(process.argv[1]);
 if (invoked === fileURLToPath(import.meta.url)) {
+  if (process.argv[2] === "provider-metrics") {
+    const options = process.argv.slice(3), values = {};
+    const allowed = ["--run", "--jobs", "--report", "--shard-plan", "--artifact"];
+    if (options.length !== allowed.length * 2) throw new TypeError("provider-metrics requires --run --jobs --report --shard-plan --artifact");
+    for (let index = 0; index < options.length; index += 2) {
+      if (!allowed.includes(options[index]) || values[options[index]] !== undefined) throw new TypeError("invalid provider-metrics arguments");
+      values[options[index]] = options[index + 1];
+    }
+    const json = async (name) => JSON.parse(await readFile(resolve(values[name]), "utf8"));
+    const report = createCanaryProviderMetrics({ run: await json("--run"), jobs: await json("--jobs"),
+      parityReport: await json("--report"), shardPlan: await json("--shard-plan"), generatedAt: new Date().toISOString() });
+    const output = resolve(values["--artifact"]); await mkdir(dirname(output), { recursive: true });
+    await writeFile(output, `${JSON.stringify(report, null, 2)}\n`, { flag: "wx" });
+    console.log(`MEASURED ${report.parityStatus} ${report.reportDigest}`);
+    // Successful measurement does not turn a failed run into qualification.
+    if (!report.equivalenceReported) process.exitCode = 1;
+  } else {
   const names = ["--plan", "--shard-plan", "--serial-dir", "--parallel-dir", "--serial-certificate", "--parallel-certificate", "--provider-bundle", "--artifact", "--plant-failure"];
   const args = process.argv.slice(2), values = {};
   if (args.length !== names.length * 2) throw new TypeError("invalid canary report arguments");
@@ -246,4 +366,5 @@ if (invoked === fileURLToPath(import.meta.url)) {
     plantedFailureTaskId: values["--plant-failure"] === "none" ? null : values["--plant-failure"], generatedAt: new Date().toISOString() });
   const output = resolve(values["--artifact"]); await mkdir(dirname(output), { recursive: true }); await writeFile(output, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   console.log(`${report.status.toUpperCase()} ${report.reportDigest}`); if (report.errors.length > 0) process.exitCode = 1;
+  }
 }
