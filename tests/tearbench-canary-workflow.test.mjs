@@ -34,7 +34,7 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   const aggregateJob = workflow.slice(workflow.indexOf("\n  aggregate:"));
   assert.match(aggregateJob, /id: aggregate-provider[\s\S]+?name: tearbench-canary-provider-/u);
   assert.equal([...workflow.matchAll(/--ready-at/gu)].length, 5);
-  assert.equal([...workflow.matchAll(/^\s+- id: ready$/gmu)].length, 2);
+  assert.equal([...workflow.matchAll(/^\s+- id: ready$/gmu)].length, 3);
   assert.ok([...workflow.matchAll(/uses: actions\/upload-artifact@v4/gu)].length >= 8);
   assert.ok([...workflow.matchAll(/if: always\(\)/gu)].length >= 6);
   for (const job of ["browser", "core"]) assert.match(workflow, new RegExp(`name: tearbench-canary-\\$\\{\\{ matrix\\.shardId \\}\\}`), job);
@@ -61,6 +61,16 @@ test("parallel canary retries only the failed atomic task and records authorizat
   assert.match(shardRunner, /`bounded-canary-invalid-sample-retry:\$\{values\["--mission"\]\}:\$\{taskId\}`/u);
   assert.match(shardRunner, /`bounded-canary-single-retry:\$\{values\["--mission"\]\}:\$\{taskId\}`/u);
   assert.match(shardRunner, /delete process\.env\.TEARBENCH_RETRY_AUTHORIZATION/u);
+});
+
+test("serial timing excludes the preceding parallel experiment but retains its own queue and setup", () => {
+  const serial = workflow.slice(workflow.indexOf("\n  serial:"), workflow.indexOf("\n  build:"));
+  const performance = workflow.slice(workflow.indexOf("\n  performance:"), workflow.indexOf("\n  certify-serial:"));
+  assert.match(performance, /outputs:\s+ready_at: \$\{\{ steps\.ready\.outputs\.ready_at \}\}/u);
+  assert.match(performance, /- id: ready\s+if: always\(\)\s+run: echo "ready_at=\$\(date -u \+%FT%T\.%3NZ\)" >> "\$GITHUB_OUTPUT"/u);
+  assert.match(serial, /--run-created '\$\{\{ needs\.performance\.outputs\.ready_at \}\}' --ready-at '\$\{\{ needs\.performance\.outputs\.ready_at \}\}'/u);
+  assert.doesNotMatch(serial, /--run-created '\$\{\{ needs\.plan\.outputs\.run_created \}\}'/u);
+  assert.match(serial, /--job-start '\$\{\{ steps\.clock\.outputs\.job_start \}\}'/u);
 });
 
 test("detached parity resolves pnpm from PATH outside a parent pnpm process", () => {

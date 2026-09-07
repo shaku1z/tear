@@ -197,9 +197,16 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
   if (parallelCertificate?.status !== expectedParallel || parallelCertificate.planDigest !== plan.planDigest) {
     errors.push(`parallel certificate is not the expected ${expectedParallel} decision`);
   }
-  const serialMetrics = timingSummary(serialTimings, "serial"), parallelMetrics = timingSummary(parallelTimings, "parallel");
   const browser = parallelTimings.filter((entry) => entry.shardId.startsWith("browser-"));
   const isolatedPerformance = parallelTimings.find((entry) => entry.shardId === shardPlan.performanceShard.shardId);
+  const serialTiming = serialTimings.find((entry) => entry.shardId === shardPlan.serialShard.shardId);
+  const serialStart = Date.parse(serialTiming?.runCreatedAt), serialReady = Date.parse(serialTiming?.readyAt);
+  const serialFinish = Date.parse(serialTiming?.finishedAt), parallelFinish = Date.parse(isolatedPerformance?.finishedAt);
+  const comparisonClockValid = [serialStart, serialReady, serialFinish, parallelFinish].every(Number.isFinite)
+    && serialStart === serialReady && serialStart >= parallelFinish && serialFinish >= serialStart;
+  if (!comparisonClockValid) errors.push("serial comparison clock includes prior work or has invalid boundaries");
+  const serialMetrics = comparisonClockValid ? timingSummary(serialTimings, "serial") : null;
+  const parallelMetrics = comparisonClockValid ? timingSummary(parallelTimings, "parallel") : null;
   const minBrowser = Math.min(...browser.map((entry) => Math.max(1, entry.taskWallMs)));
   const payload = { format: "tearbench-canary-parity-report", schemaVersion: 1, generatedAt,
     status: errors.length === 0 ? (plantedFailureTaskId === null ? "equivalent" : "expected-rejection-proved") : "mismatched",
@@ -214,7 +221,8 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
         taskWallMs: isolatedPerformance.taskWallMs, jobWallMs: isolatedPerformance.jobWallMs,
       },
       browserShardBalanceRatio: browser.length === 0 ? null : Number((Math.max(...browser.map((entry) => entry.taskWallMs)) / minBrowser).toFixed(3)),
-      wallTimeReductionRatio: serialMetrics.wallMs === 0 ? null : Number((parallelMetrics.wallMs / serialMetrics.wallMs).toFixed(3)) },
+      wallTimeReductionRatio: !comparisonClockValid || serialMetrics.wallMs === 0 ? null
+        : Number((parallelMetrics.wallMs / serialMetrics.wallMs).toFixed(3)) },
     errors };
   return Object.freeze({ ...payload, reportDigest: receiptSha256(payload) });
 }

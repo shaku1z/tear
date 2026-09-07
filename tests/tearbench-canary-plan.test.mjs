@@ -74,13 +74,27 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
     artifactId: "789", artifactDigest: "d".repeat(64), artifactUrl: "https://github.com/shaku1z/tear/actions/runs/123/artifacts/789", receipts: providerReceipts };
   const providerBundle = { ...providerUnsigned, bundleDigest: receiptSha256(providerUnsigned) };
   const common = { plan, shardPlan, serialReceipts: serial, parallelReceipts: parallel,
-    serialTimings: [timing("serial-1", "serial", ["task.a", "task.b", performanceTaskId], 10000)],
+    serialTimings: [{ ...timing("serial-1", "serial", ["task.a", "task.b", performanceTaskId], 10000),
+      runCreatedAt: "2026-08-31T00:00:06.000Z", readyAt: "2026-08-31T00:00:06.000Z",
+      finishedAt: "2026-08-31T00:00:16.000Z" }],
     parallelTimings: [timing("build-1", "build", ["task.b"], 4000), timing("browser-1", "browser", ["task.a"], 5000),
       timing("performance-1", "performance", [performanceTaskId], 3000)],
     serialCertificate: { status: "certified", planDigest: plan.planDigest },
     parallelCertificate: { status: "certified", planDigest: plan.planDigest }, providerBundle,
     generatedAt: "2026-08-31T00:01:00.000Z" };
   assert.equal(createCanaryParityReport(common).status, "equivalent");
+  for (const invalid of [
+    { runCreatedAt: "2026-08-31T00:00:00.000Z" },
+    { runCreatedAt: "invalid", readyAt: "invalid" },
+    { runCreatedAt: "2026-08-31T00:00:02.000Z", readyAt: "2026-08-31T00:00:02.000Z" },
+    { finishedAt: "2026-08-31T00:00:05.000Z" },
+  ]) {
+    const report = createCanaryParityReport({ ...common,
+      serialTimings: [{ ...common.serialTimings[0], ...invalid }] });
+    assert.equal(report.status, "mismatched");
+    assert.equal(report.metrics.wallTimeReductionRatio, null);
+    assert.ok(report.errors.includes("serial comparison clock includes prior work or has invalid boundaries"));
+  }
   assert.deepEqual(createCanaryParityReport(common).metrics.isolatedPerformance,
     { queueMs: 10, setupMs: 20, taskWallMs: 2980, jobWallMs: 3000 });
   const failedBrowserTiming = timing("browser-1", "browser", ["task.a"], 5000);
