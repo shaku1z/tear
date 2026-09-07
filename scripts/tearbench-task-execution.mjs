@@ -40,12 +40,12 @@ function originFromEnvironment() {
     workflow: process.env.GITHUB_WORKFLOW ?? "", runId: process.env.GITHUB_RUN_ID ?? "",
     job: process.env.GITHUB_JOB ?? "", attempt: Number(process.env.GITHUB_RUN_ATTEMPT ?? "0") });
 }
-function executeTask(task) {
+function executeTask(task, spawnTask) {
   const runner = task.runner;
   const executable = runner.kind === "node" && runner.executable === "node" ? process.execPath : process.execPath;
   const args = runner.kind === "node" && runner.executable === "node"
     ? runner.args : [resolve(root, runner.executable), ...runner.args];
-  const result = spawnSync(executable, args, { cwd: root, encoding: "utf8", maxBuffer: 50 * 1024 * 1024,
+  const result = spawnTask(executable, args, { cwd: root, encoding: "utf8", maxBuffer: 50 * 1024 * 1024,
     env: { ...process.env, TEARBENCH_TASK_ID: task.taskId,
       ...(task.dependencies.some((entry) => entry.outputId === "build-artifact") ? { TEARBENCH_REUSE_VERIFIED_BUILDS: "1" } : {}) } });
   process.stdout.write(result.stdout ?? ""); process.stderr.write(result.stderr ?? "");
@@ -163,12 +163,12 @@ async function producedBuildAttestations(requirement, plan) {
 export async function executePlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId }) {
   const task = registry.tasks.find((entry) => entry.taskId === taskId);
   if (task === undefined) throw new RangeError(`unknown registered task ${taskId}`);
-  return await withResourceLeases(taskResourceKeys(task), () => executeLeasedPlanTask({
-    planPath, taskId, missionId, attemptNumber, plantedFailureTaskId,
+  return await withResourceLeases(taskResourceKeys(task), (spawnTask) => executeLeasedPlanTask({
+    planPath, taskId, missionId, attemptNumber, plantedFailureTaskId, spawnTask,
   }));
 }
 
-async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId }) {
+async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumber, plantedFailureTaskId, spawnTask }) {
   const planInput = await workspaceInput(planPath, "task plan");
   const plan = JSON.parse(await readFile(planInput.absolute, "utf8"));
   const task = registry.tasks.find((entry) => entry.taskId === taskId);
@@ -205,7 +205,7 @@ async function executeLeasedPlanTask({ planPath, taskId, missionId, attemptNumbe
   const startedAt = new Date().toISOString();
   const result = plantedFailureTaskId === taskId
     ? { status: 97, stdout: "", stderr: `VAP-6 planted canary failure: ${taskId}\n` }
-    : executeTask(task);
+    : executeTask(task, spawnTask);
   const finishedAt = new Date().toISOString();
   const after = sourceIdentity();
   if (canonicalJson(before) !== canonicalJson(after)) throw new Error(`task ${taskId} changed its source identity`);

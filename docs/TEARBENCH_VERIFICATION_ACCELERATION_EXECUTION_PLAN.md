@@ -488,10 +488,49 @@ contention, failure cleanup, partial acquisition rollback, ownership changes,
 directory aliases, and collision rejection by both actual command entry points.
 The original compatibility inventory remains a historical baseline; functional
 and protected profiles add this regression obligation. This does not close
-VAP-8: direct scenario, selected-evidence, graveyard and minimization paths still
-need coordinated coverage, and equivalent-receipt suppression, mission schema,
+VAP-8: direct scenario, selected-evidence, graveyard, minimization and bisection
+paths require the nested-lease proof described below, and equivalent-receipt suppression, mission schema,
 source-drift handoff proof and orchestration benchmarks remain open. A lease is
 cooperative exclusion, not evidence or protected release authority.
+
+The follow-on nested-lease implementation passes ownership only through a
+synchronous child runner. Borrowers verify their direct parent, canonical lease
+directory, unchanged lock token and live owning process; they never remove an
+ancestor's lock. Selected evidence and direct live runs hold their leases through
+execution and artifact inspection. Nonempty graveyard selections hold leases
+across the build and replay batch; minimization holds them across both worktree
+builds and replay pairs; bisection holds them from preflight through all revisions
+and worktree cleanup. Bisection launches the
+revision's CLI directly, preserving the package-manager entry for its build.
+Empty graveyard selections do not reserve build/browser resources.
+
+Read-only review found no concrete ownership or cleanup defect. A parent holding
+both build and browser leases successfully invoked the real direct CLI for
+`pale-aurora-track-behavior` with catalog seed
+`pale-aurora-track-behavior-seed`: 180 live-runtime ticks, passed, zero failures.
+The retained local artifact is
+`artifacts/tearbench/generated/vap8-nested-lease-live-proof.json`, bound to dirty
+source fingerprint
+`3e58c1f5fb8387622d747e3e819b4a6d98e1aaac071dfd2462d8d89fd8f82689`.
+This is engineering execution evidence, not protected release authority.
+
+Permanent CLI tests now cover nonempty graveyard contention and both bisection
+entry points, rejecting an occupied build lease before execution. Acceptance
+remains open for a complete bisection run. The opt-in
+`nonempty synthetic graveyard replays under inherited leases` test passed after
+capturing a real canonical baseline and retaining its full replay context. It
+executes the nonempty graveyard browser path and confirms the parent still owns
+the build lease after the child exits. Its synthetic failure registry proves
+infrastructure behavior, not a historical gameplay fix. Enable
+`TEARBENCH_LEASE_LIVE_PROOF=1` and supply pnpm's JavaScript entry in
+`npm_execpath`, then run
+`node --test --test-name-pattern='nonempty synthetic graveyard' tests/tearbench-resource-leases.test.mjs`.
+The test removes successful disposable fixtures and retains failed ones for
+diagnosis; default unit runs intentionally skip this browser/build proof.
+Helper inheritance tests, rejected competing CLI calls, and guarded preflight
+tests alone do not prove those end-to-end paths or close VAP-8. On non-Windows hosts, launch
+bisection through pnpm so the pinned package-manager entry is available to its
+direct child.
 
 ### Shared evidence context
 

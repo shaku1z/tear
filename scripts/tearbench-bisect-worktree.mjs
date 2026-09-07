@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { withResourceLeases } from "./tearbench-resource-leases.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const artifactRoot = resolve(root, "artifacts", "tearbench", "bisect");
@@ -68,15 +69,12 @@ function revisionDirectoryName(revision) {
   return revision.replaceAll(/[^a-zA-Z0-9._-]/gu, "_").slice(0, 80);
 }
 
-function pnpmInvocation(args) {
-  if (process.env.npm_execpath) return { executable: process.execPath, args: [process.env.npm_execpath, ...args] };
+function pnpmEntryPath() {
+  if (process.env.npm_execpath) return process.env.npm_execpath;
   if (process.env.APPDATA) {
-    return {
-      executable: process.execPath,
-      args: [resolve(process.env.APPDATA, "npm", "node_modules", "pnpm", "bin", "pnpm.mjs"), ...args],
-    };
+    return resolve(process.env.APPDATA, "npm", "node_modules", "pnpm", "bin", "pnpm.mjs");
   }
-  return { executable: process.platform === "win32" ? "pnpm.cmd" : "pnpm", args };
+  throw new Error("TearBench bisection must be launched through pnpm so the pinned package manager can be reused");
 }
 
 function currentSourceMustBeClean() {
@@ -121,12 +119,13 @@ async function readRun(path) {
   return parsed;
 }
 
-function runMaterializer(worktree, scenario, seed, actionTrace, artifactPath) {
-  const invocation = pnpmInvocation([
-    "tearbench", "run", scenario, "--seed", seed, "--repeat", "1", "--artifact", artifactPath,
+function runMaterializer(worktree, scenario, seed, actionTrace, artifactPath, spawnTask) {
+  const result = spawnTask(process.execPath, [
+    resolve(worktree, "scripts", "tearbench.mjs"), "run", scenario, "--seed", seed, "--repeat", "1", "--artifact", artifactPath,
     ...(actionTrace === undefined ? [] : ["--actions", actionTrace]),
-  ]);
-  return command(invocation.executable, invocation.args, worktree);
+  ], { cwd: worktree, encoding: "utf8", windowsHide: true,
+    env: { ...process.env, npm_execpath: pnpmEntryPath() } });
+  return { status: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", error: result.error?.message };
 }
 
 async function cleanupWorktree(path, created) {
@@ -142,7 +141,7 @@ function attemptError(attempt, error) {
   return Object.freeze({ attempt, outcome: "execution-error", error: error.slice(0, 2_000) });
 }
 
-async function executeRevision({ worktree, revision, scenario, seed, repetitions, baseArtifacts, actionTrace, modules, runRoot }) {
+async function executeRevision({ worktree, revision, scenario, seed, repetitions, baseArtifacts, actionTrace, modules, runRoot, spawnTask }) {
   const checkout = git(["checkout", "--detach", revision], worktree);
   if (checkout.status !== 0) {
     return {
@@ -163,7 +162,7 @@ async function executeRevision({ worktree, revision, scenario, seed, repetitions
     const attempt = index + 1;
     const artifactPath = resolve(runRoot, revisionDirectoryName(revision), `attempt-${String(attempt)}.json`);
     await mkdir(dirname(artifactPath), { recursive: true });
-    const result = runMaterializer(worktree, scenario, seed, actionTrace, artifactPath);
+    const result = runMaterializer(worktree, scenario, seed, actionTrace, artifactPath, spawnTask);
     if (result.status !== 0) {
       attempts.push(attemptError(attempt, `materializer failed: ${(result.stderr || result.stdout || result.error || "unknown error").trim()}`));
       continue;
@@ -201,6 +200,10 @@ function usage() {
 }
 
 export async function main() {
+  return await withResourceLeases(["resources/browser", "resources/build"], (spawnTask) => executeLeasedBisection(spawnTask));
+}
+
+async function executeLeasedBisection(spawnTask) {
   const goodInput = requiredOption("--good", usage());
   const badInput = requiredOption("--bad", usage());
   const scenario = requiredOption("--scenario", usage());
@@ -230,7 +233,7 @@ export async function main() {
       const add = git(["worktree", "add", "--detach", tempWorktree, good]);
       if (add.status !== 0) throw new Error(`clean worktree creation failed: ${(add.stderr || add.stdout || add.error || "unknown error").trim()}`);
       created = true;
-      const baseline = await executeRevision({ worktree: tempWorktree, revision: good, scenario, seed, repetitions, baseArtifacts: [], actionTrace, modules, runRoot });
+      const baseline = await executeRevision({ worktree: tempWorktree, revision: good, scenario, seed, repetitions, baseArtifacts: [], actionTrace, modules, runRoot, spawnTask });
       records.set(good, baseline.record);
       baselineArtifacts = baseline.record.attempts.flatMap((attempt) => attempt.artifactPath === undefined ? [] : [attempt.artifactPath]);
       if (baseline.record.stability !== "does-not-reproduce" || baselineArtifacts.length !== repetitions) {
@@ -242,7 +245,7 @@ export async function main() {
           const middle = Math.floor((low + high) / 2);
           const revision = candidates[middle];
           if (revision === undefined) throw new Error("bisection selected an invalid revision");
-          const execution = await executeRevision({ worktree: tempWorktree, revision, scenario, seed, repetitions, baseArtifacts: baselineArtifacts, actionTrace, modules, runRoot });
+          const execution = await executeRevision({ worktree: tempWorktree, revision, scenario, seed, repetitions, baseArtifacts: baselineArtifacts, actionTrace, modules, runRoot, spawnTask });
           records.set(revision, execution.record);
           if (execution.firstInvestigation !== undefined) currentInvestigation = execution.firstInvestigation;
           if (execution.record.stability === "does-not-reproduce") low = middle;
@@ -253,7 +256,7 @@ export async function main() {
           const revision = candidates[high];
           if (revision === undefined) throw new Error("bisection selected an invalid known-bad revision");
           if (!records.has(revision)) {
-            const execution = await executeRevision({ worktree: tempWorktree, revision, scenario, seed, repetitions, baseArtifacts: baselineArtifacts, actionTrace, modules, runRoot });
+            const execution = await executeRevision({ worktree: tempWorktree, revision, scenario, seed, repetitions, baseArtifacts: baselineArtifacts, actionTrace, modules, runRoot, spawnTask });
             records.set(revision, execution.record);
             if (execution.firstInvestigation !== undefined) currentInvestigation = execution.firstInvestigation;
           }
