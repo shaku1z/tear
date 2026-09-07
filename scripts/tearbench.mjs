@@ -673,32 +673,32 @@ if (!evidenceRoutes.some((route) => route.id === "shared-runtime")) {
   throw new TypeError("TearBench evidence routes must include a shared-runtime fallback");
 }
 
-function buildTestStandalone() {
+function buildTestStandalone(spawnTask = spawnSync) {
   if (process.env.TEARBENCH_REUSE_VERIFIED_BUILDS === "1") {
     validateServedBuildIdentity(readServedBuildInfo(), readSourceIdentity());
     return;
   }
   const pnpmEntry = process.env.npm_execpath;
   if (!pnpmEntry) throw new Error("TearBench must be launched through pnpm so the pinned package manager can be reused");
-  const build = spawnSync(process.execPath, [pnpmEntry, "build:test:standalone"], { cwd: root, encoding: "utf8" });
+  const build = spawnTask(process.execPath, [pnpmEntry, "build:test:standalone"], { cwd: root, encoding: "utf8" });
   if (build.status !== 0) throw new Error(`test-build materialization build failed:\n${build.stderr || build.stdout}`);
 }
 
-function materializeLiveRun(scenario, seed, artifactPath, actionTracePath, maxTicks = scenario.maxTicks, contextPaths = {}, replayContextPath) {
+function materializeLiveRun(scenario, seed, artifactPath, actionTracePath, maxTicks = scenario.maxTicks, contextPaths = {}, replayContextPath, spawnTask = spawnSync) {
   const argumentsList = ["tests/browser-tearbench-live-materialize.js", scenario.id, "--seed", seed, "--max-ticks", String(maxTicks), "--artifact", artifactPath];
   if (actionTracePath) argumentsList.push("--actions", actionTracePath);
   if (contextPaths.snapshotPath) argumentsList.push("--snapshot", contextPaths.snapshotPath);
   if (contextPaths.presentationPath) argumentsList.push("--presentation", contextPaths.presentationPath);
   if (replayContextPath) argumentsList.push("--replay-context", replayContextPath);
-  return spawnSync(process.execPath, argumentsList, { cwd: root, encoding: "utf8" });
+  return spawnTask(process.execPath, argumentsList, { cwd: root, encoding: "utf8" });
 }
 
-function runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
-  buildTestStandalone();
+function runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath, spawnTask) {
+  buildTestStandalone(spawnTask);
   const invocations = [];
   for (let index = 0; index < repeat; index += 1) {
     const attemptArtifact = index === repeat - 1 ? artifactPath : artifactPath.replace(/\.json$/u, `.attempt-${String(index + 1)}.json`);
-    const result = materializeLiveRun(scenario, seed, attemptArtifact, actionTracePath, scenario.maxTicks, {}, replayContextPath);
+    const result = materializeLiveRun(scenario, seed, attemptArtifact, actionTracePath, scenario.maxTicks, {}, replayContextPath, spawnTask);
     invocations.push({ index, status: result.status, stdout: result.stdout, stderr: result.stderr, artifact: attemptArtifact });
     if (result.status !== 0) break;
   }
@@ -901,9 +901,20 @@ function evidenceForDiff(files) {
   };
 }
 
-function executeApprovedEvidence(command, state) {
+async function executeApprovedEvidence(command, state) {
   const steps = parseApprovedEvidenceCommand(command), receipts = [];
   for (const step of steps) {
+    const resources = step.kind === "build" ? ["resources/build"]
+      : ["canonical-live", "node"].includes(step.kind) ? ["resources/browser", "resources/build"] : [];
+    const receipt = await withResourceLeases(resources, (spawnStep) => executeApprovedEvidenceStep(step, state, spawnStep));
+    receipts.push(receipt);
+    if (!["passed", "skipped"].includes(receipt.status)) break;
+  }
+  return { status: receipts.length === steps.length && receipts.every((entry) => entry.status === "passed" || entry.status === "skipped")
+    ? "passed" : "failed", receipts };
+}
+
+function executeApprovedEvidenceStep(step, state, spawnStep) {
     const before = readSourceIdentity();
     if (state.source === undefined) state.source = before;
     else if (state.source.fingerprint !== before.fingerprint || state.source.revision !== before.revision) {
@@ -911,40 +922,34 @@ function executeApprovedEvidence(command, state) {
     }
     let result;
     if (step.kind === "build") {
-      if (state.testStandaloneBuilt) { receipts.push({ kind: step.kind, status: "skipped", reason: "deduplicated test-standalone build" }); continue; }
+      if (state.testStandaloneBuilt) return { kind: step.kind, status: "skipped", reason: "deduplicated test-standalone build" };
       if (process.env.TEARBENCH_REUSE_VERIFIED_BUILDS === "1") {
         state.build = validateServedBuildIdentity(readServedBuildInfo(), before);
         state.testStandaloneBuilt = true;
-        receipts.push({ kind: step.kind, status: "skipped", reason: "verified plan dependency reuse", source: before, build: state.build });
-        continue;
+        return { kind: step.kind, status: "skipped", reason: "verified plan dependency reuse", source: before, build: state.build };
       }
-      result = spawnSync(process.execPath, [resolve(root, "scripts", "build-target.mjs"), "test-standalone"], { cwd: root, encoding: "utf8" });
+      result = spawnStep(process.execPath, [resolve(root, "scripts", "build-target.mjs"), "test-standalone"], { cwd: root, encoding: "utf8" });
       if (result.status === 0) state.testStandaloneBuilt = true;
     } else if (step.kind === "canonical-live") {
       const pnpmEntry = process.env.npm_execpath;
       if (!pnpmEntry) throw new Error("TearBench must be launched through pnpm so canonical live evidence can reuse the pinned package manager");
-      result = spawnSync(process.execPath, [pnpmEntry, "tearbench", "run", step.scenarioId], { cwd: root, encoding: "utf8" });
+      result = spawnStep(process.execPath, [resolve(root, "scripts", "tearbench.mjs"), "run", step.scenarioId], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "vitest") {
-      result = spawnSync(process.execPath, [resolve(root, "node_modules", "vitest", "vitest.mjs"), "run", ...step.files], { cwd: root, encoding: "utf8" });
+      result = spawnStep(process.execPath, [resolve(root, "node_modules", "vitest", "vitest.mjs"), "run", ...step.files], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "docs-check") {
-      result = spawnSync(process.execPath, [step.file], { cwd: root, encoding: "utf8" });
+      result = spawnStep(process.execPath, [step.file], { cwd: root, encoding: "utf8" });
     } else if (step.kind === "node-version") {
-      result = spawnSync(process.execPath, ["--version"], { cwd: root, encoding: "utf8" });
+      result = spawnStep(process.execPath, ["--version"], { cwd: root, encoding: "utf8" });
     } else {
-      result = spawnSync(process.execPath, step.kind === "node-check" ? ["--check", step.file] : [step.file], { cwd: root, encoding: "utf8" });
+      result = spawnStep(process.execPath, step.kind === "node-check" ? ["--check", step.file] : [step.file], { cwd: root, encoding: "utf8" });
     }
     const after = readSourceIdentity();
     if (after.fingerprint !== before.fingerprint || after.revision !== before.revision) {
       throw new Error(`selected evidence command changed source identity (${step.kind})`);
     }
     if (step.kind === "build" && result.status === 0) state.build = validateServedBuildIdentity(readServedBuildInfo(), after);
-    const receipt = { kind: step.kind, status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1,
+    return { kind: step.kind, status: result.status === 0 ? "passed" : "failed", exitCode: result.status ?? 1,
       stdout: result.stdout ?? "", stderr: result.stderr ?? "", source: after, ...(state.build === undefined ? {} : { build: state.build }) };
-    receipts.push(receipt);
-    if (receipt.status !== "passed") break;
-  }
-  return { status: receipts.length === steps.length && receipts.every((entry) => entry.status === "passed" || entry.status === "skipped")
-    ? "passed" : "failed", receipts };
 }
 
 function writeDiffCapabilityReport(scope, state, executions) {
@@ -964,16 +969,16 @@ function writeDiffCapabilityReport(scope, state, executions) {
   return workspaceRelativePath(path);
 }
 
-function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets = [], authorityCommands = [], scope = {}) {
+async function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets = [], authorityCommands = [], scope = {}) {
   const state = { testStandaloneBuilt: false, source: readSourceIdentity() }, executions = [], completedCommands = new Map();
   const executionScope = canonicalDiffScope({ scenarios, journeyCommands, buildTargets, ...scope });
-  const runOne = (id, command, backend = "explicit-command") => {
+  const runOne = async (id, command, backend = "explicit-command") => {
     const completed = completedCommands.get(command);
     if (completed !== undefined) {
       executions.push({ ...completed, id, backend, reusedExecutionId: completed.id });
       return true;
     }
-    const execution = executeApprovedEvidence(command, state);
+    const execution = await executeApprovedEvidence(command, state);
     const result = { id, backend, command, status: execution.status, receipts: execution.receipts,
       source: state.source, ...(state.build === undefined ? {} : { build: state.build }) };
     executions.push(result);
@@ -983,19 +988,19 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
   for (const target of buildTargets) {
     const policy = evidencePolicy.buildTargets[target];
     if (policy === undefined) throw new TypeError(`unknown TearBench build target: ${target}`);
-    if (!runOne(`build-target:${target}`, displayCommandForTask(policy.taskId))) return { status: "failed", executions };
+    if (!await runOne(`build-target:${target}`, displayCommandForTask(policy.taskId))) return { status: "failed", executions };
   }
   for (const id of scenarios) {
     for (const evidence of evidenceCommandsForScenario(scenarioById(id))) {
-      if (!runOne(id, evidence.command, evidence.backend)) break;
+      if (!await runOne(id, evidence.command, evidence.backend)) break;
     }
     if (!executions.every((entry) => entry.status === "passed")) break;
   }
   if (executions.every((entry) => entry.status === "passed")) {
-    for (const command of journeyCommands) if (!runOne(`journey:${command}`, command)) break;
+    for (const command of journeyCommands) if (!await runOne(`journey:${command}`, command)) break;
   }
   if (executions.every((entry) => entry.status === "passed")) {
-    for (const command of authorityCommands) if (!runOne(`authority:${command}`, command)) break;
+    for (const command of authorityCommands) if (!await runOne(`authority:${command}`, command)) break;
   }
   const status = executions.every((entry) => entry.status === "passed") ? "passed" : "failed";
   const obligationExecution = canonicalEvidenceBindings(scope.obligationBindings ?? []).map((binding) => {
@@ -1007,17 +1012,17 @@ function executeSelectedEvidence(scenarios, journeyCommands = [], buildTargets =
   return { status, executions, obligationExecution, ...(generatedArtifact === undefined ? {} : { generatedArtifact }) };
 }
 
-function executeRegistryTask(task) {
+function executeRegistryTask(task, spawnTask) {
   const runner = task.runner;
   const options = { cwd: root, stdio: "inherit", env: registryTaskEnvironment(task) };
   if (runner.kind === "build-target") {
-    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
+    return spawnTask(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
   }
   if (runner.kind === "node" && runner.executable === "node") {
-    return spawnSync(process.execPath, runner.args, options);
+    return spawnTask(process.execPath, runner.args, options);
   }
   if (["vitest", "typescript", "eslint", "wrangler", "tearbench", "certifier"].includes(runner.kind)) {
-    return spawnSync(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
+    return spawnTask(process.execPath, [resolve(root, runner.executable), ...runner.args], options);
   }
   throw new TypeError(`unsupported TearBench task runner: ${String(runner.kind)}`);
 }
@@ -1056,9 +1061,9 @@ async function runTaskProfile() {
   for (const [index, taskId] of ordered.entries()) {
     const task = taskById.get(taskId);
     console.log(`TASK ${String(index + 1)}/${String(ordered.length)} ${taskId}`);
-    const result = await withResourceLeases(taskResourceKeys(task), async () => {
+    const result = await withResourceLeases(taskResourceKeys(task), async (spawnTask) => {
       await verifyRegistryBuildDependencies(task);
-      return executeRegistryTask(task);
+      return executeRegistryTask(task, spawnTask);
     });
     if (result.status !== 0) {
       process.exitCode = result.status ?? 1;
@@ -1150,7 +1155,7 @@ export function verifyCurrentWeaponParityExecution(selection, evidence) {
     weapons: [...selection.currentWeaponParity.weapons], scenarios: [...selection.currentWeaponParity.scenarios] } };
 }
 
-function executeCurrentWeaponParity() {
+async function executeCurrentWeaponParity() {
   const selected = evidenceForDiff(["src/gameplay/weapon-selection.ts"]);
   const scenarios = [...selected.currentWeaponParity.scenarios];
   const scope = canonicalDiffScope({ ...selected.scope, scenarios, journeyCheckpoints: ["current-five-weapon-live-detached-parity"],
@@ -1171,7 +1176,7 @@ function executeCurrentWeaponParity() {
     }
   }
   return { ...selection, evidenceExecution: verifyCurrentWeaponParityExecution(selection,
-    executeSelectedEvidence(scenarios, [], ["test-standalone"], [], scope)) };
+    await executeSelectedEvidence(scenarios, [], ["test-standalone"], [], scope)) };
 }
 
 async function writeSelection(selection) {
@@ -1305,7 +1310,7 @@ async function recordEvidenceReceipt() {
   if (commandParts.length === 0) throw new TypeError(usage);
   const command = commandParts.join(" ");
   const before = { repository: RELEASE_REPOSITORY, ...readSourceIdentity() };
-  const execution = executeApprovedEvidence(command, { testStandaloneBuilt: false, source: before });
+  const execution = await executeApprovedEvidence(command, { testStandaloneBuilt: false, source: before });
   const result = {
     status: execution.status === "passed" ? 0 : 1,
     stdout: execution.receipts.map((receipt) => receipt.stdout ?? "").filter(Boolean).join("\n"),
@@ -1517,10 +1522,15 @@ async function writeReleaseCertificate() {
 }
 
 async function executeRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath) {
+  return await withResourceLeases(["resources/browser", "resources/build"], (spawnTask) =>
+    executeLeasedRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath, spawnTask));
+}
+
+async function executeLeasedRun(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath, spawnTask) {
   if (scenario.stateForge !== undefined && seed !== scenario.seed) {
     throw new RangeError(`canonical State Forge scenario ${scenario.id} requires its authoritative catalog seed ${scenario.seed}`);
   }
-  const invocations = runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath);
+  const invocations = runLiveMaterializer(scenario, seed, repeat, artifactPath, actionTracePath, replayContextPath, spawnTask);
   const passed = invocations.length === repeat && invocations.every((entry) => entry.status === 0)
     && existsSync(artifactPath) && isPassedTearBenchRunArtifact(artifactPath);
   if (!passed && !existsSync(artifactPath)) {
@@ -1628,10 +1638,10 @@ function cleanGitWorkspace(path, label) {
   return workspace;
 }
 
-function buildCleanWorkspace(workspace, label) {
+function buildCleanWorkspace(workspace, label, spawnTask) {
   const pnpmEntry = process.env.npm_execpath;
   if (!pnpmEntry) throw new Error("TearBench must be launched through pnpm so the pinned package manager can be reused");
-  const build = spawnSync(process.execPath, [pnpmEntry, "--dir", workspace, "build:test:standalone"], { cwd: workspace, encoding: "utf8" });
+  const build = spawnTask(process.execPath, [pnpmEntry, "--dir", workspace, "build:test:standalone"], { cwd: workspace, encoding: "utf8" });
   if (build.status !== 0) throw new Error(`${label} test-build failed:\n${build.stderr || build.stdout}`);
 }
 
@@ -1641,6 +1651,10 @@ function buildCleanWorkspace(workspace, label) {
  * validated against isolated base and candidate builds, not cached frames.
  */
 async function minimizeRegression() {
+  return await withResourceLeases(["resources/browser", "resources/build"], (spawnTask) => minimizeLeasedRegression(spawnTask));
+}
+
+async function minimizeLeasedRegression(spawnTask) {
   const usage = "usage: pnpm tearbench minimize --base <run.json> --candidate <run.json> --base-workspace <clean-worktree> --candidate-workspace <clean-worktree> [--repetitions 3] [--max-pairs 48] [--artifact path]";
   const basePath = requiredOption("--base", usage);
   const candidatePath = requiredOption("--candidate", usage);
@@ -1654,8 +1668,8 @@ async function minimizeRegression() {
     readFile(resolve(candidatePath), "utf8").then(JSON.parse),
   ]);
   if (base?.format !== "tearbench-run" || candidate?.format !== "tearbench-run") throw new TypeError("minimize requires materialized tearbench-run base and candidate artifacts");
-  buildCleanWorkspace(baseWorkspace, "base");
-  buildCleanWorkspace(candidateWorkspace, "candidate");
+  buildCleanWorkspace(baseWorkspace, "base", spawnTask);
+  buildCleanWorkspace(candidateWorkspace, "candidate", spawnTask);
   const artifactPath = resolve(option("--artifact", resolve(root, "artifacts", "tearbench", "regression-minimization.json")));
   const artifactStem = artifactPath.replace(/\.json$/u, "");
   const materializedPaths = new Map();
@@ -1676,7 +1690,7 @@ async function minimizeRegression() {
       ...(context.initialSnapshot === undefined ? [] : ["--snapshot", snapshotPath]),
       ...(context.presentation === undefined ? [] : ["--presentation", presentationPath]),
       "--artifact", runPath];
-    const result = spawnSync(process.execPath, argumentsList, { cwd: workspace, encoding: "utf8" });
+    const result = spawnTask(process.execPath, argumentsList, { cwd: workspace, encoding: "utf8" });
     if (result.status !== 0) throw new Error(`${safeSide} replay materialization failed:\n${result.stderr || result.stdout}`);
     const artifact = JSON.parse(await readFile(runPath, "utf8"));
     materializedPaths.set(artifact.id, workspaceRelativePath(runPath));
@@ -1876,57 +1890,59 @@ async function executeSelectedGraveyardCases(selectors, options = {}) {
     const artifacts = await artifactStoreForRegistry(registry);
     graveyard.validateGraveyardRegistry(registry, artifacts);
     const entries = graveyard.selectGraveyardEntries(registry, selectors);
-    const cases = [];
-    if (entries.length > 0) buildTestStandalone();
-    for (const entry of entries) {
-      const replay = graveyard.createGraveyardReplayRequest(entry, artifacts);
-      if (replay.maxTicks < 1 || replay.maxTicks > 720) {
-        throw new RangeError(`graveyard ${entry.id} replay horizon is outside the live materializer limit: ${String(replay.maxTicks)}`);
+    return await withResourceLeases(entries.length > 0 ? ["resources/browser", "resources/build"] : [], async (spawnTask) => {
+      const cases = [];
+      if (entries.length > 0) buildTestStandalone(spawnTask);
+      for (const entry of entries) {
+        const replay = graveyard.createGraveyardReplayRequest(entry, artifacts);
+        if (replay.maxTicks < 1 || replay.maxTicks > 720) {
+          throw new RangeError(`graveyard ${entry.id} replay horizon is outside the live materializer limit: ${String(replay.maxTicks)}`);
+        }
+        const scenario = scenarioById(replay.scenarioId);
+        if (replay.scenarioVersion !== 1) throw new TypeError(`graveyard ${entry.id} references unsupported canonical scenario version ${String(replay.scenarioVersion)}`);
+        const caseStem = resolve(dirname(outputPath), "graveyard-runs", entry.id);
+        const actionsPath = `${caseStem}.replay.actions.json`;
+        const runPath = `${caseStem}.run.json`;
+        const snapshotPath = `${caseStem}.snapshot.json`;
+        const presentationPath = `${caseStem}.presentation.json`;
+        await mkdir(dirname(caseStem), { recursive: true });
+        await writeFile(actionsPath, `${JSON.stringify({ actions: replay.actions }, null, 2)}\n`, "utf8");
+        if (replay.replayContext?.initialSnapshot !== undefined) {
+          await writeFile(snapshotPath, `${JSON.stringify(replay.replayContext.initialSnapshot, null, 2)}\n`, "utf8");
+        }
+        if (replay.replayContext?.presentation !== undefined) {
+          await writeFile(presentationPath, `${JSON.stringify(replay.replayContext.presentation, null, 2)}\n`, "utf8");
+        }
+        const materialized = materializeLiveRun(scenario, replay.seed, runPath, actionsPath, replay.maxTicks, {
+          ...(replay.replayContext?.initialSnapshot === undefined ? {} : { snapshotPath }),
+          ...(replay.replayContext?.presentation === undefined ? {} : { presentationPath }),
+        }, undefined, spawnTask);
+        if (materialized.stdout) process.stdout.write(materialized.stdout);
+        if (materialized.stderr) process.stderr.write(materialized.stderr);
+        if (materialized.status !== 0) {
+          cases.push({ id: entry.id, status: "failed", reason: "materialization-failed", runArtifact: workspaceRelativePath(runPath) });
+          continue;
+        }
+        const run = JSON.parse(await readFile(runPath, "utf8"));
+        const invariantFailures = Array.isArray(run.failures) ? run.failures.filter((failure) => failure?.id === replay.invariantId) : [];
+        const preservedActions = canonicalJson(run.actions) === canonicalJson(replay.actions);
+        const preservedContext = canonicalJson(run.replayContext ?? {}) === canonicalJson(replay.replayContext ?? {});
+        const passed = run.format === "tearbench-run" && run.seed === replay.seed
+          && run.resolvedScenario?.id === replay.scenarioId
+          && run.resolvedScenario?.version === replay.scenarioVersion
+          && run.resolvedScenario?.maxTicks === replay.maxTicks
+          && preservedActions && preservedContext && run.status !== "failed" && invariantFailures.length === 0;
+        cases.push({
+          id: entry.id,
+          status: passed ? "passed" : "failed",
+          invariantId: replay.invariantId,
+          sourceMinimalArtifact: entry.minimalChild.path,
+          runArtifact: workspaceRelativePath(runPath),
+          ...(passed ? {} : { reason: "recorded-invariant-recurred-or-replay-mismatched" }),
+        });
       }
-      const scenario = scenarioById(replay.scenarioId);
-      if (replay.scenarioVersion !== 1) throw new TypeError(`graveyard ${entry.id} references unsupported canonical scenario version ${String(replay.scenarioVersion)}`);
-      const caseStem = resolve(dirname(outputPath), "graveyard-runs", entry.id);
-      const actionsPath = `${caseStem}.replay.actions.json`;
-      const runPath = `${caseStem}.run.json`;
-      const snapshotPath = `${caseStem}.snapshot.json`;
-      const presentationPath = `${caseStem}.presentation.json`;
-      await mkdir(dirname(caseStem), { recursive: true });
-      await writeFile(actionsPath, `${JSON.stringify({ actions: replay.actions }, null, 2)}\n`, "utf8");
-      if (replay.replayContext?.initialSnapshot !== undefined) {
-        await writeFile(snapshotPath, `${JSON.stringify(replay.replayContext.initialSnapshot, null, 2)}\n`, "utf8");
-      }
-      if (replay.replayContext?.presentation !== undefined) {
-        await writeFile(presentationPath, `${JSON.stringify(replay.replayContext.presentation, null, 2)}\n`, "utf8");
-      }
-      const materialized = materializeLiveRun(scenario, replay.seed, runPath, actionsPath, replay.maxTicks, {
-        ...(replay.replayContext?.initialSnapshot === undefined ? {} : { snapshotPath }),
-        ...(replay.replayContext?.presentation === undefined ? {} : { presentationPath }),
+      return { registry, entries, cases };
       });
-      if (materialized.stdout) process.stdout.write(materialized.stdout);
-      if (materialized.stderr) process.stderr.write(materialized.stderr);
-      if (materialized.status !== 0) {
-        cases.push({ id: entry.id, status: "failed", reason: "materialization-failed", runArtifact: workspaceRelativePath(runPath) });
-        continue;
-      }
-      const run = JSON.parse(await readFile(runPath, "utf8"));
-      const invariantFailures = Array.isArray(run.failures) ? run.failures.filter((failure) => failure?.id === replay.invariantId) : [];
-      const preservedActions = canonicalJson(run.actions) === canonicalJson(replay.actions);
-      const preservedContext = canonicalJson(run.replayContext ?? {}) === canonicalJson(replay.replayContext ?? {});
-      const passed = run.format === "tearbench-run" && run.seed === replay.seed
-        && run.resolvedScenario?.id === replay.scenarioId
-        && run.resolvedScenario?.version === replay.scenarioVersion
-        && run.resolvedScenario?.maxTicks === replay.maxTicks
-        && preservedActions && preservedContext && run.status !== "failed" && invariantFailures.length === 0;
-      cases.push({
-        id: entry.id,
-        status: passed ? "passed" : "failed",
-        invariantId: replay.invariantId,
-        sourceMinimalArtifact: entry.minimalChild.path,
-        runArtifact: workspaceRelativePath(runPath),
-        ...(passed ? {} : { reason: "recorded-invariant-recurred-or-replay-mismatched" }),
-      });
-    }
-    return { registry, entries, cases };
   });
   const report = {
     format: "tearbench-graveyard-rerun",
@@ -1982,7 +1998,8 @@ try {
   } else if (command === "failure") {
     await materializeBranchFailure();
   } else if (command === "bisect") {
-    const result = spawnSync(process.execPath, [resolve(root, "scripts", "tearbench-bisect-worktree.mjs"), ...process.argv.slice(3)], { cwd: root, encoding: "utf8" });
+    const result = await withResourceLeases([], (spawnTask) => spawnTask(process.execPath,
+      [resolve(root, "scripts", "tearbench-bisect-worktree.mjs"), ...process.argv.slice(3)], { cwd: root, encoding: "utf8" }));
     if (result.stdout) process.stdout.write(result.stdout);
     if (result.stderr) process.stderr.write(result.stderr);
     if (result.status !== 0) process.exitCode = result.status ?? 1;
@@ -2031,14 +2048,14 @@ try {
   } else if (command === "evidence" && process.argv[3] === "correction-manifest") {
     await composeCorrectionClosureManifest();
   } else if (command === "parity" && process.argv[3] === "current-weapons") {
-    const result = executeCurrentWeaponParity();
+    const result = await executeCurrentWeaponParity();
     if (result.evidenceExecution.status !== "passed") process.exitCode = 1;
     await writeSelection(result);
   } else if (command === "select") {
     const selection = evidenceForDiff(await changedFiles());
     const result = process.argv.includes("--execute-evidence")
       ? { ...selection, evidenceExecution: verifyCurrentWeaponParityExecution(selection,
-        executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
+        await executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
           selection.buildTargets, selection.authorityCommands, selection.scope)) } : selection;
     if (result.evidenceExecution?.status === "failed") process.exitCode = 1;
     await writeSelection(result);
@@ -2056,13 +2073,13 @@ try {
       "tests/unit/tearbench-release-certification.test.ts",
       ...scenarioFiles,
     ])];
-    const docsEvidence = docsOnly ? executeSelectedEvidence([], [], [], selection.authorityCommands, selection.scope) : undefined;
+    const docsEvidence = docsOnly ? await executeSelectedEvidence([], [], [], selection.authorityCommands, selection.scope) : undefined;
     const evidence = docsOnly ? { status: docsEvidence.status === "passed" ? 0 : 1, stdout: "", stderr: "" } : runFiles(files);
     if (evidence.stdout) process.stdout.write(evidence.stdout);
     if (evidence.stderr) process.stderr.write(evidence.stderr);
     const evidenceExecution = docsOnly ? docsEvidence
       : evidence.status === 0 ? verifyCurrentWeaponParityExecution(selection,
-        executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
+        await executeSelectedEvidence(selection.scenarios, selection.journeyCommands,
           selection.buildTargets, selection.authorityCommands, selection.scope))
       : { status: "skipped", reason: "selected unit evidence failed", executions: [] };
     await writeFile(artifactPath, `${JSON.stringify({ ...selection, evidenceExecution }, null, 2)}\n`, "utf8");
