@@ -144,7 +144,7 @@ jobs:
           --shard-plan artifacts/tearbench/generated/vap6-canary-shards.json
           --shard serial-1 --mission serial-${{ github.run_id }}-${{ github.run_attempt }}
           --timing artifacts/tearbench/canary/timings/serial-${{ github.run_id }}-${{ github.run_attempt }}/serial-1.json
-          --run-created '${{ needs.plan.outputs.run_created }}' --ready-at '${{ needs.plan.outputs.ready_at }}'
+          --run-created '${{ needs.performance.outputs.ready_at }}' --ready-at '${{ needs.performance.outputs.ready_at }}'
           --job-start '${{ steps.clock.outputs.job_start }}'
           --plant-failure none
       - name: Bundle only mission-owned evidence
@@ -359,6 +359,8 @@ jobs:
     if: ${{ always() && !cancelled() && needs.plan.result == 'success' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      ready_at: ${{ steps.ready.outputs.ready_at }}
     steps:
       - id: clock
         run: echo "job_start=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
@@ -412,6 +414,13 @@ jobs:
           path: artifacts/tearbench/canary-bundles/${{ needs.plan.outputs.performance }}/root
           if-no-files-found: error
           retention-days: 14
+
+      # The serial experiment is intentionally sequenced after parallel work.
+      # Start its clock here so prior parallel work cannot inflate its duration.
+      # Its own queue, checkout, installation and execution remain measured.
+      - id: ready
+        if: always()
+        run: echo "ready_at=$(date -u +%FT%T.%3NZ)" >> "$GITHUB_OUTPUT"
 
   certify-serial:
     needs: [plan, serial]

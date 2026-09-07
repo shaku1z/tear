@@ -80,7 +80,7 @@ packing evidence.
   pass locally. A bounded Luna High adversarial re-audit returned PASS after
   provider-origin, timing, and shard-ownership findings were repaired.
 
-## Protected evidence still required
+## Original protected-launch handoff
 
 The workflow has not been pushed or dispatched. GitHub accepts a
 `workflow_dispatch` event only after that workflow file exists on the default
@@ -103,3 +103,43 @@ tune the frozen history. The ruleset observed on 2026-08-31 requires pull
 requests and the strict `check` status on `main`, exposes no bypass actor, and
 does not yet require this canary. No protected setting or external repository
 state was changed in this slice.
+
+## 2026-09-07 measurement-boundary correction
+
+The original launch handoff above is historical: the non-required workflow was
+subsequently integrated and dispatched. Run `33490944371` at protected source
+`404426a171dc83aa952b31c348e06661f597f7e9` failed performance and certificate
+acceptance. It does not close VAP-6 or authorize VAP-7 cutover.
+
+This local slice corrects one measurement prerequisite independently of host
+qualification. The serial job waits for the parallel performance job, but its
+old `runCreatedAt` input referred to the start of the entire workflow. As a
+result, its reported wall time included the preceding parallel experiment and
+could exaggerate the apparent reduction ratio.
+
+The performance job now emits a completion boundary after its evidence upload,
+including on task failure. The serial job uses that boundary for both its
+experiment start and readiness. Its own queue, checkout, dependency install,
+browser setup, and task execution remain in the measured duration. Parallel
+timing still includes initial planning overhead, so this is conservative for
+the parallel result rather than a symmetric task-only microbenchmark. A missing
+boundary must not fall back to the original workflow start.
+
+The aggregate also rejects a serial start that differs from its readiness,
+precedes completion of parallel performance, is non-finite, or follows its own
+finish. Rejected comparison clocks produce null comparison metrics and no
+reduction ratio, while retaining task/claim failures. Regression mutations cover
+the old inflated origin, invalid timestamps, overlap, and reversed boundaries;
+the equivalent and planted-rejection cases remain passing.
+
+The workflow regression test fails against the old boundary and passes after
+the correction. Existing workflow tests continue to require manual-only,
+non-required execution and the unchanged `Validate` functional gate. No task,
+claim, performance threshold, release consumer, or required-check setting is
+removed or relaxed. New protected timing evidence is still required; old ratios
+must not be promoted into measured speedup acceptance.
+
+Runner provisioning and additional performance retries are deferred. Remaining
+work proceeds only when it has an explicit checkpoint obligation and a bounded
+discriminating test; uncertain performance acceptance is not permission to
+expand infrastructure or repeat unchanged experiments.
