@@ -261,6 +261,9 @@ function verifyReceipt(receipt, plan, task, expectedOrigin, artifactBytes, build
     environmentDigest: receiptSha256(receipt.bindings?.environment), evidenceDigest: receiptSha256(receipt.bindings?.evidence),
   };
   if (receipt.executionKey !== receiptSha256(identity)) errors.push(`${label} execution key is invalid`);
+  if (receipt.attemptId !== `${receipt.missionId}:${task.taskId}:${String(receipt.attemptNumber)}`) {
+    errors.push(`${label} attempt identity is invalid`);
+  }
   try {
     if (receipt.immutablePath !== taskAttemptPath({ ...receipt, taskId: receipt.task?.taskId })) errors.push(`${label} immutable path is invalid`);
   } catch { errors.push(`${label} immutable path is invalid`); }
@@ -269,14 +272,28 @@ function verifyReceipt(receipt, plan, task, expectedOrigin, artifactBytes, build
     if (receipt.authority !== "protected-ci" || receipt.canonicalReleaseAuthority !== true) errors.push(`${label} is below protected release authority`);
     if (!sameProtectedRun(receipt.origin, expectedOrigin)) errors.push(`${label} protected origin is forged or mismatched`);
   }
-  if (!['passed', 'failed'].includes(receipt.result?.status)
+  if (!['passed', 'failed'].includes(receipt.result?.status) || !Number.isSafeInteger(receipt.result?.exitCode)
     || (receipt.result?.status === "passed") !== (receipt.result?.exitCode === 0)) errors.push(`${label} result is invalid`);
   const expectedSampleValidity = classifyPerformanceSample({ taskId: task.taskId,
     status: receipt.result?.status, stdout: receipt.result?.stdout, stderr: receipt.result?.stderr });
   if (!same(receipt.result?.sampleValidity ?? null, expectedSampleValidity)) {
     errors.push(`${label} performance sample classification is missing or malformed`);
   }
-  for (const artifact of receipt.artifacts ?? []) {
+  if (!Array.isArray(receipt.artifacts)) {
+    errors.push(`${label} artifact descriptors are missing or malformed`);
+    return false;
+  }
+  const outputIds = receipt.artifacts.map((artifact) => artifact?.outputId);
+  if (new Set(outputIds).size !== outputIds.length
+    || (receipt.result?.status === "passed" && ((task.outputs ?? []).length !== outputIds.length
+      || (task.outputs ?? []).some((output) => !outputIds.includes(output.outputId))))) {
+    errors.push(`${label} artifact descriptors do not bind each declared output exactly once`);
+  }
+  for (const artifact of receipt.artifacts) {
+    if (artifact === null || typeof artifact !== "object") {
+      errors.push(`${label} artifact descriptor is malformed`);
+      continue;
+    }
     const output = (task.outputs ?? []).find((entry) => entry.outputId === artifact.outputId);
     if (output === undefined || output.path !== artifact.path) errors.push(`${label} artifact is not owned by task output ${String(artifact.outputId)}`);
     const bytes = artifactBytes[artifact.path];
@@ -287,27 +304,38 @@ function verifyReceipt(receipt, plan, task, expectedOrigin, artifactBytes, build
   return true;
 }
 
-export function createPlanCertificate({ plan, receipts, expectedOrigin, artifactBytes = {}, buildArtifactHashes = {}, generatedAt }) {
+function evaluatePlanReceipts({ plan, receipts, expectedOrigin, artifactBytes = {}, buildArtifactHashes = {}, generatedAt }) {
   assertTimestamp(generatedAt, "certificate generation");
   const { planDigest, ...planPayload } = plan ?? {};
   if (plan?.format !== "tearbench-shadow-plan" || !SHA256.test(planDigest) || receiptSha256(planPayload) !== planDigest) {
     throw new TypeError("certificate requires a canonical self-bound plan");
   }
-  const errors = [], byTask = new Map(), seenAttempts = new Set(), seenDigests = new Set();
+  const errors = [], byTask = new Map(), seenAttempts = new Map(), seenDigests = new Map();
   const extras = [], duplicates = [], retryHistory = [], passed = [];
+  const taskErrors = new Map(plan.requiredTaskIds.map((taskId) => [taskId, []]));
   for (const receipt of receipts) {
     const taskId = receipt?.task?.taskId;
     const task = plan.taskNodes.find((entry) => entry.taskId === taskId);
     if (task === undefined || !plan.requiredTaskIds.includes(taskId)) { extras.push(String(taskId)); continue; }
-    if (seenDigests.has(receipt.receiptDigest) || seenAttempts.has(receipt.attemptId)) duplicates.push(receipt.attemptId);
-    seenDigests.add(receipt.receiptDigest); seenAttempts.add(receipt.attemptId);
-    verifyReceipt(receipt, plan, task, expectedOrigin, artifactBytes, buildArtifactHashes, errors);
+    for (const [seen, identity] of [[seenAttempts, receipt.attemptId], [seenDigests, receipt.receiptDigest]]) {
+      const owners = seen.get(identity);
+      if (owners !== undefined) {
+        duplicates.push(receipt.attemptId);
+        owners.add(taskId);
+        for (const owner of owners) taskErrors.get(owner).push(`duplicate attempt: ${receipt.attemptId}`);
+      } else seen.set(identity, new Set([taskId]));
+    }
+    const receiptErrors = [];
+    verifyReceipt(receipt, plan, task, expectedOrigin, artifactBytes, buildArtifactHashes, receiptErrors);
+    errors.push(...receiptErrors);
+    taskErrors.get(taskId).push(...receiptErrors);
     const values = byTask.get(taskId) ?? []; values.push(receipt); byTask.set(taskId, values);
   }
   const missing = plan.requiredTaskIds.filter((id) => !byTask.has(id));
   for (const taskId of plan.requiredTaskIds) {
     const attempts = [...(byTask.get(taskId) ?? [])].sort((a, b) => a.attemptNumber - b.attemptNumber);
     if (attempts.length === 0) continue;
+    const historyErrorStart = errors.length;
     for (let index = 0; index < attempts.length; index += 1) {
       const attempt = attempts[index], previous = attempts[index - 1];
       if (attempt.attemptNumber !== index + 1 || (index === 0 ? attempt.retryOf !== null : attempt.retryOf !== previous.receiptDigest)) {
@@ -326,12 +354,14 @@ export function createPlanCertificate({ plan, receipts, expectedOrigin, artifact
         errors.push(`task ${taskId} retry lacks a receipt-proven infrastructure-invalid sample`);
       }
     }
-    if (final?.result?.status !== "passed") errors.push(`task ${taskId} has no passing terminal attempt`);
     if (recovered && (typeof final.retryAuthorization !== "string" || final.retryAuthorization.length === 0)) {
       errors.push(`task ${taskId} recovered through an unauthorized retry`);
     }
+    taskErrors.get(taskId).push(...errors.slice(historyErrorStart));
+    if (final?.result?.status !== "passed") errors.push(`task ${taskId} has no passing terminal attempt`);
     if (final?.result?.status === "passed") passed.push(taskId);
-    retryHistory.push({ taskId, disposition: recovered ? "recovered-flaky" : final?.result?.status === "passed" ? "passed-first-attempt" : "failed",
+    retryHistory.push({ taskId, disposition: recovered ? "recovered-flaky" : final?.result?.status === "passed"
+      ? attempts.length === 1 ? "passed-first-attempt" : "passed-repeated" : "failed",
       attempts: attempts.map((entry) => ({ attemptId: entry.attemptId, receiptDigest: entry.receiptDigest,
         status: entry.result?.status, retryOf: entry.retryOf, retryAuthorization: entry.retryAuthorization,
         sampleValidity: entry.result?.sampleValidity ?? null })) });
@@ -345,18 +375,42 @@ export function createPlanCertificate({ plan, receipts, expectedOrigin, artifact
   const extraClaims = coveredClaims.filter((claim) => !plan.requiredClaims.includes(claim));
   if (missingClaims.length > 0) errors.push(`required claims are missing: ${missingClaims.join(", ")}`);
   if (extraClaims.length > 0) errors.push(`unexpected claims were derived: ${extraClaims.join(", ")}`);
-  const artifactDigests = canonicalStrings(receipts.flatMap((receipt) => (receipt.artifacts ?? []).map((artifact) => artifact.sha256)));
+  const artifactDigests = canonicalStrings(receipts.flatMap((receipt) =>
+    (Array.isArray(receipt?.artifacts) ? receipt.artifacts : [])
+      .map((artifact) => artifact?.sha256).filter((digest) => SHA256.test(digest))));
   const unsigned = {
     format: "tearbench-plan-certificate", schemaVersion: 1, status: errors.length === 0 ? "certified" : "rejected",
     generatedAt, planDigest: plan.planDigest, source: plan.source, protectedOrigin: expectedOrigin ?? null,
     taskRegistryDigest: plan.taskRegistryDigest, policyDigest: plan.policyDigest, plannerPolicyDigest: plan.plannerPolicyDigest,
-    receiptDigests: canonicalStrings(receipts.map((receipt) => receipt.receiptDigest).filter((digest) => SHA256.test(digest))),
+    receiptDigests: canonicalStrings(receipts.map((receipt) => receipt?.receiptDigest).filter((digest) => SHA256.test(digest))),
     artifactDigests, taskCoverage: { required: [...plan.requiredTaskIds], passed: canonicalStrings(passed), missing,
       extra: canonicalStrings(extras), duplicateAttempts: canonicalStrings(duplicates) },
     claimCoverage: { required: [...plan.requiredClaims], passed: coveredClaims, missing: missingClaims, extra: extraClaims },
     unsupported: [...plan.diagnostics.unsupported], retryHistory, errors: canonicalStrings(errors),
   };
-  return Object.freeze({ ...unsigned, certificateDigest: receiptSha256(unsigned) });
+  const taskStatuses = plan.requiredTaskIds.map((taskId) => {
+    const attempts = byTask.get(taskId) ?? [];
+    const reasons = canonicalStrings(taskErrors.get(taskId));
+    const terminal = [...attempts].sort((a, b) => a.attemptNumber - b.attemptNumber).at(-1);
+    return Object.freeze({ taskId,
+      status: attempts.length === 0 ? "missing" : reasons.length > 0 ? "stale"
+        : terminal?.result?.status === "passed" ? "valid" : "failed",
+      reasons, receiptDigests: canonicalStrings(attempts.map((entry) => entry.receiptDigest)),
+    });
+  });
+  return { certificate: Object.freeze({ ...unsigned, certificateDigest: receiptSha256(unsigned) }), taskStatuses };
+}
+
+export function createPlanCertificate(input) {
+  return evaluatePlanReceipts(input).certificate;
+}
+
+// Relative to the supplied plan and independently supplied artifact bytes only.
+// Callers must bind that plan to current source/environment before reusing evidence.
+export function assessPlanTaskReceipts(input) {
+  const { certificate, taskStatuses } = evaluatePlanReceipts(input);
+  return Object.freeze({ planDigest: certificate.planDigest, taskStatuses,
+    unsupported: certificate.unsupported, retryHistory: certificate.retryHistory, errors: certificate.errors });
 }
 
 export function certificateBindsPlan(certificate, plan) {
