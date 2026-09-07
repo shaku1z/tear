@@ -515,8 +515,7 @@ source fingerprint
 This is engineering execution evidence, not protected release authority.
 
 Permanent CLI tests now cover nonempty graveyard contention and both bisection
-entry points, rejecting an occupied build lease before execution. Acceptance
-remains open for a complete bisection run. The opt-in
+entry points, rejecting an occupied build lease before execution. The opt-in
 `nonempty synthetic graveyard replays under inherited leases` test passed after
 capturing a real canonical baseline and retaining its full replay context. It
 executes the nonempty graveyard browser path and confirms the parent still owns
@@ -527,6 +526,19 @@ infrastructure behavior, not a historical gameplay fix. Enable
 `node --test --test-name-pattern='nonempty synthetic graveyard' tests/tearbench-resource-leases.test.mjs`.
 The test removes successful disposable fixtures and retains failed ones for
 diagnosis; default unit runs intentionally skip this browser/build proof.
+
+A complete local bisection diagnostic between `b56a960` and `1cc5a0c` ran two
+attempts per revision on the same canonical Pale scenario and seed. All four
+live artifacts passed 180 ticks with zero failures, and both revisions were
+stable `does-not-reproduce`. The aggregate correctly remained inconclusive
+because the candidate did not reproduce a regression; this is execution and
+equivalence proof, not planted-regression detection. The retained aggregate is
+`artifacts/tearbench/generated/vap8-bisection-lease-proof-2.json`; Git and the
+filesystem both confirmed removal of its disposable worktree. The first attempt
+exposed missing dependencies in fresh worktrees. Bisection now installs each
+revision's own frozen lockfile before materialization instead of borrowing a
+potentially incompatible dependency graph. These local proofs do not close the
+remaining VAP-8 protocol, receipt-reuse, source-drift or benchmark obligations.
 Helper inheritance tests, rejected competing CLI calls, and guarded preflight
 tests alone do not prove those end-to-end paths or close VAP-8. On non-Windows hosts, launch
 bisection through pnpm so the pinned package-manager entry is available to its
