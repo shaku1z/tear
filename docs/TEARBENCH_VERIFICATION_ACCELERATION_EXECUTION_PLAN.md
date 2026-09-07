@@ -546,6 +546,44 @@ direct child.
 
 ### Shared evidence context
 
+Task-reuse follow-on contract: extend the planned-task executor with a
+mission/task lease held across status validation, execution, and immutable
+receipt capture, including tasks with no resource-class lease. Add an explicit
+ensure-task request that reuses only an independently verified current result
+for the same mission and task, executes missing first attempts, and stops on
+failed, stale, or unsupported evidence. Keep explicit run-task retry and
+intentional repetition semantics unchanged. Scope is the existing task executor,
+lease helper, focused contract tests, and this plan; no release-policy cutover,
+cross-mission equivalence claim, deployment, or unrelated workspace edits.
+Required evidence includes held-task-lease rejection for resource-free tasks,
+sequential reuse without another attempt, failure/stale stopping, and unchanged
+explicit retries/repetitions. This is a protocol implementation step, not VAP-8
+completion or authorization to skip protected CI.
+
+Local implementation: `node scripts/tearbench-task-execution.mjs ensure-task --plan <plan-path> --task <task-id> --mission <mission-id>`
+returns `REUSED` only after the shared verifier reports the current task valid;
+it returns `EXECUTED` for a missing first attempt and refuses failed or stale
+evidence. Both ensure-task and explicit run-task hold the same canonical
+worktree/mission/task lease, including resource-free tasks. Existing host-wide
+browser/build leases remain held as well. The task lease is separate from receipt
+identity and covers all attempts in that mission; it does not coalesce independent
+missions or intentional A/B task identities. Explicit run-task remains available
+for authorized retries and repetitions. Local executor fixtures prove unchanged
+receipt bytes and attempt count on reuse, independent-mission execution,
+failed/stale stopping, and preserved explicit repetition. Targeted existing lease
+fixtures additionally prove held-build rejection, inheritance, rollback, and
+cross-workspace exclusion. Concurrent empty-mission callers prove exactly one
+execution; the other caller either reuses the completed attempt or stops at the
+occupied lease, after which an explicit later ensure request reuses it. There is
+no automatic contention retry. Exact plan and receipt input bytes are rechecked
+after collection and at the reuse boundary; deterministic replacement-after-read
+fixtures reject both plan and receipt replacement. The API returns the verified
+receipt JSON snapshot on reuse, and CLI output names both plan and receipt digests.
+A receipt path is a location, not durable proof: subsequent consumers must verify
+the named digest and source rather than trust whatever bytes later occupy that
+path. Protected integration and protocol-client wiring are
+not yet claimed for this follow-on.
+
 Receipt-status follow-on contract: expose read-only mission/task status through
 the existing receipt and artifact verifier before enabling duplicate-work
 suppression. Scope is the task-receipt verifier, execution CLI, their contract
