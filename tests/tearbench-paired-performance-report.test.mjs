@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -27,7 +27,11 @@ async function fixture(values, callback) {
       writeFile(resolve(directory, "candidate-build-info.json"), JSON.stringify(build(candidate, "2"))),
       ...["baseline", "candidate"].flatMap((side) => values[side].flatMap((value, offset) => {
         const prefix = resolve(directory, `${side}-${offset + 1}`);
-        const stdout = [JSON.stringify({ browserRuntime: { version: browserVersion, archiveSha256: browserArchiveSha256 } }),
+        const sideBuild = build(side === "baseline" ? baseline : candidate, side === "baseline" ? "1" : "2");
+        const performanceBuild = { sourceRevision: sideBuild.sourceRevision, sourceFingerprint: sideBuild.sourceFingerprint,
+          artifactHash: sideBuild.artifactHash, buildIdentityDigest: sideBuild.buildIdentityDigest };
+        const stdout = [JSON.stringify({ performanceBuild }),
+          JSON.stringify({ browserRuntime: { version: browserVersion, archiveSha256: browserArchiveSha256 } }),
           JSON.stringify({ scenario: "4x constrained gameplay", measurements: measurement(value) })].join("\n");
         return [writeFile(`${prefix}.stdout`, stdout), writeFile(`${prefix}.stderr`, value > 10
           ? `AssertionError: 4x constrained gameplay simulation p95 ms: ${value} exceeded budget 10` : ""),
@@ -61,5 +65,15 @@ test("paired diagnostic rejects wrong revisions, browsers, and incomplete sample
   assert.throws(() => createPairedPerformanceReport({ ...input, candidateRevision: baseline }), /must differ/u);
   assert.throws(() => createPairedPerformanceReport({ ...input, browserVersion: "latest" }), /browser binding/u);
   await writeFile(resolve(directory, "candidate-3.stdout"), "{}");
-  assert.throws(() => createPairedPerformanceReport(input), /lacks one attributable/u);
+  assert.throws(() => createPairedPerformanceReport(input), /lacks one attributable build/u);
+}));
+
+test("paired diagnostic rejects a measurement attributed to another build", async () => fixture({
+  baseline: [11, 11, 11], candidate: [12, 12, 12],
+}, async (directory) => {
+  const path = resolve(directory, "candidate-2.stdout");
+  const stdout = await readFile(path, "utf8");
+  await writeFile(path, stdout.replace(`"artifactHash":"${"2".repeat(64)}"`, `"artifactHash":"${"3".repeat(64)}"`));
+  assert.throws(() => createPairedPerformanceReport({ directory, baselineRevision: baseline, candidateRevision: candidate,
+    browserVersion, browserArchiveSha256 }), /does not match its validated build identity/u);
 }));

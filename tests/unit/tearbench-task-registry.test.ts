@@ -27,6 +27,12 @@ describe("TearBench atomic task registry", () => {
       expect(task.intentionalReplica, task.taskId).toBe("backend-live");
     }
   });
+  it("binds the production test-isolation scan to both production builds", () => {
+    expect(requiredTask("static.check-test-isolation").dependencies).toEqual([
+      { taskId: "build.standalone", outputId: "build-artifact" },
+      { taskId: "build.crazygames", outputId: "build-artifact" },
+    ]);
+  });
   it("runs canary parity, provider-clock and workflow contracts once per protected profile", () => {
     const value = canonical();
     for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {

@@ -8,6 +8,7 @@ const validate = await readFile(new URL("../.github/workflows/ci.yml", import.me
 const registry = JSON.parse(await readFile(new URL("../src/tearbench/task-registry.json", import.meta.url), "utf8"));
 const shardRunner = await readFile(new URL("../scripts/tearbench-canary-run-shard.mjs", import.meta.url), "utf8");
 const detachedParityRunner = await readFile(new URL("../scripts/run-current-live-detached-parity.mjs", import.meta.url), "utf8");
+const browserPerformance = await readFile(new URL("browser-performance.js", import.meta.url), "utf8");
 const performanceBrowserAction = await readFile(
   new URL("../.github/actions/install-tear-performance-browser/action.yml", import.meta.url), "utf8");
 
@@ -56,15 +57,21 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
 
 test("paired performance mode is isolated, exact-source bound, alternating, and artifact retaining", () => {
   assert.match(workflow, /options: \[normal, planted-failure, paired-performance\]/u);
+  assert.match(workflow, /group: tearbench-parallel-canary-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.mode \}\}/u);
   assert.match(workflow, /plan:\r?\n\s+if: \$\{\{ inputs\.mode != 'paired-performance' \}\}/u);
   const paired = workflow.slice(workflow.indexOf("\n  paired-performance:"), workflow.indexOf("\n  certify-serial:"));
   assert.match(paired, /if: \$\{\{ inputs\.mode == 'paired-performance' \}\}/u);
   assert.match(paired, /\[\[ "\$BASELINE_REVISION" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
   assert.match(paired, /git worktree add --detach "\$baseline" "\$BASELINE_REVISION"/u);
   assert.match(paired, /git worktree add --detach "\$candidate" "\$CANDIDATE_REVISION"/u);
+  assert.match(paired, /TEAR_BUILD_GIT_SHA="\$BASELINE_REVISION" pnpm --dir "\$baseline" build:test:standalone/u);
+  assert.match(paired, /TEAR_BUILD_GIT_SHA="\$CANDIDATE_REVISION" pnpm --dir "\$candidate" build:test:standalone/u);
   assert.equal([...paired.matchAll(/run_sample baseline/gu)].length, 3);
   assert.equal([...paired.matchAll(/run_sample candidate/gu)].length, 3);
   assert.match(paired, /TEAR_PERF_SCENARIO=constrained/u);
+  assert.ok(browserPerformance.indexOf("JSON.stringify({ performanceBuild })")
+    < browserPerformance.indexOf("JSON.stringify({ browserRuntime })"),
+  "performance build identity must be emitted before runtime and scenario assertions");
   assert.match(paired, /tearbench-paired-performance-report\.mjs/u);
   assert.match(paired, /tearbench-paired-performance-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/u);
 });

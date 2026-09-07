@@ -856,7 +856,7 @@
     },
     {
       "taskId": "static.check-test-isolation",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "node",
         "executable": "node",
@@ -868,7 +868,16 @@
         "static",
         "check:test-isolation"
       ],
-      "dependencies": [],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        },
+        {
+          "taskId": "build.crazygames",
+          "outputId": "build-artifact"
+        }
+      ],
       "resourceClass": "static",
       "resourceKeys": [],
       "outputs": [],

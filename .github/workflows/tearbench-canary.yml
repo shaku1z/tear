@@ -28,7 +28,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: tearbench-parallel-canary-${{ github.ref }}
+  group: tearbench-parallel-canary-${{ github.ref }}-${{ inputs.mode }}
   cancel-in-progress: true
 
 env:
@@ -469,8 +469,8 @@ jobs:
           mkdir -p "$samples"
           pnpm --dir "$baseline" install --frozen-lockfile
           pnpm --dir "$candidate" install --frozen-lockfile
-          pnpm --dir "$baseline" build:test:standalone
-          pnpm --dir "$candidate" build:test:standalone
+          TEAR_BUILD_GIT_SHA="$BASELINE_REVISION" pnpm --dir "$baseline" build:test:standalone
+          TEAR_BUILD_GIT_SHA="$CANDIDATE_REVISION" pnpm --dir "$candidate" build:test:standalone
           cp "$baseline/dist/test-standalone/build-info.json" "$samples/baseline-build-info.json"
           cp "$candidate/dist/test-standalone/build-info.json" "$samples/candidate-build-info.json"
       - name: Run three alternating constrained samples per revision

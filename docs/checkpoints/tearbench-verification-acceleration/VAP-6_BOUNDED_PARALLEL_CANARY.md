@@ -158,6 +158,12 @@ source, and alternates three constrained-only samples per side using pinned
 Chrome `152.0.7977.64`. Normal canary jobs are disabled in this mode. The
 reporter rejects missing samples or mismatched source, build, and browser
 identity and retains complete measurements plus raw stdout/stderr.
+Each detached build explicitly overrides the workflow checkout SHA with its
+requested revision. Every sample emits source revision, source fingerprint,
+artifact hash and build-identity digest before any budget assertion, and the
+reporter requires all four fields to match that side's validated build record.
+Workflow concurrency includes the selected mode, so the one paired diagnostic
+cannot cancel a normal or planted-failure canary on the same ref.
 
 The bounded comparison is `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b`
 against repaired protected main `29ac61832daea599e5355cf2254cfb0c056cf616`.
@@ -203,7 +209,29 @@ This proves the repaired launcher/build-binding path without executing a hidden
 rebuild. The structural tests cover all ten task definitions. These remain
 local repair proofs, not canary equivalence or VAP-6 acceptance.
 
-The same run finished `mismatched`. Its report contains all 122 required task
+Normal canary `34165689678` then ran protected main
+`29ac61832daea599e5355cf2254cfb0c056cf616`. All four ordinary browser shards
+passed, and every repaired live task passed, confirming that the shared-build
+routing repair held in the provider environment. Exact task coverage was 101
+required, 101 serial and 101 parallel. The aggregate still correctly reported
+`mismatched`: parallel `static.check-test-isolation` failed twice because its
+registry definition declared no dependency while its script reads both
+`dist/standalone` and `dist/crazygames`. The serial copy happened to pass only
+because its preceding production builds remained in that workspace. Version 2
+of this task now declares both exact build artifacts. Registry and canary-plan
+regressions require both producers and place them before the scan.
+
+The run's isolated parallel performance attempt stopped on desktop frame-
+interval max 50.1 ms against 50 ms before reaching the constrained scenario.
+The serial attempt reached that scenario and recorded simulation p95 10.1 ms
+against the unchanged 10 ms budget. Its observed in-task parallel and serial
+walls were 386,540 ms and 1,063,774 ms, a 0.363 ratio, with browser-shard
+balance 1.123. Failed certificates make all of these diagnostic observations,
+not qualification or acceleration acceptance. The bounded paired mode runs the
+constrained scenario only, avoiding the unrelated desktop precondition while
+preserving every constrained threshold.
+
+Earlier run `34160687282` finished `mismatched`. Its report contains all 122 required task
 IDs in both serial and parallel paths, but all ten live tasks failed in both
 paths at the launcher boundary. The parallel performance job separately failed
 constrained-gameplay simulation p95 at 12.1 ms against the unchanged 10 ms

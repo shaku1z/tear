@@ -34,21 +34,29 @@ function validateBuild(build, revision, side) {
     || !/^[0-9a-f]{64}$/u.test(build.configuration?.digest ?? "")) {
     throw new TypeError(`${side} build identity is incomplete or does not match its revision`);
   }
-  return { revision, artifactHash: build.artifactHash, buildIdentityDigest: build.buildIdentityDigest,
+  return { revision, sourceRevision: revision, artifactHash: build.artifactHash, buildIdentityDigest: build.buildIdentityDigest,
     sourceFingerprint: build.sourceFingerprint, toolchainDigest: build.toolchain?.digest,
     configurationDigest: build.configuration?.digest };
 }
 
-function readSample(directory, side, index, browserBinding) {
+function readSample(directory, side, index, browserBinding, expectedBuild) {
   const prefix = resolve(directory, `${side}-${index}`);
   const stdout = readFileSync(`${prefix}.stdout`, "utf8"), stderr = readFileSync(`${prefix}.stderr`, "utf8");
   const exitCode = Number(readFileSync(`${prefix}.status`, "utf8").trim());
   if (!Number.isSafeInteger(exitCode) || exitCode < 0) throw new TypeError(`${side} sample ${index} has an invalid exit code`);
   const lines = jsonLines(stdout);
+  const builds = lines.filter((entry) => entry.performanceBuild !== undefined).map((entry) => entry.performanceBuild);
   const runtimes = lines.filter((entry) => entry.browserRuntime !== undefined).map((entry) => entry.browserRuntime);
   const measurements = lines.filter((entry) => entry.scenario === scenario).map((entry) => entry.measurements);
-  if (runtimes.length !== 1 || measurements.length !== 1) throw new TypeError(`${side} sample ${index} lacks one attributable constrained measurement`);
-  const runtime = runtimes[0], measured = measurements[0];
+  if (builds.length !== 1 || runtimes.length !== 1 || measurements.length !== 1) {
+    throw new TypeError(`${side} sample ${index} lacks one attributable build, runtime, and constrained measurement`);
+  }
+  const sampleBuild = builds[0], runtime = runtimes[0], measured = measurements[0];
+  for (const field of ["sourceRevision", "sourceFingerprint", "artifactHash", "buildIdentityDigest"]) {
+    if (sampleBuild?.[field] !== expectedBuild[field]) {
+      throw new TypeError(`${side} sample ${index} does not match its validated build identity`);
+    }
+  }
   if (runtime.version !== browserBinding.version || runtime.archiveSha256 !== browserBinding.archiveSha256) {
     throw new TypeError(`${side} sample ${index} used a different performance browser`);
   }
@@ -83,7 +91,8 @@ export function createPairedPerformanceReport({ directory, baselineRevision, can
   };
   const budgetMs = budgets.constrainedGameplay.simulationP95Ms;
   const results = Object.fromEntries(["baseline", "candidate"].map((side) => [side,
-    summarize(Array.from({ length: sampleCount }, (_, offset) => readSample(directory, side, offset + 1, browser)), budgetMs)]));
+    summarize(Array.from({ length: sampleCount }, (_, offset) => readSample(
+      directory, side, offset + 1, browser, build[side])), budgetMs)]));
   const outcome = results.baseline.allWithinBudget && results.candidate.allWithinBudget ? "both-within-budget"
     : results.baseline.allWithinBudget && results.candidate.allExceedBudget ? "candidate-regression-plausible"
       : results.baseline.allExceedBudget && results.candidate.allExceedBudget ? "pre-existing-budget-miss"

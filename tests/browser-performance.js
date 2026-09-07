@@ -17,6 +17,12 @@ assert.match(buildInfo.artifactHash, /^[a-f0-9]{64}$/u, "performance evidence re
 assert.match(buildInfo.buildIdentityDigest, /^[a-f0-9]{64}$/u, "performance evidence requires the complete build identity");
 assert.equal(buildInfo.contentAddressedPath, `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
   "performance evidence requires the content-addressed build");
+const performanceBuild = {
+  sourceRevision: buildInfo.sourceRevision,
+  sourceFingerprint: buildInfo.sourceFingerprint,
+  artifactHash: buildInfo.artifactHash,
+  buildIdentityDigest: buildInfo.buildIdentityDigest,
+};
 const port = Number(process.env.TEAR_PERF_PORT || 8126);
 const baseUrl = `http://127.0.0.1:${port}`;
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";
@@ -554,6 +560,9 @@ async function repeatedRunScenario(browser, pageErrors) {
       executable: chromePath || "playwright-bundled-chromium",
       archiveSha256: browserPreference === "pinned" ? pinnedBrowserArchiveSha256 : null,
     };
+    // Emit the build identity before any scenario assertion so every failing
+    // measurement remains bound to the exact detached build under test.
+    console.log(JSON.stringify({ performanceBuild }));
     // Emit the runtime identity before any scenario assertion so failed attempt
     // receipts remain attributable to the exact browser under measurement.
     console.log(JSON.stringify({ browserRuntime }));
