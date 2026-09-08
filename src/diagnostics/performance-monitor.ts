@@ -1,4 +1,4 @@
-export type TimingKind = "simulation" | "render" | "frame" | "frameInterval" | "outsideFrameWork";
+export type TimingKind = "simulation" | "canonicalTick" | "render" | "frame" | "frameInterval" | "outsideFrameWork";
 
 export interface TimingSummary {
   readonly samples: number;
@@ -10,6 +10,8 @@ export interface TimingSummary {
 
 export interface PerformanceDiagnosticsSnapshot {
   readonly simulation: TimingSummary;
+  /** One authoritative fixed simulation tick, excluding presentation/application work. */
+  readonly canonicalTick: TimingSummary;
   readonly render: TimingSummary;
   readonly frame: TimingSummary;
   readonly frameInterval: TimingSummary;
@@ -81,6 +83,7 @@ export class PerformanceMonitor {
   constructor(capacity = 600) {
     this.#timings = {
       simulation: new SampleRing(capacity),
+      canonicalTick: new SampleRing(capacity),
       render: new SampleRing(capacity),
       frame: new SampleRing(capacity),
       frameInterval: new SampleRing(capacity),
@@ -106,6 +109,7 @@ export class PerformanceMonitor {
   snapshot(): PerformanceDiagnosticsSnapshot {
     return Object.freeze({
       simulation: this.#timings.simulation.summary(),
+      canonicalTick: this.#timings.canonicalTick.summary(),
       render: this.#timings.render.summary(),
       frame: this.#timings.frame.summary(),
       frameInterval: this.#timings.frameInterval.summary(),

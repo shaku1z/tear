@@ -444,8 +444,13 @@ counts full job intervals and certifier decisions; see the
 Bounded paired run `34169267567` subsequently established that the constrained
 simulation miss predates the candidate: all three baseline and all three
 candidate samples exceeded the unchanged 10 ms budget. It is diagnostic rather
-than qualification, and robust accepted p50/p95 evidence remains absent. No
-required-gate cutover is authorized by these measurements.
+than qualification. One bounded follow-up separates the existing frame-level
+simulation interval from an authoritative fixed-tick timing and predeclares
+`aggregate-within-budget`, `aggregate-boundary-miss`, and
+`canonical-tick-miss` outcomes. It retains exact build/browser identity and
+step-poll evidence without changing the budget or production runtime. Robust
+accepted p50/p95 evidence remains absent, and no required-gate cutover is
+authorized by these measurements.
 
 ## 16. VAP-7 — Cut over one stable required gate
 

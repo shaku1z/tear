@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Run normal equivalence, planted rejection, or the bounded paired performance diagnostic
+        description: Run normal equivalence, planted rejection, paired performance, or the simulation-boundary diagnostic
         required: true
         default: normal
         type: choice
-        options: [normal, planted-failure, paired-performance]
+        options: [normal, planted-failure, paired-performance, simulation-boundary]
       planted_task:
         description: Exact task ID to fail only in the parallel mission
         required: true
@@ -19,7 +19,7 @@ on:
         required: false
         type: string
       candidate_revision:
-        description: Exact candidate commit for paired-performance mode
+        description: Exact candidate commit for paired-performance or simulation-boundary mode
         required: false
         type: string
 
@@ -38,7 +38,7 @@ env:
 
 jobs:
   plan:
-    if: ${{ inputs.mode != 'paired-performance' }}
+    if: ${{ inputs.mode == 'normal' || inputs.mode == 'planted-failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -515,9 +515,72 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  simulation-boundary:
+    if: ${{ inputs.mode == 'simulation-boundary' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CANDIDATE_REVISION: ${{ inputs.candidate_revision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/install-tear-performance-browser
+      - name: Prepare one exact clean candidate build
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "$CANDIDATE_REVISION^{commit}"
+          candidate="$RUNNER_TEMP/vap6-simulation-boundary-candidate"
+          samples="$RUNNER_TEMP/vap6-simulation-boundary-sample"
+          git worktree add --detach "$candidate" "$CANDIDATE_REVISION"
+          mkdir -p "$samples"
+          pnpm --dir "$candidate" install --frozen-lockfile
+          TEAR_BUILD_GIT_SHA="$CANDIDATE_REVISION" pnpm --dir "$candidate" build:test:standalone
+          cp "$candidate/dist/test-standalone/build-info.json" "$samples/candidate-build-info.json"
+          cp "$candidate/config/browser-performance-budgets.json" "$samples/candidate-browser-performance-budgets.json"
+      - name: Run one constrained simulation-boundary sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate="$RUNNER_TEMP/vap6-simulation-boundary-candidate"
+          samples="$RUNNER_TEMP/vap6-simulation-boundary-sample"
+          set +e
+          (cd "$candidate" && TEAR_PERF_SCENARIO=constrained TEAR_PERF_PORT=8217 \
+            xvfb-run -a node tests/browser-performance.js) \
+            > "$samples/candidate.stdout" 2> "$samples/candidate.stderr"
+          status=$?
+          set -e
+          printf '%s\n' "$status" > "$samples/candidate.status"
+      - name: Validate and classify the simulation boundary
+        run: >-
+          node scripts/tearbench-simulation-boundary-report.mjs
+          --samples "$RUNNER_TEMP/vap6-simulation-boundary-sample"
+          --revision "$CANDIDATE_REVISION"
+          --artifact artifacts/tearbench/generated/vap6-simulation-boundary-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tearbench-simulation-boundary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/tearbench/generated/vap6-simulation-boundary-report.json
+            ${{ runner.temp }}/vap6-simulation-boundary-sample
+          if-no-files-found: error
+          retention-days: 14
+
   certify-serial:
     needs: [plan, serial]
-    if: ${{ always() && !cancelled() && inputs.mode != 'paired-performance' }}
+    if: ${{ always() && !cancelled() && (inputs.mode == 'normal' || inputs.mode == 'planted-failure') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -556,7 +619,7 @@ jobs:
 
   certify-parallel:
     needs: [plan, build, browser, core, performance]
-    if: ${{ always() && !cancelled() && inputs.mode != 'paired-performance' }}
+    if: ${{ always() && !cancelled() && (inputs.mode == 'normal' || inputs.mode == 'planted-failure') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -625,7 +688,7 @@ jobs:
 
   aggregate:
     needs: [plan, serial, build, browser, core, performance, certify-serial, certify-parallel]
-    if: ${{ always() && !cancelled() && inputs.mode != 'paired-performance' }}
+    if: ${{ always() && !cancelled() && (inputs.mode == 'normal' || inputs.mode == 'planted-failure') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

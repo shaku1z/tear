@@ -298,6 +298,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   await startPlayground(page);
   await warmPlaygroundRuntime(page);
   const peakGauges = { enemies: 0, projectiles: 0, effects: 0 };
+  const simulationStepHistogram = new Map();
   const samplePeak = (snapshot) => {
     for (const name of Object.keys(peakGauges)) peakGauges[name] = Math.max(peakGauges[name], gauge(snapshot, name));
   };
@@ -309,6 +310,10 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
   const sampleMeasuredPeak = async (snapshot) => {
     samplePeak(snapshot);
+    const simulationSteps = gauge(snapshot, "simulationSteps");
+    if (Number.isSafeInteger(simulationSteps) && simulationSteps >= 0) {
+      simulationStepHistogram.set(simulationSteps, (simulationStepHistogram.get(simulationSteps) || 0) + 1);
+    }
     await stopTraceAfterHitch(browser, snapshot, label);
   };
   const activeFrameSamples = await exerciseCombat(
@@ -323,6 +328,11 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   await stopTraceAfterHitch(browser, snapshot, label);
   const result = {
     simulation: snapshot.simulation,
+    canonicalTick: snapshot.canonicalTick,
+    simulationStepPoll: {
+      observations: [...simulationStepHistogram.values()].reduce((total, count) => total + count, 0),
+      histogram: Object.fromEntries([...simulationStepHistogram].sort(([left], [right]) => left - right)),
+    },
     render: snapshot.render,
     frame: snapshot.frame,
     frameInterval: snapshot.frameInterval,

@@ -14,10 +14,12 @@ describe("PerformanceMonitor", () => {
   it("rejects invalid samples and returns stable sorted gauges", () => {
     const monitor = new PerformanceMonitor(2);
     monitor.record("simulation", Number.NaN);
+    monitor.record("canonicalTick", 1.25);
     monitor.gauge("projectiles", 4);
     monitor.gauge("enemies", 8);
     expect(monitor.snapshot()).toMatchObject({
       simulation: { samples: 0 },
+      canonicalTick: { samples: 1, p95Ms: 1.25 },
       gauges: { enemies: 8, projectiles: 4 },
     });
   });
@@ -30,6 +32,7 @@ describe("PerformanceMonitor", () => {
     monitor.resetTimingSamples();
     expect(monitor.snapshot()).toMatchObject({
       simulation: { samples: 0 },
+      canonicalTick: { samples: 0 },
       frame: { samples: 0 },
       frameInterval: { samples: 0 },
       outsideFrameWork: { samples: 0 },
