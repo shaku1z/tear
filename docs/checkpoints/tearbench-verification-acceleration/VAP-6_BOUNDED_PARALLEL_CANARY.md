@@ -298,7 +298,8 @@ frame-interval p99 at 49.9 ms against 34 ms. The serial runner instead failed
 constrained simulation p95 at 11.6 ms against 10 ms. Its authoritative tick
 p95 remained 1.1 ms. Because the hard failure signals differ, both certificates
 and the normal aggregate correctly reject. The serial scenario-console browser
-task also recovered from one 30-second `page.reload` timeout on its single bounded
+task also recovered from one 30-second `page.reload` timeout on its single
+bounded
 retry, so this run is not flake-free. A planted-failure run is not dispatched
 from a failed normal baseline.
 

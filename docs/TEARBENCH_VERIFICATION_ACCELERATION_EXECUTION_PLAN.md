@@ -469,7 +469,8 @@ Fresh normal run `34188495672` then retained all 100 task IDs and matching claim
 sets, but did not qualify. Parallel failed unthrottled Verdant pacing p99 at
 49.9 ms against 34 ms while serial failed constrained simulation p95 at 11.6
 ms against 10 ms; the serial scenario-console browser task also recovered one
-reload timeout on its bounded retry. The aggregate therefore remained `mismatched` and no planted
+reload timeout on its bounded retry. The aggregate therefore remained
+`mismatched` and no planted
 run followed. Its measured parallel/serial wall ratio was `0.412`, while full
 provider job wall was 1,647 versus 1,259 seconds. These savings and the higher
 runner cost are rejected single-sample diagnostics, not p50/p95 acceptance.
