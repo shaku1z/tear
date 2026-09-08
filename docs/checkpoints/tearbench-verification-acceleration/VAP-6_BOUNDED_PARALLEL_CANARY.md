@@ -385,6 +385,47 @@ normal-canary certificate, does not repair the serial constrained miss, does
 not provide full-canary p50/p95 cost acceptance, and does not unblock the
 planted-failure canary. The predeclared no-retry stop condition applies.
 
+### Bounded five-run qualification cohort
+
+The owner authorized one statistically aggregated campaign on existing
+GitHub-hosted runners with all task and performance thresholds unchanged. The
+manual workflow therefore exposes exactly five `sample-1` through `sample-5`
+normal-mode slots in addition to the default `single` slot. The five signed
+slots share one non-cancelling campaign concurrency key, while `single` retains
+its independent cancellation behavior. The five samples are dispatched once
+each, sequentially, and protected main is rechecked by each campaign run; this
+avoids self-contention in the shared hosted-runner pool. The cohort verifier
+also rejects overlapping provider job intervals. If the source advances, the
+campaign stops rather than mixing revisions. A non-normal mode must use the
+default slot.
+
+The qualification reporter requires exactly five unique first workflow
+attempts. Every sample must bind its aggregate artifact ID, exact artifact name
+and downloaded archive SHA-256 to GitHub's artifact API metadata. The input
+manifest declares the exact protected source, plan and shard-plan digests,
+required task count, mutable hosted-runner label, Node/pnpm versions, and pinned
+browser identity before aggregation. Each sample supplies its raw provider run,
+complete job pagination, shard plan, schema-v3 parity report and provider report;
+the qualification reporter replays the canonical provider topology and clock
+verifier instead of trusting the supplied summary. It also validates exact
+slot identity, runner names, claims, retry attempt sequences, retry dispositions,
+and denominators. Altered reports, duplicate run/attempts or slots, rerun
+attempts, cross-source samples, planted samples, hidden retries and incomplete
+provenance fail closed.
+
+The report uses nearest-rank p50 and p95 over candidate-to-certificate and
+serial decision wall time, critical paths, provider job wall, experiment wall,
+setup time, maximum dispatch wait, browser-shard balance, retry rate, and
+parallel-to-serial wall and job-cost ratios. `complete-equivalent-cohort`
+requires five successful equivalent normal samples; any valid failed sample
+produces `rejected-cohort` while retaining its measurements. The cohort report
+also retains initial failures separately from retries and keeps task-stage setup
+separate from complete provider job wall. It does not invent a wall-time, flake,
+balance or runner-cost acceptance threshold,
+is not a billing attestation or release certificate, and cannot itself authorize
+VAP-7. A planted-failure run remains blocked until the measured cohort satisfies
+the VAP-6 exit decision.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair

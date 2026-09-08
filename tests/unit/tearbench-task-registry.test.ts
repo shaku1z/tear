@@ -39,11 +39,12 @@ describe("TearBench atomic task registry", () => {
       expect(value.profiles[profile]?.filter((id) => id === "unit.tearbench-canary-contract")).toHaveLength(1);
     }
     expect(requiredTask("unit.tearbench-canary-contract").runner.args).toEqual([
-      "--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-workflow.test.mjs",
+      "--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-qualification-report.test.mjs",
+      "tests/tearbench-canary-workflow.test.mjs",
       "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs",
       "tests/tearbench-simulation-boundary-report.test.mjs",
     ]);
-    expect(requiredTask("unit.tearbench-canary-contract").version).toBe(3);
+    expect(requiredTask("unit.tearbench-canary-contract").version).toBe(4);
     expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
   });
   it("runs resource lease regressions in functional and protected profiles without rewriting the compatibility baseline", () => {
