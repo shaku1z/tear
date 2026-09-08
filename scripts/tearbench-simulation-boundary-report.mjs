@@ -71,8 +71,11 @@ export function createSimulationBoundaryReport({ directory, revision, browserVer
   const sampleCapacity = budgets.referenceProfile.sampleCapacity;
   const minimumFrameSamples = budgets.constrainedGameplay.minimumSamples;
   const minimumPollObservations = Math.floor(minimumFrameSamples / 10);
+  const constrainedBudgetFields = ["simulationP95Ms", "renderP95Ms", "frameP95Ms", "frameIntervalP99Ms",
+    "frameIntervalMaxMs", "newLongTasksMax"];
   if (budgetMs !== 10 || sampleCapacity !== 600 || minimumFrameSamples !== 300
-    || candidateBudgets?.constrainedGameplay?.simulationP95Ms !== budgetMs
+    || constrainedBudgetFields.some((field) => candidateBudgets?.constrainedGameplay?.[field]
+      !== budgets.constrainedGameplay[field])
     || candidateBudgets?.referenceProfile?.sampleCapacity !== sampleCapacity
     || candidateBudgets?.constrainedGameplay?.minimumSamples !== minimumFrameSamples) {
     throw new TypeError("simulation boundary requires the unchanged candidate and reporter measurement contract");
@@ -106,16 +109,39 @@ export function createSimulationBoundaryReport({ directory, revision, browserVer
   const frameInterval = validateTiming(measurement?.frameInterval, "frame interval", { minimumSamples: minimumFrameSamples });
   const outsideFrameWork = validateTiming(measurement?.outsideFrameWork, "outside-frame work",
     { minimumSamples: minimumFrameSamples });
+  if (!Number.isSafeInteger(measurement?.newLongTasks) || measurement.newLongTasks < 0
+    || !Number.isSafeInteger(measurement?.peakGauges?.enemies) || measurement.peakGauges.enemies < 0) {
+    throw new TypeError("simulation boundary counters are incomplete");
+  }
+  const performanceBudget = budgets.constrainedGameplay;
+  const sampleFailures = [
+    { id: "simulation-p95", label: `${scenario} simulation p95 ms`, actual: simulation.p95Ms,
+      budget: performanceBudget.simulationP95Ms },
+    { id: "render-p95", label: `${scenario} render p95 ms`, actual: render.p95Ms,
+      budget: performanceBudget.renderP95Ms },
+    { id: "frame-p95", label: `${scenario} frame-work p95 ms`, actual: frame.p95Ms,
+      budget: performanceBudget.frameP95Ms },
+    { id: "frame-interval-p99", label: `${scenario} frame-interval p99 ms`, actual: frameInterval.p99Ms,
+      budget: performanceBudget.frameIntervalP99Ms },
+    { id: "frame-interval-max", label: `${scenario} frame-interval max ms`, actual: frameInterval.maxMs,
+      budget: performanceBudget.frameIntervalMaxMs },
+    { id: "new-long-tasks", label: `${scenario} new >50 ms frames`, actual: measurement.newLongTasks,
+      budget: performanceBudget.newLongTasksMax },
+  ].filter(({ actual, budget }) => actual > budget).map((failure) => ({ ...failure,
+    assertion: `${failure.label}: ${failure.actual} exceeded budget ${failure.budget}` }));
+  if (measurement.peakGauges.enemies === 0) sampleFailures.push({ id: "representative-enemies",
+    label: `${scenario} representative enemies`, actual: 0, budget: 0,
+    assertion: `${scenario} did not exercise representative enemies` });
   const exceeded = simulation.p95Ms > budgetMs;
-  const expectedAssertion = `${scenario} simulation p95 ms: ${simulation.p95Ms} exceeded budget ${budgetMs}`;
   const failureHeadlines = `${stdout}\n${stderr}`.split(/\r?\n/u).map((line) => line.trim())
     .filter((line) => /^(?:AssertionError(?: \[[^\]]+\])?|Error):/u.test(line));
-  const expectedHeadline = `AssertionError [ERR_ASSERTION]: ${expectedAssertion}`;
-  const statusMatches = exceeded
-    ? exitCode !== 0 && failureHeadlines.length === 1 && failureHeadlines[0] === expectedHeadline
-    : exitCode === 0 && failureHeadlines.length === 0;
+  const expectedHeadline = sampleFailures.length === 0 ? undefined
+    : `AssertionError [ERR_ASSERTION]: ${sampleFailures[0].assertion}`;
+  const statusMatches = sampleFailures.length === 0
+    ? exitCode === 0 && failureHeadlines.length === 0
+    : exitCode !== 0 && failureHeadlines.length === 1 && failureHeadlines[0] === expectedHeadline;
   if (!statusMatches) {
-    throw new TypeError("simulation boundary status does not match its exact measured aggregate budget assertion");
+    throw new TypeError("simulation boundary status does not match its exact first measured constrained assertion");
   }
   const outcome = !exceeded ? "aggregate-within-budget"
     : canonicalTick.p95Ms <= budgetMs ? "aggregate-boundary-miss" : "canonical-tick-miss";
@@ -124,7 +150,8 @@ export function createSimulationBoundaryReport({ directory, revision, browserVer
       sourceConfigSha256: createHash("sha256").update(candidateBudgetBytes).digest("hex") },
     browser: { version: browserVersion, archiveSha256: browserArchiveSha256 },
     revision: sourceRevision, build, exitCode, measurements: { ...measurement, simulation, canonicalTick,
-      simulationStepPoll, render, frame, frameInterval, outsideFrameWork }, outcome };
+      simulationStepPoll, render, frame, frameInterval, outsideFrameWork },
+    sampleAssessment: { status: sampleFailures.length === 0 ? "passed" : "failed", failures: sampleFailures }, outcome };
   return { ...report, reportDigest: createHash("sha256").update(JSON.stringify(report)).digest("hex") };
 }
 
