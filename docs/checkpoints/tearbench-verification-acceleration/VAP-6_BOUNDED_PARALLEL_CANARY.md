@@ -364,6 +364,27 @@ classification. Every outcome remains diagnostic: it cannot qualify VAP-6,
 unblock the planted-failure canary, alter a threshold, provision a runner or
 authorize VAP-7 cutover by itself.
 
+Protected-main run `34227181366` executed that one comparison from workflow
+revision `3825964766a2526ec22862a88dead4cbe360554b`. It bound detached builds to
+the predeclared baseline `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b` and
+candidate `50213cc420bb1ce61c745d9452ec2dd256728684`, pinned Chrome
+`152.0.7977.64`, and the unchanged Verdant budget. All three samples on each
+side passed. Baseline simulation p95 values were 2.0, 1.7 and 1.6 ms; candidate
+values were 1.9, 1.7 and 1.5 ms. Both sides recorded frame-interval p99 at
+approximately 33.4 ms against 34 ms, frame-interval maxima no higher than
+33.5 ms against 50 ms, zero new long tasks, and workloads within every ceiling.
+The exact report therefore classifies `both-within-budget`, with report digest
+`01ab864264ef9e87caf70c24eb24cab4077c51420c2c39ee9278575444ac7ed5`.
+Workflow artifact `10056286982` has archive SHA-256
+`4a7ae108c59c2c47bf175c25772f9dd065ba75eac76b5c01d1e92b1745c1984f`.
+
+This closes the candidate-regression question for the bounded paired workload:
+the earlier single Verdant miss was not reproduced, and the candidate did not
+regress measured Tear work relative to the baseline. The result is not a
+normal-canary certificate, does not repair the serial constrained miss, does
+not provide full-canary p50/p95 cost acceptance, and does not unblock the
+planted-failure canary. The predeclared no-retry stop condition applies.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair
