@@ -89,6 +89,12 @@ test("canary parity proves exact equivalence and a planted aggregate rejection",
     parallelCertificate: { status: "certified", planDigest: plan.planDigest }, providerBundle,
     generatedAt: "2026-08-31T00:01:00.000Z" };
   assert.equal(createCanaryParityReport(common).status, "equivalent");
+  assert.equal(createCanaryParityReport(common).schemaVersion, 3);
+  assert.equal(createCanaryParityReport(common).campaignSlot, "single");
+  assert.equal(createCanaryParityReport({ ...common, campaignSlot: "sample-4" }).campaignSlot, "sample-4");
+  assert.throws(() => createCanaryParityReport({ ...common, campaignSlot: "sample-6" }), /campaign slot/u);
+  assert.throws(() => createCanaryParityReport({ ...common, campaignSlot: "sample-4",
+    plantedFailureTaskId: "task.a" }), /campaign slot/u);
   assert.deepEqual(createCanaryParityReport(common).providerOrigin,
     { kind: "github-actions", repository: "shaku1z/tear", workflow: "Canary", runId: "123", attempt: 1 });
   const foreignSerial = serial.map((receipt) => ({ ...receipt, origin: { ...receipt.origin, attempt: 2 } }));

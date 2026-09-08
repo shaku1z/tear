@@ -4,11 +4,11 @@
   "tasks": [
     {
       "taskId": "unit.tearbench-canary-contract",
-      "version": 3,
+      "version": 4,
       "runner": {
         "kind": "node",
         "executable": "node",
-        "args": ["--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-workflow.test.mjs", "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs", "tests/tearbench-simulation-boundary-report.test.mjs"]
+        "args": ["--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-qualification-report.test.mjs", "tests/tearbench-canary-workflow.test.mjs", "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs", "tests/tearbench-simulation-boundary-report.test.mjs"]
       },
       "claimIds": ["unit", "canary-control-plane"],
       "dependencies": [],

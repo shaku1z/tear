@@ -27,6 +27,7 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.match(workflow, /if: \$\{\{ always\(\) && !cancelled\(\) && \(inputs\.mode == 'normal' \|\| inputs\.mode == 'planted-failure'\) \}\}/u);
   assert.match(workflow, /tearbench-canary-compose\.mjs/u);
   assert.match(workflow, /--plant-failure/u);
+  assert.match(workflow, /--campaign-slot \$\{\{ inputs\.campaign_slot \}\}/u);
   assert.match(workflow, /tearbench:record-build-provider/u);
   assert.match(workflow, /id: aggregate-provider[\s\S]+?tearbench-canary-provider-/u);
   assert.match(workflow, /--provider-bundle downloads\/parallel\/provider\/provider-build-bundle\.json/u);
@@ -55,13 +56,30 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.match(aggregateJob, /steps\.aggregate-performance\.outcome == 'success'/u);
 });
 
+test("normal qualification campaign exposes exactly five bounded slots and validates them in the plan job", () => {
+  assert.match(workflow, /campaign_slot:[\s\S]+?default: single[\s\S]+?options: \[single, sample-1, sample-2, sample-3, sample-4, sample-5\]/u);
+  assert.match(workflow,
+    /group: tearbench-parallel-canary-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.mode \}\}-\$\{\{ inputs\.campaign_slot == 'single' && 'single' \|\| 'qualification' \}\}/u);
+  const plan = workflow.slice(workflow.indexOf("\n  plan:"), workflow.indexOf("\n  build:"));
+  assert.match(plan, /name: Validate bounded campaign slot/u);
+  assert.match(plan, /\[\[ "\$CAMPAIGN_SLOT" == "single" \|\| "\$CAMPAIGN_SLOT" =~ \^sample-\[1-5\]\$ \]\]/u);
+  assert.match(plan, /\[\[ "\$MODE" == "normal" \|\| "\$CAMPAIGN_SLOT" == "single" \]\]/u);
+  assert.match(plan, /\[\[ "\$GITHUB_REF" == "refs\/heads\/main" \]\]/u);
+  assert.match(plan, /gh api repos\/\$GITHUB_REPOSITORY\/git\/ref\/heads\/main --jq \.object\.sha/u);
+  assert.equal([...workflow.matchAll(/name: Validate bounded campaign slot/gu)].length, 1);
+  assert.match(workflow, /cancel-in-progress: \$\{\{ inputs\.campaign_slot == 'single' \}\}/u,
+    "the five campaign slots must share a non-cancelling sequential lock");
+});
+
 test("paired performance mode is isolated, exact-source bound, alternating, and artifact retaining", () => {
   assert.match(workflow, /options: \[normal, planted-failure, paired-performance, simulation-boundary\]/u);
   assert.match(workflow, /paired_scenario:[\s\S]+?default: verdant[\s\S]+?options: \[constrained, verdant\]/u);
-  assert.match(workflow, /group: tearbench-parallel-canary-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.mode \}\}/u);
+  assert.match(workflow,
+    /group: tearbench-parallel-canary-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.mode \}\}-\$\{\{ inputs\.campaign_slot == 'single' && 'single' \|\| 'qualification' \}\}/u);
   assert.match(workflow, /plan:\r?\n\s+if: \$\{\{ inputs\.mode == 'normal' \|\| inputs\.mode == 'planted-failure' \}\}/u);
   const paired = workflow.slice(workflow.indexOf("\n  paired-performance:"), workflow.indexOf("\n  certify-serial:"));
   assert.match(paired, /if: \$\{\{ inputs\.mode == 'paired-performance' \}\}/u);
+  assert.match(paired, /name: Reject campaign slots outside normal mode[\s\S]+?test "\$CAMPAIGN_SLOT" = "single"/u);
   assert.match(paired, /PAIRED_SCENARIO: \$\{\{ inputs\.paired_scenario \}\}/u);
   assert.match(paired, /\[\[ "\$PAIRED_SCENARIO" == "constrained" \|\| "\$PAIRED_SCENARIO" == "verdant" \]\]/u);
   assert.match(paired, /\[\[ "\$BASELINE_REVISION" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
@@ -92,6 +110,7 @@ test("paired performance mode is isolated, exact-source bound, alternating, and 
 test("simulation-boundary mode runs one exact constrained sample and retains its diagnostic", () => {
   const boundary = workflow.slice(workflow.indexOf("\n  simulation-boundary:"), workflow.indexOf("\n  certify-serial:"));
   assert.match(boundary, /if: \$\{\{ inputs\.mode == 'simulation-boundary' \}\}/u);
+  assert.match(boundary, /name: Reject campaign slots outside normal mode[\s\S]+?test "\$CAMPAIGN_SLOT" = "single"/u);
   assert.match(boundary, /\[\[ "\$CANDIDATE_REVISION" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
   assert.match(boundary, /git worktree add --detach "\$candidate" "\$CANDIDATE_REVISION"/u);
   assert.match(boundary, /TEAR_BUILD_GIT_SHA="\$CANDIDATE_REVISION" pnpm --dir "\$candidate" build:test:standalone/u);

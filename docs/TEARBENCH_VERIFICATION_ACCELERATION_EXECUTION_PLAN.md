@@ -504,6 +504,25 @@ and retires the one-shot diagnostic without an unchanged retry. It does not
 supply a normal aggregate certificate, serial constrained acceptance,
 full-canary p50/p95 cost evidence, or permission to dispatch the planted sample,
 so VAP-6 remains open.
+A bounded five-run normal campaign is now authorized on existing GitHub-hosted
+runners with every current task and performance threshold preserved. Five
+distinct signed workflow slots identify the samples, while all five share one
+non-cancelling campaign concurrency lock. Campaign samples run sequentially,
+with protected
+main rechecked before each dispatch, so they do not create their own hosted-runner
+contention; a source advance stops the campaign instead of mixing revisions.
+The fail-closed qualification report requires five unique first-attempt run IDs
+bound to a declared protected source, plan, shard plan, task count, and runtime
+pins. It replays the canonical provider verifier from raw run, job, shard-plan,
+and schema-v3 parity inputs, verifies the downloaded aggregate archive against
+its GitHub artifact metadata digest, and validates task, claim, and retry
+history. It reports nearest-rank p50/p95 decision, critical
+path, setup, queue, shard-balance, retry and runner-cost measurements.
+`complete-equivalent-cohort` requires all five normal samples to be successful
+and equivalent; any valid failed sample retains its measurements as
+`rejected-cohort`. The reporter grants no release authority and invents no
+acceptance threshold. The planted sample remains blocked until the cohort is
+measured and accepted against the VAP-6 exit criteria.
 
 ## 16. VAP-7 — Cut over one stable required gate
 

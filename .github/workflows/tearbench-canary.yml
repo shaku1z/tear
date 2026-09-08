@@ -28,14 +28,20 @@ on:
         default: verdant
         type: choice
         options: [constrained, verdant]
+      campaign_slot:
+        description: Unique slot for the bounded five-run normal qualification campaign
+        required: true
+        default: single
+        type: choice
+        options: [single, sample-1, sample-2, sample-3, sample-4, sample-5]
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: tearbench-parallel-canary-${{ github.ref }}-${{ inputs.mode }}
-  cancel-in-progress: true
+  group: tearbench-parallel-canary-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.campaign_slot == 'single' && 'single' || 'qualification' }}
+  cancel-in-progress: ${{ inputs.campaign_slot == 'single' }}
 
 env:
   TEAR_PERF_BROWSER: pinned
@@ -63,6 +69,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Validate bounded campaign slot
+        env:
+          MODE: ${{ inputs.mode }}
+          CAMPAIGN_SLOT: ${{ inputs.campaign_slot }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          [[ "$CAMPAIGN_SLOT" == "single" || "$CAMPAIGN_SLOT" =~ ^sample-[1-5]$ ]]
+          [[ "$MODE" == "normal" || "$CAMPAIGN_SLOT" == "single" ]]
+          if [[ "$CAMPAIGN_SLOT" != "single" ]]; then
+            [[ "$GITHUB_REF" == "refs/heads/main" ]]
+            test "$(gh api repos/$GITHUB_REPOSITORY/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
+          fi
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -449,6 +468,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Reject campaign slots outside normal mode
+        env:
+          CAMPAIGN_SLOT: ${{ inputs.campaign_slot }}
+        run: test "$CAMPAIGN_SLOT" = "single"
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -537,6 +560,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Reject campaign slots outside normal mode
+        env:
+          CAMPAIGN_SLOT: ${{ inputs.campaign_slot }}
+        run: test "$CAMPAIGN_SLOT" = "single"
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -785,6 +812,7 @@ jobs:
           --provider-bundle downloads/parallel/provider/provider-build-bundle.json
           --artifact artifacts/tearbench/generated/vap6-canary-report.json
           --plant-failure ${{ inputs.mode == 'planted-failure' && inputs.planted_task || 'none' }}
+          --campaign-slot ${{ inputs.campaign_slot }}
       - name: Reject incomplete aggregation
         if: always() && steps.parity.outcome != 'success'
         run: exit 1
