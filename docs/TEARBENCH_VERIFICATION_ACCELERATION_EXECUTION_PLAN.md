@@ -489,6 +489,21 @@ shared-provider boundary. All-pass, pre-existing Tear-work misses and mixed
 shapes have explicit non-acceptance outcomes. The experiment runs exactly once
 after protected integration and cannot itself qualify VAP-6 or unblock the
 planted-failure sample.
+Protected-main run `34227181366` produced the predeclared
+`both-within-budget` outcome. All three baseline and all three candidate
+Verdant samples passed the unchanged hard budgets on pinned Chrome
+`152.0.7977.64`; their simulation p95 ranges were 1.6-2.0 ms and 1.5-1.9 ms,
+respectively, frame-interval p99 remained approximately 33.4 ms on both sides,
+and neither side produced a new long task or exceeded a workload ceiling. The
+content-bound report digest is
+`01ab864264ef9e87caf70c24eb24cab4077c51420c2c39ee9278575444ac7ed5`, and
+workflow artifact `10056286982` has archive SHA-256
+`4a7ae108c59c2c47bf175c25772f9dd065ba75eac76b5c01d1e92b1745c1984f`.
+This rejects a reproducible candidate regression in that bounded comparison
+and retires the one-shot diagnostic without an unchanged retry. It does not
+supply a normal aggregate certificate, serial constrained acceptance,
+full-canary p50/p95 cost evidence, or permission to dispatch the planted sample,
+so VAP-6 remains open.
 
 ## 16. VAP-7 — Cut over one stable required gate
 
