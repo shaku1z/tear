@@ -43,6 +43,7 @@ describe("TearBench atomic task registry", () => {
       "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs",
       "tests/tearbench-simulation-boundary-report.test.mjs",
     ]);
+    expect(requiredTask("unit.tearbench-canary-contract").version).toBe(3);
     expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
   });
   it("runs resource lease regressions in functional and protected profiles without rewriting the compatibility baseline", () => {

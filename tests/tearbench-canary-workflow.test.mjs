@@ -57,10 +57,13 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
 
 test("paired performance mode is isolated, exact-source bound, alternating, and artifact retaining", () => {
   assert.match(workflow, /options: \[normal, planted-failure, paired-performance, simulation-boundary\]/u);
+  assert.match(workflow, /paired_scenario:[\s\S]+?default: verdant[\s\S]+?options: \[constrained, verdant\]/u);
   assert.match(workflow, /group: tearbench-parallel-canary-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.mode \}\}/u);
   assert.match(workflow, /plan:\r?\n\s+if: \$\{\{ inputs\.mode == 'normal' \|\| inputs\.mode == 'planted-failure' \}\}/u);
   const paired = workflow.slice(workflow.indexOf("\n  paired-performance:"), workflow.indexOf("\n  certify-serial:"));
   assert.match(paired, /if: \$\{\{ inputs\.mode == 'paired-performance' \}\}/u);
+  assert.match(paired, /PAIRED_SCENARIO: \$\{\{ inputs\.paired_scenario \}\}/u);
+  assert.match(paired, /\[\[ "\$PAIRED_SCENARIO" == "constrained" \|\| "\$PAIRED_SCENARIO" == "verdant" \]\]/u);
   assert.match(paired, /\[\[ "\$BASELINE_REVISION" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
   assert.match(paired, /git worktree add --detach "\$baseline" "\$BASELINE_REVISION"/u);
   assert.match(paired, /git worktree add --detach "\$candidate" "\$CANDIDATE_REVISION"/u);
@@ -68,12 +71,17 @@ test("paired performance mode is isolated, exact-source bound, alternating, and 
   assert.match(paired, /TEAR_BUILD_GIT_SHA="\$CANDIDATE_REVISION" pnpm --dir "\$candidate" build:test:standalone/u);
   assert.equal([...paired.matchAll(/run_sample baseline/gu)].length, 3);
   assert.equal([...paired.matchAll(/run_sample candidate/gu)].length, 3);
+  assert.deepEqual([...paired.matchAll(/^\s+run_sample (baseline|candidate) /gmu)].map((match) => match[1]),
+    ["baseline", "candidate", "baseline", "candidate", "baseline", "candidate"]);
   assert.match(paired, /readFileSync\(process\.argv\[1\],"utf8"\)[\s\S]+?performanceBuild:[\s\S]+?sourceRevision:b\.sourceRevision/u);
-  assert.match(paired, /TEAR_PERF_BUILD_IDENTITY_EMITTED=1 TEAR_PERF_SCENARIO=constrained/u);
+  assert.match(paired, /baseline\/config\/browser-performance-budgets\.json/u);
+  assert.match(paired, /candidate\/config\/browser-performance-budgets\.json/u);
+  assert.match(paired, /TEAR_PERF_BUILD_IDENTITY_EMITTED=1 TEAR_PERF_SCENARIO="\$PAIRED_SCENARIO"/u);
   assert.match(paired, />> "\$samples\/\$side-\$index\.stdout"/u);
   assert.match(browserPerformance,
     /if \(process\.env\.TEAR_PERF_BUILD_IDENTITY_EMITTED !== "1"\) console\.log\(JSON\.stringify\(\{ performanceBuild \}\)\)/u);
-  assert.match(paired, /TEAR_PERF_SCENARIO=constrained/u);
+  assert.match(paired, /--scenario "\$PAIRED_SCENARIO"/u);
+  assert.match(paired, /--workflow-revision "\$GITHUB_SHA"/u);
   assert.ok(browserPerformance.indexOf("JSON.stringify({ performanceBuild })")
     < browserPerformance.indexOf("JSON.stringify({ browserRuntime })"),
   "performance build identity must be emitted before runtime and scenario assertions");

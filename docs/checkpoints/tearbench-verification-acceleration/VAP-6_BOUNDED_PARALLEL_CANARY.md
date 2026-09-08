@@ -322,6 +322,48 @@ snapshot accounting only; the resulting report retains `mismatched`,
 content-bound report digest is
 `43bba46bd07aeef4d9d05babd2f87bcfd1356e5c8b9a62ca3982a81d151927f6`.
 
+### Bounded unthrottled Verdant paired diagnostic
+
+The failed normal sample does not establish whether its Verdant pacing miss is
+Tear work or shared-runner cadence. Repeating the full normal canary or the
+earlier constrained pair would not discriminate that boundary. Exactly one new
+paired-performance run is authorized after this mode extension reaches
+protected main. It compares baseline
+`b8d3b8d3f4e490573e5c2928110a7db91dbbf07b` with candidate
+`50213cc420bb1ce61c745d9452ec2dd256728684`, the protected-main revision that
+contains completed-provider topology accounting but predates this diagnostic
+extension. The workflow revision is recorded separately from both detached
+build revisions.
+
+Both revisions contain the same unthrottled `verdant` workload and unchanged
+6 ms simulation, 14 ms render, 16.67 ms frame-work, 34 ms interval-p99, 50 ms
+interval-maximum, zero-long-task and workload-ceiling contract. One pinned
+Chrome runner prepares exact clean builds and alternates three samples per
+side. The reporter requires the exact scenario and complete monotonic timing,
+outside-frame, long-task, gauge, workload, source-budget, build, browser and
+exit/assertion evidence. It retains the raw measurements and does not grant
+release authority.
+
+The result stops after this one run with no unchanged retry:
+
+- `both-within-budget` means the prior one-sample miss was not reproduced;
+- `candidate-regression-plausible` requires all three baseline samples to pass
+  and all three candidate samples to fail with measured Tear-work or workload
+  failures, not pacing alone;
+- `shared-provider-boundary` requires all six samples to fail only pacing while
+  every Tear-work bound passes and outside-frame p99 is at least 75% of frame
+  interval p99;
+- `pre-existing-budget-miss` requires all six samples to contain measured
+  Tear-work or workload failures; and
+- every mixed, pacing-only candidate, weakly attributable or otherwise
+  non-discriminating shape is `inconclusive`.
+
+The 49.9 ms normal-run failure had only 72.7% outside-frame dominance, so that
+single retained value is deliberately insufficient for the provider-boundary
+classification. Every outcome remains diagnostic: it cannot qualify VAP-6,
+unblock the planted-failure canary, alter a threshold, provision a runner or
+authorize VAP-7 cutover by itself.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair
