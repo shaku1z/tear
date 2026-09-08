@@ -465,6 +465,18 @@ required, preserves the numeric pacing bounds and raw measurements, and treats
 only CPU-throttled scheduler cadence as diagnostic. Unthrottled pacing remains
 required. Qualification still requires fresh protected normal and planted
 canaries after that repair; this evidence alone does not close VAP-6.
+Fresh normal run `34188495672` then retained all 100 task IDs and matching claim
+sets, but did not qualify. Parallel failed unthrottled Verdant pacing p99 at
+49.9 ms against 34 ms while serial failed constrained simulation p95 at 11.6
+ms against 10 ms; the serial scenario-console browser task also recovered one
+reload timeout on its bounded retry. The aggregate therefore remained
+`mismatched` and no planted
+run followed. Its measured parallel/serial wall ratio was `0.412`, while full
+provider job wall was 1,647 versus 1,259 seconds. These savings and the higher
+runner cost are rejected single-sample diagnostics, not p50/p95 acceptance.
+Completed-provider accounting was also repaired to require and explicitly
+record the two workflow-defined skipped diagnostic-mode jobs without treating
+arbitrary skipped jobs as valid. VAP-6 remains open.
 
 ## 16. VAP-7 — Cut over one stable required gate
 
