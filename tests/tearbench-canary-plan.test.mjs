@@ -212,10 +212,12 @@ function providerFixture() {
     head_sha: parityReport.source.revision, event: "workflow_dispatch", status: "completed", conclusion: "failure",
     created_at: time(0), updated_at: time(180) };
   const entries = [["plan", 1, 5], ["build", 6, 15], ["browser (browser-1)", 16, 60], ["core (core-1)", 16, 80],
-    ["performance", 83, 100], ["certify-parallel", 101, 105], ["serial", 101, 170], ["certify-serial", 171, 175], ["aggregate", 176, 180]];
-  const jobs = { total_count: entries.length, jobs: entries.map(([name, start, end], index) => ({ id: index + 1, name,
+    ["performance", 83, 100], ["certify-parallel", 101, 105], ["serial", 101, 170], ["certify-serial", 171, 175],
+    ["aggregate", 176, 180], ["simulation-boundary", 0, 0, "skipped"], ["paired-performance", 0, 0, "skipped"]];
+  const jobs = { total_count: entries.length, jobs: entries.map(([name, start, end, conclusion], index) => ({ id: index + 1, name,
     run_id: run.id, run_attempt: run.run_attempt, head_sha: run.head_sha, status: "completed",
-    conclusion: name === "performance" ? "failure" : "success", started_at: time(start), completed_at: time(end) })) };
+    conclusion: conclusion ?? (name === "performance" ? "failure" : "success"),
+    started_at: time(start), completed_at: time(end) })) };
   return { run, jobs, parityReport, shardPlan, generatedAt: time(181) };
 }
 
@@ -232,6 +234,10 @@ test("provider clocks distinguish dependency wait, complete job cost and rejecte
   assert.equal(report.equivalenceReported, false);
   assert.equal(report.canonicalReleaseAuthority, false);
   assert.equal(report.providerJobsDigest, receiptSha256(input.jobs));
+  assert.deepEqual(report.skippedJobs.map(({ name, conclusion }) => ({ name, conclusion })), [
+    { name: "simulation-boundary", conclusion: "skipped" },
+    { name: "paired-performance", conclusion: "skipped" },
+  ]);
   assert.deepEqual(createCanaryProviderMetrics(input), report);
 });
 
@@ -251,6 +257,19 @@ test("provider measurement rejects mixed sources, attempts, omissions, overlap a
     (input) => { input.jobs.jobs[1].name = "unexpected"; },
     (input) => { input.jobs.jobs[1].name = input.jobs.jobs[0].name; },
     (input) => { input.jobs.jobs[1].conclusion = "cancelled"; },
+    (input) => { input.jobs.jobs.find(({ name }) => name === "simulation-boundary").conclusion = "success"; },
+    (input) => { input.jobs.jobs.find(({ name }) => name === "simulation-boundary").conclusion = "failure"; },
+    (input) => { input.jobs.jobs.find(({ name }) => name === "simulation-boundary").status = "in_progress"; },
+    (input) => { input.jobs.jobs.find(({ name }) => name === "build").conclusion = "skipped"; },
+    (input) => { input.jobs.jobs.find(({ name }) => name === "simulation-boundary").name = "unknown-diagnostic"; },
+    (input) => { const skipped = input.jobs.jobs.find(({ name }) => name === "simulation-boundary");
+      input.jobs.jobs.push({ ...skipped, id: 500, name: "unknown-diagnostic" }); input.jobs.total_count++; },
+    (input) => { const first = input.jobs.jobs.find(({ name }) => name === "simulation-boundary");
+      input.jobs.jobs.find(({ name }) => name === "paired-performance").id = first.id; },
+    (input) => { const index = input.jobs.jobs.findIndex(({ name }) => name === "simulation-boundary");
+      input.jobs.jobs.splice(index, 1); input.jobs.total_count--; },
+    (input) => { const index = input.jobs.jobs.findIndex(({ name }) => name === "paired-performance");
+      input.jobs.jobs.splice(index, 1); input.jobs.total_count--; },
     (input) => { input.jobs.jobs.pop(); },
     (input) => { input.jobs.jobs.pop(); input.jobs.total_count--; },
     (input) => { input.parityReport.status = "equivalent"; },
@@ -268,7 +287,7 @@ test("provider equivalence requires the same receipt-origin run and attempt, inc
   const input = providerFixture();
   const resign = (value, key) => { const { [key]: ignored, ...payload } = value; assert.ok(ignored); value[key] = receiptSha256(payload); };
   input.run.conclusion = "success";
-  for (const job of input.jobs.jobs) job.conclusion = "success";
+  for (const job of input.jobs.jobs) if (job.conclusion !== "skipped") job.conclusion = "success";
   input.parityReport.status = "equivalent"; input.parityReport.errors = [];
   resign(input.parityReport, "reportDigest");
   assert.equal(createCanaryProviderMetrics(input).equivalenceReported, true);
