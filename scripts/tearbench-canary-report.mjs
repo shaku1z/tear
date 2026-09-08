@@ -283,19 +283,29 @@ export function createCanaryProviderMetrics({ run, jobs, parityReport, shardPlan
     ["certify-serial", ["plan", "serial"]],
     ["aggregate", ["plan", "build", ...ordinary, "performance", "serial", "certify-parallel", "certify-serial"]],
   ]);
-  const indexed = new Map(), ids = new Set(), started = date(run.created_at), finished = date(run.updated_at);
+  const skippedModeNames = new Set(["simulation-boundary", "paired-performance"]);
+  const expectedJobNames = new Set([...dependencies.keys(), ...skippedModeNames]);
+  const indexed = new Map(), seenNames = new Set(), ids = new Set(), skippedJobs = [];
+  const started = date(run.created_at), finished = date(run.updated_at);
   requireValue(finished >= started, "reversed run clock");
   for (const job of jobs.jobs) {
-    requireValue(dependencies.has(job.name) && !indexed.has(job.name) && !ids.has(job.id)
+    requireValue(expectedJobNames.has(job.name) && !seenNames.has(job.name) && !ids.has(job.id)
       && Number.isSafeInteger(job.id) && job.id > 0 && job.run_id === run.id && job.run_attempt === run.run_attempt
-      && job.head_sha === run.head_sha && job.status === "completed"
-      && ["success", "failure"].includes(job.conclusion), "unknown, duplicate, incomplete or mismatched job");
+      && job.head_sha === run.head_sha && job.status === "completed", "unknown, duplicate, incomplete or mismatched job");
+    const skippedMode = skippedModeNames.has(job.name);
+    requireValue(skippedMode ? job.conclusion === "skipped" : ["success", "failure"].includes(job.conclusion),
+      "invalid job conclusion for selected canary mode");
     const start = date(job.started_at), end = date(job.completed_at);
     requireValue(start >= started && end >= start && end <= finished, "invalid job interval");
-    indexed.set(job.name, { job, start, end }); ids.add(job.id);
+    seenNames.add(job.name); ids.add(job.id);
+    if (skippedMode) {
+      skippedJobs.push({ name: job.name, jobId: job.id, conclusion: job.conclusion,
+        startedAt: job.started_at, completedAt: job.completed_at });
+    } else indexed.set(job.name, { job, start, end });
   }
-  requireValue(indexed.size === dependencies.size, "missing workflow job");
-  requireValue(run.conclusion !== "success" || jobs.jobs.every((job) => job.conclusion === "success"), "successful run contains failed jobs");
+  requireValue(seenNames.size === expectedJobNames.size && indexed.size === dependencies.size, "missing workflow job");
+  requireValue(run.conclusion !== "success" || jobs.jobs.every((job) => ["success", "skipped"].includes(job.conclusion)),
+    "successful run contains failed jobs");
   requireValue(parityReport.status !== "equivalent" || parityReport.errors.length === 0, "equivalent report contains errors");
   const rows = [...dependencies].map(([name, needs]) => {
     const { job, start, end } = indexed.get(name);
@@ -317,7 +327,7 @@ export function createCanaryProviderMetrics({ run, jobs, parityReport, shardPlan
     serialDecisionWallMs: indexed.get("certify-serial").end - indexed.get("performance").end,
     parallelJobWallMs: sum(parallelNames), serialJobWallMs: sum(["serial", "certify-serial"]),
     experimentJobWallMs: rows.reduce((total, row) => total + row.jobWallMs, 0),
-    experimentWallMs: indexed.get("aggregate").end - started, jobs: rows,
+    experimentWallMs: indexed.get("aggregate").end - started, jobs: rows, skippedJobs,
     canonicalReleaseAuthority: false,
     limitations: ["Provider snapshots are supplied data, not an authenticated release certificate",
       "Legacy schema-1 parity reports have no run/attempt origin binding and cannot report equivalence here",

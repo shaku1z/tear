@@ -286,6 +286,41 @@ This changes evidence attribution, not a threshold, workload, product runtime,
 runner, or release authority. It requires protected integration followed by
 new normal and planted canaries before VAP-6 can be qualified.
 
+### Fresh normal canary after the methodology repair
+
+Normal run `34188495672` at protected source
+`2707e5d4fd6e8cb5e1b420381cdb5f9b785f5659` retained all 100 task IDs and the
+same claim set in both paths. Every terminal task except
+`browser.test-browser-performance` passed. The parallel performance runner
+kept desktop and constrained game-work budgets within bounds, including 8.8 ms
+constrained simulation p95, but failed the unchanged unthrottled Verdant
+frame-interval p99 at 49.9 ms against 34 ms. The serial runner instead failed
+constrained simulation p95 at 11.6 ms against 10 ms. Its authoritative tick
+p95 remained 1.1 ms. Because the hard failure signals differ, both certificates
+and the normal aggregate correctly reject. The serial scenario-console browser
+task also recovered from one 30-second `page.reload` timeout on its single bounded
+retry, so this run is not flake-free. A planted-failure run is not dispatched
+from a failed normal baseline.
+
+The in-task report records a 504,230 ms parallel critical path versus
+1,222,490 ms serial wall time (`0.412` ratio), with 25.071 versus 20.245
+task-stage runner minutes. Completed-provider accounting records 533,000 ms to
+the rejected parallel decision versus 1,265,000 ms for the serial decision,
+1,647,000 versus 1,259,000 ms of full job wall, and 2,938,000 ms across the
+experiment. These are material wall-time savings accompanied by higher runner
+cost, but they are one rejected sample rather than p50/p95 or cost acceptance.
+
+The terminal GitHub snapshot contains the two workflow-defined jobs for modes
+not selected by this normal run: `simulation-boundary` and
+`paired-performance`, both completed with conclusion `skipped`. Provider
+accounting now requires exactly those two metadata-only rows, records them as
+`skippedJobs`, excludes them from job-cost sums, and still rejects any missing,
+active, failed, duplicated, or unknown extra job. This repairs complete
+snapshot accounting only; the resulting report retains `mismatched`,
+`equivalenceReported: false`, and `canonicalReleaseAuthority: false`. Its
+content-bound report digest is
+`43bba46bd07aeef4d9d05babd2f87bcfd1356e5c8b9a62ca3982a81d151927f6`.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair
