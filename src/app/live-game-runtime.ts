@@ -150,7 +150,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { awardCoins, telemetry: economyTelemetry } = economyRuntime;
   const { openDraft: openRewardDraft, openTier: openRewardTier } = rewardRuntime;
   const { read: getBest, record: saveBest } = bestScores.api;
-  let state: LegacyAppScreen = APP.screen;
+  let state: LegacyAppScreen = APP.screen, canonicalTickStartedAt: number | null = null;
   const interfaceFrame = createLiveInterfaceFrameState(state);
   function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
     const prior = state;
@@ -468,14 +468,13 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       }
       return Input.drainSemanticActions(tick);
     },
-    recordSealedActions: (_tick, actions) => { for (const action of actions) ghostV3?.record("commands", action.tick, action); },
+    recordSealedActions: (_tick, actions) => { for (const action of actions) ghostV3?.record("commands", action.tick, action); if (__TEAR_TEST_BUILD__) canonicalTickStartedAt = performance.now(); },
     ...(__TEAR_TEST_BUILD__ ? {
-      beforeSimulationStep: (tick: number) => {
-        const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
-        hook?.before?.(tick);
-      },
+      beforeSimulationStep: (tick: number) => { const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__; hook?.before?.(tick); },
     } : {}),
-    afterSimulationStep: (tick: number) => {
+    afterSimulationStep: (tick: number) => { if (__TEAR_TEST_BUILD__ && canonicalTickStartedAt !== null) {
+      DIAG.record("canonicalTick", performance.now() - canonicalTickStartedAt); canonicalTickStartedAt = null;
+    }
       if (ghostV3?.active === true && tick % ghostV3.keyframeIntervalTicks === 0) {
         const random = worldContext.services.random.snapshot();
         ghostV3.record("presentation", tick, {

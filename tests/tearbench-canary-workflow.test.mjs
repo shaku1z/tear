@@ -24,7 +24,7 @@ test("parallel canary is manual and non-required while Validate keeps plain brow
 
 test("parallel canary preserves bounded isolation, failure uploads, collision checks, and aggregate rejection", () => {
   assert.equal([...workflow.matchAll(/fail-fast: false/gu)].length, 2);
-  assert.match(workflow, /if: \$\{\{ always\(\) && !cancelled\(\) && inputs\.mode != 'paired-performance' \}\}/u);
+  assert.match(workflow, /if: \$\{\{ always\(\) && !cancelled\(\) && \(inputs\.mode == 'normal' \|\| inputs\.mode == 'planted-failure'\) \}\}/u);
   assert.match(workflow, /tearbench-canary-compose\.mjs/u);
   assert.match(workflow, /--plant-failure/u);
   assert.match(workflow, /tearbench:record-build-provider/u);
@@ -46,8 +46,8 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
   assert.match(workflow, /TEAR_PERF_BROWSER: pinned/u);
   assert.match(workflow, /TEAR_PERF_BROWSER_VERSION: "152\.0\.7977\.64"/u);
   assert.match(workflow, /TEAR_PERF_BROWSER_ARCHIVE_SHA256: 8b592f066af71f054aab2cc80fc26f73c775c6d44ebb99d16ade924b24756c2e/u);
-  assert.equal([...workflow.matchAll(/uses: \.\/\.github\/actions\/install-tear-performance-browser/gu)].length, 3,
-    "parallel, serial and paired measurements must install the same pinned Chrome");
+  assert.equal([...workflow.matchAll(/uses: \.\/\.github\/actions\/install-tear-performance-browser/gu)].length, 4,
+    "parallel, serial, paired and boundary measurements must install the same pinned Chrome");
   assert.match(performanceBrowserAction,
     /https:\/\/storage\.googleapis\.com\/chrome-for-testing-public\/\$\{TEAR_PERF_BROWSER_VERSION\}\/linux64\/chrome-linux64\.zip/u);
   assert.match(performanceBrowserAction, /sha256sum --check --strict/u);
@@ -56,9 +56,9 @@ test("parallel canary preserves bounded isolation, failure uploads, collision ch
 });
 
 test("paired performance mode is isolated, exact-source bound, alternating, and artifact retaining", () => {
-  assert.match(workflow, /options: \[normal, planted-failure, paired-performance\]/u);
+  assert.match(workflow, /options: \[normal, planted-failure, paired-performance, simulation-boundary\]/u);
   assert.match(workflow, /group: tearbench-parallel-canary-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.mode \}\}/u);
-  assert.match(workflow, /plan:\r?\n\s+if: \$\{\{ inputs\.mode != 'paired-performance' \}\}/u);
+  assert.match(workflow, /plan:\r?\n\s+if: \$\{\{ inputs\.mode == 'normal' \|\| inputs\.mode == 'planted-failure' \}\}/u);
   const paired = workflow.slice(workflow.indexOf("\n  paired-performance:"), workflow.indexOf("\n  certify-serial:"));
   assert.match(paired, /if: \$\{\{ inputs\.mode == 'paired-performance' \}\}/u);
   assert.match(paired, /\[\[ "\$BASELINE_REVISION" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
@@ -79,6 +79,20 @@ test("paired performance mode is isolated, exact-source bound, alternating, and 
   "performance build identity must be emitted before runtime and scenario assertions");
   assert.match(paired, /tearbench-paired-performance-report\.mjs/u);
   assert.match(paired, /tearbench-paired-performance-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/u);
+});
+
+test("simulation-boundary mode runs one exact constrained sample and retains its diagnostic", () => {
+  const boundary = workflow.slice(workflow.indexOf("\n  simulation-boundary:"), workflow.indexOf("\n  certify-serial:"));
+  assert.match(boundary, /if: \$\{\{ inputs\.mode == 'simulation-boundary' \}\}/u);
+  assert.match(boundary, /\[\[ "\$CANDIDATE_REVISION" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u);
+  assert.match(boundary, /git worktree add --detach "\$candidate" "\$CANDIDATE_REVISION"/u);
+  assert.match(boundary, /TEAR_BUILD_GIT_SHA="\$CANDIDATE_REVISION" pnpm --dir "\$candidate" build:test:standalone/u);
+  assert.match(boundary, /candidate\/config\/browser-performance-budgets\.json/u);
+  assert.equal([...boundary.matchAll(/TEAR_PERF_SCENARIO=constrained/gu)].length, 1);
+  assert.match(boundary, /tearbench-simulation-boundary-report\.mjs/u);
+  assert.match(boundary, /tearbench-simulation-boundary-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/u);
+  assert.match(browserPerformance, /canonicalTick: snapshot\.canonicalTick/u);
+  assert.match(browserPerformance, /simulationStepPoll/u);
 });
 
 test("parallel canary retries only the failed atomic task and records authorization", () => {

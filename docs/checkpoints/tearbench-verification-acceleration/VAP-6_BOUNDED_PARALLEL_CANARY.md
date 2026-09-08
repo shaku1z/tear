@@ -197,6 +197,49 @@ while each derived report has a new timestamp and therefore a new report digest.
 This parser repair does not change a threshold or convert the budget miss into
 qualification.
 
+### Simulation-boundary diagnostic
+
+The paired result establishes a stable pre-existing miss, but the existing
+`simulation` timing spans the entire pre-render coordinator interval: input,
+prelude, one or more fixed simulation steps, and application/music work. It
+does not identify whether one authoritative fixed tick itself exceeds the
+budget. Repeating the paired or current-only measurement would not answer that
+question.
+
+The manual canary therefore defines one isolated `simulation-boundary` mode.
+It accepts one exact 40-character candidate revision, prepares one clean
+test-standalone build, and runs exactly one constrained sample with the same
+pinned Chrome and unchanged 10 ms budget. Normal, planted, paired, serial,
+matrix, certificate and aggregate jobs are disabled in this mode. The test
+build records `canonicalTick` after input sealing and command recording, around
+each authoritative fixed step, and ends the measurement before ghost/parity
+presentation work. The browser output retains
+the existing frame-level `simulation` summary plus the separate tick summary
+and an honestly named `simulationStepPoll` histogram of the latest per-frame
+step gauge observed by each browser poll; the histogram is not represented as
+an exhaustive frame trace.
+
+The reporter requires one exact clean build identity, one pinned-browser
+identity, one constrained measurement, the full 600 canonical-tick samples,
+at least 300 frame samples, complete monotonic timing summaries, at least 30
+step-poll observations, and a canonical integer exit status bound to the sole
+exact measured aggregate assertion. The candidate's retained budget
+configuration and the reporter's configuration must both preserve the exact
+10 ms threshold.
+Duplicate, mismatched, incomplete, stale and budget-drifted evidence is
+rejected. One retained report classifies the predeclared stop condition:
+
+- `aggregate-within-budget` if the existing frame-level simulation p95 is at
+  or below 10 ms;
+- `aggregate-boundary-miss` if frame-level simulation exceeds 10 ms while the
+  canonical-tick p95 does not; or
+- `canonical-tick-miss` if both p95 values exceed 10 ms.
+
+This mode is passive test-build instrumentation. It does not change production
+gameplay, the threshold, runner provisioning, a required check, or release
+authority. It must run exactly once after protected integration; its result is
+diagnostic and cannot itself close VAP-6.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair
