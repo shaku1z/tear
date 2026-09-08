@@ -22,6 +22,12 @@ on:
         description: Exact candidate commit for paired-performance or simulation-boundary mode
         required: false
         type: string
+      paired_scenario:
+        description: Isolated workload selected only by paired-performance mode
+        required: true
+        default: verdant
+        type: choice
+        options: [constrained, verdant]
 
 permissions:
   contents: read
@@ -438,6 +444,7 @@ jobs:
     env:
       BASELINE_REVISION: ${{ inputs.baseline_revision }}
       CANDIDATE_REVISION: ${{ inputs.candidate_revision }}
+      PAIRED_SCENARIO: ${{ inputs.paired_scenario }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -458,6 +465,7 @@ jobs:
           set -euo pipefail
           [[ "$BASELINE_REVISION" =~ ^[0-9a-f]{40}$ ]]
           [[ "$CANDIDATE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PAIRED_SCENARIO" == "constrained" || "$PAIRED_SCENARIO" == "verdant" ]]
           test "$BASELINE_REVISION" != "$CANDIDATE_REVISION"
           git cat-file -e "$BASELINE_REVISION^{commit}"
           git cat-file -e "$CANDIDATE_REVISION^{commit}"
@@ -473,7 +481,9 @@ jobs:
           TEAR_BUILD_GIT_SHA="$CANDIDATE_REVISION" pnpm --dir "$candidate" build:test:standalone
           cp "$baseline/dist/test-standalone/build-info.json" "$samples/baseline-build-info.json"
           cp "$candidate/dist/test-standalone/build-info.json" "$samples/candidate-build-info.json"
-      - name: Run three alternating constrained samples per revision
+          cp "$baseline/config/browser-performance-budgets.json" "$samples/baseline-browser-performance-budgets.json"
+          cp "$candidate/config/browser-performance-budgets.json" "$samples/candidate-browser-performance-budgets.json"
+      - name: Run three alternating selected performance samples per revision
         shell: bash
         run: |
           set -euo pipefail
@@ -485,7 +495,7 @@ jobs:
             node -e 'const b=JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")); console.log(JSON.stringify({performanceBuild:{sourceRevision:b.sourceRevision,sourceFingerprint:b.sourceFingerprint,artifactHash:b.artifactHash,buildIdentityDigest:b.buildIdentityDigest}}))' \
               "$samples/$side-build-info.json" > "$samples/$side-$index.stdout"
             set +e
-            (cd "$workspace" && TEAR_PERF_BUILD_IDENTITY_EMITTED=1 TEAR_PERF_SCENARIO=constrained TEAR_PERF_PORT="$port" \
+            (cd "$workspace" && TEAR_PERF_BUILD_IDENTITY_EMITTED=1 TEAR_PERF_SCENARIO="$PAIRED_SCENARIO" TEAR_PERF_PORT="$port" \
               xvfb-run -a node tests/browser-performance.js) \
               >> "$samples/$side-$index.stdout" 2> "$samples/$side-$index.stderr"
             status=$?
@@ -494,8 +504,8 @@ jobs:
           }
           run_sample baseline "$baseline" 1 8211
           run_sample candidate "$candidate" 1 8212
-          run_sample candidate "$candidate" 2 8213
-          run_sample baseline "$baseline" 2 8214
+          run_sample baseline "$baseline" 2 8213
+          run_sample candidate "$candidate" 2 8214
           run_sample baseline "$baseline" 3 8215
           run_sample candidate "$candidate" 3 8216
       - name: Validate and classify the paired diagnostic
@@ -504,6 +514,8 @@ jobs:
           --samples "$RUNNER_TEMP/vap6-paired-samples"
           --baseline "$BASELINE_REVISION"
           --candidate "$CANDIDATE_REVISION"
+          --scenario "$PAIRED_SCENARIO"
+          --workflow-revision "$GITHUB_SHA"
           --artifact artifacts/tearbench/generated/vap6-paired-performance-report.json
       - uses: actions/upload-artifact@v4
         if: always()

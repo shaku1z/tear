@@ -477,6 +477,18 @@ runner cost are rejected single-sample diagnostics, not p50/p95 acceptance.
 Completed-provider accounting was also repaired to require and explicitly
 record the two workflow-defined skipped diagnostic-mode jobs without treating
 arbitrary skipped jobs as valid. VAP-6 remains open.
+One final bounded diagnostic is predeclared instead of repeating that failed
+normal run: the existing same-runner paired mode selects the unthrottled
+Verdant workload and alternates three pinned-browser samples for historical
+baseline `b8d3b8d3f4e490573e5c2928110a7db91dbbf07b` and pre-diagnostic protected
+main `50213cc420bb1ce61c745d9452ec2dd256728684`. It preserves every hard budget
+and complete raw workload/timing evidence. Only all-baseline-pass plus
+all-candidate Tear-work failures can indicate a plausible regression; all six
+pacing-only failures with at least 75% outside-frame dominance indicate a
+shared-provider boundary. All-pass, pre-existing Tear-work misses and mixed
+shapes have explicit non-acceptance outcomes. The experiment runs exactly once
+after protected integration and cannot itself qualify VAP-6 or unblock the
+planted-failure sample.
 
 ## 16. VAP-7 — Cut over one stable required gate
 
