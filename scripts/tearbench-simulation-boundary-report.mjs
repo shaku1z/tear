@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 const budgets = JSON.parse(readFileSync(new URL("../config/browser-performance-budgets.json", import.meta.url), "utf8"));
 const scenario = "4x constrained gameplay";
@@ -59,7 +60,8 @@ function validateStepPoll(value, minimumObservations) {
   return value;
 }
 
-export function createSimulationBoundaryReport({ directory, revision, browserVersion, browserArchiveSha256 }) {
+export function createSimulationBoundaryReport({ directory, revision, browserVersion, browserArchiveSha256,
+  legacyPacingRequired = false }) {
   const sourceRevision = exactSha(revision, "candidate revision");
   if (!/^\d+\.\d+\.\d+\.\d+$/u.test(browserVersion ?? "") || !/^[0-9a-f]{64}$/u.test(browserArchiveSha256 ?? "")) {
     throw new TypeError("simulation boundary browser binding is incomplete");
@@ -71,8 +73,8 @@ export function createSimulationBoundaryReport({ directory, revision, browserVer
   const sampleCapacity = budgets.referenceProfile.sampleCapacity;
   const minimumFrameSamples = budgets.constrainedGameplay.minimumSamples;
   const minimumPollObservations = Math.floor(minimumFrameSamples / 10);
-  const constrainedBudgetFields = ["simulationP95Ms", "renderP95Ms", "frameP95Ms", "frameIntervalP99Ms",
-    "frameIntervalMaxMs", "newLongTasksMax"];
+  const constrainedBudgetFields = ["cpuThrottleRate", "simulationP95Ms", "renderP95Ms", "frameP95Ms",
+    "frameIntervalP99Ms", "frameIntervalMaxMs", "newLongTasksMax"];
   if (budgetMs !== 10 || sampleCapacity !== 600 || minimumFrameSamples !== 300
     || constrainedBudgetFields.some((field) => candidateBudgets?.constrainedGameplay?.[field]
       !== budgets.constrainedGameplay[field])
@@ -132,12 +134,28 @@ export function createSimulationBoundaryReport({ directory, revision, browserVer
   if (measurement.peakGauges.enemies === 0) sampleFailures.push({ id: "representative-enemies",
     label: `${scenario} representative enemies`, actual: 0, budget: 0,
     assertion: `${scenario} did not exercise representative enemies` });
+  const pacingFailures = sampleFailures.filter(({ id }) => id === "frame-interval-p99" || id === "frame-interval-max");
+  const expectedPacingAssessment = {
+    format: "tear-browser-pacing-assessment", schemaVersion: 1,
+    enforcement: "diagnostic-under-cpu-throttle", cpuThrottleRate: performanceBudget.cpuThrottleRate,
+    status: pacingFailures.length === 0 ? "within-budget" : "exceeded",
+    failures: pacingFailures.map(({ id, actual, budget, assertion }) => ({ id, actual, budget, assertion })),
+  };
+  const emittedPacingAssessment = measurement.pacingAssessment;
+  if (emittedPacingAssessment === undefined && legacyPacingRequired !== true) {
+    throw new TypeError("simulation boundary sample is missing its pacing assessment");
+  }
+  if (emittedPacingAssessment !== undefined && !isDeepStrictEqual(emittedPacingAssessment, expectedPacingAssessment)) {
+    throw new TypeError("simulation boundary pacing assessment does not match its measured evidence");
+  }
+  const requiredFailures = emittedPacingAssessment === undefined ? sampleFailures
+    : sampleFailures.filter(({ id }) => id !== "frame-interval-p99" && id !== "frame-interval-max");
   const exceeded = simulation.p95Ms > budgetMs;
   const failureHeadlines = `${stdout}\n${stderr}`.split(/\r?\n/u).map((line) => line.trim())
     .filter((line) => /^(?:AssertionError(?: \[[^\]]+\])?|Error):/u.test(line));
-  const expectedHeadline = sampleFailures.length === 0 ? undefined
-    : `AssertionError [ERR_ASSERTION]: ${sampleFailures[0].assertion}`;
-  const statusMatches = sampleFailures.length === 0
+  const expectedHeadline = requiredFailures.length === 0 ? undefined
+    : `AssertionError [ERR_ASSERTION]: ${requiredFailures[0].assertion}`;
+  const statusMatches = requiredFailures.length === 0
     ? exitCode === 0 && failureHeadlines.length === 0
     : exitCode !== 0 && failureHeadlines.length === 1 && failureHeadlines[0] === expectedHeadline;
   if (!statusMatches) {
@@ -146,6 +164,8 @@ export function createSimulationBoundaryReport({ directory, revision, browserVer
   const outcome = !exceeded ? "aggregate-within-budget"
     : canonicalTick.p95Ms <= budgetMs ? "aggregate-boundary-miss" : "canonical-tick-miss";
   const report = { format: "tearbench-simulation-boundary", schemaVersion: 1, generatedAt: new Date().toISOString(),
+    canonicalReleaseAuthority: false,
+    pacingEvidence: { mode: emittedPacingAssessment === undefined ? "legacy-required" : "structured-policy" },
     scenario, budget: { simulationP95Ms: budgetMs,
       sourceConfigSha256: createHash("sha256").update(candidateBudgetBytes).digest("hex") },
     browser: { version: browserVersion, archiveSha256: browserArchiveSha256 },
@@ -161,15 +181,19 @@ function option(name) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const allowed = ["--samples", "--revision", "--artifact"];
+  const required = ["--samples", "--revision", "--artifact"], allowed = [...required, "--legacy-pacing"];
   const options = process.argv.slice(2), keys = options.filter((_, index) => index % 2 === 0);
-  if (options.length !== allowed.length * 2 || keys.some((value) => !allowed.includes(value)) || new Set(keys).size !== allowed.length) {
-    throw new TypeError("usage: node scripts/tearbench-simulation-boundary-report.mjs --samples dir --revision sha --artifact path");
+  const legacyPacing = option("--legacy-pacing");
+  if (options.length % 2 !== 0 || ![required.length, allowed.length].includes(keys.length)
+    || keys.some((value) => !allowed.includes(value)) || new Set(keys).size !== keys.length
+    || required.some((value) => !keys.includes(value)) || (legacyPacing !== undefined && legacyPacing !== "required")) {
+    throw new TypeError("usage: node scripts/tearbench-simulation-boundary-report.mjs --samples dir --revision sha --artifact path [--legacy-pacing required]");
   }
   const artifact = resolve(option("--artifact"));
   const report = createSimulationBoundaryReport({ directory: resolve(option("--samples")), revision: option("--revision"),
     browserVersion: process.env.TEAR_PERF_BROWSER_VERSION,
-    browserArchiveSha256: process.env.TEAR_PERF_BROWSER_ARCHIVE_SHA256 });
+    browserArchiveSha256: process.env.TEAR_PERF_BROWSER_ARCHIVE_SHA256,
+    legacyPacingRequired: legacyPacing === "required" });
   mkdirSync(dirname(artifact), { recursive: true });
   writeFileSync(artifact, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   console.log(`simulation boundary diagnostic: ${report.outcome}`);

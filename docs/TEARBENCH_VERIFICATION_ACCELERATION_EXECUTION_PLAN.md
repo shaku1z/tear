@@ -457,6 +457,14 @@ later frame-interval p99 assertion failed at 100 ms against 50 ms. Its retained
 raw artifact is reclassified as `aggregate-within-budget` with the pacing
 failure preserved separately. This one result is not repeated and is not
 robust performance acceptance.
+Across the retained provider samples, 4×-throttled frame-interval p99 ranges
+from 100 to 166.6 ms while outside-frame residual time dominates and Tear frame
+work remains within its 20 ms budget. The next methodology repair therefore
+keeps aggregate simulation, render, frame-work, long-task and workload checks
+required, preserves the numeric pacing bounds and raw measurements, and treats
+only CPU-throttled scheduler cadence as diagnostic. Unthrottled pacing remains
+required. Qualification still requires fresh protected normal and planted
+canaries after that repair; this evidence alone does not close VAP-6.
 
 ## 16. VAP-7 — Cut over one stable required gate
 

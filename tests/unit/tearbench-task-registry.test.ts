@@ -40,6 +40,8 @@ describe("TearBench atomic task registry", () => {
     }
     expect(requiredTask("unit.tearbench-canary-contract").runner.args).toEqual([
       "--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-workflow.test.mjs",
+      "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs",
+      "tests/tearbench-simulation-boundary-report.test.mjs",
     ]);
     expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
   });

@@ -260,6 +260,32 @@ is the immutable raw input. This result is not repeated: it shows that the prior
 simulation miss is not consistently reproduced and exposes a separate pacing
 failure, but it is not robust performance acceptance or VAP-6 qualification.
 
+### CPU-throttled pacing methodology
+
+Retained provider evidence now separates two boundaries. Tear's own measured
+frame work is bounded: the simulation, render and complete frame-work
+percentiles remain hard assertions, as do minimum samples, long tasks and the
+representative enemy workload. Browser scheduling is outside that boundary:
+the 4×-throttled samples record frame-interval p99 values from 100 to 166.6 ms,
+with outside-frame residual time dominating, while the boundary diagnostic
+records canonical tick p95 at 1.1 ms and full frame-work p95 at 10.8 ms.
+
+The smallest methodology repair keeps the existing 10 ms simulation, 14 ms
+render, 20 ms frame-work, 50 ms interval-p99 and 75 ms interval-maximum numbers
+unchanged. Every active workload emits an exact structured pacing assessment.
+For the CPU-throttled workload, interval exceedances are retained as diagnostic
+failures because CDP scheduling delay cannot be attributed to Tear work. The
+same raw pacing assertions remain required for unthrottled active and biome
+workloads. No interval value is divided by the throttle rate, and canonical
+tick timing remains decomposition evidence rather than replacing the broader
+simulation assertion. Focused policy tests require that unthrottled pacing
+still fails, throttled exceedances remain exact and visible, and malformed
+throttled pacing evidence fails closed.
+
+This changes evidence attribution, not a threshold, workload, product runtime,
+runner, or release authority. It requires protected integration followed by
+new normal and planted canaries before VAP-6 can be qualified.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair
