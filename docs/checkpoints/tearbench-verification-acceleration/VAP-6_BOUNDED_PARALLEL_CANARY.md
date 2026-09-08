@@ -223,7 +223,9 @@ The reporter requires one exact clean build identity, one pinned-browser
 identity, one constrained measurement, the full 600 canonical-tick samples,
 at least 300 frame samples, complete monotonic timing summaries, at least 30
 step-poll observations, and a canonical integer exit status bound to the sole
-exact measured aggregate assertion. The candidate's retained budget
+exact first measured constrained assertion. Later render, frame, frame-interval
+and long-task failures are recorded separately from the simulation-boundary
+classification. The candidate's retained budget
 configuration and the reporter's configuration must both preserve the exact
 10 ms threshold.
 Duplicate, mismatched, incomplete, stale and budget-drifted evidence is
@@ -239,6 +241,24 @@ This mode is passive test-build instrumentation. It does not change production
 gameplay, the threshold, runner provisioning, a required check, or release
 authority. It must run exactly once after protected integration; its result is
 diagnostic and cannot itself close VAP-6.
+
+Protected-main run `34183589170` executed the single diagnostic against exact
+revision `785f5a4358afdc502d0d30a5ba26b7d79eeb3dda`. Its full 600-sample
+canonical ring measured 1.1 ms p95 while the existing frame-level simulation
+interval measured 8.3 ms p95, producing the predeclared
+`aggregate-within-budget` outcome. The 97 step-poll observations recorded 8,
+10, or 12 fixed steps per sampled frame gauge. The sample process then failed
+the later frame-interval p99 assertion at 100 ms against 50 ms; frame-interval
+max was also 100.1 ms against 75 ms. The first reporter revision required a
+zero exit whenever aggregate simulation was within budget and therefore
+rejected this otherwise attributable retained sample. A fail-first fixture now
+requires the sole exact first measured constrained assertion and preserves all
+measured failures in `sampleAssessment` without changing the boundary outcome.
+Workflow artifact `10039761238` (archive SHA-256
+`548bc2c3dad119f214c96d3d0f081a877f35264371b927a97612279ccd64b07e`)
+is the immutable raw input. This result is not repeated: it shows that the prior
+simulation miss is not consistently reproduced and exposes a separate pacing
+failure, but it is not robust performance acceptance or VAP-6 qualification.
 
 ## Completed-provider measurement contract
 

@@ -451,6 +451,12 @@ simulation interval from an authoritative fixed-tick timing and predeclares
 step-poll evidence without changing the budget or production runtime. Robust
 accepted p50/p95 evidence remains absent, and no required-gate cutover is
 authorized by these measurements.
+The single protected follow-up, run `34183589170`, measured aggregate
+simulation p95 at 8.3 ms and authoritative fixed-tick p95 at 1.1 ms, while a
+later frame-interval p99 assertion failed at 100 ms against 50 ms. Its retained
+raw artifact is reclassified as `aggregate-within-budget` with the pacing
+failure preserved separately. This one result is not repeated and is not
+robust performance acceptance.
 
 ## 16. VAP-7 — Cut over one stable required gate
 
