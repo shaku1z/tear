@@ -25,7 +25,7 @@ describe("tutorial input prompts", () => {
     expect(tutorialInputPrompt("LAUNCH", "Current curriculum", ["MOUSE ↑"], "touch", pad)).toEqual({
       description: "Current curriculum", keys: ["DRAG ↑"],
     });
-    expect(tutorialInputPrompt("FIELD TEST", "Carry the route", [], "touch", pad).keys)
+    expect(tutorialInputPrompt("FIELD TEST", "Carry the route", ["SHIFT", "MOUSE"], "touch", pad).keys)
       .toEqual(["DASH", "DRAG SWING"]);
     expect(tutorialInputPrompt("READ THE CHARGE", "Wait for recovery", [], "gamepad", pad).keys)
       .toEqual(["R2"]);
@@ -35,5 +35,10 @@ describe("tutorial input prompts", () => {
       .toEqual(["R2", "RS SWING"]);
     expect(tutorialInputPrompt("FIELD TEST", "Evade, then punish", ["SHIFT", "MOUSE"], "keyboard", pad).keys)
       .toEqual(["SHIFT", "MOUSE"]);
+    expect(tutorialInputPrompt("FIELD TEST", "INTER-WAVE", [], "gamepad", pad).keys).toEqual([]);
+    expect(tutorialInputPrompt("FIELD TEST", "Launch, follow and return", ["MOUSE UP", "MOUSE"], "gamepad", pad).keys)
+      .toEqual(["RS ↑", "RS — SWING"]);
+    expect(tutorialInputPrompt("FIELD TEST", "Launch, follow and return", ["MOUSE UP", "MOUSE"], "touch", pad).keys)
+      .toEqual(["DRAG ↑", "DRAG — SWING"]);
   });
 });

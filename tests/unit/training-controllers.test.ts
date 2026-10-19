@@ -13,6 +13,39 @@ function startTutorial() {
 }
 
 describe("tutorial controller", () => {
+  it("teaches two Field Test waves with fresh transfer evidence and retains historical checkpoint rules", () => {
+    const controller = startTutorial();
+    controller.restoreSession({ ...controller.captureSession(), lessonId: "field-test", reached: ["move", "field-test"], pendingArena: null });
+    controller.mark("launch"); controller.mark("airHit"); controller.mark("parry");
+    controller.mark("evade"); controller.mark("punish");
+    controller.update(neutralTutorialFrame);
+    expect(controller.session().instruction).toContain("INTER-WAVE");
+    expect(controller.completionDelay).toBe(0);
+    controller.mark("launch"); controller.mark("airHit"); controller.mark("deflect");
+    expect(controller.counters.launch ?? 0).toBe(0);
+    const saved = controller.captureSession(), restored = new TutorialController(CONFIG); restored.restoreSession(saved);
+    expect(restored.captureSession()).toEqual(saved);
+    const activate = { ...neutralTutorialFrame, dt: 1.25 };
+    expect(restored.update(activate)).toEqual(controller.update(activate));
+    expect(controller.step()).toMatchObject({ dummyCount: 1, ranged: true });
+    for (let hit = 0; hit < 6; hit++) controller.mark("strike");
+    controller.mark("airHit"); controller.mark("deflect"); controller.update(neutralTutorialFrame);
+    expect(controller.completionDelay).toBe(0); expect(controller.counters.airHit ?? 0).toBe(0);
+    controller.mark("updraft"); controller.mark("airHit"); controller.update(neutralTutorialFrame);
+    expect(controller.counters.airHit ?? 0).toBe(0);
+    controller.mark("airHit"); controller.update(neutralTutorialFrame);
+    expect(controller.completionDelay).toBe(1.1);
+
+    const historical = { ...saved, version: 1 } as Record<string, unknown>;
+    delete historical.curriculumVersion; delete historical.fieldEncounter; delete historical.interWaveRemaining;
+    historical.counters = { evade: 1, punish: 1 };
+    restored.restoreSession(historical);
+    expect(restored.captureSession()).toEqual(historical);
+    restored.update(neutralTutorialFrame);
+    expect(restored.completionDelay).toBe(1.1);
+    expect(restored.captureSession().version).toBe(1);
+    expect(restored.restart()).toBe(true); expect(restored.captureSession().version).toBe(1);
+  });
   it("restarts only reached exercises, clears delayed evidence, and restores exact continuation without reinstalling rooms", () => {
     const controller = startTutorial();
     controller.counters = { moveL: 60, moveR: 60 };
@@ -183,7 +216,7 @@ describe("tutorial controller", () => {
     const coach = snapshot.enemies[0];
     if (coach === undefined) throw new Error("tutorial coach fixture missing");
     controller.update({ ...snapshot, player: { ...snapshot.player, dashTimer: 0 }, enemies: [{ ...coach, attack: "recover" }] });
-    expect(controller.counters.punish).toBe(1);
+    expect(controller.captureSession()).toMatchObject({ fieldEncounter: "breath", counters: {} });
   });
 
   it("does not turn an ordinary dash or cut into enemy-language credit", () => {
@@ -209,10 +242,10 @@ describe("tutorial controller", () => {
     if (coach === undefined) throw new Error("field-test coach fixture missing");
     controller.update({ ...committed, player: { ...committed.player, dashTimer: 0 }, enemies: [{ ...coach, attack: "recover" }] });
 
-    expect(controller.step().complete(controller.counters)).toBe(true);
-    expect(controller.step().instruction?.(controller.counters)).toContain("ROUTE COMPLETE");
-    expect(controller.counters).toMatchObject({ evade: 1, punish: 1 });
-    expect(controller.step().progress(controller.counters)).toEqual([2, 2]);
+    expect(controller.session().instruction).toContain("INTER-WAVE");
+    expect(controller.session().progress).toEqual([2, 5]);
+    expect(controller.completionDelay).toBe(0);
+    expect(controller.step().progress(controller.counters)).toEqual([2, 5]);
   });
 
   it("recovers an unreachable thrown blade without granting throw credit", () => {

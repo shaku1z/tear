@@ -15,7 +15,9 @@ const scenario = {
   executionClass: "engineering",
   seed: "tutorial-parity",
   start: { mode: "tutorial", difficulty: "normal", weapon: "sword" },
-  maxTicks: 12_000,
+  // The prior course used 11,970 ticks. Two-wave transfer adds a 150-tick
+  // breath plus real launch/follow-up/projectile actions, with finite retries.
+  maxTicks: 16_000,
   assertions: ["runtime.finite-state", "player.finite-transform", "blade.finite-transform"],
   tags: ["tutorial", "parity", "full-journey"],
 };
@@ -65,7 +67,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       const snapshot = tutorial();
       trace.push({
         label, tick: observation.tick, lessonIndex: snapshot.lessonIndex, lesson: snapshot.lesson, description: snapshot.description,
-        arena: snapshot.arena,
+        arena: snapshot.arena, fieldEncounter: environment.canonicalState().tutorial?.fieldEncounter,
         counters: snapshot.counters, player: observation.player, blade: observation.blade,
         entities: observation.entities,
       });
@@ -305,7 +307,39 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
         } };
       capturing = true;
     }
+    let sawFieldBreath = false, sawFieldMixed = false;
     for (let tick = 0; tick < 8_400 && tutorial().lessonIndex === 12; tick += 1) {
+      const encounter = environment.canonicalState().tutorial?.fieldEncounter;
+      if (encounter === "breath") {
+        if (!sawFieldBreath) {
+          record("field-inter-wave"); sawFieldBreath = true;
+          if (environment.observe().entities.length !== 0 || window.__PANTHEON_TEST.state().projectileTrace.length !== 0) {
+            throw new Error("Field Test inter-wave breath must clear the completed encounter");
+          }
+        }
+        step(); continue;
+      }
+      if (encounter === "mixed") {
+        if (!sawFieldMixed) {
+          record("field-mixed"); sawFieldMixed = true;
+          const n = tutorial().counters;
+          if ((n.launch ?? 0) !== 0 || (n.airHit ?? 0) !== 0 || (n.parry ?? 0) !== 0 || (n.deflect ?? 0) !== 0) {
+            throw new Error("Mixed transfer must start without earlier encounter credit");
+          }
+          step();
+          const kinds = environment.observe().entities.map((enemy) => enemy.kind);
+          if (!kinds.includes("charger") || !kinds.includes("ranged")) throw new Error("Mixed transfer must install real target and ranged actors");
+        }
+        const counters = tutorial().counters;
+        if ((counters.deflect ?? 0) + (counters.parry ?? 0) === 0 && returnVisibleShot()) continue;
+        if ((counters.launch ?? 0) === 0 || (counters.airHit ?? 0) === 0) {
+          approachDummy(70, 120);
+          risingCutThroughDummy(8, 12);
+          swingThroughDummy(110000, 10);
+          swingThroughDummy(110000, 18);
+        } else step();
+        continue;
+      }
       const counters = tutorial().counters, enemy = coach();
       if ((counters.evade ?? 0) === 0) {
         if (enemy?.state === "commit") evadeLiveCharge(enemy); else moveTowardCoach();
@@ -313,6 +347,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
         if (enemy?.state === "recover") swingThroughDummy(120000, 8); else moveTowardCoach();
       } else step();
     }
+    if (!sawFieldBreath || !sawFieldMixed) throw new Error("Field Test must teach both waves with a visible inter-wave breath");
     waitForLessonToAdvance(12, 720);
     const reachedReady = tutorial().lessonIndex === 13;
     for (let tick = 0; tick < 240 && tutorial().active; tick += 1) step();

@@ -22,6 +22,10 @@ export function tutorialInputPrompt(
   gamepad: Pick<LegacyGamepad, "bindingLabel">,
 ): TutorialInputPrompt {
   if (mode === "keyboard" || mode === "mouse") return keyboardPrompt(description, keys);
+  if (title === "FIELD TEST" && keys.length === 0) return { description, keys: [] };
+  if (title === "FIELD TEST" && keys.includes("MOUSE UP")) return {
+    description, keys: mode === "touch" ? ["DRAG ↑", "DRAG — SWING"] : ["RS ↑", "RS — SWING"],
+  };
 
   if (mode === "touch") {
     const prompts: Readonly<Record<string, TutorialInputPrompt>> = {

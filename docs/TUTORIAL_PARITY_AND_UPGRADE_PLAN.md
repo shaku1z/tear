@@ -25,6 +25,28 @@ The governing principle is:
 
 ## Cutting Room 2.0 implementation status
 
+### Additive Field Test transfer contract
+
+Current courses keep all fourteen lesson IDs. Field Test starts with the unchanged
+Charger evade → recovery punish route (wave 1), then clears the encounter for a
+1.25-second visible inter-wave breath. Wave 2 installs a fresh baseline target
+and real ranged attacker. It requires a new upward launch, a later airborne hit,
+and a production projectile deflect or parry after activation. Ordinary cuts,
+earlier-room evidence, help and demonstrations cannot satisfy these goals.
+There are no campaign waves, shops, drafts or upgrades in this miniature cadence.
+
+Tutorial session checkpoint version 2 records curriculum version 2, the current
+Field Test encounter and remaining breath time. Version 1 sessions retain the
+original Charger-only rule and serialize as version 1; their completed evidence
+is never relabeled. Fresh courses use version 2. Lesson restart/reached selection
+and completed practice retain their course's curriculum, restarting Field Test at
+its first encounter. Restore does not reinstall or respawn an installed room.
+The previous actual full course took 11,970 fixed ticks. The extended journey
+declares a finite 16,000-tick total budget: the new breath alone takes 150 ticks,
+with the remaining allowance for genuine launch, follow-up and projectile input.
+The extended course's observed timing and live/detached parity require the next
+actual journey; this budget is not a claim that it has already run.
+
 Retained tutorial behavior now has an executable detached owner. Production replay
 and headless worlds use the same `createLiveTutorialRuntime`, lesson controller,
 content spawning and shared actor reset/recovery helpers as live. Restoration
@@ -67,10 +89,9 @@ snapshot round trips alone prove reconstructed-byte continuation, not live parit
 Live and detached tutorial movement evidence both read the actor's authoritative
 input, which physical controls and Class A commands share. The controller still
 counts actual displacement as before. Historical courses whose counters consulted
-unrecorded physical host input are not retroactively verified. `KeyN` skip still
-belongs to that host input and has no recorded semantic action: detached replay
-does not synthesize a skip, and continuation across such an unrecorded boundary
-is unsupported.
+unrecorded physical host input are not retroactively verified. `KeyN` is read by
+the live port, but the controller explicitly ignores `skipPressed`: it cannot
+advance a lesson or grant evidence and introduces no skip replay behavior.
 
 The live tutorial now uses the Cutting Room curriculum rather than the old
 shared playground layout. This is deliberately a baseline-only teaching run:
@@ -101,11 +122,11 @@ shared playground layout. This is deliberately a baseline-only teaching run:
 - `READ THE CHARGE` uses a real baseline Charger. Only a dash *away from its
   live committed charge* earns the evade; only a subsequent blade hit inside
   recovery earns the punish. Generic dashes and cuts cannot complete it.
-- `FIELD TEST` is the shipped two-step encounter in `THE FIELD`: evade a fresh
-  committed Charger attack, then land a blade hit during its recovery. It uses
-  no draft, shop, meta, or tutorial damage bonus and hands directly into the
-  same no-wave practice arena. Upward-launch and projectile mixed testing are
-  future work, not Field Test completion requirements.
+- `FIELD TEST` opens with the same two-step Charger encounter in `THE FIELD`:
+  evade its commitment, then punish recovery. Current curriculum version 2 adds
+  the inter-wave breath and mixed transfer encounter specified above. It uses
+  no draft, shop, meta, or tutorial damage bonus. Historical version 1 sessions
+  retain their Charger-only completion rule and practice policy.
 - The coach ghosts for both encounter rooms are sampled from the production
   Player movement model, so their escape routes are physically possible.
 
@@ -560,9 +581,9 @@ the tether rather than falsely implying unlimited recall.
 
 ## Act III: Read and survive a fight
 
-The mixed launch/projectile encounter described in this act is future-only. It
-is not a description of the shipped Field Test: the shipped contract is only
-the Charger evade followed by a recovery punish.
+Current Field Test implements two miniature waves: the Charger route followed
+by baseline launch/airborne/projectile transfer. The broader armor, elite and
+campaign-style final exam described below remains a future proposal.
 
 ### Block 7: Answer a threat
 
@@ -803,7 +824,7 @@ The shipped Cutting Room now additionally includes:
   Charger `commit`/`recover` evidence: evade the charge, then punish recovery.
 - [x] Hand off immediately to the no-wave practice arena after course completion.
 - [x] Add a technique summary and post-completion reached-lesson practice selector.
-- [ ] Add launch/projectile mixed testing and explicit wave cadence.
+- [x] Add launch/projectile mixed transfer and two-wave miniature cadence.
 - Add contextual first-run campaign onboarding for the real draft/shop screens;
   keep them absent from the tutorial.
 - Retire version 1 only after completion and abandonment metrics meet targets.

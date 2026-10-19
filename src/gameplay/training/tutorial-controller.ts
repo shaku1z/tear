@@ -16,6 +16,7 @@ export function isTutorialMark(value: string): value is TutorialMark { return TU
 export const TUTORIAL_LESSON_IDS = ["move", "jump", "dash", "cut", "launch", "juggle", "slam", "power-slam", "updraft", "throw", "parry", "read-the-charge", "field-test", "ready"] as const;
 export type TutorialLessonId = typeof TUTORIAL_LESSON_IDS[number];
 export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "free-practice";
+type FieldEncounter = "charger" | "breath" | "mixed";
 export interface TutorialSessionView {
   readonly phase: TutorialSessionPhase; readonly lessonId: TutorialLessonId; readonly courseCompleted: boolean;
   readonly helpVisible: boolean; readonly instruction: string; readonly progress: readonly [number, number];
@@ -28,7 +29,7 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("Invalid tutorial session");
   const data = value as Record<string, unknown>;
   const ids = (entry: unknown): entry is TutorialLessonId[] => Array.isArray(entry) && new Set(entry as unknown[]).size === entry.length && (entry as unknown[]).every((id) => TUTORIAL_LESSON_IDS.some((valid) => valid === id));
-  if (data.version !== 1 || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
+  if ((data.version !== 1 && data.version !== 2) || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
     typeof data.phase !== "string" || !TUTORIAL_LESSON_IDS.includes(data.lessonId as TutorialLessonId) || !ids(data.reached) || !ids(data.completed) ||
     typeof data.active !== "boolean" || typeof data.completionAwarded !== "boolean" || typeof data.previousGrounded !== "boolean" || typeof data.dashLatched !== "boolean" ||
     typeof data.previousBladeState !== "string" || (data.pendingArena !== null && !TUTORIAL_LESSONS.some((lesson) => lesson.arena === data.pendingArena))) throw new TypeError("Invalid tutorial session fields");
@@ -46,6 +47,12 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
     (data.active && (!data.reached.includes(data.lessonId as TutorialLessonId) || !data.courseSessionId)) ||
     data.completed.some((id) => !reached.includes(id)) ||
     ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded)) throw new RangeError("Inconsistent tutorial session");
+  if (data.version === 2) {
+    if (data.curriculumVersion !== 2 || (data.fieldEncounter !== "charger" && data.fieldEncounter !== "breath" && data.fieldEncounter !== "mixed") ||
+      typeof data.interWaveRemaining !== "number" || !Number.isFinite(data.interWaveRemaining) || data.interWaveRemaining < 0 || data.interWaveRemaining > FIELD_BREATH_SECONDS ||
+      (data.fieldEncounter !== "charger" && data.lessonId !== "field-test") ||
+      (data.fieldEncounter === "breath" ? data.interWaveRemaining <= 0 || data.completionDelay !== 0 : data.interWaveRemaining !== 0)) throw new RangeError("Invalid tutorial encounter");
+  }
   return structuredClone(value) as TutorialSessionCheckpoint;
 }
 
@@ -135,6 +142,7 @@ export interface TutorialGhostSnapshot {
 const count = (counters: Readonly<Partial<Record<TutorialMark, number>>>, key: TutorialMark) => counters[key] ?? 0;
 const bounded = (value: number, target: number) => Math.min(value, target);
 const READY_RETURN_SECONDS = 1.6;
+const FIELD_BREATH_SECONDS = 1.25;
 
 const LESSONS: TutorialLesson[] = [
   { title: "MOVE", description: "Run with A and D. Warm up — move both ways.", keys: ["A", "D"], objectiveMarks: ["moveL", "moveR"], progress: (n) => [(count(n, "moveL") > 25 ? 1 : 0) + (count(n, "moveR") > 25 ? 1 : 0), 2], complete: (n) => count(n, "moveL") > 25 && count(n, "moveR") > 25 },
@@ -248,6 +256,9 @@ export class TutorialController {
   private completed = new Set<TutorialLessonId>();
   private completionAwarded = false;
   private helpVisible = false;
+  private curriculumVersion: 1 | 2 = 2;
+  private fieldEncounter: FieldEncounter = "charger";
+  private interWaveRemaining = 0;
 
   session(): TutorialSessionView {
     const lessonId = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move", lesson = this.step();
@@ -270,19 +281,24 @@ export class TutorialController {
     this.helpVisible = true; this.ghostTime = 0; this.coachDemoTime = 6; this.coachIdle = 0; return true;
   }
   captureSession() {
-    return { version: 1 as const, courseSessionId: this.courseSessionId, phase: this.phase, active: this.active,
+    const checkpoint = { version: 1 as const, courseSessionId: this.courseSessionId, phase: this.phase, active: this.active,
       lessonId: this.session().lessonId, reached: [...this.reached], completed: [...this.completed], completionAwarded: this.completionAwarded,
       counters: { ...this.counters }, pendingArena: this.pendingArena, completionDelay: this.completionDelay, endingTime: this.endingTime,
       observedLaunches: this.observedLaunches, observedStrikes: this.observedStrikes, risingCutWindow: this.risingCutWindow,
       chargeCommitWindow: this.chargeCommitWindow, chargeRecoveryWindow: this.chargeRecoveryWindow, chargeCommitAwayX: this.chargeCommitAwayX,
       bladeAwayTime: this.bladeAwayTime, previousGrounded: this.previousGrounded, previousBladeState: this.previousBladeState,
       dashLatched: this.dashLatched, previousPlayerX: this.previousPlayerX ?? null };
+    return this.curriculumVersion === 1 ? checkpoint : { ...checkpoint, version: 2 as const, curriculumVersion: 2 as const,
+      fieldEncounter: this.fieldEncounter, interWaveRemaining: this.interWaveRemaining };
   }
   capturePresentation() { return { version: 1 as const, ghostTime: this.ghostTime, anchorX: this.anchorX,
     evidencePulse: this.evidencePulse, coachIdle: this.coachIdle, coachDemoTime: this.coachDemoTime, helpVisible: this.helpVisible }; }
   restoreSession(value: unknown): void {
     const data = parseTutorialSessionCheckpoint(value);
     if (data === undefined) { this.start(0, ""); this.stop(); this.reached.clear(); this.completed.clear(); this.pendingArena = null; return; }
+    this.curriculumVersion = data.version === 1 ? 1 : data.curriculumVersion;
+    this.fieldEncounter = data.version === 1 ? "charger" : data.fieldEncounter;
+    this.interWaveRemaining = data.version === 1 ? 0 : data.interWaveRemaining;
     this.courseSessionId = data.courseSessionId; this.phase = data.phase; this.active = data.active;
     this.lessonIndex = TUTORIAL_LESSON_IDS.indexOf(data.lessonId); this.reached = new Set(data.reached); this.completed = new Set(data.completed);
     this.completionAwarded = data.completionAwarded; this.counters = { ...data.counters }; this.pendingArena = data.pendingArena;
@@ -302,6 +318,7 @@ export class TutorialController {
   }
 
   start(viewportWidth: number, courseSessionId = "tutorial"): void {
+    this.curriculumVersion = 2; this.fieldEncounter = "charger"; this.interWaveRemaining = 0;
     this.courseSessionId = courseSessionId; this.phase = "course"; this.reached = new Set(["move"]); this.completed.clear(); this.completionAwarded = false; this.helpVisible = false;
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
     this.ghostTime = 0; this.anchorX = viewportWidth * 0.2; this.previousGrounded = true;
@@ -316,17 +333,43 @@ export class TutorialController {
   consumePendingArena(): TutorialArenaId | null { const arena = this.pendingArena; this.pendingArena = null; return arena; }
   mark(mark: TutorialMark): void {
     if (!this.active) return;
+    if (this.curriculumVersion === 2 && this.lessonIndex === 12) {
+      if (this.fieldEncounter === "breath" || this.pendingArena !== null) return;
+      if (this.fieldEncounter === "charger" && ["launch", "airHit", "deflect", "parry"].includes(mark)) return;
+      // Production names a rising empowered launch "updraft"; it is still an
+      // upward opening, with a separate later contact required for follow-up.
+      if (this.fieldEncounter === "mixed" && mark === "updraft") this.mark("launch");
+      // A launch contact cannot also be its own airborne follow-up. The launch
+      // must already have reached the controller on an earlier update.
+      if (this.fieldEncounter === "mixed" && mark === "airHit" && this.observedLaunches < 1) return;
+    }
     this.counters[mark] = count(this.counters, mark) + 1;
     if ((this.step().entryMarks ?? []).includes(mark)) this.evidencePulse = true;
   }
   step(): TutorialLesson {
     const lesson = TUTORIAL_LESSONS[this.lessonIndex] ?? TUTORIAL_LESSONS.at(-1);
     if (!lesson) throw new Error("Tutorial has no lessons");
+    if (this.curriculumVersion === 2 && this.lessonIndex === 12) {
+      if (this.fieldEncounter === "breath") return { ...lesson, coachCharger: false, keys: [], entryMarks: [],
+        description: "INTER-WAVE — BREATHE. Wave 1 clear. Next: launch, follow through in the air, and return a shot.",
+        instruction: () => "INTER-WAVE — BREATHE. Wave 1 clear. Next: launch, follow through in the air, and return a shot.", progress: () => [2, 5], complete: () => false };
+      if (this.fieldEncounter === "mixed") return { ...lesson, coachCharger: false, dummyCount: 1, ranged: true,
+        keys: ["MOUSE UP", "MOUSE"], entryMarks: ["launch", "airHit", "deflect", "parry"],
+        instruction: (n) => count(n, "launch") < 1 ? "WAVE 2/2: Launch the target with a fresh upward cut. A shooter is live — return its shots."
+          : count(n, "airHit") < 1 ? "WAVE 2/2: Follow the launch. Hit again while the target is airborne. Return a shot when it approaches."
+          : count(n, "deflect") + count(n, "parry") < 1 ? "WAVE 2/2: Return an incoming shot with the blade. Keep moving."
+          : "WAVE 2 CLEAR: launch, airborne follow-up, projectile returned.",
+        progress: (n) => [2 + bounded(count(n, "launch"), 1) + bounded(count(n, "airHit"), 1) + bounded(count(n, "deflect") + count(n, "parry"), 1), 5],
+        complete: (n) => count(n, "launch") >= 1 && count(n, "airHit") >= 1 && count(n, "deflect") + count(n, "parry") >= 1 };
+      return { ...lesson, instruction: (n) => `WAVE 1/2 — ${lesson.instruction?.(n) ?? lesson.description}`,
+        progress: (n) => [lesson.progress(n)[0], 5] };
+    }
     return lesson;
   }
 
   private enterLesson(index: number): void {
     this.lessonIndex = Math.min(index, TUTORIAL_LESSONS.length - 1);
+    this.fieldEncounter = "charger"; this.interWaveRemaining = 0;
     const lesson = this.step();
     this.reached.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
     this.counters = {}; this.completionDelay = 0; this.endingTime = 0; this.helpVisible = false;
@@ -349,6 +392,16 @@ export class TutorialController {
       intents.push({ type: "reset-training-space" }, { type: "install-arena", arena: this.pendingArena });
       this.pendingArena = null;
       // Installation replaces actors. Never read the outgoing encounter as new evidence.
+      return intents;
+    }
+    if (this.curriculumVersion === 2 && this.lessonIndex === 12 && this.fieldEncounter === "breath") {
+      this.interWaveRemaining = Math.max(0, this.interWaveRemaining - dt);
+      if (this.interWaveRemaining === 0) {
+        this.fieldEncounter = "mixed"; this.counters = {}; this.observedLaunches = 0; this.observedStrikes = 0;
+        this.previousPlayerX = undefined; this.previousGrounded = true; this.dashLatched = false;
+        this.ghostTime = 0; this.coachIdle = 0; this.coachDemoTime = 0;
+        intents.push({ type: "reset-training-space" }, { type: "install-arena", arena: "field-floor" });
+      }
       return intents;
     }
     const horizontalDelta = this.previousPlayerX === undefined ? 0 : player.x - this.previousPlayerX;
@@ -445,6 +498,14 @@ export class TutorialController {
         intents.push({ type: "release-pointer" }, { type: "begin-practice" });
       }
     } else if (lesson.complete(this.counters)) {
+      if (this.curriculumVersion === 2 && this.lessonIndex === 12 && this.fieldEncounter === "charger") {
+        this.fieldEncounter = "breath"; this.interWaveRemaining = FIELD_BREATH_SECONDS;
+        this.counters = {}; this.observedLaunches = 0; this.observedStrikes = 0;
+        this.chargeCommitWindow = 0; this.chargeRecoveryWindow = 0; this.chargeCommitAwayX = 0;
+        this.risingCutWindow = 0; this.previousBladeState = "held"; this.bladeAwayTime = 0;
+        this.coachDemoTime = 0; this.coachIdle = 0; this.evidencePulse = false;
+        return [...intents, { type: "sound", cue: "rankup" }, { type: "reset-training-space" }];
+      }
       this.completed.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
       this.completionDelay = 1.1; intents.push({ type: "sound", cue: "rankup" });
     }
@@ -453,9 +514,10 @@ export class TutorialController {
 
   ghostSnapshot(groundY: number): TutorialGhostSnapshot {
     this.ghostTraces ??= productionGhostTraces(this.configuration);
-    const lesson = this.step(), script = this.ghostTraces[lesson.title];
+    const lesson = this.step(), mixed = this.curriculumVersion === 2 && this.lessonIndex === 12 && this.fieldEncounter === "mixed";
+    const script = this.ghostTraces[mixed ? count(this.counters, "airHit") < 1 ? "JUGGLE" : "PARRY" : lesson.title];
     const hidden: TutorialGhostSnapshot = { visible: false, demonstrating: false, lesson: lesson.title, time: 0, actor: { x: 0, y: 0, facing: 1, dashAfterimages: [] }, target: { visible: false, x: 0, y: 0, hit: false }, blade: { x: 0, y: 0, angle: 0.25, swinging: false, thrown: false, hit: false }, shot: { visible: false, x: 0, y: 0, deflected: false } };
-    if (lesson.final || !script || this.coachDemoTime <= 0) return hidden;
+    if (lesson.final || !script || this.coachDemoTime <= 0 || (this.lessonIndex === 12 && this.fieldEncounter === "breath")) return hidden;
     const time = this.ghostTime % script.length, position = interpolate(script.path, time);
     const x = this.anchorX + position.x, y = groundY - 25 + position.y;
     const facing: -1 | 1 = script.path.length > 1 && interpolate(script.path, time + 0.05).x < position.x ? -1 : 1;

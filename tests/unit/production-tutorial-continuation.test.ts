@@ -28,6 +28,25 @@ function capture(source: Source) { return captureProductionReplayCheckpoint(sour
 function restore(source: Source) { return composition().create(JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1); }
 
 describe("production tutorial reconstructed-byte continuation", () => {
+  it("restores the inter-wave breath and the installed mixed encounter through the same production owner", () => {
+    const source = composition().create(undefined);
+    boundary(source, { lessonId: "field-test", reached: [...TUTORIAL_LESSON_IDS.slice(0, 13)],
+      completed: [...TUTORIAL_LESSON_IDS.slice(0, 12)], fieldEncounter: "breath", interWaveRemaining: 2 / 120 });
+    const restored = restore(source);
+    expect(restored.replay.world.state.enemies()).toHaveLength(0);
+    for (let tick = 0; tick < 4; tick++) {
+      expect(restored.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+    }
+    expect(restored.replay.tutorial.captureSession()).toMatchObject({ version: 2, curriculumVersion: 2, fieldEncounter: "mixed", interWaveRemaining: 0 });
+    expect(restored.replay.world.state.enemies().map((enemy) => [enemy.kind, enemy.tutDummy === true])).toEqual([["charger", true], ["ranged", false]]);
+    const mixed = restore(source);
+    expect(mixed.replay.world.state.enemies()).toHaveLength(2);
+    for (let tick = 0; tick < 180; tick++) {
+      expect(mixed.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+    }
+    expect(mixed.replay.tutorial.n.launch ?? 0).toBe(0);
+    expect(mixed.replay.tutorial.doneT).toBe(0);
+  });
   it.skipIf(process.env.TEAR_TUTORIAL_CONTINUATION_TRACE === undefined)("matches an explicitly supplied actual live Field Test trace through READY", () => {
     const path = process.env.TEAR_TUTORIAL_CONTINUATION_TRACE;
     if (path === undefined) throw new Error("actual live tutorial trace path is required");
@@ -70,7 +89,7 @@ describe("production tutorial reconstructed-byte continuation", () => {
 
   it("resumes an installed mid-encounter recovery window and receives real collision marks through the live tutorial owner", () => {
     const source = composition().create(undefined);
-    boundary(source, { lessonId: "field-test", reached: [...TUTORIAL_LESSON_IDS.slice(0, 13)], completed: [...TUTORIAL_LESSON_IDS.slice(0, 12)],
+    boundary(source, { version: 1, lessonId: "field-test", reached: [...TUTORIAL_LESSON_IDS.slice(0, 13)], completed: [...TUTORIAL_LESSON_IDS.slice(0, 12)],
       counters: { evade: 1, strike: 0, punish: 0 }, chargeRecoveryWindow: 0.7, chargeCommitAwayX: -1, previousPlayerX: source.replay.world.state.player()?.x ?? null });
     source.replay.stage.platforms = createTutorialArena("field-floor", CONFIG.view.w, CONFIG.view.h, CONFIG.world.groundY);
     const enemy = source.waveReward.spawnTutorial("charger", 2);
