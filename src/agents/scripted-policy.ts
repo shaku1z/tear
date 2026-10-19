@@ -97,6 +97,17 @@ export interface BladeMotorDecision {
 
 export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeMotorDecision> {
   decide(input: BladeMotorInput): BladeMotorDecision {
+    const decision = this.#decide(input);
+    if (input.observation.state.run.weapon !== "riftlock") return decision;
+    const blade = input.observation.state.blade;
+    const stocked = typeof blade.chambers === "number" && Number.isFinite(blade.chambers) && blade.chambers > 0;
+    const ready = stocked && blade.fireCooldown === 0;
+    const requested = decision.actions.some((action) => action.type === "weapon" && action.intent === "primary" && action.phase === "pressed");
+    return { ...decision, actions: [...decision.actions.filter((action) => action.type !== "weapon" || action.intent !== "primary"),
+      { type: "weapon", intent: "primary", phase: ready && requested ? "pressed" : "released" }] };
+  }
+
+  #decide(input: BladeMotorInput): BladeMotorDecision {
     const { state } = input.observation;
     const target = input.target;
     const observedBoss = input.observation.boss ?? state.diagnostics?.boss;

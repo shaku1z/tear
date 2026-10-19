@@ -35,13 +35,15 @@ export function projectLiveBehaviorMode(
 }
 
 export function projectLiveBladeMechanics(
-  blade: Readonly<{ riftChambers?: unknown; riftChamberCooldown?: unknown;
+  blade: Readonly<{ riftChambers?: unknown; riftChamberCooldown?: unknown; riftFireCooldown?: unknown;
     wheelSpin?: unknown; reversals?: unknown }>,
   accessClass: TearRuntimeAccessClass,
-): Readonly<{ chambers?: number; chamberCooldown?: number; wheelSpin?: number; reversalCount?: number }> {
+): Readonly<{ chambers?: number; chamberCooldown?: number; fireCooldown?: number; wheelSpin?: number; reversalCount?: number }> {
   if (accessClass === "C") return Object.freeze({});
   return Object.freeze({
     ...(typeof blade.riftChambers === "number" && Number.isFinite(blade.riftChambers) ? { chambers: blade.riftChambers } : {}),
+    ...(typeof blade.riftFireCooldown === "number" && Number.isFinite(blade.riftFireCooldown) && blade.riftFireCooldown >= 0
+      ? { fireCooldown: blade.riftFireCooldown } : {}),
     ...(typeof blade.riftChamberCooldown === "number" && Number.isFinite(blade.riftChamberCooldown)
       ? { chamberCooldown: blade.riftChamberCooldown }
       : {}),

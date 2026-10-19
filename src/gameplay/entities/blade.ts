@@ -77,8 +77,9 @@ class Blade extends BladeCore {
         if (this.riftChambers < CONFIG.weapons.riftlock.chambers) this.riftChamberCooldown = CONFIG.weapons.riftlock.chamberReform;
       }
     }
-    const pressed = Input.tetherHeld && !this.riftTriggerHeld;
-    this.riftTriggerHeld = Input.tetherHeld;
+    const held = this.lmbOverride ?? Input.tetherHeld;
+    const pressed = held && !this.riftTriggerHeld;
+    this.riftTriggerHeld = held;
     if (pressed) this._fireRazorRound(player);
   }
 

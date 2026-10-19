@@ -13,11 +13,13 @@ describe("live actor observation projection", () => {
   });
 
   it("exposes finite Riftlock chamber mechanics to Class A/B but never Class C", () => {
-    const riftlock = { riftChambers: 3, riftChamberCooldown: 0.75 };
-    expect(projectLiveBladeMechanics(riftlock, "A")).toEqual({ chambers: 3, chamberCooldown: 0.75 });
-    expect(projectLiveBladeMechanics(riftlock, "B")).toEqual({ chambers: 3, chamberCooldown: 0.75 });
+    const riftlock = { riftChambers: 3, riftChamberCooldown: 0.75, riftFireCooldown: 0.12 };
+    expect(projectLiveBladeMechanics(riftlock, "A")).toEqual({ chambers: 3, chamberCooldown: 0.75, fireCooldown: 0.12 });
+    expect(projectLiveBladeMechanics(riftlock, "B")).toEqual({ chambers: 3, chamberCooldown: 0.75, fireCooldown: 0.12 });
     expect(projectLiveBladeMechanics(riftlock, "C")).toEqual({});
     expect(projectLiveBladeMechanics({ riftChambers: Number.NaN }, "A")).toEqual({});
+    expect(projectLiveBladeMechanics({ riftFireCooldown: Number.NaN }, "A")).toEqual({});
+    expect(projectLiveBladeMechanics({ riftFireCooldown: -1 }, "B")).toEqual({});
     expect(projectLiveBladeMechanics({ wheelSpin: 8, reversals: [{ target: {} }] }, "A"))
       .toEqual({ wheelSpin: 8, reversalCount: 1 });
     expect(projectLiveBladeMechanics({ wheelSpin: Number.NaN, reversals: "invalid" }, "B")).toEqual({});
@@ -68,6 +70,9 @@ describe("live actor observation projection", () => {
       availableActions: ["move"],
     };
     expect(validateTearContract(observation).ok).toBe(true);
+    const negativeFire = validateTearContract({ ...observation, blade: { ...observation.blade, fireCooldown: -1 } });
+    expect(negativeFire.ok).toBe(false);
+    if (!negativeFire.ok) expect(negativeFire.issues.some((issue) => issue.path === "blade.fireCooldown")).toBe(true);
     const invalid = {
       ...observation,
       player: { ...observation.player, halfWidth: -1 },
