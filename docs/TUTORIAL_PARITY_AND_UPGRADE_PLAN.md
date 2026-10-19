@@ -904,6 +904,16 @@ their existing meanings and shapes. Boss-phase practice remains a separate
 future feature. The short normal-UI journey uses a declared completed-profile
 and legacy-kill fixture; it does not claim a real cross-device persistence run.
 
+Observed at `dd43b735`: the fresh standalone build and normal menu/setup Lab
+journey passed known-opponent selection/reset, unknown support-subtype history,
+reload, and equality of all saved stats, achievements and balances. The first
+journey caught `modesPlayed` changing during baseline practice; the existing
+practice disposition now excludes those starts from progression tracking, with
+the full-stats assertion retained. Seven focused catalog controls and two
+repair controls passed, including actual Mender collision defeat and portable
+continuation through the practice handoff. The browser fixture checks UI and
+test-adapter bytes; it does not establish human combat or device evidence.
+
 The delivered baseline entry is available from the normal menu and setup after
 a positive saved `tutorialDone` count is loaded, including after reboot. Opening
 it reads that existing completion fact and starts normal-difficulty sword
