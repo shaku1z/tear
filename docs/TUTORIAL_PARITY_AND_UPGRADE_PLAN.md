@@ -913,9 +913,17 @@ match the restored run before restoration can commit. The baseline/annex selecto
 tab remains presentation data. Existing version-1/2 course and version-3 baseline
 practice checkpoint meanings and byte shapes remain unchanged; annexes do not
 invent historical completion. Production collision/release/projectile controls
-exercise all five drills and reconstructed-byte continuation. The short normal
-UI fixture selects and resets the five weapons; built-browser acceptance remains
-separate from these local controls.
+exercise all five drills and reconstructed-byte continuation through 150 fixed
+ticks, including the actual begin-practice handoff without course credit. On
+clean `c0d5530e`, one fresh standalone build and the short normal UI fixture
+passed selection and restart of all five annexes, checking the actual weapon,
+normal difficulty, empty run upgrades and unchanged completion/coin/purchase
+effects. The fixture uses loaded historical completion eligibility and rendered
+controls; its selection/reset proof does not claim human completion of the five
+drills, physical-device coverage or natural full-course progression. A real
+Hammer control exposed incomplete new-world weapon statistics in the detached
+factory; fresh worlds now use the canonical eight zeroed counters, while
+restored historical records retain their original data.
 
 Encountered-enemy catalog, boss-phase selection, gold-trace comparison and
 mastery medals remain future slices. On clean `dcf67a2e`, the
