@@ -16,6 +16,7 @@ import {
 } from "./observation-identity";
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
+import { createLiveCameraEffectsFixture } from "./live-camera-fixture";
 import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
 import { projectLiveProjectiles } from "./live-observation-projectiles"; import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
 import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLiveBossObservation, projectLivePlayerMechanics } from "./live-observation-actors";
@@ -33,7 +34,7 @@ import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
 import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
-  TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
+  TearCaptureLayerPolicyV1, TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
   TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 export type * from "./live-runtime-contracts";
 function numericSeed(seed: string): number {
@@ -527,11 +528,8 @@ export function createLiveTearRuntimeEnvironment(
     bloomWellPresentation(options?: BloomWellPresentationOptions) {
       return bloomWellPresentation(environment, options);
     },
-    screenshot() {
-      screenshotCount += 1;
-      context.render();
-      return context.screenshot();
-    },
+    presentation() { return context.presentation(); },
+    screenshot(policy?: TearCaptureLayerPolicyV1) { screenshotCount += 1; return context.screenshot(policy); },
   };
   if (accessClass === "A") return Object.freeze({
     ...environment,
@@ -587,6 +585,7 @@ export function createLiveTearRuntimeEnvironment(
     setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
       context.setTimeEffectsForTest(effects);
     },
+    setCameraEffectsForTest: createLiveCameraEffectsFixture(context.setCameraEffectsForTest),
     captureSnapshot: (id: string, stateClass?: TearStateClass, seed?: string) => snapshots.capture(id, stateClass, seed),
     restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
     forgeExitLaunch: (launch: StateForgeExitLaunch) => {
@@ -694,6 +693,6 @@ export function createLiveTearRuntimeEnvironment(
     forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
     forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
     forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
-    screenshot: () => environment.screenshot(),
+    presentation: () => context.presentation(), screenshot: (policy?: TearCaptureLayerPolicyV1) => environment.screenshot(policy),
   });
 }

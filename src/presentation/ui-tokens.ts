@@ -46,6 +46,7 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
             },
             // component metrics
             metric: {
+                hudTextOutline: 3,
                 btnH: 48, btnW: 300, btnGap: 12, btnRound: 0,
                 panelPad: 14, chipH: 28, chipW: 96, barH: 14, cardRound: 0,
                 // boss theater: shared HUD + cinematic proportions. Ratios remain tokens so

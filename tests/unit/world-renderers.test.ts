@@ -51,9 +51,9 @@ class TestUi implements WorldUiPort {
     metric: { bossHudH: 16 },
   };
   font(size: number, bold?: boolean): string { return `${bold ? "bold " : ""}${String(size)}px monospace`; }
-  text(_canvas: CanvasRenderingContext2D, text: string): void { this.record("text", text); }
+  text(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number, align?: CanvasTextAlign, _alpha?: number, protectContrast?: boolean): void { this.record("text", text, protectContrast, { x, y, size, align }); }
   title(_canvas: CanvasRenderingContext2D, text: string): void { this.record("title", text); }
-  tag(_canvas: CanvasRenderingContext2D, text: string): void { this.record("tag", text); }
+  tag(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, color?: string, align?: CanvasTextAlign, size?: number, protectContrast?: boolean): void { this.record("tag", text, { x, y, color, align, size, protectContrast }); }
   bossHud(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossHud"]>[1]): void { this.record("bossHud", options); }
   bossIntro(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossIntro"]>[1]): void { this.record("bossIntro", options); }
   private record(name: string, ...values: readonly unknown[]): void { this.calls.push({ name, arguments: values }); }
@@ -131,6 +131,97 @@ describe("legacy world presentation renderers", () => {
     expect((boss?.arguments[0] as { readonly frac?: number } | undefined)?.frac).toBeCloseTo(0.6);
     expect(boss?.arguments[0]).toMatchObject({ phaseMarks: [0.66, 0.33], guard: 0.5 });
     expect(canvasCalls.some((call) => call.name === "createRadialGradient")).toBe(true);
+  });
+
+  it("routes local HUD contrast while separating active-combo boss copy", () => {
+    const ordinaryUi = new TestUi(), protectedUi = new TestUi();
+    const ordinaryCalls: CanvasCall[] = [], protectedCalls: CanvasCall[] = [];
+    const snapshot = hudSnapshot();
+    createLegacyWorldRenderers(renderContext(ordinaryCalls, ordinaryUi)).hud(snapshot);
+    createLegacyWorldRenderers(renderContext(protectedCalls, protectedUi)).hud({ ...snapshot, protectTextContrast: true });
+    expect(protectedCalls).toEqual(ordinaryCalls);
+    const textCalls = (ui: TestUi) => ui.calls.filter((call) => call.name !== "bossHud").map((call) => [call.name, call.arguments[0]]);
+    expect(textCalls(protectedUi)).toEqual(textCalls(ordinaryUi));
+    expect(protectedUi.calls.filter((call) => call.name === "text").every((call) => call.arguments[1] === true)).toBe(true);
+    expect(ordinaryUi.calls.filter((call) => call.name === "text").every((call) => call.arguments[1] === undefined)).toBe(true);
+    const bossTags = protectedUi.calls.filter((call) => call.name === "tag" &&
+      ["THE WARDEN", "KEEPER OF THE YARD   ·   LOCKDOWN"].includes(String(call.arguments[0])));
+    expect(bossTags.map((call) => call.arguments[1])).toEqual([
+      { x: 800, y: 153.5, color: "#e44", align: "center", size: 13, protectContrast: true },
+      { x: 800, y: 135.5, color: "#101218", align: "center", size: 11, protectContrast: true },
+    ]);
+    expect(ordinaryUi.calls.filter((call) => call.name === "tag").every((call) =>
+      (call.arguments[1] as { protectContrast?: boolean }).protectContrast === undefined)).toBe(true);
+  });
+
+  it("retains desktop boss placement without an active combo", () => {
+    const ui = new TestUi(), snapshot = hudSnapshot();
+    createLegacyWorldRenderers(renderContext([], ui)).hud({ ...snapshot, protectTextContrast: true,
+      run: { ...snapshot.run, multiplier: 1 } });
+    expect(ui.calls.find((call) => call.name === "bossHud")?.arguments[0]).toMatchObject({ y: 138 });
+  });
+
+  it("reflows small image-native HUD text at a CSS-readable size with a bounded arsenal summary", () => {
+    const ui = new TestUi(), calls: CanvasCall[] = [], scale = 414 / 900;
+    const snapshot = hudSnapshot();
+    const large = { ...snapshot, protectTextContrast: true,
+      player: { ...snapshot.player, abilities: Array.from({ length: 32 }, (_, index) => `ABILITY ${String(index)}`) } };
+    const before = JSON.stringify(large);
+    const base = renderContext(calls, ui);
+    createLegacyWorldRenderers({ ...base, cssPerLogicalPixel: scale, safe: { ...base.safe, top: 20 } }).hud(large);
+    expect(JSON.stringify(large)).toBe(before);
+    const text = ui.calls.filter((call) => call.name === "text");
+    expect(text.map((call) => call.arguments[0])).toEqual(expect.arrayContaining(["32 ABILITIES", "PAUSE: ARSENAL", "SCORE", "TIME", "LEFT"]));
+    expect(text).toHaveLength(9);
+    for (const call of text) {
+      const placement = call.arguments[2] as { size: number; y: number };
+      expect(placement.size * scale).toBeGreaterThanOrEqual(11);
+      expect(placement.y - placement.size).toBeGreaterThan(20);
+    }
+    const boss = ui.calls.find((call) => call.name === "bossHud");
+    expect(boss?.arguments[0]).toMatchObject({ y: 225 + 1.5 * 11 / scale, w: 620 });
+    for (const tag of ui.calls.filter((call) => call.name === "tag")) {
+      expect((tag.arguments[1] as { size: number }).size * scale).toBeGreaterThanOrEqual(11);
+      expect((tag.arguments[1] as { protectContrast?: boolean }).protectContrast).toBe(true);
+    }
+  });
+
+  it("keeps compact boss copy below the combo meter across small viewport scales", () => {
+    for (const scale of [0.4, 414 / 900, 0.6, 0.74]) {
+      const ui = new TestUi();
+      const base = renderContext([], ui), top = 20;
+      createLegacyWorldRenderers({ ...base, cssPerLogicalPixel: scale, safe: { ...base.safe, top } })
+        .hud({ ...hudSnapshot(), protectTextContrast: true });
+      const epithet = ui.calls.find((call) => call.name === "tag" && String(call.arguments[0]).startsWith("KEEPER"));
+      const placement = epithet?.arguments[1] as { y: number; size: number };
+      expect(placement.y - placement.size).toBeCloseTo(top + 163 + placement.size / 2);
+    }
+  });
+
+  it("re-evaluates viewport scale when the same HUD owner is resized", () => {
+    let cssScale = 1;
+    const ui = new TestUi();
+    const renderer = createLegacyWorldRenderers({ ...renderContext([], ui), get cssPerLogicalPixel() { return cssScale; } });
+    const snapshot = { ...hudSnapshot(), protectTextContrast: true };
+    renderer.hud(snapshot);
+    expect(ui.calls.some((call) => call.arguments[0] === "PAUSE: ARSENAL")).toBe(false);
+    ui.calls.length = 0; cssScale = 0.46;
+    renderer.hud(snapshot);
+    expect(ui.calls.some((call) => call.arguments[0] === "PAUSE: ARSENAL")).toBe(true);
+    ui.calls.length = 0; cssScale = 1;
+    renderer.hud(snapshot);
+    expect(ui.calls.some((call) => call.arguments[0] === "PAUSE: ARSENAL")).toBe(false);
+  });
+
+  it("does not compact ordinary HUDs or image-native desktop layouts", () => {
+    const snapshot = hudSnapshot(), ordinary = new TestUi(), small = new TestUi(), desktop = new TestUi();
+    createLegacyWorldRenderers(renderContext([], ordinary)).hud(snapshot);
+    createLegacyWorldRenderers({ ...renderContext([], small), cssPerLogicalPixel: 0.46 }).hud(snapshot);
+    expect(small.calls).toEqual(ordinary.calls);
+    createLegacyWorldRenderers({ ...renderContext([], desktop), cssPerLogicalPixel: 1 }).hud({ ...snapshot, protectTextContrast: true });
+    const content = (ui: TestUi) => ui.calls.filter((call) => call.name !== "bossHud").map((call) => call.arguments[0]);
+    expect(content(desktop)).toEqual(content(ordinary));
+    expect(desktop.calls.find((call) => call.name === "bossHud")?.arguments[0]).toMatchObject({ y: 159.5 });
   });
 
   it("keeps tutorial, playground, touch and transient overlay copy intact", () => {

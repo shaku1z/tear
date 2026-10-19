@@ -11,6 +11,7 @@ import { createLiveWorldPresentationAdapters, type LiveWorldPresentationAdapters
 import type { LivePresentationHost } from "./live-presentation-host";
 import { AchievementToastController } from "./achievement-toast-controller";
 import { TouchOnboardingController } from "./touch-onboarding-controller";
+import { createLiveInterfacePresentationCapture, type LivePresentationCaptureSource } from "./live-presentation-capture";
 
 export { createLiveAcademyScreen } from "./live-academy-screen";
 export { createLiveTrainingArchiveScreen } from "./training-archive";
@@ -30,9 +31,9 @@ type ScreenOptions = Omit<LiveScreenPresentationOptions, "library" | "settings">
 type FrameServices = Omit<LivePresentationFrameServices<LegacyAppScreen,
   WorldPresentationServices["stage"]["current"]>, "wipe" | "renderWorld" | "drawHud" |
   "drawBossIntro" | "drawTouchControls" | "drawWaveBanner" | "drawStageBanner" |
-  "drawReticle" | "drawAchievementToast" | "chooseUpgrade" | "chooseReserve" | "rerollDraft" | "screenHue">;
+  "drawReticle" | "drawAchievementToast" | "chooseUpgrade" | "chooseReserve" | "rerollDraft" | "screenHue" | "capturePolicy">;
 type WorldServices = Omit<WorldPresentationServices, "screenRectangle" | "world" |
-  "achievementToast" | "touchOnboarding">;
+  "achievementToast" | "touchOnboarding" | "capturePolicy">;
 
 const SCREEN_HUES: Partial<Record<LegacyAppScreen, string>> = Object.freeze({
   shop: "#e0a326", achievements: "#13c4d6", leaderboards: "#e0a326",
@@ -56,6 +57,7 @@ export interface LiveInterfaceCompositionOptions {
 }
 
 export interface LiveInterfaceComposition {
+  readonly capture: ReturnType<typeof createLiveInterfacePresentationCapture>;
   readonly wipe: TearWipe;
   readonly world: LegacyWorldRendererRegistry;
   readonly screens: LiveScreenPresentationComposition;
@@ -64,10 +66,17 @@ export interface LiveInterfaceComposition {
 }
 
 /** Owns the lazy cycles between screen, frame, world, and transition presentation hosts. */
-export function createLiveInterfaceComposition(options: LiveInterfaceCompositionOptions): LiveInterfaceComposition {
+export function createLiveInterfaceComposition(
+  options: LiveInterfaceCompositionOptions, captureSource?: LivePresentationCaptureSource,
+): LiveInterfaceComposition {
+  const capture = createLiveInterfacePresentationCapture(captureSource, options.worldSurface, options.frameServices);
   const surface = createLivePresentationSurface({
     wipe: options.wipe,
-    world: { ...options.worldSurface, get screen() { return frame.screenRectangle(); } },
+    world: { ...options.worldSurface,
+      // Object spread snapshots getters; viewport-dependent HUD layout must stay live.
+      get cssPerLogicalPixel() { return options.worldSurface.cssPerLogicalPixel ?? 1; },
+      get safe() { return options.worldSurface.safe; },
+      get screen() { return frame.screenRectangle(); } },
   });
   options.onBiomeTransition(() => { surface.wipe.begin(); });
 
@@ -79,7 +88,7 @@ export function createLiveInterfaceComposition(options: LiveInterfaceComposition
       stepTab: (tabs, current, changed) => frame.stepTab(tabs, current, changed) },
   });
   const frame = createLivePresentationFrameHost(options.frameState, {
-    ...options.frameServices, wipe: surface.wipe, screenHue: (screen) => SCREEN_HUES[screen],
+    ...options.frameServices, capturePolicy: capture.policy, wipe: surface.wipe, screenHue: (screen) => SCREEN_HUES[screen],
     renderWorld: () => worldAdapters.renderWorld(), drawHud: () => { worldAdapters.drawHud(); },
     drawBossIntro: () => { worldAdapters.drawBossIntro(); },
     drawTouchControls: () => { worldAdapters.drawTouchControls(); },
@@ -90,9 +99,9 @@ export function createLiveInterfaceComposition(options: LiveInterfaceComposition
     chooseUpgrade: screens.chooseUpgrade, chooseReserve: screens.chooseReserve, rerollDraft: screens.rerollDraft,
   });
   const worldAdapters = createLiveWorldPresentationAdapters(options.worldState, {
-    ...options.worldServices, screenRectangle: frame.screenRectangle, world: surface.world,
+    ...options.worldServices, capturePolicy: capture.policy, screenRectangle: frame.screenRectangle, world: surface.world,
     achievementToast: new AchievementToastController(options.worldServices.ease),
     touchOnboarding: new TouchOnboardingController(),
   });
-  return Object.freeze({ wipe: surface.wipe, world: surface.world, screens, frame, worldAdapters });
+  return Object.freeze({ capture, wipe: surface.wipe, world: surface.world, screens, frame, worldAdapters });
 }

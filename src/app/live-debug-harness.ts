@@ -96,6 +96,30 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
   context.install(Object.freeze({
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
     prepareCurrentGameplayScenario: prepareCurrentGameplay,
+    prepareCalibrationMovement() {
+      prepareCurrentGameplay();
+      const run = runOf(context.state);
+      // Keep the pending wave intact, but defer combat during this short proof.
+      if (context.state.enemies().length === 0) {
+        context.state.setEnemies([context.entities.createEnemy("charger", 30,
+          d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, run)]);
+      }
+      run.spawnTimer = 30;
+      context.state.setProjectiles([]);
+      for (const enemy of context.state.enemies()) {
+        Object.assign(enemy, { x: 30, y: d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2,
+          vx: 0, vy: 0, stun: 30, atkCd: 30, spawnT: 30 });
+      }
+    },
+    setCalibrationPlatformState(index: number, state: string) {
+      if (!["stable", "stressed", "warning", "broken", "reforming"].includes(state)) throw new Error("Invalid calibration platform state");
+      const platform = context.stage.platforms[index];
+      if (typeof platform !== "object" || platform === null || !("y" in platform)
+        || typeof platform.y !== "number" || platform.y >= d.CONFIG.world.groundY) throw new Error("Expected an elevated calibration platform");
+      // Presentation fixture only: no new lifecycle rule or collision geometry.
+      Object.assign(platform, { arenaState: state === "stressed" ? "stable" : state,
+        stress: state === "stressed" ? 0.6 : 0, crackWarn: 0.2, respawnIn: 0.2 });
+    },
     performanceEnvironmentSnapshot,
     prepareVariantSelectionScenario(kind: ExplicitVariantKind, variantId: string) {
       const run = runOf(context.state);

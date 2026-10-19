@@ -35,6 +35,39 @@ export interface TearRuntimeEnvironmentMetrics extends Readonly<Record<string, n
   readonly screenshots: number;
 }
 
+export interface TearCaptureLayerPolicyV1 {
+  readonly ui: "include" | "exclude";
+  readonly debug: "include" | "exclude";
+  readonly pointerLock: "include" | "exclude";
+  readonly actors?: "include" | "exclude";
+}
+
+export interface TearLivePresentationStateV1 {
+  readonly simulationTick: number;
+  readonly presentationClockSeconds: number;
+  readonly viewport: Readonly<{
+    readonly logicalWidth: number;
+    readonly logicalHeight: number;
+    readonly cssWidth: number;
+    readonly cssHeight: number;
+    readonly backingWidth: number;
+    readonly backingHeight: number;
+    readonly deviceScaleFactor: number;
+  }>;
+  readonly settings: Readonly<{
+    readonly gfx: "auto" | "high" | "low";
+    readonly lowGraphics: boolean;
+    readonly reducedMotion: boolean;
+    readonly highContrast: boolean;
+    readonly flashScale: number;
+  }>;
+  readonly overlays: Readonly<{
+    readonly debugAvailable: boolean;
+    readonly pointerLocked: boolean;
+    readonly pointerLockHintVisible: boolean;
+  }>;
+}
+
 export interface LiveObservationPlatform {
   readonly x: number;
   readonly y: number;
@@ -78,7 +111,8 @@ export interface TearStructuredRuntimeEnvironment {
   environment(): EnvironmentRuntimeState;
   /** Browser-executed, renderer-neutral accessibility facts from the live environment state. */
   bloomWellPresentation(options?: BloomWellPresentationOptions): readonly BloomWellPresentationFacts[];
-  screenshot(): string;
+  presentation(): TearLivePresentationStateV1;
+  screenshot(policy?: TearCaptureLayerPolicyV1): string;
 }
 
 export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvironment {
@@ -116,6 +150,7 @@ export interface TearClassARuntimeEnvironment extends TearStructuredRuntimeEnvir
   /** Immutable terminal-outcome and finale outward receipts since reset. */
   outcomeChronologyProjection(): readonly OutcomeChronologyEntry[];
   setTimeEffectsForTest(effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>): void;
+  setCameraEffectsForTest(effects: Readonly<{ zoom: number; shake: number }>): void;
   captureSnapshot(id: string, stateClass?: TearStateClass, seed?: string): TearSnapshotV1;
   restoreSnapshot(snapshot: TearSnapshotV1): TearLiveRestoreResult;
   forgeExitLaunch(launch: StateForgeExitLaunch): TearLiveRestoreResult;
@@ -216,13 +251,15 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly availableGameActions: () => readonly GameAction["type"][];
   readonly random: () => RunRandomStreamsSnapshot;
   readonly render: () => void;
-  readonly screenshot: () => string;
+  readonly presentation: () => TearLivePresentationStateV1;
+  readonly screenshot: (policy?: TearCaptureLayerPolicyV1) => string;
   readonly subscribeEngineEvent: (listener: (event: TearGameplayEvent) => void) => () => void;
   readonly drainConsumedActions: () => readonly CommandEnvelope<GameAction>[];
   readonly emitPhysicalInput: (input: TearPhysicalInput) => void;
   readonly setTimeEffectsForTest: (
     effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>,
   ) => void;
+  readonly setCameraEffectsForTest: (effects: Readonly<{ zoom: number; shake: number }>) => void;
   readonly stateForge: TearLiveWorldAdapter<unknown>;
   readonly replayProgression: (ledger: TearProgressionLedger) => TearProgressionReplayResult;
   /** Narrow privileged bridge used to resume a certified State Forge wave frontier. */

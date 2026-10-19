@@ -72,12 +72,20 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         },
         // ---- TEXT ---------------------------------------------------------------
         // body / inline copy. size defaults to the `body` token.
-        text(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number, align?: Align, alpha?: number) {
-            ctx.globalAlpha = alpha ?? this.t.alpha.full;
+        text(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number, align?: Align, alpha?: number, protectContrast = false) {
+            ctx.globalAlpha = protectContrast ? this.t.alpha.full : alpha ?? this.t.alpha.full;
             ctx.fillStyle = this.ink;
             ctx.font = this.font(truthyOr(size, () => this.t.type.body), false);
             ctx.textAlign = truthyOr(align, () => "left");
             ctx.textBaseline = "alphabetic";
+            if (protectContrast) {
+                ctx.save();
+                ctx.strokeStyle = this.t.color.paper;
+                ctx.lineWidth = this.t.metric.hudTextOutline;
+                ctx.lineJoin = "round";
+                ctx.strokeText(str, x, y);
+                ctx.restore();
+            }
             ctx.fillText(str, x, y);
             ctx.globalAlpha = 1;
         },
@@ -164,12 +172,21 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             }
         },
         // a coloured caption/tag (category labels, status words). align defaults left.
-        tag(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, color?: string, align?: Align, size?: number) {
+        tag(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, color?: string, align?: Align, size?: number, protectContrast = false) {
             ctx.fillStyle = truthyOr(color, () => this.t.color.muted);
             ctx.font = this.font(truthyOr(size, () => this.t.type.micro), true);
             ctx.textAlign = truthyOr(align, () => "left");
             ctx.textBaseline = "alphabetic";
-            ctx.fillText(str, x, y);
+            if (protectContrast) {
+                ctx.save();
+                ctx.globalAlpha = this.t.alpha.full;
+                ctx.strokeStyle = this.t.color.paper;
+                ctx.lineWidth = this.t.metric.hudTextOutline;
+                ctx.lineJoin = "round";
+                ctx.strokeText(str, x, y);
+                ctx.fillText(str, x, y);
+                ctx.restore();
+            } else ctx.fillText(str, x, y);
         },
         // standard screen header: an h1/h2 title + an optional muted tagline beneath it.
         // Returns the y just below the header so callers can flow content under it.

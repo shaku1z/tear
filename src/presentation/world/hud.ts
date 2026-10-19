@@ -9,6 +9,11 @@ export function createHudRenderer(context: LegacyWorldRenderContext) {
     const player = snapshot.player;
     const run = snapshot.run;
     const type = ui.t.type;
+    const cssScale = context.cssPerLogicalPixel ?? 1;
+    const compact = snapshot.protectTextContrast === true && Number.isFinite(cssScale) && cssScale > 0 && cssScale < 0.75;
+    const micro = compact ? Math.max(type.micro, type.micro / cssScale) : type.micro;
+    const label = compact ? Math.max(type.label, type.label / cssScale) : type.label;
+    const top = compact ? context.safe.top : 0;
     const lowHealth = player.hpFraction <= 0.25;
     const pulse = clamp(player.lowHpPulse);
     if (lowHealth) {
@@ -22,8 +27,8 @@ export function createHudRenderer(context: LegacyWorldRenderContext) {
       canvas.restore();
     }
 
-    const x = 28 + context.safe.left, y = 26 + context.safe.top, barWidth = 320, barHeight = 22;
-    const resourceY = y + barHeight + 12, dashWidth = 34, dashHeight = 11, dashGap = 6;
+    const x = 28 + context.safe.left, y = 26 + context.safe.top, barWidth = 320, barHeight = compact ? label + 12 : 22;
+    const resourceY = y + barHeight + (compact ? micro : 12), dashWidth = 34, dashHeight = 11, dashGap = 6;
     const maxDash = Math.max(1, player.maxDashCharges);
     const healthFill = lowHealth
       ? `rgb(${String(Math.round(150 + 95 * pulse))},${String(Math.round(34 + 22 * pulse))},${String(Math.round(40 + 18 * pulse))})`
@@ -44,12 +49,12 @@ export function createHudRenderer(context: LegacyWorldRenderContext) {
       canvas.beginPath(); canvas.moveTo(sectionX, y); canvas.lineTo(sectionX, y + barHeight); canvas.stroke();
     }
     canvas.globalAlpha = 1; canvas.strokeStyle = context.ink; canvas.lineWidth = 2; canvas.strokeRect(x, y, barWidth, barHeight);
-    canvas.font = ui.font(type.label, true); canvas.textAlign = "right"; canvas.fillStyle = "#fff";
+    canvas.font = ui.font(label, true); canvas.textAlign = "right"; canvas.fillStyle = "#fff";
     canvas.shadowColor = "rgba(0,0,0,0.65)"; canvas.shadowBlur = 3;
     canvas.fillText(`${String(Math.ceil(player.hp))} / ${String(player.maxHp)}`, x + barWidth - 8, y + barHeight - 5);
     canvas.shadowBlur = 0;
     canvas.restore();
-    if (player.oneHit) ui.tag(canvas, "ONE-HIT", x + barWidth + 12, y + 6, "#e23b3b", "left", type.micro);
+    if (player.oneHit) ui.tag(canvas, "ONE-HIT", x + barWidth + 12, y + (compact ? micro : 6), "#e23b3b", "left", micro, snapshot.protectTextContrast);
 
     for (let index = 0; index < maxDash; index++) {
       const dashX = x + index * (dashWidth + dashGap);
@@ -60,8 +65,8 @@ export function createHudRenderer(context: LegacyWorldRenderContext) {
       }
       canvas.strokeStyle = context.ink; canvas.lineWidth = 1.5; canvas.strokeRect(dashX, resourceY, dashWidth, dashHeight);
     }
-    ui.text(canvas, "DASH", x + maxDash * (dashWidth + dashGap) + 6, resourceY + dashHeight - 1, type.micro, "left", ui.t.alpha.soft);
-    const shieldX = x + maxDash * (dashWidth + dashGap) + 62;
+    ui.text(canvas, "DASH", x + maxDash * (dashWidth + dashGap) + 6, resourceY + dashHeight - 1, micro, "left", ui.t.alpha.soft, snapshot.protectTextContrast);
+    const shieldX = x + maxDash * (dashWidth + dashGap) + (compact ? micro * 3 + 20 : 62);
     for (let index = 0; index < player.maxShield; index++) {
       const itemX = shieldX + index * 20;
       if (index < player.shield) { canvas.fillStyle = player.shieldColor; canvas.fillRect(itemX, resourceY, 16, dashHeight); }
@@ -69,32 +74,40 @@ export function createHudRenderer(context: LegacyWorldRenderContext) {
     }
     canvas.strokeStyle = context.ink; canvas.fillStyle = context.ink;
     let abilityY = resourceY + 36;
-    for (const ability of player.abilities) {
-      ui.text(canvas, ability, x, abilityY, type.micro, "left", ui.t.alpha.soft);
+    if (compact && player.abilities.length > 0) {
+      ui.text(canvas, `${String(player.abilities.length)} ABILITIES`, x, abilityY, micro, "left", ui.t.alpha.soft, snapshot.protectTextContrast);
+      ui.text(canvas, "PAUSE: ARSENAL", x, abilityY + micro + 8, micro, "left", ui.t.alpha.soft, snapshot.protectTextContrast);
+    }
+    for (const ability of compact ? [] : player.abilities) {
+      ui.text(canvas, ability, x, abilityY, type.micro, "left", ui.t.alpha.soft, snapshot.protectTextContrast);
       abilityY += 15;
     }
 
     if (run.mode !== "tutorial" && run.mode !== "playground") {
-      ui.title(canvas, run.bossWave ? "BOSS" : `WAVE ${String(run.wave)}`, context.width / 2, 42, type.h2);
-      stat("SCORE", String(run.score), context.width / 2 - 150);
-      stat("TIME", run.timeLabel, context.width / 2);
-      stat("LEFT", String(run.remaining), context.width / 2 + 150);
+      ui.title(canvas, run.bossWave ? "BOSS" : `WAVE ${String(run.wave)}`, context.width / 2, 42 + top, type.h2);
+      stat("SCORE", String(run.score), context.width / 2 - (compact ? 210 : 150), snapshot.protectTextContrast, compact, label, micro, top);
+      stat("TIME", run.timeLabel, context.width / 2, snapshot.protectTextContrast, compact, label, micro, top);
+      stat("LEFT", String(run.remaining), context.width / 2 + (compact ? 210 : 150), snapshot.protectTextContrast, compact, label, micro, top);
     }
     if (run.multiplier > 1) {
-      canvas.save(); canvas.translate(context.width / 2, 106);
+      canvas.save(); canvas.translate(context.width / 2, (compact ? 150 : 106) + top);
       const scale = 1 + run.multiplierPop * 0.4; canvas.scale(scale, scale);
       if (!context.lowGraphics) { canvas.shadowColor = run.trickColor; canvas.shadowBlur = 10; }
-      ui.tag(canvas, `×${String(run.multiplier)}${run.rank ? `  ${run.rank}` : ""}`, 0, 0, run.trickColor, "center", type.lead);
+      ui.tag(canvas, `×${String(run.multiplier)}${run.rank ? `  ${run.rank}` : ""}`, 0, 0, run.trickColor, "center", compact ? label : type.lead, snapshot.protectTextContrast);
       canvas.restore();
       const comboWidth = 240, comboX = context.width / 2 - comboWidth / 2;
-      canvas.globalAlpha = 0.14; canvas.fillStyle = context.ink; canvas.fillRect(comboX, 114, comboWidth, 5); canvas.globalAlpha = 1;
-      canvas.fillStyle = run.trickColor; canvas.fillRect(comboX, 114, comboWidth * clamp(run.comboFraction), 5);
+      const comboY = (compact ? 158 : 114) + top;
+      canvas.globalAlpha = 0.14; canvas.fillStyle = context.ink; canvas.fillRect(comboX, comboY, comboWidth, 5); canvas.globalAlpha = 1;
+      canvas.fillStyle = run.trickColor; canvas.fillRect(comboX, comboY, comboWidth * clamp(run.comboFraction), 5);
     }
     canvas.textAlign = "left";
 
     if (snapshot.boss) {
       const boss = snapshot.boss;
-      const width = 620, bossX = (context.width - width) / 2, bossY = 138;
+      // Leave half a text line below the combo meter before the epithet's ascent.
+      const bossTop = compact ? 205 + micro * 1.5
+        : snapshot.protectTextContrast && run.multiplier > 1 ? 143 + micro * 1.5 : 138;
+      const width = 620, bossX = (context.width - width) / 2, bossY = bossTop + top;
       const fraction = clamp(boss.hpFraction * (boss.introSweep ?? 1));
       ui.bossHud(canvas, { x: bossX, y: bossY, w: width, h: ui.t.metric.bossHudH, frac: fraction,
         fill: boss.color, phaseFlash: boss.phaseFlash, time: context.timeSeconds, lowGraphics: context.lowGraphics,
@@ -102,16 +115,18 @@ export function createHudRenderer(context: LegacyWorldRenderContext) {
         // the immutable snapshot contract without allocating a defensive array per frame.
         ...(boss.phaseMarks ? { phaseMarks: boss.phaseMarks as number[] } : {}),
         ...(boss.guard !== undefined ? { guard: boss.guard } : {}) });
-      ui.tag(canvas, boss.name.toUpperCase(), context.width / 2, bossY - 6, boss.color, "center", type.caption);
+      ui.tag(canvas, boss.name.toUpperCase(), context.width / 2, bossY - (compact ? 10 : 6), boss.color, "center", compact ? micro : type.caption, snapshot.protectTextContrast);
       if (boss.epithet || boss.phaseTag) {
         ui.tag(canvas, `${boss.epithet ?? ""}${boss.phaseTag ? `   ·   ${boss.phaseTag}` : ""}`,
-          context.width / 2, bossY - 24, ui.t.color.muted, "center", type.micro);
+          context.width / 2, bossY - (compact ? 42 : 24), snapshot.protectTextContrast ? context.ink : ui.t.color.muted,
+          "center", micro, snapshot.protectTextContrast);
       }
     }
   };
 
-  function stat(label: string, value: string, centerX: number): void {
-    ui.text(canvas, value, centerX, 66, ui.t.type.label, "center");
-    ui.text(canvas, label, centerX, 80, ui.t.type.micro, "center", ui.t.alpha.faint);
+  function stat(name: string, value: string, centerX: number, protectContrast: boolean | undefined,
+    compact: boolean, label: number, micro: number, top: number): void {
+    ui.text(canvas, value, centerX, (compact ? 78 : 66) + top, label, "center", undefined, protectContrast);
+    ui.text(canvas, name, centerX, (compact ? 106 : 80) + top, micro, "center", ui.t.alpha.faint, protectContrast);
   }
 }

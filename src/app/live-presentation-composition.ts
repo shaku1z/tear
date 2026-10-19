@@ -50,6 +50,13 @@ interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
   rotateGate(context: CanvasRenderingContext2D, rectangle: ScreenRectangle, seconds: number): void;
 }
 
+export interface LiveCaptureLayerPolicy {
+  readonly ui: "include" | "exclude";
+  readonly debug: "include" | "exclude";
+  readonly pointerLock: "include" | "exclude";
+  readonly actors: "include" | "exclude";
+}
+
 type PresentationControl = InteractiveUiButton & CanvasUiButton;
 
 export interface LivePresentationFrameState<Screen extends string> {
@@ -96,6 +103,7 @@ export interface LivePresentationFrameServices<Screen extends string,
   readonly wipe: TearWipe;
   readonly reducedMotion: () => boolean;
   readonly flashScale: () => number;
+  readonly capturePolicy: () => LiveCaptureLayerPolicy;
   readonly touchActive: () => boolean;
   readonly controller: () => Readonly<{ active: boolean; toastSeconds: number; toastText: string }> | null;
   readonly pointerLocked: () => boolean;
@@ -158,23 +166,23 @@ export function createLivePresentationFrameHost<Screen extends string,
           context.globalAlpha = services.clamp(state.flash(), 0, 1); context.fillStyle = "#fff";
           context.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h); context.restore();
         }
-        if (!services.cinema.hideHud) services.drawHud();
+        if (services.capturePolicy().ui === "include" && !services.cinema.hideHud) services.drawHud();
         const beat = state.bossBeat();
-        if (beat !== null && state.screen() === "playing" && !state.bossIntroActive() && !services.cinema.active) {
+        if (services.capturePolicy().ui === "include" && beat !== null && state.screen() === "playing" && !state.bossIntroActive() && !services.cinema.active) {
           const progress = services.clamp(beat.t / beat.dur, 0, 1);
           ui.bossPhaseBanner(context, { text: beat.text, color: beat.color,
             alpha: Math.min(1, (1 - progress) * 6, progress * 5) });
         }
-        if (state.bossIntroActive() && state.screen() === "playing") services.drawBossIntro();
-        if (services.cinema.active) services.cinema.draw(context, ui, host.screenRectangle(), services.reducedMotion());
-        if (services.touchActive() && state.screen() === "playing" &&
+        if (services.capturePolicy().ui === "include" && state.bossIntroActive() && state.screen() === "playing") services.drawBossIntro();
+        if (services.capturePolicy().ui === "include" && services.cinema.active) services.cinema.draw(context, ui, host.screenRectangle(), services.reducedMotion());
+        if (services.capturePolicy().ui === "include" && services.touchActive() && state.screen() === "playing" &&
           (!services.cinema.active || services.cinema.playerMode === "finalBlade") && !services.controller()?.active) {
           services.drawTouchControls();
         }
-        if (state.screen() === "playing" && state.bannerSeconds() > 0 && !services.cinema.active) services.drawWaveBanner();
-        if (state.screen() === "playing" && services.stage.bannerSeconds > 0 && !services.cinema.active) services.drawStageBanner();
+        if (services.capturePolicy().ui === "include" && state.screen() === "playing" && state.bannerSeconds() > 0 && !services.cinema.active) services.drawWaveBanner();
+        if (services.capturePolicy().ui === "include" && state.screen() === "playing" && services.stage.bannerSeconds > 0 && !services.cinema.active) services.drawStageBanner();
         const rank = state.rankPopup();
-        if (state.screen() === "playing" && rank.seconds > 0) {
+        if (services.capturePolicy().ui === "include" && state.screen() === "playing" && rank.seconds > 0) {
           context.save(); context.globalAlpha = services.clamp(rank.seconds, 0, 1);
           context.fillStyle = services.trickColor(rank.multiplier); context.textAlign = "center";
           context.font = ui.font(42 + (1 - services.clamp(rank.seconds, 0, 1)) * 18, true);
@@ -183,7 +191,7 @@ export function createLivePresentationFrameHost<Screen extends string,
         ui.ink = "#000";
       },
       renderReticle: () => {
-        if (!services.cinema.active || services.cinema.playerMode === "landing" || services.cinema.playerMode === "finalBlade") {
+        if (services.capturePolicy().ui === "include" && (!services.cinema.active || services.cinema.playerMode === "landing" || services.cinema.playerMode === "finalBlade")) {
           services.drawReticle();
         }
       },
@@ -205,9 +213,9 @@ export function createLivePresentationFrameHost<Screen extends string,
         }
       },
       renderScreen: services.renderScreen, drawButtons: host.drawButtons,
-      drawPostLayers: () => { services.wipe.draw(state.deltaSeconds()); services.drawAchievementToast(state.deltaSeconds()); },
+      drawPostLayers: () => { if (services.capturePolicy().ui === "include") { services.wipe.draw(state.deltaSeconds()); services.drawAchievementToast(state.deltaSeconds()); } },
       drawCursor: () => { ui.cursor(context, services.input.mouseX, services.input.mouseY); },
-      showCanvasCursor: () => shouldDrawCanvasCursor(state.screen()),
+      showCanvasCursor: () => services.capturePolicy().ui === "include" && shouldDrawCanvasCursor(state.screen()),
       drawControllerToast: () => {
         const controller = services.controller();
         if (controller === null || controller.toastSeconds <= 0 || !controller.toastText) return;
@@ -218,9 +226,9 @@ export function createLivePresentationFrameHost<Screen extends string,
       drawRotationGate: () => { ui.rotateGate(context, host.screenRectangle(), state.timeSeconds()); },
       firstEnabledButton: host.firstEnabledButton, setFocus: state.setFocus,
       updateDomHints: (screen) => {
-        if (services.lockHint !== null) services.lockHint.style.display = screen === "playing" &&
+        if (services.lockHint !== null) services.lockHint.style.display = services.capturePolicy().pointerLock === "include" && screen === "playing" &&
           !services.pointerLocked() && !services.touchActive() ? "block" : "none";
-        if (services.inputHint !== null) services.inputHint.style.display = screen === "playing" &&
+        if (services.inputHint !== null) services.inputHint.style.display = services.capturePolicy().ui === "include" && screen === "playing" &&
           !services.touchActive() ? "block" : "none";
       },
     }),

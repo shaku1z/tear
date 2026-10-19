@@ -66,8 +66,17 @@ async function withJourney(options, run) {
     // its own production and offline browser gates.
     const page = await browser.newPage({
       viewport: options.viewport || { width: 1600, height: 900 },
+      deviceScaleFactor: options.deviceScaleFactor || 1,
       serviceWorkers: "block",
     });
+    if (options.settings) {
+      await page.addInitScript((settings) => {
+        window.__TEAR_TEST_STORAGE__ = {
+          tear_settings: JSON.stringify({ gfx: settings.gfx, reducedMotion: settings.reducedMotion,
+            highContrast: settings.highContrast, flash: settings.flashScale }),
+        };
+      }, options.settings);
+    }
     if (options.colorScheme || options.reducedMotion) {
       await page.emulateMedia({ colorScheme: options.colorScheme, reducedMotion: options.reducedMotion });
     }
@@ -75,11 +84,12 @@ async function withJourney(options, run) {
     page.on("pageerror", (error) => errors.push(error.stack || error.message));
     await page.route("**/*", (route) => route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort());
 
-    const initialQuery = { test: "1", bossdebug: "1", ...(options.query || {}) };
+    const initialQuery = { test: "1", ...(options.debugApi === false ? {} : { bossdebug: "1" }), ...(options.query || {}) };
     async function boot(query = initialQuery) {
       await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, { waitUntil: "domcontentloaded", timeout: 30000 });
       try {
-        await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, { timeout: 15000 });
+        await page.waitForFunction((debugApi) => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_RUNTIME_ENVIRONMENT__
+          && (!debugApi || window.__PANTHEON_TEST), options.debugApi !== false, { timeout: 15000 });
         await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
       } catch (error) {
         throw new Error(`Tear browser boot unavailable: ${errors.join("\n") || "no page error was emitted"}`, { cause: error });
@@ -108,7 +118,17 @@ async function withJourney(options, run) {
     await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait, buildInfo });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
-    if (browser) await browser.close();
+    if (browser && options.browserCloseTimeoutMs) {
+      let timeout;
+      try {
+        await Promise.race([
+          browser.close(),
+          new Promise((resolve) => { timeout = setTimeout(resolve, options.browserCloseTimeoutMs); }),
+        ]);
+      } finally {
+        clearTimeout(timeout);
+      }
+    } else if (browser) await browser.close();
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }

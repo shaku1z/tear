@@ -26,9 +26,9 @@ export interface WorldUiPort {
     readonly metric: Record<string, number> & { readonly bossHudH: number };
   };
   font(size: number, bold?: boolean): string;
-  text(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
+  text(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number, protectContrast?: boolean): void;
   title(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
-  tag(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
+  tag(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number, protectContrast?: boolean): void;
   bossHud(canvas: CanvasRenderingContext2D, options: {
     readonly x: number; readonly y: number; readonly w: number; readonly h: number;
     readonly frac: number; readonly fill: string; readonly phaseMarks?: number[];
@@ -46,6 +46,7 @@ export interface LegacyWorldRenderContext {
   readonly ui: WorldUiPort;
   readonly width: number;
   readonly height: number;
+  readonly cssPerLogicalPixel?: number;
   readonly safe: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
   readonly screen: WorldRect;
   readonly ink: string;
@@ -129,6 +130,7 @@ export interface BossHudSnapshot {
 }
 
 export interface HudSnapshot {
+  readonly protectTextContrast?: boolean;
   readonly player: PlayerHudSnapshot;
   readonly run: RunHudSnapshot;
   readonly boss?: BossHudSnapshot | undefined;

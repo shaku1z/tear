@@ -27,6 +27,12 @@ import { createRunSeed } from "../platform/run-seed";
 import type { PwaUpdateCapability } from "../platform/pwa-update";
 import { createAttract } from "../presentation/attract";
 import { createBackdrop } from "../presentation/backdrop";
+import { createPreparedVerdantCalibration, loadCalibrationBitmap } from "../presentation/prepared-verdant-calibration";
+import { createPreparedVerdantMaterial } from "../presentation/platform-materials/prepared-verdant-material";
+import verdantLayerPackage from "../presentation/assets/verdant-calibration/scene-package.json";
+import verdantOverscanPackage from "../presentation/assets/verdant-calibration/overscan-package.json";
+import verdantControlPackage from "../presentation/assets/verdant-calibration/control-package.json";
+import verdantLivingPackage from "../presentation/assets/verdant-calibration/living-stage-package.json";
 import { createCinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createParticleSystem } from "../presentation/particles";
@@ -100,7 +106,41 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticRandom,
   });
+  // Test-build opt-in until final image-native acceptance. IN1 stays available
+  // as a same-build control; only the selected package is fetched/decoded.
+  // All consumers share this app owner; no world owns its lifetime.
+  const sceneNative = tearTestMode ? new URLSearchParams(window.location.search).get("sceneNative") : null;
+  const verdantCalibration = sceneNative === "1" || sceneNative === "control" || sceneNative === "layers" || sceneNative === "living"
+    ? createPreparedVerdantCalibration(sceneNative === "control" ? verdantControlPackage
+      : sceneNative === "layers" ? verdantLayerPackage : sceneNative === "living" ? verdantLivingPackage : verdantOverscanPackage, {
+      "structure-top": new URL("../presentation/assets/verdant-calibration/structure-top.webp", import.meta.url).href,
+      "structure-bottom": new URL("../presentation/assets/verdant-calibration/structure-bottom.webp", import.meta.url).href,
+      foliage: new URL("../presentation/assets/verdant-calibration/foliage.webp", import.meta.url).href,
+      "exterior-top-left": new URL("../presentation/assets/verdant-calibration/exterior-top-left.webp", import.meta.url).href,
+      "exterior-top-right": new URL("../presentation/assets/verdant-calibration/exterior-top-right.webp", import.meta.url).href,
+      "exterior-bottom-left": new URL("../presentation/assets/verdant-calibration/exterior-bottom-left.webp", import.meta.url).href,
+      "exterior-bottom-right": new URL("../presentation/assets/verdant-calibration/exterior-bottom-right.webp", import.meta.url).href,
+      "exterior-left": new URL("../presentation/assets/verdant-calibration/exterior-left.webp", import.meta.url).href,
+      "exterior-right": new URL("../presentation/assets/verdant-calibration/exterior-right.webp", import.meta.url).href,
+      "control-top": new URL("../presentation/assets/verdant-calibration/calibration-top.png", import.meta.url).href,
+      "control-bottom": new URL("../presentation/assets/verdant-calibration/calibration-bottom.png", import.meta.url).href,
+      "support-top": new URL("../presentation/assets/verdant-calibration/support-top.png", import.meta.url).href,
+      "support-bottom": new URL("../presentation/assets/verdant-calibration/support-bottom.png", import.meta.url).href,
+      tail: new URL("../presentation/assets/verdant-calibration/tail.png", import.meta.url).href,
+      "tail-motion": new URL("../presentation/assets/verdant-calibration/tail-motion.png", import.meta.url).href,
+    }, loadCalibrationBitmap) : undefined;
+  const verdantMaterial = verdantCalibration
+    ? createPreparedVerdantMaterial(new URL("../presentation/assets/verdant-calibration/moss-stone.webp", import.meta.url).href)
+    : undefined;
+  if (verdantCalibration) {
+    void verdantCalibration.prepare();
+    void verdantMaterial?.prepare();
+    window.addEventListener("pagehide", (event) => { if (!event.persisted) verdantCalibration.dispose(); });
+    window.addEventListener("pagehide", (event) => { if (!event.persisted) verdantMaterial?.dispose(); });
+  }
   const Backdrop = createBackdrop({
+    ...(verdantCalibration ? { verdantCalibration } : {}),
+    ...(verdantMaterial ? { verdantMaterial } : {}),
     clock: CLOCK, config: worldConfig, graphics: GFX, accessibility: A11Y,
     overscan: OVERSCAN, theme: THEME, createCanvas: () => document.createElement("canvas"), performance,
   });
@@ -227,6 +267,11 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       }),
     });
     compositionWindow.__TEAR_CATALOG_DEBUG__ = Object.freeze({
+      verdantCalibration: Object.freeze({ status: () => verdantCalibration?.status() ?? "disabled",
+        report: () => verdantCalibration?.report() ?? null,
+        setView: (view: "composite" | "support-only" | "tail-only") => { verdantCalibration?.setDiagnosticView(view); },
+        setMotion: (view: "live" | "neutral" | "minimum" | "maximum") => { verdantCalibration?.setDiagnosticMotion(view); },
+      }),
       weapons: WEAPONS.map((weapon) => ({ id: weapon.id, throwIdentity: weapon.throwIdentity, ratings: weapon.ratings })),
       abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map((upgrade) => upgrade.name),
       input: Object.freeze({

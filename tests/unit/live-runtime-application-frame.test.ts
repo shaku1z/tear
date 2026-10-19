@@ -8,6 +8,7 @@ import type { LiveTearRuntimeEnvironmentContext } from "../../src/tearbench/live
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
 import type { AudioDispatchReceipt } from "../../src/audio/audio-dispatch-receipts";
+import { createLivePresentationCaptureController } from "../../src/app/live-presentation-capture";
 
 const SCENARIO = Object.freeze({
   format: "tear-contract",
@@ -47,6 +48,13 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     x: 420, y: 700, tipX: 450, tipY: 700,
     vx: 0, vy: 0, tipSpeed: 0, state: "held",
   };
+  const capture = createLivePresentationCaptureController(() => ({
+    simulationTick: tick, presentationClockSeconds: tick / 120,
+    viewport: { logicalWidth: 1600, logicalHeight: 900, cssWidth: 1600, cssHeight: 900,
+      backingWidth: 1600, backingHeight: 900, deviceScaleFactor: 1 },
+    settings: { gfx: "high", lowGraphics: false, reducedMotion: false, highContrast: false, flashScale: 1 },
+    overlays: { debugAvailable: true, pointerLocked: false, pointerLockHintVisible: false },
+  }));
   const context = {
     width: 1600,
     height: 900,
@@ -101,8 +109,7 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     advanceRenderFrame: () => 0,
     authoritative: () => ({ tick, stateHash: `hash-${String(tick)}`, state: { tick } }),
     random: () => ({}),
-    render: () => { calls.push("render"); },
-    screenshot: () => "data:image/png;base64,",
+    ...capture.ports(() => { calls.push("render"); }, () => "data:image/png;base64,"),
     subscribeEngineEvent: (listener: (event: TearGameplayEvent) => void) => {
       gameplayListeners.push(listener);
       return () => undefined;
@@ -110,6 +117,7 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     drainConsumedActions: () => [],
     emitPhysicalInput: () => undefined,
     setTimeEffectsForTest: () => undefined,
+    setCameraEffectsForTest: () => undefined,
     stateForge: {
       capture: () => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
       validate: () => [],
@@ -229,6 +237,20 @@ describe("Class-A live application-frame surface", () => {
     expect("advanceStateForgeCinematicBeat" in structured).toBe(false);
     expect("finaleOutwardProjection" in structured).toBe(false);
     expect("audioDispatchProjection" in structured).toBe(false);
+  });
+
+  it("accounts for each Class B screenshot while the capture port renders exactly once", () => {
+    const fixture = contextFixture();
+    const structured = createLiveTearRuntimeEnvironment(fixture.context, "B");
+    structured.reset(SCENARIO);
+    fixture.calls.length = 0;
+    const before = structured.metrics().screenshots;
+
+    expect(structured.screenshot({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }))
+      .toBe("data:image/png;base64,");
+
+    expect(structured.metrics().screenshots).toBe(before + 1);
+    expect(fixture.calls).toEqual(["render"]);
   });
 
   it("advances one semantic cinematic beat without inventing a renderer clock or fixed tick", () => {

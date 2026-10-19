@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   VERDANT_ROOTSTONE_COLORS,
@@ -14,7 +14,7 @@ import {
   type PaleIceRenderPolicy,
 } from "../../src/presentation/platform-materials/pale-ice";
 
-function render(state: string, policy: Partial<VerdantRootstoneRenderPolicy> = {}) {
+function render(state: string, policy: Partial<VerdantRootstoneRenderPolicy> = {}, material?: Parameters<typeof drawVerdantRootstone>[3]) {
   const calls: string[] = [];
   const gradient = { addColorStop: (_offset: number, color: string) => { calls.push(`stop:${color}`); } };
   const context = new Proxy({}, {
@@ -34,11 +34,27 @@ function render(state: string, policy: Partial<VerdantRootstoneRenderPolicy> = {
     warningRatio: 0.7,
     reformRatio: 0.6,
     ...policy,
-  });
+  }, material);
   return calls;
 }
 
 describe("verdant-rootstone platform material", () => {
+  it("uses prepared stone for surfaces and fragments while retaining warning and hollow reform cues", () => {
+    const draw = vi.fn(() => true);
+    const stable = render("stable", { floor: true }, { draw });
+    expect(draw).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ x: 20, y: 30, w: 240, h: 24 }), true);
+    expect(stable).not.toContain(`fillStyle:${VERDANT_ROOTSTONE_COLORS.wetEdge}`);
+    const warning = render("warning", { highContrast: true, flashScale: 0 }, { draw });
+    expect(warning).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.highContrastWarning}`);
+    draw.mockClear();
+    render("broken", {}, { draw });
+    expect(draw).toHaveBeenCalledTimes(5);
+    draw.mockClear();
+    render("reforming", {}, { draw });
+    expect(draw).not.toHaveBeenCalled();
+    expect(render("stable", {}, { draw: () => false })).toEqual(render("stable"));
+  });
+
   it("derives presentation state from the existing arena lifecycle", () => {
     expect(verdantRootstoneState({ x: 0, y: 0, w: 1, h: 1 })).toBe("stable");
     expect(verdantRootstoneState({ x: 0, y: 0, w: 1, h: 1, stress: 0.2 })).toBe("stressed");
@@ -47,12 +63,16 @@ describe("verdant-rootstone platform material", () => {
     }
   });
 
-  it("renders root grain and wet edges only as presentation details", () => {
+  it("renders dark-teal strata, pale warmth, wet edges, and sparse gold seams only inside the source rectangle", () => {
     const calls = render("stable");
     expect(calls).toContain(`stop:${VERDANT_ROOTSTONE_COLORS.bodyDeep}`);
     expect(calls).toContain(`fillStyle:${VERDANT_ROOTSTONE_COLORS.moss}`);
+    expect(calls).toContain(`fillStyle:${VERDANT_ROOTSTONE_COLORS.paleWarm}`);
     expect(calls).toContain(`fillStyle:${VERDANT_ROOTSTONE_COLORS.wetEdge}`);
-    expect(calls).toContain("quadraticCurveTo");
+    expect(calls).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.ink}`);
+    expect(calls).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.preservationGold}`);
+    expect(calls.filter((entry) => entry === "fill")).toHaveLength(4);
+    expect(calls).toContain("clip");
   });
 
   it("keeps warning geometry in low graphics and strengthens high contrast", () => {
@@ -68,6 +88,20 @@ describe("verdant-rootstone platform material", () => {
     const reforming = render("reforming");
     expect(reforming).toContain("strokeRect");
     expect(reforming.filter((entry) => entry === "quadraticCurveTo")).toHaveLength(4);
+  });
+
+  it("keeps reforming outlines readable without making the unavailable surface solid", () => {
+    const normal = render("reforming", { reformRatio: 0 });
+    expect(normal.filter((entry) => entry === "strokeRect")).toHaveLength(2);
+    expect(normal).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.bodyDeep}`);
+    expect(normal).toContain("globalAlpha:0.65");
+    expect(normal).not.toContain("fillRect");
+    const accessible = render("reforming", { highContrast: true, lowGraphics: true, reducedMotion: true, flashScale: 0, reformRatio: 0 });
+    expect(accessible).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.paleWarm}`);
+    expect(accessible).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.highContrastWarning}`);
+    expect(accessible).toContain("globalAlpha:1");
+    expect(accessible).not.toContain("fillRect");
+    expect(accessible).toEqual(render("reforming", { highContrast: true, lowGraphics: true, reducedMotion: true, flashScale: 0, reformRatio: 0, timeSeconds: 100 }));
   });
 });
 

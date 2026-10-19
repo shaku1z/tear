@@ -66,6 +66,10 @@ export interface WorldPresentationServices {
   readonly width: number;
   readonly height: number;
   readonly debug: boolean;
+  readonly capturePolicy: () => Readonly<{
+    readonly debug: "include" | "exclude";
+    readonly actors: "include" | "exclude";
+  }>;
   readonly screenRectangle: () => ScreenRectangle;
   readonly world: LegacyWorldRendererRegistry;
   readonly stage: { index: number; current: Stage; platforms: Platforms; bannerSeconds: number; name: string };
@@ -94,7 +98,7 @@ export function createLiveWorldPresentationAdapters(
   services: WorldPresentationServices,
 ): LiveWorldPresentationAdapters {
   const { dependencies: d, canvas, width, height, stage, world, tutorial } = services;
-  const presentationEnemies = (): PresentationEnemy[] => state.enemies().flatMap((enemy) =>
+  const presentationEnemies = (): PresentationEnemy[] => services.capturePolicy().actors === "exclude" ? [] : state.enemies().flatMap((enemy) =>
     isDrawableEnemy(enemy) ? [projectPresentationEnemy(enemy)] : []);
 
   const drawEnemyStatus = (enemy: VisualEnemySource): void => {
@@ -103,7 +107,7 @@ export function createLiveWorldPresentationAdapters(
   };
   const drawPantheonDebug = (view: WorldBounds, painted: WorldBounds): void => {
     const run = state.run();
-    world.pantheonDebug(buildPantheonDebugSnapshot({ enabled: services.debug, visible: view, painted,
+    world.pantheonDebug(buildPantheonDebugSnapshot({ enabled: services.debug && services.capturePolicy().debug === "include", visible: view, painted,
       platforms: stage.platforms.map((platform) => ({ ...platform })),
       brokenPlatforms: (run._arenaBroken ?? []).map((platform) => ({ ...platform })),
       chunks: (run.voidScroll?.chunks ?? []).map((chunk) => ({
@@ -119,6 +123,7 @@ export function createLiveWorldPresentationAdapters(
       defaultZoneWidth: d.CONFIG.warden.zoneW }));
   };
   const drawFinaleWorld = (layer: "rear" | "front"): void => {
+    if (services.capturePolicy().actors === "exclude") return;
     const finale = services.finale();
     if (!finale) return;
     const blade = state.blade();
@@ -129,7 +134,7 @@ export function createLiveWorldPresentationAdapters(
       ...(blade ? { blade: { x: blade.x, y: blade.y } } : {}) }));
   };
   const sceneEffects = (voidActive: boolean) => buildSceneEffectsSnapshot({ voidActive,
-    enemies: state.enemies().map(projectSceneBoss), platforms: stage.platforms.map((platform) => ({
+    enemies: services.capturePolicy().actors === "exclude" ? [] : state.enemies().map(projectSceneBoss), platforms: stage.platforms.map((platform) => ({
       x: platform.x, y: platform.y, w: platform.w, h: platform.h,
       ...(platform.arenaPlatId === undefined ? {} : { arenaPlatId: platform.arenaPlatId }),
       crackT: platform.crackT ?? 0, ...(platform.crackMax === undefined ? {} : { crackMax: platform.crackMax }),
@@ -144,7 +149,7 @@ export function createLiveWorldPresentationAdapters(
   const entityLayer = () => {
     const run = state.run();
     return buildEntityLayerSnapshot({ enemies: presentationEnemies(), sandbox: run.mode === "sandbox",
-      player: state.player(), formatLabel: formatEnemyLabel,
+      player: services.capturePolicy().actors === "exclude" ? undefined : state.player(), formatLabel: formatEnemyLabel,
       drawTransformation: (context, enemy) => {
         if (isBossPresentationActor(enemy)) d.drawBossTransformationWorld(context, enemy);
       },
@@ -187,27 +192,29 @@ export function createLiveWorldPresentationAdapters(
 
   const renderWorld = (): WorldCamera => {
     const run = state.run();
-    const player = state.player();
-    const blade = state.blade();
+    const actorsIncluded = services.capturePolicy().actors === "include";
+    const physicalPlayer = state.player();
+    const player = actorsIncluded ? physicalPlayer : undefined;
+    const blade = actorsIncluded ? state.blade() : undefined;
     const biome = ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(run.mode);
     const voidActive = !!run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen);
     return renderLegacyWorldFrame({ canvas, width, height, screen: services.screenRectangle(),
       zoom: state.zoom(), shake: state.shake(), playing: state.screen() === "playing", random: d.cosmeticRandom,
-      biome, debug: services.debug, timeSeconds: d.CLOCK.sim, reducedMotion: d.A11Y.reducedMotion,
-      stage: stage.current, playerX: player?.x ?? width / 2, sceneEffects: sceneEffects(voidActive), enemies: entityLayer(),
+      biome, debug: services.debug && services.capturePolicy().debug === "include", timeSeconds: d.CLOCK.sim, reducedMotion: d.A11Y.reducedMotion,
+      stage: stage.current, playerX: physicalPlayer?.x ?? width / 2, sceneEffects: sceneEffects(voidActive), enemies: entityLayer(),
       player: player ? { x: player.x, y: player.y, halfWidth: player.hw, halfHeight: player.hh } : undefined,
       entityOptions: { darkTheme: d.THEME.dark, sandbox: run.mode === "sandbox", buffColors: d.CONFIG.colors,
         font: (size, bold) => d.UI.font(size, bold) },
-      floaters: state.floaters().map((item) => ({ x: item.x, y: item.y, text: item.text,
-        color: item.col || "#000", life: item.life, big: item.big })),
-      brokenPlatforms: run._arenaBroken ?? [], platforms: stage.platforms, projectiles: state.projectiles(),
+      floaters: actorsIncluded ? state.floaters().map((item) => ({ x: item.x, y: item.y, text: item.text,
+        color: item.col || "#000", life: item.life, big: item.big })) : [],
+      brokenPlatforms: run._arenaBroken ?? [], platforms: stage.platforms, projectiles: actorsIncluded ? state.projectiles() : [],
       setEffectView: (bounds) => { d.FX.setViewRect(bounds); },
       drawBackdrop: (_value, time, playerX, bounds) => { d.Backdrop.draw(canvas, stage.current, time, playerX, bounds); },
       drawPlatform: (platform, _value, floor, bounds) => { d.Backdrop.platform(canvas, platform, stage.current, floor, bounds); },
-      drawFinale: drawFinaleWorld, tutorialActive: run.mode === "tutorial" && tutorial.active,
+      drawFinale: drawFinaleWorld, tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active,
       drawTutorialGhost: () => { tutorial.drawGhost(); }, drawPlayer: () => { player?.draw(canvas); },
       drawBlade: () => { if (blade && player) blade.draw(canvas, player); },
-      drawEffects: () => { d.FX.draw(canvas); }, drawEnvironment, drawDebug: drawPantheonDebug });
+      drawEffects: () => { if (actorsIncluded) d.FX.draw(canvas); }, drawEnvironment, drawDebug: drawPantheonDebug });
   };
 
   const drawTutorialCard = (): void => {
@@ -243,7 +250,7 @@ export function createLiveWorldPresentationAdapters(
       formatTime: services.formatTime, trickColor: services.trickColor, ease: services.ease });
     state.setHud({ lagHp: result.lagHp, multiplier: result.multiplier, multiplierPop: result.multiplierPop });
     if (boss && result.bossPhaseFlashTime !== undefined) boss._phaseFlashT = result.bossPhaseFlashTime;
-    world.hud(result.snapshot);
+    world.hud({ ...result.snapshot, protectTextContrast: d.Backdrop.needsHudTextContrast(stage.current) });
     if (run.mode === "tutorial") drawTutorialCard();
     else if (run.mode === "playground") drawPlaygroundHelp();
   };

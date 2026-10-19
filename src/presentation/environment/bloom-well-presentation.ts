@@ -24,7 +24,14 @@ export function renderBloomWellPresentation(
   canvas.lineWidth = facts.highContrast ? 5 : (warning ? 3 : 2);
   canvas.globalAlpha = cooldown ? 0.28 : pulse;
   canvas.setLineDash(warning ? [12, 8] : []);
-  canvas.beginPath(); canvas.ellipse(centerX, bottom, radius, Math.max(10, radius * 0.22), 0, 0, Math.PI * 2); canvas.stroke();
+  canvas.beginPath(); canvas.ellipse(centerX, bottom, radius, Math.max(10, radius * 0.22), 0, 0, Math.PI * 2);
+  if (!facts.highContrast && !cooldown) {
+    // Separate the existing boundary from bright water and moss without
+    // widening the field or making an expired response look active.
+    canvas.strokeStyle = "#10251e"; canvas.lineWidth = warning ? 7 : 6; canvas.stroke();
+    canvas.strokeStyle = "#e4c95a"; canvas.lineWidth = warning ? 3 : 2;
+  }
+  canvas.stroke();
   canvas.setLineDash([]);
   if (active) {
     const column = canvas.createLinearGradient(centerX, top, centerX, bottom);
