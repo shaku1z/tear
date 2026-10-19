@@ -48,6 +48,7 @@ export interface LiveOpeningPhaseHost {
   readonly protection: { active: boolean; lastMode: string | null };
   readonly lowGraphics: boolean;
   readonly transformationBlocked: boolean;
+  readonly practicePreparing?: boolean;
   overrunMovementMultiplier: () => number;
   runDamageMultiplier: () => number;
   stepCinematic: (dt: number) => void;
@@ -107,7 +108,9 @@ export interface LiveOpeningPhaseResult { readonly blocked: boolean }
 export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): LiveOpeningPhaseResult {
   const { player, blade, run, state, config } = host;
   const timers = { throwCooldown: state.throwCooldown };
-  const prelude = stepCombatPrelude({ dt, blocking: host.blocking, playerMode: host.playerMode,
+  const preparing = host.practicePreparing === true && !host.blocking;
+  if (preparing) { player.cinematicProtected = true; host.protection.active = true; host.protection.lastMode = "locked"; host.flushClosingInput(); host.consumeThrow(); blade.update(dt, player, host.platforms); blade.drainWeaponEvents(); }
+  const prelude = preparing ? { blocked: false, previousBladeState: blade.state, wasReturning: false, linkBreakReason: false as const } : stepCombatPrelude({ dt, blocking: host.blocking, playerMode: host.playerMode,
     player, blade, run, platforms: host.platforms, protection: host.protection, timers,
     tuning: { flowGuardTier: config.resilience.flowGuardTier, flowGuardMultiplier: config.resilience.flowGuardMult,
       thrownMoveBoost: config.player.thrownMoveBoost },
@@ -119,8 +122,8 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   state.throwCooldown = timers.throwCooldown;
   if (prelude.blocked) return { blocked: true };
   if (prelude.linkBreakReason) host.linkBroken(prelude.linkBreakReason);
-  runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
-  host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); host.updateWave(dt);
+  if (!preparing) { runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason); host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); }
+  host.updateWave(dt);
   const transformed = stepEnemyActors({ dt, enemies: host.enemies, platforms: host.platforms, player,
     projectiles: host.projectiles, freeze: run.pg?.freeze === true, gravity: config.world.gravity,
     groundY: config.world.groundY, viewportWidth: host.width,
@@ -134,7 +137,7 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
     onKill: (enemy) => { host.onKill(enemy as LiveEnemy, "skill"); } });
   host.resolveBossZones(); host.updateBossArenaPlatforms(dt); runPlatformLifecycle(host, dt); host.updateVoidScroll(dt);
   runBosses(host, dt); host.updateEffects(dt);
-  return { blocked: false };
+  return { blocked: preparing };
 }
 
 function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: string, wasReturning: boolean, linkBroken: boolean): void {

@@ -3,7 +3,7 @@ import { SourceVoidController } from "../gameplay/training/arena-rules";
 
 /** Builds the Source's void traversal controller from canonical tuning. */
 export function createLiveSourceVoidController(
-  dependencies: GameRuntimeDependencies,
+  dependencies: Pick<GameRuntimeDependencies, "CONFIG">,
   width: number,
   height: number,
 ): SourceVoidController {

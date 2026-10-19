@@ -32,7 +32,7 @@ export interface LiveRunStartPort<TMods extends { weaponId?: string }> {
   readonly requestPointerLock: () => void;
 }
 
-function deriveVoidSeed(runSeed: number): number {
+export function deriveVoidSeed(runSeed: number): number {
   const derived = (Math.imul(runSeed ^ 0x7f4a7c15, 1664525) + 1013904223) >>> 0;
   return derived || 1;
 }

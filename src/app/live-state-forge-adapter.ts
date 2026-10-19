@@ -104,7 +104,7 @@ export interface LiveStateForgeAdapterOptions {
   readonly captureCinema: () => unknown;
   /** Validates the candidate's behavior-bearing cinematic binding before commit mutation. */
   readonly validateCinema: (runtime: Readonly<Record<string, unknown>>, run: GameRun, stageIndex: number,
-    enemies: readonly GameEnemy[]) => void;
+    enemies: readonly GameEnemy[], platforms?: readonly object[]) => void;
 }
 
 // Input projection is owned by the live frame lifecycle, not State Forge.
@@ -330,7 +330,7 @@ export function createLiveStateForgeAdapter(
       if (candidate.enemies.some((enemy) => !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y))) {
         issues.push("enemy transform is not finite");
       }
-      try { options.validateCinema(candidate.runtime, candidate.run, candidate.stageIndex, candidate.enemies); }
+      try { options.validateCinema(candidate.runtime, candidate.run, candidate.stageIndex, candidate.enemies, candidate.platforms); }
       catch (error) { issues.push(error instanceof Error ? error.message : String(error)); }
       return Object.freeze(issues);
     },

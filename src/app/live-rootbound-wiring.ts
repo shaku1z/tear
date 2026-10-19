@@ -10,6 +10,7 @@ export function bindLiveRootboundActors(
   player: () => GamePlayer | null,
   enemies: () => readonly GameEnemy[],
   actorId: (enemy: GameEnemy) => string,
+  config: typeof CONFIG = CONFIG,
 ): void {
   environment.addFeature(createVerdantEnvironmentFeature());
   environment.setFeatureActorSource("verdant", "rootbound", () => enemies().filter((enemy) => enemy.kind === "rootbound").map((enemy): RootboundEnvironmentActor => {
@@ -48,7 +49,7 @@ export function bindLiveRootboundActors(
         ownerPosition: Object.freeze({ x: enemy.x, y: enemy.y }),
         bloomPattern: actor.bossBloomPattern?.() ?? null,
         rootCagePlacement: actor.rootCagePlacement?.() ?? null,
-        arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
+        arena: Object.freeze({ width: config.view.w, groundY: config.world.groundY }),
         phase: actor.phase,
         regrowth: actor.regrowthState,
       }),

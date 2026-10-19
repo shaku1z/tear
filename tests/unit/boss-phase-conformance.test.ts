@@ -1,3 +1,15 @@
+import { GRAFT_ANCHOR_TYPES } from "../../src/gameplay/environment/graft-anchor";
+import { createBossPhasePracticeRuntime, validateBossPhasePracticeState, type BossPhasePracticeActor, type BossPhasePracticeRequest, type BossPhasePracticeWorld } from "../../src/gameplay/training/boss-phase-practice-runtime";
+import { beginBossEncounter, cleanupBossEncounterActors } from "../../src/gameplay/run/boss-encounter";
+import { BossArenaRules, SourceVoidController, createBossArena, type ArenaPlatform, type SourceVoidState } from "../../src/gameplay/training/arena-rules";
+import { BossRitualController, type BossRitualActor, type BossRitualCue } from "../../src/gameplay/entities/boss-ritual-controller";
+import { createLiveCinematicRuntime } from "../../src/gameplay/campaign/live-cinematic-runtime";
+import { createSourceVoidRuntimeBridge } from "../../src/gameplay/campaign/source-void-runtime";
+import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
+import { stepBossRuntime } from "../../src/gameplay/combat/boss-step-runtime";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import { bindLiveRootboundActors } from "../../src/app/live-rootbound-wiring";
+import { clamp, lerp } from "../../src/domain/geometry";
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
@@ -8,7 +20,8 @@ import { STAGES } from "../../src/gameplay/stages";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
 import { createMirrorTestHarness } from "./mirror-test-harness";
 
-type BossActor = BehaviorActor & {
+type BossActor = BehaviorActor & BossPhasePracticeActor & BossRitualActor & {
+  introT: number;
   bossId: string;
   bossName: string;
   presentationId: string;
@@ -208,5 +221,179 @@ describe("boss phase conformance", () => {
       expect(boss.dead, entry.id).toBe(true);
       expect([boss].filter((actor) => !actor.dead), `${entry.id} cleanup`).toEqual([]);
     }
+  });
+});
+
+
+/** A fixed-step owner fixture: actual boss factories, encounter/arena, ritual timeline,
+ * cinematic player transfer, Source stream, Verdant environment and clone owner. */
+function practiceWorld() {
+  const base = createEnemyHarness();
+  let mirror = createMirrorTestHarness();
+  let boss: BossActor;
+  let player = mirror.mirrorPlayer;
+  let platforms: ArenaPlatform[] = [];
+  let projectiles: EnemyProjectile[] = [];
+  let clones: InstanceType<typeof mirror.ReflectionEnemy>[] = [];
+  let stream: SourceVoidState | null = null;
+  let tick = 0;
+  let created = 0;
+  let binding: Pick<BossPhasePracticeWorld, "encounterId" | "generation" | "seed" | "bossId">;
+  const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "phase-practice-control" });
+  bindLiveRootboundActors(environment, () => player, () => [boss], () => "practice:boss");
+  const director = new CinematicTimeline.Director(CONFIG);
+  const cinema = { get active() { return director.active; }, get playerMode() { return director.playerMode; },
+    start: (script: Parameters<typeof director.start>[0]) => director.start(script, {}) };
+  const no = () => undefined;
+  const sourceController = new SourceVoidController({ ...CONFIG.source,
+    voidWispCooldown: CONFIG.source.voidWispCd, arrivalFxStep: CONFIG.effects.voidArrivalFxStep,
+    voidFallDamage: CONFIG.source.voidFallDmg, voidSlowDuration: CONFIG.source.voidSlowDur },
+  { width: CONFIG.view.w, height: CONFIG.view.h, groundY: CONFIG.world.groundY },
+  { jumpSpeed: CONFIG.player.jumpSpeed, gravity: CONFIG.world.gravity, moveSpeed: CONFIG.player.moveSpeed,
+    dashSpeed: CONFIG.dash.speed, dashDuration: CONFIG.dash.duration },
+  { dialogueDuck: CONFIG.presentation.dialogueDuck, unmakeMix: CONFIG.presentation.voidUnmakeMix,
+    releaseMix: CONFIG.presentation.voidReleaseMix, revealMix: CONFIG.presentation.voidRevealMix });
+  const sourceRuntime = createSourceVoidRuntimeBridge({ controller: sourceController, get player() { return player; },
+    get platforms() { return platforms; }, get projectiles() { return projectiles; }, perfectColor: CONFIG.colors.perfect,
+    get runTime() { return tick / 120; }, get state() { return stream; },
+    replaceProjectiles(value) { projectiles = value; }, replacePlatforms(value) { platforms = value; },
+    clearDescent: no, clearBossBeat: no, setWorldZoom: no, spawnWisp: no, liveWispCount: () => 0,
+    flash: no, shake: no, explode: no, burst: no, ring: no, shockwave: no, musicDuck: no,
+    voidMix: no, sound: no, voidTransfer: no, onDamageResult: no, floater: no });
+  const cinematic = createLiveCinematicRuntime({ cinema, sourceController, ritualController: new BossRitualController(), sourceRuntime,
+    player: () => player, blade: () => null, platforms: () => platforms, ritualPlatforms: () => platforms,
+    replacePlatforms(value) { platforms = value; }, projectiles: () => projectiles,
+    replaceProjectiles(value) { projectiles = value as EnemyProjectile[]; }, sourceSeed: () => binding.seed,
+    setDescent: no, setStream(value) { stream = value; }, hasVoidScroll: () => stream !== null,
+    story: { finale: null, lastCinemaPlayerMode: null, markFinaleLanded: no, syncFinale: no },
+    policy: () => ({ play: true, brief: true }), reducedMotion: () => false,
+    gravity: () => CONFIG.world.gravity, maxFall: () => 1600, descentLiftVelocity: () => -120,
+    viewportWidth: CONFIG.view.w, groundY: () => CONFIG.world.groundY, bomberColor: () => CONFIG.colors.bomber,
+    dialogueDuck: () => CONFIG.presentation.dialogueDuck, verticalResponse: () => 1, time: () => tick / 120,
+    lerp, clamp, clearBossBeat: no, setMusicDuck: no, playSound: no, storeSeen: no, landing: no, finaleBladeCut: no });
+  const arenaRules = new BossArenaRules(CONFIG.bossArena, CONFIG.colors);
+  let broken: ArenaPlatform[] = [];
+  const services = {
+    createEncounter(request: BossPhasePracticeRequest, generation: number, encounterId: string) {
+      created += 1; tick = 0; mirror = createMirrorTestHarness(); player = mirror.mirrorPlayer;
+      binding = { bossId: request.bossId, seed: request.seed, generation, encounterId };
+      boss = request.bossId === "echo" ? mirror.host as unknown as BossActor : createBoss(request.bossId).boss;
+      boss.bossId = request.bossId;
+      platforms = base.platforms.map((platform) => ({ ...platform })) as ArenaPlatform[]; broken = [];
+      beginBossEncounter({ runTime: 0 }, boss, 0.1, { platforms: () => platforms, setPlatforms(value) { platforms = value; },
+        arenaFor: (id) => createBossArena(id, CONFIG.view.w, CONFIG.view.h, CONFIG.world.groundY, CONFIG.bossArena.reformWarn)?.map((platform) => ({ ...platform })) ?? null });
+    },
+    observe(): BossPhasePracticeWorld | null {
+      return { ...binding, actor: boss, weaponId: "sword", difficulty: "normal", noProgression: true,
+        cinematicActive: director.active, arenaReady: platforms.length > 0, checkpointReady: true,
+        phaseWorldReady: binding.bossId !== "source" || boss.practicePhaseEntry().phase === 1 || (stream !== null
+          && (boss.practicePhaseEntry().phase === 2 ? stream.active && !stream.forming : stream.frozen || stream.active)) };
+    },
+    cleanup(reason: "exit" | "reset" | "replacement") {
+      cleanupBossEncounterActors([boss], reason === "replacement" ? "reset" : reason); director.cancel(reason); environment.clear(reason === "exit" ? "abandon" : "retry");
+      mirror.Mirror.active = false; clones = []; projectiles = []; stream = null;
+    },
+  };
+  const runtime = createBossPhasePracticeRuntime(services);
+  function step() {
+    tick += 1;
+    const dt = 1 / 120;
+    if (director.active) { director.update(dt, {}); cinematic.step(dt); }
+    else {
+      boss.introT = Math.max(0, boss.introT - dt);
+      environment.step(tick, dt, () => {
+        boss.update(dt, platforms, player, projectiles);
+        for (const clone of clones) clone.update(dt, platforms, player, projectiles);
+      }, new Set(["practice:boss"]));
+      if (boss.cinematicRequest !== null) cinematic.startBossTransformation(boss, boss.cinematicRequest as BossRitualCue);
+      const run = { voidScroll: stream };
+      stepBossRuntime({ dt, player, platforms, enemies: [boss], run, thawMultiplier: CONFIG.source.thawSpeedMult,
+        maximumScrollSpeed: CONFIG.source.scrollSpeedMax, unlockWitness: no,
+        startVoidDescent: () => cinematic.startVoidDescent(boss), spawnAdds: () => [],
+        spawnClone() { clones.push(new mirror.ReflectionEnemy(boss.x + 120, boss.y)); },
+        floater: no, dramaticBeat: no, removeClone: no, spikeImpact: no });
+      arenaRules.update({ platforms, broken }, dt, null, [boss], true);
+    }
+    const result = runtime.afterWorldStep();
+    if (result.status === "refused") throw new Error(`Practice refused ${result.reason} at ${String(tick)}`);
+    return result;
+  }
+  return { runtime, services, step, environment, get boss() { return boss; }, get created() { return created; },
+    get projectiles() { return projectiles; }, get platforms() { return platforms; }, get stream() { return stream; },
+    get clones() { return clones; }, get mirror() { return mirror.Mirror; }, get director() { return director; } };
+}
+
+describe("authored boss phase practice", () => {
+  it.each(BOSS_ROSTER.map(({ id }) => id))("prepares all three %s entries through actual owner transitions and resets cleanly", (bossId) => {
+    const world = practiceWorld();
+    for (const phase of [1, 2, 3] as const) {
+      world.runtime.begin({ bossId, phase, seed: "authored-entry-control" });
+      for (let tick = 0; tick < 12000 && world.runtime.snapshot()?.lifecycle !== "active"; tick++) world.step();
+      expect(world.runtime.snapshot(), `${bossId} phase ${String(phase)}`).toMatchObject({ lifecycle: "active", enteredPhase: phase });
+      expect(world.runtime.captureAvailability()).toBe("canonical-checkpoint");
+      if (bossId === "warden" && phase === 2) expect(world.boss.cages.length).toBeGreaterThan(0);
+      if (bossId === "warden" && phase === 3) expect(world.boss).toMatchObject({ onCeiling: true });
+      if (bossId === "colossus" && phase >= 2) {
+        expect(world.boss.shielded).toBe(false);
+        if (phase === 2) expect(world.projectiles.some((shot) => shot.family === "sweeper")).toBe(true);
+      }
+      if (bossId === "colossus" && phase === 3) expect(world.boss.zones).toHaveLength(CONFIG.colossus.panelCount);
+      if (bossId === "aldric" && phase === 2) expect(world.boss.fireZones.length).toBeGreaterThan(0);
+      if (bossId === "aldric" && phase === 3) expect(world.boss).toMatchObject({ mode: "downed", witnessEarned: false, crownWorn: false, faked: false });
+      if (bossId === "rootbound" && phase === 2) expect(world.boss).toMatchObject({ activeGraftTypes: [...GRAFT_ANCHOR_TYPES] });
+      if (bossId === "rootbound" && phase === 3) {
+        expect(world.boss).toMatchObject({ finalPhaseTwoGraftTypes: [...GRAFT_ANCHOR_TYPES], regrowthState: { phase: "channeling" }, lastSpringUseCount: 0 });
+        expect(world.environment.routes().length).toBeGreaterThan(0);
+      }
+      if (bossId === "echo" && phase === 2) expect(world.clones).toHaveLength(1);
+      if (bossId === "echo" && phase === 3) { expect(world.clones.every((clone) => clone.dead)).toBe(true); expect(world.mirror.blade.lengthBonus).toBe(100); }
+      if (bossId === "source" && phase >= 2) {
+        expect(world.stream?.chunks.length).toBeGreaterThan(0);
+        expect(world.platforms.some((platform) => platform.floor)).toBe(false);
+        expect(world.stream?.forming).toBe(false);
+      }
+      if (bossId === "source" && phase === 3) expect(world.stream).toMatchObject({ frozen: true, active: false });
+      const before = world.runtime.snapshot();
+      world.runtime.restart();
+      expect(world.runtime.snapshot()?.generation).toBe((before?.generation ?? 0) + 1);
+      expect(world.projectiles).toEqual([]); expect(world.clones).toEqual([]); expect(world.stream).toBeNull();
+      world.runtime.cancel("exit");
+      expect(world.runtime.captureAvailability()).toBe("unavailable");
+      expect(world.environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
+    }
+  });
+
+  it("rehydrates a real pending request without replaying it and rejects an unrequested actor", () => {
+    const world = practiceWorld();
+    world.runtime.begin({ bossId: "warden", phase: 3, seed: "pending-entry" });
+    for (let tick = 0; tick < 120 && world.runtime.snapshot()?.pendingPhase !== 2; tick++) world.step();
+    const snapshot = JSON.parse(JSON.stringify(world.runtime.snapshot())) as unknown;
+    const candidate = world.services.observe();
+    if (candidate === null) throw new Error("Expected pending candidate world");
+    const created = world.created;
+    world.runtime.restore(snapshot, candidate);
+    expect(world.created).toBe(created);
+    const hp = world.boss.hp;
+    world.boss.hp = world.boss.maxHp;
+    expect(() => validateBossPhasePracticeState(snapshot, candidate)).toThrow(/world mismatch/);
+    world.boss.hp = hp;
+    for (let tick = 0; tick < 12000 && world.runtime.snapshot()?.lifecycle !== "active"; tick++) world.step();
+    expect(world.runtime.snapshot()).toMatchObject({ enteredPhase: 3, lifecycle: "active" });
+    expect(() => validateBossPhasePracticeState({ ...(world.runtime.snapshot()), unknown: true }, candidate)).toThrow();
+  });
+
+  it("retains selected entry while allowing normal later phase, ritual and terminal progression", () => {
+    const world = practiceWorld();
+    world.runtime.begin({ bossId: "colossus", phase: 1, seed: "continued-entry" });
+    for (let tick = 0; tick < 120 && world.runtime.snapshot()?.lifecycle !== "active"; tick++) world.step();
+    world.boss.hit(world.boss.maxHp * .5, 0, 0);
+    world.step();
+    expect(world.director.active).toBe(true);
+    const state = JSON.parse(JSON.stringify(world.runtime.snapshot())) as unknown;
+    const candidate = world.services.observe();
+    if (candidate === null) throw new Error("Expected progressed world");
+    expect(validateBossPhasePracticeState(state, candidate)).toMatchObject({ phase: 1, enteredPhase: 2, lifecycle: "active" });
+    world.runtime.cancel("exit");
+    expect(() => validateBossPhasePracticeState(world.runtime.snapshot(), candidate)).toThrow();
   });
 });

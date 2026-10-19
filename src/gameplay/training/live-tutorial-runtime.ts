@@ -1,3 +1,4 @@
+import type { BossPracticeCandidate, BossPracticePort, PracticeBossEntry, PracticeBossState } from "./practice-boss-catalog";
 import {
   TUTORIAL_LESSONS,
   TutorialController,
@@ -87,6 +88,7 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly bladeState: () => string;
   readonly bladeTipVY?: () => number;
   readonly weaponId?: () => string;
+  readonly bossCatalog?: () => readonly PracticeBossEntry[];
   readonly enemyCatalog?: () => readonly PracticeEnemyEntry[];
   readonly enemies: () => TEnemy[];
   readonly playSound: (cue: "rankup" | "ui") => void;
@@ -97,6 +99,7 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly recoverBlade?: () => void;
   /** Starts the separate no-wave practice run after the curriculum completes. */
   readonly beginPractice: () => void;
+  readonly finishBossPractice?: () => void;
   readonly terminateRun: (reason: "quit") => void;
   readonly navigate: (screen: "menu") => void;
   readonly releasePointer: () => void;
@@ -127,16 +130,17 @@ export interface LiveTutorialRuntime {
   selectLesson(id: string): boolean;
   selectAnnex(id: string): boolean;
   selectEnemy(id: string): boolean;
-  showCatalog(): void;
+  showCatalog(): void; showBosses(): void; selectBoss(id: string, retained?: PracticeBossState): boolean; bindBossPractice(port: BossPracticePort): void; afterWorldStep(): void;
   showAnnexes(): void;
   weaponEffect(weaponId: string, effect: string): void;
   showHelp(): void;
   demonstrate(): boolean;
   captureSession(): ReturnType<TutorialController["captureSession"]> | undefined;
-  validateSession(value: unknown, candidateWeaponId?: string, candidateEnemies?: readonly LiveTutorialEnemy[]): void;
+  validateSession(value: unknown, candidateWeaponId?: string, candidateEnemies?: readonly LiveTutorialEnemy[], bossCandidate?: BossPracticeCandidate): void;
   restoreSession(value: unknown): void;
   capturePresentation(): ReturnType<TutorialController["capturePresentation"]>;
   restorePresentation(value: ReturnType<TutorialController["capturePresentation"]> | undefined): void;
+  readonly preparingBoss: boolean;
   readonly active: boolean;
   readonly idx: number;
   readonly doneT: number;
@@ -157,6 +161,7 @@ export interface LiveTutorialRuntime {
 export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
   port: LiveTutorialPort<TEnemy>,
 ): LiveTutorialRuntime {
+  let bossPort: BossPracticePort | undefined;
   const controller = new TutorialController(port.config);
   const installPendingArena = (): void => {
     const arena = controller.consumePendingArena();
@@ -174,18 +179,24 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     };
   };
   return {
-    openPractice: (tutorialDone) => controller.openPractice(port.viewportWidth, tutorialDone),
-    session: () => { const session = controller.session(); return session.practiceOnly ? { ...session, enemyCatalog: port.enemyCatalog?.() ?? [] } : session; },
-    restart: () => { const changed = controller.restart(); if (changed) installPendingArena(); return changed; },
+    openPractice: (tutorialDone) => { const changed = controller.openPractice(port.viewportWidth, tutorialDone); if (changed) bossPort?.restore(undefined); return changed; },
+    session: () => { const session = controller.session(); return session.practiceOnly ? { ...session, enemyCatalog: port.enemyCatalog?.() ?? [], bossCatalog: port.bossCatalog?.() ?? [] } : session; },
+    bindBossPractice: (value) => { bossPort = value; },
+    afterWorldStep: () => { const saved = controller.session().bossPractice; if (!saved || saved.defeated) return; const next = bossPort?.afterWorldStep(); if (next) { controller.syncBoss({ ...saved, ...next }); if (next.defeated) port.finishBossPractice?.(); } },
+    selectBoss: (id, retained) => { const entry = retained && id === `${retained.bossId}:${String(retained.phase)}` ? { ...retained, id, title: retained.bossId, canPractice: true } : port.bossCatalog?.().find((boss) => boss.id === id); if (!entry?.canPractice || !bossPort || !controller.session().practiceOnly) return false;
+      port.resetTrainingSpace(); return controller.selectBoss(entry, bossPort.begin(entry)); },
+    showBosses: () => { controller.showBosses(); },
+    restart: () => { const selected = controller.session().bossPractice; if (selected && bossPort) { port.resetTrainingSpace(); return controller.selectBoss({ ...selected, id: `${selected.bossId}:${String(selected.phase)}`, title: selected.bossId, canPractice: true }, bossPort.begin(selected)); } const changed = controller.restart(); if (changed) installPendingArena(); return changed; },
     selectLesson: (id) => { const changed = controller.selectLesson(id); if (changed) installPendingArena(); return changed; },
     selectAnnex: (id) => { const changed = controller.selectAnnex(id); if (changed) installPendingArena(); return changed; },
     selectEnemy: (id) => { const entry = port.enemyCatalog?.().find((enemy) => enemy.id === id); const changed = entry !== undefined && controller.selectEnemy(entry); if (changed) installPendingArena(); return changed; },
     showCatalog: () => { controller.showCatalog(); },
     showAnnexes: () => { controller.showAnnexes(); }, weaponEffect: (weaponId, effect) => { controller.weaponEffect(weaponId, effect); },
     showHelp: () => { controller.showHelp(); }, demonstrate: () => controller.demonstrate(),
-    captureSession: () => controller.session().phase === "inactive" ? undefined : controller.captureSession(),
-    validateSession: (value, candidateWeaponId, candidateEnemies) => {
+    captureSession: () => { if (controller.session().phase === "inactive") return undefined; if (controller.session().bossPractice && !controller.session().bossPractice?.defeated) bossPort?.capture(); return controller.captureSession(); },
+    validateSession: (value, candidateWeaponId, candidateEnemies, bossCandidate) => {
       const data = parseTutorialSessionCheckpoint(value);
+      if (data?.version === 6) { if (!bossPort) throw new Error("Boss practice host unavailable"); bossPort.validate(data.bossPractice, bossCandidate); }
       const weaponId = candidateWeaponId ?? port.weaponId?.();
       if (data?.version === 4 && weaponId !== undefined && data.annex.weaponId !== weaponId) throw new RangeError("Tutorial annex weapon does not match its world");
       if (data?.version === 5 && weaponId !== undefined && weaponId !== "sword") throw new RangeError("Practice enemy requires its baseline Sword world");
@@ -199,9 +210,10 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       const data = parseTutorialSessionCheckpoint(value);
       if (data?.version === 4 && port.weaponId !== undefined && data.annex.weaponId !== port.weaponId()) throw new RangeError("Tutorial annex weapon does not match its world");
       if (data?.version === 5 && port.weaponId !== undefined && port.weaponId() !== "sword") throw new RangeError("Practice enemy requires its baseline Sword world");
-      controller.restoreSession(data);
+      controller.restoreSession(data); bossPort?.restore(data?.version === 6 ? data.bossPractice : undefined);
     },
     capturePresentation: () => controller.capturePresentation(), restorePresentation: (value) => { controller.restorePresentation(value); },
+    get preparingBoss() { const selected = controller.session().bossPractice; return selected !== undefined && !selected.defeated && selected.runtime.enteredPhase < selected.phase; },
     get active() { return controller.active; },
     get idx() { return controller.lessonIndex; },
     get doneT() { return controller.completionDelay; },
@@ -211,7 +223,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     get anchor() { return controller.anchorX; },
     steps: TUTORIAL_LESSONS,
     start(courseSessionId = "unissued") { controller.start(port.viewportWidth, courseSessionId); installPendingArena(); },
-    stop() { controller.stop(); },
+    stop() { if (controller.session().bossPractice) bossPort?.cancel(); controller.stop(); },
     mark(kind) { controller.mark(kind); },
     step: lessonView,
     drawGhost() { port.drawGhost(controller.ghostSnapshot(port.groundY())); },

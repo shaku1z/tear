@@ -1,3 +1,9 @@
+import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
+import { deriveVoidSeed } from "../gameplay/run/live-run-start-controller";
+import { createLiveBossPhasePractice } from "../app/live-boss-phase-practice";
+import { createLiveCinematicHost } from "../app/live-cinematic-host";
+import { createLiveSourceVoidController } from "../app/live-source-void-controller";
+import { stageAt } from "../gameplay/stages";
 import type { EnemyKind } from "../gameplay/run/content-director";
 import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../app/live-authoritative-input-adapter";
@@ -35,6 +41,7 @@ import { trainingPlatforms } from "../gameplay/training/playground-controller";
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
 export interface ProductionReplayWorldOptions {
+  readonly gameplayEvents?: TearGameplayEventPort;
   readonly worldId?: string;
   readonly seed: string;
   readonly enemies?: readonly Readonly<{ id: string; x: number; y: number }>[];
@@ -105,7 +112,7 @@ export function createProductionReplayRun(
     diffHp: plan.scaling.enemyHp, diffCount: plan.scaling.enemyCount,
     coinMod: plan.scaling.coin, scoreMod: plan.scaling.score,
     mods: newMods(), mult: 1, lifestealCd: 0,
-    weaponId, runSeed, wave: 1, score: 0, waveKills: 0, wavePeak: 1, waveTime: 0, runTime: 0,
+    weaponId, runSeed, voidSeed: deriveVoidSeed(runSeed), wave: 1, score: 0, waveKills: 0, wavePeak: 1, waveTime: 0, runTime: 0,
     spawnQueue: [], spawnTimer: 0, clearTimer: -1, waveLog: [],
     specialBlock: -1, specialsOffered: 0, reservedUpgrade: null,
     isBossWave: false, horde: false, miniBoss: null, waveTag: "", waveKinds: [],
@@ -137,7 +144,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist }, cosmeticRandom: cosmeticEmissionRandom.next,
   });
   const dependencies = {
-    CLOCK: clock, CONFIG: config, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects, cosmeticRandom, cosmeticEmissionRandom,
+    CLOCK: clock, CONFIG: config, GAMEPLAY_EVENTS: { emit: (event: Parameters<TearGameplayEventPort["emit"]>[0]) => { options.gameplayEvents?.emit(event); } }, GFX, A11Y, SFX: unavailableOutwardPort(), browserStorage: unavailableOutwardPort(), lerp, clamp, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects, cosmeticRandom, cosmeticEmissionRandom,
     Backdrop: { resetFx: () => undefined }, Mirror: factories.mirrorTypes.Mirror, BOSSFX: factories.enemyTypes.BOSSFX,
     Cinematics: CinematicTimeline, Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
     Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
@@ -195,6 +202,16 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     aimRadius: () => config.blade.aimRadius,
   });
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
+  const practiceCinematic = createLiveCinematicHost({ dependencies, state: state,
+    sourceController: createLiveSourceVoidController({ CONFIG: config }, config.view.w, config.view.h), cinema: world.context.cinema,
+    story: { finale: null, lastCinemaPlayerMode: null, markFinaleLanded: () => undefined, syncFinale: () => undefined },
+    stage: { get platforms() { return stage.platforms as never[]; }, set platforms(value) { stage.platforms = value; }, get current() { return stageAt(stage.index); } },
+    width: config.view.w, policy: () => ({ play: true, brief: false }), clearBossBeat: () => { state.setBossBeat(null); },
+    setWorldZoom: (value) => { world.context.transient.feel.worldZoomTarget = value; },
+    spawnWisp: (x, y, lane) => { const actor = world.entities.createEnemy("void-wisp", x, y, state.run() as never); Reflect.set(actor, "voidLane", lane); state.setEnemies([...state.enemies(), actor]); },
+    addFlash: (value) => { world.context.transient.feel.flash = Math.max(world.context.transient.feel.flash, value); },
+    addShake: (value) => { world.context.transient.impact.shake = Math.max(world.context.transient.impact.shake, value); },
+    loseStyle: () => undefined, shieldAbsorb: () => undefined, addFloater: () => undefined, finaleBladeCut: () => undefined, playSound: () => undefined });
   const tutorialOutward: string[] = [];
   let tutorialSpawn: ((kind: EnemyKind, hpScale: number) => ReturnType<typeof entities.createEnemy>) | undefined;
   const requirePlayer = () => { const value = world.state.player(); if (value === undefined) throw new Error("tutorial requires its world player"); return value; };
@@ -218,6 +235,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
       resetTutorialActors(config, config.view.w, requirePlayer(), world.state.blade());
     },
     recoverBlade: () => { recoverTutorialBlade(config, requirePlayer(), world.state.blade()); },
+    finishBossPractice: () => { options.tutorialHandoff?.(); },
     beginPractice: () => { tutorialOutward.push("awaiting-next-run"); options.tutorialHandoff?.(); },
     terminateRun: (reason) => { world.lifecycle.terminate(reason); },
     navigate: (screen) => { tutorialOutward.push(`navigate:${screen}`); },
@@ -226,8 +244,12 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     completeCourse: (id) => { tutorialOutward.push(`complete-course:${id}`); return Promise.resolve("nonpersistent"); },
     checkAchievements: () => { tutorialOutward.push("achievement-check"); }, drawGhost: () => undefined,
   });
+  const bossPractice = createLiveBossPhasePractice({ config, state: state, stage, selectStage: (index) => { stage.index = index; world.context.environment.setStage(stageAt(index).id, "stage-transition"); }, resetEnvironment: () => { world.context.environment.clear("new-run"); },
+    createEnemy: (id, x, y, active) => world.entities.createEnemy(id, x, y, active), cinematicActive: () => world.context.cinema.active,
+    cancelCinema: () => { if (world.context.cinema.active) world.context.cinema.cancel("practice-reset"); } });
+  tutorial.bindBossPractice(bossPractice);
   return Object.freeze({
-    dependencies, world, configuration, clock, effects, random, cosmeticEmissionRandom, factories,
+    practiceCinematic, dependencies, world, configuration, clock, effects, random, cosmeticEmissionRandom, factories,
     transient: world.context.transient, input, run, stage,
     tutorial, tutorialOutward,
     bindTutorialSpawn: (spawn: NonNullable<typeof tutorialSpawn>) => { tutorialSpawn = spawn; },

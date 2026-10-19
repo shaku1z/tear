@@ -27,7 +27,7 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
         tear_profile_v2: JSON.stringify({ schema: "tear.profile", schemaVersion: 3, revision: 1,
         updatedAtMs: 1, writerId: "practice-lab-ui-fixture", extensions: {}, profile: { v: 1, created: 1,
           shards: 10, ach: { student: 1, first_buy: 1 }, achCoinsRetrofit: true, modes: {}, seen: {},
-          stats: { tutorialDone: 1, coinsEarned: 1000, shopBuys: 1, kill_charger: 1, kill_support: 1 } } }),
+          stats: { tutorialDone: 1, coinsEarned: 1000, shopBuys: 1, kill_charger: 1, kill_support: 1, killColossus: 1, "encounterBoss:warden:2": 1 } } }),
         tear_meta: JSON.stringify({ lifetimeEarned: 1000, lifetimeSpent: 375, buy: { sharp: 1 } }),
       };
       // test=1 uses composition's isolated storage, never localStorage. Carry
@@ -81,7 +81,9 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
       if (!storage) throw new Error("Practice Lab fixture did not observe the isolated storage adapter");
       const profile = JSON.parse(storage.get("tear_profile_v2")).profile;
       const meta = JSON.parse(storage.get("tear_meta"));
-      return { stats: profile.stats, tutorialDone: profile.stats.tutorialDone, achievements: profile.ach, earned: meta.lifetimeEarned, spent: meta.lifetimeSpent, buy: meta.buy };
+      const cinematicSeen = { browser: Object.fromEntries(Object.entries(localStorage).filter(([key]) => key.startsWith("tear.cinematic."))),
+        adapter: Object.fromEntries([...storage].filter(([key]) => key.startsWith("tear.cinematic."))) };
+      return { stats: profile.stats, tutorialDone: profile.stats.tutorialDone, achievements: profile.ach, earned: meta.lifetimeEarned, spent: meta.lifetimeSpent, buy: meta.buy, cinematicSeen };
     });
     await boot();
     const before = await savedEffects();
@@ -138,6 +140,36 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     assert.equal(opponent.session.enemyPractice.defeated, false);
     assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].hp, opponent.snapshot.state["tear.enemy.v1"][0].maxHp);
     await pressUntilScreen("p", "paused");
+    await clickLabel("BOSS PRACTICE");
+    session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
+    assert.equal(session.bossCatalog.length, 18);
+    assert.equal(session.bossCatalog.find((entry) => entry.id === "colossus:1").knowledge, "defeated-identity");
+    assert.equal(session.bossCatalog.find((entry) => entry.id === "colossus:2").canPractice, false);
+    assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:2").canPractice, true);
+    assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:3").canPractice, false);
+    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-boss-phases.png") });
+    await page.setViewportSize({ width: 800, height: 360 });
+    await page.evaluate(() => { window.__TEAR_PRACTICE_LAB_TEXT__.length = 0; });
+    await page.mouse.wheel(0, 144);
+    await page.waitForFunction(() => window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "THE SOURCE · P3"));
+    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-boss-phases-landscape.png") });
+    await page.mouse.wheel(0, -144);
+    await page.setViewportSize({ width: 1600, height: 900 }); await page.waitForTimeout(100);
+    await clickLabel("IRON COLOSSUS · P1"); await waitScreen("playing");
+    await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active");
+    let bossAttempt = await page.evaluate(() => ({ tutorial: window.__PANTHEON_TEST.tutorial().session,
+      state: window.__PANTHEON_TEST.state(), snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").captureSnapshot("boss-practice", "recorded-canonical") }));
+    assert.equal(bossAttempt.tutorial.bossPractice.bossId, "colossus"); assert.equal(bossAttempt.tutorial.bossPractice.phase, 1);
+    assert.equal(bossAttempt.state.weapon, "sword"); assert.equal(bossAttempt.state.difficulty, "normal");
+    assert.deepEqual(bossAttempt.snapshot.state["tear.run.v1"].mods.owned, {});
+    assert.equal(bossAttempt.snapshot.state["tear.boss.v1"][0].bossId, "colossus");
+    await pressUntilScreen("p", "paused"); await clickLabel("RESTART LESSON"); await waitScreen("playing");
+    await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active");
+    await pressUntilScreen("p", "paused");
+    // Saved phase fixture, not claimed natural phase discovery.
+    await clickLabel("THE WARDEN · P2"); await waitScreen("playing");
+    await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active", undefined, { timeout: 20000 });
+    await pressUntilScreen("p", "paused");
     await clickLabel("MAIN MENU"); await waitScreen("confirmquit");
     await clickLabel("QUIT"); await waitScreen("menu");
     assert.deepEqual(await savedEffects(), before, "practice must leave actual adapter completion/reward state unchanged before reload");
@@ -153,8 +185,12 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
     assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
     assert.equal(session.enemyCatalog.find((entry) => entry.id === "mender").canPractice, false);
+    await clickLabel("BOSS PRACTICE");
+    session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
+    assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:2").canPractice, true);
+    assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:3").canPractice, false);
     assert.deepEqual(await savedEffects(), before, "opening/restarting practice must not add completion, achievements, coins or purchases");
-    console.log("Practice Lab UI fixture passed: completed-profile adapter bytes reconstructed after reload, normal menu/setup entry, lesson, five weapon annexes and known real-opponent catalog selection/reset; unknown subtype history preserved, no discovery or reward grant");
+    console.log("Practice Lab UI fixture passed: completed-profile adapter bytes reconstructed after reload, normal menu/setup entry, lesson, five weapon annexes and known real-opponent and six-boss phase catalog selection/reset; unknown subtype history preserved, no discovery or reward grant");
     return;
   }
 

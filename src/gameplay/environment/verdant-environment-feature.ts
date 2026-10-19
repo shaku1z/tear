@@ -44,7 +44,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     for (const object of environment.combatObjects()) {
       if (object.kind !== "root-link" || object.ownerId === null || object.state === "destroyed" || object.state === "expired") continue;
       if ("playerId" in object) this.#rootbinderLeashes.set(object.ownerId, object.id);
-      else networks.set(object.ownerId, [...(networks.get(object.ownerId) ?? []), object.id]);
+      else if (object.targetId !== null) networks.set(object.ownerId, [...(networks.get(object.ownerId) ?? []), object.id]);
     }
     for (const [ownerId, ids] of networks) this.#rootbinderNetworks.set(ownerId, Object.freeze(ids));
   }

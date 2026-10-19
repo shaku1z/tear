@@ -212,7 +212,7 @@ interface PreparedRuntimeOwners {
 function productionRuntimeState(replay: ProductionReplayWorld, prepared?: PreparedRuntimeOwners) {
   const transient = replay.world.context.transient;
   return createLiveStateForgeRuntimeBridge({
-    tutorial: replay.tutorial,
+    tutorial: replay.tutorial, practiceCinema: replay.practiceCinematic.runtime, practiceWorld: () => ({ run: replay.world.state.run() as never, actors: replay.world.state.enemies(), platforms: replay.stage.platforms as object[] }),
     captureBossIntro: () => replay.world.state.bossIntro(),
     restoreBossIntro: (intro) => { replay.world.state.setBossIntro(intro); },
     captureTransient: () => Object.freeze({
@@ -363,8 +363,9 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   createTearWorldConfiguration(replay.configuration.baseSnapshot()).restore(candidateConfiguration);
   validateParticlePresentationBinding(staged.particlesPresentation, candidateConfiguration.effects);
   const particleRestore = prepareParticlePresentationRestore(staged.particlesPresentation, staged.run.runSeed, staged.tick);
-  const preparedRuntime = prepareProductionChapter(replay, staged.runtime, candidateConfiguration);
-  productionRuntimeState(replay, preparedRuntime).validate(staged.runtime, staged.run, staged.stageIndex, staged.enemies);
+  const bossBinding = replay.practiceCinematic.runtime.stageBinding(staged.runtime.bossCinematicBinding, staged.enemies);
+  const preparedRuntime = prepareProductionChapter(replay, staged.runtime, candidateConfiguration, bossBinding);
+  productionRuntimeState(replay, preparedRuntime).validate(staged.runtime, staged.run, staged.stageIndex, staged.enemies, staged.platforms as object[]);
   // Exercise the same portable RNG restore before any destination stream changes.
   new RunRandomStreams().restore(staged.rng as RunRandomStreamsSnapshot);
   // Live opening capture precedes the menu -> playing route in the same start-run call.
@@ -461,7 +462,7 @@ export function createProductionGhostReplayComposition(
     create(snapshot: TearSnapshotV1 | undefined) {
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let clockPlayback: ReturnType<typeof createGhostApplicationClockPlayback> | undefined;
-      const replay = createProductionReplayWorld({ seed: snapshot?.seed ?? options.seed,
+      const replay = createProductionReplayWorld({ ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }), seed: snapshot?.seed ?? options.seed,
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
         ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }),
@@ -486,7 +487,7 @@ export function createProductionGhostReplayComposition(
       if (opening !== undefined && options.inputSnapshots?.get(0) !== undefined
         && stableVerificationHash(options.inputSnapshots.get(0)) !== stableVerificationHash(opening.input)) throw new TypeError("opening held input does not match its capsule receipt");
       const staged = snapshot === undefined ? undefined : restoreProductionReplaySnapshot(replay, snapshot, openingPermit);
-      if (staged !== undefined) assertDetachedSourceVoidSupported(staged.run);
+      if (staged !== undefined && replay.tutorial.captureSession()?.version !== 6) assertDetachedSourceVoidSupported(staged.run);
       let outcome: ProductionRunOutcomeRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
         ...(staged === undefined || staged.platforms.length === 0 ? {} : { platforms: staged.platforms }),

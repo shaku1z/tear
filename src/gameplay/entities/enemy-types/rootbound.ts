@@ -1,3 +1,4 @@
+import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_DEFINITION } from "../../run/boss-definitions";
@@ -134,6 +135,20 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.atk = "unavailable";
     }
 
+    /** Practice requests cross an authored threshold; normal update owns every transition effect. */
+    requestPracticePhase(phase: 2 | 3): boolean {
+      const entry = this.practicePhaseEntry();
+      if (!entry.ready || entry.targetPhase !== entry.phase || phase !== entry.phase + 1 || this.dead || this.dying || this.hp <= 0) return false;
+      this.hp = this.maxHp * practicePhaseEntryHealth(this.phaseMarks, phase);
+      this.hpDisplay = this.hp;
+      return true;
+    }
+    practicePhaseEntry(): BossPracticeActorEntry {
+      const phase = this.phaseMarker === 3 ? 3 : this.phaseMarker === 2 ? 2 : 1;
+      return Object.freeze({ phase, targetPhase: this.phase === 3 ? 3 : this.phase === 2 ? 2 : 1,
+        ready: (phase !== 2 || GRAFT_ANCHOR_TYPES.every((type) => this.activeGraftTypes.includes(type))) && (phase !== 3 || this.regrowthState.phase !== "idle") && this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
+        stage: this.introT > 0 ? "opening" : this.cinematicRequest !== null || this.cinematicT > 0 ? "transition" : phase === 3 ? "regrowth" : phase === 2 ? "graft-baseline" : "combat" });
+    }
     get phase(): number {
       const fraction = this.maxHp > 0 ? this.hp / this.maxHp : 0;
       const fromHp = fraction > this.phaseMarks[0] ? 1 : fraction > this.phaseMarks[1] ? 2 : 3;

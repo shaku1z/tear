@@ -1,3 +1,4 @@
+import { rebindBossPracticeSource } from "../gameplay/training/boss-practice-source-restore";
 import type { TearCodecValue, TearCodecWorld } from "./state-codecs";
 import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
@@ -267,6 +268,10 @@ export function hydrateTearCodecWorld<
   if (record(run) && run.mode === "tutorial" && tutorialSession?.phase === "inactive"
     && record(runtime.lifecycle) && runtime.lifecycle.phase !== "terminated") throw new RangeError("active tutorial run cannot restore inactive behavior");
   if (tutorialSession?.active === true && (!record(run) || run.mode !== "tutorial")) throw new RangeError("active tutorial behavior requires tutorial mode");
+  const platforms = decodeTearCodecValue(component(world, "tear.platform.v1"), identities) as Platform[];
+  if (tutorialSession?.version === 6 && tutorialSession.bossPractice.bossId === "source" && !tutorialSession.bossPractice.defeated) {
+    rebindBossPracticeSource({ run: run as Parameters<typeof rebindBossPracticeSource>[0]["run"], player, enemies, platforms: platforms as object[] });
+  }
   const hudPresentation = parseUiHudPresentationCheckpoint(record(ui) ? ui.hudPresentation : undefined);
   const particlesPresentation = parseParticlePresentationCheckpoint(record(ui) ? ui.particlesPresentation : undefined);
   return Object.freeze({
@@ -281,7 +286,7 @@ export function hydrateTearCodecWorld<
       ? decodeTearCodecValue(hazards.slowZones, identities) as SlowZone[] : [],
     walls: record(hazards) && Array.isArray(hazards.walls)
       ? decodeTearCodecValue(hazards.walls, identities) as Wall[] : [],
-    platforms: decodeTearCodecValue(component(world, "tear.platform.v1"), identities) as Platform[],
+    platforms,
     screen: stringField(ui, "screen"),
     focus: Number.parseInt(stringField(ui, "focusId"), 10),
     ...(tutorialPresentation === undefined ? {} : { tutorialPresentation }),

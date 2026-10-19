@@ -61,6 +61,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     return value;
   };
   const tutorial = createLiveTutorialRuntime({
+    bossCatalog: () => d.practiceEncounterPersistence?.bossCatalog() ?? [],
     enemyCatalog: () => d.practiceEncounterPersistence?.catalog() ?? practiceEnemyCatalog((key) => d.PROFILE.stat(key)),
     config: d.CONFIG, viewportWidth: context.width, groundY: () => d.CONFIG.world.groundY,
     skipPressed: () => d.Input.pressed.has("KeyN"),
@@ -81,7 +82,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       resetTutorialActors(d.CONFIG, context.width, player(), state.blade());
     },
     recoverBlade: () => { recoverTutorialBlade(d.CONFIG, player(), state.blade()); },
-    beginPractice: context.startPractice,
+    beginPractice: context.startPractice, finishBossPractice: () => { context.navigate("paused"); context.releasePointer(); },
     terminateRun: (reason) => { context.lifecycle.terminate(reason); },
     navigate: (screen) => { context.navigate(screen); }, releasePointer: context.releasePointer,
     addProfileStat: d.profileStatsPersistence.add,

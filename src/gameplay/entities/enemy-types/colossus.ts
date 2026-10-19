@@ -1,3 +1,4 @@
+import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type { EnemyDependencies, ArenaZone, EnemyDamageContext, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
@@ -36,6 +37,20 @@ export function createColossusType(dependencies: EnemyDependencies, Enemy: Enemy
       this.attackIdx = 0; this._playerRef = null;
       this.chargeStop = false; this.smashTX = 0; this.grabCd = 0;   // bruiser kit
       this.plateKickT = 0; this.servoCompression = 0;
+    }
+    /** Practice requests cross an authored threshold; normal update owns every transition effect. */
+    requestPracticePhase(phase: 2 | 3): boolean {
+      const entry = this.practicePhaseEntry();
+      if (!entry.ready || entry.targetPhase !== entry.phase || phase !== entry.phase + 1 || this.dead || this.dying || this.hp <= 0) return false;
+      this.hp = this.maxHp * practicePhaseEntryHealth(bossPhaseMarks("colossus"), phase);
+      this.hpDisplay = this.hp;
+      return true;
+    }
+    practicePhaseEntry(): BossPracticeActorEntry {
+      const phase = this.phaseMarker === 3 ? 3 : this.phaseMarker === 2 ? 2 : 1;
+      return Object.freeze({ phase, targetPhase: this.phase,
+        ready: this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
+        stage: this.introT > 0 ? "opening" : this.cinematicRequest !== null || this.cinematicT > 0 ? "transition" : "combat" });
     }
     get phase() { const f = this.hp / this.maxHp, marks = bossPhaseMarks("colossus"); return f > marks[0] ? 1 : (f > marks[1] ? 2 : 3); }
     get guardSide() { return this.facing; }

@@ -138,7 +138,7 @@ export interface HudSnapshot {
 
 export interface TutorialCardSnapshot {
   readonly annex?: boolean;
-  readonly enemyPractice?: boolean;
+  readonly enemyPractice?: boolean; readonly bossPractice?: boolean;
   readonly lessonIndex: number; readonly lessonCount: number; readonly title: string; readonly description: string;
   readonly keys: readonly string[]; readonly final: boolean; readonly completedBeat: number;
   readonly arenaLabel?: string; readonly teachingFocus?: string;

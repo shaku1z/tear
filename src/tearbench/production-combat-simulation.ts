@@ -4,6 +4,7 @@ import type { ProductionReplayWorld } from "./production-world-factory";
 import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
 import { bindLiveAuroraTrackActors } from "../app/live-aurora-track-wiring";
 import { bindLiveWhiteHartActors } from "../app/live-white-hart-wiring";
+import { bindLiveRootboundActors } from "../app/live-rootbound-wiring";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
   snapshot(tick: number, input: AuthoritativeInputState): State;
@@ -38,7 +39,7 @@ export function createProductionCombatSimulation<State>(
     },
     authoritative: {
       actionPort: replay.input.actionPort,
-      snapshot: (tick, input) => options.snapshot(tick, input),
+      snapshot: (tick, input) => { replay.tutorial.afterWorldStep(); return options.snapshot(tick, input); },
     },
   });
   const config = replay.configuration.value;
@@ -54,6 +55,10 @@ export function createProductionCombatSimulation<State>(
     () => replay.world.state.player() as never,
     () => replay.world.state.enemies(),
     (enemy) => core.combatEntityRuntime.id(enemy, "enemy"));
+  bindLiveRootboundActors(replay.world.context.environment,
+    () => replay.world.state.player() as never,
+    () => replay.world.state.enemies(),
+    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"), config);
   replay.world.context.environment.setAvailableActorIdsSource(() => new Set(["player", "blade",
     ...replay.world.state.enemies().map((enemy) => core.combatEntityRuntime.id(enemy, "enemy")),
     ...replay.world.state.projectiles().map((projectile) => core.combatEntityRuntime.id(projectile, "projectile"))]));

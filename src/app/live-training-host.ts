@@ -64,6 +64,7 @@ const fallbackLesson: ReturnType<LiveTutorialRuntime["step"]> = Object.freeze({
 
 /** Lazy training facade. Its concrete runtime is fetched only before a training mode starts. */
 export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTrainingHost {
+  let bossPractice: Parameters<LiveTutorialRuntime["bindBossPractice"]>[0] | undefined;
   let loaded: TrainingRuntime | undefined;
   let loading: Promise<void> | undefined;
   let preparedCourseId: string | undefined;
@@ -71,7 +72,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
 
   const ensureLoaded = (): Promise<void> => {
     loading ??= import("./live-training-host-runtime").then((module) => {
-      loaded = module.createLiveTrainingHostRuntime(context);
+      loaded = module.createLiveTrainingHostRuntime(context); if (bossPractice) loaded.tutorial.bindBossPractice(bossPractice);
     });
     return loading;
   };
@@ -80,14 +81,17 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     session: () => loaded?.tutorial.session() ?? { phase: "inactive", lessonId: "move", courseCompleted: false, helpVisible: false, instruction: "", progress: [0, 0], lessons: [] },
     restart: () => loaded?.tutorial.restart() ?? false, selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
     selectAnnex: (id) => loaded?.tutorial.selectAnnex(id) ?? false, showAnnexes: () => { loaded?.tutorial.showAnnexes(); },
+    bindBossPractice: (port) => { bossPractice = port; loaded?.tutorial.bindBossPractice(port); }, afterWorldStep: () => { loaded?.tutorial.afterWorldStep(); },
+    showBosses: () => { loaded?.tutorial.showBosses(); }, selectBoss: (id, retained) => loaded?.tutorial.selectBoss(id, retained) ?? false,
     selectEnemy: (id) => loaded?.tutorial.selectEnemy(id) ?? false, showCatalog: () => { loaded?.tutorial.showCatalog(); },
     weaponEffect: (weaponId, effect) => { loaded?.tutorial.weaponEffect(weaponId, effect); },
     showHelp: () => { loaded?.tutorial.showHelp(); }, demonstrate: () => loaded?.tutorial.demonstrate() ?? false,
     captureSession: () => loaded?.tutorial.captureSession(),
-    validateSession: (value, weaponId, actors) => { if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session"); loaded?.tutorial.validateSession(value, weaponId, actors); },
+    validateSession: (value, weaponId, actors, candidate) => { if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session"); loaded?.tutorial.validateSession(value, weaponId, actors, candidate); },
     restoreSession: (value) => { if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session"); loaded?.tutorial.restoreSession(value); },
     capturePresentation: () => loaded?.tutorial.capturePresentation() ?? { version: 1, ghostTime: 0, anchorX: 0, evidencePulse: false, coachIdle: 0, coachDemoTime: 0, helpVisible: false },
     restorePresentation: (value) => { loaded?.tutorial.restorePresentation(value); },
+    get preparingBoss() { return loaded?.tutorial.preparingBoss ?? false; },
     get active() { return loaded?.tutorial.active ?? false; },
     get idx() { return loaded?.tutorial.idx ?? 0; },
     get doneT() { return loaded?.tutorial.doneT ?? 0; },

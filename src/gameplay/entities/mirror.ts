@@ -1,3 +1,4 @@
+import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../training/boss-phase-practice-runtime";
 import type { BladePoint } from "./blade";
 import type { PlayerPlatformPort } from "./player";
 import { createMirrorActions } from "./mirror-actions";
@@ -281,6 +282,7 @@ class MirrorHost extends Enemy {
   mode: string;
   _mods: MirrorMods | null;
   _live: boolean;
+  introT = 0;
 
   constructor(x: number, y: number, mods?: MirrorMods | null) {
     // heavier presence than the old Echo, and knockback tuned so hits FEEL like they land
@@ -291,6 +293,18 @@ class MirrorHost extends Enemy {
     this.spawnClone = false; this.mode = "mirror";
     this._mods = mods ?? null;
     this._live = false;   // set true by the game when actually fought (bestiary previews stay inert)
+  }
+  requestPracticePhase(phase: 2 | 3): boolean {
+    const entry = this.practicePhaseEntry();
+    if (!entry.ready || entry.targetPhase !== entry.phase || phase !== entry.phase + 1 || this.dead || this.dying || this.hp <= 0) return false;
+    this.hp = this.maxHp * practicePhaseEntryHealth(bossPhaseMarks("echo"), phase);
+    this.hpDisplay = this.hp;
+    return true;
+  }
+  practicePhaseEntry(): BossPracticeActorEntry {
+    const phase = Mirror.host === this && Mirror._phaseMark === 3 ? 3 : Mirror.host === this && Mirror._phaseMark === 2 ? 2 : 1;
+    return Object.freeze({ phase, targetPhase: Mirror.host === this && Mirror.phase === 3 ? 3 : Mirror.host === this && Mirror.phase === 2 ? 2 : 1, ready: this._live && Mirror.host === this && Mirror.active && this.introT <= 0 && !this.spawnClone,
+      stage: this.introT > 0 ? "opening" : !this._live || Mirror.host !== this || this.spawnClone ? "transition" : "combat" });
   }
   update(dt: number, platforms: readonly PlayerPlatformPort[], player: MirrorPlayerPort, projectiles: MirrorProjectilePort[]): void {
     this.tickTimers(dt);

@@ -1,4 +1,4 @@
-import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./live-ghost-frame-recording"; import { createBrowserLiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
@@ -243,7 +243,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const tutorialSessionActions = createLiveTutorialSessionActions({ training: trainingHost, tutorial: TUT, screen: () => state, mode: () => liveRun().mode,
     selectPracticeWeapon: (id) => { hostState.setSelectedWeapon(id); }, startLessonRun: () => { tutorialPracticeStart = TUT.session().practiceOnly === true; try { startRunImmediate("tutorial", "normal"); } finally { tutorialPracticeStart = false; } },
     resetFocus: () => { interfaceInteraction.setFocus(0); }, resume: () => { setState("playing"); requestLock(); } });
-  const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => sourceVoidRuntime.syncPlayer(...args); const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { sourceVoidRuntime.update(...args); };
+  const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => TUT.session().bossPractice?.defeated ? undefined : sourceVoidRuntime.syncPlayer(...args); const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { if (!TUT.session().bossPractice?.defeated) sourceVoidRuntime.update(...args); };
   const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = cinematicRuntime;
   const dispatchPlaygroundAction = (...args: Parameters<typeof playgroundRuntime.dispatchAction>) => { playgroundRuntime.dispatchAction(...args); }; const stepPlayground = (...args: Parameters<typeof playgroundRuntime.step>) => { playgroundRuntime.step(...args); };
   const { renderMenu: renderPgMenu, renderLab: renderPgLab } = playgroundPresentation; const { achievements: AT, addStyle, tracks: achTracks, check: achCheck, loseStyle, update: updateTrick, color: trickColor, splitProjectile: spawnSplitShards, formatTime: fmtTime } = styleAchievementRuntime;
@@ -285,8 +285,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); },
     ...(outcomeChronology === null ? {} : { observeOutcomeChronology: outcomeChronology.record }),
   });
-  const frameDriver = new RuntimeFrameDriver(browserWindow);
-  type CombatSnapshot = ReturnType<typeof projectCanonicalGameplayState>; type CombatHost = ReturnType<typeof createLiveCombatComposition<CombatSnapshot>>; type CombatCompositionInput = Parameters<typeof createLiveCombatComposition<CombatSnapshot>>[0];
+  TUT.bindBossPractice(createLiveBossPhasePractice({ config: CONFIG, state: hostState, stage: { get index() { return stageRuntime.index; }, set index(value) { stageRuntime.restoreIndex(value); }, get platforms() { return stageRuntime.platforms; }, set platforms(value) { stageRuntime.platforms = value; } }, selectStage: (index) => { stageRuntime.load(index); environment.setStage(stageRuntime.current.id, "stage-transition"); }, resetEnvironment: () => { environment.clear("new-run"); }, createEnemy: (id, x, y, run) => worldEntities.createEnemy(id, x, y, run), cinematicActive: () => CINEMA.active, cancelCinema: () => { if (CINEMA.active) CINEMA.cancel("practice-reset"); } }));
+  const frameDriver = new RuntimeFrameDriver(browserWindow); type CombatSnapshot = ReturnType<typeof projectCanonicalGameplayState>; type CombatHost = ReturnType<typeof createLiveCombatComposition<CombatSnapshot>>; type CombatCompositionInput = Parameters<typeof createLiveCombatComposition<CombatSnapshot>>[0];
   const isGameProjectile = (value: unknown): value is GameProjectile => value instanceof dependencies.Projectile;
   const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>
     isGameEnemy(value);   // the descent derives its actor id from presentationId/bossId
@@ -529,8 +529,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     frame: frameContext, coordinator: coordinatorContext,
     authoritative: {
       actionPort: liveInputAdapter.actionPort,
-      snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
-        hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()),
+      snapshot: (tick, input) => { TUT.afterWorldStep(); return projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
+        hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()); },
     },
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
@@ -547,7 +547,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot(), ghostFrames.receipt(snapshot === undefined ? undefined : { id: snapshot.id, exactHash: snapshot.hashes.exact })));
   };
   GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick); environment.setAvailableActorIdsSource(() => new Set([stageRuntime.current.id, "player", "blade", ...hostState.enemies().map((enemy) => combatRuntime.id(enemy, "enemy")), ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile"))]));
-  const stateForgeRuntime = createLiveStateForgeRuntimeBridge({ tutorial: TUT, captureBossIntro: () => hostState.bossIntro(), restoreBossIntro: (intro) => { hostState.setBossIntro(intro); },
+  const stateForgeRuntime = createLiveStateForgeRuntimeBridge({ tutorial: TUT, practiceCinema: cinematicRuntime, practiceWorld: () => ({ run: liveRun(), actors: hostState.enemies(), platforms: stageRuntime.platforms }), captureBossIntro: () => hostState.bossIntro(), restoreBossIntro: (intro) => { hostState.setBossIntro(intro); },
     captureTransient: () => ({ hitStop: impact.hitStop, shake: impact.shake, timeScale: feel.timeScale, slowmo: impact.slowMotion, zoom: feel.zoom, flash: feel.flash, bannerT: feel.bannerSeconds, dashGhostT: openingCarry.dashGhostTime, landingV: openingCarry.landingVelocity, wasDashing: openingCarry.wasDashing, wasSwinging: openingCarry.wasSwinging, wasOnGround: openingCarry.wasOnGround, worldZoom: feel.worldZoom, worldZoomTarget: feel.worldZoomTarget, throwCd: openingCarry.throwCooldown, rankPopT: feel.rankPopupSeconds, rankPopText: feel.rankPopupText }),
     restoreTransient: (snapshot) => { transient.assignImpact({ hitStop: Number(snapshot.hitStop), slowMotion: Number(snapshot.slowmo), shake: Number(snapshot.shake) }); transient.assignOpening({ throwCooldown: Number(snapshot.throwCd), dashGhostTime: Number(snapshot.dashGhostT), landingVelocity: Number(snapshot.landingV), wasDashing: Boolean(snapshot.wasDashing), wasSwinging: Boolean(snapshot.wasSwinging), wasOnGround: Boolean(snapshot.wasOnGround) }); feel.timeScale = Number(snapshot.timeScale); feel.zoom = Number(snapshot.zoom); feel.flash = Number(snapshot.flash); feel.bannerSeconds = Number(snapshot.bannerT); feel.worldZoom = Number(snapshot.worldZoom); feel.worldZoomTarget = Number(snapshot.worldZoomTarget); feel.rankPopupSeconds = Number(snapshot.rankPopT); feel.rankPopupText = String(snapshot.rankPopText); },
     captureLifecycle: RUN_LIFECYCLE.snapshot.bind(RUN_LIFECYCLE), restoreLifecycle: RUN_LIFECYCLE.restore.bind(RUN_LIFECYCLE),

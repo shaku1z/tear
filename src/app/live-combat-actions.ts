@@ -86,6 +86,7 @@ export function createLiveCombatActions<
     get blocking() { return ports.cinema.active && ports.cinema.blocksCombat; },
     get playerMode() { return ports.cinema.playerMode; }, get protection() { return live.openingProtection(); },
     get lowGraphics() { return d.GFX.low; },
+    get practicePreparing() { return ports.tutorial.preparingBoss === true; },
     get transformationBlocked() { return ports.cinema.active && ports.cinema.blocksCombat; },
     overrunMovementMultiplier: () => overrunMovementMultiplier({ overrun: run().mods.overrun ?? 0,
       overrunStacks: run().mods.overrunStacks ?? 0 }, d.CONFIG.overrun),

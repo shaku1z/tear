@@ -971,13 +971,47 @@ repair leaves product eligibility unchanged. This proves loaded-profile entry
 and controls, not production localStorage persistence, a natural full-course
 replay, physical-device use or purchase progression.
 
+### Boss phase Practice Lab implementation (2026-10-19)
+
+The normal Lab now projects the six published bosses (Warden, Colossus, Aldric,
+Rootbound, Echo and Source), each with three authored entry exercises. White Hart
+remains preview content. A positive historical boss defeat grants only its
+opening exercise, labelled **defeated identity**. Later phases require their exact
+acknowledged ordinary-play exposure; missing legacy history stays unknown and a
+pending/failed save remains locked. The same naturally installed boss can record
+separate phases, with no retry loop and no discovery from practice or restoration.
+
+Each selection starts Sword/Normal with no permanent upgrades, currencies,
+course credit or profile writes. Earlier prerequisites prepare through the actual
+owners; selected transitions stay interactive: Aldric's unwitnessed kneel,
+Rootbound's representative fresh graft baseline and real regrowth entry, and
+Source's descent/transfer or downed/freeze. Reset starts a fresh matching attempt.
+A real boss defeat produces a finished attempt, rather than inferring victory
+from absence during setup. Help has no completion effect; no substitute demo is
+advertised. Small landscape uses the existing wheel/touch/right-stick/PageUp/Down
+scroll owner for the boss list while keeping the Lab menu reachable.
+
+Version6 carries explicit practice eligibility and encounter lifecycle. Versions1–5
+retain their meanings and shapes. Restore validates the candidate baseline,
+selected actor/arena and cinematic binding before mutation; destination history
+is not queried. Source stream/platform aliases and Aldric crown context are
+reconstructed from captured ownership, with no transition replay or cinema skip.
+Focused controls cover exact exposure/save failure, real Aldric/Source entry
+continuation at120Hz plus application frames, actual boss defeat/removal and
+finished restoration, and800×360 control geometry. The short existing Lab browser
+fixture declares legacy ColossusP1 and saved WardenP2 history and exercises normal
+buttons/reset/reload with full stats/balances equality; its fresh-build execution
+and visual acceptance remain with the parent after source freeze. These fixtures
+do not establish natural human encounter history or physical-device acceptance.
+Gold traces, personal ghost comparison and mastery medals remain separate work.
+
 The finite tutorial should unlock a separate revisitable Practice Lab:
 
 - replay any completed action block;
 - select baseline weapon;
 - practice optional mastery medals;
 - spawn previously encountered normal enemies;
-- practice previously encountered bosses by phase;
+- practice previously encountered bosses by phase (implemented above; normal-browser acceptance pending);
 - compare personal and gold ghosts;
 - turn coaching overlays on or off;
 - reset instantly without profile or currency effects.
@@ -1050,7 +1084,7 @@ Keep Version 1 available as a fallback until Version 2 meets every gate.
 
 ### T6: Practice Lab and retirement decision
 
-- Add revisitable blocks, enemy catalog, boss practice, and weapon annexes.
+- [x] Implement revisitable blocks, enemy catalog, boss phase entries and current weapon annexes; retain the bounded browser acceptance gate described above.
 - Compare completion, abandonment, help, and first-run survival metrics.
 - Retire Version 1 only when Version 2 is more reliable across input modes and
   accessibility configurations.

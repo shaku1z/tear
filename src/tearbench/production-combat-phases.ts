@@ -265,9 +265,11 @@ export function createProductionCombatPhases(
     get blocking() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
     get playerMode() { return world.context.cinema.playerMode; }, protection: transient.protection,
     get lowGraphics() { return GFX.low; },
+    get practicePreparing() { return replay.tutorial.preparingBoss; },
     get transformationBlocked() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
     overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
     stepCinematic: (dt: number) => {
+      if (replay.tutorial.session().bossPractice) { replay.practiceCinematic.runtime.step(dt); return; }
       stepCinematicPlayer({ dt, mode: world.context.cinema.playerMode, player: player(), blade: blade(),
         platforms: platforms(), gravity: config.world.gravity, maxFall: config.player.maxFall,
         descentLiftVelocity: config.source.descentLiftV, viewportWidth: config.view.w,
@@ -310,7 +312,7 @@ export function createProductionCombatPhases(
         geoWallW: config.exotic.geoWallW, geoWallH: config.exotic.geoWallH, geoWallLife: config.exotic.geoWallLife,
         sludgeColor: config.colors.sludge });
     },
-    syncVoidSupport: refuseSourceVoid, activateThrowSecondary: note("activateThrowSecondary"),
+    syncVoidSupport: () => { if (replay.tutorial.session().bossPractice) { if (!replay.tutorial.session().bossPractice?.defeated) replay.practiceCinematic.sourceRuntime.syncPlayer(); } else refuseSourceVoid(); }, activateThrowSecondary: note("activateThrowSecondary"),
     linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); const active = blade() as { tipX: number; tipY: number }; effects.ring(active.tipX, active.tipY, 8, config.colors.bladeTrail); },
     distance: (ax: number, ay: number, bx: number, by: number) => len(ax - bx, ay - by),
     areaDamage: (x: number, y: number, radius: number, damage: number) => { dealArea(x, y, radius, damage); },
@@ -363,7 +365,7 @@ export function createProductionCombatPhases(
       if (drained.length > 0) outward.push(`bossFx:${String(drained.length)}`);
     },
     consumeThrow: () => input.consumeThrow(() => false),
-    updateWave: (dt: number) => { options.updateWave?.(dt); }, startTransformation: () => false,
+    updateWave: (dt: number) => { options.updateWave?.(dt); }, startTransformation: (owner: never, cue: never) => replay.tutorial.session().bossPractice ? replay.practiceCinematic.runtime.startBossTransformation(owner, cue) : false,
     updateSupports: (dt: number) => {
       if (combat === null) throw new Error("production combat runtime has not been composed");
       combat.updateSupports(dt, config.support, config.colors.anchor);
@@ -374,11 +376,13 @@ export function createProductionCombatPhases(
         defaultDamage: config.warden.zoneTick, defaultTickCooldown: config.warden.zoneTickCd });
     },
     updateBossArenaPlatforms: (dt: number) => { bossArena.updateLive(dt); },
-    updateVoidScroll: () => {
+    updateVoidScroll: (dt: number) => {
+      if (replay.tutorial.session().bossPractice) { if (!replay.tutorial.session().bossPractice?.defeated) replay.practiceCinematic.sourceRuntime.update(dt); return; }
       const run = world.state.run() as { voidScroll?: unknown } | null;
       if (run?.voidScroll !== undefined && run.voidScroll !== null) refuseSourceVoid();
     },
     unlockWitness: note("unlockWitness"), startVoidDescent: (boss: never) => {
+      if (replay.tutorial.session().bossPractice) return replay.practiceCinematic.runtime.startVoidDescent(boss);
       const owner = boss as { bossId?: string; presentationId?: string };
       if (owner.bossId === "source" || owner.presentationId === "source") refuseSourceVoid();
       return false;

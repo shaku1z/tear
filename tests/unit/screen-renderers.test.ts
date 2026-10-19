@@ -1,3 +1,4 @@
+import { practiceBossCatalog } from "../../src/gameplay/training/practice-boss-catalog";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
@@ -90,6 +91,19 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
+  it("keeps boss phase controls and every Lab menu item reachable at 800 by 360 with the existing scroll owner", () => {
+    const controller = new TutorialController(CONFIG); controller.openPractice(800, 1);
+    const found: string[] = [];
+    for (const scroll of [0, 144]) {
+      const controls: ScreenControl[] = [], context = createRenderContext(controls);
+      const renderer = createLegacyScreenRenderers({ ...context, width: 800, height: 360, scroll });
+      renderer.paused({ id: "paused", tutorial: { ...controller.session(), bossSelector: true, bossCatalog: practiceBossCatalog(() => 1) } } as Parameters<typeof renderer.paused>[0]);
+      expect(controls.every((control) => control.y >= 0 && control.y + control.h <= 360 && control.h >= 24)).toBe(true);
+      found.push(...controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-boss").map((control) => control.label));
+    }
+    expect(new Set(found).size).toBe(18);
+  });
+
   it("keeps local Vault controls stable and renders an explicit separate owner recovery catalog", () => {
     const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createControlContext(controls));
     const local = { id: "profile" as const, tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],

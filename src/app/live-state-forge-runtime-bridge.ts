@@ -1,3 +1,5 @@
+import { stableVerificationHash } from "../replay/hash";
+import type { BossPracticeCandidate } from "../gameplay/training/practice-boss-catalog";
 import type { CinematicDirectorBinding, CinematicDirectorPort } from
   "../gameplay/runtime/cinematic-director";
 import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
@@ -17,9 +19,11 @@ interface StagedChapterBinding {
 export interface LiveStateForgeRuntimeBridgeOptions {
   readonly tutorial?: Readonly<{
     captureSession(): unknown;
-    validateSession(value: unknown, candidateWeaponId?: string, candidateEnemies?: readonly GameEnemy[]): void;
+    validateSession(value: unknown, candidateWeaponId?: string, candidateEnemies?: readonly GameEnemy[], candidate?: BossPracticeCandidate): void;
     restoreSession(value: unknown): void;
   }>;
+  readonly practiceWorld?: () => Readonly<{ run: GameRun; actors: readonly GameEnemy[]; platforms: readonly object[] }>;
+  readonly practiceCinema?: Readonly<{ captureBinding(): unknown; stageBinding(value: unknown, owners: readonly object[]): CinematicDirectorBinding | undefined; restoreBinding(value: unknown): void }>;
   readonly captureBossIntro: () => BossIntroState | null;
   readonly restoreBossIntro: (intro: BossIntroState | null) => void;
   readonly captureTransient: () => Readonly<Record<string, unknown>>;
@@ -46,6 +50,7 @@ export interface LiveStateForgeRuntimeBridge {
     candidateRun: GameRun,
     candidateStageIndex: number,
     candidateEnemies?: readonly GameEnemy[],
+    candidatePlatforms?: readonly object[],
   ) => void;
 }
 
@@ -150,20 +155,44 @@ function cinemaProtection(value: unknown): Readonly<{ active: boolean; lastMode:
   return Object.freeze({ active: candidate.active, lastMode: candidate.lastMode });
 }
 
+/** Non-entity nested records are encoded by value. Rebind only after exact structural agreement. */
+function canonicalPracticeBinding(value: unknown, run: GameRun, platforms: readonly object[]): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== "object" || Array.isArray(value)) throw new TypeError("Invalid boss cinematic binding");
+  const binding = value as Record<string, unknown>;
+  if (binding.kind === "source-descent") {
+    const transition: unknown = Reflect.get(run, "voidDescent");
+    if (!transition || stableVerificationHash(binding.transition) !== stableVerificationHash(transition)) throw new RangeError("Source descent binding differs from canonical run transition");
+    return { ...binding, transition };
+  }
+  if (binding.kind !== "boss-ritual" || !binding.context || typeof binding.context !== "object" || !binding.ritual || typeof binding.ritual !== "object") throw new TypeError("Invalid ritual binding");
+  const context = binding.context as Record<string, unknown>, ritual = binding.ritual as { platforms?: readonly object[] };
+  const idOf = (platform: object): string => {
+    const id: unknown = Reflect.get(platform, "platformId"); if (typeof id !== "string" || id.length === 0) throw new RangeError("Ritual platform lacks canonical identity"); return id;
+  };
+  const byId = new Map<string, object>();
+  for (const platform of platforms) { const id = idOf(platform); if (byId.has(id)) throw new RangeError("Ambiguous ritual platform identity"); byId.set(id, platform); }
+  const resolve = (platform: object): object => {
+    const match = byId.get(idOf(platform));
+    if (!match || stableVerificationHash(match) !== stableVerificationHash(platform)) throw new RangeError("Ritual platform is not the canonical candidate record"); return match;
+  };
+  if (!Array.isArray(ritual.platforms) || ritual.platforms.length !== platforms.length || new Set(ritual.platforms.map(idOf)).size !== platforms.length) throw new RangeError("Ritual arena binding mismatch");
+  return { ...binding, context: { ...context, crownPlatform: context.crownPlatform === null ? null : resolve(context.crownPlatform as object) },
+    ritual: { ...ritual, platforms: ritual.platforms.map(resolve) } };
+}
+
 /** Owns the portable State Forge runtime payload and all pre-commit binding validation. */
 export function createLiveStateForgeRuntimeBridge(
   options: LiveStateForgeRuntimeBridgeOptions,
 ): LiveStateForgeRuntimeBridge {
-  const capture = (): Readonly<Record<string, unknown>> => Object.freeze({
-    ...options.captureTransient(),
-    bossIntroVersion: 1,
-    bossIntro: options.captureBossIntro(),
-    lifecycle: options.captureLifecycle(),
-    chapterBinding: options.captureChapterBinding(),
-    stageBanner: options.captureStageBanner(),
-    cinemaProtection: options.captureCinemaProtection(),
-    ...(options.tutorial?.captureSession() === undefined ? {} : { tutorialSession: options.tutorial.captureSession() }),
-  });
+  const capture = (): Readonly<Record<string, unknown>> => {
+    const tutorialSession = options.tutorial?.captureSession();
+    return Object.freeze({ ...options.captureTransient(), bossIntroVersion: 1, bossIntro: options.captureBossIntro(), lifecycle: options.captureLifecycle(),
+      chapterBinding: options.captureChapterBinding(), stageBanner: options.captureStageBanner(), cinemaProtection: options.captureCinemaProtection(),
+      ...(tutorialSession === undefined ? {} : { tutorialSession }),
+      ...(typeof tutorialSession === "object" && tutorialSession !== null && "version" in tutorialSession && tutorialSession.version === 6
+        ? { bossCinematicBinding: options.practiceCinema?.captureBinding() ?? null } : {}) });
+  };
   const restore = (snapshot: Readonly<Record<string, unknown>>): void => {
     const intro = bossIntro(snapshot.bossIntro, snapshot.bossIntroVersion);
     const transient = normalizeTransient(snapshot);
@@ -174,7 +203,10 @@ export function createLiveStateForgeRuntimeBridge(
     options.restoreLifecycle(snapshot.lifecycle as RunLifecycleSnapshot);
     options.restoreCinemaProtection(protection);
     options.restoreBossIntro(intro);
-    const binding = options.installChapterBinding(snapshot.chapterBinding);
+    const world = options.practiceWorld?.();
+    const practiceBinding = world ? canonicalPracticeBinding(snapshot.bossCinematicBinding, world.run, world.platforms) : snapshot.bossCinematicBinding;
+    const binding = options.installChapterBinding(snapshot.chapterBinding) ?? options.practiceCinema?.stageBinding(practiceBinding, world?.actors ?? []);
+    options.practiceCinema?.restoreBinding(practiceBinding);
     options.cinema.restoreState(snapshot.cinema, binding);
     options.tutorial?.restoreSession(snapshot.tutorialSession);
   };
@@ -183,12 +215,13 @@ export function createLiveStateForgeRuntimeBridge(
     candidateRun: GameRun,
     candidateStageIndex: number,
     candidateEnemies: readonly GameEnemy[] = [],
+    candidatePlatforms: readonly object[] = [],
   ): void => {
     resolveStateForgeBossIntro(snapshot, candidateEnemies);
     validateTransient(normalizeTransient(snapshot));
     stageBanner(snapshot.stageBanner);
     cinemaProtection(snapshot.cinemaProtection);
-    options.tutorial?.validateSession(snapshot.tutorialSession, candidateRun.weaponId, candidateEnemies);
+    options.tutorial?.validateSession(snapshot.tutorialSession, candidateRun.weaponId, candidateEnemies, { run: candidateRun, actors: candidateEnemies, cinematicActive: activeCinema(snapshot.cinema).active === true });
     const tutorial = snapshot.tutorialSession;
     if (typeof tutorial === "object" && tutorial !== null && "active" in tutorial && tutorial.active === true && candidateRun.mode !== "tutorial") {
       throw new RangeError("active tutorial session requires a tutorial run");
@@ -215,10 +248,19 @@ export function createLiveStateForgeRuntimeBridge(
         throw new RangeError("active campaign chapter binding is inconsistent with candidate world state");
       }
     }
-    if (cinema.active === true && chapter === null && lifecycle.sessionId !== options.captureLifecycle().sessionId) {
+    const practice = typeof tutorial === "object" && tutorial !== null && "version" in tutorial && tutorial.version === 6;
+    const canonicalBinding = practice ? canonicalPracticeBinding(snapshot.bossCinematicBinding, candidateRun, candidatePlatforms) : undefined;
+    if (practice && cinema.active === true) {
+      const selected = tutorial as unknown as { bossPractice: { bossId: string } };
+      const descriptor = canonicalBinding as { owner?: GameEnemy } | null;
+      if (descriptor?.owner?.bossId !== selected.bossPractice.bossId || descriptor.owner.isBoss !== true) throw new RangeError("Boss practice cinematic candidate owner mismatch");
+    }
+    const practiceBinding = practice ? options.practiceCinema?.stageBinding(canonicalBinding, candidateEnemies) : undefined;
+    if (practice && cinema.active === true && !practiceBinding) throw new RangeError("Active boss practice cinema is missing its candidate binding");
+    if (cinema.active === true && chapter === null && !practiceBinding && lifecycle.sessionId !== options.captureLifecycle().sessionId) {
       throw new RangeError("active cinematic belongs to a different run session");
     }
-    options.cinema.validateState(snapshot.cinema, chapter?.binding);
+    options.cinema.validateState(snapshot.cinema, chapter?.binding ?? practiceBinding);
   };
   return Object.freeze({ capture, restore, validate });
 }

@@ -75,6 +75,11 @@ function lerp(a: number, b: number, amount: number): number { return a + (b - a)
 export class BossRitualController {
   begin(owner: BossRitualActor, cue: BossRitualCue, options: BossRitualOptions): Readonly<{ context: BossRitualContext; sequence: BossRitualSequence }> {
     owner.cinematicRequest = null;
+    return this.prepare(owner, cue, options);
+  }
+
+  /** Pure binding construction; hydration must never replay launch mutations. */
+  prepare(owner: BossRitualActor, cue: BossRitualCue, options: BossRitualOptions): Readonly<{ context: BossRitualContext; sequence: BossRitualSequence }> {
     const timing = timings[cue.pose ?? "transform"] ?? { anticipation: 0.3, reveal: 0.62, resolve: 0.52 };
     const context: BossRitualContext = { owner, cue, crownStart: null, crownTarget: null, crownPlatform: null,
       crownSound: false, crownFractureColor: options.bomberColor };

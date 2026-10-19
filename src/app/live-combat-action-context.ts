@@ -47,7 +47,7 @@ export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
     readonly current: { readonly accent?: string; readonly name?: string; readonly chapter?: { readonly bossOutro?: unknown } } };
   readonly story: { protection(): Opening["protection"]; applyProtection(value: Opening["protection"]): void };
   readonly cinema: { readonly active: boolean; readonly blocksCombat: boolean; readonly playerMode: string };
-  readonly tutorial: { mark(name: string): void; update(seconds: number): void; weaponEffect?(weaponId: string, effect: string): void };
+  readonly tutorial: { readonly preparingBoss?: boolean; mark(name: string): void; update(seconds: number): void; weaponEffect?(weaponId: string, effect: string): void };
   readonly achievement: {
     dashDodge: CombatEntityRuntimeHooks["dashDodge"]; bossHit(enemy: object, kind: string): void;
     bossKill(enemy: object): void; onKill(enemy: object): void; swung(): void; thrown(): void;

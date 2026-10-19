@@ -18,6 +18,7 @@ export function buildTutorialCardSnapshot(index: number, count: number, lesson: 
   const progress = lesson.prog !== undefined && lesson.final !== true ? lesson.prog() : undefined;
   return Object.freeze({ lessonIndex: index, lessonCount: count, title: lesson.t, description: lesson.d,
     ...(lesson.t.endsWith(" ANNEX") ? { annex: true } : {}),
+    ...(lesson.t.includes(" · PHASE ") ? { bossPractice: true } : {}),
     ...(lesson.t.endsWith(" ENCOUNTER") ? { enemyPractice: true } : {}),
     keys: lesson.keys ?? [], final: lesson.final === true, completedBeat: doneTime,
     arenaLabel: lesson.arenaLabel ?? "TRAINING", teachingFocus: lesson.teachingFocus ?? "movement",

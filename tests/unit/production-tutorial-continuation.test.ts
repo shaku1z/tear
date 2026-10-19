@@ -1,3 +1,5 @@
+import { isPracticeBossActor } from "../../src/app/live-boss-phase-practice";
+import type { PracticeBossState } from "../../src/gameplay/training/practice-boss-catalog";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CONFIG } from "../../src/config/game-config";
@@ -31,6 +33,102 @@ function capture(source: Source) { return captureProductionReplayCheckpoint(sour
 function restore(source: Source) { return composition().create(JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1); }
 
 describe("production tutorial reconstructed-byte continuation", () => {
+  function bossAttempt(bossId: "source" | "aldric" | "colossus" | "rootbound", phase: 1 | 2 | 3) {
+    const source = composition().create(undefined);
+    const retained: PracticeBossState = { bossId, phase, knowledge: "encountered-phase", defeated: false,
+      runtime: { version: 1, bossId, phase, seed: "declared-eligibility-fixture", generation: 1,
+        encounterId: `boss-practice:1:${bossId}:${String(phase)}:declared-eligibility-fixture`, lifecycle: "preparing", setupStage: "opening", enteredPhase: 1, entryStage: "opening", pendingPhase: null } };
+    source.replay.tutorial.openPractice(1);
+    expect(source.replay.tutorial.selectBoss(`${bossId}:${String(phase)}`, retained)).toBe(true);
+    return source;
+  }
+  function bossStep(source: Source, tick: number) {
+    // Explicit caller confirmation at the application clock, then one real 120 Hz combat tick.
+    source.advanceApplicationFrame(1 / 120, { key: tick % 120 === 0 });
+    return source.simulation.advanceOne([]);
+  }
+  it("enters Rootbound regrowth through the production Verdant owner and continues its captured grafts", () => {
+    const source = bossAttempt("rootbound", 3);
+    for (let tick = 1; tick <= 5000 && source.replay.tutorial.session().bossPractice?.runtime.lifecycle !== "active"; tick++) bossStep(source, tick);
+    expect(source.replay.tutorial.session().bossPractice?.runtime.lifecycle).toBe("active");
+    const restored = restore(source);
+    for (let tick = 1; tick <= 120; tick++) expect(bossStep(restored, tick).state).toEqual(bossStep(source, tick).state);
+    expect(restored.replay.tutorialOutward.some((value) => value.startsWith("complete-course:") || value === "achievement-check")).toBe(false);
+  });
+  it.each(["source", "aldric"] as const)("continues %s authored entry/cinematic against decoded owners without replaying launch", (bossId) => {
+    const source = bossAttempt(bossId, bossId === "source" ? 2 : 3);
+    for (let tick = 1; tick <= 10000; tick++) {
+      bossStep(source, tick);
+      const cinema = source.replay.world.context.cinema;
+      if (cinema.active && cinema.beatId === "reveal" && cinema.progress > .15 && (bossId === "source" || cinema.id === "aldric-crownfall")) break;
+      if (tick === 10000) throw new Error(`Actual ${bossId} entry did not reach its reveal`);
+    }
+    const saved = capture(source), restored = composition().create(JSON.parse(JSON.stringify(saved.snapshot)) as TearSnapshotV1);
+    expect(restored.replay.tutorial.captureSession()).toEqual(source.replay.tutorial.captureSession());
+    expect(restored.replay.world.state.enemies()[0]).not.toBe(source.replay.world.state.enemies()[0]);
+    for (let tick = 1; tick <= 900; tick++) expect(bossStep(restored, tick).state).toEqual(bossStep(source, tick).state);
+    expect(restored.replay.tutorial.session().bossPractice?.runtime.lifecycle).toBe("active");
+    expect(restored.replay.tutorialOutward.some((value) => value.startsWith("complete-course:") || value === "achievement-check")).toBe(false);
+    const before = restored.replay.tutorial.captureSession(), run = restored.replay.world.state.run();
+    if (!run) throw new Error("Boss world missing");
+    expect(() => { restored.replay.tutorial.validateSession(before, "hammer", restored.replay.world.state.enemies(), { run: { ...run, weaponId: "hammer" }, actors: restored.replay.world.state.enemies(), cinematicActive: false }); }).toThrow(/binding mismatch/);
+    expect(restored.replay.tutorial.captureSession()).toEqual(before);
+    if (bossId === "aldric") {
+      restored.replay.world.context.cinema.start({ id: "unrelated-future-scene", beats: [{ id: "wait", duration: 1, completion: "timed" }] });
+      expect(restored.replay.practiceCinematic.runtime.captureBinding()).toBeNull();
+      restored.replay.world.context.cinema.cancel("test-cleanup");
+    }
+    if (bossId === "source") {
+      const activeRestored = restore(source);
+      for (let tick = 1; tick <= 120; tick++) expect(bossStep(activeRestored, tick).state).toEqual(bossStep(source, tick).state);
+      const boss = source.replay.world.state.enemies().find((actor) => actor.bossId === "source"), player = source.replay.world.state.player();
+      const blade = source.replay.world.state.blade() as unknown as InstanceType<ReturnType<typeof createBlade>>;
+      if (!boss || !player || !isPracticeBossActor(boss)) throw new Error("Source owner missing");
+      expect(boss.requestPracticePhase(3)).toBe(true);
+      for (let tick = 1; tick <= 3000; tick++) { bossStep(source, tick); if (boss.practicePhaseEntry().phase === 3 && boss.practicePhaseEntry().stage === "combat" && !source.replay.world.context.cinema.active) break; }
+      for (let hit = 0; hit < 1800 && !boss.dying && !boss.dead; hit++) {
+        bossStep(source, hit + 1); if (Reflect.get(boss, "depthPlane") === "rear") continue;
+        Object.assign(boss, { hitCd: 0, x: player.x + 80, y: player.y - 10 });
+        Object.assign(blade, { state: "held", angle: 0, x: boss.x - 70, y: boss.y, tipX: boss.x + 70, tipY: boss.y, tipVX: 0, tipVY: -2200, tipSpeed: 2200, vx: 0, vy: -2200 });
+        blade.swingId++; runLiveCollisionPhase(source.combat.collision, 1 / 120);
+      }
+      for (let tick = 1; tick <= 360 && !boss.dead; tick++) bossStep(source, tick);
+      expect(boss.dead, JSON.stringify({ hp: boss.hp, entry: boss.practicePhaseEntry() })).toBe(true); bossStep(source, 1);
+      expect(source.replay.tutorial.session().bossPractice?.defeated).toBe(true);
+      const finished = restore(source);
+      expect(finished.replay.tutorial.captureSession()).toEqual(source.replay.tutorial.captureSession());
+      expect(finished.replay.stage.platforms).toEqual(source.replay.stage.platforms);
+    }
+  });
+  it("captures actual boss defeat/removal as a finished portable attempt and restarts without course effects", () => {
+    const source = bossAttempt("colossus", 3);
+    for (let tick = 1; tick <= 1000 && source.replay.world.context.cinema.id !== "colossus-breach"; tick++) bossStep(source, tick);
+    const altered = JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1;
+    const runtime = (altered.state["tear.world.v1"] as Record<string, unknown>).runtime as { bossCinematicBinding: { context: { cue: { after?: string } } } };
+    delete runtime.bossCinematicBinding.context.cue.after;
+    expect(() => composition().create(altered)).toThrow(/authored boss transition/);
+    for (let tick = 1; tick <= 10000 && source.replay.tutorial.session().bossPractice?.runtime.lifecycle !== "active"; tick++) bossStep(source, tick);
+    expect(source.replay.tutorial.session().bossPractice?.runtime.lifecycle).toBe("active");
+    const boss = source.replay.world.state.enemies().find((actor) => actor.isBoss), player = source.replay.world.state.player();
+    const blade = source.replay.world.state.blade() as unknown as InstanceType<ReturnType<typeof createBlade>>;
+    if (!boss || !player) throw new Error("Real boss missing");
+    for (let hit = 0; hit < 150 && !boss.dead; hit++) {
+      Object.assign(boss, { hitCd: 0, x: player.x + 80, y: player.y - 10 });
+      Object.assign(blade, { state: "held", angle: 0, x: boss.x - 70, y: boss.y, tipX: boss.x + 70, tipY: boss.y, tipVX: 0, tipVY: -2200, tipSpeed: 2200, vx: 0, vy: -2200 });
+      blade.swingId++; runLiveCollisionPhase(source.combat.collision, 1 / 120);
+    }
+    for (let tick = 1; tick <= 360 && !boss.dead; tick++) bossStep(source, tick);
+    expect({ hp: boss.hp, dead: boss.dead, dying: boss.dying }).toMatchObject({ dead: true }); bossStep(source, 1);
+    expect(source.replay.tutorial.session()).toMatchObject({ phase: "free-practice", bossPractice: { defeated: true } });
+    const finished = restore(source);
+    expect(finished.replay.tutorial.captureSession()).toEqual(source.replay.tutorial.captureSession());
+    expect(source.replay.tutorial.restart()).toBe(true);
+    expect(finished.replay.tutorial.restart()).toBe(true);
+    expect(finished.replay.tutorial.session().bossPractice?.runtime.generation).toBe(source.replay.tutorial.session().bossPractice?.runtime.generation);
+    expect(finished.replay.tutorial.session().bossPractice).toMatchObject({ bossId: "colossus", phase: 3, defeated: false });
+    expect(finished.replay.tutorialOutward.some((value) => value.startsWith("complete-course:") || value === "achievement-check")).toBe(false);
+  });
+
   it("continues a real Mender attempt from portable provenance, defeats it through collision and returns without course credit", () => {
     const controller = new TutorialController(CONFIG);
     expect(controller.openPractice(CONFIG.view.w, 1)).toBe(true);
