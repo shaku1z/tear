@@ -627,7 +627,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     worldServices: { dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
   }, { simulationTick: () => simulation.tick, browserWindow, gfx: () => settings.gfx, debugAvailable: PANTHEON_DEBUG }); const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition;
-  if (__TEAR_TEST_BUILD__ && TEST_MODE) void import("../tearbench/browser/live-runtime-bridge").then(({ installGhostV3BrowserInspector, installGhostVaultConditionalCommitInspector, installLiveTearRuntimeBridge }) => {
+  if (__TEAR_TEST_BUILD__ && (TEST_MODE || new URLSearchParams(browserWindow.location.search).get("watchagent") === "1")) void import("../tearbench/browser/live-runtime-bridge").then(({ installGhostV3BrowserInspector, installGhostVaultConditionalCommitInspector, installLiveTearRuntimeBridge }) => {
     installGhostV3BrowserInspector(browserWindow, {
       manifest: () => ghostV3?.lastManifest ?? null,
       manifests: () => listBrowserGhostCapsuleManifests(browserIndexedDb),

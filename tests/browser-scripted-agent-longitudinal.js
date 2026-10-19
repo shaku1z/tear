@@ -10,9 +10,10 @@ const maxSpend = Number(process.env.C24_LONGITUDINAL_MAX_SPEND || 1500);
 const r18 = process.env.TEAR_R18_CONTROLLED_COHORT === "1";
 
 withJourney({ name: r18 ? "R18 controlled Normal depth cohort" : "C24 longitudinal earned-profile journey", port: 8155,
-  ...(r18 ? { deferBoot: true, query: { test: "0", watchagent: "1" } } : {}) }, async ({ page, errors, boot, buildInfo }) => {
+  ...(r18 ? { deferBoot: true, ordinaryWatch: true, query: { test: "0", watchagent: "1" } } : {}) }, async ({ page, errors, boot, buildInfo }) => {
   if (r18) {
-    const directory = "C:/tmp/tear-r18-controlled-cohort-20261019";
+    const directory = process.env.TEAR_R18_ARTIFACT_DIR || "C:/tmp/tear-r18-controlled-cohort-20261019";
+    assert.ok(path.isAbsolute(directory), "R18 evidence destination must be absolute");
     fs.mkdirSync(directory); // Exclusive: never replace a previous cohort's evidence.
     const started = Date.now(), deadline = started + 20 * 60_000;
     const report = { format: "tear-r18-controlled-depth-cohort", schemaVersion: 1, buildInfo,

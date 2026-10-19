@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Shared browser harness runs directly under Node CommonJS. */
 const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -88,9 +89,16 @@ async function withJourney(options, run) {
     async function boot(query = initialQuery) {
       await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, { waitUntil: "domcontentloaded", timeout: 30000 });
       try {
-        await page.waitForFunction((debugApi) => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_RUNTIME_ENVIRONMENT__
-          && (!debugApi || window.__PANTHEON_TEST), options.debugApi !== false, { timeout: 15000 });
-        await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
+        if (options.ordinaryWatch) {
+          await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__ && window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST
+            && [...document.querySelectorAll("canvas")].some((canvas) => canvas.width > 0 && canvas.height > 0
+              && canvas.getBoundingClientRect().width > 0 && canvas.getContext("2d")?.getImageData(0, 0, 1, 1).data[3] > 0), undefined, { timeout: 15000 });
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        } else {
+          await page.waitForFunction((debugApi) => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_RUNTIME_ENVIRONMENT__
+            && (!debugApi || window.__PANTHEON_TEST), options.debugApi !== false, { timeout: 15000 });
+          await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
+        }
       } catch (error) {
         throw new Error(`Tear browser boot unavailable: ${errors.join("\n") || "no page error was emitted"}`, { cause: error });
       }
