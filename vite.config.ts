@@ -141,6 +141,8 @@ export default defineConfig(({ mode }) => {
       __TEAR_BUILD_MODE__: JSON.stringify(mode),
       __TEAR_BUILD_TARGET__: JSON.stringify(target),
     },
+    // Build outputs must not reload the preview or hold Windows staging folders open.
+    server: { watch: { ignored: ["**/artifacts/**", "**/dist/**"] } },
     build: {
       outDir: testBuild ? `dist/test-${target}` : `dist/${target}`,
       emptyOutDir: true,
