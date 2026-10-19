@@ -182,11 +182,12 @@ async function main() {
   assert.ok(aimBeforeMove, "recorded live play exposes the physical blade aim");
   const reachBeforeMove = Math.hypot(aimBeforeMove.x, aimBeforeMove.y);
   await moveCapturedPointer(controller, { x: 800, y: 450 }, { x: 800, y: 475 });
-  await controller.waitForFunction((before) => {
+  const aimAfterShortMoveHandle = await controller.waitForFunction((before) => {
     const after = window.__PANTHEON_TEST.state().bladeAim;
-    return after && Math.hypot(after.x, after.y) < before - 8;
+    return after && Math.hypot(after.x, after.y) < before - 8 ? { x: after.x, y: after.y } : false;
   }, reachBeforeMove, { timeout: 10_000 });
-  const aimAfterShortMove = await controller.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
+  const aimAfterShortMove = await aimAfterShortMoveHandle.jsonValue();
+  await aimAfterShortMoveHandle.dispose();
   assert.ok(aimAfterShortMove && Math.hypot(aimAfterShortMove.x, aimAfterShortMove.y) < reachBeforeMove - 8,
     "a short captured movement preserves the source reticle distance instead of expanding to full reach");
   await moveCapturedPointer(controller, { x: 800, y: 475 }, { x: 1_050, y: 475 });
