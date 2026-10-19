@@ -1,4 +1,5 @@
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
+import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 
 /** A sealed live authoritative-state hash recorded beside a V3 keyframe. */
 export interface GhostAuthoritativeReceiptV1 {
@@ -15,10 +16,21 @@ export function createGhostAuthoritativeReceipt(
   stateHash: string,
   input: AuthoritativeInputSnapshot,
 ): GhostAuthoritativeReceiptV1 {
+  const receipt = validateReceipt(tick, stateHash, input);
+  return Object.freeze({ ...receipt, input: Object.freeze({ ...receipt.input,
+    aimMagnitude: receipt.input.aimMagnitude ?? AIM_MAGNITUDE_SCALE }) });
+}
+
+/** Validation copies original input fields; it never enriches historical evidence. */
+function validateReceipt(tick: number, stateHash: string, value: unknown): GhostAuthoritativeReceiptV1 {
   if (!Number.isSafeInteger(tick) || tick < 0) throw new RangeError("authoritative receipt tick must be non-negative");
   if (!/^[a-f0-9]{16}$/iu.test(stateHash)) {
     throw new TypeError("authoritative receipt requires a canonical 64-bit verification hash");
   }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("authoritative receipt requires its same-tick held-input snapshot");
+  }
+  const input = value as AuthoritativeInputSnapshot;
   if (input.tick !== tick || !Number.isFinite(input.moveX) || !Number.isFinite(input.moveY)
     || !Number.isFinite(input.aimTurn) || typeof input.primaryHeld !== "boolean"
     || input.aimMagnitude !== undefined && (!Number.isSafeInteger(input.aimMagnitude)
@@ -36,7 +48,6 @@ export function readGhostAuthoritativeReceipt(value: unknown): GhostAuthoritativ
   if (candidate.format !== "tearghost-authoritative-receipt" || candidate.schemaVersion !== 1
     || candidate.kind !== "authoritative-hash" || typeof candidate.tick !== "number"
     || typeof candidate.stateHash !== "string" || typeof candidate.input !== "object" || candidate.input === null) return undefined;
-  try { return createGhostAuthoritativeReceipt(candidate.tick, candidate.stateHash, candidate.input as AuthoritativeInputSnapshot); }
+  try { return validateReceipt(candidate.tick, candidate.stateHash, candidate.input); }
   catch { return undefined; }
 }
-import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";

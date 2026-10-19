@@ -880,10 +880,13 @@ frozen evidence record.
    external frame inputs are not in terminal command artifacts. This is not durable
    checkpoint transport, full-trace attestation or natural full-Campaign/finale proof.
    Schema-two C30 checkpoints require explicit held aim magnitude and reject older
-   or missing frontiers before replacement. Canonical input/receipts add an optional
-   nonfull magnitude while preserving full-scale legacy bytes/hashes; absent legacy
-   magnitude assumes full scale and does not recover historical partial aim.
-   Historical capsule exact-verification classification remains open separately.
+   or missing frontiers before replacement. Canonical input adds an optional nonfull
+   magnitude while preserving full-scale hashes. Fresh Ghost receipts explicitly
+   record even full magnitude, and the reader preserves historical absence.
+   Exact receipt-assisted verification refuses missing legacy magnitude when unknown
+   or established nonfull; linked original action history can establish full input
+   from that point only. A seeded declaration alone does not witness input reset.
+   It does not rewrite archives or recover earlier unknown aim.
    Every recorded-canonical keyframe now additionally passes an all-or-nothing
    isolated versioned-codec restore and declared exact/semantic-hash preflight
    before C29 can treat its state track as seekable. The preflight has no

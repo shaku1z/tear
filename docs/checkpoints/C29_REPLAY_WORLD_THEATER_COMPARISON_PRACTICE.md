@@ -179,6 +179,18 @@ same-anchor comparison does not prove later continuation or endurance.
 Public verified sessions capture the recorded tick range and reject out-of-range
 or noninteger seeks before constructing a replay world.
 
+Fresh authoritative receipts explicitly record held aim magnitude, including
+full scale, while canonical full-scale state hashes keep their existing shape.
+The v1 reader preserves historical absence. Same-tick receipt-assisted restore
+does not prove a missing magnitude: the verifier folds admitted original actions
+through the shared input owner with source-bound bootstrap linkage. An original
+aim assignment can establish full magnitude from that point; the current v1
+seeded-state declaration does not witness an actual initial input reset.
+Unknown or established nonfull legacy omission is unavailable.
+Later commands never establish earlier input. Only validated explicit full
+magnitude is removed for canonical input comparison; other fields remain.
+Original receipt/archive bytes and hashes are not rewritten or promoted.
+
 The separate opening-continuation verifier derives an explicitly disclosed
 in-memory envelope containing only the original opening anchor, executes exactly
 180 existing-runtime steps, and compares source state and held input at 60/120/180.

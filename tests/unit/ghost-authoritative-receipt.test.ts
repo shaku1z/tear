@@ -5,6 +5,21 @@ import { createGhostAuthoritativeReceipt, readGhostAuthoritativeReceipt } from "
 const hash = "a".repeat(16);
 
 describe("Ghost authoritative receipts", () => {
+  it("writes explicit full magnitude for fresh receipts while preserving legacy absence on read", () => {
+    const input = { tick: 0, moveX: 0, moveY: 0, aimTurn: 0, primaryHeld: false };
+    const canonicalBytes = JSON.stringify(input);
+    const receipt = createGhostAuthoritativeReceipt(0, hash, input);
+    expect(receipt.input.aimMagnitude).toBe(1000);
+    expect(JSON.stringify(input)).toBe(canonicalBytes);
+    expect(receipt.input).not.toBe(input); expect(Object.isFrozen(receipt.input)).toBe(true);
+    const legacy = { ...receipt, input };
+    const bytes = JSON.stringify(legacy);
+    const read = readGhostAuthoritativeReceipt(JSON.parse(bytes));
+    expect(read).toEqual(legacy); if (read === undefined) throw new Error("legacy receipt missing");
+    expect(Object.hasOwn(read.input, "aimMagnitude")).toBe(false);
+    expect(JSON.stringify(legacy)).toBe(bytes);
+    expect(readGhostAuthoritativeReceipt({ ...legacy, input: [] })).toBeUndefined();
+  });
   it.each([0, 250, 1000])("retains a strict optional held aim magnitude %s without rewriting legacy receipts", (aimMagnitude) => {
     const input = { tick: 1, moveX: 0, moveY: 0, aimTurn: 125000, primaryHeld: true, aimMagnitude };
     const receipt = createGhostAuthoritativeReceipt(1, hash, input);

@@ -209,11 +209,15 @@ operational boundary it proves.
   are not recorded in terminal command artifacts. Opt-in native source tracks
   label restored output as a suffix; surgical State Forge hydration does not
   deliver the natural source's pending facts as original evidence.
-  Canonical input snapshots/receipts retain their old full-scale shape and
-  carry an optional magnitude only for nonfull input. Older missing-magnitude
-  snapshots assume full scale for compatibility, without claiming recovery of
-  historical partial aim. Historical capsule exact-verification classification
-  remains a separate open obligation; this slice does not repair that policy.
+  Canonical input snapshots retain their old full-scale shape and carry an
+  optional magnitude only for nonfull input. Fresh Ghost receipts explicitly
+  record magnitude, including full scale; their reader preserves legacy absence.
+  Older missing-magnitude snapshots assume full scale for compatibility, without claiming recovery of
+  historical partial aim. Ghost exact verification refuses unknown or established
+  nonfull legacy omission before receipt-assisted restore; admitted original aim
+  history may establish full magnitude only from that point onward. This does
+  not treat a seeded declaration as reset evidence, rewrite historical receipts
+  or alter C30 canonical full-scale hashes.
 - [x] Explicit mid-run process cancellation. A worker reports `started` only
   after its first actual source fixed tick. `cancel(requestId)` waits for that
   signal, terminates only that active child, and returns one serializable

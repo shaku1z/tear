@@ -28,6 +28,56 @@ import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
 
+/** Disclosed legacy-format model, authored before sealing. No historical archive is rewritten. */
+async function sealedLegacyAim(magnitudes: readonly number[], options: Readonly<{ legacyOpening?: boolean; freshLater?: boolean;
+  invalidHistory?: boolean; extraInputField?: boolean; seeded?: boolean; initialMagnitude?: number }> = {}) {
+  const receiptTick = 1;
+  const fixture = actualOpeningHost(options.seeded === true ? "playing" : "menu"); fixture.controller.start("endless", "normal");
+  let capture = fixture.captured(); const boundary = fixture.boundary();
+  if (capture === undefined || boundary === undefined) throw new Error("opening missing");
+  if (options.initialMagnitude !== undefined) {
+    // Constructed source-owned input edge before archival sealing, not a historical producer claim.
+    fixture.source.simulation.input.restore({ ...fixture.source.simulation.input.snapshot(), aimMagnitude: options.initialMagnitude });
+    capture = captureProductionReplayCheckpoint(fixture.source.replay, fixture.source.combat, fixture.source.waveReward, capture.snapshot.id);
+  }
+  const id = "legacy-aim-model", run = fixture.source.replay.world.state.run();
+  if (run === null) throw new Error("source run missing");
+  const context = createGhostReplayRunContext({ runId: boundary.runId, seed: boundary.seed, mode: run.mode, difficulty: run.diff, weaponId: run.weaponId,
+    ticksPerSecond: 120, build: capture.snapshot.provenance.build, rng: fixture.source.replay.random.streams.snapshot(),
+    ...(options.seeded === true ? { initialState: "seeded-run-start" as const } : {}),
+    ...(options.seeded === true ? {} : { opening: { version: 1, phase: boundary.phase, previousScreen: "menu", destination: "playing", runId: boundary.runId } }) });
+  const provenance = { replayContext: context }, vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+  const recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-10-19T00:00:00Z", chunkEntries: 16, maxPendingWrites: 16, vault, provenance });
+  await recorder.start(); await recorder.append({ kind: "events", tick: 0, value: createLiveGhostBootstrapEvent(id, provenance) });
+  for (const event of fixture.events) await recorder.append({ kind: "events", tick: 0, value: event });
+  const anchor = { ...capture.snapshot, provenance: { ...capture.snapshot.provenance, sourceId: ghostLiveBootstrapEventId(id) } };
+  await recorder.append({ kind: "keyframes", tick: 0, value: anchor });
+  // Tick-zero receipt is fresh and explicit, so only the requested later legacy omission is under test.
+  const legacyOpeningInput = { ...capture.input }; delete legacyOpeningInput.aimMagnitude;
+  const openingReceipt = createGhostAuthoritativeReceipt(0, capture.semanticHash, capture.input);
+  await recorder.append({ kind: "results", tick: 0, value: options.legacyOpening === true ? { ...openingReceipt, input: legacyOpeningInput,
+    stateHash: stableVerificationHash({ ...fixture.source.semanticProjection(), input: legacyOpeningInput }) } : openingReceipt });
+  const actions: ReplayActionEnvelope[] = magnitudes.map((magnitude, index) => ({ kind: "command", id: index + 1, tick: 1,
+    command: { type: "aim", turn: 125000, magnitude } }));
+  let state = fixture.source.semanticProjection();
+  for (let tick = 1; tick <= receiptTick; tick++) {
+    const commands = tick === 1 ? actions : [];
+    for (const command of commands) await recorder.append({ kind: "commands", tick, value: options.invalidHistory === true ? { ...command, id: 0 } : command });
+    state = fixture.source.simulation.advanceOne(commands).state;
+  }
+  const checkpoint = captureProductionReplayCheckpoint(fixture.source.replay, fixture.source.combat, fixture.source.waveReward, "legacy-aim-same-tick");
+  await recorder.append({ kind: "keyframes", tick: receiptTick, value: { ...checkpoint.snapshot,
+    provenance: { ...checkpoint.snapshot.provenance, sourceId: ghostLiveBootstrapEventId(id) } } });
+  const input = { ...fixture.source.simulation.input.snapshot() }; delete input.aimMagnitude;
+  // The old projection omitted magnitude even when actual held aim was partial/zero.
+  const receipt = options.freshLater === true ? createGhostAuthoritativeReceipt(receiptTick, stableVerificationHash(state), fixture.source.simulation.input.snapshot())
+    : { ...createGhostAuthoritativeReceipt(receiptTick, stableVerificationHash({ ...state, input }), input), input };
+  const archived = options.extraInputField === true ? { ...receipt, input: { ...receipt.input, unsupportedField: true } } : receipt;
+  await recorder.append({ kind: "results", tick: receiptTick, value: archived });
+  await recorder.finalize("2026-10-19T00:00:01Z");
+  return new GhostCapsuleReader(vault).read(id);
+}
+
 function rehashOpening(snapshot: TearSnapshotV1): TearSnapshotV1 {
   const registry = createDefaultStateCodecRegistry(), world: TearCodecWorld = { components: new Map(Object.entries(snapshot.state) as never), references: new Map(), entityIds: new Set() };
   return { ...snapshot, hashes: { ...snapshot.hashes, exact: stableVerificationHash(snapshot.state),
@@ -130,7 +180,8 @@ async function sealedTerminatedOpening(options: Readonly<{ legacy?: boolean; lat
 
 async function sealedActualOpening(previousScreen = "menu", legacy = false, continuation = false,
   mutate?: (snapshot: TearSnapshotV1) => TearSnapshotV1,
-  tracks?: Readonly<{ bootstrapSequence?: number; sealedPredecessor?: string; entries?: readonly Readonly<{ kind: "commands" | "events"; tick: number; value: unknown }>[] }>) {
+  tracks?: Readonly<{ bootstrapSequence?: number; sealedPredecessor?: string; legacyMagnitude?: boolean; finalAimMagnitude?: number;
+    entries?: readonly Readonly<{ kind: "commands" | "events"; tick: number; value: unknown }>[] }>) {
   const fixture = actualOpeningHost(previousScreen, false, continuation); fixture.controller.start("endless", "normal");
   const capture = fixture.captured(), boundary = fixture.boundary(); if (capture === undefined || boundary === undefined) throw new Error("actual capture boundary missing");
   const run = fixture.source.replay.world.state.run(); if (run === null) throw new Error("run missing");
@@ -151,7 +202,8 @@ async function sealedActualOpening(previousScreen = "menu", legacy = false, cont
   for (const event of fixture.events) if (!legacy || event.type !== "system.checkpoint") await recorder.append({ kind: "events", tick: 0, value: event });
   for (const entry of tracks?.entries ?? []) await recorder.append(entry);
   await recorder.append({ kind: "keyframes", tick: 0, value: snapshot });
-  await recorder.append({ kind: "results", tick: 0, value: createGhostAuthoritativeReceipt(0, capture.semanticHash, capture.input) });
+  const openingReceipt = createGhostAuthoritativeReceipt(0, capture.semanticHash, capture.input);
+  await recorder.append({ kind: "results", tick: 0, value: tracks?.legacyMagnitude === true ? { ...openingReceipt, input: capture.input } : openingReceipt });
   const sourceReceipts = new Map<number, { stateHash: string; input: typeof capture.input }>();
   if (continuation) {
     for (let tick = 1; tick <= 180; tick++) {
@@ -161,7 +213,8 @@ async function sealedActualOpening(previousScreen = "menu", legacy = false, cont
         : tick === 4 ? [{ kind: "command", id: 4, tick, command: { type: "weapon", intent: "primary", phase: "pressed" } }]
         : tick === 15 ? [{ kind: "command" as const, id: 5, tick, command: { type: "jump" as const, phase: "pressed" as const } }]
         : tick === 75 ? [{ kind: "command" as const, id: 6, tick, command: { type: "dash" as const, x: 1000, y: 0 } }]
-        : tick === 121 ? [{ kind: "command", id: 7, tick, command: { type: "weapon", intent: "primary", phase: "released" } }] : [];
+        : tick === 121 ? [{ kind: "command", id: 7, tick, command: { type: "weapon", intent: "primary", phase: "released" } }]
+        : tick === 180 && tracks?.finalAimMagnitude !== undefined ? [{ kind: "command", id: 8, tick, command: { type: "aim", turn: 125000, magnitude: tracks.finalAimMagnitude } }] : [];
       for (const action of actions) await recorder.append({ kind: "commands", tick, value: action });
       const result = fixture.source.simulation.advanceOne(actions);
       if ([1, 60, 120, 180].includes(tick)) {
@@ -177,6 +230,68 @@ async function sealedActualOpening(previousScreen = "menu", legacy = false, cont
 }
 
 describe("LiveRunStartController", () => {
+  it.each([{ magnitudes: [250] }, { magnitudes: [0] }, { magnitudes: [1000, 250] }])("refuses same-tick exact authority for sealed legacy missing magnitude after original aim $magnitudes", async ({ magnitudes }) => {
+    const capsule = await sealedLegacyAim(magnitudes), before = JSON.stringify(capsule);
+    expect(mapGhostCapsuleToReplayEnvelope(capsule).issues).toEqual([]);
+    const report = verifyGhostCapsuleProductionReplay(capsule);
+    expect(report.status, JSON.stringify(report)).toBe("unavailable");
+    expect(JSON.stringify(capsule)).toBe(before);
+  });
+  it.each([{ magnitudes: [1000] }, { magnitudes: [250, 1000] }])("retains proven-full legacy same-tick authority after original aim $magnitudes", async ({ magnitudes }) => {
+    const capsule = await sealedLegacyAim(magnitudes);
+    expect(verifyGhostCapsuleProductionReplay(capsule).status).toBe("verified");
+  });
+  it.each([{ magnitudes: [] }, { magnitudes: [1000] }])("does not prove unknown legacy tick-zero aim retroactively from $magnitudes", async ({ magnitudes }) => {
+    const capsule = await sealedLegacyAim(magnitudes, { legacyOpening: true }), before = JSON.stringify(capsule);
+    const create = vi.spyOn(productionReplayComposition, "createProductionGhostReplayComposition"); create.mockClear();
+    try {
+      const report = verifyGhostCapsuleProductionReplay(capsule);
+      expect(report.status).toBe("unavailable"); expect(report.comparisons[0]).toMatchObject({ tick: 0, equal: false });
+      expect(report.comparisons[0]?.reason).toContain("unknown");
+      expect(create).not.toHaveBeenCalled(); expect(JSON.stringify(capsule)).toBe(before);
+    } finally { create.mockRestore(); }
+  });
+  it.each([250, 1000])("does not treat a linked seeded declaration as initial magnitude authority (%s)", async (initialMagnitude) => {
+    const capsule = await sealedLegacyAim([], { seeded: true, legacyOpening: true, initialMagnitude }), before = JSON.stringify(capsule);
+    const context = readGhostReplayRunContext(capsule.manifest.provenance); if (context === undefined) throw new Error("source context missing");
+    expect(assessGhostReplayBootstrap(capsule, context)).toBeUndefined();
+    expect(mapGhostCapsuleToReplayEnvelope(capsule).issues).toEqual([]);
+    const create = vi.spyOn(productionReplayComposition, "createProductionGhostReplayComposition"); create.mockClear();
+    try {
+      const report = verifyGhostCapsuleProductionReplay(capsule);
+      expect(report.status, JSON.stringify(report)).toBe("unavailable"); expect(report.comparisons[0]?.reason).toContain("unknown");
+      expect(create).not.toHaveBeenCalled(); expect(JSON.stringify(capsule)).toBe(before);
+    } finally { create.mockRestore(); }
+  });
+  it.each([0, 250, 1000])("verifies freshly explicit aim magnitude %s against unchanged canonical state", async (magnitude) => {
+    const capsule = await sealedLegacyAim([magnitude], { freshLater: true });
+    expect(verifyGhostCapsuleProductionReplay(capsule).status).toBe("verified");
+  });
+  it("refuses inadmissible original aim history before creating a replay destination", async () => {
+    const capsule = await sealedLegacyAim([1000], { invalidHistory: true }), before = JSON.stringify(capsule);
+    const create = vi.spyOn(productionReplayComposition, "createProductionGhostReplayComposition"); create.mockClear();
+    try {
+      expect(verifyGhostCapsuleProductionReplay(capsule).status).toBe("mismatch");
+      expect(create).not.toHaveBeenCalled(); expect(JSON.stringify(capsule)).toBe(before);
+    } finally { create.mockRestore(); }
+  });
+  it("does not erase unrelated original receipt input fields to make a comparison equal", async () => {
+    const capsule = await sealedLegacyAim([1000], { freshLater: true, extraInputField: true });
+    const report = verifyGhostCapsuleProductionReplay(capsule);
+    expect(report.status).toBe("mismatch"); expect(report.comparisons.at(-1)?.reason).toContain("original receipt fields");
+  });
+  it("executes original partial aim in the opening-only continuation without later receipt injection", async () => {
+    const { capsule } = await sealedActualOpening("setup", false, true, undefined, { finalAimMagnitude: 250 });
+    const before = JSON.stringify(capsule), report = verifyGhostCapsuleOpeningContinuation(capsule);
+    expect(report.status, JSON.stringify(report)).toBe("verified"); expect(report.continuation.steps).toBe(180);
+    expect(report.comparisons.map((entry) => entry.inputEqual)).toEqual([true, true, true]); expect(JSON.stringify(capsule)).toBe(before);
+  });
+  it("refuses opening-only execution from an unknown legacy held-magnitude anchor", async () => {
+    const { capsule } = await sealedActualOpening("setup", false, true, undefined, { legacyMagnitude: true });
+    const report = verifyGhostCapsuleOpeningContinuation(capsule);
+    expect(report.status).toBe("unavailable"); expect(report.continuation.steps).toBe(0);
+    expect(report.comparisons[0]?.reason).toContain("unknown");
+  });
   it.each([false, true].flatMap((legacy) => (["quit", "victory", "defeat"] as const).map((outcome) => ({ legacy, outcome }))))("verifies only the original Endless tick-zero anchor after completed start then $outcome (legacy descriptor=$legacy)", async ({ legacy, outcome }) => {
     // Constructed lifecycle outcomes exercise each native terminal type; this
     // does not attest a naturally completed/defeated gameplay journey.
@@ -380,9 +495,11 @@ describe("LiveRunStartController", () => {
     const anchor = mapped.ghost.snapshots.find((snapshot) => snapshot.tick === 0); if (anchor === undefined) throw new Error("anchor missing");
     // Deliberately derived in-memory test envelope: source archive and later anchors stay immutable.
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
-    const initialInput = fixture.captured()?.input; if (initialInput === undefined) throw new Error("input missing");
+    const capture = fixture.captured(); if (capture === undefined) throw new Error("capture missing");
+    const initialInput = capture.input;
     expect(initialInput).toMatchObject({ tick: 0, moveX: 0.75, primaryHeld: true });
-    const composition = createProductionGhostReplayComposition({ seed: "unused", openingPermit: permit, inputSnapshots: new Map([[0, initialInput]]) });
+    const openingReceipt = createGhostAuthoritativeReceipt(0, capture.semanticHash, initialInput);
+    const composition = createProductionGhostReplayComposition({ seed: "unused", openingPermit: permit, inputSnapshots: new Map([[0, openingReceipt.input]]) });
     const sampled = new Map<number, { stateHash: string; input: typeof initialInput }>(), created: ReturnType<typeof composition.create>[] = [], advances: number[] = [];
     const recording = { create(snapshot: Parameters<typeof composition.create>[0]) {
       const session = composition.create(snapshot), advance = session.simulation.advanceOne.bind(session.simulation), restore = vi.spyOn(session.simulation.input, "restore");
