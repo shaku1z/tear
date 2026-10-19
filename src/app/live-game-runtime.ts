@@ -276,7 +276,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     environment, prepareWorld: () => { if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
     resetTransientWorld: () => { impact.hitStop = 0; impact.shake = 0; },
     finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
-      openingCarry.dashGhostTime = 0; openingCarry.throwCooldown = 0; },
+      transient.resetOpening(); },
     resetAuthoritativeClocks: () => { simulationRuntime.reset(0); }, resetCombatIdentity: () => { combatRuntime.resetIdentity(); },
     createRunSeed: () => session.takeRunSeed() ?? dependencies.createRunSeed(),
     authoritativeResult: () => authoritativeStep.lastResult,

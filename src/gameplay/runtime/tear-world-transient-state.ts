@@ -55,6 +55,8 @@ export interface TearWorldTransientState {
   assignProtection(value: Readonly<TearWorldOpeningProtection>): void;
   assignOpening(value: Readonly<TearWorldOpeningState>): void;
   assignImpact(value: Readonly<TearWorldImpactState>): void;
+  /** Clears outgoing actor locomotion history when a fresh run replaces them. */
+  resetOpening(): void;
   /** Restores the neutral frame-feel values a fresh run starts from. */
   resetFeel(): void;
 }
@@ -71,15 +73,17 @@ const NEUTRAL_FEEL: Readonly<TearWorldFeelState> = Object.freeze({
   worldZoom: 1, worldZoomTarget: 1, rankPopupSeconds: 0, rankPopupText: "",
 });
 
+const NEUTRAL_OPENING: Readonly<TearWorldOpeningState> = Object.freeze({
+  throwCooldown: 0, wasDashing: false, wasSwinging: false, wasOnGround: true,
+  dashGhostTime: 0, landingVelocity: 0,
+});
+
 /** Creates one isolated set of transient records; nothing is shared between worlds. */
 export function createTearWorldTransientState(
   options: TearWorldTransientStateOptions = {},
 ): TearWorldTransientState {
   const protection: TearWorldOpeningProtection = { active: false, lastMode: null, ...options.protection };
-  const opening: TearWorldOpeningState = {
-    throwCooldown: 0, wasDashing: false, wasSwinging: false, wasOnGround: true,
-    dashGhostTime: 0, landingVelocity: 0, ...options.opening,
-  };
+  const opening: TearWorldOpeningState = { ...NEUTRAL_OPENING, ...options.opening };
   const impact: TearWorldImpactState = { hitStop: 0, slowMotion: 0, shake: 0, ...options.impact };
   const feel: TearWorldFeelState = { ...NEUTRAL_FEEL, ...options.feel };
   return Object.freeze({
@@ -93,6 +97,7 @@ export function createTearWorldTransientState(
     assignImpact(value) {
       impact.hitStop = value.hitStop; impact.slowMotion = value.slowMotion; impact.shake = value.shake;
     },
+    resetOpening() { Object.assign(opening, NEUTRAL_OPENING); },
     // Run reset deliberately restores dilation and framing without clearing the
     // rank popup, matching the live host's prior reset boundary exactly.
     resetFeel() {

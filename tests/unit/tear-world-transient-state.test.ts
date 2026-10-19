@@ -3,6 +3,21 @@ import { describe, expect, it } from "vitest";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 
 describe("Tear world transient state", () => {
+  it("resets every opening carry field in place without changing other owners", () => {
+    const transient = createTearWorldTransientState();
+    const opening = transient.opening;
+    const fresh = createTearWorldTransientState();
+    transient.assignOpening({ throwCooldown: 0.4, wasDashing: true, wasSwinging: true, wasOnGround: false,
+      dashGhostTime: 0.2, landingVelocity: 900 });
+    transient.assignImpact({ hitStop: 0.05, slowMotion: 0.75, shake: 8 });
+    transient.assignProtection({ active: true, lastMode: "sever" });
+    transient.feel.rankPopupSeconds = 0.9; transient.feel.rankPopupText = "SSS";
+    const unrelated = structuredClone({ protection: transient.protection, impact: transient.impact, feel: transient.feel });
+    transient.resetOpening();
+    expect(transient.opening).toBe(opening);
+    expect(transient.opening).toEqual(fresh.opening);
+    expect({ protection: transient.protection, impact: transient.impact, feel: transient.feel }).toEqual(unrelated);
+  });
   it("starts every world from the same neutral opening and impact defaults", () => {
     const transient = createTearWorldTransientState();
 
