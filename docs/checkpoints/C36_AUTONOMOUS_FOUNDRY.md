@@ -975,5 +975,10 @@ One focused engineering source control covers actual native promotion/observatio
 stale intent, final-CAS drift, restoration, exact retry and malformed terminal refusal.
 The existing normal browser journey now continues after its retained stopped
 observation/reload through normal RESTORE BASELINE and verifies the original frozen
-artifact plus native terminal after a second reload. Fresh-build browser proof remains
-pending; no learned quality, human evidence or unattended rollback claim is made.
+artifact plus native terminal after a second reload. At `f3de399a`, the fresh
+standalone build and that normal browser journey passed. The action restored
+`foundry-champion` (`4c1b3c6a1e6750af`) in activation revision 3, retained restoration
+receipt `781e70e64e37e9b9`, and kept the exact terminal, active pointer and budget
+unchanged after reload. Monitor `7cdb1e26659f225e` retained its original stopped
+observation and threshold-breach classification. The declared engineering source
+fixture supplies no learned quality, human evidence or unattended rollback claim.
