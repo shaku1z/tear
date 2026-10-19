@@ -2,7 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { withJourney } = require("./browser-journey-harness");
+const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 
 // Produced by the focused native observation unit case using actual source
 // training/evaluation owners. This is engineering synthetic data, not learned
@@ -76,7 +76,7 @@ withJourney({ name: "normal native Run Monitor observation", port: 8180, deferBo
   // Click its authored logical center and require the actual screen transition.
   await page.mouse.click(548, 757); await waitScreen("foundry");
   await clickText(page, "PROMOTE");
-  await page.waitForFunction(async () => {
+  await waitForBrowserValue(page, async () => {
     const database = await new Promise((resolve) => { const request = indexedDB.open("tear-ghost-v3", 2); request.onsuccess = () => resolve(request.result); });
     try { return await new Promise((resolve) => { const tx = database.transaction("analysis", "readonly"), request = tx.objectStore("analysis").getAllKeys(); request.onsuccess = () => resolve(request.result.some((key) => key.startsWith("training-operations-v3-promotion-cycle:v1:"))); }); }
     finally { database.close(); }
