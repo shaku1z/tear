@@ -35,7 +35,7 @@ paused worlds do not advance it. Delay, terminal cancellation and final actor
 `introT` clearing retain their live owner. Application-frame calls do not consume
 fixed ticks or simulation seconds, and physics ticks do not invent intro frames.
 The focused continuation case reaches real resumed Rootbound AI. This is a
-caller-clock dependency now also has a fresh recording/playback path. Its explicit
+caller-clock dependency with a fresh recording/playback path. Its explicit
 version-one `cinema-and-boss-intro` declaration admits typed events on the existing
 global causal sequence, actual bounded deltas/confirm inputs and installation
 delay witnesses. Receipt extensions bind current frame cursors and unique exact
@@ -49,8 +49,16 @@ Generated headless hosts separately declare one `1/120`-second intro frame per
 generated step; checkpoint/terminal and candidate context/attestation retain that
 policy. It is never substituted for absent browser timing. Historical absence
 remains unknown, and old bytes are not enriched. Focused development checks cover
-these boundaries; the parent owns the fresh normal record/Vault download/isolated
-continuation browser proof. This feature does not close broader R07 replay work.
+these boundaries. On clean `bc9c4d70`, the fresh normal Boss Test journey recorded
+Warden installation from the tick-zero pre-intro anchor, completed the intro at
+tick 78, reached active AI and ended in natural defeat at tick 96. The actual
+Vault download retained its original bytes. Opening-only detached replay matched
+the original receipt at tick 60 and terminal authoritative state at tick 95,
+without later keyframes or injected state/input; normal seek used the original
+tick-60 receipt. The first browser attempt exposed a Boss Test opening-admission
+gap; its unchanged archive supplied the fail-first case for the narrow repair.
+This engineering Boss Test evidence does not close broader R07 replay work or
+certify natural full-Campaign, device, output-fidelity or release behavior.
 
 Compatibility disposition: historical snapshots that contain null callback array entries have already discarded executable binding identity. They are rejected as unsupported before destination mutation. No same-schema cross-version compatibility or automatic migration is claimed for these snapshots; callback-order-safe historical migration remains outstanding.
 
