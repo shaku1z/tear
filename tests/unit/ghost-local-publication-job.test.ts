@@ -24,6 +24,13 @@ describe("C38 local immutable publication jobs", () => {
     expect(stored).not.toContain("commands"); expect(stored).not.toContain("bearer"); expect(stored).not.toContain("uid");
   });
 
+  it("finds the durable queued job only for its authorized account and leaves consent unchanged", async () => {
+    const f = await fixture(), first = await f.jobs.enqueue(await input(f));
+    expect(await f.jobs.findForCapsule(f.capsuleId, f.publicationConsent.actorHash)).toEqual(first);
+    expect(await f.jobs.findForCapsule(f.capsuleId, "another-account-binding")).toBeUndefined();
+    expect((await f.ledger.read(f.actor)).revision).toBe(1);
+  });
+
   it("rejects incomplete, quarantined, malformed, and non-granted custody sources", async () => {
     const f = await fixture(); const manifest = await f.vault.getManifest(f.capsuleId); if (manifest === undefined) throw new Error("fixture missing");
     const valid = await input(f);

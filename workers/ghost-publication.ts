@@ -322,7 +322,7 @@ function immutableManifestMatches(row: UploadRow, body: BeginBody): boolean {
 }
 
 function resumedBegin(row: UploadRow): Response {
-  return json({ capsuleId: row.capsule_id, uploadId: row.upload_id, status: "uploading", resumed: true });
+  return json({ capsuleId: row.capsule_id, uploadId: row.upload_id, status: row.status, resumed: true });
 }
 
 async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
@@ -330,7 +330,7 @@ async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifi
   const body = parseBegin(await boundedJson(request));
   const existing = await loadUpload(env, body.capsuleId);
   if (existing !== null) {
-    if (existing.owner_id === actor && existing.status === "uploading" && immutableManifestMatches(existing, body)) {
+    if (existing.owner_id === actor && ["uploading", "verifying", "finalized", "quarantined"].includes(existing.status) && immutableManifestMatches(existing, body)) {
       return resumedBegin(existing);
     }
     throw new Error("upload manifest conflict");

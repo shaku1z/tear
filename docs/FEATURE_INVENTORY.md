@@ -1347,6 +1347,18 @@ target, anonymous account, unhealthy/revoked custody, or a missing job leaves
 both actions unavailable. This remains local browser wiring, not deployed or
 cross-device publication evidence.
 
+Reopening review restores the same queued job only for its current account and
+exact consent custody, preserving the consent revision and job identity.
+Superseded account, capsule, or foreground actions cannot send a pending bearer
+or repaint a newer screen; conditional transport commits preserve a newer
+cancellation across controller instances, including delayed success responses
+and response bodies. Durable job cancellation stops subsequent upload requests
+while remote abort is pending; exact consent withdrawal during token acquisition
+cancels the job before any request. Immutable remote uploads awaiting verification resume through
+verification without creating another multipart upload. The four focused
+publication controller/job/transport/Worker suites preserve these contracts.
+Configured-account browser resume and real cloud publication remain unproven.
+
 ### C36 approval-bound post-promotion monitor
 
 An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.

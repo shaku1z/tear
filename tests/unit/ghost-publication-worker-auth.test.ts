@@ -92,9 +92,47 @@ function environment(input: Readonly<{
           writeHttpMetadata(headers: Headers) { headers.set("content-type", "application/vnd.tear.ghost+binary"); },
         });
       },
-    } as unknown as R2Bucket,
+  } as unknown as R2Bucket,
     GHOST_VERIFIER: {} as Fetcher,
   };
+}
+
+function verifierResumeEnvironment(): { readonly env: Env; readonly row: () => Record<string, unknown>; readonly creates: () => number; readonly verifierCalls: () => number } {
+  let row = uploadRow(), creates = 0, verifierCalls = 0;
+  const parts = [{ part_number: 1, etag: "one" }];
+  const statement = (sql: string) => ({
+    bind: (...values: unknown[]) => {
+      const execute = () => {
+        if (sql.includes("UPDATE ghost_uploads SET status = 'verifying'")) row = { ...row, status: "verifying", visibility: "private" };
+        if (sql.includes("UPDATE ghost_uploads SET status = ?, visibility")) row = { ...row, status: values[0], visibility: values[1] === "finalized" ? row.visibility : "private", verdict_json: values[2], active_verdict_id: values[3] };
+      };
+      return {
+        first: () => Promise.resolve(row),
+        all: () => Promise.resolve({ results: sql.includes("ghost_upload_parts") ? parts : [] }),
+        run: () => { execute(); return Promise.resolve({ success: true }); },
+        sql, values, execute,
+      };
+    },
+  });
+  const env = {
+    FIREBASE_PROJECT_ID: "tear-682cf",
+    GHOST_METADATA: {
+      prepare: statement,
+      batch: (entries: readonly { execute?: () => void }[]) => { entries.forEach((entry) => entry.execute?.()); return Promise.resolve([]); },
+    } as unknown as D1Database,
+    GHOST_CAPSULES: {
+      createMultipartUpload: () => { creates += 1; return { uploadId: "new-upload", abort: () => Promise.resolve(), complete: () => Promise.resolve({ size: 8, httpEtag: "etag" }) }; },
+      resumeMultipartUpload: () => ({ complete: () => Promise.resolve({ size: 8, httpEtag: "etag" }), abort: () => Promise.resolve() }),
+    } as unknown as R2Bucket,
+    GHOST_VERIFIER: {
+      fetch: () => {
+        verifierCalls += 1;
+        if (verifierCalls === 1) return Promise.resolve(new Response("down", { status: 503 }));
+        return Promise.resolve(Response.json({ status: "verified", capsuleId: "capsule-1", buildId: "tear-1", contentHash: "content-hash", resultHash: "result-hash", signature: "signature", verifierId: "tear-verifier", verificationVersion: "v1", moderation: "cleared", issuedAt: "2026-01-01T00:00:00.000Z" }));
+      },
+    } as unknown as Fetcher,
+  } as Env;
+  return { env, row: () => row, creates: () => creates, verifierCalls: () => verifierCalls };
 }
 
 function discoveryEnvironment(input: Readonly<{
@@ -453,6 +491,16 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     expect(batches).toHaveLength(1);
   });
 
+  it("resumes an exact immutable verifying manifest through owner retry without creating a second multipart upload", async () => {
+    const f = verifierResumeEnvironment(), handler = createGhostPublicationHandler({ verifier: verifier() });
+    const pending = await handler.fetch(request("/v1/uploads/capsule-1/complete", { method: "POST", body: JSON.stringify({ parts: [{ partNumber: 1, etag: "one" }] }) }), f.env, context());
+    expect(pending.status).toBe(202); expect(f.row().status).toBe("verifying");
+    const resumed = await handler.fetch(request("/v1/uploads", { method: "POST", body: manifest() }), f.env, context());
+    expect(resumed.status).toBe(200); expect(await resumed.json()).toEqual({ capsuleId: "capsule-1", uploadId: "upload-1", status: "verifying", resumed: true }); expect(f.creates()).toBe(0);
+    const finalized = await handler.fetch(request("/v1/uploads/capsule-1/verify", { method: "POST" }), f.env, context());
+    expect(finalized.status).toBe(200); expect(await finalized.json()).toMatchObject({ capsuleId: "capsule-1", status: "finalized", verification: "verified" }); expect(f.row().status).toBe("finalized"); expect(f.verifierCalls()).toBe(2);
+  });
+
   it("accepts one bounded authenticated report only for a non-owner verified cleared pseudonymous public capsule", async () => {
     const handler = createGhostPublicationHandler({ verifier: verifier(), allowedOrigins: ["https://game.tear.test"] });
     let batches = 0;
@@ -491,8 +539,13 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
   it("rejects begin collisions when immutable manifest data differs or the upload is terminal", async () => {
     const handler = createGhostPublicationHandler({ verifier: verifier() });
     const changed = await handler.fetch(request("/v1/uploads", { method: "POST", body: manifest().replace("content-hash", "other-hash") }), environment({ row: uploadRow() }), context());
+    expect(changed.status).toBe(409);
+    for (const status of ["verifying", "finalized", "quarantined"] as const) {
+      const mismatch = await handler.fetch(request("/v1/uploads", { method: "POST", body: manifest().replace("content-hash", "other-hash") }), environment({ row: uploadRow({ status }) }), context());
+      expect(mismatch.status).toBe(409);
+    }
     const terminal = await handler.fetch(request("/v1/uploads", { method: "POST", body: manifest() }), environment({ row: uploadRow({ status: "finalized" }) }), context());
-    expect(changed.status).toBe(409); expect(terminal.status).toBe(409);
+    expect(terminal.status).toBe(200); expect(await terminal.json()).toMatchObject({ status: "finalized", resumed: true });
   });
 
   it("refuses completion unless submitted parts exactly equal the durable ledger", async () => {

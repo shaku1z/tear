@@ -178,11 +178,20 @@ export class GhostLocalPublicationJobs {
   }
 
   async read(id: string): Promise<GhostLocalPublicationJobV1 | undefined> {
+    return this.#read(id, true);
+  }
+
+  /** Revalidates live manifest/custody/consent; transport hashes its captured export separately. */
+  async readAuthority(id: string): Promise<GhostLocalPublicationJobV1 | undefined> {
+    return this.#read(id, false);
+  }
+
+  async #read(id: string, verifyExport: boolean): Promise<GhostLocalPublicationJobV1 | undefined> {
     const raw = await this.#backend.get("uploadJobs", jobKey(id)); if (raw === undefined) return undefined;
     const job = parseJob(raw); if (job.status === "cancelled") return job;
     const [manifestRaw, custodyRaw] = await Promise.all([this.#backend.get("manifests", job.source.capsuleId), this.#backend.get("analysis", custodyKey(job.source.capsuleId))]);
     let current: boolean;
-    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); if (custody === undefined) throw new TypeError("publication custody is unavailable"); const consent = await this.#publicationConsent.acceptForJob(custody.publicationConsent); current = manifest?.status === "complete" && custody.custodyHash === job.custodyHash && custody.sourceConsent.capsuleId === manifest.id && custody.sourceConsent.rootIntegrity === manifest.rootIntegrity && custody.sourceConsent.actorHash === consent.actorHash && custody.sourceConsent.revision === consent.revision && custody.sourceConsent.decidedAt === consent.decidedAt && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash; } catch { current = false; }
+    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); if (custody === undefined) throw new TypeError("publication custody is unavailable"); const consent = await this.#publicationConsent.acceptForJob(custody.publicationConsent); current = manifest?.status === "complete" && custody.custodyHash === job.custodyHash && custody.sourceConsent.capsuleId === manifest.id && custody.sourceConsent.rootIntegrity === manifest.rootIntegrity && custody.sourceConsent.actorHash === consent.actorHash && custody.sourceConsent.revision === consent.revision && custody.sourceConsent.decidedAt === consent.decidedAt && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && (!verifyExport || hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash); } catch { current = false; }
     if (current) return job;
     const { jobHash: ignoredJobHash, ...prior } = job; void ignoredJobHash;
     const cancelled = freezeJob({ ...prior, status: "cancelled", cancellationReason: "source-or-custody-changed" });
@@ -195,6 +204,34 @@ export class GhostLocalPublicationJobs {
     const raw = await this.#backend.get("analysis", custodyKey(capsuleId));
     if (raw === undefined) return undefined;
     return parseCustody(raw);
+  }
+
+  /** Status-only optimistic guard; source and consent authority still require read(). */
+  async queuedGuard(id: string): Promise<Readonly<{ store: "uploadJobs"; key: string; expected: string }> | undefined> {
+    const key = jobKey(id), raw = await this.#backend.get("uploadJobs", key);
+    if (raw === undefined || parseJob(raw).status !== "queued") return undefined;
+    return Object.freeze({ store: "uploadJobs", key, expected: raw });
+  }
+
+  /** Rehydrates only a queued job owned by the supplied account authority. */
+  async findForCapsule(capsuleId: string, actorHash: string): Promise<GhostLocalPublicationJobV1 | undefined> {
+    if (!nonEmpty(capsuleId) || !nonEmpty(actorHash)) throw new TypeError("publication lookup requires a capsule and actor binding");
+    const keys = await this.#backend.keys("uploadJobs");
+    let found: GhostLocalPublicationJobV1 | undefined;
+    for (const storedKey of keys) {
+      if (!storedKey.startsWith(JOB_PREFIX)) continue;
+      const raw = await this.#backend.get("uploadJobs", storedKey);
+      if (raw === undefined) continue;
+      const candidate = parseJob(raw);
+      if (candidate.source.capsuleId !== capsuleId) continue;
+      const current = await this.read(candidate.id);
+      if (current?.status !== "queued") continue;
+      const custody = await this.readCustody(capsuleId);
+      if (custody === undefined) throw new TypeError("publication custody is unavailable");
+      if (custody.publicationConsent.actorHash !== actorHash || custody.sourceConsent.actorHash !== actorHash) continue;
+      if (found === undefined || Date.parse(current.createdAt) > Date.parse(found.createdAt)) found = current;
+    }
+    return found;
   }
 
   async cancel(id: string): Promise<GhostLocalPublicationJobV1> {

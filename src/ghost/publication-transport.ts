@@ -14,44 +14,121 @@ export interface GhostPublicationTransportStateV1 {
   readonly terminalMetadata?: Readonly<{ status: string; verification?: string; etag?: string }>;
   readonly stateHash: string;
 }
-export interface GhostPublicationTransportOptions { readonly endpoint: string; readonly fetch: typeof fetch; readonly bearer: GhostPublicationBearerPort; readonly jobs: GhostLocalPublicationJobs; readonly vault: GhostLocalVault; }
+export interface GhostPublicationTransportOptions { readonly endpoint: string; readonly fetch: typeof fetch; readonly bearer: GhostPublicationBearerPort; readonly jobs: GhostLocalPublicationJobs; readonly vault: GhostLocalVault; readonly isActionCurrent?: () => boolean; }
 function key(id: string): string { return `${STATE_PREFIX}${id}`; }
 function freeze(draft: Omit<GhostPublicationTransportStateV1, "stateHash">): GhostPublicationTransportStateV1 { const { stateHash: ignoredStateHash, ...plain } = draft as Omit<GhostPublicationTransportStateV1, "stateHash"> & Partial<Pick<GhostPublicationTransportStateV1, "stateHash">>; void ignoredStateHash; const copy = Object.freeze({ ...plain, etags: Object.freeze(plain.etags.map((x) => Object.freeze({ ...x }))), ...(plain.terminalMetadata === undefined ? {} : { terminalMetadata: Object.freeze({ ...plain.terminalMetadata }) }) }); return Object.freeze({ ...copy, stateHash: stableVerificationHash(copy) }); }
-function parse(raw: string): GhostPublicationTransportStateV1 { const x = JSON.parse(raw) as Record<string, unknown>; const terminal = x.terminal; if (x.format !== "tear-ghost-publication-transport" || x.schemaVersion !== 1 || typeof x.jobId !== "string" || typeof x.jobHash !== "string" || !Number.isSafeInteger(x.attempts) || !Array.isArray(x.etags) || typeof x.stateHash !== "string" || (terminal !== undefined && (typeof terminal !== "string" || !["finalized", "quarantined", "rejected", "unsupported", "cancelled", "failed"].includes(terminal)))) throw new TypeError("invalid publication transport state"); const metadata = typeof x.terminalMetadata === "object" && x.terminalMetadata !== null ? x.terminalMetadata as NonNullable<GhostPublicationTransportStateV1["terminalMetadata"]> : undefined; const draft: Omit<GhostPublicationTransportStateV1, "stateHash"> = { format: "tear-ghost-publication-transport", schemaVersion: 1, jobId: x.jobId, jobHash: x.jobHash, attempts: x.attempts as number, etags: x.etags.map((p) => { const q = p as Record<string, unknown>; if (!Number.isSafeInteger(q.partNumber) || typeof q.etag !== "string") throw new TypeError("invalid publication transport ETag"); return Object.freeze({ partNumber: q.partNumber as number, etag: q.etag }); }), ...(typeof x.retryAt === "string" ? { retryAt: x.retryAt } : {}), ...(typeof terminal === "string" ? { terminal: terminal as NonNullable<GhostPublicationTransportStateV1["terminal"]> } : {}), ...(metadata === undefined ? {} : { terminalMetadata: metadata }) }; const result = freeze(draft); if (result.stateHash !== x.stateHash) throw new TypeError("publication transport state integrity mismatch"); return result; }
+function parse(raw: string): GhostPublicationTransportStateV1 { const x = JSON.parse(raw) as Record<string, unknown>; const terminal = x.terminal; if (x.format !== "tear-ghost-publication-transport" || x.schemaVersion !== 1 || typeof x.jobId !== "string" || typeof x.jobHash !== "string" || !Number.isSafeInteger(x.attempts) || !Array.isArray(x.etags) || typeof x.stateHash !== "string" || (terminal !== undefined && (typeof terminal !== "string" || !["finalized", "quarantined", "rejected", "unsupported", "cancelled", "failed"].includes(terminal)))) throw new TypeError("invalid publication transport state"); const metadataValue = x.terminalMetadata; if (metadataValue !== undefined && (!record(metadataValue) || typeof metadataValue.status !== "string" || (metadataValue.verification !== undefined && typeof metadataValue.verification !== "string") || (metadataValue.etag !== undefined && typeof metadataValue.etag !== "string"))) throw new TypeError("invalid publication transport metadata"); const metadata = metadataValue === undefined ? undefined : metadataValue as NonNullable<GhostPublicationTransportStateV1["terminalMetadata"]>; const draft: Omit<GhostPublicationTransportStateV1, "stateHash"> = { format: "tear-ghost-publication-transport", schemaVersion: 1, jobId: x.jobId, jobHash: x.jobHash, attempts: x.attempts as number, etags: x.etags.map((p) => { const q = p as Record<string, unknown>; if (!Number.isSafeInteger(q.partNumber) || typeof q.etag !== "string") throw new TypeError("invalid publication transport ETag"); return Object.freeze({ partNumber: q.partNumber as number, etag: q.etag }); }), ...(typeof x.retryAt === "string" ? { retryAt: x.retryAt } : {}), ...(typeof terminal === "string" ? { terminal: terminal as NonNullable<GhostPublicationTransportStateV1["terminal"]> } : {}), ...(metadata === undefined ? {} : { terminalMetadata: metadata }) }; const result = freeze(draft); if (result.stateHash !== x.stateHash) throw new TypeError("publication transport state integrity mismatch"); return result; }
 function initial(job: GhostLocalPublicationJobV1): GhostPublicationTransportStateV1 { return freeze({ format: "tear-ghost-publication-transport", schemaVersion: 1, jobId: job.id, jobHash: job.jobHash, attempts: 0, etags: [] }); }
 function retryAt(now: string, attempts: number): string { return new Date(Date.parse(now) + Math.min(60_000, 1_000 * (2 ** Math.min(attempts, 6)))).toISOString(); }
 function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 async function body(response: Response): Promise<Record<string, unknown>> { const x: unknown = await response.json(); if (!record(x)) throw new TypeError("malformed publication Worker response"); return x; }
+type RemoteTerminal = NonNullable<GhostPublicationTransportStateV1["terminal"]>;
+function remoteTerminal(status: unknown): RemoteTerminal | undefined {
+  if (status === "finalized" || status === "quarantined" || status === "rejected" || status === "unsupported") return status;
+  if (status === "deleted") return "cancelled";
+  return undefined;
+}
+function resumableStatus(status: unknown): status is "uploading" | "verifying" | "finalized" | "quarantined" {
+  return status === "uploading" || status === "verifying" || status === "finalized" || status === "quarantined";
+}
+function metadata(remote: Record<string, unknown>): Readonly<{ status: string; verification?: string; etag?: string }> {
+  if (typeof remote.status !== "string") throw new TypeError("malformed publication remote status");
+  return { status: remote.status, ...(typeof remote.verification === "string" ? { verification: remote.verification } : {}), ...(typeof remote.etag === "string" ? { etag: remote.etag } : {}) };
+}
 
 /** Foreground-only bounded upload action. It creates no timer, queue pump, or retained bearer. */
 export class GhostPublicationTransport {
   readonly #o: GhostPublicationTransportOptions;
   constructor(options: GhostPublicationTransportOptions) { this.#o = options; }
   async state(jobId: string): Promise<GhostPublicationTransportStateV1 | undefined> { const raw = await this.#o.vault.backend().get("analysis", key(jobId)); return raw === undefined ? undefined : parse(raw); }
-  async #save(state: GhostPublicationTransportStateV1): Promise<GhostPublicationTransportStateV1> { const raw = await this.#o.vault.backend().get("analysis", key(state.jobId)); await this.#o.vault.backend().commitIfMatches([{ store: "analysis", key: key(state.jobId), ...(raw === undefined ? {} : { expected: raw }) }], [{ store: "analysis", key: key(state.jobId), value: JSON.stringify(state) }]); return state; }
-  async #request(path: string, init: RequestInit): Promise<Response> { const capability = await this.#o.bearer.acquireAuthorization(), headers = new Headers(init.headers); headers.set("authorization", capability.authorization); return await this.#o.fetch(`${this.#o.endpoint.replace(/\/$/u, "")}${path}`, { ...init, headers }); }
+  async #save(state: GhostPublicationTransportStateV1, expectedState: GhostPublicationTransportStateV1 | undefined): Promise<GhostPublicationTransportStateV1> {
+    if (state.terminal !== "cancelled") await this.#o.jobs.readAuthority(state.jobId);
+    const queuedGuard = state.terminal === "cancelled" ? undefined : await this.#o.jobs.queuedGuard(state.jobId);
+    if (state.terminal !== "cancelled" && queuedGuard === undefined) state = freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: "cancelled-by-player" } });
+    const backend = this.#o.vault.backend(), stateKey = key(state.jobId), raw = await backend.get("analysis", stateKey), current = raw === undefined ? undefined : parse(raw);
+    if (this.#o.isActionCurrent?.() === false || current?.terminal !== undefined) return current ?? expectedState ?? state;
+    // A transport may advance only the durable state it observed, including across controllers.
+    if (current?.stateHash !== expectedState?.stateHash) {
+      if (current !== undefined) return current;
+      throw new Error("publication transport state changed");
+    }
+    try { await backend.commitIfMatches([{ store: "analysis", key: stateKey, ...(raw === undefined ? {} : { expected: raw }) }, ...(queuedGuard === undefined ? [] : [queuedGuard])], [{ store: "analysis", key: stateKey, value: JSON.stringify(state) }]); }
+    catch (error) {
+      const latest = await backend.get("analysis", stateKey); if (latest !== undefined && latest !== raw) return parse(latest);
+      if (queuedGuard !== undefined && await this.#o.jobs.queuedGuard(state.jobId) === undefined) return this.#save(freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: "cancelled-by-player" } }), expectedState);
+      throw error;
+    }
+    return state;
+  }
+  async #assertActionCurrent(jobId: string, requireQueued: boolean): Promise<void> {
+    if (this.#o.isActionCurrent?.() === false) throw new Error("publication action superseded");
+    if (requireQueued && (await this.#o.jobs.readAuthority(jobId))?.status !== "queued") throw new Error("publication action superseded");
+    if ((await this.state(jobId))?.terminal !== undefined) throw new Error("publication action superseded");
+    if (this.#o.isActionCurrent?.() === false) throw new Error("publication action superseded");
+  }
+  async #request(jobId: string, path: string, init: RequestInit, requireQueued = true): Promise<Response> {
+    await this.#assertActionCurrent(jobId, requireQueued);
+    if (this.#o.isActionCurrent?.() === false) throw new Error("publication action superseded");
+    const capability = await this.#o.bearer.acquireAuthorization(), headers = new Headers(init.headers);
+    await this.#assertActionCurrent(jobId, requireQueued);
+    if (this.#o.isActionCurrent?.() === false) throw new Error("publication action superseded");
+    headers.set("authorization", capability.authorization);
+    const response = await this.#o.fetch(`${this.#o.endpoint.replace(/\/$/u, "")}${path}`, { ...init, headers });
+    await this.#assertActionCurrent(jobId, requireQueued);
+    return response;
+  }
   async runOnce(jobId: string, now: string): Promise<GhostPublicationTransportStateV1> {
     const job = await this.#o.jobs.read(jobId); if (job === undefined) throw new RangeError("publication job does not exist");
-    let state = (await this.state(jobId)) ?? initial(job); if (state.jobHash !== job.jobHash) throw new TypeError("publication transport job binding changed");
+    let persistedState = await this.state(jobId), state = persistedState ?? initial(job); if (state.jobHash !== job.jobHash) throw new TypeError("publication transport job binding changed");
+    const save = async (next: GhostPublicationTransportStateV1): Promise<GhostPublicationTransportStateV1> => { const saved = await this.#save(next, persistedState); persistedState = saved; return saved; };
     if (state.terminal !== undefined || (state.retryAt !== undefined && Date.parse(now) < Date.parse(state.retryAt))) return state;
-    if (job.status !== "queued") return this.#save(freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: job.cancellationReason ?? "cancelled" } }));
+    if (job.status !== "queued") return save(freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: job.cancellationReason ?? "cancelled" } }));
     try {
       const custody = await this.#o.jobs.readCustody(job.source.capsuleId); if (custody?.custodyHash !== job.custodyHash) throw new TypeError("publication custody changed");
       const exported = await this.#o.vault.exportCapsule(job.source.capsuleId), bytes = new TextEncoder().encode(exported);
       if (stableVerificationHash(exported) !== job.source.exportHash || bytes.byteLength !== job.source.byteLength || await ghostSha256(exported) !== job.workerManifest.contentSha256) throw new TypeError("publication source changed");
       const hashes = await Promise.all(job.transfer.parts.map(async (part) => await ghostSha256(bytes.slice(part.fromByte, part.toByte))));
       if (hashes.some((hash, i) => hash !== job.transfer.parts[i]?.hash) || job.transfer.parts.length !== job.workerManifest.partCount) throw new TypeError("publication topology changed");
-      const begin = await this.#request("/v1/uploads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ capsuleId: job.source.capsuleId, buildId: "tear-local-capsule", schemaVersion: job.workerManifest.schemaVersion, byteLength: job.workerManifest.byteLength, contentHash: job.workerManifest.contentSha256, resultHash: job.source.rootIntegrity, title: `Tear Ghost ${job.source.capsuleId}`, tags: [], privacy: custody.privacy, visibility: custody.visibility, trainingConsent: false, eligibility: custody.eligibility, partCount: job.workerManifest.partCount }) });
-      if (!begin.ok) throw new Error(`publication begin failed: ${String(begin.status)}`); const begun = await body(begin); if (begun.capsuleId !== job.source.capsuleId || begun.status !== "uploading" || typeof begun.uploadId !== "string") throw new TypeError("malformed publication begin response");
-      const status = await this.#request(`/v1/uploads/${encodeURIComponent(job.source.capsuleId)}`, { method: "GET" }); if (!status.ok) throw new Error(`publication status failed: ${String(status.status)}`); const remote = await body(status); if (remote.capsuleId !== job.source.capsuleId || remote.status !== "uploading" || remote.partCount !== job.workerManifest.partCount || remote.byteLength !== job.workerManifest.byteLength || !Array.isArray(remote.parts)) throw new TypeError("malformed publication status response");
+      const begin = await this.#request(jobId, "/v1/uploads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ capsuleId: job.source.capsuleId, buildId: "tear-local-capsule", schemaVersion: job.workerManifest.schemaVersion, byteLength: job.workerManifest.byteLength, contentHash: job.workerManifest.contentSha256, resultHash: job.source.rootIntegrity, title: `Tear Ghost ${job.source.capsuleId}`, tags: [], privacy: custody.privacy, visibility: custody.visibility, trainingConsent: false, eligibility: custody.eligibility, partCount: job.workerManifest.partCount }) });
+      if (!begin.ok) throw new Error(`publication begin failed: ${String(begin.status)}`);
+      const begun = await body(begin);
+      if (begun.capsuleId !== job.source.capsuleId || !resumableStatus(begun.status) || typeof begun.uploadId !== "string") throw new TypeError("malformed publication begin response");
+      const begunTerminal = remoteTerminal(begun.status);
+      if (begunTerminal !== undefined) return await save(freeze({ ...state, attempts: state.attempts + 1, terminal: begunTerminal, terminalMetadata: metadata(begun) }));
+      const status = await this.#request(jobId, `/v1/uploads/${encodeURIComponent(job.source.capsuleId)}`, { method: "GET" });
+      if (!status.ok) throw new Error(`publication status failed: ${String(status.status)}`);
+      let remote = await body(status);
+      if (remote.capsuleId !== job.source.capsuleId || typeof remote.status !== "string") throw new TypeError("malformed publication status response");
+      const statusTerminal = remoteTerminal(remote.status);
+      if (statusTerminal !== undefined) return await save(freeze({ ...state, attempts: state.attempts + 1, terminal: statusTerminal, terminalMetadata: metadata(remote) }));
+      if (remote.status === "verifying") {
+        const verified = await this.#request(jobId, `/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/verify`, { method: "POST" });
+        if (!verified.ok && verified.status !== 202) throw new Error(`publication verify failed: ${String(verified.status)}`);
+        remote = await body(verified);
+        if (remote.capsuleId !== job.source.capsuleId || typeof remote.status !== "string") throw new TypeError("malformed publication verify response");
+        const verifiedTerminal = remoteTerminal(remote.status);
+        if (verifiedTerminal !== undefined) return await save(freeze({ ...state, attempts: state.attempts + 1, terminal: verifiedTerminal, terminalMetadata: metadata(remote) }));
+        if (remote.status !== "verifying" || verified.status !== 202 || remote.retryable !== true) throw new TypeError("malformed publication verify response");
+        return await save(freeze({ ...state, attempts: state.attempts + 1, retryAt: retryAt(now, state.attempts + 1), terminalMetadata: metadata(remote) }));
+      }
+      if (remote.status !== "uploading" || remote.partCount !== job.workerManifest.partCount || remote.byteLength !== job.workerManifest.byteLength || !Array.isArray(remote.parts)) throw new TypeError("malformed publication status response");
       const etags = new Map<number, string>(); for (const item of remote.parts) { if (!record(item)) throw new TypeError("malformed publication part ledger"); const partNumber = item.partNumber, etag = item.etag; if (!Number.isSafeInteger(partNumber) || typeof etag !== "string") throw new TypeError("malformed publication part ledger"); const number = partNumber as number; if (number < 1 || number > job.transfer.parts.length || etags.has(number)) throw new TypeError("malformed publication part ledger"); etags.set(number, etag); }
       for (const known of state.etags) if (etags.has(known.partNumber) && etags.get(known.partNumber) !== known.etag) throw new TypeError("publication ETag changed remotely");
-      for (const part of job.transfer.parts) if (!etags.has(part.partNumber)) { const response = await this.#request(`/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/parts/${String(part.partNumber)}`, { method: "PUT", headers: { "content-type": "application/octet-stream" }, body: bytes.slice(part.fromByte, part.toByte) }); if (!response.ok) throw new Error(`publication part failed: ${String(response.status)}`); const uploaded = await body(response); if (uploaded.partNumber !== part.partNumber || typeof uploaded.etag !== "string") throw new TypeError("malformed publication part response"); etags.set(part.partNumber, uploaded.etag); }
+      for (const part of job.transfer.parts) if (!etags.has(part.partNumber)) { const response = await this.#request(jobId, `/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/parts/${String(part.partNumber)}`, { method: "PUT", headers: { "content-type": "application/octet-stream" }, body: bytes.slice(part.fromByte, part.toByte) }); if (!response.ok) throw new Error(`publication part failed: ${String(response.status)}`); const uploaded = await body(response); if (uploaded.partNumber !== part.partNumber || typeof uploaded.etag !== "string") throw new TypeError("malformed publication part response"); etags.set(part.partNumber, uploaded.etag); }
       const parts = job.transfer.parts.map((part) => ({ partNumber: part.partNumber, etag: etags.get(part.partNumber) })); if (parts.some((part) => typeof part.etag !== "string")) throw new TypeError("publication ETag reconciliation failed");
-      state = await this.#save(freeze({ ...state, etags: parts as readonly { partNumber: number; etag: string }[] }));
-      const complete = await this.#request(`/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/complete`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ parts }) }); if (!complete.ok) throw new Error(`publication complete failed: ${String(complete.status)}`); const terminal = await body(complete); if (terminal.capsuleId !== job.source.capsuleId || typeof terminal.status !== "string") throw new TypeError("malformed publication complete response");
-      if (!["finalized", "quarantined", "rejected", "unsupported"].includes(terminal.status)) throw new TypeError("malformed publication terminal status"); return await this.#save(freeze({ ...state, attempts: state.attempts + 1, etags: parts as readonly { partNumber: number; etag: string }[], terminal: terminal.status as NonNullable<GhostPublicationTransportStateV1["terminal"]>, terminalMetadata: { status: terminal.status, ...(typeof terminal.verification === "string" ? { verification: terminal.verification } : {}), ...(typeof terminal.etag === "string" ? { etag: terminal.etag } : {}) } }));
-    } catch (error) { const message = error instanceof Error ? error.message : "publication transport failure"; const terminal = /changed|malformed|binding|firebase-|begin failed: 401|status failed: 401|part failed: 401|complete failed: 401/u.test(message) ? "failed" : undefined; return this.#save(freeze({ ...state, attempts: state.attempts + 1, ...(terminal === undefined ? { retryAt: retryAt(now, state.attempts + 1) } : { terminal, terminalMetadata: { status: message } }) })); }
+      state = await save(freeze({ ...state, etags: parts as readonly { partNumber: number; etag: string }[] }));
+      if (state.terminal !== undefined) return state;
+      const complete = await this.#request(jobId, `/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/complete`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ parts }) }); if (!complete.ok && complete.status !== 202) throw new Error(`publication complete failed: ${String(complete.status)}`); const terminal = await body(complete); if (terminal.capsuleId !== job.source.capsuleId || typeof terminal.status !== "string") throw new TypeError("malformed publication complete response");
+      const completeTerminal = remoteTerminal(terminal.status);
+      if (completeTerminal !== undefined) return await save(freeze({ ...state, attempts: state.attempts + 1, etags: parts as readonly { partNumber: number; etag: string }[], terminal: completeTerminal, terminalMetadata: metadata(terminal) }));
+      if (terminal.status !== "verifying" || complete.status !== 202 || terminal.retryable !== true) throw new TypeError("malformed publication complete response");
+      return await save(freeze({ ...state, attempts: state.attempts + 1, etags: parts as readonly { partNumber: number; etag: string }[], retryAt: retryAt(now, state.attempts + 1), terminalMetadata: metadata(terminal) }));
+    } catch (error) {
+      if (this.#o.isActionCurrent?.() === false) return (await this.state(jobId)) ?? state;
+      const message = error instanceof Error ? error.message : "publication transport failure";
+      const terminal = /changed|malformed|binding|firebase-|begin failed: 401|status failed: 401|verify failed: 401|part failed: 401|complete failed: 401/u.test(message) ? "failed" : undefined;
+      return save(freeze({ ...state, attempts: state.attempts + 1, ...(terminal === undefined ? { retryAt: retryAt(now, state.attempts + 1) } : { terminal, terminalMetadata: { status: message } }) }));
+    }
   }
-  async cancel(jobId: string, _now: string): Promise<GhostPublicationTransportStateV1> { void _now; const job = await this.#o.jobs.cancel(jobId); const state = (await this.state(jobId)) ?? initial(job); if (state.terminal !== undefined) return state; try { const response = await this.#request(`/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/abort`, { method: "POST" }); if (!response.ok && response.status !== 404) throw new Error(`publication abort failed: ${String(response.status)}`); } catch { /* explicit local cancellation remains durable even when remote abort is unavailable */ } return this.#save(freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: "cancelled-by-player" } })); }
+  async cancel(jobId: string, _now: string): Promise<GhostPublicationTransportStateV1> { void _now; const job = await this.#o.jobs.cancel(jobId); const persistedState = await this.state(jobId), state = persistedState ?? initial(job); if (state.terminal !== undefined) return state; try { const response = await this.#request(jobId, `/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/abort`, { method: "POST" }, false); if (!response.ok && response.status !== 404) throw new Error(`publication abort failed: ${String(response.status)}`); } catch { /* explicit local cancellation remains durable even when remote abort is unavailable */ } return this.#save(freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: "cancelled-by-player" } }), persistedState); }
 }
