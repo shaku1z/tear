@@ -44,8 +44,9 @@ its first encounter. Restore does not reinstall or respawn an installed room.
 The previous actual full course took 11,970 fixed ticks. The extended journey
 declares a finite 16,000-tick total budget: the new breath alone takes 150 ticks,
 with the remaining allowance for genuine launch, follow-up and projectile input.
-The extended course's observed timing and live/detached parity require the next
-actual journey; this budget is not a claim that it has already run.
+The extended actual journey passed in 12,458 fixed ticks at `ea010cde`, including
+the summary and reached-lesson practice selection. Its captured two-wave Field
+Test replay matched every authoritative tick through READY in the detached host.
 
 Retained tutorial behavior now has an executable detached owner. Production replay
 and headless worlds use the same `createLiveTutorialRuntime`, lesson controller,
