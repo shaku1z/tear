@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
+import { crc32, deflateRawSync } from "node:zlib";
 import { createCanaryProviderMetrics } from "../scripts/tearbench-canary-report.mjs";
 import { createCanaryQualificationReport, QUALIFICATION_RUNTIME,
   REQUIRED_QUALIFICATION_SAMPLES } from "../scripts/tearbench-canary-qualification-report.mjs";
@@ -20,8 +21,47 @@ const REPORT_TIME = "2026-09-08T04:00:00Z";
 
 function signed(payload, field = "reportDigest") { return { ...payload, [field]: receiptSha256(payload) }; }
 function iso(milliseconds) { return new Date(START + milliseconds).toISOString(); }
-function archiveBytes(index) { return Buffer.from(`qualification-archive-${index}`, "utf8"); }
-function archiveDigest(index) { return createHash("sha256").update(archiveBytes(index)).digest("hex"); }
+const REPORT_MEMBER = "vap6-canary-report.json";
+
+// Real ZIP records, including the provider's deflate/data-descriptor layout.
+function zipFixture(entries, { method = 8, descriptor = true } = {}) {
+  const locals = [], central = [];
+  let offset = 0;
+  for (const [name, value] of entries) {
+    const filename = Buffer.from(name), content = Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value));
+    const compressed = method === 8 ? deflateRawSync(content) : content;
+    const checksum = crc32(content), flags = 0x800 | (descriptor ? 8 : 0);
+    const local = Buffer.alloc(30), row = Buffer.alloc(46), tail = Buffer.alloc(descriptor ? 16 : 0);
+    local.writeUInt32LE(0x04034b50); local.writeUInt16LE(20, 4); local.writeUInt16LE(flags, 6);
+    local.writeUInt16LE(method, 8); local.writeUInt16LE(filename.length, 26);
+    if (!descriptor) {
+      local.writeUInt32LE(checksum, 14); local.writeUInt32LE(compressed.length, 18); local.writeUInt32LE(content.length, 22);
+    } else {
+      tail.writeUInt32LE(0x08074b50); tail.writeUInt32LE(checksum, 4);
+      tail.writeUInt32LE(compressed.length, 8); tail.writeUInt32LE(content.length, 12);
+    }
+    row.writeUInt32LE(0x02014b50); row.writeUInt16LE(20, 4); row.writeUInt16LE(20, 6);
+    row.writeUInt16LE(flags, 8); row.writeUInt16LE(method, 10); row.writeUInt32LE(checksum, 16);
+    row.writeUInt32LE(compressed.length, 20); row.writeUInt32LE(content.length, 24);
+    row.writeUInt16LE(filename.length, 28); row.writeUInt32LE(offset, 42);
+    locals.push(local, filename, compressed, tail); central.push(row, filename);
+    offset += local.length + filename.length + compressed.length + tail.length;
+  }
+  const directory = Buffer.concat(central), end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(directory.length, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, directory, end]);
+}
+
+function retainArchive(sample, entries = [[REPORT_MEMBER, sample.parityReport]], options) {
+  retainRawArchive(sample, zipFixture(entries, options));
+}
+
+function retainRawArchive(sample, archive) {
+  const digest = createHash("sha256").update(archive).digest("hex");
+  sample.artifact.archiveBytes = archive; sample.artifact.archiveSha256 = digest;
+  sample.artifact.metadata.digest = `sha256:${digest}`; sample.artifact.metadata.size_in_bytes = archive.length;
+}
 
 function shardPlanFixture() {
   return signed({ format: "tearbench-canary-shard-plan", schemaVersion: 1, planDigest: PLAN_DIGEST,
@@ -93,16 +133,18 @@ function sampleFixture(index, { equivalent = true } = {}) {
       browserShardBalanceRatio: 1 + index / 100 }, errors: equivalent ? [] : ["performance failed"] });
   const providerMetrics = createCanaryProviderMetrics({ run, jobs, parityReport, shardPlan,
     generatedAt: iso(providerGeneratedAt) });
-  const digest = archiveDigest(index), artifactId = 7000 + index;
-  const artifact = { archiveSha256: digest, metadata: { id: artifactId,
+  const artifactId = 7000 + index;
+  const artifact = { metadata: { id: artifactId,
     node_id: Buffer.from(`artifact:${artifactId}`).toString("base64"),
-    name: `tearbench-canary-aggregate-${run.id}-1`, size_in_bytes: archiveBytes(index).length, expired: false,
+    name: `tearbench-canary-aggregate-${run.id}-1`, expired: false,
     url: `https://api.github.com/repos/shaku1z/tear/actions/artifacts/${artifactId}`,
     archive_download_url: `https://api.github.com/repos/shaku1z/tear/actions/artifacts/${artifactId}/zip`,
-    digest: `sha256:${digest}`, created_at: iso(aggregateAt), updated_at: iso(aggregateAt),
+    created_at: iso(aggregateAt), updated_at: iso(aggregateAt),
     workflow_run: { id: run.id, head_branch: "main", head_sha: SOURCE.revision,
       repository_id: 1, head_repository_id: 1 } } };
-  return { run, jobs, shardPlan, parityReport, providerMetrics, artifact };
+  const sample = { run, jobs, shardPlan, parityReport, providerMetrics, artifact };
+  retainArchive(sample);
+  return sample;
 }
 
 function expectedFixture() {
@@ -133,6 +175,9 @@ test("five exact samples replay raw provider evidence and produce nearest-rank s
   assert.equal(report.summaries.recoveredFlakes, 1);
   assert.equal(report.summaries.retryRate.maximum, 0.25);
   assert.equal(report.samples[0].runnerJobs.length, 9);
+  assert.deepEqual(report.samples[0].artifact.parityMember, { name: REPORT_MEMBER,
+    sizeInBytes: Buffer.byteLength(JSON.stringify(cohort()[0].parityReport)),
+    sha256: createHash("sha256").update(JSON.stringify(cohort()[0].parityReport)).digest("hex") });
   assert.equal(report.reportDigest, receiptSha256(Object.fromEntries(Object.entries(report)
     .filter(([key]) => key !== "reportDigest"))));
 });
@@ -144,6 +189,88 @@ test("a complete failed normal sample rejects the cohort without hiding measurem
   assert.equal(report.status, "rejected-cohort");
   assert.equal(report.samples[2].equivalent, false);
   assert.equal(report.summaries.parallelDecisionWallMs.values.length, 5);
+});
+
+for (const sidecar of ["parity", "shard-plan"]) {
+  test(`qualification rejects substituted and re-signed ${sidecar} sidecars despite replayed metrics`, () => {
+    const samples = cohort(), expected = globalThis.structuredClone(expectedFixture());
+    for (const sample of samples) {
+      if (sidecar === "parity") sample.parityReport.metrics.parallel.criticalPathMs = 1;
+      else {
+        sample.shardPlan.browserShards[0].taskIds = ["substituted"];
+        const { shardPlanDigest, ...payload } = sample.shardPlan;
+        assert.equal(typeof shardPlanDigest, "string");
+        sample.shardPlan.shardPlanDigest = receiptSha256(payload);
+        sample.parityReport.shardPlanDigest = sample.shardPlan.shardPlanDigest;
+        expected.shardPlanDigest = sample.shardPlan.shardPlanDigest;
+      }
+      resign(sample.parityReport); rebuildProvider(sample);
+    }
+    assert.throws(() => createCanaryQualificationReport({ samples, expected, generatedAt: REPORT_TIME }),
+      /parity sidecar differs from verified archive member/u);
+  });
+}
+
+test("qualification requires raw archive proof and rejects absent, duplicate and escaping members", () => {
+  const mutations = [
+    (sample) => { delete sample.artifact.archiveBytes; },
+    (sample) => { sample.artifact.archiveBytes[0] ^= 1; },
+    (sample) => { sample.artifact.metadata.size_in_bytes += 1; },
+    (sample) => { retainRawArchive(sample, Buffer.from("plaintext archive")); },
+    (sample) => { retainArchive(sample, [["different.json", sample.parityReport]]); },
+    (sample) => { retainArchive(sample, [[REPORT_MEMBER, sample.parityReport], [REPORT_MEMBER, sample.parityReport]]); },
+    (sample) => { retainArchive(sample, [[REPORT_MEMBER, sample.parityReport], ["../escape.json", {}]]); },
+    (sample) => { retainArchive(sample, [[`folder/${REPORT_MEMBER}`, sample.parityReport]]); },
+  ];
+  for (const mutate of mutations) {
+    const samples = cohort(); mutate(samples[4]);
+    assert.throws(() => createCanaryQualificationReport({ samples, expected: expectedFixture(), generatedAt: REPORT_TIME }),
+      /canary qualification:/u);
+  }
+});
+
+test("qualification accepts stored and deflated ZIP members with ordinary local sizes", () => {
+  for (const method of [0, 8]) {
+    const samples = cohort();
+    for (const sample of samples) retainArchive(sample, undefined, { method, descriptor: false });
+    assert.equal(createCanaryQualificationReport({ samples, expected: expectedFixture(), generatedAt: REPORT_TIME }).status,
+      "complete-equivalent-cohort");
+  }
+});
+
+test("qualification rederives shard-plan digest from the sidecar bound by the archived report", () => {
+  for (const resignShard of [false, true]) {
+    const samples = cohort(), sample = samples[4];
+    sample.shardPlan.browserShards[0].taskIds = ["substituted"];
+    if (resignShard) {
+      const { shardPlanDigest, ...payload } = sample.shardPlan;
+      assert.equal(typeof shardPlanDigest, "string"); sample.shardPlan.shardPlanDigest = receiptSha256(payload);
+    }
+    assert.throws(() => createCanaryQualificationReport({ samples, expected: expectedFixture(), generatedAt: REPORT_TIME }),
+      /canary qualification: altered shardPlanDigest|canary provider metrics: report\/shard plan mismatch/u);
+  }
+});
+
+test("qualification rejects provider-digested ZIPs with mismatched headers, contents or unsafe layouts", () => {
+  const mutations = [
+    (bytes) => { bytes[30] ^= 1; }, // local filename disagrees with central directory
+    (bytes) => { bytes.writeUInt16LE(0x801, 6); }, // local encryption flags
+    (bytes, directory) => { bytes.writeUInt16LE(0x809, directory + 8); }, // central encryption flags
+    (bytes, directory) => { bytes.writeUInt16LE(99, directory + 10); },
+    (bytes, directory) => { bytes.writeUInt32LE(0xffffffff, directory + 24); }, // unbounded expansion
+    (bytes, directory) => { bytes.writeUInt32LE(1, directory + 42); }, // wrong local-header offset
+    (bytes, directory) => { bytes.writeUInt32LE((0xa000 << 16) >>> 0, directory + 38); }, // symlink
+    (bytes, directory) => { bytes.writeUInt32LE(123, directory + 16); }, // CRC mismatch
+    (bytes, directory) => { bytes[directory - 12] ^= 1; }, // data-descriptor CRC mismatch
+    (bytes) => { bytes[30 + Buffer.byteLength(REPORT_MEMBER) + 2] ^= 1; }, // deflated content corruption
+    (bytes) => { bytes.writeUInt32LE(0xffffffff, bytes.length - 6); }, // invalid central offset
+  ];
+  for (const mutate of mutations) {
+    const samples = cohort(), sample = samples[4], bytes = Buffer.from(sample.artifact.archiveBytes);
+    mutate(bytes, bytes.readUInt32LE(bytes.length - 6)); retainRawArchive(sample, bytes);
+    assert.throws(() => createCanaryQualificationReport({ samples, expected: expectedFixture(), generatedAt: REPORT_TIME }),
+      /canary qualification: invalid aggregate ZIP/u);
+  }
 });
 
 test("qualification rejects incomplete, duplicate, cross-plan, altered, and unbound cohorts", () => {
@@ -183,6 +310,7 @@ test("qualification rejects planted, duplicate-slot, malformed retry, and invali
   ];
   for (const mutate of mutations) {
     const samples = cohort(), sample = samples[4]; mutate(sample); resign(sample.parityReport); rebuildProvider(sample);
+    retainArchive(sample);
     assert.throws(() => createCanaryQualificationReport({ samples, expected: expectedFixture(),
       generatedAt: REPORT_TIME }), /canary qualification:/u);
   }
@@ -200,18 +328,25 @@ test("qualification CLI verifies archive bytes and refuses to overwrite its repo
       for (const [name, value] of Object.entries(files)) {
         await writeFile(resolve(sampleDirectory, `${name}.json`), JSON.stringify(value));
       }
-      await writeFile(resolve(sampleDirectory, "artifact.zip"), archiveBytes(number));
+      await writeFile(resolve(sampleDirectory, "artifact.zip"), sample.artifact.archiveBytes);
       manifest.samples.push(Object.fromEntries([...Object.keys(files).map((name) =>
         [name, `sample-${number}/${name}.json`]), ["artifactArchive", `sample-${number}/artifact.zip`]]));
     }
     const manifestFile = resolve(directory, "manifest.json"), output = resolve(directory, "report.json");
     await writeFile(manifestFile, JSON.stringify(manifest));
-    const run = () => spawnSync(process.execPath, ["scripts/tearbench-canary-qualification-report.mjs", "--manifest", manifestFile,
-      "--artifact", output], { cwd: resolve(import.meta.dirname, ".."), encoding: "utf8", timeout: 10000 });
+    const run = (artifact = output) => spawnSync(process.execPath, ["scripts/tearbench-canary-qualification-report.mjs", "--manifest", manifestFile,
+      "--artifact", artifact], { cwd: resolve(import.meta.dirname, ".."), encoding: "utf8", timeout: 10000 });
     const first = run(); assert.equal(first.status, 0, first.stderr); assert.match(first.stdout, /^COMPLETE-EQUIVALENT-COHORT /u);
     const bytes = await readFile(output, "utf8");
     const duplicate = run(); assert.notEqual(duplicate.status, 0); assert.match(duplicate.stderr, /EEXIST/u);
     assert.equal(await readFile(output, "utf8"), bytes);
+    const replacement = cohort()[4]; replacement.parityReport.metrics.parallel.setupMs = 1;
+    resign(replacement.parityReport); rebuildProvider(replacement);
+    await writeFile(resolve(directory, "sample-5/parityReport.json"), JSON.stringify(replacement.parityReport));
+    await writeFile(resolve(directory, "sample-5/providerMetrics.json"), JSON.stringify(replacement.providerMetrics));
+    const rejectedOutput = resolve(directory, "substituted.json"), substituted = run(rejectedOutput);
+    assert.notEqual(substituted.status, 0); assert.match(substituted.stderr, /parity sidecar differs from verified archive member/u);
+    await assert.rejects(readFile(rejectedOutput), { code: "ENOENT" });
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 

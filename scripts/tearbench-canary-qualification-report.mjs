@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { crc32, inflateRawSync } from "node:zlib";
 import { createCanaryProviderMetrics } from "./tearbench-canary-report.mjs";
 import { receiptSha256 } from "./tearbench-task-receipts.mjs";
 
@@ -126,6 +127,85 @@ function metricRows(providerMetrics, names, label) {
   return rows;
 }
 
+const PARITY_ARCHIVE_MEMBER = "vap6-canary-report.json";
+const MAX_ARCHIVE_BYTES = 32 * 1024 * 1024;
+const MAX_PARITY_BYTES = 32 * 1024 * 1024;
+
+// The aggregate upload contains exactly this one JSON file. Read it in memory;
+// never extract paths or accept a caller's assertion that a sidecar was a member.
+function archiveParity(archive) {
+  const valid = (condition) => requireValue(condition, "invalid aggregate ZIP member or layout");
+  valid(archive.length >= 22 && archive.length <= MAX_ARCHIVE_BYTES);
+  let end = archive.length - 22;
+  for (; end >= Math.max(0, archive.length - 22 - 65535); end -= 1) {
+    if (archive.readUInt32LE(end) === 0x06054b50
+      && end + 22 + archive.readUInt16LE(end + 20) === archive.length) break;
+  }
+  valid(end >= Math.max(0, archive.length - 22 - 65535));
+  valid(archive.readUInt16LE(end + 4) === 0 && archive.readUInt16LE(end + 6) === 0
+    && archive.readUInt16LE(end + 8) === 1 && archive.readUInt16LE(end + 10) === 1);
+  const directorySize = archive.readUInt32LE(end + 12), directory = archive.readUInt32LE(end + 16);
+  valid(directory + directorySize === end && directorySize >= 46 && directory >= 30
+    && archive.readUInt32LE(directory) === 0x02014b50);
+  const flags = archive.readUInt16LE(directory + 8), method = archive.readUInt16LE(directory + 10);
+  const checksum = archive.readUInt32LE(directory + 16), compressedSize = archive.readUInt32LE(directory + 20);
+  const size = archive.readUInt32LE(directory + 24), nameSize = archive.readUInt16LE(directory + 28);
+  const extraSize = archive.readUInt16LE(directory + 30), commentSize = archive.readUInt16LE(directory + 32);
+  valid(46 + nameSize + extraSize + commentSize === directorySize
+    && archive.readUInt16LE(directory + 34) === 0 && archive.readUInt32LE(directory + 42) === 0
+    && archive.readUInt16LE(directory + 6) <= 20 && (flags & ~0x80e) === 0
+    && (method === 8 || (method === 0 && (flags & 6) === 0))
+    && size > 0 && size <= MAX_PARITY_BYTES && compressedSize > 0 && compressedSize <= MAX_ARCHIVE_BYTES);
+  const name = archive.subarray(directory + 46, directory + 46 + nameSize);
+  valid(name.equals(Buffer.from(PARITY_ARCHIVE_MEMBER)));
+  // Reject links and directories even when their filename resembles the report.
+  const attributes = archive.readUInt32LE(directory + 38), fileType = (attributes >>> 16) & 0xf000;
+  valid((attributes & 0x10) === 0 && (fileType === 0 || fileType === 0x8000));
+  const extras = (start, length) => {
+    const limit = start + length;
+    for (let offset = start; offset < limit;) {
+      valid(offset + 4 <= limit && archive.readUInt16LE(offset) !== 1); // no ZIP64
+      offset += 4 + archive.readUInt16LE(offset + 2);
+      valid(offset <= limit);
+    }
+  };
+  extras(directory + 46 + nameSize, extraSize);
+  valid(archive.readUInt32LE(0) === 0x04034b50
+    && archive.readUInt16LE(4) === archive.readUInt16LE(directory + 6)
+    && archive.readUInt16LE(6) === flags && archive.readUInt16LE(8) === method
+    && archive.readUInt16LE(26) === nameSize);
+  const localExtraSize = archive.readUInt16LE(28), data = 30 + nameSize + localExtraSize;
+  valid(data + compressedSize <= directory && archive.subarray(30, 30 + nameSize).equals(name));
+  extras(30 + nameSize, localExtraSize);
+  for (const [offset, expected] of [[14, checksum], [18, compressedSize], [22, size]]) {
+    const actual = archive.readUInt32LE(offset);
+    valid(actual === expected || ((flags & 8) !== 0 && actual === 0));
+  }
+  const dataEnd = data + compressedSize;
+  if ((flags & 8) !== 0) {
+    valid(dataEnd + 12 <= directory);
+    const descriptor = archive.readUInt32LE(dataEnd) === 0x08074b50 ? dataEnd + 4 : dataEnd;
+    valid(descriptor + 12 === directory && archive.readUInt32LE(descriptor) === checksum
+      && archive.readUInt32LE(descriptor + 4) === compressedSize && archive.readUInt32LE(descriptor + 8) === size);
+  } else valid(dataEnd === directory);
+  const compressed = archive.subarray(data, dataEnd);
+  let bytes;
+  try {
+    if (method === 0) bytes = compressed;
+    else {
+      const inflated = inflateRawSync(compressed, { maxOutputLength: size, info: true });
+      valid(inflated.engine.bytesWritten === compressedSize);
+      bytes = inflated.buffer;
+    }
+    valid(bytes.length === size && crc32(bytes) === checksum);
+    const parity = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    return { parity, member: { name: PARITY_ARCHIVE_MEMBER, sizeInBytes: bytes.length,
+      sha256: createHash("sha256").update(bytes).digest("hex") } };
+  } catch {
+    throw new TypeError("canary qualification: invalid aggregate ZIP report content");
+  }
+}
+
 function validateArtifact(artifact, provider, rawRun, expected, index) {
   const metadata = artifact?.metadata;
   const expectedName = `tearbench-canary-aggregate-${provider.runId}-${provider.attempt}`;
@@ -143,12 +223,20 @@ function validateArtifact(artifact, provider, rawRun, expected, index) {
   `sample ${index} artifact workflow binding is invalid`);
   requireValue(isDigest(artifact.archiveSha256) && metadata.digest === `sha256:${artifact.archiveSha256}`,
     `sample ${index} downloaded archive digest differs from provider metadata`);
+  requireValue(artifact.archiveBytes instanceof Uint8Array && artifact.archiveBytes.byteLength <= MAX_ARCHIVE_BYTES,
+    `sample ${index} raw archive bytes are required and must be bounded`);
+  const bytes = Buffer.from(artifact.archiveBytes);
+  requireValue(bytes.length === metadata.size_in_bytes
+    && createHash("sha256").update(bytes).digest("hex") === artifact.archiveSha256,
+  `sample ${index} raw archive bytes differ from provider metadata`);
+  const verified = archiveParity(bytes);
   const created = Date.parse(metadata.created_at), updated = Date.parse(metadata.updated_at);
   requireValue(Number.isFinite(created) && Number.isFinite(updated) && updated >= created
     && created >= Date.parse(rawRun.created_at) && updated <= Date.parse(rawRun.updated_at),
     `sample ${index} artifact timestamps are invalid`);
-  return Object.freeze({ artifactId: metadata.id, name: metadata.name, archiveSha256: artifact.archiveSha256,
-    sizeInBytes: metadata.size_in_bytes, createdAt: metadata.created_at, updatedAt: metadata.updated_at });
+  return { parity: verified.parity, artifact: Object.freeze({ artifactId: metadata.id, name: metadata.name,
+    archiveSha256: artifact.archiveSha256, parityMember: verified.member,
+    sizeInBytes: metadata.size_in_bytes, createdAt: metadata.created_at, updatedAt: metadata.updated_at }) };
 }
 
 function validateRunnerRows(rawJobs, provider, expected, index) {
@@ -167,7 +255,10 @@ function validateRunnerRows(rawJobs, provider, expected, index) {
 }
 
 function validateSample(sample, index, generatedAt, expected) {
-  const parity = sample?.parityReport, provider = sample?.providerMetrics, shardPlan = sample?.shardPlan;
+  const provider = sample?.providerMetrics, shardPlan = sample?.shardPlan;
+  const { artifact, parity } = validateArtifact(sample?.artifact, provider, sample?.run, expected, index);
+  requireValue(receiptSha256(sample.parityReport) === receiptSha256(parity),
+    `sample ${index} parity sidecar differs from verified archive member`);
   verifyDigest(parity, "reportDigest");
   verifyDigest(provider, "reportDigest");
   verifyDigest(shardPlan, "shardPlanDigest");
@@ -200,7 +291,6 @@ function validateSample(sample, index, generatedAt, expected) {
   requireValue(receiptSha256(parity.source) === receiptSha256(expected.source)
     && parity.planDigest === expected.planDigest && parity.shardPlanDigest === expected.shardPlanDigest,
   `sample ${index} differs from the declared source or plan`);
-  const artifact = validateArtifact(sample.artifact, provider, sample.run, expected, index);
   const runnerJobs = validateRunnerRows(sample.jobs, provider, expected, index);
   const taskParity = parity.taskParity;
   requireValue(taskParity?.required === expected.taskCount && Number.isSafeInteger(taskParity.serial)
@@ -338,6 +428,7 @@ if (invoked === fileURLToPath(import.meta.url)) {
       parityReport: await json(sample, "parityReport"),
       providerMetrics: await json(sample, "providerMetrics"),
       artifact: { metadata: await json(sample, "artifactMetadata"),
+        archiveBytes: archive,
         archiveSha256: createHash("sha256").update(archive).digest("hex") },
     };
   }));

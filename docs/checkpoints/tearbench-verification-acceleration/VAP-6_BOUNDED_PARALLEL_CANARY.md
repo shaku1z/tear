@@ -426,6 +426,43 @@ is not a billing attestation or release certificate, and cannot itself authorize
 VAP-7. A planted-failure run remains blocked until the measured cohort satisfies
 the VAP-6 exit decision.
 
+### Retained archive membership correction
+
+The qualification verifier now requires the actual downloaded archive bytes in
+both its CLI and in-process inputs. It recomputes the archive SHA-256 and size
+against the retained provider metadata, then reads the aggregate's sole
+`vap6-canary-report.json` member. Qualification uses this verified parity report
+and rejects a supplied parity sidecar whose content differs, even if that
+sidecar and its replayed provider metrics have valid recomputed report digests.
+The output retains the verified member name, byte count and SHA-256 alongside
+the provider archive identity.
+
+The current aggregate upload contains the parity report only. Shard-plan data
+is therefore bound transitively: the verifier independently recomputes the
+supplied shard plan's cryptographic digest and requires the digest embedded in
+the verified parity member. It does not claim the shard plan is itself an
+archive member. Provider metrics are still recomputed from retained raw run and
+complete jobs snapshots against the verified report and digest-bound shard
+plan, rather than accepting a re-signed summary.
+
+The bounded reader accepts stored or deflated ordinary ZIPs, including data
+descriptors, with a 32 MiB archive and report limit. It requires exactly one
+member at the upload's exact filename and rejects missing, duplicate, nested,
+escaping, linked, encrypted, ZIP64, corrupt or inconsistent members without
+extracting anything to disk. Unsupported layouts fail closed; no archive
+library dependency, workflow upload change or caller-asserted membership flag
+is introduced.
+
+Two discriminating regressions fail against the original implementation:
+substituting and re-signing parity alone, and substituting and re-signing the
+shard plan together with parity and replayed provider metrics while retaining
+the original provider-verified archive. Both now reject. The positive CLI
+fixture uses a real deflated ZIP instead of plaintext archive bytes; hostile
+ZIP controls and a CLI sidecar-substitution control cover the retained-byte
+boundary. This local contract correction does not qualify a native cohort,
+change protected-source requirements, performance thresholds, retry rules or
+the five-sample minimum, dispatch work, or authorize VAP-7.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair
