@@ -203,3 +203,24 @@ export async function commitTrainingOperationsJobWrites(backend: GhostVaultBacke
   if (authority.budget === undefined) await backend.commitIfMatches(combined, writes);
   else await commitTrainingOperationsBudget(backend, job.id, authority.budget.declarationHash, combined, writes, computeUnits);
 }
+
+/** Atomic promotion: job outputs are metered; the guarded policy pointer/history remain policy-owned. */
+export async function commitTrainingOperationsPromotionWrites(backend: GhostVaultBackend, job: BudgetJob,
+  guards: readonly GhostVaultGuard[], jobWrites: readonly GhostVaultWrite[], policyWrites: readonly GhostVaultWrite[],
+): Promise<void> {
+  if (policyWrites.length !== 2 || !policyWrites.some((write) => write.store === "analysis" && write.key === "policy-active:v1")
+    || !policyWrites.some((write) => write.store === "indexes" && /^policy-activation:v1:\d{12}$/u.test(write.key))
+    || policyWrites.some((write) => typeof write.value !== "string" || !guards.some((guard) => guard.store === write.store && guard.key === write.key))
+    || jobWrites.some((write) => write.key.startsWith("policy-active:") || write.key.startsWith("policy-activation:")
+      || write.key.startsWith("training-operations-budget:") || write.key.startsWith("training-operations-budget-owner:"))) {
+    throw new RangeError("native promotion requires distinct guarded policy-owned writes");
+  }
+  const authority = await trainingOperationsJobBudgetAuthority(backend, job);
+  if (authority.budget === undefined) {
+    await backend.commitIfMatches(mergeGuards([...guards, ...authority.guards]), [...jobWrites, ...policyWrites]);
+    return;
+  }
+  const current = authority.budget, { next, guards: owned } = await applyWrites(backend, current, jobWrites, 0);
+  await backend.commitIfMatches(mergeGuards([...guards, ...authority.guards, ...owned]),
+    [...jobWrites, ...policyWrites, { store: "analysis", key: trainingOperationsBudgetKey(job.id), value: JSON.stringify(next) }]);
+}

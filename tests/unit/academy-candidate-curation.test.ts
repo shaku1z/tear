@@ -11,6 +11,8 @@ import {
   TrainingOperationsV3TrainingAdmissionExecutor,
   TrainingOperationsV3EvaluationExecutor,
   TrainingOperationsV3ScheduledCycle,
+  TrainingOperationsV3PromotionCycle,
+  parseTearFoundryV3PromotionApprovalOrigin,
   TearFoundryJobScheduleVault,
   TearFoundryScheduledExecution,
   createTearFoundryJobSchedule,
@@ -383,6 +385,89 @@ describe("C31 held Academy candidate curation", () => {
       expect((await context.memory.keys("analysis")).filter((key) => key.startsWith("training-operations-execution-binding:v6:"))).toEqual(bindingKeys);
       expect(await context.memory.get("analysis", pointerKey)).toBe("f".repeat(16));
       expect(await context.memory.get("analysis", `training-operations-scheduled-attempt:v1:${adopted.schedule.scheduleHash}`)).toBeUndefined();
+    });
+  });
+
+  describe("native V3 explicit promotion", () => {
+    async function promotionFixture() {
+      const context = await numericAdmissionFixture(100);
+      const champion = await new TearC34V3C32CandidateRegistry(context.input.backend).get(context.job.inputs.champion.id);
+      if (champion === undefined) throw new Error("missing compatible champion");
+      const registry = new TearPolicyArtifactRegistry(context.input.backend, champion.compatibility);
+      const baseline = await registry.activate(champion.id, "2026-08-03T00:08:00.000Z");
+      const training = await context.executor.start(context.job, context.request);
+      const schedules = new TearFoundryJobScheduleVault(context.input.backend);
+      const declared = createTearFoundryJobSchedule({ id: context.declaration.scheduleId, jobId: training.job.id, jobHash: training.job.jobHash,
+        intervalMs: 60_000, computeBudgetHash: trainingOperationsComputeBudgetHash(context.declaration),
+        storageBudgetHash: trainingOperationsStorageBudgetHash(context.declaration), stopConditionsHash: training.job.inputs.stopConditionsHash,
+        state: "disabled", configuredAt: "2026-08-03T00:10:00.000Z" });
+      const cycle = new TrainingOperationsV3ScheduledCycle(context.jobs, schedules, context.services);
+      let schedule = (await cycle.adoptAndEnable(declared, context.job.jobHash, training.receiptHash, context.evaluationCases, declared.configuredAt)).schedule;
+      const execution = new TearFoundryScheduledExecution(context.jobs, schedules, context.services.custody, context.services.corpus, context.services.loader, context.services);
+      for (const minute of [11, 12, 13]) {
+        await execution.runScheduledOnce(schedule.scheduleHash, `2026-08-03T00:${String(minute)}:00.000Z`, `promotion-${String(minute)}`);
+        const next = await schedules.get(schedule.id);
+        if (next === undefined) throw new Error("missing native schedule");
+        schedule = next;
+      }
+      const promotion = () => new TrainingOperationsV3PromotionCycle(context.jobs, schedules, context.services);
+      return { ...context, baseline, training, schedules, schedule, cycle, promotion };
+    }
+    it("promotes only an explicit native intent and retains one activation with exact read-only retries", async () => {
+      const context = await promotionFixture(), at = "2026-08-03T00:14:00.000Z";
+      expect(context.schedule.state).toBe("disabled");
+      expect(await context.memory.get("analysis", "policy-active:v1")).toBe(JSON.stringify(context.baseline));
+      const prepared = await context.promotion().prepare(context.schedule.scheduleHash, at);
+      await expect(context.promotion().promote(context.schedule.scheduleHash, "", at)).rejects.toThrow(/intent/u);
+      await expect(context.promotion().promote(context.schedule.scheduleHash, "f".repeat(16), at)).rejects.toThrow(/intent/u);
+      expect(await context.memory.get("analysis", "policy-active:v1")).toBe(JSON.stringify(context.baseline));
+      const calls = context.commitIfMatches.mock.calls.length;
+      const result = await context.promotion().promote(context.schedule.scheduleHash, prepared.intent.intentHash, at);
+      expect(result).toMatchObject({ artifactId: context.request.artifact.id, revision: context.baseline.revision + 1 });
+      expect(context.commitIfMatches.mock.calls.slice(calls).filter(([, writes]) => writes.some((write) => write.key === "policy-active:v1"))).toHaveLength(1);
+      const active = await context.memory.get("analysis", "policy-active:v1");
+      const raw = await context.memory.get("analysis", `foundry-job-v3-promotion-approval:v1:${result.approvalHash}`);
+      if (raw === undefined) throw new Error("missing native approval");
+      const approval = parseTearFoundryV3PromotionApprovalOrigin(JSON.parse(raw));
+      expect(approval.format).toBe("training-operations-v3-native-promotion-approval");
+      expect(Object.hasOwn(approval, "bridge")).toBe(false);
+      expect(approval.rollbackBaseline?.activationHash).toBe(context.baseline.activationHash);
+      expect(approval.conditions.approverFree).toBe(true);
+      expect((await context.cycle.current(context.schedule))?.step).toBe("promoted");
+      const budget = await context.memory.get("analysis", trainingOperationsBudgetKey(context.job.id));
+      if (budget === undefined) throw new Error("missing promotion ledger");
+      const ledger = parseTrainingOperationsBudget(JSON.parse(budget));
+      expect(ledger.computeUsed).toBe(24);
+      expect(ledger.records.some((record) => record.key === "policy-active:v1" || record.key.startsWith("policy-activation:"))).toBe(false);
+      const beforeRetry = context.commitIfMatches.mock.calls.length;
+      expect(await context.promotion().promote(context.schedule.scheduleHash, prepared.intent.intentHash, at)).toEqual(result);
+      expect(context.commitIfMatches.mock.calls.slice(beforeRetry).every(([, writes]) => writes.length === 0)).toBe(true);
+      expect(await context.memory.get("analysis", "policy-active:v1")).toBe(active);
+      expect(await context.memory.get("analysis", trainingOperationsBudgetKey(context.job.id))).toBe(budget);
+      expect((await context.jobs.get(context.job.id))?.phase).toBe("monitoring");
+      expect((await context.memory.keys("analysis")).some((key) => key.startsWith("foundry-job-v3-monitoring-bridge:") || key.startsWith("foundry-job-decision:v1:"))).toBe(false);
+    });
+    it("refuses late source binding drift at activation CAS without partial job, receipt, binding or budget writes", async () => {
+      const context = await promotionFixture(), at = "2026-08-03T00:14:00.000Z";
+      const prepared = await context.promotion().prepare(context.schedule.scheduleHash, at);
+      const pointer = `training-operations-execution-binding-current:v6:${context.schedule.id}:${String(context.schedule.revision)}:${context.schedule.scheduleHash}`;
+      const snapshot = async () => {
+        const rows: [string, string, string | undefined][] = [];
+        for (const store of ["analysis", "indexes"] as const) for (const key of [...await context.memory.keys(store)].sort()) {
+          if (key !== pointer) rows.push([store, key, await context.memory.get(store, key)]);
+        }
+        return rows;
+      };
+      const before = await snapshot();
+      let final = 0;
+      context.commitIfMatches.mockImplementation(async (guards, writes) => {
+        if (writes.some((write) => write.key === "policy-active:v1")) { final++; await context.memory.put("analysis", pointer, "f".repeat(16)); }
+        await context.memory.commitIfMatches(guards, writes);
+      });
+      await expect(context.promotion().promote(context.schedule.scheduleHash, prepared.intent.intentHash, at)).rejects.toThrow();
+      expect(final).toBe(1);
+      expect(await snapshot()).toEqual(before);
+      expect(await context.memory.get("analysis", pointer)).toBe("f".repeat(16));
     });
   });
 

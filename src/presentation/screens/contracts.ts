@@ -276,6 +276,8 @@ export interface AcademyScreenView {
 /** Read-only C36 local recovery projection. It deliberately contains no custody or model data. */
 export interface FoundryScreenView {
   readonly id: "foundry";
+  /** Exact local action token; eligibility alone does not activate a policy. */
+  readonly promotion?: Readonly<{ scheduleHash: string; intentHash: string }>;
   readonly status: "loading" | "unavailable" | "ready";
   readonly subtitle: string;
   /** Local lifecycle scheduler state; it never implies a worker, cloud task, policy activation, or promotion. */

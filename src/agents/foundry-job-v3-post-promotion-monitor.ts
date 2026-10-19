@@ -1,7 +1,7 @@
 import type { GhostVaultBackend } from "../ghost";
 import { stableVerificationHash } from "../replay/hash";
 import { parseTearFoundryV3PromotionReceipt } from "./foundry-job-v3-promotion";
-import { parseTearFoundryV3PromotionApproval } from "./foundry-job-v3-promotion-approval";
+import { parseTearFoundryV3PromotionApprovalOrigin } from "./foundry-job-v3-promotion-approval";
 import { parseTearFoundryJob, requireTearFoundryEvaluationProtocol } from "./foundry-job-state";
 import { parseTearPolicyActivation } from "./policy-artifact-registry";
 import { parseTearPolicyDecisionJournal, type TearPolicyDecisionJournalV1 } from "./policy-decision-journal";
@@ -74,7 +74,7 @@ export class TearFoundryV3PostPromotionMonitor {
     let journal; try { journal = parseTearPolicyDecisionJournal(JSON.parse(journalRaw)); } catch { await this.#backend.put("quarantine", `policy-decision-journal-quarantine:v1:${terminalReceipt.journalId}:post-promotion-monitor`, journalRaw); throw new RangeError("post-promotion monitor journal is corrupt"); }
     if (journal.journalHash !== terminalReceipt.journalHash) throw new RangeError("post-promotion terminal journal changed");
     const exact = await exactPromotion(this.#backend), approvalRaw = await this.#backend.get("analysis", `${APPROVAL}${exact.promotion.approvalHash}`); if (approvalRaw === undefined) throw new RangeError("post-promotion approval is unavailable");
-    let approval; try { approval = parseTearFoundryV3PromotionApproval(JSON.parse(approvalRaw)); } catch { await this.#backend.put("quarantine", `${APPROVAL}${exact.promotion.approvalHash}:post-promotion-monitor`, approvalRaw); throw new RangeError("post-promotion approval is corrupt"); }
+    let approval; try { approval = parseTearFoundryV3PromotionApprovalOrigin(JSON.parse(approvalRaw)); } catch { await this.#backend.put("quarantine", `${APPROVAL}${exact.promotion.approvalHash}:post-promotion-monitor`, approvalRaw); throw new RangeError("post-promotion approval is corrupt"); }
     if (approval.approvalHash !== exact.promotion.approvalHash || approval.candidate.id !== exact.promotion.artifactId || approval.candidate.artifactHash !== exact.promotion.artifactHash) throw new RangeError("post-promotion approval provenance changed");
     const jobRaw = await this.#backend.get("analysis", `foundry-job:v1:${approval.job.id}`); if (jobRaw === undefined) throw new RangeError("post-promotion monitoring job is unavailable");
     const job = parseTearFoundryJob(JSON.parse(jobRaw)), protocol = requireTearFoundryEvaluationProtocol(job); if (job.jobHash !== approval.job.jobHash || protocol.protocolHash !== approval.job.protocolHash || job.inputs.stopConditionsHash !== approval.job.stopConditionsHash) throw new RangeError("post-promotion monitoring policy changed");

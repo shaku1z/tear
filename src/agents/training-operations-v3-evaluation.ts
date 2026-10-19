@@ -170,7 +170,7 @@ export class TrainingOperationsV3EvaluationExecutor {
     this.#jobs = jobs; this.#services = services;
   }
 
-  async #capture(trainingSourceJobHash: string, at: string, expectedJob?: TearFoundryJobV1, casesInput?: readonly TearScenarioV1[]) {
+  async #capture(trainingSourceJobHash: string, at: string, expectedJob?: TearFoundryJobV1, casesInput?: readonly TearScenarioV1[], candidateActive = false) {
     if (!HASH.test(trainingSourceJobHash) || !Number.isFinite(Date.parse(at))) throw new TypeError("invalid V3 evaluation admission request");
     const backend = this.#jobs.backend();
     const guards: Readonly<{ store: GhostVaultStore; key: string; expected?: string }>[] = [];
@@ -214,7 +214,8 @@ export class TrainingOperationsV3EvaluationExecutor {
     const activeRaw = await pin("analysis", "policy-active:v1");
     if (activeRaw !== undefined) {
       const active = parseTearPolicyActivation(JSON.parse(activeRaw));
-      if (active.artifactId !== champion.id || active.artifactHash !== champion.artifactHash) throw new RangeError("V3 evaluation active champion changed");
+      if ((active.artifactId !== champion.id || active.artifactHash !== champion.artifactHash)
+        && (!candidateActive || active.artifactId !== data.candidate.artifact.id || active.artifactHash !== data.candidate.artifact.artifactHash)) throw new RangeError("V3 evaluation active champion changed");
     }
     const previous = rawPrevious === undefined ? undefined : parseTrainingOperationsV3EvaluationAdmission(JSON.parse(rawPrevious), training, champion);
     if (!same(current, expectedJob ?? previous?.job ?? source) || previous !== undefined && Date.parse(at) < Date.parse(previous.admittedAt)) {
@@ -264,6 +265,24 @@ export class TrainingOperationsV3EvaluationExecutor {
       trainingSourceJobHash, trainingReceiptHash: training.receiptHash, sourceJob: source, job, admittedAt: previous?.admittedAt ?? at, plan };
     const receipt = parseTrainingOperationsV3EvaluationAdmission({ ...draft, receiptHash: stableVerificationHash(draft) }, training, champion);
     return { receipt, training, champion, current, previous, guards };
+  }
+
+  /** Read-only authority capture for native monitoring; callers must fence returned guards at their commit. */
+  async captureMonitoring(trainingSourceJobHash: string, at: string, candidateActive = false) {
+    const backend = this.#jobs.backend(), decisionKey = `${DECISION_KEY}${trainingSourceJobHash}`;
+    const decisionRaw = await backend.get("analysis", decisionKey), evaluationKey = `${RESULT_KEY}${trainingSourceJobHash}`;
+    const evaluationRaw = await backend.get("analysis", evaluationKey);
+    if (decisionRaw === undefined || evaluationRaw === undefined) throw new RangeError("native monitoring requires retained decision and evaluation");
+    const value = JSON.parse(decisionRaw) as TrainingOperationsV3DecisionV1;
+    const captured = await this.#capture(trainingSourceJobHash, at, parseTearFoundryJob(value.job), undefined, candidateActive);
+    if (captured.previous === undefined) throw new RangeError("native monitoring admission unavailable");
+    const evaluation = parseTrainingOperationsV3EvaluationExecution(JSON.parse(evaluationRaw), captured.receipt, captured.training, captured.champion);
+    const decision = parseTrainingOperationsV3Decision(value, evaluation, captured.receipt, captured.training, captured.champion);
+    requireEvaluationTime(decision.job, at);
+    if (decision.disposition !== "monitoring-ready" || decision.job.phase !== "monitoring") throw new RangeError("native monitoring requires a passed decision");
+    captured.guards.push({ store: "analysis", key: decisionKey, expected: decisionRaw },
+      { store: "analysis", key: evaluationKey, expected: evaluationRaw });
+    return { ...captured, evaluation, decision };
   }
 
   async admit(trainingSourceJobHash: string, at: string, cases?: readonly TearScenarioV1[],

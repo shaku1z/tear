@@ -23,7 +23,7 @@ const ATTEMPT = "training-operations-scheduled-attempt:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 type Services = Parameters<typeof trainTrainingArchiveV3Candidate>[0];
 type Request = Omit<TrainingArchiveV3CandidateTrainingRequest, "at">;
-type Step = "train" | "admit" | "execute" | "decide" | "awaiting-promotion" | "rejected";
+type Step = "train" | "admit" | "execute" | "decide" | "awaiting-promotion" | "promoted" | "rejected";
 const stepFor = (phase: TearFoundryJobV1["phase"]): Step => {
   const step = { curating: "train", training: "admit", evaluating: "execute", deciding: "decide", monitoring: "awaiting-promotion", rejected: "rejected" } as const;
   if (!Object.hasOwn(step, phase)) throw new RangeError("V5 binding phase is outside the governed pipeline");
@@ -57,6 +57,7 @@ export interface TrainingOperationsExecutionBindingV5 {
   readonly previousBindingHash: string | null;
   /** An initial training head was already admitted; this is an origin, not an invented predecessor binding. */
   readonly admittedTraining?: Readonly<{ receiptHash: string; jobHash: string }>;
+  readonly promotion?: Readonly<{ approvalHash: string; receiptHash: string; activationHash: string; intentHash: string }>;
   readonly boundAt: string;
   readonly bindingHash: string;
 }
@@ -92,8 +93,12 @@ function createBinding(input: Omit<TrainingOperationsExecutionBindingV5, "format
     || stableVerificationHash({ format: "tear-offline-rl-reward-definition", schemaVersion: 1, ...input.request.reward.reward }) !== source.inputs.rewardDefinitionHash
     || input.evaluationCases.length < 1 || input.evaluationCases.length > 256 || input.evaluationCases.some((entry) => !text(entry.seed))
     || stableVerificationHash(input.evaluationCases) !== source.inputs.evaluationPlanHash) throw new RangeError("V5 binding does not match its frozen governed request");
+  if (input.promotion !== undefined) {
+    closed(input.promotion, "approvalHash receiptHash activationHash intentHash");
+    if (input.job.phase !== "monitoring" || input.previousBindingHash === null || !Object.values(input.promotion).every(hash)) throw new RangeError("invalid native promoted binding");
+  }
   const draft = { format: "training-operations-execution-binding" as const, schemaVersion: 5 as const,
-    ...structuredClone(input), step: stepFor(input.job.phase) };
+    ...structuredClone(input), step: input.promotion === undefined ? stepFor(input.job.phase) : "promoted" as const };
   return freezeTrainingOperationsEvidence({ ...draft, bindingHash: stableVerificationHash(draft) });
 }
 
@@ -101,12 +106,13 @@ function createBinding(input: Omit<TrainingOperationsExecutionBindingV5, "format
 export const createTrainingOperationsExecutionBindingV5 = createBinding;
 
 export function parseTrainingOperationsExecutionBindingV5(value: unknown): TrainingOperationsExecutionBindingV5 {
-  const raw = closed(value, `format schemaVersion schedule sourceJob job request evaluationCases step previousBindingHash boundAt bindingHash${value !== null && typeof value === "object" && Object.hasOwn(value, "admittedTraining") ? " admittedTraining" : ""}`);
+  const raw = closed(value, `format schemaVersion schedule sourceJob job request evaluationCases step previousBindingHash boundAt bindingHash${value !== null && typeof value === "object" && Object.hasOwn(value, "admittedTraining") ? " admittedTraining" : ""}${value !== null && typeof value === "object" && Object.hasOwn(value, "promotion") ? " promotion" : ""}`);
   if (raw.format !== "training-operations-execution-binding" || raw.schemaVersion !== 5 || !hash(raw.bindingHash)) throw new TypeError("invalid V5 binding version");
   const typed = value as TrainingOperationsExecutionBindingV5;
   const parsed = createBinding({ schedule: typed.schedule, sourceJob: typed.sourceJob, job: typed.job, request: typed.request,
     evaluationCases: typed.evaluationCases, previousBindingHash: typed.previousBindingHash, boundAt: typed.boundAt,
-    ...(typed.admittedTraining === undefined ? {} : { admittedTraining: typed.admittedTraining }) });
+    ...(typed.admittedTraining === undefined ? {} : { admittedTraining: typed.admittedTraining }),
+    ...(typed.promotion === undefined ? {} : { promotion: typed.promotion }) });
   if (!same(parsed, typed)) throw new RangeError("V5 binding integrity mismatch");
   return parsed;
 }
@@ -124,11 +130,12 @@ function createBudgetBinding(input: Parameters<typeof createBinding>[0], budgetI
 export function parseTrainingOperationsExecutionBinding(value: unknown): TrainingOperationsExecutionBinding {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError("invalid Training Operations binding");
   if ((value as Record<string, unknown>).schemaVersion !== 6) return parseTrainingOperationsExecutionBindingV5(value);
-  closed(value, `format schemaVersion schedule sourceJob job request evaluationCases step previousBindingHash boundAt bindingHash budget${Object.hasOwn(value, "admittedTraining") ? " admittedTraining" : ""}`);
+  closed(value, `format schemaVersion schedule sourceJob job request evaluationCases step previousBindingHash boundAt bindingHash budget${Object.hasOwn(value, "admittedTraining") ? " admittedTraining" : ""}${Object.hasOwn(value, "promotion") ? " promotion" : ""}`);
   const typed = value as TrainingOperationsExecutionBindingV6;
   const parsed = createBudgetBinding({ schedule: typed.schedule, sourceJob: typed.sourceJob, job: typed.job, request: typed.request,
     evaluationCases: typed.evaluationCases, previousBindingHash: typed.previousBindingHash, boundAt: typed.boundAt,
-    ...(typed.admittedTraining === undefined ? {} : { admittedTraining: typed.admittedTraining }) }, typed.budget);
+    ...(typed.admittedTraining === undefined ? {} : { admittedTraining: typed.admittedTraining }),
+    ...(typed.promotion === undefined ? {} : { promotion: typed.promotion }) }, typed.budget);
   if (!same(parsed, typed)) throw new RangeError("budgeted binding integrity mismatch");
   return parsed;
 }
@@ -340,6 +347,26 @@ export class TrainingOperationsV3ScheduledCycle {
     return binding;
   }
 
+  /** Pure derived records for the sole promotion executor's atomic continuation. */
+  promotionContinuation(schedule: TearFoundryJobScheduleV1, binding: TrainingOperationsExecutionBinding,
+    promotion: NonNullable<TrainingOperationsExecutionBinding["promotion"]>, retry = false) {
+    if (binding.step !== "awaiting-promotion" || schedule.state !== "disabled" || binding.schedule.scheduleHash !== schedule.scheduleHash) throw new RangeError("native promotion requires disabled awaiting-promotion schedule");
+    const next = createBudgetBinding({ schedule: binding.schedule, sourceJob: binding.sourceJob, job: binding.job,
+      request: binding.request, evaluationCases: binding.evaluationCases, previousBindingHash: binding.bindingHash,
+      boundAt: binding.boundAt, ...(binding.admittedTraining === undefined ? {} : { admittedTraining: binding.admittedTraining }), promotion },
+      binding.schemaVersion === 6 ? binding.budget : undefined);
+    const writes = bindingWrites(schedule, next);
+    const guards: TrainingOperationsV3Guard[] = [
+      { store: "analysis", key: scheduleKey(schedule), expected: JSON.stringify(schedule) },
+      { store: "analysis", key: `${OWNER}${schedule.id}`, expected: binding.sourceJob.jobHash },
+      { store: "analysis", key: bindingKey(binding.bindingHash, binding.schemaVersion), expected: JSON.stringify(binding) },
+      ...bindingWrites(schedule, binding).filter((write) => write.store === "indexes").map((write) => ({ store: write.store, key: write.key, expected: write.value ?? "" })),
+      ...writes.map((write) => ({ store: write.store, key: write.key, ...(retry ? { expected: write.value ?? "" }
+        : write.key === currentKey(schedule, binding.schemaVersion) ? { expected: binding.bindingHash } : {}) })),
+    ];
+    return { binding: next, guards, writes };
+  }
+
   /** Changes cadence without changing the frozen experiment; undefined means no V5-owned current schedule. */
   async setEnabledByHash(scheduleHash: string, enabled: boolean, at: string): Promise<TearFoundryJobScheduleV1 | undefined> {
     if (!hash(scheduleHash) || !time(at) || typeof enabled !== "boolean") throw new TypeError("invalid V5 schedule control");
@@ -352,7 +379,7 @@ export class TrainingOperationsV3ScheduledCycle {
       || Date.parse(at) < Date.parse(binding.boundAt) || Date.parse(at) < Date.parse(job.events.at(-1)?.at ?? "")) {
       throw new RangeError("V5 schedule control requires current job lineage and time");
     }
-    if (enabled && (binding.step === "awaiting-promotion" || binding.step === "rejected")) throw new RangeError("V5 cycle has no authorized next training step");
+    if (enabled && (binding.step === "awaiting-promotion" || binding.step === "promoted" || binding.step === "rejected")) throw new RangeError("V5 cycle has no authorized next training step");
     const guards: TrainingOperationsV3Guard[] = [
       { store: "analysis", key: scheduleKey(schedule), expected: JSON.stringify(schedule) },
       { store: "analysis", key: `${OWNER}${schedule.id}`, expected: binding.sourceJob.jobHash },
@@ -517,7 +544,7 @@ export class TrainingOperationsV3ScheduledCycle {
     if (binding === undefined) return undefined;
     const services = this.#services, dueAt = dueAtFoundryJobSchedule(schedule);
     if (services === undefined || schedule.state !== "enabled" || dueAt === null || Date.parse(at) < Date.parse(dueAt)) throw new RangeError("V5 execution requires shared services and a due enabled schedule");
-    if (binding.step === "awaiting-promotion" || binding.step === "rejected") throw new RangeError("V5 cycle has no authorized next training step");
+    if (binding.step === "awaiting-promotion" || binding.step === "promoted" || binding.step === "rejected") throw new RangeError("V5 cycle has no authorized next training step");
     const job = await this.#jobs.get(schedule.jobId);
     if (job?.jobHash !== binding.job.jobHash || job.phase !== binding.job.phase
       || !same(job.inputs, binding.sourceJob.inputs) || job.events.length < binding.sourceJob.events.length

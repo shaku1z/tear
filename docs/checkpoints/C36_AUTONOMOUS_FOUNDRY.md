@@ -889,3 +889,27 @@ and bindings keep their historical route. The legacy hash-only profile does
 not supply a native training request or evaluation cases. This completes the
 explicit native scheduled evaluation path, while native monitoring and
 authorized promotion continuation remain separate from it.
+
+
+### Native monitoring authority and explicit promotion
+
+Native scheduled cycles now retain their native decision/evaluation/training provenance
+through a separately tagged monitoring authority and promotion approval. The normal
+Training Operations screen exposes PROMOTE only for a current eligible, disabled
+awaiting-promotion schedule. Its exact displayed intent binds the schedule, binding,
+monitoring head, decision, candidate and rollback activation. Merely enabling a schedule
+never authorizes activation. Eligibility remains approver-free; the deliberate local
+action supplies product intent.
+
+The existing V3 promotion executor remains the sole activation writer. It atomically
+commits native authority/approval/receipt, promoted binding and indexes with the numeric
+retention ledger and guarded policy pointer/history. Source, current consent/curation,
+custody, reviewed dataset, budget and rollback baseline are revalidated at that boundary.
+Exact retries verify retained authority without a second activation or charge. Existing
+legacy bridge bytes remain separate; no V2 decision or monitoring receipt is fabricated.
+
+The existing V3 Watch journal monitor and rollback owners can read either approval
+origin using their common frozen policy and baseline fields. This does not create Watch
+observations, auto-run a Watch session, claim learned quality or participant evidence,
+or complete the remaining unattended post-promotion orchestration. Browser evidence
+for the new explicit action remains pending.

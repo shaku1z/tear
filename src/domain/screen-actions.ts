@@ -88,6 +88,7 @@ export type ScreenAction =
   | { readonly type: "academy.humanCalibration.revoke" }
   | { readonly type: "training-operations.open" }
   | { readonly type: "training-operations.refresh" }
+  | { readonly type: "training-operations.promote"; readonly scheduleHash: string; readonly intentHash: string }
   | { readonly type: "training-operations.bootstrap"; readonly profileId: string }
   | { readonly type: "training-operations.schedule.enable"; readonly scheduleHash: string }
   | { readonly type: "training-operations.schedule.disable"; readonly scheduleHash: string }

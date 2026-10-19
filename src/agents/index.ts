@@ -122,3 +122,6 @@ export * from "./training-operations-v3-comparison-result";
 export * from "./training-operations-v3-evaluation";
 export * from "./training-operations-v3-scheduled-cycle";
 export * from "./training-operations-preparation";
+
+export * from "./training-operations-v3-monitoring-authority";
+export * from "./training-operations-v3-promotion-cycle";

@@ -3,7 +3,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { TearAcademyCandidateCustodyStore } from "./academy-candidate-custody";
 import { parseTearFoundryV3PostPromotionMonitorRecord } from "./foundry-job-v3-post-promotion-monitor";
 import { parseTearFoundryV3PromotionReceipt } from "./foundry-job-v3-promotion";
-import { parseTearFoundryV3PromotionApproval } from "./foundry-job-v3-promotion-approval";
+import { parseTearFoundryV3PromotionApprovalOrigin } from "./foundry-job-v3-promotion-approval";
 import { parseTearFoundryJob, requireTearFoundryEvaluationProtocol } from "./foundry-job-state";
 import type { TearFoundryJobVault } from "./foundry-job-vault";
 import { parseTearPolicyActivation, parseTearPolicyArtifact } from "./policy-artifact-registry";
@@ -30,7 +30,7 @@ export class TearFoundryV3PostPromotionRollbackExecutor {
     if (monitor.classification !== "threshold-breach") throw new RangeError("post-promotion rollback requires an exact threshold breach");
     const [activeRaw, approvalRaw, promotionRaw] = await Promise.all([backend.get("analysis", ACTIVE), backend.get("analysis", `${APPROVAL}${monitor.promotion.approvalHash}`), backend.get("analysis", `${PROMOTION}${monitor.promotion.approvalHash}`)]);
     if (activeRaw === undefined || approvalRaw === undefined || promotionRaw === undefined) throw new RangeError("post-promotion rollback provenance is unavailable");
-    const active = parseTearPolicyActivation(JSON.parse(activeRaw)), approval = parseTearFoundryV3PromotionApproval(JSON.parse(approvalRaw)), promotion = parseTearFoundryV3PromotionReceipt(JSON.parse(promotionRaw));
+    const active = parseTearPolicyActivation(JSON.parse(activeRaw)), approval = parseTearFoundryV3PromotionApprovalOrigin(JSON.parse(approvalRaw)), promotion = parseTearFoundryV3PromotionReceipt(JSON.parse(promotionRaw));
     if (active.artifactId !== monitor.promotion.artifactId || active.artifactHash !== monitor.promotion.artifactHash || active.activationHash !== monitor.promotion.activationHash || promotion.receiptHash !== monitor.promotion.promotionReceiptHash || promotion.approvalHash !== monitor.promotion.approvalHash || promotion.activationHash !== active.activationHash || approval.approvalHash !== promotion.approvalHash || approval.candidate.id !== active.artifactId || approval.candidate.artifactHash !== active.artifactHash || approval.rollbackBaseline === undefined) throw new RangeError("post-promotion rollback active provenance changed");
     const actualJobRaw = await backend.get("analysis", `foundry-job:v1:${approval.job.id}`); if (actualJobRaw === undefined) throw new RangeError("post-promotion rollback job is unavailable"); const job = parseTearFoundryJob(JSON.parse(actualJobRaw)), protocol = requireTearFoundryEvaluationProtocol(job);
     if (job.phase !== "monitoring" || job.jobHash !== approval.job.jobHash || protocol.protocolHash !== approval.job.protocolHash || job.inputs.stopConditionsHash !== approval.job.stopConditionsHash || monitor.policy.protocolHash !== protocol.protocolHash || monitor.policy.stopConditionsHash !== job.inputs.stopConditionsHash || JSON.stringify(monitor.policy.thresholds) !== JSON.stringify(protocol.thresholds)) throw new RangeError("post-promotion rollback policy changed");

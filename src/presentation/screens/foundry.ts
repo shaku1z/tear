@@ -12,7 +12,7 @@ export function createFoundryRenderers(context: ScreenRenderContext) {
       ui.panel(canvas, panelX, 120, 640, 112);
       ui.sectionLabel(canvas, "AUTOMATION", panelX + 24, 150, 592);
       ui.displayText(canvas, view.automation === "local" ? "LOCAL APP SCHEDULER" : "UNAVAILABLE / NOT RUNNING", panelX + 24, 178, ui.t.type.label, "left");
-      ui.text(canvas, view.automation === "local" ? "One persisted due job at a time. No worker, cloud, policy activation, or promotion." : "Local schedules are configuration only; no worker, timer, or workflow is running.", panelX + 24, 202, ui.t.type.caption, "left", ui.t.alpha.muted);
+      ui.text(canvas, view.automation === "local" ? "One persisted due job at a time. Promotion requires the separate PROMOTE action." : "Local schedules are configuration only; no worker, timer, or workflow is running.", panelX + 24, 202, ui.t.type.caption, "left", ui.t.alpha.muted);
       if (view.status !== "ready") {
         ui.panel(canvas, panelX, 252, 640, 116);
         ui.text(canvas, view.status === "loading" ? "Reading local Training Operations recovery projections..." : view.subtitle, width / 2, 286, ui.t.type.body, "center", ui.t.alpha.muted);
@@ -35,11 +35,13 @@ export function createFoundryRenderers(context: ScreenRenderContext) {
         ui.text(canvas, schedule === undefined ? "SCHEDULE: NOT CONFIGURED" : `SCHEDULE: ${schedule.runtimeStatus.toUpperCase()} / ${schedule.disposition.replaceAll("-", " ").toUpperCase()}`, panelX + 24, scheduleY, ui.t.type.caption, "left", ui.t.alpha.muted);
         if (schedule !== undefined) context.enqueue({ x: panelX + 420, y: scheduleY - 26, w: 172, h: 34, label: schedule.state === "enabled" ? "DISABLE SCHEDULE" : "ENABLE SCHEDULE",
           action: schedule.state === "enabled" ? { type: TRAINING_OPERATIONS_ACTIONS.scheduleDisable, scheduleHash: schedule.scheduleHash } : { type: TRAINING_OPERATIONS_ACTIONS.scheduleEnable, scheduleHash: schedule.scheduleHash } });
+        if (view.promotion !== undefined) context.enqueue({ x: panelX + 24, y: scheduleY + 12, w: 160, h: 34, label: "PROMOTE",
+          action: { type: TRAINING_OPERATIONS_ACTIONS.promote, scheduleHash: view.promotion.scheduleHash, intentHash: view.promotion.intentHash } });
         const pageSize = 4;
         const offset = Math.max(0, Math.min(Math.max(0, view.jobs.length - pageSize), Math.floor(context.scroll / 100)));
         const jobs = view.jobs.slice(offset, offset + pageSize);
         const height = Math.max(108, 50 + jobs.length * 100);
-        const jobsY = scheduleY + 16;
+        const jobsY = scheduleY + 16 + (view.promotion === undefined ? 0 : 48);
         ui.panel(canvas, panelX, jobsY, 640, height);
         ui.sectionLabel(canvas, `LOCAL HASH-ONLY JOBS ${String(offset + 1)}-${String(offset + jobs.length)} / ${String(view.jobs.length)}`, panelX + 24, jobsY + 30, 592);
         if (jobs.length === 0) ui.text(canvas, "No validated local Training Operations jobs are stored.", panelX + 24, jobsY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);

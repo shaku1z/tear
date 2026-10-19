@@ -1,4 +1,4 @@
-import { TearAcademyCandidateCurationStore, TearAcademyCandidateCustodyStore, TearAcademyCandidateQualityStore, TearAcademyCandidateSplitStore, TearAcademyCorpusStore, TearAcademyReviewedSampleStore, TearAcademyTrainingDatasetLoader, TearFoundryBootstrapExecutor, TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryLaunchProfileAuthority, TearFoundryRecoveryController, TearFoundryScheduleController, TrainingOperationsV3ScheduledCycle } from "../agents";
+import { TearAcademyCandidateCurationStore, TearAcademyCandidateCustodyStore, TearAcademyCandidateQualityStore, TearAcademyCandidateSplitStore, TearAcademyCorpusStore, TearAcademyReviewedSampleStore, TearAcademyTrainingDatasetLoader, TearFoundryBootstrapExecutor, TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryLaunchProfileAuthority, TearFoundryRecoveryController, TearFoundryScheduleController, TrainingOperationsV3ScheduledCycle, TrainingOperationsV3PromotionCycle } from "../agents";
 import type { GhostVaultBackend } from "../ghost";
 import { createIndexedDbGhostVaultBackend } from "../ghost";
 import type { FoundryScreenView } from "../presentation/screens/contracts";
@@ -20,12 +20,18 @@ export class LiveFoundryScreenController {
   async refresh(): Promise<FoundrySnapshot> {
     if (this.#backend === undefined) return this.#set({ id: "foundry", status: "unavailable", subtitle: "Training Operations storage is unavailable in this runtime", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] });
     try {
-      const { vault, custody, authority } = this.#services(), recovery = new TearFoundryRecoveryController(vault), schedules = new TearFoundryJobScheduleVault(this.#backend);
+      const services = this.#services(), { vault, custody, authority } = services, recovery = new TearFoundryRecoveryController(vault), schedules = new TearFoundryJobScheduleVault(this.#backend);
       const projections = (await Promise.all((await vault.list()).map((job) => recovery.project(job.id)))).filter((value): value is NonNullable<typeof value> => value !== undefined);
       const now = new Date().toISOString(), [scheduleProjections, launchProfiles] = await Promise.all([new TearFoundryScheduleController(vault, schedules, { held: async (job, at) => {
         const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((record) => record.recordHash === hash));
       } }).discoverDue(now), authority.projections(now)]);
-      return this.#set({ id: "foundry", status: "ready", subtitle: "local, hashes-only restart recovery", automation: this.#schedulerOwned ? "local" : "unavailable", launchProfiles, jobs: projections.map((projection) => Object.freeze({
+      let promotion: FoundryScreenView["promotion"];
+      const native = new TrainingOperationsV3PromotionCycle(vault, schedules, services);
+      for (const schedule of await schedules.list()) {
+        try { const prepared = await native.prepare(schedule.scheduleHash, now); promotion = { scheduleHash: schedule.scheduleHash, intentHash: prepared.intent.intentHash }; break; }
+        catch { /* A legacy, active, or ineligible schedule exposes no promotion action. */ }
+      }
+      return this.#set({ id: "foundry", status: "ready", ...(promotion === undefined ? {} : { promotion }), subtitle: "local, hashes-only restart recovery", automation: this.#schedulerOwned ? "local" : "unavailable", launchProfiles, jobs: projections.map((projection) => Object.freeze({
         jobHash: projection.jobHash, phase: projection.phase, nextManualPhase: projection.nextManualPhase, resumable: projection.resumable,
         eventCount: projection.provenance.eventCount, lastEventHash: projection.provenance.lastEventHash, projectionHash: projection.projectionHash,
       })), schedules: scheduleProjections.map((schedule) => Object.freeze({ ...schedule, runtimeStatus: this.#scheduleStatus(schedule.scheduleHash) ?? (schedule.state === "disabled" ? "disabled" : schedule.disposition === "due" ? "due" : schedule.disposition.startsWith("blocked-") ? "blocked" : "configured") })) });
@@ -37,6 +43,19 @@ export class LiveFoundryScreenController {
       const { vault, custody, curation, corpus, loader } = this.#services(), schedules = new TearFoundryJobScheduleVault(this.#backend), at = new Date().toISOString();
       const native = await new TrainingOperationsV3ScheduledCycle(vault, schedules, { custody, curation, corpus, loader }).setEnabledByHash(scheduleHash, enabled, at);
       if (native === undefined) await schedules.setEnabledByHash(scheduleHash, enabled, at);
+    }
+    await this.refresh();
+  }
+  async promote(scheduleHash: string, intentHash: string): Promise<void> {
+    if (this.#backend === undefined) return;
+    try {
+      const services = this.#services();
+      await new TrainingOperationsV3PromotionCycle(services.vault, new TearFoundryJobScheduleVault(this.#backend), services)
+        .promote(scheduleHash, intentHash, new Date().toISOString());
+    } catch {
+      await this.refresh();
+      this.#snapshot = Object.freeze({ ...this.#snapshot, subtitle: "Promotion refused: refresh current evidence and try again." });
+      return;
     }
     await this.refresh();
   }
@@ -58,7 +77,7 @@ export class LiveFoundryScreenController {
   #set(snapshot: FoundrySnapshot): FoundrySnapshot { this.#snapshot = Object.freeze({ ...snapshot, jobs: Object.freeze(snapshot.jobs), schedules: Object.freeze(snapshot.schedules) }); return this.#snapshot; }
 }
 
-export function createLiveFoundryScreen(factory: IDBFactory | undefined): Readonly<{ snapshot: () => FoundryScreenView; refresh: () => void; bootstrap: (profileId: string) => void; setScheduleEnabled: (scheduleHash: string, enabled: boolean) => void }> {
+export function createLiveFoundryScreen(factory: IDBFactory | undefined): Readonly<{ snapshot: () => FoundryScreenView; refresh: () => void; bootstrap: (profileId: string) => void; promote: (scheduleHash: string, intentHash: string) => void; setScheduleEnabled: (scheduleHash: string, enabled: boolean) => void }> {
   const controller = new LiveFoundryScreenController(undefined);
   // The delayed browser backend needs one stable controller instance, not a replacement captured by the renderer.
   let active = controller;
@@ -69,5 +88,5 @@ export function createLiveFoundryScreen(factory: IDBFactory | undefined): Readon
     scheduler.value = createLiveFoundryScheduler(backend, () => { void active.refresh(); });
     scheduler.value.start(); return active.refresh();
   }).catch(() => { void active.refresh(); });
-  return Object.freeze({ snapshot: () => active.snapshot(), refresh: () => { void active.refresh(); }, bootstrap: (profileId) => { void active.bootstrap(profileId); }, setScheduleEnabled: (scheduleHash, enabled) => { void active.setScheduleEnabled(scheduleHash, enabled); } });
+  return Object.freeze({ snapshot: () => active.snapshot(), refresh: () => { void active.refresh(); }, bootstrap: (profileId) => { void active.bootstrap(profileId); }, promote: (scheduleHash, intentHash) => { void active.promote(scheduleHash, intentHash); }, setScheduleEnabled: (scheduleHash, enabled) => { void active.setScheduleEnabled(scheduleHash, enabled); } });
 }
