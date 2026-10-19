@@ -50,9 +50,13 @@ withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async
   // keyboard/pointer input. It never patches actors, fabricates outcomes or changes chunks.
   await boot({ test: "1", bossdebug: "1", "ghost-v3-profile": "forensic-qa" });
   await clickAndWait(260, 360, "setup");
+  // Canvas clicks are consumed on UI frames; observe each selection before the next click.
   await page.mouse.click(430, 255); // Endless
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await page.mouse.click(820, 435); // One-Hit: natural defeat remains an actual combat outcome.
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.difficulty === "onehit");
   await page.mouse.click(1180, 376); // Chainblade
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.weapon === "chainblade");
   assert.deepEqual(await page.evaluate(() => window.__PANTHEON_TEST.state().setup), { mode: "endless", difficulty: "onehit", weapon: "chainblade", boss: "shuffle" });
   const archive = async (id) => page.evaluate(async (sourceId) => {
     const database = await new Promise((resolve, reject) => { const request = indexedDB.open("tear-ghost-v3"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
