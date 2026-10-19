@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { withJourney } = require("./browser-journey-harness");
+const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 
 function scenario(id, seed) {
   return {
@@ -26,7 +26,7 @@ async function vaultValue(page, store, key) {
 }
 
 async function waitForVaultTerminalRecovery(page, capsuleId) {
-  await page.waitForFunction(async (id) => {
+  await waitForBrowserValue(page, async (id) => {
     const read = (storeName, recordKey) => new Promise((resolve, reject) => {
       const open = window.indexedDB.open("tear-ghost-v3");
       open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
@@ -91,7 +91,7 @@ withJourney({ name: "C27 Ghost V3 browser corrupt recovery", port: 8159 }, async
     // between the chunk check and the intentional corruption below.
     environment.pause();
   }, scenario("c27-corrupt-interrupted", "c27-corrupt-interrupted-seed"));
-  await page.waitForFunction(async (knownIds) => (await window.__TEAR_GHOST_V3__.manifests())
+  await waitForBrowserValue(page, async (knownIds) => (await window.__TEAR_GHOST_V3__.manifests())
     .some((manifest) => !knownIds.includes(manifest.id)
       && manifest.status === "recording" && manifest.chunks.length > 0), priorIds, { timeout: 20000 });
   // Return a plain evidence record from the page. This preserves the exact
@@ -138,7 +138,7 @@ withJourney({ name: "C27 Ghost V3 browser corrupt recovery", port: 8159 }, async
     for (let tick = 1; tick <= 120; tick += 1) environment.step([]);
     environment.terminate();
   }, scenario("c27-corrupt-recovery-follow-up", "c27-corrupt-recovery-follow-up-seed"));
-  await page.waitForFunction(async (id) => (await window.__TEAR_GHOST_V3__.manifests())
+  await waitForBrowserValue(page, async (id) => (await window.__TEAR_GHOST_V3__.manifests())
     .filter((manifest) => manifest.id !== id && manifest.status === "complete").length >= 2,
   interrupted.id, { timeout: 20000 });
   assert.equal(await vaultValue(page, "quarantine", quarantineKey), firstRecoveryEntry,

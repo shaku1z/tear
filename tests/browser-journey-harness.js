@@ -134,4 +134,26 @@ async function withJourney(options, run) {
   }
 }
 
-module.exports = { withJourney };
+/** Poll resolved durable evidence rather than an async predicate's Promise. */
+async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000, polling = 50 } = {}) {
+  assert.ok(Number.isFinite(timeout) && timeout > 0, "async browser wait requires a positive timeout");
+  assert.ok(Number.isFinite(polling) && polling > 0, "async browser wait requires a positive polling interval");
+  let cancelled = false, timer;
+  const deadline = new Promise((resolve, reject) => {
+    void resolve;
+    timer = setTimeout(() => reject(new Error(`async browser condition did not become truthy within ${timeout}ms`)), timeout);
+  });
+  const poll = async () => {
+    while (!cancelled) {
+      const value = await page.evaluate(predicate, argument);
+      if (cancelled) return undefined;
+      if (value) return value;
+      await new Promise((resolve) => setTimeout(resolve, polling));
+    }
+    return undefined;
+  };
+  try { return await Promise.race([poll(), deadline]); }
+  finally { cancelled = true; clearTimeout(timer); }
+}
+
+module.exports = { withJourney, waitForBrowserValue };
