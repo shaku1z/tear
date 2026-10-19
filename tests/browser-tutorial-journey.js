@@ -67,7 +67,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       const snapshot = tutorial();
       trace.push({
         label, tick: observation.tick, lessonIndex: snapshot.lessonIndex, lesson: snapshot.lesson, description: snapshot.description,
-        arena: snapshot.arena, fieldEncounter: environment.canonicalState().tutorial?.fieldEncounter,
+        arena: snapshot.arena, fieldEncounter: environment.canonicalState()?.tutorial?.fieldEncounter,
         counters: snapshot.counters, player: observation.player, blade: observation.blade,
         entities: observation.entities,
       });
