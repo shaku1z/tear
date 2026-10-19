@@ -8,7 +8,7 @@ import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-conf
 import { RuntimeFrameDriver } from "./runtime-frame-driver"; import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
 import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
 import { createLiveProductionWorld } from "./live-production-world";
-import { createLiveHudFeedbackState } from "./live-hud-feedback-state";
+import { createLiveHudFeedbackState } from "./live-hud-feedback-state"; import { createLiveParticlePresentationState } from "./live-particle-presentation-state";
 import { createLiveInterfaceFrameState } from "./live-interface-frame-state";
 import { createLiveInterfaceInteractionState } from "./live-interface-interaction-state";
 import { createLiveReviveCountdownState } from "./live-revive-countdown-state";
@@ -567,6 +567,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
     reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
     runtimeState: stateForgeRuntime.capture, restoreRuntimeState: stateForgeRuntime.restore, hudPresentation: hudFeedback,
+    particlesPresentation: createLiveParticlePresentationState(FX, () => ({ effects: CONFIG.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion })),
     captureCinema: () => CINEMA.captureState(),
     validateCinema: stateForgeRuntime.validate,
   });

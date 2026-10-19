@@ -14,6 +14,7 @@ import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import type { ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
+import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
 
 const timing: CampaignChapterTiming = Object.freeze({
   loreReveal: 0.1, chapterIn: 0.2, loreExit: 0.3, biomeRevealBrief: 0.4,
@@ -75,6 +76,34 @@ function withoutPresentation(snapshot: TearSnapshotV1): TearSnapshotV1 {
 }
 
 describe("production replay composition", () => {
+  it("captures, stages and recaptures actual particles using candidate tuning without changing replay semantics", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "particle-presentation-portability" });
+    const source = composition.create(undefined), fx = source.replay.effects;
+    source.replay.configuration.value.effects.highBudget = 4; source.replay.configuration.value.effects.lowBudget = 1;
+    fx.spark(800, 775, 1, -1); fx.drip(800, 775); fx.setViewRect({ left: 0, top: 0, right: 1200, bottom: 900 });
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "particles");
+    const saved = (checkpoint.snapshot.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation;
+    const target = createProductionReplayWorld({ seed: "different-particle-target" });
+    target.configuration.value.effects.highBudget = 9; target.configuration.value.effects.cullMargin = 7;
+    const list = target.effects.list;
+    restoreProductionReplaySnapshot(target, checkpoint.snapshot);
+    expect(createLiveParticlePresentationState(target.effects, () => ({ effects: target.configuration.value.effects, lowGraphics: false, reducedMotion: false })).capture()).toEqual(saved);
+    expect(target.effects.list).toBe(list);
+    const restored = composition.create(checkpoint.snapshot);
+    const recaptured = captureProductionReplayCheckpoint(restored.replay, restored.combat, restored.waveReward, "particles-roundtrip");
+    expect((recaptured.snapshot.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation).toEqual(saved);
+    expect(recaptured.semanticHash).toBe(checkpoint.semanticHash);
+    for (const kind of ["malformed", "binding"] as const) {
+      const invalid = structuredClone(checkpoint.snapshot);
+      const payload = (invalid.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation as { replacementCursor: number; policy: { effects: { cullMargin: number } } };
+      if (kind === "malformed") payload.replacementCursor = -1; else payload.policy.effects.cullMargin += 1;
+      const unchanged = unchangedDestination(target), particles = structuredClone(target.effects.list), view = target.effects.view;
+      expect(() => restoreProductionReplaySnapshot(target, invalid)).toThrow(/particle/);
+      unchanged(); expect(target.effects.list).toEqual(particles); expect(target.effects.view).toBe(view);
+    }
+    const legacy = structuredClone(checkpoint.snapshot); delete (legacy.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation;
+    restoreProductionReplaySnapshot(target, legacy); expect(target.effects.list).toEqual([]); expect(target.effects.view).toBeNull(); expect(target.effects._replacementCursor).toBe(0);
+  });
   it("accepts a portable live HUD checkpoint without changing replay semantics", () => {
     const composition = createProductionGhostReplayComposition({ seed: "presentation-portability" });
     const source = composition.create(undefined);

@@ -58,6 +58,17 @@ function populatedWorld(): TearCodecWorld {
 }
 
 describe("presentation-only UI checkpoints", () => {
+  it("retains particles exactly while preserving HUD and every existing semantic extension", () => {
+    const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld();
+    const legacy = { screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 }, hudPresentation: { version: 1, clockSeconds: 3, lagHp: 1, multiplier: 1, multiplierPop: 0 } };
+    const particles = { version: 1, list: [], view: null, replacementCursor: 9, policy: { effects: { highBudget: 0, lowBudget: 0, cullMargin: 180 }, lowGraphics: false, reducedMotion: false } };
+    a.components.set("tear.ui.v1", legacy); b.components.set("tear.ui.v1", { ...legacy, particlesPresentation: particles });
+    expect(codec.capture(b)).toEqual({ ...legacy, particlesPresentation: particles });
+    expect(codec.hashProjection(b)).toEqual({ screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 } });
+    expect(codec.hashProjection(b)).toEqual(codec.hashProjection(a)); expect(codec.capture(b)).not.toEqual(codec.capture(a));
+    b.components.set("tear.ui.v1", { ...legacy, extensionSentinel: { preserved: 43 }, particlesPresentation: particles });
+    expect(codec.hashProjection(b)).not.toEqual(codec.hashProjection(a));
+  });
   it("retains HUD exactly while preserving semantic projection and historical extension fields", () => {
     const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld();
     const legacy = { screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 } };

@@ -33,6 +33,8 @@ import {
 } from "../tearbench/detached-world-hydrator";
 import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import type { UiHudPresentationCheckpoint } from "../tearbench/ui-presentation-checkpoint";
+import { parseParticlePresentationCheckpoint, validateParticlePresentationBinding } from "../tearbench/particle-presentation-checkpoint";
+import type { LiveParticlePresentationState } from "./live-particle-presentation-state";
 
 interface Platform {
   readonly x: number;
@@ -96,6 +98,7 @@ export interface LiveStateForgeAdapterOptions {
   readonly runtimeState: () => Readonly<Record<string, unknown>>;
   readonly restoreRuntimeState: (state: Readonly<Record<string, unknown>>) => void;
   readonly hudPresentation?: Readonly<{ capture(): UiHudPresentationCheckpoint; restore(value: UiHudPresentationCheckpoint | undefined): void }>;
+  readonly particlesPresentation?: LiveParticlePresentationState;
   readonly captureCinema: () => unknown;
   /** Validates the candidate's behavior-bearing cinematic binding before commit mutation. */
   readonly validateCinema: (runtime: Readonly<Record<string, unknown>>, run: GameRun, stageIndex: number,
@@ -215,7 +218,8 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     routes: encode(environment.routes, identities),
   }));
   components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()),
-    ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}) }));
+    ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}),
+    ...(options.particlesPresentation ? { particlesPresentation: encode(options.particlesPresentation.capture(), identities) } : {}) }));
   components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
   components.set("tear.configuration.v1", Object.freeze({
     rulesetVersion: "live", values: Object.freeze({
@@ -251,6 +255,19 @@ function stageWorld(
   world: TearCodecWorld,
   context: TearLiveRestoreContext,
 ): Candidate {
+  // Bind against the same base/weapon/configuration composition used by commit,
+  // before constructing actors or consulting any outgoing presentation state.
+  const ui = world.components.get("tear.ui.v1"), blade = world.components.get("tear.blade.v1");
+  const uiRecord = ui !== null && typeof ui === "object" && !Array.isArray(ui) ? ui as Readonly<Record<string, TearCodecValue>> : undefined;
+  const bladeRecord = blade !== null && typeof blade === "object" && !Array.isArray(blade) ? blade as Readonly<Record<string, TearCodecValue>> : undefined;
+  const particles = parseParticlePresentationCheckpoint(uiRecord?.particlesPresentation);
+  if (particles !== undefined) {
+    if (options.particlesPresentation === undefined) throw new Error("particle presentation owner is not bound");
+    const configuration = options.worldServices.configuration.baseSnapshot();
+    if (typeof bladeRecord?.weaponId === "string") options.dependencies.applyWeapon(configuration, bladeRecord.weaponId);
+    applyTearCodecConfiguration(configuration, world.components.get("tear.configuration.v1") ?? null, new Map());
+    validateParticlePresentationBinding(particles, configuration.effects);
+  }
   const candidate = hydrateTearCodecWorld<
     GameRun,
     GamePlayer,
@@ -362,6 +379,7 @@ export function createLiveStateForgeAdapter(
       // cinema snapshot destructively clears its current binding; no later
       // commit action may throw and make the prior active binding unavailable
       // to the transactional rollback candidate.
+      options.particlesPresentation?.restore(candidate.particlesPresentation);
       options.hudPresentation?.restore(candidate.hudPresentation);
       options.restoreRuntimeState(candidate.runtime);
     },

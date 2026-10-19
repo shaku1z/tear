@@ -207,6 +207,7 @@ export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
       // Exact capture retains this new field. Existing UI fields/extensions stay semantic.
       const projection = structuredClone(payload);
       Reflect.deleteProperty(projection, "hudPresentation");
+      Reflect.deleteProperty(projection, "particlesPresentation");
       return projection;
     },
   });

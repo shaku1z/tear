@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { validateLiveCodecPayload } from "../../src/tearbench/live-codec-validation";
 
 describe("UI presentation checkpoint preflight", () => {
+  it.each([null, { version: 2 }, { version: 1, list: [] }])("rejects malformed optional particles %j", (particlesPresentation) => {
+    expect(validateLiveCodecPayload("tear.ui.v1", { screen: "playing", focusId: "-1", particlesPresentation }))
+      .toEqual(expect.arrayContaining([expect.objectContaining({ path: "$.particlesPresentation" })]));
+  });
   it.each([null, { version: 2 }, { version: 1, clockSeconds: -1, lagHp: 1, multiplier: 1, multiplierPop: 0 },
     { version: 1, clockSeconds: 1, lagHp: 1, multiplier: 1, multiplierPop: 2 }])("rejects malformed optional HUD %j", (hudPresentation) => {
     expect(validateLiveCodecPayload("tear.ui.v1", { screen: "playing", focusId: "-1", hudPresentation }))

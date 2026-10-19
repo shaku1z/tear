@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createLiveStateForgeAdapter } from "../../src/app/live-state-forge-adapter";
 import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
 import { captureLiveStateForgeSnapshot, createLiveStateForgeRestoreFactory } from "../../src/tearbench/live-runtime-snapshots";
@@ -10,6 +10,7 @@ import { STAGES, PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 import { UPGRADES } from "../../src/gameplay/upgrades";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createLiveHudFeedbackState } from "../../src/app/live-hud-feedback-state";
+import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
 
 type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {
@@ -35,6 +36,8 @@ function fixture() {
   let failure: Failure | undefined;
   let screen = "playing", focus = -1;
   const hud = createLiveHudFeedbackState();
+  const particles = createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: false, reducedMotion: false }));
+  const runtimeParticles: ReturnType<typeof particles.capture>[] = [];
   let runtime: Readonly<Record<string, unknown>> = { sentinel: 1, cinema: INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 };
   const observe = (phase: string) => {
     for (const actor of state.enemies()) observations.push({ phase, actor, id: identities.id(actor, "enemy") });
@@ -65,7 +68,7 @@ function fixture() {
     captureGhost: () => ({ recording: null }), restoreGhost: () => undefined,
     captureIdentityState: identities.captureIdentityState.bind(identities),
     restoreIdentityState: identities.restoreIdentityState.bind(identities),
-    runtimeState: () => runtime, restoreRuntimeState: (value) => { runtime = value; fail("runtime"); }, hudPresentation: hud,
+    runtimeState: () => runtime, restoreRuntimeState: (value) => { runtime = value; runtimeParticles.push(particles.capture()); fail("runtime"); }, hudPresentation: hud, particlesPresentation: particles,
     captureCinema: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1, validateCinema: () => undefined,
   });
   const registry = createDefaultStateCodecRegistry();
@@ -82,23 +85,64 @@ function fixture() {
     actor.applyGraftEffects({ incomingDamageMultiplier: damage, cadenceMultiplier: 1.15, activeTypes: ["bastion", "haste"] });
     expect(actor.startRootCage(800)).toBe(true);
   };
-  return { replay, state, adapter, capture, restore, facts, observations, hud,
+  return { replay, state, adapter, capture, restore, facts, observations, hud, particles, runtimeParticles,
     failNext: (phase: Failure) => { failure = phase; } };
 }
 
 describe("live State Forge adapter ownership boundary", () => {
+  it("captures and restores actual particles after three fixed steps and rolls back after installed FX on late failure", () => {
+    const host = fixture(), fx = host.replay.effects;
+    fx.spark(800, 775, 1, -1); fx.drip(800, 775); fx.setViewRect({ left: 0, top: 0, right: 1200, bottom: 900 });
+    const saved = host.capture(), particles = host.particles.capture(), list = fx.list, view = fx.view;
+    for (let i = 0; i < 3; i++) fx.update(1 / 120);
+    expect(host.particles.capture()).not.toEqual(particles);
+    expect(host.restore(saved).ok).toBe(true);
+    expect(host.particles.capture()).toEqual(particles); expect(fx.list).toBe(list); expect(fx.view).toBe(view);
+    expect((saved.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation).toEqual(particles);
+    fx.update(1 / 120); const outgoing = host.capture(), outgoingParticles = host.particles.capture();
+    host.failNext("runtime");
+    expect(host.restore(saved)).toMatchObject({ ok: false, phase: "commit", rolledBack: true });
+    expect(host.capture().state).toEqual(outgoing.state); expect(host.particles.capture()).toEqual(outgoingParticles);
+    expect(host.runtimeParticles.slice(-2)).toEqual([particles, outgoingParticles]);
+  });
   it("restores JSON-portable staged HUD exactly and retains boss flash only on its actor codec", () => {
     const host = fixture();
     const hud = { version: 1, clockSeconds: 2.3456789, lagHp: 0.87, multiplier: 3, multiplierPop: 0.42 };
     host.hud.restore(hud);
     Object.assign(host.state.enemies()[0] ?? {}, { _phaseFlashT: 0.5 });
     const snapshot = JSON.parse(JSON.stringify(host.capture())) as ReturnType<typeof host.capture>;
-    expect(snapshot.state["tear.ui.v1"]).toEqual({ screen: "playing", focusId: "-1", hudPresentation: hud });
+    expect(snapshot.state["tear.ui.v1"]).toEqual({ screen: "playing", focusId: "-1", hudPresentation: hud, particlesPresentation: host.particles.capture() });
     expect(snapshot.state["tear.boss.v1"]).toEqual(expect.arrayContaining([expect.objectContaining({ _phaseFlashT: 0.5 })]));
     host.hud.restore({ ...hud, clockSeconds: 99, lagHp: 0.1 });
     expect(host.restore(snapshot).ok).toBe(true);
     expect(host.hud.capture()).toEqual(hud);
     expect(host.capture().state).toEqual(snapshot.state);
+  });
+
+  it.each(["malformed", "binding"] as const)("rejects %s particles before world setters and entropy changes", (kind) => {
+    const host = fixture(); host.replay.effects.spark(1, 2, 1, 0);
+    const before = host.capture(), invalid = structuredClone(before), rng = host.replay.random.streams.snapshot();
+    const payload = (invalid.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation as { replacementCursor: number; policy: { effects: { cullMargin: number } } };
+    if (kind === "malformed") payload.replacementCursor = -1; else payload.policy.effects.cullMargin += 1;
+    const run = host.state.run(), player = host.state.player(), actors = host.state.enemies();
+    expect(host.restore(invalid)).toMatchObject({ ok: false, phase: kind === "malformed" ? "decode" : "stage", rolledBack: false });
+    expect(host.state.run()).toBe(run); expect(host.state.player()).toBe(player); expect(host.state.enemies()).toBe(actors);
+    expect(host.observations).toEqual([]); expect(host.replay.random.streams.snapshot()).toEqual(rng);
+    expect(host.capture().state).toEqual(before.state);
+  });
+
+  it("uses candidate configuration for particles and clears historical absence without resetting backdrop", () => {
+    const host = fixture(), fx = host.replay.effects;
+    host.replay.configuration.value.effects.highBudget = 4; host.replay.configuration.value.effects.lowBudget = 1;
+    fx.spark(1, 2, 1, 0); const saved = host.capture(), particles = host.particles.capture();
+    host.replay.configuration.value.effects.highBudget = 9; host.replay.configuration.value.effects.cullMargin = 17;
+    expect(host.restore(saved).ok).toBe(true); expect(host.particles.capture()).toEqual(particles);
+    const legacy = structuredClone(saved); delete (legacy.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation;
+    const reset = vi.spyOn(fx, "reset"), backdrop = vi.spyOn(host.replay.dependencies.Backdrop, "resetFx");
+    const list = fx.list;
+    expect(host.restore(legacy).ok).toBe(true);
+    expect(fx.list).toBe(list); expect(fx.list).toEqual([]); expect(fx.view).toBeNull(); expect(fx._replacementCursor).toBe(0);
+    expect(reset).not.toHaveBeenCalled(); expect(backdrop).not.toHaveBeenCalled();
   });
 
   it("resets missing historical HUD rather than inheriting outgoing feedback", () => {
