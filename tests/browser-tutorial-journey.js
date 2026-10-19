@@ -159,7 +159,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     waitForLessonToAdvance(0);
 
     for (let count = 0; count < 3 && tutorial().lessonIndex === 1; count += 1) {
-      waitGrounded(); jump(); idle(150);
+      waitGrounded(); jump(); idle(144);
     }
     waitForLessonToAdvance(1);
 
@@ -303,6 +303,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   assert.equal(result.mode, "playground", `tutorial did not hand off to practice: ${JSON.stringify(last)}`);
   assert.equal(result.screen, "paused", `completion did not open its technique summary: ${JSON.stringify(last)}`);
   assert.ok(result.metrics.acceptedActions > 0, "journey must use player-valid actions");
+  assert.ok(result.metrics.fixedTicks <= scenario.maxTicks, "tutorial journey must remain within its declared tick limit");
   const launchEntry = result.trace.find((entry) => entry.label === "after-3");
   const powerSlamEntry = result.trace.find((entry) => entry.label === "after-6");
   assert.equal(launchEntry?.lesson, "LAUNCH", "journey must reach the launch lesson");
