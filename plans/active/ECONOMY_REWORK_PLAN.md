@@ -15,6 +15,9 @@ does not authorize gameplay, reward, price, or save changes.
 
 - The current typed catalogue has **100 achievements / 73,000 coins**. Its
   rarity counts are **6 common, 19 uncommon, 29 rare, 33 epic, 13 legendary**.
+  This includes the hidden Witness achievement (900 coins). A fresh Profile
+  shows 99 because `ACH.list` hides locked hidden entries; unlocking Witness
+  reveals the 100th entry. The canonical `_all` reward pool is unchanged.
 - The current shop has **22 items / 92 ranks / 137,350 coins**. Achievement
   rewards therefore cover **53.1488897%** of the shop, below the 55% ceiling.
 - The original economy implementation at

@@ -1501,9 +1501,14 @@ Initial and operation catalog inspection performs no maintenance, eviction,
 index rebuilding, repair, source-protection or consent/training/publication
 mutation. File bytes remain transient; BFCache clears selection while retaining
 the durable intent. Focused DOM, facade, controller, action and renderer tests
-cover these local boundaries. A fresh-build normal download and independent
-browser-process cold-file restore journey remains pending; this is not remote
-redundancy, historical-runtime availability, device-quota or full C39 acceptance.
+cover these local boundaries. A fresh attributed browser journey saved a normal
+Download and restored its exact manifest and encoded chunks in separate browser
+processes, including pending-intent resume, completed-record validation,
+cancellation, corrupt-file refusal and read-only catalog checks. An independent
+file integrity/size audit passed for that short forensic-profile sample. A
+separate fresh-build check verified the shortened file-action labels and their
+normal Cancel/Restore actions. Remote redundancy, historical-runtime availability,
+device quotas, long-run performance and full C39 acceptance remain unproven.
 
 ### C38 explicit foreground owner recovery
 
