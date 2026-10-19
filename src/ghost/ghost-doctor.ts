@@ -8,6 +8,13 @@ export interface GhostDoctorReport {
   readonly repairedChildId?: string;
 }
 
+/** The Doctor's existing index schema, shared by selected repair and upkeep. */
+export function ghostDoctorManifestIndexWrite(manifest: TearGhostManifest) {
+  return Object.freeze({ store: "indexes" as const, key: `manifest:${manifest.id}`, value: JSON.stringify({
+    status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length,
+  }) });
+}
+
 export class GhostDoctor {
   readonly #vault: GhostLocalVault;
   readonly #now: () => string;
@@ -64,9 +71,8 @@ export class GhostDoctor {
     for (const id of await this.#vault.backend().keys("manifests")) {
       const manifest = await this.#vault.getManifest(id);
       if (manifest === undefined) continue;
-      await this.#vault.backend().put("indexes", `manifest:${id}`, JSON.stringify({
-        status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length,
-      }));
+      const write = ghostDoctorManifestIndexWrite(manifest);
+      await this.#vault.backend().put(write.store, write.key, write.value);
       rebuilt += 1;
     }
     return rebuilt;

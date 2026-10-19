@@ -211,6 +211,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     else if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length === 0) {
       profileMessage = "No Ghost capsules stored on this device yet.";
     }
+    if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length > 0 && profileMessage === "opening Ghost Vault...") profileMessage = "";
     const signedIn = d.Cloud.loggedIn(), canSignIn = d.Cloud.canSignIn();
     const records = buildProfileRecords(d.CONFIG.modes, d.CONFIG.difficulties, services.getBest);
     const stats = profileTab === "stats" ? buildProfileStats((key) => d.PROFILE.stat(key),

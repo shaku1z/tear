@@ -143,6 +143,7 @@ function capsuleView(
   libraries: readonly GhostLibraryKind[],
   repairChildId?: string,
   theaterRefusal?: GhostTheaterOpenResult,
+  repairMetadataComplete = false,
 ): GhostVaultLibraryCapsule {
   return Object.freeze({
     id: manifest.id,
@@ -152,7 +153,7 @@ function capsuleView(
     chunkCount: manifest.chunks.length,
     healthy,
     libraries: Object.freeze([...libraries].sort()),
-    repairable: !healthy && repairChildId === undefined,
+    repairable: !healthy && (repairChildId === undefined || !repairMetadataComplete),
     theaterEligible: theaterRefusal?.kind !== "refused",
     ...(theaterRefusal === undefined ? {} : { theaterRefusal }),
     ...(repairChildId === undefined ? {} : { repairChildId }),
@@ -187,6 +188,7 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
     const health = new Map(catalog.maintenance.integrity.map((entry) => [entry.id, entry.healthy]));
     const memberships = new Map<string, GhostLibraryKind[]>();
     const repairedChildren = new Map<string, string>();
+    const repairMetadata = new Map(catalog.repairMetadata?.map((entry) => [entry.id, entry.complete]));
     for (const entry of catalog.maintenance.libraries.entries) {
       const membershipsForGhost = memberships.get(entry.ghostId) ?? [];
       membershipsForGhost.push(entry.library);
@@ -196,7 +198,7 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
       if (manifest.lineage?.relation === "repaired-from") repairedChildren.set(manifest.lineage.parentId, manifest.id);
     }
     const capsules = catalog.manifests.map((manifest) => capsuleView(manifest, health.get(manifest.id) === true,
-      memberships.get(manifest.id) ?? [], repairedChildren.get(manifest.id), theaterRefusals.get(manifest.id)))
+      memberships.get(manifest.id) ?? [], repairedChildren.get(manifest.id), theaterRefusals.get(manifest.id), repairMetadata.get(manifest.id)))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
     return frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds, message);
   };

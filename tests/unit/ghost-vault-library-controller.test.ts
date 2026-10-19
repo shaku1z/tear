@@ -1,11 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 import { createGhostVaultLibraryController } from "../../src/app/ghost-vault-library-controller";
-import type { TearGhostManifest } from "../../src/ghost/capsule-vault";
+import type { GhostVaultBackend, TearGhostManifest } from "../../src/ghost/capsule-vault";
 import { refuseGhostTheater } from "../../src/ghost/theater-open-result";
 import { createMemoryGhostVaultBackend, GhostLocalVault, GhostStreamingRecorder } from "../../src/ghost/capsule-vault";
 import { createGhostColdRestoreBrowserPort } from "../../src/ghost/browser-cold-restore";
 import type { GhostArchiveFile } from "../../src/app/browser-ghost-archive-files";
 import { NORMAL_GHOST_ARCHIVE_LIMITS } from "../../src/ghost/capsule-archive";
+import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
+import { inspectBrowserGhostVaultReadOnly, repairBrowserGhostCapsule } from "../../src/ghost/browser-capsule-vault";
+vi.mock("../../src/ghost/indexeddb-vault-backend", () => ({ createIndexedDbGhostVaultBackend: vi.fn() }));
+
+async function damagedRepairSource(backend = createMemoryGhostVaultBackend()) {
+  const vault = new GhostLocalVault(backend), recorder = new GhostStreamingRecorder({ sessionId: "selected-damaged-source", createdAt: "2026-10-19T00:00:00Z", vault, chunkEntries: 1, maxPendingWrites: 1 });
+  await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } }); await recorder.finalize("2026-10-19T00:00:01Z");
+  const manifest = await vault.getManifest("selected-damaged-source"), chunk = manifest?.chunks[0];
+  if (manifest === undefined || chunk === undefined) throw new Error("repair fixture missing");
+  await backend.put("chunks", chunk.id, "retained-corrupt-bytes"); await backend.remove("indexes", `manifest:${manifest.id}`);
+  vi.mocked(createIndexedDbGhostVaultBackend).mockResolvedValue(backend);
+  return { vault, backend, manifest, chunk, factory: {} as IDBFactory };
+}
 
 async function archiveBytes(id = "selected-capsule") {
   const vault = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-10-19T00:00:00Z", vault, chunkEntries: 1, maxPendingWrites: 1 });
@@ -39,6 +52,36 @@ function manifest(id: string, createdAt: string): TearGhostManifest {
 }
 
 describe("Ghost Vault library controller", () => {
+  it("explicit selected-source repair preserves bytes and records only its source index and Graveyard custody", async () => {
+    const f = await damagedRepairSource(), parent = await f.backend.get("manifests", f.manifest.id);
+    const result = await repairBrowserGhostCapsule(f.factory, f.manifest.id);
+    expect(await f.backend.get("manifests", f.manifest.id)).toBe(parent); expect(await f.backend.get("chunks", f.chunk.id)).toBe("retained-corrupt-bytes");
+    expect(await f.backend.get("indexes", `manifest:${f.manifest.id}`)).toEqual(expect.any(String));
+    expect(JSON.parse(await f.backend.get("libraries", `entry:graveyard:graveyard:${f.manifest.id}`) ?? "null")).toMatchObject({ entry: { library: "graveyard", ghostId: f.manifest.id, rootHash: f.manifest.rootIntegrity } });
+    expect(await f.backend.get("lineage", `repair:${result.childId}`)).toContain(f.manifest.id);
+    expect(await f.backend.get("quarantine", `repair:${result.childId}:${f.chunk.id}`)).toContain("retained-corrupt-bytes");
+    expect(await f.backend.get("analysis", "vault-maintenance:v1")).toBeUndefined();
+  });
+
+  it("refuses selected metadata drift and keeps an already committed repair child retryable after reload", async () => {
+    const base = createMemoryGhostVaultBackend(); let armed = true;
+    const backend: GhostVaultBackend = { ...base, async commitIfMatches(guards, writes) {
+      if (armed && writes.some((write) => write.store === "libraries")) { armed = false; await base.put("indexes", "manifest:selected-damaged-source", "concurrent-index-evidence"); }
+      return base.commitIfMatches(guards, writes);
+    } };
+    const f = await damagedRepairSource(backend);
+    await expect(repairBrowserGhostCapsule(f.factory, f.manifest.id)).rejects.toThrow();
+    expect(await backend.get("indexes", `manifest:${f.manifest.id}`)).toBe("concurrent-index-evidence");
+    expect(await backend.get("libraries", `entry:graveyard:graveyard:${f.manifest.id}`)).toBeUndefined();
+    const childIds = (await backend.keys("manifests")).filter((id) => id !== f.manifest.id); expect(childIds).toHaveLength(1);
+    const controller = createGhostVaultLibraryController({ inspect: () => inspectBrowserGhostVaultReadOnly(f.factory), repair: (id) => repairBrowserGhostCapsule(f.factory, id) });
+    controller.refresh(); await vi.waitFor(() => { expect(controller.snapshot().status).toBe("ready"); });
+    expect(controller.snapshot().capsules.find((entry) => entry.id === f.manifest.id)).toMatchObject({ repairable: true });
+    controller.repair(f.manifest.id); await vi.waitFor(() => { expect(controller.snapshot().message).toBe("A verified repair child is already available."); });
+    expect(controller.snapshot().capsules.find((entry) => entry.id === f.manifest.id)).toMatchObject({ repairable: false, libraries: ["graveyard"] });
+    expect((await backend.keys("manifests")).filter((id) => id !== f.manifest.id)).toEqual(childIds);
+    expect(await backend.get("chunks", f.chunk.id)).toBe("retained-corrupt-bytes");
+  });
   it("previews only, requires exact reselection after reload, then explicitly restores and labels current custody", async () => {
     const f = archiveController(), bytes = await archiveBytes(); f.controller.pickArchive(); f.choose(bytes);
     await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("ready"); });
