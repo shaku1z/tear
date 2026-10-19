@@ -75,6 +75,8 @@ withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async
     const current = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
     const source = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), current.id);
     writeDiagnostic(`${predecessor}-capture`, { manifest: current, buildInfo, capsule: source });
+    const encoded = await archive(current.id);
+    writeDiagnostic(`${predecessor}-encoded-archive`, { buildInfo, sourceId: current.id, rootIntegrity: current.rootIntegrity, encoded });
     const initial = source.tracks.keyframes.find((entry) => entry.tick === 0).value;
     assert.equal(initial.state["tear.ui.v1"].screen, predecessor);
     assert.equal(current.provenance.replayContext.simulation.opening.previousScreen, predecessor);
@@ -84,7 +86,6 @@ withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async
     for (const kind of ["move", "jump", "dash"]) assert.ok(source.tracks.commands.some((entry) => entry.tick <= 180 && entry.value.command.type === kind), `nonvacuous opening requires ${kind}`);
     const movements = source.tracks.commands.filter((entry) => entry.tick <= 180 && entry.value.command.type === "move").map((entry) => entry.value.command.x);
     assert.ok(movements.includes(0) && movements.filter((value) => value !== 0).length >= 2, "held movement must release and repress");
-    const encoded = await archive(current.id);
     const continued = await page.evaluate((id) => window.__TEAR_GHOST_V3__.verify(id, "opening-continuation"), current.id);
     writeDiagnostic(`${predecessor}-verification`, { manifest: current, buildInfo, verification: continued });
     assert.equal(continued.status, "verified", JSON.stringify(continued));

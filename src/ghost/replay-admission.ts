@@ -257,8 +257,7 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
     || payload.mode !== run.mode || payload.difficulty !== run.diff || payload.weapon !== run.weaponId
     // The current native publisher receives the original new RunSession (wave0);
     // installed opening content has advanced its separate live run to wave1.
-    || payload.wave !== 0 || run.wave !== 1 || payload.score !== run.score || payload.runTimeSeconds !== 0
-    || capsule.tracks.events.some((entry) => { const event = causalEvent(entry.value); return event?.tick === 0 && ["run.completed", "run.defeated", "run.abandoned"].includes(event.type); })) {
+    || payload.wave !== 0 || run.wave !== 1 || payload.score !== run.score || payload.runTimeSeconds !== 0) {
     throw new TypeError("opening requires one matching native tick-zero run.started fact");
   }
   const completions = capsule.tracks.events.flatMap((entry) => {
@@ -285,6 +284,19 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
         && capsule.tracks.results.some((result) => { const receipt = readGhostAuthoritativeReceipt(result.value); return receipt?.tick === later.tick && result.tick === later.tick; });
     });
     if (!laterPlaying) throw new TypeError("legacy opening completion is unavailable without a later canonical playing receipt");
+  }
+  // A later terminal fact at the same scheduler tick does not erase the earlier
+  // anchor. It must follow a sealed playing completion, not legacy inference.
+  const terminals = capsule.tracks.events.flatMap((entry) => {
+    const event = causalEvent(entry.value);
+    return event?.tick === 0 && ["run.completed", "run.defeated", "run.abandoned"].includes(event.type) ? [{ entry, event }] : [];
+  });
+  const terminal = terminals[0], terminalPayload = record(terminal?.event.payload);
+  if (terminals.length > 0 && (terminals.length !== 1 || completion?.event === undefined
+    || terminal?.entry.tick !== 0 || terminal.event.source !== "engine" || terminal.event.phase !== "post-simulation-commit"
+    || terminal.event.sequence <= completion.event.sequence || terminalPayload?.runId !== context.run.id
+    || terminalPayload.mode !== run.mode || terminalPayload.difficulty !== run.diff || terminalPayload.weapon !== run.weaponId)) {
+    throw new TypeError("tick-zero terminal must match the run and follow its sealed playing completion");
   }
   const permit = Object.freeze({}) as GhostRecordedOpeningPermit;
   openingPermits.set(permit, Object.freeze({ snapshotHash: stableVerificationHash(anchor), rootIntegrity: capsule.manifest.rootIntegrity,

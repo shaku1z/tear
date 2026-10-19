@@ -171,6 +171,13 @@ receipt; missing completion is unavailable, never invented. This proves linkage,
 not authenticity. Raw Campaign restoration alone grants no playback transition.
 Native start currently describes the initial session at wave zero, while its
 opening-initialized installed world is wave one; publication order is preserved.
+A tick-zero native terminal may follow that sealed playing completion without
+invalidating the original anchor: it must identify the same run and follow the
+completion in both native terminal phase and strict event sequence. Without a
+sealed completion, legacy inference does not admit a tick-zero terminal. This
+same-anchor comparison does not prove later continuation or endurance.
+Public verified sessions capture the recorded tick range and reject out-of-range
+or noninteger seeks before constructing a replay world.
 
 The separate opening-continuation verifier derives an explicitly disclosed
 in-memory envelope containing only the original opening anchor, executes exactly

@@ -24,6 +24,8 @@ export interface GhostVerifiedProductionReplaySession {
 export function createGhostProductionReplaySession(
   capsule: GhostReadCapsule,
 ): GhostVerifiedProductionReplaySession {
+  const maxTick = capsule.maxTick;
+  if (!Number.isSafeInteger(maxTick) || maxTick < 0) throw new RangeError("production replay source range is invalid");
   const verification = verifyGhostCapsuleProductionReplay(capsule);
   if (verification.status !== "verified") {
     throw new TypeError(`production replay requires verified authoritative receipts (${verification.status})`);
@@ -42,7 +44,10 @@ export function createGhostProductionReplaySession(
     ...(openingPermit === undefined ? {} : { openingPermit }),
   });
   const checkpointAt = (tick: number) => mapped.ghost.snapshots.find((snapshot) => snapshot.tick === tick);
-  const seek = (tick: number): GhostSeekResult => new GhostProductionReplayWorld(mapped.ghost, composition).seek(tick);
+  const seek = (tick: number): GhostSeekResult => {
+    if (!Number.isSafeInteger(tick) || tick < 0 || tick > maxTick) throw new RangeError("production replay seek is outside the recorded source range");
+    return new GhostProductionReplayWorld(mapped.ghost, composition).seek(tick);
+  };
   return Object.freeze({
     sourceId: mapped.ghost.id,
     sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity,
