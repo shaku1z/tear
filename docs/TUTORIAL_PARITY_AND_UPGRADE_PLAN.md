@@ -981,8 +981,8 @@ acknowledged ordinary-play exposure; missing legacy history stays unknown and a
 pending/failed save remains locked. The same naturally installed boss can record
 separate phases, with no retry loop and no discovery from practice or restoration.
 
-Each selection starts Sword/Normal with no permanent upgrades, currencies,
-course credit or profile writes. Earlier prerequisites prepare through the actual
+Each selection starts Sword/Normal with permanent upgrade bonuses disabled and
+grants no currency, course credit or profile progress. Earlier prerequisites prepare through the actual
 owners; selected transitions stay interactive: Aldric's unwitnessed kneel,
 Rootbound's representative fresh graft baseline and real regrowth entry, and
 Source's descent/transfer or downed/freeze. Reset starts a fresh matching attempt.
@@ -1000,9 +1000,18 @@ Focused controls cover exact exposure/save failure, real Aldric/Source entry
 continuation at120Hz plus application frames, actual boss defeat/removal and
 finished restoration, and800×360 control geometry. The short existing Lab browser
 fixture declares legacy ColossusP1 and saved WardenP2 history and exercises normal
-buttons/reset/reload with full stats/balances equality; its fresh-build execution
-and visual acceptance remain with the parent after source freeze. These fixtures
-do not establish natural human encounter history or physical-device acceptance.
+buttons/reset/reload with full stats/balances and cinematic-seen equality.
+Parent execution on clean `e09913f1` passed a fresh test-standalone build and this
+normal rendered-control journey, including Colossus P1 selection/restart,
+Warden P2 entry and menu/setup re-entry after retained adapter bytes were reloaded.
+The initial fixture stopped before practice because its declared Colossus defeat
+lacked the corresponding historical achievement; adding that fixture receipt
+preserved the original balance assertion and ordinary achievement behavior.
+The desktop selector capture fits. The physical 800×360 browser capture scales
+the fixed 1600×900 canvas; it establishes visibility, not compact pagination or
+mobile usability. The separate logical 800×360 renderer control checks compact
+geometry. These fixtures do not establish natural human encounter history or
+physical-device acceptance.
 Gold traces, personal ghost comparison and mastery medals remain separate work.
 
 The finite tutorial should unlock a separate revisitable Practice Lab:
@@ -1011,7 +1020,7 @@ The finite tutorial should unlock a separate revisitable Practice Lab:
 - select baseline weapon;
 - practice optional mastery medals;
 - spawn previously encountered normal enemies;
-- practice previously encountered bosses by phase (implemented above; normal-browser acceptance pending);
+- practice previously encountered bosses by phase (implemented with bounded normal-browser acceptance above);
 - compare personal and gold ghosts;
 - turn coaching overlays on or off;
 - reset instantly without profile or currency effects.
