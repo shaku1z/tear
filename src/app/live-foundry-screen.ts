@@ -23,7 +23,7 @@ export class LiveFoundryScreenController {
       const { vault, custody, authority } = this.#services(), recovery = new TearFoundryRecoveryController(vault), schedules = new TearFoundryJobScheduleVault(this.#backend);
       const projections = (await Promise.all((await vault.list()).map((job) => recovery.project(job.id)))).filter((value): value is NonNullable<typeof value> => value !== undefined);
       const now = new Date().toISOString(), [scheduleProjections, launchProfiles] = await Promise.all([new TearFoundryScheduleController(vault, schedules, { held: async (job, at) => {
-        const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((record) => record.candidateHash === hash));
+        const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((record) => record.recordHash === hash));
       } }).discoverDue(now), authority.projections(now)]);
       return this.#set({ id: "foundry", status: "ready", subtitle: "local, hashes-only restart recovery", automation: this.#schedulerOwned ? "local" : "unavailable", launchProfiles, jobs: projections.map((projection) => Object.freeze({
         jobHash: projection.jobHash, phase: projection.phase, nextManualPhase: projection.nextManualPhase, resumable: projection.resumable,

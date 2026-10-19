@@ -9,6 +9,7 @@ import {
   TearFoundryCollectionExecutor,
   TearFoundryCuratedManifestExecutor,
   TrainingOperationsV3TrainingAdmissionExecutor,
+  TrainingOperationsV3EvaluationExecutor,
   parseTrainingOperationsV3TrainingReceipt,
   createTearFoundryJobV2,
   createTearFoundryBudgetedJob,
@@ -232,6 +233,77 @@ describe("C31 held Academy candidate curation", () => {
     await context.jobs.persistSuccessor(collecting, job);
     return { ...context, job, memory, commitIfMatches, declaration };
   }
+
+  describe("native V3 admitted candidate evaluation", () => {
+    it("compares exact artifacts in fresh source worlds and retains a budgeted native decision with read-only retries and no activation", async () => {
+      // Synthetic governed control corpus; this proves execution/wiring, not learned quality.
+      const context = await numericAdmissionFixture(100);
+      const training = await context.executor.start(context.job, context.request);
+      const executor = new TrainingOperationsV3EvaluationExecutor(context.jobs, context.services);
+      const sourceHash = context.job.jobHash, budgetKey = trainingOperationsBudgetKey(context.job.id);
+      const trainingRaw = await context.memory.get("analysis", `foundry-job-v3-training:v1:${sourceHash}`);
+      const artifactRaw = await context.memory.get("analysis", `policy-artifact:v1:${context.request.artifact.id}`);
+      const admission = await executor.admit(sourceHash, "2026-08-03T00:10:00.000Z", context.evaluationCases);
+      expect(admission.sourceJob).toEqual(training.job);
+      expect(admission.plan.champion).toEqual(context.job.inputs.champion);
+      expect(await executor.admit(sourceHash, admission.admittedAt, context.evaluationCases)).toEqual(admission);
+      const execution = await executor.execute(sourceHash, "2026-08-03T00:11:00.000Z");
+      expect(execution.result.traces.map((trace) => [trace.side, trace.artifactId, trace.freshWorldOrdinal])).toEqual([
+        ["champion", context.job.inputs.champion.id, 1], ["challenger", context.request.artifact.id, 2],
+      ]);
+      expect(execution.result.traces.every((trace) => trace.decisions.length === 4 && trace.terminal.tick === 4)).toBe(true);
+      expect(execution.result.traces[0]?.build).toEqual(execution.result.traces[1]?.build);
+      expect(execution.result.promotional).toBe(false);
+      const afterExecution = await context.memory.get("analysis", budgetKey);
+      if (typeof afterExecution !== "string") throw new Error("missing evaluation allowance");
+      expect(parseTrainingOperationsBudget(JSON.parse(afterExecution)).computeUsed).toBe(24);
+      expect(await executor.execute(sourceHash, execution.recordedAt)).toEqual(execution);
+      expect(await context.memory.get("analysis", budgetKey)).toBe(afterExecution);
+      const decision = await executor.decide(sourceHash, "2026-08-03T00:12:00.000Z");
+      expect(decision.disposition).toBe("monitoring-ready");
+      expect(decision.job.phase).toBe("monitoring");
+      expect(await context.jobs.get(context.job.id)).toEqual(decision.job);
+      expect(await context.memory.get("analysis", `training-operations-v3-decision:v1:${sourceHash}`)).toBe(JSON.stringify(decision));
+      const budgetBeforeRetry = await context.memory.get("analysis", budgetKey), calls = context.commitIfMatches.mock.calls.length;
+      expect(await executor.decide(sourceHash, decision.decidedAt)).toEqual(decision);
+      expect(context.commitIfMatches.mock.calls.slice(calls).every(([, writes]) => writes.length === 0)).toBe(true);
+      expect(await context.memory.get("analysis", budgetKey)).toBe(budgetBeforeRetry);
+      expect(await context.memory.get("analysis", `foundry-job-v3-training:v1:${sourceHash}`)).toBe(trainingRaw);
+      expect(await context.memory.get("analysis", `policy-artifact:v1:${context.request.artifact.id}`)).toBe(artifactRaw);
+      expect(await context.memory.get("analysis", "policy-active:v1")).toBeUndefined();
+      expect((await context.memory.keys("analysis")).some((key) => key.startsWith("foundry-job-decision:v1:"))).toBe(false);
+    });
+
+    it("refuses source loss at the actual final comparison transaction without advancing the job or changing candidate authority", async () => {
+      const context = await numericAdmissionFixture(100);
+      await context.executor.start(context.job, context.request);
+      const executor = new TrainingOperationsV3EvaluationExecutor(context.jobs, context.services), sourceHash = context.job.jobHash;
+      const admission = await executor.admit(sourceHash, "2026-08-03T00:10:00.000Z", context.evaluationCases);
+      const resultKey = `foundry-job-v3-evaluation-execution:v1:${sourceHash}`, budgetKey = trainingOperationsBudgetKey(context.job.id);
+      let before: Awaited<ReturnType<typeof admissionOutputs>> | undefined, chargedBudget: string | undefined, finalCommits = 0;
+      context.commitIfMatches.mockImplementation(async (guards, writes) => {
+        if (writes.some((write) => write.key === resultKey)) {
+          finalCommits++;
+          before = await admissionOutputs(context);
+          chargedBudget = await context.memory.get("analysis", budgetKey);
+          const source = guards.find((guard) => guard.store === "manifests" && guard.expected !== undefined);
+          if (source === undefined) throw new Error("missing actual source manifest guard");
+          await context.memory.remove(source.store, source.key);
+        }
+        await context.memory.commitIfMatches(guards, writes);
+      });
+      await expect(executor.execute(sourceHash, "2026-08-03T00:11:00.000Z")).rejects.toThrow();
+      expect(finalCommits).toBe(1);
+      expect(await admissionOutputs(context)).toEqual(before);
+      expect(await context.jobs.get(context.job.id)).toEqual(admission.job);
+      expect(await context.memory.get("analysis", resultKey)).toBeUndefined();
+      expect(await context.memory.get("analysis", `training-operations-v3-decision:v1:${sourceHash}`)).toBeUndefined();
+      expect(await context.memory.get("analysis", budgetKey)).toBe(chargedBudget);
+      if (typeof chargedBudget !== "string") throw new Error("missing charged evaluation allowance");
+      expect(parseTrainingOperationsBudget(JSON.parse(chargedBudget)).computeUsed).toBe(24);
+      expect(await context.memory.get("analysis", "policy-active:v1")).toBeUndefined();
+    });
+  });
 
   it("charges attempted training before the final transaction, retains no output on failure, and retries within its numeric allowance", async () => {
     const context = await numericAdmissionFixture(32), units = trainingOperationsTrainingComputeUnits(context.request);

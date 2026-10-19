@@ -835,3 +835,30 @@ retry, retained source/schedule/job/pointer/terminal/authority/declaration/
 approval/promotion/active/artifact refusal, held and raw C31-custody refusal,
 and planted conditional-commit loss recovery. It has no timer, dispatcher,
 automatic invocation, traffic, placement, UI, or cloud behavior.
+
+## Native admitted V3 evaluation and decision
+
+`TrainingOperationsV3EvaluationExecutor` consumes an exact retained V3 training
+receipt directly, without retraining or rewriting its job history. It admits
+the ordered frozen evaluation cases, runs the compatible V3 champion and
+inactive challenger in separate fresh production source worlds, then retains a
+native comparison and a `monitoring-ready` or `rejected` decision. The frozen
+reward/completion protocol determines that decision; it does not activate the
+candidate or establish learned quality.
+
+Each durable transition pins current corpus, custody, consent, curation,
+reviewed sample, source bytes, artifact/index identities and active baseline.
+Evaluation spends its bounded numeric compute allowance before execution.
+Receipt/job/event/current-index writes share the guarded successor transaction;
+exact retries verify the budget owner and durable side records without another
+charge. The focused `native V3 admitted candidate evaluation` cases in
+`academy-candidate-curation.test.ts` use synthetic governed inputs to exercise
+actual source execution, exact retries, inactive output and source loss at the
+final comparison transaction.
+
+This completes the direct native evaluation leaf. Scheduling an already
+admitted head still needs receipt-bound adoption/continuation, and the legacy
+V2 monitoring bridge cannot consume a native V3 decision by relabeling it.
+Native monitoring and authorized promotion continuation remain separate work;
+this leaf supplies no real-corpus, participant, calibration or unattended
+lifecycle claim.
