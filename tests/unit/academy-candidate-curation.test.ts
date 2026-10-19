@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
 import { createPlayerWatchObservation, previousPlayerWatchObservation } from "../../src/app/live-player-watch-observation";
 import { TearC32CanonicalActivePolicyRuntime } from "../../src/agents/c32-canonical-active-policy-runtime";
+import { parseTearPolicyModelWeights, reduceTearPolicyWeightRow } from "../../src/agents/policy-model-weights";
 import { parseTearPolicyActivation } from "../../src/agents/policy-artifact-registry";
 
 import {
@@ -29,10 +30,16 @@ import {
   TearC34V3C32CandidateRegistry,
   TearC34V3C32PolicyRuntime,
   createTearC32CanonicalSourceObservation,
-  type TrainingArchiveV3CandidateTrainingRequest,
+  type TrainingArchiveV3CandidateTrainingRequest, type TearTemporalPolicyTrainingResultV1, type TearAgentObservation,
   TearActivePolicyRuntime,
+  TearAgentOrchestrator,
+  createTearAcademyPolicyEvaluationPlan, createTearAcademyPolicyEvaluationLaunch,
+  TearAcademyPolicyEvaluationPlanVault, TearAcademyPolicyEvaluationExecutor,
+  TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_SCHEMA_HASH_V2, TEAR_POLICY_FEATURE_WIDTH_V2,
+  projectCanonicalPolicyFeatures, projectStructuredPolicyFeatures,
   TearAcademyCorpusStore,
   createTearBehaviorCloningArtifact,
+  createTearPolicyArtifact,
   createTearBehaviorCloningBatches,
   createTearBehaviorCloningNormalization,
   evaluateTearBehaviorCloningPolicy,
@@ -107,10 +114,21 @@ function createAcademyHarness(backend = createMemoryGhostVaultBackend()) {
   return Object.freeze({ backend, vault, custody, quality });
 }
 
-async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curation", maxTicks = 2, direction = 1_000, expiresAt?: string) {
+async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curation", maxTicks = 2, direction = 1_000, expiresAt?: string, competent = false) {
   const { backend, vault, custody, quality } = harness;
   const intake = new ProductionHeadlessAcademyIntake(1);
-  await createProductionHeadlessEpisodePool(1).run([
+  if (competent) {
+    const environment = createProductionHeadlessEnvironment(), teacher = new TearAgentOrchestrator("competent");
+    try {
+      environment.reset(scenario(fixtureId, `${fixtureId}-seed`, maxTicks));
+      for (let tick = 0; tick < maxTicks; tick += 1) {
+        const transition = environment.step(teacher.decide({ state: environment.policyObservation(), ui: { screen: "playing" } }).actions);
+        if (transition.terminated || transition.truncated) {
+          intake.offer({ episodeId: fixtureId, tick: transition.observation.tick, artifact: transition.artifact }); break;
+        }
+      }
+    } finally { environment.dispose(); }
+  } else await createProductionHeadlessEpisodePool(1).run([
     Object.freeze({ id: fixtureId, scenario: scenario(fixtureId, `${fixtureId}-seed`, maxTicks), maxTicks }),
   ], () => Object.freeze({ decide: () => Object.freeze([Object.freeze([{ type: "move" as const, x: direction, y: 0 }])]) }), {
     batchSize: 1, artifactConsumer: (sample) => { intake.offer(sample); },
@@ -1223,7 +1241,7 @@ describe("C31 held Academy candidate curation", () => {
     const batches = createTearBehaviorCloningBatches(first, normalization, { split: "training", batchSize: 2 });
     expect(createTearBehaviorCloningNormalization(second)).toEqual(normalization);
     expect(createTearBehaviorCloningBatches(second, normalization, { split: "training", batchSize: 2 })).toEqual(batches);
-    expect(batches.flatMap((batch) => batch.examples).every((example) => example.features.length === 17)).toBe(true);
+    expect(batches.flatMap((batch) => batch.examples).every((example) => example.features.length === TEAR_POLICY_FEATURE_WIDTH_V2)).toBe(true);
     expect(createTearTemporalPolicyContexts(first, 2).every((context) => context.featureFrames.length >= 1 && context.featureFrames.length <= 2)).toBe(true);
     expect(() => createTearBehaviorCloningBatches(first, normalization, { split: "validation", batchSize: 2 })).toThrow(/no examples/u);
     const config = Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 2 });
@@ -1398,6 +1416,138 @@ describe("C31 held Academy candidate curation", () => {
     expect(await trainingVault.get(training.trainingHash)).toBeUndefined();
     expect((await input.backend.keys("quarantine")).some((key) => key.endsWith(training.trainingHash))).toBe(true);
   });
+
+  // Opt-in retained experiment, not a default training/unit workload. The zero-
+  // fallback assertion stays strict; the last measured Campaign pair failed it.
+  it.runIf(process.env.TEAR_C33_PROJECTION_REPORT !== undefined)("measures the predeclared V1 versus V2 projection pair on held-out source and natural recovery", async () => {
+    const harness = createAcademyHarness();
+    const inputs = [];
+    for (const id of ["c33-projection-train-a", "c33-projection-train-b", "c33-projection-validation"]) {
+      inputs.push(await prepare(harness, id, 2400, 1000, undefined, true));
+    }
+    const curation = new TearAcademyCandidateCurationStore(harness.backend, harness.custody, harness.quality);
+    const splits = new TearAcademyCandidateSplitStore(harness.backend, harness.custody, harness.quality, curation);
+    const samples = new TearAcademyReviewedSampleStore(harness.backend, harness.custody, harness.quality, curation, splits);
+    const corpus = new TearAcademyCorpusStore(harness.backend, harness.custody, curation, splits, samples);
+    for (const [index, input] of inputs.entries()) {
+      await curation.decide({ candidateHash: input.assessment.candidateHash, assessmentHash: input.assessment.assessmentHash,
+        disposition: "curation-approved", reviewer: "academy-curator", reviewedAt: "2026-08-03T00:03:00.000Z",
+        rationale: "Declared scripted engineering episode, not human data", tags: ["c33", "engineering"], corrections: [] });
+      await splits.assign({ candidateHash: input.assessment.candidateHash, split: index === 2 ? "validation" : "training",
+        assignedAt: "2026-08-03T00:04:00.000Z", actor: "academy-curator" });
+      await samples.materialize(input.declaration, "2026-08-03T00:05:00.000Z", "academy-curator");
+      await corpus.admit({ candidateHash: input.assessment.candidateHash, lessonId: "movement-foundations", segmentKind: "demonstration",
+        tags: ["c33", "engineering"], admittedAt: "2026-08-03T00:06:00.000Z", actor: "academy-curator" });
+    }
+    const manifest = await corpus.publishManifest({ id: "c33-projection-pair", reader: { kind: "trainer", id: "c33-projection" }, version: 1,
+      createdAt: "2026-08-03T00:07:00.000Z" });
+    const dataset = await new TearAcademyTrainingDatasetLoader(corpus, samples).load({ manifestId: manifest.id, trainerId: "c33-projection", version: 1 });
+    const config = Object.freeze({ seed: 7, epochs: 3, learningRate: 0.25, batchSize: 64, window: 4,
+      conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2 });
+    const campaign = (id: string, seed: string): TearScenarioV1 => ({ ...scenario(id, seed, 20000), start: { mode: "campaign", difficulty: "normal", weapon: "sword" } });
+    const recoveryScenario = campaign("c33-projection-recovery", "m-91"), unseenScenario = campaign("c33-projection-unseen", "m-92");
+    const environment = createProductionHeadlessEnvironment(), teacher = new TearAgentOrchestrator("competent");
+    const normalization = createTearBehaviorCloningNormalization(dataset);
+    let parityFrames = 0;
+    const representativeFrames: TearAgentObservation[] = [];
+    const recovery = (() => {
+      try {
+        let canonical = environment.reset(recoveryScenario);
+        for (let tick = 0; tick < 1200; tick += 1) {
+          const observation = { state: environment.policyObservation(), ui: environment.policyUiObservation() };
+          const canonicalFeatures = projectCanonicalPolicyFeatures(canonical, normalization.featureSchemaHash);
+          const structuredFeatures = projectStructuredPolicyFeatures(observation, normalization.featureSchemaHash);
+          const normalize = (values: readonly number[]) => values.map((value, index) => (value - (normalization.mean[index] ?? 0)) / (normalization.scale[index] ?? 1));
+          if (tick % 37 === 0 && representativeFrames.length < 32) representativeFrames.push(structuredClone(observation));
+          expect(structuredFeatures).toEqual(canonicalFeatures); expect(normalize(structuredFeatures)).toEqual(normalize(canonicalFeatures)); parityFrames += 1;
+          const transition = environment.step(teacher.decide(observation).actions); canonical = transition.observation;
+          if (transition.terminated || transition.truncated) throw new Error("predeclared recovery frontier was not naturally reached");
+        }
+        const source = environment.captureCheckpoint();
+        const restored = environment.restoreCheckpoint(source);
+        expect(restored).toEqual(canonical);
+        expect(stableVerificationHash(restored)).toBe(source.checkpoint.semanticHash);
+        return source;
+      } finally { environment.dispose(); }
+    })();
+    const reusePath = process.env.TEAR_C33_PROJECTION_REUSE;
+    const retained = reusePath === undefined ? undefined : JSON.parse(await readFile(reusePath, "utf8")) as {
+      datasetHash: string; config: typeof config; versions: { featureSchemaHash: string; normalizationHash: string; trainingHash: string;
+        modelHash: string; artifact: { model: { payload: string } }; fitMetrics: TearTemporalPolicyTrainingResultV1["metrics"] }[] };
+    if (retained !== undefined) { expect(retained.datasetHash).toBe(dataset.datasetHash); expect(retained.config).toEqual(config); }
+    const versions = [];
+    for (const [index, featureSchemaHash] of [TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, TEAR_POLICY_FEATURE_SCHEMA_HASH_V2].entries()) {
+      const fittedNormalization = createTearBehaviorCloningNormalization(dataset, featureSchemaHash);
+      const saved = retained?.versions[index];
+      if (retained !== undefined && saved === undefined) throw new Error("retained fitted model is missing; refusing retraining");
+      const fit: TearTemporalPolicyTrainingResultV1 = saved === undefined ? trainTearTemporalWindowPolicy(dataset, fittedNormalization, config) : {
+        format: "tear-temporal-policy-training", schemaVersion: 1, datasetHash: dataset.datasetHash, normalizationHash: fittedNormalization.normalizationHash,
+        trainingScenarioHashes: dataset.sequences.filter((entry) => entry.split === "training").map((entry) => stableVerificationHash(entry.sourceScenario)).sort(),
+        config, model: JSON.parse(saved.artifact.model.payload) as TearTemporalPolicyTrainingResultV1["model"], metrics: saved.fitMetrics, trainingHash: saved.trainingHash };
+      if (saved !== undefined) {
+        expect(saved.featureSchemaHash).toBe(featureSchemaHash); expect(saved.normalizationHash).toBe(fittedNormalization.normalizationHash);
+        expect(stableVerificationHash(fit.model)).toBe(saved.modelHash);
+        const { trainingHash, ...draft } = fit; expect(stableVerificationHash(draft)).toBe(trainingHash);
+      }
+      const sourceInput = inputs[0]; if (sourceInput === undefined) throw new Error("training source is absent");
+      const artifact = createTearTemporalWindowPolicyArtifact(fit, { id: `c33-projection-v${String(index + 1)}`, createdAt: "2026-08-03T00:08:00.000Z",
+        encoder: { id: `tear-policy-features.v${String(index + 1)}`, schemaVersion: index + 1, observationClass: "structured-state", normalizationHash: fittedNormalization.normalizationHash },
+        actionSchema: "tear-game-action-command-envelope.v1", recurrentState: { kind: "none", schemaVersion: 1 },
+        trainingManifest: { id: manifest.id, version: manifest.version, rootHash: manifest.rootHash }, rewardVersion: "tear-reward.v1",
+        build: sourceInput.declaration.provenance.build, metrics: {}, levelTarget: "class-a", lineage: { trainingRunId: fit.trainingHash },
+        signature: { kind: "local-unsigned", keyId: "development" }, compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state",
+          actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["temporal-window-linear-policy-v1"] } });
+      const deliveredModel = JSON.parse(artifact.model.payload) as { weights: unknown };
+      const weights = parseTearPolicyModelWeights(deliveredModel.weights, fit.model.classes.length, fit.model.weights[0]?.length ?? 0, 1_048_576);
+      if (weights === undefined) throw new Error("packed model was not admitted");
+      let coefficientCount = 0, coefficientEqual = true;
+      for (const [rowIndex, row] of fit.model.weights.entries()) reduceTearPolicyWeightRow(weights, rowIndex, (total, value, column) => {
+        coefficientCount += 1; coefficientEqual &&= Object.is(value, row[column]); return total;
+      }, 0);
+      expect(coefficientEqual).toBe(true); expect(coefficientCount).toBe(fit.model.classes.length * (fit.model.weights[0]?.length ?? 0));
+      const densePayload = JSON.stringify(fit.model);
+      const denseArtifact = createTearPolicyArtifact({ ...artifact, id: `${artifact.id}-dense-control`, model: { format: artifact.model.format, payload: densePayload } });
+      const denseRuntime = new TearActivePolicyRuntime(denseArtifact, "competent", { now: () => 0, limits: { maxPayloadBytes: new TextEncoder().encode(densePayload).byteLength } });
+      const packedRuntime = new TearActivePolicyRuntime(artifact, "competent", { now: () => 0 });
+      await denseRuntime.reset(); await packedRuntime.reset();
+      for (const frame of representativeFrames) {
+        const denseDecision = denseRuntime.decide(frame), packedDecision = packedRuntime.decide(frame);
+        expect(denseDecision.receipt.source).toBe("artifact"); expect(packedDecision.receipt.source).toBe("artifact");
+        expect(packedDecision.actions).toEqual(denseDecision.actions);
+      }
+      const plan = createTearAcademyPolicyEvaluationPlan({ id: `c33-projection-v${String(index + 1)}`, version: 1, dataset, artifactTrainingHash: fit.trainingHash,
+        baselineProfile: "competent", primaryMetric: "completed-rate", minimumBaselineMargin: 0.01, daggerSourceScenarioHashes: [],
+        cases: [{ lessonId: "movement-foundations", kind: "recovery", scenario: recoveryScenario }, { lessonId: "movement-foundations", kind: "unseen", scenario: unseenScenario }] });
+      await new TearAcademyPolicyEvaluationPlanVault(harness.backend).persist(plan);
+      const result = await new TearAcademyPolicyEvaluationExecutor(harness.backend).execute(createTearAcademyPolicyEvaluationLaunch({
+        plan: { id: plan.id, planHash: plan.planHash }, candidate: artifact,
+        recovery: [{ scenarioHash: stableVerificationHash(recoveryScenario), kind: "natural-checkpoint", checkpoint: recovery }] }));
+      expect(result.candidateRuns[0]?.startedAtSemanticHash).toBe(recovery.checkpoint.semanticHash);
+      expect(result.baselineRuns[0]?.startedAtSemanticHash).toBe(recovery.checkpoint.semanticHash);
+      versions.push({ featureSchemaHash, normalizationHash: fittedNormalization.normalizationHash, trainingHash: fit.trainingHash,
+        normalization: fittedNormalization, artifact, densePayloadBytes: new TextEncoder().encode(densePayload).byteLength, deliveredPayloadBytes: new TextEncoder().encode(artifact.model.payload).byteLength, coefficientCount, equivalenceFrames: representativeFrames.length, modelHash: stableVerificationHash(fit.model), fitMetrics: fit.metrics, result });
+    }
+    const report = { engineeringOnly: true, sourceHead: "57902140c4a15e0b7f1a8811aa3edf1e4fa96931+declared-projection-repair", retainedFits: reusePath,
+      datasetHash: dataset.datasetHash, dataset, manifest, config,
+      sourceDeclarations: inputs.map((input) => {
+        if (input.declaration.trackBundle === undefined) throw new Error("governed source tracks are unavailable");
+        return { candidateHash: input.assessment.candidateHash, consent: input.declaration.consent,
+          provenance: input.declaration.provenance, privacy: input.declaration.privacy, source: input.declaration.trackBundle.source };
+      }),
+      sourceEpisodes: dataset.sequences.map((entry) => ({ candidateHash: entry.candidateHash, split: entry.split, scenario: entry.sourceScenario, observations: entry.tracks.observations.length })),
+      parityFrames, recovery: { kind: "natural-checkpoint", scenarioHash: stableVerificationHash(recoveryScenario), checkpoint: recovery, tick: recovery.checkpoint.tick,
+        semanticHash: recovery.checkpoint.semanticHash }, versions };
+    if (process.env.TEAR_C33_PROJECTION_REPORT !== undefined) await writeFile(process.env.TEAR_C33_PROJECTION_REPORT, JSON.stringify(report, null, 2), { flag: "wx" });
+    console.info("C33 projection paired outcomes", JSON.stringify(versions.map(({ artifact, normalization: fittedNormalization, ...summary }) => ({
+      ...summary, artifactId: artifact.id, artifactHash: artifact.artifactHash, normalizationHash: fittedNormalization.normalizationHash }))));
+    expect(versions).toHaveLength(2);
+    expect(versions[0]?.result.baselineRuns).toEqual(versions[1]?.result.baselineRuns);
+    expect(versions.every((entry) => entry.result.candidateRuns.every((run) => run.artifactDecisions === run.decisions && run.fallbackDecisions === 0))).toBe(true);
+    expect(normalization.featureSchemaHash).toBe(TEAR_POLICY_FEATURE_SCHEMA_HASH_V2);
+    expect(() => createTearBehaviorCloningBatches(dataset, { ...normalization, featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1 }, { split: "training", batchSize: 64 })).toThrow(/normalization/u);
+    expect(() => createTearBehaviorCloningNormalization(dataset, "f".repeat(16))).toThrow(/schema/u);
+    expect((await harness.backend.get("analysis", "policy-active:v1"))).toBeUndefined();
+  }, 900000);
 
   it("builds separately governed training and validation sequences in one immutable trainer manifest", async () => {
     const harness = createAcademyHarness();

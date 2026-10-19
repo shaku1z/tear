@@ -9,6 +9,9 @@ import {
   DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY,
 } from "../../src/agents";
 import type { TearAgentObservation } from "../../src/agents";
+import { TearAgentOrchestrator, TEAR_POLICY_FEATURE_SCHEMA_HASH_V2, TEAR_POLICY_FEATURE_WIDTH_V2,
+  projectCanonicalPolicyFeatures, projectStructuredPolicyFeatures } from "../../src/agents";
+import { createProductionHeadlessEnvironment } from "../../src/tearbench";
 
 const compatibility = Object.freeze({ runtime: "tear-policy-runtime.v1" as const, observationClass: "structured-state" as const,
   actionSchema: "tear-game-action-command-envelope.v1" as const, modelFormats: Object.freeze(["table-policy-v1"]) });
@@ -35,6 +38,82 @@ function artifact(feature: string, actions: unknown): ReturnType<typeof createTe
 }
 
 describe("C32 active policy runtime", () => {
+  it("executes tagged sparse coefficients and refuses malformed untrusted sparse payloads", async () => {
+    const coefficient = (value: number): string => {
+      const bytes = new Uint8Array(8); new DataView(bytes.buffer).setFloat64(0, value, true);
+      return btoa(String.fromCharCode(...bytes));
+    };
+    const sparse = { format: "sparse-float64-le.v1", schemaVersion: 1, rowOffsets: [0, 0, 1],
+      columns: btoa(String.fromCharCode(3, 0)), values: coefficient(2) };
+    const template = artifact("*", []), width = TEAR_POLICY_FEATURE_WIDTH_V2;
+    const model = { format: "tear-linear-policy-model", schemaVersion: 1, featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V2,
+      mean: Array(width).fill(0), scale: Array(width).fill(1), classes: [{ actions: [{ type: "move", x: -1000, y: 0 }] },
+        { actions: [{ type: "move", x: 1000, y: 0 }] }], weights: sparse, biases: [0, 0] };
+    const execute = async (weights: typeof sparse) => {
+      const stored = createTearPolicyArtifact({ ...template, id: "sparse-input", compatibility: linearCompatibility,
+        model: { format: "linear-policy-v1", payload: JSON.stringify({ ...model, weights }) } });
+      const runtime = new TearActivePolicyRuntime(stored, "competent", { now: () => 0 }); await runtime.reset();
+      return runtime.decide(observation());
+    };
+    const accepted = await execute(sparse);
+    expect(accepted.receipt.source).toBe("artifact"); expect(accepted.actions).toEqual([{ type: "move", x: 1000, y: 0 }]);
+    for (const invalid of [
+      { ...sparse, schemaVersion: 2 },
+      { ...sparse, rowOffsets: [0, 1] },
+      { ...sparse, columns: btoa(String.fromCharCode(width, 0)) },
+      { ...sparse, values: coefficient(Number.NaN) },
+    ]) expect((await execute(invalid)).receipt).toMatchObject({ source: "scripted-fallback", reason: "invalid-model" });
+  });
+
+  it("shares V2 features on genuine production frames and normalizes causal history without reinterpreting V1", async () => {
+    const environment = createProductionHeadlessEnvironment(), teacher = new TearAgentOrchestrator("competent");
+    const scenario = { format: "tear-contract", kind: "scenario", schemaVersion: 1, id: "c33-projection-parity", version: 1,
+      description: "Engineering projection parity on natural source frames", stateClass: "recorded-canonical", executionClass: "training",
+      seed: "c33-projection-parity-seed", start: { mode: "endless", difficulty: "normal", weapon: "sword" }, maxTicks: 2400,
+      assertions: ["runtime.finite-state"], tags: ["c33", "engineering"] } as const;
+    try {
+      let canonical = environment.reset(scenario), moving = false, movingBlade = false, living = false, selectedReward = false;
+      for (let tick = 0; tick < scenario.maxTicks; tick += 1) {
+        const input = { state: environment.policyObservation(), ui: environment.policyUiObservation() };
+        expect(projectCanonicalPolicyFeatures(canonical, TEAR_POLICY_FEATURE_SCHEMA_HASH_V2))
+          .toEqual(projectStructuredPolicyFeatures(input, TEAR_POLICY_FEATURE_SCHEMA_HASH_V2));
+        moving ||= (canonical.player?.vx ?? 0) !== 0;
+        movingBlade ||= (canonical.blade?.vx ?? 0) !== 0;
+        living ||= canonical.enemies.some((enemy) => !enemy.dead);
+        const teacherActions = teacher.decide(input).actions;
+        if (["draft", "reserve", "tierup"].includes(input.ui.screen)) {
+          expect(input.ui.choices.length).toBeGreaterThan(0);
+          expect(teacherActions.some((action) => "choiceId" in action && input.ui.choices.some((choice) => choice.id === action.choiceId))).toBe(true);
+        }
+        const transition = environment.step(teacherActions); canonical = transition.observation;
+        if (["draft", "reserve", "tierup"].includes(input.ui.screen)) {
+          expect(environment.policyUiObservation().screen).not.toBe(input.ui.screen);
+          selectedReward = true;
+        }
+        if (transition.terminated || transition.truncated) break;
+      }
+      expect({ moving, movingBlade, living, selectedReward }).toEqual({ moving: true, movingBlade: true, living: true, selectedReward: true });
+      const input = observation(), width = TEAR_POLICY_FEATURE_WIDTH_V2, features = projectStructuredPolicyFeatures(input, TEAR_POLICY_FEATURE_SCHEMA_HASH_V2);
+      const mean = [...features], weights = Array<number>(2 * width + TEAR_POLICY_CONDITION_WIDTH_V2).fill(0);
+      weights[3] = 1; // Previous player.x: raw 100 must become normalized zero.
+      const model = { format: "tear-temporal-window-linear-policy-model", schemaVersion: 1, featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V2,
+        window: 2, conditionSchemaHash: TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, conditionWidth: TEAR_POLICY_CONDITION_WIDTH_V2,
+        mean, scale: Array(width).fill(2), classes: [{ actions: [{ type: "move", x: -1000, y: 0 }] }, { actions: [{ type: "move", x: 1000, y: 0 }] }],
+        weights: [Array(weights.length).fill(0), weights], biases: [1, 0] };
+      const template = artifact("*", []);
+      const stored = createTearPolicyArtifact({ ...template, id: "temporal-v2", compatibility: temporalCompatibility,
+        model: { format: "temporal-window-linear-policy-v1", payload: JSON.stringify(model) } });
+      const runtime = new TearActivePolicyRuntime(stored); await runtime.reset();
+      expect(runtime.decide(input).actions).toEqual([{ type: "move", x: -1000, y: 0 }]);
+      expect(runtime.decide(input).actions).toEqual([{ type: "move", x: -1000, y: 0 }]);
+      for (const featureSchemaHash of ["f".repeat(16), TEAR_POLICY_FEATURE_SCHEMA_HASH_V1]) {
+        const invalid = createTearPolicyArtifact({ ...stored, id: `bad-${featureSchemaHash}`, model: {
+          format: "temporal-window-linear-policy-v1", payload: JSON.stringify({ ...model, featureSchemaHash }) } });
+        const refused = new TearActivePolicyRuntime(invalid); await refused.reset();
+        expect(refused.decide(input).receipt).toMatchObject({ source: "scripted-fallback", reason: "invalid-model" });
+      }
+    } finally { environment.dispose(); }
+  });
   it("admits temporal artifacts in the browser runtime compatibility contract", () => {
     expect(DEFAULT_TEAR_POLICY_RUNTIME_COMPATIBILITY.modelFormats).toContain("temporal-window-linear-policy-v1");
   });

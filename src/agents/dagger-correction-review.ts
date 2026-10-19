@@ -1,7 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { GhostVaultBackend } from "../ghost";
 import type { TearDaggerCorrectionCaptureV1 } from "./dagger-correction-capture";
-import { TEAR_POLICY_FEATURE_WIDTH_V1 } from "./policy-feature-vector";
+import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, isTearPolicyFeatureSchema, tearPolicyFeatureWidth } from "./policy-feature-vector";
 import { TEAR_POLICY_CONDITION_WIDTH_V1, TEAR_POLICY_CONDITION_WIDTH_V2 } from "./policy-condition-vector";
 
 const REVIEW_KEY = "dagger-correction-review:v1:";
@@ -36,13 +36,16 @@ function timestamp(value: unknown): value is string { return text(value) && Numb
 function reviewKey(captureHash: string, correctionHash: string): string { return `${REVIEW_KEY}${captureHash}:${correctionHash}`; }
 function captureValid(capture: TearDaggerCorrectionCaptureV1): boolean {
   const { captureHash, ...draft } = capture;
+  const schema = capture.featureSchemaHash ?? TEAR_POLICY_FEATURE_SCHEMA_HASH_V1;
+  if (!isTearPolicyFeatureSchema(schema)) return false;
+  const width = tearPolicyFeatureWidth(schema);
   return HASH.test(captureHash) && captureHash === stableVerificationHash(draft)
     && capture.corrections.every((correction) => {
       const { correctionHash, ...candidate } = correction;
       return HASH.test(correctionHash) && correctionHash === stableVerificationHash(candidate)
-        && correction.features.length === TEAR_POLICY_FEATURE_WIDTH_V1 && correction.features.every(Number.isFinite)
+        && correction.features.length === width && correction.features.every(Number.isFinite)
         && correction.temporal.featureFrames.length >= 1 && correction.temporal.featureFrames.length <= 64
-        && correction.temporal.featureFrames.every((frame) => frame.length === TEAR_POLICY_FEATURE_WIDTH_V1 && frame.every(Number.isFinite))
+        && correction.temporal.featureFrames.every((frame) => frame.length === width && frame.every(Number.isFinite))
         && (correction.temporal.condition.length === TEAR_POLICY_CONDITION_WIDTH_V1 || correction.temporal.condition.length === TEAR_POLICY_CONDITION_WIDTH_V2) && correction.temporal.condition.every(Number.isFinite);
     });
 }

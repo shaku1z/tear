@@ -7,8 +7,8 @@ import { createLiveParticlePresentationState } from "../app/live-particle-presen
 import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
 import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
-import { UPGRADES } from "../gameplay/upgrades";
-import { eligibleTierChoices } from "../gameplay/run/reward-selection";
+import { UPGRADES, type UpgradeDefinition } from "../gameplay/upgrades";
+import { eligibleTierChoices, type RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
 import { restoreUpgradeHooks } from "../gameplay/upgrade-hooks";
 import { hydrateRewardCodecPayload, hydrateRewardUpgrade } from "./reward-codec-hydrator";
 import { captureCampaignChapterBindingSpec, parseCampaignChapterBindingSpec, stageCampaignChapterBinding,
@@ -16,7 +16,7 @@ import { captureCampaignChapterBindingSpec, parseCampaignChapterBindingSpec, sta
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
 import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
 import { CinematicTimeline, type CinematicDirectorBinding, type CinematicDirectorPort } from "../gameplay/runtime/cinematic-director";
-import { createLiveStateForgeAdapter } from "../app/live-state-forge-adapter";
+import { createLiveStateForgeAdapter, captureLiveRewardSelection } from "../app/live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge, resolveStateForgeBossIntro } from "../app/live-state-forge-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../simulation/run-random";
@@ -48,6 +48,11 @@ import { createGhostApplicationClockPlayback, type GhostApplicationClockSchedule
 
 const productionChapterBindings = new WeakMap<ProductionReplayWorld, StagedCampaignChapterBinding>();
 const productionFocus = new WeakMap<ProductionReplayWorld, number>();
+/** Canonical portable reward data owned by the production replay composition. */
+export function captureProductionRewardSelection(selection: RewardSelectionSnapshot<UpgradeDefinition> | null) {
+  return captureLiveRewardSelection(selection);
+}
+
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
 
 /** Explicit application-frame inputs, independent of fixed simulation ticks. */

@@ -196,3 +196,14 @@ The resulting V3 candidate may be named by a C36 approval package only after
 the exact completed/passed evidence and candidate-only registry bytes still
 match. The package is non-promotional custody, not a C34 quality result or
 runtime rollout.
+
+### C33 projection repair is separate from C34 learning evidence
+
+C33's shared V2 structured feature projection corrects training/execution units
+and semantics for the existing linear and temporal-window perceptrons. Its
+lossless bounded weight delivery and exact natural-checkpoint evaluation do not
+change the C34 V3 canonical state/Q adapter, manufacture a native V3 receipt,
+or establish RL/self-play or held-out quality. The engineering fitted models and
+source episodes remain explicitly separate from consented human evidence and
+from the native promotion/Watch fixtures. C33's strict completion metric still
+requires a genuinely completable source task; Endless truncation is no success.

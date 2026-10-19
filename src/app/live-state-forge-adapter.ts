@@ -157,6 +157,12 @@ function encode(
   return Object.freeze(encoded);
 }
 
+/** The ordinary reward codec's data-only projection; executable choices are rebound by catalog ID on restore. */
+export function captureLiveRewardSelection(selection: RewardSelectionSnapshot<UpgradeDefinition> | null,
+  identities: ReadonlyMap<object, string> = new Map()): TearCodecValue {
+  return encode(selection, identities);
+}
+
 function factoryId(enemy: GameEnemy): string {
   if (typeof enemy.bossId === "string" && enemy.bossId.length > 0) return enemy.bossId;
   if (enemy.kind === "support" && "supportType" in enemy && typeof enemy.supportType === "string") {
@@ -223,7 +229,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     ...(options.tutorialPresentation ? { tutorialPresentation: options.tutorialPresentation.capture() } : {}),
     ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}),
     ...(options.particlesPresentation ? { particlesPresentation: encode(options.particlesPresentation.capture(), identities) } : {}) }));
-  components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
+  components.set("tear.reward.v1", Object.freeze({ selection: captureLiveRewardSelection(options.reward(), identities) }));
   components.set("tear.configuration.v1", Object.freeze({
     rulesetVersion: "live", values: Object.freeze({
       ...(encode(options.worldServices.configuration.value, identities) as Readonly<Record<string, TearCodecValue>>),

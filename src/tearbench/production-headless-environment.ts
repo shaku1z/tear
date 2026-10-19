@@ -7,6 +7,7 @@ import { stableVerificationHash } from "../replay/hash";
 import type { createProductionCombatSimulation } from "./production-combat-simulation";
 import {
   captureProductionReplayCheckpoint,
+  captureProductionRewardSelection,
   createProductionGhostReplayComposition,
   projectProductionReplayCanonicalState,
   type ProductionReplayBootstrap,
@@ -134,6 +135,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
 > {
   /** Structured policy projection from this exact source-owned production world. */
   policyObservation(): TearObservationV1;
+  /** Exact source-owned UI facts; observing never selects or rerolls a reward. */
+  policyUiObservation(): Readonly<{ screen: string; choices: readonly Readonly<{ id: string }>[]; focusedId?: string }>;
   /** Build provenance remains available outside checkpointable lifecycle states. */
   sourceBuild(): ProductionReplayBootstrap["build"];
   /** Before the associated fixed step; no implicit cadence or confirm policy. */
@@ -220,7 +223,7 @@ function requireBootstrap(value: unknown): ProductionReplayBootstrap {
   });
 }
 
-function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
+export function validateProductionHeadlessCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
   if (!record(value) || value.format !== "tearbench-production-headless-checkpoint" || value.schemaVersion !== 2) {
     throw new TypeError("production headless checkpoint format is invalid");
   }
@@ -327,7 +330,7 @@ function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
 
 function validateStateForgeEvaluation(value: unknown): Readonly<{ source: ProductionHeadlessCheckpoint; forgedSnapshot: TearSnapshotV1 }> {
   if (!record(value)) throw new TypeError("production State Forge evaluation is invalid");
-  const source = validateCheckpoint(value.source);
+  const source = validateProductionHeadlessCheckpoint(value.source);
   const parsed = validateTearContract(value.forgedSnapshot);
   if (!parsed.ok || parsed.value.kind !== "snapshot") throw new TypeError("production State Forge evaluation snapshot is invalid");
   const forged = parsed.value;
@@ -415,7 +418,7 @@ export function createProductionHeadlessEnvironment(
       }), ...projectLiveProjectiles(value.replay.world.state.projectiles(), sourcePlayer, "B")]),
       run: Object.freeze({ mode: run.mode, difficulty: run.diff, weapon: run.weaponId,
         stage: canonicalObservationStage(value.replay.stage.index), wave: run.wave, score: run.score, elapsedTicks: tick }),
-      availableActions: canonicalObservationActions("playing", run.mode, false),
+      availableActions: canonicalObservationActions(value.waveReward.screen(), run.mode, false),
     });
   };
   const compose = (
@@ -449,7 +452,7 @@ export function createProductionHeadlessEnvironment(
       ...(sourceTracks === undefined ? {} : { sourceTracks }) });
     if (sourceTracks !== undefined) {
       sourceTracks.rewardComponents.push(Object.freeze({ tick: composed.simulation.scheduler.tick,
-        value: structuredClone(composed.waveReward.reward.snapshot()) }));
+        value: captureProductionRewardSelection(composed.waveReward.reward.snapshot()) }));
     }
     return core;
   };
@@ -465,6 +468,14 @@ export function createProductionHeadlessEnvironment(
       return observation(core);
     },
     policyObservation: () => policyObservation(requireCore()),
+    policyUiObservation: () => {
+      const current = requireCore(), screen = current.waveReward.screen(), selection = current.waveReward.reward.snapshot();
+      const choices = screen === "reserve" ? selection?.reserveChoices ?? []
+        : screen === "draft" || screen === "tierup" ? selection?.choices ?? [] : [];
+      const focusedId = choices[current.waveReward.focus()]?.id;
+      return Object.freeze({ screen, choices: Object.freeze(choices.map((choice) => Object.freeze({ id: choice.id }))),
+        ...(focusedId === undefined ? {} : { focusedId }) });
+    },
     sourceBuild: () => Object.freeze({ ...requireCore().bootstrap.build }),
     advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => { requireCore().advanceApplicationFrame(seconds, confirm); },
     tutorialHandoff: () => requireCore().replay.tutorialHandoff(),
@@ -510,7 +521,7 @@ export function createProductionHeadlessEnvironment(
       ));
       if (current.sourceTracks !== undefined) {
         current.sourceTracks.rewardComponents.push(Object.freeze({ tick: result.tick,
-          value: structuredClone(current.waveReward.reward.snapshot()) }));
+          value: captureProductionRewardSelection(current.waveReward.reward.snapshot()) }));
       }
       const lifecycle = current.replay.world.lifecycle.snapshot();
       const tutorialHandoff = current.replay.tutorialHandoff();
@@ -561,7 +572,7 @@ export function createProductionHeadlessEnvironment(
       return Object.freeze({ ...value, delivery: Object.freeze({ ...delivery, hash: stableVerificationHash({ ...value, delivery }) }) });
     },
     restoreCheckpoint(value: ProductionHeadlessCheckpoint): CanonicalGameplayState {
-      const checkpoint = validateCheckpoint(value);
+      const checkpoint = validateProductionHeadlessCheckpoint(value);
       const restored = compose(checkpoint.scenario, checkpoint.snapshot, checkpoint.input, checkpoint.bootstrap);
       assertCheckpointable(restored);
       if (restored.nativeEvents.length !== 0) throw new RangeError("checkpoint hydration emitted unexpected native facts");
