@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { verifyGhostCapsuleOpeningContinuation, verifyGhostCapsuleProductionReplay } from "../../src/ghost/production-replay-verification";
 import { createGhostApplicationClockEvent, GHOST_APPLICATION_FRAMES_V1, readGhostApplicationClockSchedule,
   type GhostApplicationFrameCursor } from "../../src/ghost/application-frame-events";
 import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-receipt";
@@ -45,6 +49,16 @@ function fixture() {
 }
 
 describe("Ghost application-frame evidence", () => {
+  it.skipIf(process.env.TEAR_R07_ORIGINAL_ARCHIVE === undefined)("continues an original normal downloaded intro archive", async () => {
+    const path = process.env.TEAR_R07_ORIGINAL_ARCHIVE; if (path === undefined) throw new Error("original archive path missing");
+    const encoded = readFileSync(path, "utf8"), vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const manifest = await vault.importCapsule(encoded), capsule = await new GhostCapsuleReader(vault).read(manifest.id);
+    const continued = verifyGhostCapsuleOpeningContinuation(capsule), verification = verifyGhostCapsuleProductionReplay(capsule);
+    console.info(JSON.stringify({ continued, verification }));
+    expect(verification.status, JSON.stringify(verification)).toBe("verified");
+    expect(continued.status, JSON.stringify(continued)).toBe("verified");
+    expect(await vault.exportCapsule(manifest.id)).toBe(encoded);
+  });
   it("replays ordered zero-tick frames and skips the prelude already reflected in a mid-frame keyframe", () => {
     const value = fixture(), schedule = readGhostApplicationClockSchedule(value.capsule, binding.runId, true);
     if (schedule === undefined) throw new Error("clock schedule missing");

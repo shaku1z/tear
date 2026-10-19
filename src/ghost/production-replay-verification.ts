@@ -61,12 +61,15 @@ export interface GhostProductionReceiptComparison {
 export interface GhostOpeningContinuationVerification extends GhostProductionReplayVerification {
   readonly comparisons: readonly (GhostProductionReceiptComparison & { readonly inputEqual?: boolean })[];
   readonly continuation: Readonly<{ kind: "opening-only-derived-in-memory"; sourceRootIntegrity: string;
-    sourceAnchorId: string | undefined; steps: number; laterKeyframesUsed: false; derivedRootHash?: string }>;
+    sourceAnchorId: string | undefined; steps: number; laterKeyframesUsed: false; derivedRootHash?: string;
+    terminalWitness?: Readonly<{ terminalTick: number; authoritativeTick: number; introClearedTick: number }> }>;
 }
 
 /** Disclosed in-memory opening-only execution; never replaces or edits archive keyframes. */
 export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule): GhostOpeningContinuationVerification {
-  const mapped = mapGhostCapsuleToReplayEnvelope(capsule), targets = [60, 120, 180];
+  const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
+  let targets = [60, 120, 180], finalWitness: Readonly<{ tick: number; stateHash: string }> | undefined;
+  let terminalWitness: Readonly<{ terminalTick: number; authoritativeTick: number; introClearedTick: number }> | undefined;
   const receipts = capsule.tracks.results.flatMap((entry) => {
     const receipt = readGhostAuthoritativeReceipt(entry.value); return receipt?.tick === entry.tick ? [receipt] : [];
   });
@@ -74,20 +77,41 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
   const comparisons: (GhostProductionReceiptComparison & { readonly inputEqual?: boolean })[] = [];
   let steps = 0;
   const evidence = () => Object.freeze({ kind: "opening-only-derived-in-memory" as const, sourceRootIntegrity: capsule.manifest.rootIntegrity,
-    sourceAnchorId: anchor?.id, steps, laterKeyframesUsed: false as const });
+    sourceAnchorId: anchor?.id, steps, laterKeyframesUsed: false as const, ...(terminalWitness === undefined ? {} : { terminalWitness }) });
   if (mapped.issues.length > 0) return Object.freeze({ status: "unavailable", comparisons: Object.freeze([]), continuation: evidence(),
     mappingIssues: Object.freeze(mapped.issues.map((issue) => `${issue.track}@${String(issue.tick)}: ${issue.reason}`)) });
   try {
     const refusals = legacyAimRefusals(capsule, mapped, receipts.filter((receipt) => receipt.tick === 0));
     if (refusals.length > 0) return Object.freeze({ status: "unavailable", comparisons: refusals, continuation: evidence(), mappingIssues: Object.freeze([]) });
     const permit = issueGhostRecordedOpeningPermit(capsule);
+    const context = readGhostReplayRunContext(capsule.manifest.provenance);
+    const applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);
+    if (context?.run.mode === "bossonly" && context.simulation.opening !== undefined && applicationClock !== undefined) {
+      const install = applicationClock.events.find((event) => event.payload.format === "tearghost-intro-install");
+      const clear = applicationClock.events.find((event) => event.sequence > (install?.sequence ?? Infinity)
+        && event.payload.format === "tearghost-application-frame" && event.payload.kind === "end" && !event.payload.introActive);
+      const terminals = capsule.tracks.results.flatMap((entry) => {
+        if (typeof entry.value !== "object" || entry.value === null || Array.isArray(entry.value)) return [];
+        const value = entry.value as Readonly<Record<string, unknown>>;
+        return entry.tick === capsule.maxTick && value.mode === context.run.mode && value.diff === context.run.difficulty
+          && Number.isSafeInteger(value.authoritativeTick) && Number(value.authoritativeTick) > (clear?.tick ?? Infinity)
+          && Number(value.authoritativeTick) < entry.tick && typeof value.authoritativeStateHash === "string"
+          && /^[a-f0-9]{16}$/iu.test(value.authoritativeStateHash)
+          ? [{ tick: Number(value.authoritativeTick), stateHash: value.authoritativeStateHash, terminalTick: entry.tick }] : [];
+      });
+      const terminal = terminals[0];
+      if (install === undefined || clear === undefined || terminals.length !== 1 || terminal === undefined) throw new TypeError("fresh boss continuation requires an original authoritative terminal witness after recorded intro clearing");
+      finalWitness = terminal;
+      terminalWitness = Object.freeze({ terminalTick: terminal.terminalTick, authoritativeTick: terminal.tick, introClearedTick: clear.tick });
+      targets = [...new Set([...receipts.filter((receipt) => receipt.tick > 0 && receipt.tick <= terminal.tick).map((receipt) => receipt.tick), terminal.tick])].sort((a, b) => a - b);
+      const sameTick = receipts.find((receipt) => receipt.tick === terminal.tick);
+      if (sameTick !== undefined && sameTick.stateHash !== terminal.stateHash) throw new TypeError("source terminal and receipt hashes disagree");
+    }
     if (permit === undefined || anchor === undefined || mapped.issues.length !== 0
-      || targets.some((tick) => receipts.filter((receipt) => receipt.tick === tick).length !== 1)) {
+      || targets.some((tick) => tick !== finalWitness?.tick && receipts.filter((receipt) => receipt.tick === tick).length !== 1)) {
       return Object.freeze({ status: "unavailable" as const, comparisons, continuation: evidence(), mappingIssues: ["opening continuation requires admitted anchor, valid command/event mapping, and unique60/120/180 receipts"] });
     }
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
-    const context = readGhostReplayRunContext(capsule.manifest.provenance);
-    const applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);
     const composition = createProductionGhostReplayComposition({ seed: anchor.seed, openingPermit: permit,
       requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }) });
     const replay = new GhostProductionReplayWorld(derived, { create(snapshot) {
@@ -96,14 +120,18 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
         steps++;
         const tick = session.simulation.scheduler.tick;
         if (!targets.includes(tick)) return;
-        const expected = receipts.find((receipt) => receipt.tick === tick);
+        const receipt = receipts.find((candidate) => candidate.tick === tick);
+        const expected = receipt ?? (finalWitness?.tick === tick ? finalWitness : undefined);
         if (expected === undefined) throw new Error("opening receipt disappeared");
-        const actualHash = stableVerificationHash(session.semanticProjection()), inputEqual = stableVerificationHash(session.simulation.input.snapshot()) === stableVerificationHash(canonicalReceiptInput(expected.input));
-        comparisons.push(Object.freeze({ tick, expectedHash: expected.stateHash, actualHash, inputEqual, equal: inputEqual && actualHash === expected.stateHash }));
+        const actualHash = stableVerificationHash(session.semanticProjection());
+        const inputEqual = receipt === undefined ? undefined : stableVerificationHash(session.simulation.input.snapshot()) === stableVerificationHash(canonicalReceiptInput(receipt.input));
+        comparisons.push(Object.freeze({ tick, expectedHash: expected.stateHash, actualHash,
+          ...(inputEqual === undefined ? {} : { inputEqual }), equal: inputEqual !== false && actualHash === expected.stateHash }));
       } });
     } });
-    replay.seek(180);
-    return Object.freeze({ status: comparisons.length === 3 && comparisons.every((entry) => entry.equal) && steps === 180 ? "verified" as const : "mismatch" as const,
+    const lastTick = targets.at(-1); if (lastTick === undefined) throw new TypeError("opening continuation has no original target");
+    replay.seek(lastTick);
+    return Object.freeze({ status: comparisons.length === targets.length && comparisons.every((entry) => entry.equal) && steps === lastTick ? "verified" as const : "mismatch" as const,
       comparisons: Object.freeze(comparisons), continuation: Object.freeze({ ...evidence(), derivedRootHash: derived.rootHash }), mappingIssues: Object.freeze([]) });
   } catch (error) {
     return Object.freeze({ status: "mismatch" as const, comparisons: Object.freeze(comparisons), continuation: evidence(),

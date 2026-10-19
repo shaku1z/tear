@@ -9,6 +9,7 @@ import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { LEGACY_APP_SCREENS, LEGAL_LEGACY_TRANSITIONS, type LegacyAppScreen } from "../app/legacy-state-controller";
 import { GHOST_APPLICATION_FRAMES_V1 } from "./application-frame-events";
+import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
 
 export const GHOST_REPLAY_CONTEXT_FORMAT = "tear-ghost-replay-context" as const;
 export const GHOST_REPLAY_CONTEXT_SCHEMA_VERSION = 1 as const;
@@ -270,12 +271,20 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
   if (receipts.length !== 1 || receipts[0] === undefined) throw new TypeError("opening requires one original tick-zero held-input receipt");
   const run = record(anchor.state["tear.run.v1"]), world = record(anchor.state["tear.world.v1"]), runtime = record(world?.runtime), lifecycle = record(runtime?.lifecycle);
   const opening = context.simulation.opening;
+  const bossOrder: readonly unknown[] = Array.isArray(run?.bossOrder) ? run.bossOrder : [];
+  const bossQueue: readonly unknown[] = Array.isArray(run?.spawnQueue) ? run.spawnQueue : [];
+  const freshBossOpening = context.run.mode === "bossonly" && opening !== undefined
+    && context.simulation.applicationFrames !== undefined && lifecycle?.phase === "wave-active"
+    && lifecycle.bossWave === true && lifecycle.activationDeferred === false && lifecycle.reward === null
+    && run?.bossIdx === 1 && typeof run.curBoss === "string" && isBossDefinitionId(run.curBoss)
+    && bossOrder[0] === run.curBoss && bossOrder.every((id) => typeof id === "string" && isBossDefinitionId(id))
+    && new Set(bossOrder).size === bossOrder.length && bossQueue.length === 1 && record(bossQueue[0])?.type === "boss";
   if (context.simulation.initialState !== "opening-initialized" || run?.tick !== 0 || run.runTime !== 0
     || String(run.runSeed) !== context.run.seed || run.mode !== context.run.mode || run.diff !== context.run.difficulty || run.weaponId !== context.run.weaponId
     || lifecycle?.sessionId !== context.run.id || lifecycle.outcome !== null
     || (world?.simulationSeconds !== undefined && world.simulationSeconds !== 0)
     || typeof ui?.screen !== "string" || (opening !== undefined && opening.previousScreen !== ui.screen)
-    || !["endless", "campaign"].includes(context.run.mode)) throw new TypeError("opening run/UI/session facts do not match capsule context");
+    || (!["endless", "campaign"].includes(context.run.mode) && !freshBossOpening)) throw new TypeError("opening run/UI/session facts do not match capsule context");
   openingPredecessor(ui.screen);
   const starts = capsule.tracks.events.flatMap((entry) => { const event = causalEvent(entry.value); return event?.type === "run.started" ? [{ entry, event }] : []; });
   const bootstrapId = ghostLiveBootstrapEventId(capsule.manifest.id);

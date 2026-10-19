@@ -374,7 +374,8 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   const admittedOpening = opening !== undefined && snapshot.tick === 0 && staged.run.runTime === 0 && noPendingReward
     && preparedRuntime.lifecycle.reward === null && preparedRuntime.lifecycle.outcome === null
     && restoredBossIntro === null
-    && (openingCampaign || (staged.run.mode === "endless" && preparedRuntime.chapter === null
+    && (openingCampaign || ((staged.run.mode === "endless" || (staged.run.mode === "bossonly"
+      && opening.kind === "explicit" && preparedRuntime.lifecycle.bossWave)) && preparedRuntime.chapter === null
       && preparedRuntime.lifecycle.phase === "wave-active" && preparedRuntime.lifecycle.wave === staged.run.wave
       && !preparedRuntime.lifecycle.activationDeferred && !preparedRuntime.cinema.active));
   if (opening !== undefined && !admittedOpening) throw new RangeError("recorded opening runtime is incoherent or unsupported");
