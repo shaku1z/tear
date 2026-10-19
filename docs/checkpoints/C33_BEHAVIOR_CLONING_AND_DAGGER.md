@@ -470,3 +470,14 @@ zero-fallback experiment assertion failed, and these mixed executions establish
 no pure learned-policy advantage. No limit was raised and the pair was not
 rerun to seek a better result. The expensive measurement is opt-in through
 `TEAR_C33_PROJECTION_REPORT`; ordinary unit gates do not retrain or repeat it.
+
+Parent integration accepted source commit `1b4d0ce06e80a20d89335fa38e98f798e7f0b12c`:
+one fresh `test-standalone` build and the existing normal C37 native Watch,
+retained observation and explicit baseline-restoration journey passed. This is
+compatibility evidence using the existing engineering native fixture, not a
+browser quality result for either C33 fit. Build artifact hash:
+`20742e673cb50dd54f1ac0c23daaad74125b5402bd77dd49cd971e9825b95192`;
+build identity:
+`7f2e61650c8fff9bf02c5b8dc0ee24539c10a838c1fc4ddd6275c6760a88bda3`.
+Logs are retained under
+`C:/Users/realm/.codex/tmp/tear-resumption-20261018/c33-projection-1b4d0ce0-{build,browser}.log`.
