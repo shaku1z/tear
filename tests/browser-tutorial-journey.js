@@ -52,7 +52,10 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     const waitForLessonToAdvance = (lessonIndex, limit = 360) => {
       for (let index = 0; index < limit && tutorial().lessonIndex === lessonIndex; index += 1) step();
       record(`after-${lessonIndex}`);
-      return tutorial().lessonIndex > lessonIndex;
+      if (tutorial().lessonIndex <= lessonIndex) {
+        throw new Error(`Tutorial lesson ${lessonIndex} did not advance: ${JSON.stringify({ tutorial: tutorial(), observation: environment.observe() })}`);
+      }
+      return true;
     };
     const liveDummy = () => environment.observe().entities.find((entity) => entity.kind === "charger");
     const approachDummy = (distance = 70, limit = 360) => {
@@ -80,6 +83,23 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       const before = (center - arc + 1_000_000) % 1_000_000;
       const after = (center + arc) % 1_000_000;
       swing(before, after, 4, recover);
+    };
+    const risingAimAtDummy = () => {
+      const dummy = liveDummy(), observation = environment.observe();
+      if (!dummy) return null;
+      // Aim is player-relative. The observed blade "hand" point is the moving
+      // blade body, so it must not reverse the target side as the spring lags.
+      const dx = dummy.x - observation.player.x, dy = dummy.y - observation.player.y;
+      const side = Math.sign(dx) || Math.sign(dummy.x - observation.blade.handX) || 1;
+      const center = Math.round(((((Math.atan2(dy, dx) / (Math.PI * 2)) % 1) + 1) % 1) * 1_000_000) % 1_000_000;
+      const arc = 200000;
+      return { from: (center + side * arc + 1_000_000) % 1_000_000,
+        to: (center - side * arc + 1_000_000) % 1_000_000 };
+    };
+    const risingCutThroughDummy = (settle, recover) => {
+      const aim = risingAimAtDummy();
+      if (!aim) { idle(recover); return; }
+      swing(aim.from, aim.to, settle, recover);
     };
     const jump = () => {
       step({ type: "jump", phase: "pressed" });
@@ -144,14 +164,14 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
 
     approachDummy(70);
     for (let attempt = 0; attempt < 50 && tutorial().lessonIndex === 4; attempt += 1) {
-      swing(250000, 750000, 10, 24);
+      risingCutThroughDummy(10, 24);
       approachDummy(70, 120);
     }
     waitForLessonToAdvance(4);
 
     approachDummy(70);
     for (let attempt = 0; attempt < 30 && tutorial().lessonIndex === 5; attempt += 1) {
-      swing(250000, 750000, 8, 12);
+      risingCutThroughDummy(8, 12);
       swingThroughDummy(110000, 10);
       swingThroughDummy(110000, 18);
       approachDummy(70, 120);
@@ -189,9 +209,12 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     for (let attempt = 0; attempt < 30 && tutorial().lessonIndex === 8; attempt += 1) {
       // An updraft is not merely an upward cut: the player must still be in
       // the strong rising window when the blade crosses the target.
-      step({ type: "aim", turn: 250000, magnitude: 1000 }); idle(8);
-      approachDummy(70); waitGrounded(); jump(); idle(2);
-      step({ type: "aim", turn: 750000, magnitude: 1000 });
+      approachDummy(70); waitGrounded();
+      const aim = risingAimAtDummy();
+      if (!aim) { step(); continue; }
+      step({ type: "aim", turn: aim.from, magnitude: 1000 }); idle(8);
+      jump(); idle(2);
+      step({ type: "aim", turn: aim.to, magnitude: 1000 });
       idle(75);
     }
     waitForLessonToAdvance(8);
