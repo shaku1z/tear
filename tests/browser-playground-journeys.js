@@ -26,7 +26,7 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
       const fixture = {
         tear_profile_v2: JSON.stringify({ schema: "tear.profile", schemaVersion: 3, revision: 1,
         updatedAtMs: 1, writerId: "practice-lab-ui-fixture", extensions: {}, profile: { v: 1, created: 1,
-          shards: 10, ach: { student: 1, first_buy: 1 }, achCoinsRetrofit: true, modes: {}, seen: {},
+          shards: 10, ach: { student: 1, first_buy: 1, boss_colossus: 1 }, achCoinsRetrofit: true, modes: {}, seen: {},
           stats: { tutorialDone: 1, coinsEarned: 1000, shopBuys: 1, kill_charger: 1, kill_support: 1, killColossus: 1, "encounterBoss:warden:2": 1 } } }),
         tear_meta: JSON.stringify({ lifetimeEarned: 1000, lifetimeSpent: 375, buy: { sharp: 1 } }),
       };
