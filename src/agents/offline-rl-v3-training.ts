@@ -83,6 +83,15 @@ function ordered(values: readonly TearOfflineRlQValueV1[]): readonly TearOffline
   return Object.freeze(output);
 }
 
+/** Checks authoring values without requiring a fabricated trajectory receipt. */
+export function validateTearOfflineRlV3Request(input: Readonly<{ id: string; version: number; actionVocabulary: readonly unknown[]; config: TearOfflineRlTrainingConfigV1 }>): readonly GameAction[] {
+  if (!record(input) || !text(input.id) || !positive(input.version, Number.MAX_SAFE_INTEGER)
+    || !validConfig(input.config) || !Array.isArray(input.actionVocabulary)) throw new TypeError("invalid offline RL V3 request");
+  const actions = canonicalizeTearC34C32ActionVocabulary(input.actionVocabulary);
+  if (actions.length < 1 || actions.length > 16) throw new RangeError("offline RL V3 requires one to sixteen canonical actions");
+  return actions;
+}
+
 function freezePlan(draft: Omit<TearOfflineRlV3PlanV1, "planHash" | "actionVocabularyHash">): TearOfflineRlV3PlanV1 {
   const rawAdapter: unknown = draft.sourceStateAdapter;
   if (!text(draft.id) || !positive(draft.version, Number.MAX_SAFE_INTEGER) || !record(draft.receipt)
@@ -91,8 +100,7 @@ function freezePlan(draft: Omit<TearOfflineRlV3PlanV1, "planHash" | "actionVocab
     || rawAdapter.adapterHash !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 || !validConfig(draft.config)) {
     throw new TypeError("invalid offline RL V3 plan");
   }
-  const actionVocabulary = canonicalizeTearC34C32ActionVocabulary(draft.actionVocabulary);
-  if (actionVocabulary.length < 1 || actionVocabulary.length > 16) throw new RangeError("offline RL V3 requires one to sixteen canonical actions");
+  const actionVocabulary = validateTearOfflineRlV3Request(draft);
   const actionVocabularyHash = stableVerificationHash(actionVocabulary);
   const value = Object.freeze({ format: "tear-offline-rl-v3-plan" as const, schemaVersion: 1 as const, id: draft.id, version: draft.version,
     receipt: freeze(draft.receipt), sourceStateAdapter: freeze(draft.sourceStateAdapter), actionVocabulary, actionVocabularyHash, config: freeze(draft.config) });

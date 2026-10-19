@@ -165,10 +165,19 @@ function freezeReward(value: Omit<TearOfflineRlRewardDefinitionV1, "format" | "s
 }
 
 function validateLimits(value: TearOfflineRlLimitsV1): TearOfflineRlLimitsV1 {
-  if (!positiveInteger(value.maxTransitions, 1_000_000) || !positiveInteger(value.maxEventsPerTransition, 10_000)) {
+  const maxRewardViolations: unknown = value.maxRewardViolations;
+  if (!positiveInteger(value.maxTransitions, 1_000_000) || !positiveInteger(value.maxEventsPerTransition, 10_000) || maxRewardViolations !== 0) {
     throw new TypeError("invalid offline RL extraction limits");
   }
   return Object.freeze({ ...value });
+}
+
+/** Validates authoring inputs without inventing a dataset or extracting trajectories. */
+export function validateTearOfflineRlPlanRequest(request: TearOfflineRlPlanRequestV1): Readonly<{ reward: TearOfflineRlRewardDefinitionV1; limits: TearOfflineRlLimitsV1 }> {
+  if (!record(request) || !text(request.id) || !positiveInteger(request.version, Number.MAX_SAFE_INTEGER)
+    || !Number.isSafeInteger(request.seed) || request.seed < 0 || !record(request.reward)
+    || !Array.isArray(request.reward.components) || !record(request.limits)) throw new TypeError("invalid offline RL request");
+  return Object.freeze({ reward: freezeReward(request.reward), limits: validateLimits(request.limits) });
 }
 
 function datasetTrainingSequences(dataset: TearAcademyTrainingDatasetV1): readonly TearAcademyTrainingSequenceV1[] {
@@ -202,7 +211,7 @@ function freezePlan(value: Omit<TearOfflineRlPlanV1, "planHash">): TearOfflineRl
   if (stableVerificationHash(sortedUnique(selection.map((entry) => entry.scenarioHash))) !== stableVerificationHash(scenarioHashes)) {
     throw new RangeError("offline RL plan curriculum does not match its training selection");
   }
-  const reward = freezeReward(value.reward), limits = validateLimits(value.limits);
+  const { reward, limits } = validateTearOfflineRlPlanRequest(value);
   const draft = { format: value.format, schemaVersion: value.schemaVersion, id: value.id, version: value.version, seed: value.seed,
     dataset: Object.freeze({ ...value.dataset }), environment: Object.freeze({ execution: "production-headless" as const, scenarioHashes }),
     curriculum: Object.freeze({ lessonIds, scenarioHashes: curriculumHashes }), trainingSelection: Object.freeze(selection), reward, limits };

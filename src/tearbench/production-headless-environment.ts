@@ -114,6 +114,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
 > {
   /** Structured policy projection from this exact source-owned production world. */
   policyObservation(): TearObservationV1;
+  /** Build provenance remains available outside checkpointable lifecycle states. */
+  sourceBuild(): ProductionReplayBootstrap["build"];
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   restoreStateForgeEvaluation(evaluation: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState;
@@ -146,6 +148,9 @@ function requireScenario(value: unknown): TearScenarioV1 {
   }
   return requireNaturalScenario(validated.value);
 }
+
+/** Pure admission shared by runtime reset and governed training requests. */
+export const validateProductionHeadlessScenario = requireScenario;
 
 function cloneActions(actions: readonly CommandEnvelope<GameAction>[]): readonly CommandEnvelope<GameAction>[] {
   return Object.freeze(actions.map((entry) => Object.freeze({
@@ -379,6 +384,7 @@ export function createProductionHeadlessEnvironment(
       return observation(core);
     },
     policyObservation: () => policyObservation(requireCore()),
+    sourceBuild: () => Object.freeze({ ...requireCore().bootstrap.build }),
     step(actions: readonly GameAction[]): TearHeadlessTransition<CanonicalGameplayState> {
       const current = requireCore();
       const tick = current.simulation.simulationRuntime.scheduler.tick + 1;

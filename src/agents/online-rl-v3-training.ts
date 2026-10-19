@@ -1,6 +1,7 @@
 import type { GhostVaultBackend } from "../ghost";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../replay/hash";
+import { validateProductionHeadlessScenario } from "../tearbench/production-headless-environment";
 import { createProductionHeadlessEnvironment, type ProductionHeadlessCheckpoint, type TearScenarioV1 } from "../tearbench";
 import { createTearC34C32RuntimeModel, selectTearC34C32RuntimeAction } from "./c34-c32-runtime-compatibility";
 import { evaluateTearOfflineRlRewardTransition, parseTearOfflineRlPlan, type TearOfflineRlPlanV1, type TearOfflineRlQValueV1 } from "./offline-rl-training";
@@ -36,9 +37,24 @@ function ordered(values: readonly TearOfflineRlQValueV1[]): readonly TearOffline
 }
 function validConfig(value: unknown): value is TearOnlineRlV3ConfigV1 { return record(value) && finite(value.learningRate, 0.000_001, 1) && finite(value.gamma, 0, 1) && positive(value.maxTicks, 20_000) && positive(value.maxUpdates, 1_000_000) && finite(value.maxAbsoluteQ, 0.000_001, 1_000_000); }
 
+/** Checks natural source scenarios and limits before any offline result exists. */
+export function validateTearOnlineRlV3Request(input: Pick<TearOnlineRlV3PlanV1, "id" | "scenarios" | "config">): readonly TearScenarioV1[] {
+  if (!record(input) || !text(input.id) || !validConfig(input.config) || !Array.isArray(input.scenarios)
+    || input.scenarios.length < 1 || input.scenarios.length > 32) throw new TypeError("invalid online RL V3 request");
+  const sourceScenarios: readonly TearScenarioV1[] = input.scenarios;
+  const scenarios = sourceScenarios.map(freeze), ids = new Set<string>();
+  for (const scenario of scenarios) {
+    validateProductionHeadlessScenario(scenario);
+    const id = stableVerificationHash(scenario);
+    if (ids.has(id)) throw new RangeError("online RL V3 scenarios repeat");
+    ids.add(id);
+  }
+  return Object.freeze(scenarios);
+}
+
 function freezePlan(draft: Omit<TearOnlineRlV3PlanV1, "planHash">): TearOnlineRlV3PlanV1 {
   if (!text(draft.id) || !record(draft.offline) || !hash(draft.offline.v3PlanHash) || !hash(draft.offline.trainingHash) || !hash(draft.offline.rewardPlanHash) || !hash(draft.offline.receiptHash) || !hash(draft.offline.adapterHash) || !hash(draft.offline.actionVocabularyHash) || !validConfig(draft.config) || draft.scenarios.length < 1 || draft.scenarios.length > 32) throw new TypeError("invalid online RL V3 plan");
-  const scenarios = draft.scenarios.map(freeze), ids = new Set<string>(); for (const scenario of scenarios) { const id = stableVerificationHash(scenario); if (ids.has(id)) throw new RangeError("online RL V3 scenarios repeat"); ids.add(id); }
+  const scenarios = validateTearOnlineRlV3Request(draft);
   const value = Object.freeze({ format: "tear-online-rl-v3-plan" as const, schemaVersion: 1 as const, id: draft.id, offline: freeze(draft.offline), scenarios: Object.freeze(scenarios), config: freeze(draft.config) }); return Object.freeze({ ...value, planHash: stableVerificationHash(value) });
 }
 /** Freezes only a completed explicit V3 baseline and natural C30 cases. */
@@ -84,7 +100,21 @@ export function advanceTearOnlineRlV3Checkpoint(planInput: TearOnlineRlV3PlanV1,
 
 function execute(modelEntries: readonly TearOfflineRlQValueV1[], plan: TearOnlineRlV3PlanV1, offline: TearOfflineRlV3PlanV1, reward: TearOfflineRlPlanV1, side: "baseline" | "challenger") { const traces: TearOnlineRlV3EvaluationResultV1["traces"][number][] = []; for (const scenario of plan.scenarios) { const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true }); try { let current = environment.reset(scenario), rewardTotal = 0, eventCursor = 0; while (current.tick < Math.min(scenario.maxTicks, plan.config.maxTicks)) { const selected = selectTearC34C32RuntimeAction(createTearC34C32RuntimeModel(modelEntries), current, offline.actionVocabulary, environment.policyObservation().availableActions); if (selected === undefined) break; const transition = environment.step(selected.actions), events = environment.sourceTracks().nativeEvents.slice(eventCursor); eventCursor += events.length; rewardTotal += evaluateTearOfflineRlRewardTransition(reward, current, transition.observation, events).total; current = transition.observation; if (transition.terminated || transition.truncated) break; } traces.push(Object.freeze({ side, scenarioHash: stableVerificationHash(scenario), reward: rewardTotal, terminalHash: stableVerificationHash(current) })); } finally { environment.dispose(); } } return traces; }
 /** Fresh paired C30 evaluation retains a pass/fail fact only; it cannot promote. */
-export function evaluateTearOnlineRlV3InSource(planInput: TearOnlineRlV3PlanV1, offlineInput: TearOfflineRlV3PlanV1, resultInput: TearOfflineRlV3TrainingResultV1, rewardInput: TearOfflineRlPlanV1, challengerInput: TearOnlineRlV3CheckpointV1, minimumRewardGain = 0): TearOnlineRlV3EvaluationResultV1 { const plan = parseTearOnlineRlV3Plan(planInput), offline = parseTearOfflineRlV3Plan(offlineInput), result = parseTearOfflineRlV3TrainingResult(resultInput), reward = parseTearOfflineRlPlan(rewardInput), challenger = parseTearOnlineRlV3Checkpoint(challengerInput); if (result.model === undefined || challenger.status !== "complete" || challenger.planHash !== plan.planHash || !Number.isFinite(minimumRewardGain)) throw new RangeError("online RL V3 evaluation lineage is incomplete"); const traces = Object.freeze([...execute(result.model.entries, plan, offline, reward, "baseline"), ...execute(challenger.qValues, plan, offline, reward, "challenger")]); const baselineReward = traces.filter((entry) => entry.side === "baseline").reduce((sum, entry) => sum + entry.reward, 0), challengerReward = traces.filter((entry) => entry.side === "challenger").reduce((sum, entry) => sum + entry.reward, 0); const draft = { format: "tear-online-rl-v3-evaluation" as const, schemaVersion: 1 as const, planHash: plan.planHash, baselineTrainingHash: result.trainingHash, challengerCheckpointHash: challenger.checkpointHash, traces, metrics: Object.freeze({ baselineReward, challengerReward, passed: challengerReward - baselineReward >= minimumRewardGain }), promotional: false as const }; return Object.freeze({ ...draft, resultHash: stableVerificationHash(draft) }); }
+export function evaluateTearOnlineRlV3InSource(planInput: TearOnlineRlV3PlanV1, offlineInput: TearOfflineRlV3PlanV1, resultInput: TearOfflineRlV3TrainingResultV1, rewardInput: TearOfflineRlPlanV1, challengerInput: TearOnlineRlV3CheckpointV1, minimumRewardGain = 0): TearOnlineRlV3EvaluationResultV1 {
+  const plan = parseTearOnlineRlV3Plan(planInput), offline = parseTearOfflineRlV3Plan(offlineInput), result = parseTearOfflineRlV3TrainingResult(resultInput), reward = parseTearOfflineRlPlan(rewardInput), challenger = parseTearOnlineRlV3Checkpoint(challengerInput);
+  // Reconstruct through the same admission contract used before training. A
+  // well-formed but unrelated reward or vocabulary must never produce evidence
+  // labelled with this plan's identity.
+  const expected = createTearOnlineRlV3Plan(offline, result, reward, { id: plan.id, scenarios: plan.scenarios, config: plan.config });
+  if (expected.planHash !== plan.planHash || result.model === undefined || challenger.status !== "complete"
+    || challenger.planHash !== plan.planHash || !Number.isFinite(minimumRewardGain)) {
+    throw new RangeError("online RL V3 evaluation lineage is incomplete or changed");
+  }
+  const traces = Object.freeze([...execute(result.model.entries, plan, offline, reward, "baseline"), ...execute(challenger.qValues, plan, offline, reward, "challenger")]);
+  const baselineReward = traces.filter((entry) => entry.side === "baseline").reduce((sum, entry) => sum + entry.reward, 0), challengerReward = traces.filter((entry) => entry.side === "challenger").reduce((sum, entry) => sum + entry.reward, 0);
+  const draft = { format: "tear-online-rl-v3-evaluation" as const, schemaVersion: 1 as const, planHash: plan.planHash, baselineTrainingHash: result.trainingHash, challengerCheckpointHash: challenger.checkpointHash, traces, metrics: Object.freeze({ baselineReward, challengerReward, passed: challengerReward - baselineReward >= minimumRewardGain }), promotional: false as const };
+  return Object.freeze({ ...draft, resultHash: stableVerificationHash(draft) });
+}
 export function parseTearOnlineRlV3EvaluationResult(value: unknown): TearOnlineRlV3EvaluationResultV1 {
   if (!record(value) || value.format !== "tear-online-rl-v3-evaluation" || value.schemaVersion !== 1 || !hash(value.resultHash) || !hash(value.planHash) || !hash(value.baselineTrainingHash) || !hash(value.challengerCheckpointHash) || !Array.isArray(value.traces) || !record(value.metrics) || typeof value.metrics.baselineReward !== "number" || !Number.isFinite(value.metrics.baselineReward) || typeof value.metrics.challengerReward !== "number" || !Number.isFinite(value.metrics.challengerReward) || typeof value.metrics.passed !== "boolean" || value.promotional !== false) throw new TypeError("invalid online RL V3 evaluation result");
   const typed = value as unknown as TearOnlineRlV3EvaluationResultV1, { resultHash, ...draft } = typed;

@@ -1098,6 +1098,17 @@ frozen evidence record.
 
 ## C36 Foundry status
 
+- [ ] Governed C31 → V3 → inactive C32 admission — an explicit local executor
+  trains an exact published trainer manifest with bounded offline and source
+  training, then atomically retains derived evidence, candidate/index pairs,
+  and its legal training successor. Final-transaction guards reject source,
+  custody, consent, curation, or output-slot drift. Numeric jobs charge bounded
+  attempts before source work and refuse missing or exhausted allowances.
+  `academy-candidate-curation.test.ts` executes the resulting inactive artifact
+  through the existing canonical C32 adapter in a real C30 world. This evidence
+  does not establish learned quality, population levels, promotion, or an
+  unattended full cycle.
+
 - [ ] C36 launch-profile screen action — the standard Foundry renderer receives
   only an opaque profile ID and `eligible`/`blocked` disposition. Its one
   semantic `foundry.bootstrap { profileId }` command rechecks the profile at

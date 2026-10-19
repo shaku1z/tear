@@ -115,3 +115,5 @@ export * from "./mode-completion-contracts";
 export * from "./difficulty-expectations";
 export * from "./predictive-survival-planner";
 export * from "./longitudinal-progression";
+export * from "./training-archive-v3-candidate-training";
+export * from "./training-operations-v3-training";

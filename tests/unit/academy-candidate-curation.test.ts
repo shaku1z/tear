@@ -1,9 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   TearAcademyCandidateCurationStore,
   TearAcademyCandidateCustodyStore,
   TearAcademyCandidateQualityStore,
+  trainTrainingArchiveV3Candidate,
+  TearFoundryJobVault,
+  TearFoundryCollectionExecutor,
+  TearFoundryCuratedManifestExecutor,
+  TrainingOperationsV3TrainingAdmissionExecutor,
+  parseTrainingOperationsV3TrainingReceipt,
+  createTearFoundryJobV2,
+  createTearFoundryBudgetedJob,
+  transitionTearFoundryJob,
+  TearC34V3C32CandidateRegistry,
+  TearC34V3C32PolicyRuntime,
+  createTearC32CanonicalSourceObservation,
+  type TrainingArchiveV3CandidateTrainingRequest,
   TearActivePolicyRuntime,
   TearAcademyCorpusStore,
   createTearBehaviorCloningArtifact,
@@ -50,7 +63,11 @@ import {
   type TearAcademyCandidateCapsuleMaterializationReceiptV1,
   type TearAcademyCandidateDeclarationV1,
 } from "../../src/agents";
-import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost";
+import { GhostLocalVault, createMemoryGhostVaultBackend, type GhostVaultStore } from "../../src/ghost";
+import { stableVerificationHash } from "../../src/replay/hash";
+import { parseTrainingOperationsBudget, trainingOperationsBudgetKey, trainingOperationsBudgetOwnerKey } from "../../src/agents/training-operations-budget";
+import { trainingOperationsTrainingComputeUnits } from "../../src/agents/training-operations-compute-budget";
+import { parseGhostCapsuleManifest, reviseGhostCapsuleManifest } from "../../src/ghost/capsule-contract";
 import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V2 } from "../../src/agents/policy-condition-vector";
 import {
   ProductionHeadlessAcademyIntake,
@@ -70,20 +87,19 @@ function scenario(id = "c31-curation", seed = "c31-curation-seed", maxTicks = 2)
   });
 }
 
-function createAcademyHarness() {
-  const backend = createMemoryGhostVaultBackend();
+function createAcademyHarness(backend = createMemoryGhostVaultBackend()) {
   const vault = new GhostLocalVault(backend);
   const custody = new TearAcademyCandidateCustodyStore(backend);
   const quality = new TearAcademyCandidateQualityStore(backend, custody);
   return Object.freeze({ backend, vault, custody, quality });
 }
 
-async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curation", maxTicks = 2) {
+async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curation", maxTicks = 2, direction = 1_000, expiresAt?: string) {
   const { backend, vault, custody, quality } = harness;
   const intake = new ProductionHeadlessAcademyIntake(1);
   await createProductionHeadlessEpisodePool(1).run([
     Object.freeze({ id: fixtureId, scenario: scenario(fixtureId, `${fixtureId}-seed`, maxTicks), maxTicks }),
-  ], () => Object.freeze({ decide: () => Object.freeze([Object.freeze([{ type: "move" as const, x: 1_000, y: 0 }])]) }), {
+  ], () => Object.freeze({ decide: () => Object.freeze([Object.freeze([{ type: "move" as const, x: direction, y: 0 }])]) }), {
     batchSize: 1, artifactConsumer: (sample) => { intake.offer(sample); },
   });
   const source = intake.take()[0];
@@ -96,7 +112,7 @@ async function prepare(harness = createAcademyHarness(), fixtureId = "c31-curati
     declaration, materialization: materialized,
     privacyRetention: Object.freeze({ classification: "anonymous" as const, revision: "c31-curation-privacy-1",
       declaredAt: "2026-08-03T00:00:00.000Z", authorizedActorIds: Object.freeze(["academy-curator", "player"]) }),
-    retention: Object.freeze({ mode: "indefinite" as const }),
+    retention: Object.freeze(expiresAt === undefined ? { mode: "indefinite" as const } : { mode: "until" as const, expiresAt }),
     decidedAt: "2026-08-03T00:01:00.000Z", actor: "academy-curator", reason: "held for curation",
   });
   const assessment = await quality.assess({ declaration, assessedAt: "2026-08-03T00:02:00.000Z", actor: "academy-curator" });
@@ -125,6 +141,597 @@ function candidateDeclaration(
 }
 
 describe("C31 held Academy candidate curation", () => {
+  async function v3CandidateFixture(direction = 1_000, harness = createAcademyHarness(), expiresAt?: string) {
+    const input = await prepare(harness, "c31-curation", 2, direction, expiresAt);
+    const curation = new TearAcademyCandidateCurationStore(input.backend, input.custody, input.quality);
+    await curation.decide({ candidateHash: input.assessment.candidateHash, assessmentHash: input.assessment.assessmentHash,
+      disposition: "curation-approved", reviewer: "academy-curator", reviewedAt: "2026-08-03T00:03:00.000Z",
+      rationale: "approved local V3 training", tags: ["baseline"], corrections: [] });
+    const splits = new TearAcademyCandidateSplitStore(input.backend, input.custody, input.quality, curation);
+    await splits.assign({ candidateHash: input.assessment.candidateHash, split: "training", assignedAt: "2026-08-03T00:04:00.000Z", actor: "academy-curator" });
+    const samples = new TearAcademyReviewedSampleStore(input.backend, input.custody, input.quality, curation, splits);
+    const sample = await samples.materialize(input.declaration, "2026-08-03T00:05:00.000Z", "academy-curator");
+    const corpus = new TearAcademyCorpusStore(input.backend, input.custody, curation, splits, samples);
+    await corpus.admit({ candidateHash: sample.candidateHash, lessonId: "movement-foundations", segmentKind: "demonstration",
+      tags: ["baseline"], admittedAt: "2026-08-03T00:06:00.000Z", actor: "academy-curator" });
+    const manifest = await corpus.publishManifest({ id: "c34-v3-governed", reader: { kind: "trainer", id: "c34-local" },
+      version: 1, createdAt: "2026-08-03T00:07:00.000Z" });
+    const services = { custody: input.custody, curation, corpus, loader: new TearAcademyTrainingDatasetLoader(corpus, samples) };
+    const request: TrainingArchiveV3CandidateTrainingRequest = {
+      dataset: { manifestId: manifest.id, trainerId: manifest.reader.id, version: manifest.version },
+      manifestHash: manifest.manifestHash, manifestRootHash: manifest.rootHash,
+      actor: "academy-curator", at: "2026-08-03T00:08:00.000Z", minimumRewardGain: 0,
+      reward: { id: "governed-v3-reward", version: 1, seed: 7,
+        reward: { components: [{ id: "score", source: "score.delta", weight: 1, maximumSourceValue: 10, perTransitionCap: 10 }],
+          totalMinimum: -10, totalMaximum: 10 }, limits: { maxTransitions: 4, maxEventsPerTransition: 4, maxRewardViolations: 0 } },
+      offline: { id: "governed-v3-offline", version: 1, actionVocabulary: [{ type: "move", x: direction, y: 0 }],
+        config: { epochs: 1, learningRate: 0.5, gamma: 0.9, maxStateActionEntries: 10, maxAbsoluteQ: 100,
+          maxMeanAbsoluteTdError: 100, maxConsecutiveDivergentEpochs: 2 } },
+      online: { id: "governed-v3-online", scenarios: [scenario("governed-v3-online", "unseen-v3-seed", 4)],
+        config: { learningRate: 0.5, gamma: 0.9, maxTicks: 4, maxUpdates: 10, maxAbsoluteQ: 100 } },
+      artifact: { id: "governed-v3-candidate", createdAt: "2026-08-03T00:08:00.000Z",
+        levelTarget: "class-a", signature: { kind: "local-unsigned", keyId: "development" } },
+    };
+    return { input, services, request, manifest };
+  }
+
+  async function foundryV3Fixture(harness = createAcademyHarness(), expiresAt?: string, oppositeChampion = false, minimumRewardGain = 0,
+    evaluationCases = [scenario("governed-v3-holdout", "heldout-champion-seed", 4)], createdOnly = false) {
+    const context = await v3CandidateFixture(1_000, harness, expiresAt);
+    const baselineContext = oppositeChampion ? await v3CandidateFixture(-1_000) : context;
+    const baseline = await trainTrainingArchiveV3Candidate(baselineContext.services, { ...baselineContext.request,
+      artifact: { ...baselineContext.request.artifact, id: "foundry-champion" } });
+    await new TearC34V3C32CandidateRegistry(context.input.backend).register(baseline.candidate.artifact);
+    const jobs = new TearFoundryJobVault(context.input.backend), champion = baseline.candidate.artifact;
+    const created = createTearFoundryJobV2({ id: "real-c31-v3-admission", createdAt: context.request.at,
+      reason: "admit governed training", inputs: { champion: { id: champion.id, artifactHash: champion.artifactHash },
+        corpusRecordHashes: context.manifest.entries.map((entry) => entry.custodyRecordHash), evaluationPlanHash: stableVerificationHash(evaluationCases),
+        rewardDefinitionHash: baseline.reward.reward.rewardHash, invariantSetHash: "1".repeat(16), budgetHash: "2".repeat(16), stopConditionsHash: "3".repeat(16),
+        evaluationProtocol: { version: 1, id: "real-c31-v3-admission", thresholds: { minimumRewardGain, requireCompletionRateNotLower: true,
+          maxTicksPerCase: 4, maxAbsoluteRewardPerCase: 100 } },
+      } });
+    let job = created;
+    if (!createdOnly) {
+      await jobs.persist(created);
+      const collected = await new TearFoundryCollectionExecutor(jobs, context.services.custody).collect(created, "2026-08-03T00:08:10.000Z");
+      job = (await new TearFoundryCuratedManifestExecutor(jobs, context.services.custody, context.services.corpus)
+        .admit(collected.job, { id: context.manifest.id, trainerId: context.manifest.reader.id, version: context.manifest.version }, "2026-08-03T00:08:20.000Z")).job;
+    }
+    const request = { ...context.request, at: "2026-08-03T00:09:00.000Z" };
+    return { ...context, jobs, job, request, evaluationCases, executor: new TrainingOperationsV3TrainingAdmissionExecutor(jobs, context.services) };
+  }
+
+  async function admissionOutputs(context: Awaited<ReturnType<typeof foundryV3Fixture>>) {
+    const values: [GhostVaultStore, string, string | undefined][] = [];
+    for (const store of ["analysis", "indexes"] as const) {
+      const keys = (await context.input.backend.keys(store)).filter((key) => store === "analysis"
+        ? key === `policy-artifact:v1:${context.request.artifact.id}` || key === "policy-active:v1"
+          || key === `foundry-job-v3-training:v1:${context.job.jobHash}` || key === `foundry-job:v1:${context.job.id}`
+          || key.startsWith(`foundry-job-event:v1:${context.job.id}:`)
+        : key === `policy-artifact:${context.request.artifact.id}` || key === `foundry-job-current:${context.job.id}`
+          || key.startsWith(`foundry-job-v3-training:${context.job.id}:`));
+      for (const key of keys.sort()) values.push([store, key, await context.input.backend.get(store, key)]);
+    }
+    return values;
+  }
+
+  async function numericAdmissionFixture(maxComputeUnits: number, maxRecords = 128) {
+    const memory = createMemoryGhostVaultBackend(), commitIfMatches = vi.fn(memory.commitIfMatches.bind(memory));
+    const context = await foundryV3Fixture(createAcademyHarness({ ...memory, commitIfMatches }));
+    const declaration = { jobId: "numeric-v3-admission", scheduleId: "explicit-local-admission", maxComputeUnits,
+      maxRetainedBytes: 2_000_000, maxRecords };
+    const protocol = context.job.inputs.evaluationProtocol;
+    if (protocol === undefined) throw new Error("missing frozen evaluation protocol");
+    const created = createTearFoundryBudgetedJob({ id: declaration.jobId, createdAt: context.request.at,
+      reason: "explicit numeric admission test", inputs: { ...context.job.inputs, evaluationProtocol: protocol,
+        budgetHash: stableVerificationHash(declaration) } });
+    await context.jobs.persistWithBudget(created, declaration);
+    const collecting = transitionTearFoundryJob(created, "collecting", context.request.at, "test allowance-bound predecessor");
+    await context.jobs.persistSuccessor(created, collecting);
+    const job = transitionTearFoundryJob(collecting, "curating", context.request.at, "test allowance-bound curating head");
+    await context.jobs.persistSuccessor(collecting, job);
+    return { ...context, job, memory, commitIfMatches, declaration };
+  }
+
+  it("charges attempted training before the final transaction, retains no output on failure, and retries within its numeric allowance", async () => {
+    const context = await numericAdmissionFixture(32), units = trainingOperationsTrainingComputeUnits(context.request);
+    expect(units).toBe(16);
+    const key = trainingOperationsBudgetKey(context.job.id);
+    const initial = await context.memory.get("analysis", key);
+    if (initial === undefined) throw new Error("missing numeric allowance fixture");
+    const initialBudget = parseTrainingOperationsBudget(JSON.parse(initial));
+    let before: Awaited<ReturnType<typeof admissionOutputs>> | undefined, finalAttempts = 0;
+    context.commitIfMatches.mockImplementation(async (guards, writes) => {
+      if (writes.some((write) => write.key === `policy-artifact:v1:${context.request.artifact.id}`)) {
+        finalAttempts += 1;
+        before = await admissionOutputs(context);
+        throw new Error("final candidate transaction interrupted");
+      }
+      await context.memory.commitIfMatches(guards, writes);
+    });
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/final candidate transaction/u);
+    expect(finalAttempts).toBe(1);
+    expect(await admissionOutputs(context)).toEqual(before);
+    const spent = await context.memory.get("analysis", key);
+    if (spent === undefined) throw new Error("missing charged allowance");
+    const afterFailure = parseTrainingOperationsBudget(JSON.parse(spent));
+    expect(afterFailure.computeUsed).toBe(units);
+    expect(afterFailure.records).toEqual(initialBudget.records);
+    expect(afterFailure.retainedBytes).toBe(initialBudget.retainedBytes);
+    context.commitIfMatches.mockImplementation(context.memory.commitIfMatches.bind(context.memory));
+    const receipt = await context.executor.start(context.job, context.request);
+    expect(receipt.job.phase).toBe("training");
+    const admitted = await context.memory.get("analysis", key);
+    if (admitted === undefined) throw new Error("missing admitted allowance");
+    const budget = parseTrainingOperationsBudget(JSON.parse(admitted));
+    expect(budget.computeUsed).toBe(2 * units);
+    expect(budget.records).toContainEqual(expect.objectContaining({ store: "analysis", key: `policy-artifact:v1:${context.request.artifact.id}` }));
+    expect(budget.records).toContainEqual(expect.objectContaining({ store: "indexes", key: `foundry-job-v3-training:${context.job.id}:${receipt.receiptHash}` }));
+    expect(await context.executor.start(context.job, context.request)).toEqual(receipt);
+    expect(await context.memory.get("analysis", key)).toBe(admitted);
+    expect(await context.memory.get("analysis", "policy-active:v1")).toBeUndefined();
+    const retainedOutputs = await admissionOutputs(context);
+    await context.memory.remove("analysis", key);
+    await context.memory.remove("analysis", trainingOperationsBudgetOwnerKey(context.job.id));
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/budget authority/u);
+    expect(await admissionOutputs(context)).toEqual(retainedOutputs);
+  });
+
+  it("refuses exhausted compute and storage allowances without advancing a numeric job", async () => {
+    const exhausted = await numericAdmissionFixture(15), load = vi.spyOn(exhausted.services.loader, "load");
+    const before = await admissionOutputs(exhausted);
+    await expect(exhausted.executor.start(exhausted.job, exhausted.request)).rejects.toThrow(/compute budget/u);
+    expect(load).not.toHaveBeenCalled();
+    expect(await admissionOutputs(exhausted)).toEqual(before);
+    const bounded = await numericAdmissionFixture(32, 6), boundedBefore = await admissionOutputs(bounded);
+    await expect(bounded.executor.start(bounded.job, bounded.request)).rejects.toThrow(/storage budget/u);
+    expect(await admissionOutputs(bounded)).toEqual(boundedBefore);
+    const raw = await bounded.memory.get("analysis", trainingOperationsBudgetKey(bounded.job.id));
+    if (raw === undefined) throw new Error("missing failed attempt allowance");
+    expect(parseTrainingOperationsBudget(JSON.parse(raw)).computeUsed).toBe(16);
+  });
+
+  it("refuses a numeric job whose ledger and owner are both removed", async () => {
+    const context = await numericAdmissionFixture(32), before = await admissionOutputs(context);
+    await context.memory.remove("analysis", trainingOperationsBudgetKey(context.job.id));
+    await context.memory.remove("analysis", trainingOperationsBudgetOwnerKey(context.job.id));
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/budget authority/u);
+    expect(await admissionOutputs(context)).toEqual(before);
+    expect(await context.jobs.get(context.job.id)).toEqual(context.job);
+  });
+
+  it.each(["orphan", "late-drift"] as const)("refuses a legacy admission receipt index with %s ownership", async (kind) => {
+    const reference = await foundryV3Fixture(), receipt = await reference.executor.start(reference.job, reference.request);
+    const memory = createMemoryGhostVaultBackend(), commitIfMatches = vi.fn(memory.commitIfMatches.bind(memory));
+    const context = await foundryV3Fixture(createAcademyHarness({ ...memory, commitIfMatches }));
+    expect(context.job).toEqual(reference.job);
+    const key = `foundry-job-v3-training:${context.job.id}:${receipt.receiptHash}`, foreign = "foreign-receipt-index";
+    if (kind === "orphan") await memory.put("indexes", key, foreign);
+    let before = await admissionOutputs(context), finalAttempts = 0;
+    commitIfMatches.mockImplementation(async (guards, writes) => {
+      if (writes.some((write) => write.key === `policy-artifact:v1:${context.request.artifact.id}`)) {
+        finalAttempts += 1;
+        await memory.put("indexes", key, foreign);
+        before = await admissionOutputs(context);
+      }
+      await memory.commitIfMatches(guards, writes);
+    });
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/authority bytes changed|conditional/u);
+    expect(finalAttempts).toBe(kind === "orphan" ? 0 : 1);
+    expect(await memory.get("indexes", key)).toBe(foreign);
+    expect(await admissionOutputs(context)).toEqual(before);
+    expect(await context.jobs.get(context.job.id)).toEqual(context.job);
+  });
+
+  it("requires the legacy initial job and index to remain one exact pair", async () => {
+    const context = await foundryV3Fixture(), memory = context.input.backend;
+    const protocol = context.job.inputs.evaluationProtocol;
+    if (protocol === undefined) throw new Error("missing frozen protocol fixture");
+    const created = createTearFoundryJobV2({ id: "legacy-initial-pair", inputs: { ...context.job.inputs, evaluationProtocol: protocol },
+      createdAt: context.request.at, reason: "exact initial record pair" });
+    const key = `foundry-job:${created.id}:${created.jobHash}`;
+    await memory.put("indexes", key, "orphan-index");
+    await expect(context.jobs.persist(created)).rejects.toThrow(/conditional/u);
+    expect(await memory.get("analysis", `foundry-job:v1:${created.id}`)).toBeUndefined();
+    expect(await memory.get("indexes", key)).toBe("orphan-index");
+    await memory.remove("indexes", key);
+    expect(await Promise.all([context.jobs.persist(created), context.jobs.persist(created)])).toEqual([created, created]);
+    const exact = await memory.get("indexes", key);
+    if (exact === undefined) throw new Error("missing initial index");
+    for (const replacement of [undefined, "mismatched-index"]) {
+      if (replacement === undefined) await memory.remove("indexes", key);
+      else await memory.put("indexes", key, replacement);
+      await expect(context.jobs.persist(created)).rejects.toThrow(/conditional/u);
+      expect(await context.jobs.get(created.id)).toEqual(created);
+      expect(await memory.get("indexes", key)).toBe(replacement);
+    }
+    await memory.put("indexes", key, exact);
+    expect(await context.jobs.persist(created)).toEqual(created);
+  });
+
+  it("refuses initial legacy index drift at its actual job creation transaction", async () => {
+    const memory = createMemoryGhostVaultBackend(), commitIfMatches = vi.fn(memory.commitIfMatches.bind(memory));
+    const context = await foundryV3Fixture(createAcademyHarness({ ...memory, commitIfMatches }));
+    const protocol = context.job.inputs.evaluationProtocol;
+    if (protocol === undefined) throw new Error("missing frozen protocol fixture");
+    const job = createTearFoundryJobV2({ id: "late-initial-index", inputs: { ...context.job.inputs, evaluationProtocol: protocol },
+      createdAt: context.request.at, reason: "late initial pair race" });
+    const indexKey = `foundry-job:${job.id}:${job.jobHash}`;
+    let reached = false;
+    commitIfMatches.mockImplementation(async (guards, writes) => {
+      if (writes.some((write) => write.key === `foundry-job:v1:${job.id}`)) {
+        reached = true;
+        await memory.put("indexes", indexKey, "concurrent-index-owner");
+      }
+      await memory.commitIfMatches(guards, writes);
+    });
+    await expect(context.jobs.persist(job)).rejects.toThrow(/conditional/u);
+    expect(reached).toBe(true);
+    expect(await context.jobs.get(job.id)).toBeUndefined();
+    expect(await memory.get("indexes", indexKey)).toBe("concurrent-index-owner");
+  });
+
+  it.each([["event", "foreign-event-owner"], ["current-index", "malformed-current-index"],
+    ["current-index", JSON.stringify({ jobHash: "f".repeat(16), phase: "training" })]] as const)(
+    "refuses an orphan or late legacy successor %s slot containing %s", async (slot, foreign) => {
+    for (const timing of ["existing", "late"] as const) {
+      const memory = createMemoryGhostVaultBackend(), commitIfMatches = vi.fn(memory.commitIfMatches.bind(memory));
+      const context = await foundryV3Fixture(createAcademyHarness({ ...memory, commitIfMatches }));
+      const next = transitionTearFoundryJob(context.job, "training", context.request.at, "test exact legacy successor slots");
+      const event = next.events.at(-1);
+      if (event === undefined) throw new Error("missing successor event fixture");
+      const store = slot === "event" ? "analysis" : "indexes";
+      const key = slot === "event" ? `foundry-job-event:v1:${next.id}:${String(event.sequence)}:${event.eventHash}`
+        : `foundry-job-current:${next.id}`;
+      if (timing === "existing") await memory.put(store, key, foreign);
+      let before = await admissionOutputs(context), finalTransactions = 0;
+      commitIfMatches.mockImplementation(async (guards, writes) => {
+        if (writes.some((write) => write.key === `foundry-job:v1:${next.id}` && write.value === JSON.stringify(next))) {
+          finalTransactions += 1;
+          await memory.put(store, key, foreign);
+          before = await admissionOutputs(context);
+        }
+        await memory.commitIfMatches(guards, writes);
+      });
+      await expect(context.jobs.persistSuccessor(context.job, next)).rejects.toThrow(/already owned|exact previous head|conditional/u);
+      expect(finalTransactions).toBe(timing === "existing" ? 0 : 1);
+      expect(await memory.get(store, key)).toBe(foreign);
+      expect(await admissionOutputs(context)).toEqual(before);
+      expect(await context.jobs.get(context.job.id)).toEqual(context.job);
+    }
+  });
+
+  it.each(["absent", "previous"] as const)("advances a healthy legacy successor with its current index %s and verifies exact retry side records", async (currentIndex) => {
+    const context = await foundryV3Fixture(), backend = context.input.backend;
+    const next = transitionTearFoundryJob(context.job, "training", context.request.at, "healthy legacy successor slots");
+    const indexKey = `foundry-job-current:${next.id}`;
+    if (currentIndex === "absent") await backend.remove("indexes", indexKey);
+    expect(await context.jobs.persistSuccessor(context.job, next)).toEqual(next);
+    expect(await context.jobs.persistSuccessor(context.job, next)).toEqual(next);
+    const event = next.events.at(-1);
+    if (event === undefined) throw new Error("missing healthy successor event");
+    const eventKey = `foundry-job-event:v1:${next.id}:${String(event.sequence)}:${event.eventHash}`;
+    expect(await backend.get("analysis", eventKey)).toBe(JSON.stringify(event));
+    await backend.remove("analysis", eventKey);
+    await expect(context.jobs.persistSuccessor(context.job, next)).rejects.toThrow(/conditional/u);
+    await backend.put("analysis", eventKey, JSON.stringify(event));
+    await backend.put("indexes", indexKey, "foreign-after-success");
+    await expect(context.jobs.persistSuccessor(context.job, next)).rejects.toThrow(/conditional/u);
+    expect(await context.jobs.get(next.id)).toEqual(next);
+  });
+
+  it("refuses an extra write that replaces the helper-owned successor event", async () => {
+    const context = await foundryV3Fixture();
+    const next = transitionTearFoundryJob(context.job, "training", context.request.at, "protected helper-owned event");
+    const event = next.events.at(-1);
+    if (event === undefined) throw new Error("missing protected event fixture");
+    const before = await admissionOutputs(context);
+    await expect(context.jobs.persistSuccessor(context.job, next, [{ store: "analysis",
+      key: `foundry-job-event:v1:${next.id}:${String(event.sequence)}:${event.eventHash}`, value: "injected-event" }]))
+      .rejects.toThrow(/cannot replace durable job state/u);
+    expect(await admissionOutputs(context)).toEqual(before);
+    expect(await context.jobs.get(context.job.id)).toEqual(context.job);
+  });
+
+  it.each(["event", "current-index"] as const)("refuses an admission retry with missing or foreign %s bytes", async (slot) => {
+    const context = await foundryV3Fixture(), receipt = await context.executor.start(context.job, context.request);
+    const event = receipt.job.events.at(-1);
+    if (event === undefined) throw new Error("missing admitted event fixture");
+    const store = slot === "event" ? "analysis" : "indexes";
+    const key = slot === "event" ? `foundry-job-event:v1:${receipt.job.id}:${String(event.sequence)}:${event.eventHash}`
+      : `foundry-job-current:${receipt.job.id}`;
+    const exact = await context.input.backend.get(store, key);
+    if (exact === undefined) throw new Error("missing admitted side record");
+    for (const value of [undefined, "foreign-admitted-side-record"]) {
+      if (value === undefined) await context.input.backend.remove(store, key);
+      else await context.input.backend.put(store, key, value);
+      const before = await admissionOutputs(context);
+      await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/conditional/u);
+      expect(await admissionOutputs(context)).toEqual(before);
+      expect(await context.jobs.get(context.job.id)).toEqual(receipt.job);
+    }
+    await context.input.backend.put(store, key, exact);
+    expect(await context.executor.start(context.job, context.request)).toEqual(receipt);
+  });
+
+  it.each(["source-disappearance", "manifest-revision", "chunk-bytes", "custody-revision", "consent-revocation", "curation-decision"] as const)(
+    "refuses %s at the final candidate transaction without retaining any output or progression", async (drift) => {
+      const memory = createMemoryGhostVaultBackend(), commitIfMatches = vi.fn(memory.commitIfMatches.bind(memory));
+      const context = await foundryV3Fixture(createAcademyHarness({ ...memory, commitIfMatches }));
+      const load = vi.spyOn(context.services.loader, "load");
+      const custody = await context.input.custody.get(context.input.assessment.candidateHash);
+      if (custody === undefined) throw new Error("missing final-transaction custody fixture");
+      const sourceId = custody.source.capsuleRange.capsuleId;
+      let finalTransactions = 0, before: Awaited<ReturnType<typeof admissionOutputs>> | undefined;
+      commitIfMatches.mockImplementation(async (guards, writes) => {
+        if (writes.some((write) => write.store === "analysis" && write.key === `policy-artifact:v1:${context.request.artifact.id}`)) {
+          finalTransactions += 1;
+          before = await admissionOutputs(context);
+          if (drift === "source-disappearance") await memory.remove("manifests", sourceId);
+          else if (drift === "manifest-revision" || drift === "chunk-bytes") {
+            const raw = await memory.get("manifests", sourceId);
+            if (raw === undefined) throw new Error("missing retained source manifest");
+            const manifest = parseGhostCapsuleManifest(JSON.parse(raw));
+            if (drift === "manifest-revision") {
+              const revised = reviseGhostCapsuleManifest(manifest, { completedAt: "2026-08-03T00:09:00.000Z" });
+              expect(revised.rootIntegrity).toBe(manifest.rootIntegrity);
+              expect(parseGhostCapsuleManifest(revised)).toEqual(revised);
+              await memory.put("manifests", sourceId, JSON.stringify(revised));
+            } else {
+              const chunk = manifest.chunks[0];
+              if (chunk === undefined) throw new Error("missing retained source chunk");
+              const encoded = await memory.get("chunks", chunk.id);
+              if (encoded === undefined) throw new Error("missing retained source bytes");
+              await memory.put("chunks", chunk.id, `${encoded}changed`);
+            }
+          } else if (drift === "consent-revocation") {
+            await context.input.custody.revoke({ candidateHash: custody.candidateHash, scope: "model-training",
+              consent: { ...custody.consent, revision: "withdrawn-at-final-cas", modelTraining: "no-training" },
+              decidedAt: context.request.at, actor: context.request.actor, reason: "withdrawn before durable admission" });
+          } else if (drift === "custody-revision") {
+            const { recordHash, ...draft } = custody; void recordHash;
+            const revised = { ...draft, privacyRetention: { ...draft.privacyRetention, revision: "changed-at-final-cas" } };
+            await memory.put("analysis", `academy-candidate-custody:v1:${custody.candidateHash}`,
+              JSON.stringify({ ...revised, recordHash: stableVerificationHash(revised) }));
+            expect((await context.input.custody.get(custody.candidateHash))?.privacyRetention.revision).toBe("changed-at-final-cas");
+          } else {
+            const approval = await context.services.curation.get(custody.candidateHash);
+            if (approval === undefined) throw new Error("missing curation fixture");
+            const { decisionHash, ...draft } = approval; void decisionHash;
+            const revised = { ...draft, rationale: "approval revised at final candidate transaction" };
+            await memory.put("analysis", `academy-candidate-curation:v1:${custody.candidateHash}`,
+              JSON.stringify({ ...revised, decisionHash: stableVerificationHash(revised) }));
+            expect((await context.services.curation.get(custody.candidateHash))?.rationale).toBe(revised.rationale);
+          }
+        }
+        await memory.commitIfMatches(guards, writes);
+      });
+      await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/conditional/u);
+      expect(finalTransactions).toBe(1);
+      expect(load).toHaveBeenCalledOnce();
+      expect(before).toBeDefined();
+      expect(await admissionOutputs(context)).toEqual(before);
+      expect(await context.jobs.get(context.job.id)).toEqual(context.job);
+      expect(await context.executor.get(context.job.jobHash)).toBeUndefined();
+      expect(await memory.get("analysis", `policy-artifact:v1:${context.request.artifact.id}`)).toBeUndefined();
+      expect(await memory.get("indexes", `policy-artifact:${context.request.artifact.id}`)).toBeUndefined();
+      expect(await memory.get("analysis", "policy-active:v1")).toBeUndefined();
+    });
+
+  it("rejects nested raw-track extensions before governed V3 training can retain them", async () => {
+    const context = await v3CandidateFixture();
+    const extensions = { rawTracks: [{ observations: [{ tick: 1 }] }] };
+    const requests = [
+      { ...context.request, offline: { ...context.request.offline, config: { ...context.request.offline.config, extensions } } },
+      { ...context.request, online: { ...context.request.online, config: { ...context.request.online.config, extensions } } },
+      { ...context.request, online: { ...context.request.online, scenarios: context.request.online.scenarios.map((entry) => ({ ...entry, extensions })) } },
+      { ...context.request, dataset: { ...context.request.dataset, extensions } },
+    ];
+    const before = await context.input.backend.keys("analysis");
+    for (const request of requests) await expect(trainTrainingArchiveV3Candidate(context.services, request)).rejects.toThrow(/derived evidence forbids extension/u);
+    expect(await context.input.backend.keys("analysis")).toEqual(before);
+  });
+
+  it("atomically admits real C31 V3 training, an inactive candidate and the legal Foundry successor", async () => {
+    const context = await foundryV3Fixture(), receipt = await context.executor.start(context.job, context.request);
+    expect(receipt.job.phase).toBe("training");
+    expect(await context.jobs.get(context.job.id)).toEqual(receipt.job);
+    expect(await context.executor.get(context.job.jobHash)).toEqual(receipt);
+    expect(parseTrainingOperationsV3TrainingReceipt(JSON.parse(JSON.stringify(receipt)))).toEqual(receipt);
+    expect(await context.executor.start(context.job, context.request)).toEqual(receipt);
+    expect(receipt.evidence).not.toHaveProperty("dataset");
+    expect(receipt.evidence).not.toHaveProperty("trajectories");
+    expect(await new TearC34V3C32CandidateRegistry(context.input.backend).get(context.request.artifact.id)).toEqual(receipt.evidence.candidate.artifact);
+    expect(await context.input.backend.get("analysis", "policy-active:v1")).toBeUndefined();
+    const corrupt = { ...receipt, evidence: { ...receipt.evidence, lineage: { ...receipt.evidence.lineage, datasetHash: "f".repeat(16) } } };
+    expect(() => parseTrainingOperationsV3TrainingReceipt(corrupt)).toThrow(/integrity/u);
+    const { receiptHash, ...draft } = corrupt; void receiptHash;
+    expect(() => parseTrainingOperationsV3TrainingReceipt({ ...draft, receiptHash: stableVerificationHash(draft) })).toThrow(/lineage/u);
+    const { receiptHash: ignored, ...original } = receipt; void ignored;
+    const nestedTracks = { ...original, evidence: { ...original.evidence, request: { ...original.evidence.request,
+      offline: { ...original.evidence.request.offline, config: { ...original.evidence.request.offline.config, extensions: { rawTracks: [] } } } } } };
+    expect(() => parseTrainingOperationsV3TrainingReceipt({ ...nestedTracks, receiptHash: stableVerificationHash(nestedTracks) })).toThrow(/derived evidence forbids extension/u);
+    const nestedResult = { ...original, evidence: { ...original.evidence, evaluation: { ...original.evidence.evaluation,
+      metrics: { ...original.evidence.evaluation.metrics, extensions: { rawTracks: [] } } } } };
+    expect(() => parseTrainingOperationsV3TrainingReceipt({ ...nestedResult, receiptHash: stableVerificationHash(nestedResult) })).toThrow(/derived evidence forbids extension/u);
+    const rawTracks = { ...original, evidence: { ...original.evidence, dataset: { observations: [] } } };
+    expect(() => parseTrainingOperationsV3TrainingReceipt({ ...rawTracks, receiptHash: stableVerificationHash(rawTracks) })).toThrow(/derived evidence/u);
+    const outerTracks = { ...original, trajectories: [{ observations: [] }] };
+    expect(() => parseTrainingOperationsV3TrainingReceipt({ ...outerTracks, receiptHash: stableVerificationHash(outerTracks) })).toThrow(/derived evidence/u);
+    const malformedKey = `foundry-job-v3-training:v1:${context.job.jobHash}`;
+    const malformedRaw = JSON.stringify({ ...outerTracks, receiptHash: stableVerificationHash(outerTracks) });
+    await context.input.backend.put("analysis", malformedKey, malformedRaw);
+    expect(await context.executor.get(context.job.jobHash)).toBeUndefined();
+    expect(await context.input.backend.get("quarantine", malformedKey)).toBe(malformedRaw);
+    await context.input.backend.put("analysis", malformedKey, JSON.stringify(receipt));
+    const indexKey = `policy-artifact:${context.request.artifact.id}`;
+    const indexRaw = await context.input.backend.get("indexes", indexKey);
+    if (indexRaw === undefined) throw new Error("admitted artifact index is missing");
+    await context.input.backend.remove("indexes", indexKey);
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/retry evidence/u);
+    await context.input.backend.put("indexes", indexKey, indexRaw);
+    const sampleKey = `academy-reviewed-sample:v1:${context.input.assessment.candidateHash}`;
+    const sampleRaw = await context.input.backend.get("analysis", sampleKey);
+    if (sampleRaw === undefined) throw new Error("admitted reviewed sample is missing");
+    await context.input.backend.remove("analysis", sampleKey);
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/reviewed sample/u);
+    await context.input.backend.put("analysis", sampleKey, sampleRaw);
+    await context.input.backend.remove("analysis", `academy-candidate-curation:v1:${context.input.assessment.candidateHash}`);
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/approval/u);
+  });
+
+  it("leaves no partial V3 candidate or successor after a conditional commit fault and supports exact retry", async () => {
+    const memory = createMemoryGhostVaultBackend(), commitIfMatches = vi.fn(memory.commitIfMatches.bind(memory));
+    const context = await foundryV3Fixture(createAcademyHarness({ ...memory, commitIfMatches }));
+    commitIfMatches.mockRejectedValueOnce(new Error("admission commit interrupted"));
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/interrupted/u);
+    expect(await context.jobs.get(context.job.id)).toEqual(context.job);
+    expect(await context.executor.get(context.job.jobHash)).toBeUndefined();
+    expect(await memory.get("analysis", `policy-artifact:v1:${context.request.artifact.id}`)).toBeUndefined();
+    expect(await memory.get("indexes", `policy-artifact:${context.request.artifact.id}`)).toBeUndefined();
+    expect((await context.executor.start(context.job, context.request)).job.phase).toBe("training");
+  });
+
+  it("rejects valid foreign reward and last-moment authority drift before V3 admission writes", async () => {
+    const memory = createMemoryGhostVaultBackend(), commitIfMatches = vi.fn(memory.commitIfMatches.bind(memory));
+    const context = await foundryV3Fixture(createAcademyHarness({ ...memory, commitIfMatches }));
+    await expect(context.executor.start(context.job, { ...context.request,
+      reward: { ...context.request.reward, reward: { ...context.request.reward.reward, totalMaximum: 11 } } })).rejects.toThrow(/lineage/u);
+    commitIfMatches.mockImplementationOnce(async (guards, writes) => {
+      await memory.remove("analysis", `academy-candidate-curation:v1:${context.input.assessment.candidateHash}`);
+      await memory.commitIfMatches(guards, writes);
+    });
+    await expect(context.executor.start(context.job, context.request)).rejects.toThrow(/conditional/u);
+    expect(await context.jobs.get(context.job.id)).toEqual(context.job);
+    expect(await context.executor.get(context.job.jobHash)).toBeUndefined();
+    expect(await memory.get("analysis", `policy-artifact:v1:${context.request.artifact.id}`)).toBeUndefined();
+  });
+
+  it("does not mistake a competing identical job head for this V3 request's candidate admission", async () => {
+    const context = await foundryV3Fixture();
+    const competing = { ...context.request, artifact: { ...context.request.artifact, id: "competing-v3-candidate" } };
+    const outcomes = await Promise.allSettled([context.executor.start(context.job, context.request), context.executor.start(context.job, competing)]);
+    expect(outcomes.filter((entry) => entry.status === "fulfilled")).toHaveLength(1);
+    expect(outcomes.filter((entry) => entry.status === "rejected")).toHaveLength(1);
+    const retained = await context.executor.get(context.job.jobHash);
+    if (retained === undefined) throw new Error("concurrent admission did not retain a winner");
+    expect(retained.job.phase).toBe("training");
+    const keys = await context.input.backend.keys("analysis");
+    const actualCandidates = keys.filter((key) => key === `policy-artifact:v1:${context.request.artifact.id}` || key === `policy-artifact:v1:${competing.artifact.id}`);
+    expect(actualCandidates).toEqual([`policy-artifact:v1:${retained.evidence.candidate.artifact.id}`]);
+  });
+
+  it("trains a governed C31 corpus through real V3 source evaluation into an inactive C32 candidate", async () => {
+    const { input, services, request, manifest } = await v3CandidateFixture();
+    const beforeKeys = await input.backend.keys("analysis");
+    const result = await trainTrainingArchiveV3Candidate(services, request);
+    expect(result.training.disposition).toBe("complete");
+    expect(result.checkpoint.status).toBe("complete");
+    expect(result.evaluation.metrics.passed).toBe(true);
+    expect(result.evaluation.traces.map((trace) => trace.side)).toEqual(["baseline", "challenger"]);
+    expect(result.candidate.artifact.trainingManifest).toEqual({ id: manifest.id, version: manifest.version, rootHash: manifest.rootHash });
+    const source = createProductionHeadlessEnvironment();
+    try {
+      const firstScenario = request.online.scenarios[0];
+      if (firstScenario === undefined) throw new Error("missing V3 source scenario");
+      let state = source.reset(firstScenario);
+      const startX = state.player?.x;
+      if (startX === undefined) throw new Error("missing initial source player");
+      expect(result.candidate.artifact.build).toEqual(source.captureCheckpoint().bootstrap.build);
+      expect(result.sourceBuilds[0]?.build).toEqual(result.candidate.artifact.build);
+      const fallback = vi.fn(() => []);
+      const runtime = new TearC34V3C32PolicyRuntime(result.candidate.artifact, fallback);
+      for (let tick = 1; tick <= firstScenario.maxTicks; tick += 1) {
+        const observation = createTearC32CanonicalSourceObservation(state, source.policyObservation().availableActions);
+        const decision = runtime.decide(observation);
+        expect(decision).toMatchObject({ source: "artifact",
+          actions: [{ type: "move", x: 1_000, y: 0 }] });
+        state = source.step(decision.actions).observation;
+        expect(state.tick).toBe(tick);
+      }
+      const endX = state.player?.x;
+      if (endX === undefined) throw new Error("missing stepped source player");
+      expect(endX).toBeGreaterThan(startX);
+      expect(fallback).not.toHaveBeenCalled();
+    } finally { source.dispose(); }
+    expect(result.lineage.custodyRecordHashes).toEqual(manifest.entries.map((entry) => entry.custodyRecordHash));
+    expect(await input.backend.keys("analysis")).toEqual(beforeKeys);
+    expect(await trainTrainingArchiveV3Candidate(services, request)).toEqual(result);
+    const registry = new TearC34V3C32CandidateRegistry(input.backend);
+    await registry.register(result.candidate.artifact);
+    expect(await registry.get(result.candidate.artifact.id)).toEqual(result.candidate.artifact);
+    expect(await input.backend.get("analysis", "policy-active:v1")).toBeUndefined();
+  });
+
+  it("protects held C31 source capsules from generic quota cleanup", async () => {
+    const { input, services, request } = await v3CandidateFixture();
+    const vault = new GhostLocalVault(input.backend);
+    const held = await input.custody.held(request.at);
+    const source = held.find((record) => record.candidateHash === input.assessment.candidateHash);
+    if (source === undefined) throw new Error("Expected held source custody");
+    const capsuleId = source.source.capsuleRange.capsuleId;
+    const before = await vault.exportCapsule(capsuleId);
+    expect(await vault.enforceQuota(0, {})).not.toContain(capsuleId);
+    expect(await vault.exportCapsule(capsuleId)).toBe(before);
+    expect(await input.custody.held(request.at)).toEqual(held);
+    const result = await trainTrainingArchiveV3Candidate(services, request);
+    expect(result.candidate.artifact.id).toBe(request.artifact.id);
+    expect(await input.backend.get("analysis", "policy-active:v1")).toBeUndefined();
+  });
+
+  it("refuses revoked C31 custody and mismatched trainer manifests before emitting a V3 candidate", async () => {
+    const { input, services, request } = await v3CandidateFixture();
+    await expect(trainTrainingArchiveV3Candidate(services, { ...request, manifestHash: "f".repeat(16) })).rejects.toThrow(/exact published/u);
+    await expect(trainTrainingArchiveV3Candidate(services, { ...request, actor: "unauthorized" })).rejects.toThrow(/custody/u);
+    await input.custody.revoke({ candidateHash: input.assessment.candidateHash, scope: "model-training",
+      consent: { ...input.declaration.consent, revision: "revoked-v3-training", modelTraining: "no-training" }, decidedAt: "2026-08-03T00:09:00.000Z",
+      actor: "academy-curator", reason: "training permission withdrawn" });
+    await expect(trainTrainingArchiveV3Candidate(services, { ...request, at: "2026-08-03T00:10:00.000Z" })).rejects.toThrow(/custody/u);
+    expect((await input.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
+  });
+
+  it("refuses V3 candidate output if consent is revoked while loading real trainer data", async () => {
+    const { input, services, request } = await v3CandidateFixture();
+    const load = services.loader.load.bind(services.loader);
+    vi.spyOn(services.loader, "load").mockImplementationOnce(async (value) => {
+      const dataset = await load(value);
+      await input.custody.revoke({ candidateHash: input.assessment.candidateHash, scope: "model-training",
+        consent: { ...input.declaration.consent, revision: "revoked-during-load", modelTraining: "no-training" },
+        decidedAt: request.at, actor: request.actor, reason: "withdrawn during load" });
+      return dataset;
+    });
+    await expect(trainTrainingArchiveV3Candidate(services, request)).rejects.toThrow(/custody/u);
+    expect((await input.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
+  });
+
+  it("refuses foreign Vault services and a manifest removed during V3 data loading", async () => {
+    const { input, services, request } = await v3CandidateFixture();
+    const foreign = await v3CandidateFixture();
+    for (const key of ["custody", "curation", "corpus", "loader"] as const) {
+      await expect(trainTrainingArchiveV3Candidate({ ...services, [key]: foreign.services[key] }, request)).rejects.toThrow(/share one Vault/u);
+    }
+    const load = services.loader.load.bind(services.loader);
+    vi.spyOn(services.loader, "load").mockImplementationOnce(async (value) => {
+      const dataset = await load(value);
+      const key = (await input.backend.keys("analysis")).find((entry) => entry.startsWith("academy-corpus-manifest:v1:"));
+      if (key === undefined) throw new Error("missing V3 manifest fixture");
+      await input.backend.remove("analysis", key);
+      return dataset;
+    });
+    await expect(trainTrainingArchiveV3Candidate(services, request)).rejects.toThrow(/published manifest/u);
+    expect((await input.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
+  });
+
+  it("refuses V3 candidates with missing curation approval, stopped training, or failed evaluation", async () => {
+    const { input, services, request } = await v3CandidateFixture();
+    await expect(trainTrainingArchiveV3Candidate(services, { ...request, minimumRewardGain: 1 })).rejects.toThrow(/passed/u);
+    await expect(trainTrainingArchiveV3Candidate(services, { ...request,
+      online: { ...request.online, config: { ...request.online.config, maxUpdates: 1 } } })).rejects.toThrow(/lineage/u);
+    await input.backend.remove("analysis", `academy-candidate-curation:v1:${input.assessment.candidateHash}`);
+    await expect(trainTrainingArchiveV3Candidate(services, request)).rejects.toThrow(/curation/u);
+    expect((await input.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
+  });
+
   it("records an authorized human curation decision without creating a sample, manifest, or trainer input", async () => {
     const input = await prepare();
     const curation = new TearAcademyCandidateCurationStore(input.backend, input.custody, input.quality);
