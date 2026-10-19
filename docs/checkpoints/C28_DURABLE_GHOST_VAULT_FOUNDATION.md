@@ -18,13 +18,15 @@ not this checkpoint's progress measure.
   indexes, upload jobs, analysis, lineage, settings, journals, quarantine, and
   version-2 `libraries` records. The running Profile → Vault player path opens
   the durable browser adapter rather than recorder internals alone.
-- Player Vault maintenance applies retention, rebuilds missing manifest indexes,
-  validates real stored capsules with `GhostDoctor`, and writes its maintenance
-  receipt. A real corrupted chunk produces an unhealthy result and durable
-  Graveyard membership.
+- Normal Player Vault inspection validates stored capsules with `GhostDoctor`
+  without retention, index repair, library writes or a maintenance receipt.
+  Global maintenance remains a separate explicit operation.
 - The normal player `REPAIR` action creates a non-mutating repaired child;
   browser evidence reads its lineage and forensic quarantine record while
-  proving the original corrupted byte remains untouched.
+  proving the original corrupted byte remains untouched. It also restores the
+  selected source index and Graveyard membership with exact source, child,
+  chunk and metadata guards. A failed metadata commit preserves the child and
+  remains explicitly retryable after reload; it never runs global upkeep.
 - Canon promotion, Frontier novelty triage, and consent/split/deduplicated
   Corpus ingestion use governed versioned durable library entries. Malformed or
   future entries are rejected without being trusted or overwritten.

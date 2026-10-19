@@ -39,5 +39,10 @@ Focused injected-port controls exercise the real recovery service and memory
 Vault for explicit catalog → import → already-recovered, deferred-token account
 transition refusal, object-body transition refusal, and committed-import identity.
 These are local engineering controls, not real Firebase or cross-device proof.
-The parent owns the existing normal Vault browser journey's negative navigation
-check. No service is deployed and no live account or cloud completion is claimed.
+At `8a6569f7`, a fresh standalone build and the existing normal Vault browser
+journey passed: anonymous/unconfigured navigation and the unavailable cloud
+control sent no recovery request and left every retained Vault record unchanged.
+The same journey completed explicit local Doctor repair, preserving original
+manifest/chunk bytes and forensic evidence while restoring selected metadata.
+No service is deployed and no live account or cross-device cloud completion is
+claimed.
