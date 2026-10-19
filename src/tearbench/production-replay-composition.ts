@@ -42,6 +42,9 @@ import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from 
 import { rebaseEnvironmentSnapshot } from "./environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
 import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../ghost/replay-admission";
+import { advanceFramePrelude, commitBossIntroSnapshot, type MutableFramePreludeState } from "../app/live-frame-runtime";
+import { clamp, lerp } from "../domain/geometry";
+import { createGhostApplicationClockPlayback, type GhostApplicationClockSchedule } from "../ghost/application-frame-events";
 
 const productionChapterBindings = new WeakMap<ProductionReplayWorld, StagedCampaignChapterBinding>();
 const productionFocus = new WeakMap<ProductionReplayWorld, number>();
@@ -65,6 +68,8 @@ export interface ProductionGhostReplayCompositionOptions {
   /** Optional portable terminal endpoint; device/persistence behavior stays outside this composition. */
   readonly endRun?: () => void;
   readonly openingPermit?: GhostRecordedOpeningPermit;
+  readonly applicationClock?: GhostApplicationClockSchedule;
+  readonly requireRecordedApplicationFrames?: boolean;
 }
 
 export interface ProductionReplayCheckpointCapture {
@@ -77,6 +82,7 @@ export interface ProductionReplayCheckpointCapture {
 export interface ProductionReplayBootstrap {
   readonly build: TearBuildIdentityV1;
   readonly rng: RunRandomStreamsSnapshot;
+  readonly applicationFramePolicy?: Readonly<{ version: 1; kind: "generated-step-intro"; secondsPerStep: number }>;
 }
 
 /** Shared renderer-neutral projection for production replay and headless worlds. */
@@ -448,6 +454,7 @@ export function createProductionGhostReplayComposition(
   return Object.freeze({
     create(snapshot: TearSnapshotV1 | undefined) {
       let waveReward: ProductionWaveRewardRuntime | null = null;
+      let clockPlayback: ReturnType<typeof createGhostApplicationClockPlayback> | undefined;
       const replay = createProductionReplayWorld({ seed: snapshot?.seed ?? options.seed,
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
@@ -473,9 +480,6 @@ export function createProductionGhostReplayComposition(
       if (opening !== undefined && options.inputSnapshots?.get(0) !== undefined
         && stableVerificationHash(options.inputSnapshots.get(0)) !== stableVerificationHash(opening.input)) throw new TypeError("opening held input does not match its capsule receipt");
       const staged = snapshot === undefined ? undefined : restoreProductionReplaySnapshot(replay, snapshot, openingPermit);
-      if (replay.world.state.bossIntro() !== null) {
-        throw new Error("production detached active boss intro playback is unsupported without application-frame timing; use the live backend");
-      }
       if (staged !== undefined) assertDetachedSourceVoidSupported(staged.run);
       let outcome: ProductionRunOutcomeRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
@@ -491,6 +495,11 @@ export function createProductionGhostReplayComposition(
         ...(options.recordWaveIntent === undefined ? {} : { recordIntent: options.recordWaveIntent }),
         currentTick: () => core.simulationRuntime.scheduler.tick,
         actorId: (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+        bossIntroDelay: (enemy, duration) => {
+          if (clockPlayback !== undefined) return clockPlayback.installedDelay(core.combatEntityRuntime.id(enemy, "enemy"), duration);
+          if (options.requireRecordedApplicationFrames === true) throw new TypeError("historical intro installation has unknown application-clock provenance");
+          return 0;
+        },
         chapterFlowActive: () => productionChapterBindings.has(replay),
         beginCampaignChapter: (index, priorOutro = null) => {
           const run = replay.world.state.run() as never as { _prologueShown?: boolean };
@@ -545,7 +554,7 @@ export function createProductionGhostReplayComposition(
           waveReward.restoreScreen("playing"); openingStatus = "completed";
         } catch (error) { openingStatus = "failed"; throw error; }
       };
-      return Object.freeze({
+      const session = Object.freeze({
         replay,
         bootstrap,
         combat: core,
@@ -553,6 +562,10 @@ export function createProductionGhostReplayComposition(
         outcome,
         waveReward,
         routeAction: waveReward.routeAction,
+        beforeReplayAdvance: (tick: number) => {
+          if (clockPlayback !== undefined) clockPlayback.beforeTick(tick);
+          else if (options.requireRecordedApplicationFrames === true && replay.world.state.bossIntro() !== null) throw new TypeError("historical active intro has unknown application-clock provenance");
+        },
         advanceApplicationFrame: (deltaSeconds: number, confirm: ProductionApplicationFrameConfirm = {}) => {
           // RuntimeFrameDriver caps canonical application-frame deltas at 0.1s.
           // This detached API rejects outside that domain instead of silently truncating caller time.
@@ -560,13 +573,45 @@ export function createProductionGhostReplayComposition(
             || Object.entries(confirm).some(([key, value]) => !["key", "touch", "pad", "mouse", "click"].includes(key) || typeof value !== "boolean")) {
             throw new RangeError("production application frame requires bounded finite seconds and boolean confirm sources");
           }
+          // Match RuntimeFrameCoordinator: cinema input precedes the playing prelude.
           if (waveReward.screen() === "playing" && replay.world.context.cinema.active) replay.world.context.cinema.update(deltaSeconds, confirm);
+          if (waveReward.screen() !== "playing") return;
+          const transient = replay.world.context.transient, intro = replay.world.state.bossIntro(), beat = replay.world.state.bossBeat();
+          const frame: MutableFramePreludeState = {
+            slowMotion: transient.impact.slowMotion, timeScale: transient.feel.timeScale,
+            worldZoom: transient.feel.worldZoom, worldZoomTarget: transient.feel.worldZoomTarget,
+            zoom: transient.feel.zoom, flash: transient.feel.flash,
+            bannerTime: transient.feel.bannerSeconds, stageBannerSeconds: transient.feel.bannerSeconds,
+            rankPopTime: transient.feel.rankPopupSeconds,
+            bossIntro: intro === null ? null : { ...intro, boss: { hp: intro.boss.hp, maxHp: intro.boss.maxHp,
+              dead: intro.boss.dead, dying: intro.boss.dying, introT: intro.boss.introT ?? 0 } },
+            bossBeat: beat === null ? null : { t: beat.t },
+          };
+          advanceFramePrelude({ dt: deltaSeconds, state: frame, parrySlowScale: replay.configuration.value.juice.parrySlowScale,
+            cinemaActive: replay.world.context.cinema.active,
+            playgroundSlow: (replay.world.state.run() as { pg?: { slow?: boolean } } | null)?.pg?.slow === true,
+            introScale: replay.configuration.value.bossTheater.introScale, lerp, clamp });
+          transient.impact.slowMotion = frame.slowMotion;
+          Object.assign(transient.feel, { timeScale: frame.timeScale, worldZoom: frame.worldZoom, zoom: frame.zoom,
+            flash: frame.flash, bannerSeconds: frame.bannerTime, rankPopupSeconds: frame.rankPopTime });
+          replay.world.state.setBossIntro(commitBossIntroSnapshot(intro, frame.bossIntro));
+          if (frame.bossBeat === null) replay.world.state.setBossBeat(null);
+          else if (beat !== null) replay.world.state.setBossBeat({ ...beat, t: frame.bossBeat.t });
         },
         completeRecordedOpening,
         invalidateRecordedOpening: () => { openingStatus = "failed"; },
         semanticProjection: () => core.simulationRuntime.lastResult?.state
           ?? projectProductionReplayCanonicalState(replay, core.simulationRuntime.scheduler.tick, core.simulationRuntime.input),
       });
+      if (options.applicationClock !== undefined) {
+        const cursor = options.applicationClock.receipts.get(snapshot?.tick ?? 0)?.cursor;
+        if (cursor === undefined) throw new TypeError("recorded origin lacks its application-frame cursor");
+        clockPlayback = createGhostApplicationClockPlayback(options.applicationClock, cursor, {
+          tick: () => core.simulationRuntime.scheduler.tick, introActive: () => replay.world.state.bossIntro() !== null,
+          advance: (seconds, confirm) => { session.advanceApplicationFrame(seconds, confirm); },
+        });
+      }
+      return session;
     },
   });
 }

@@ -69,6 +69,28 @@ function expectContinuation(actual: ProductionHeadlessCheckpoint, source: Produc
 }
 
 describe("C30 production headless environment", () => {
+  it("completes natural boss intros using an explicit generated cadence preserved across checkpoint continuation", () => {
+    const source = createProductionHeadlessEnvironment(), restored = createProductionHeadlessEnvironment();
+    source.reset({ ...scenario, start: { ...scenario.start, mode: "bossonly" }, maxTicks: 600 });
+    let checkpoint = source.captureCheckpoint();
+    for (let tick = 0; tick < 120 && !(checkpoint.snapshot.state["tear.world.v1"] as { runtime?: { bossIntro?: unknown } }).runtime?.bossIntro; tick++) {
+      source.step([]); checkpoint = source.captureCheckpoint();
+    }
+    expect(checkpoint.bootstrap.applicationFramePolicy).toEqual({ version: 1, kind: "generated-step-intro", secondsPerStep: 1 / 120 });
+    const runtime = () => (source.captureCheckpoint().snapshot.state["tear.world.v1"] as { runtime: { bossIntro: unknown } }).runtime;
+    expect(runtime().bossIntro).not.toBeNull();
+    restored.restoreCheckpoint(checkpoint);
+    for (let tick = 0; tick < 240; tick++) expect(restored.step([])).toEqual(source.step([]));
+    expect(runtime().bossIntro).toBeNull();
+    const bosses = source.captureCheckpoint().snapshot.state["tear.boss.v1"] as readonly { introT: number; aliveT: number }[];
+    expect(bosses.length).toBeGreaterThan(0);
+    expect(bosses[0]?.introT).toBe(0); expect(bosses[0]?.aliveT).toBeGreaterThan(0);
+    expect(source.captureCheckpoint().bootstrap.applicationFramePolicy).toEqual(checkpoint.bootstrap.applicationFramePolicy);
+    const legacyBootstrap = { ...checkpoint.bootstrap }; delete legacyBootstrap.applicationFramePolicy;
+    const legacy = bindCheckpoint({ ...checkpoint, bootstrap: legacyBootstrap });
+    expect(() => restored.restoreCheckpoint(legacy)).toThrow(/unknown generated/);
+    source.dispose(); restored.dispose();
+  });
   it("checkpoint admission refuses a gapped accepted trace and step rejects an invalid batch atomically", () => {
     const source = createProductionHeadlessEnvironment(); source.reset(scenario);
     source.step([{ type: "move", x: 1000, y: 0 }]); source.step([{ type: "move", x: 0, y: 0 }]);

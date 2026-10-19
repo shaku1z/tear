@@ -52,6 +52,7 @@ export interface LiveRunOrchestrationOptions {
   readonly blade: () => GameBlade;
   readonly enemies: () => GameEnemy[];
   readonly actorId: (enemy: GameEnemy) => string;
+  readonly observeBossIntro?: (actorId: string, duration: number, delay: number) => void;
   readonly setEnemies: (value: GameEnemy[]) => void;
   readonly setProjectiles: (value: GameProjectile[]) => void;
   readonly selectedBoss: () => string;
@@ -117,7 +118,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     dependencies: d, entities: options.entities, state: options.state, worldServices: options.worldServices, stage, width: options.width, height: options.height,
     run: options.run, player: options.player, enemies: options.enemies, actorId: options.actorId,
     wipeRemainingSeconds: options.wipeRemainingSeconds,
-    setBossIntro: (enemy, duration, delay) => { options.state.setBossIntro({ boss: enemy, t: 0, dur: duration, delay }); },
+    setBossIntro: (enemy, duration, delay) => { options.state.setBossIntro({ boss: enemy, t: 0, dur: duration, delay }); options.observeBossIntro?.(options.actorId(enemy), duration, delay); },
     clearBossBeat: () => { options.state.setBossBeat(null); },
     clearBanner: () => { options.setBannerSeconds(0); stage.resetBanner(); },
   });

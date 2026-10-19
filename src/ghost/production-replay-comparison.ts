@@ -3,6 +3,7 @@ import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { createGhostProductionReplaySession, type GhostVerifiedProductionReplaySession } from "./production-replay-session";
 import { alignGhostsBySemanticEvent } from "./theater";
+import { parseGhostApplicationClockEvent } from "./application-frame-events";
 
 export const MIN_GHOST_COMPARISON_RUNS = 2;
 export const MAX_GHOST_COMPARISON_RUNS = 9;
@@ -54,9 +55,11 @@ export function createGhostProductionReplayComparison(
   const runs = Object.freeze(sources.map((source) => Object.freeze({
     sourceId: source.session.sourceId, sourceRootHash: source.session.sourceRootHash,
   })));
-  const eventTypes = [...new Set(sources.flatMap((source) => source.envelope.ghost.events.map((event) => event.type)))].sort();
+  const semanticGhosts = sources.map((source) => ({ ...source.envelope.ghost,
+    events: source.envelope.ghost.events.filter((event) => parseGhostApplicationClockEvent(event) === undefined) }));
+  const eventTypes = [...new Set(semanticGhosts.flatMap((ghost) => ghost.events.map((event) => event.type)))].sort();
   const occurrences = Object.freeze(eventTypes.flatMap((eventType) => alignGhostsBySemanticEvent(
-    sources.map((source) => source.envelope.ghost), eventType,
+    semanticGhosts, eventType,
   ).map((alignment) => Object.freeze({
     eventType,
     occurrence: alignment.occurrence,

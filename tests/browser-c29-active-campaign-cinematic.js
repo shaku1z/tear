@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- direct Node browser evidence consumer. */
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const openingJourney = process.env.TEAR_C29_OPENING_JOURNEY === "1";
+const introJourney = process.env.TEAR_R07_INTRO_JOURNEY === "1";
+if (introJourney && !process.env.TEAR_R07_INTRO_ARTIFACT_DIR) throw new Error("intro journey requires an explicit artifact destination");
+if (introJourney && fs.existsSync(process.env.TEAR_R07_INTRO_ARTIFACT_DIR) && fs.readdirSync(process.env.TEAR_R07_INTRO_ARTIFACT_DIR).length > 0) throw new Error("intro artifact destination must be empty");
 if (openingJourney && !process.env.TEAR_OPENING_ARTIFACT_DIR) throw new Error("opening journey requires a unique TEAR_OPENING_ARTIFACT_DIR evidence destination");
 if (openingJourney && fs.existsSync(process.env.TEAR_OPENING_ARTIFACT_DIR) && fs.readdirSync(process.env.TEAR_OPENING_ARTIFACT_DIR).length > 0) throw new Error("opening evidence destination must be empty; preserve prior evidence");
 const diagnosticDirectory = process.env.TEAR_C29_DIAGNOSTIC_DIR ? path.resolve(process.env.TEAR_C29_DIAGNOSTIC_DIR) : undefined;
@@ -16,6 +20,63 @@ function writeDiagnostic(name, value) {
 withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async ({ page, boot, waitScreen, clickAndWait, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined,
     { timeout: 15000 });
+  if (introJourney) {
+    const directory = path.resolve(process.env.TEAR_R07_INTRO_ARTIFACT_DIR); fs.mkdirSync(directory, { recursive: true });
+    await boot({ test: "1", bossdebug: "1", "ghost-v3-profile": "forensic-qa" });
+    await clickAndWait(260, 360, "setup");
+    await page.mouse.click(430, 509); // Existing DEV Boss Test row.
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "bossonly");
+    await page.mouse.click(820, 435); // One-Hit: await actual combat defeat.
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.difficulty === "onehit");
+    await page.mouse.click(1180, 196); // Sword.
+    await page.mouse.click(850, 682); // First published boss, Warden.
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.boss === "warden"
+      && window.__PANTHEON_TEST.state().setup.weapon === "sword");
+    await page.mouse.click(800, 758); await waitScreen("playing");
+    await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.bossId === "warden" && enemy.introT > 0), undefined, { timeout: 10000 });
+    await page.screenshot({ path: path.join(directory, "live-intro.png") });
+    await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.bossId === "warden" && enemy.introT === 0 && enemy.aliveT > 0.1), undefined, { timeout: 15000 });
+    const liveBoss = await page.evaluate(() => window.TEAR_WEAPON_DEBUG().enemies.find((enemy) => enemy.bossId === "warden"));
+    await page.screenshot({ path: path.join(directory, "live-ai.png") });
+    // No altered actor, score, wave, clock, or forced outcome.
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, { timeout: 90000 });
+    await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest()?.status === "complete"
+      || window.__TEAR_GHOST_V3__.failure() !== null, undefined, { timeout: 20000 });
+    assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
+    const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
+    const capsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
+    const initial = capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value;
+    assert.equal(initial?.state["tear.world.v1"].runtime.bossIntro, null, "proof must start before natural intro installation");
+    assert.equal(manifest.provenance.replayContext.simulation.applicationFrames.coverage, "cinema-and-boss-intro");
+    const clocks = capsule.tracks.events.map((entry) => entry.value).filter((event) => ["tearghost-application-frame", "tearghost-intro-install"].includes(event.payload?.format));
+    assert.ok(clocks.some((event) => event.payload.format === "tearghost-intro-install"));
+    assert.ok(clocks.some((event) => event.payload.kind === "end" && !event.payload.introActive));
+    fs.writeFileSync(path.join(directory, "source-capsule.json"), JSON.stringify(capsule));
+    await boot();
+    await page.evaluate(() => {
+      const original = CanvasRenderingContext2D.prototype.fillText;
+      window.__R07_RENDERED_TEXT__ = [];
+      CanvasRenderingContext2D.prototype.fillText = function observe(text, ...rest) {
+        window.__R07_RENDERED_TEXT__.push(String(text)); return original.call(this, text, ...rest);
+      };
+    });
+    await clickAndWait(260, 266, "profile"); await page.mouse.click(875, 271);
+    await page.waitForFunction(() => window.__R07_RENDERED_TEXT__.includes("DOWNLOAD"), undefined, { timeout: 15000 });
+    const [download] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), page.mouse.click(1026, 518)]);
+    const archivePath = path.join(directory, "normal-download.tearghost.json"); await download.saveAs(archivePath);
+    assert.equal(await download.failure(), null);
+    const originalFile = fs.readFileSync(archivePath), archived = JSON.parse(originalFile.toString("utf8"));
+    assert.deepEqual(archived.manifest, manifest);
+    const continued = await page.evaluate((id) => window.__TEAR_GHOST_V3__.verify(id, "opening-continuation"), manifest.id);
+    const seek = await page.evaluate((id) => window.__TEAR_GHOST_V3__.seek(id, 180), manifest.id);
+    fs.writeFileSync(path.join(directory, "continuation.json"), JSON.stringify({ buildInfo, liveBoss, continued, seek }, null, 2));
+    assert.equal(continued.status, "verified", JSON.stringify(continued));
+    assert.equal(continued.continuation.steps, 180); assert.equal(continued.continuation.laterKeyframesUsed, false);
+    assert.equal(seek.tick, 180);
+    assert.deepEqual((await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id)), capsule);
+    assert.deepEqual(fs.readFileSync(archivePath), originalFile);
+    return;
+  }
   await page.evaluate(() => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     environment.reset({

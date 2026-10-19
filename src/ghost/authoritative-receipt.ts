@@ -1,5 +1,6 @@
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
+import { parseGhostApplicationFrameReceipt, type GhostApplicationFrameReceipt } from "./application-frame-events";
 
 /** A sealed live authoritative-state hash recorded beside a V3 keyframe. */
 export interface GhostAuthoritativeReceiptV1 {
@@ -9,15 +10,17 @@ export interface GhostAuthoritativeReceiptV1 {
   readonly tick: number;
   readonly stateHash: string;
   readonly input: AuthoritativeInputSnapshot;
+  readonly applicationFrames?: GhostApplicationFrameReceipt;
 }
 
 export function createGhostAuthoritativeReceipt(
   tick: number,
   stateHash: string,
   input: AuthoritativeInputSnapshot,
+  applicationFrames?: GhostApplicationFrameReceipt,
 ): GhostAuthoritativeReceiptV1 {
   const receipt = validateReceipt(tick, stateHash, input);
-  return Object.freeze({ ...receipt, input: Object.freeze({ ...receipt.input,
+  return Object.freeze({ ...receipt, ...(applicationFrames === undefined ? {} : { applicationFrames: parseGhostApplicationFrameReceipt(applicationFrames) }), input: Object.freeze({ ...receipt.input,
     aimMagnitude: receipt.input.aimMagnitude ?? AIM_MAGNITUDE_SCALE }) });
 }
 
@@ -48,6 +51,7 @@ export function readGhostAuthoritativeReceipt(value: unknown): GhostAuthoritativ
   if (candidate.format !== "tearghost-authoritative-receipt" || candidate.schemaVersion !== 1
     || candidate.kind !== "authoritative-hash" || typeof candidate.tick !== "number"
     || typeof candidate.stateHash !== "string" || typeof candidate.input !== "object" || candidate.input === null) return undefined;
-  try { return validateReceipt(candidate.tick, candidate.stateHash, candidate.input); }
+  try { return Object.freeze({ ...validateReceipt(candidate.tick, candidate.stateHash, candidate.input),
+    ...(candidate.applicationFrames === undefined ? {} : { applicationFrames: parseGhostApplicationFrameReceipt(candidate.applicationFrames) }) }); }
   catch { return undefined; }
 }

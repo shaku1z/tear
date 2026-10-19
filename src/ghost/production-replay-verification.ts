@@ -8,6 +8,7 @@ import { createGhostV3 } from "./truth-kernel";
 import { stableVerificationHash } from "../replay/hash";
 import { AuthoritativeInputState, type AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
+import { readGhostApplicationClockSchedule, type GhostApplicationClockSchedule } from "./application-frame-events";
 
 /** Only explicit validated full magnitude has the canonical omitted-full spelling. Keep every other field. */
 function canonicalReceiptInput(input: AuthoritativeInputSnapshot): AuthoritativeInputSnapshot {
@@ -85,7 +86,10 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
       return Object.freeze({ status: "unavailable" as const, comparisons, continuation: evidence(), mappingIssues: ["opening continuation requires admitted anchor, valid command/event mapping, and unique60/120/180 receipts"] });
     }
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
-    const composition = createProductionGhostReplayComposition({ seed: anchor.seed, openingPermit: permit });
+    const context = readGhostReplayRunContext(capsule.manifest.provenance);
+    const applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);
+    const composition = createProductionGhostReplayComposition({ seed: anchor.seed, openingPermit: permit,
+      requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }) });
     const replay = new GhostProductionReplayWorld(derived, { create(snapshot) {
       const session = composition.create(snapshot);
       return Object.freeze({ ...session, afterReplayAdvance() {
@@ -134,11 +138,18 @@ export function verifyGhostCapsuleProductionReplay(
   const refusals = legacyAimRefusals(capsule, mapped, receipts);
   if (refusals.length > 0) return Object.freeze({ status: "unavailable", comparisons: refusals, mappingIssues });
   const inputs = new Map(receipts.map((receipt) => [receipt.tick, receipt.input]));
+  let applicationClock: GhostApplicationClockSchedule | undefined;
+  try {
+    const context = readGhostReplayRunContext(capsule.manifest.provenance);
+    applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);
+  } catch (error) { return Object.freeze({ status: "unavailable", comparisons: Object.freeze([]),
+    mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]) }); }
   let openingPermit;
   try { openingPermit = issueGhostRecordedOpeningPermit(capsule); }
   catch (error) { return Object.freeze({ status: "mismatch", comparisons: Object.freeze([]),
     mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]) }); }
   const composition = createProductionGhostReplayComposition({ seed: mapped.ghost.snapshots[0]?.seed ?? "unknown", inputSnapshots: inputs,
+    requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }),
     ...(openingPermit === undefined ? {} : { openingPermit }) });
   const comparisons: GhostProductionReceiptComparison[] = [];
   for (const receipt of receipts) {

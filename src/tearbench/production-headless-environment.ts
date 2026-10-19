@@ -192,6 +192,9 @@ function requireBootstrap(value: unknown): ProductionReplayBootstrap {
     throw new TypeError("production headless checkpoint bootstrap is invalid");
   }
   const build = value.build;
+  const policy = value.applicationFramePolicy;
+  if (policy !== undefined && (!record(policy) || policy.version !== 1 || policy.kind !== "generated-step-intro"
+    || policy.secondsPerStep !== 1 / 120 || Object.keys(policy).some((key) => !["version", "kind", "secondsPerStep"].includes(key)))) throw new TypeError("unsupported generated application-frame policy");
   const buildKeys = ["version", "revision", "target", "rulesetVersion", "contentHash", "configHash"] as const;
   if (buildKeys.some((key) => typeof build[key] !== "string" || build[key].length === 0)) {
     throw new TypeError("production headless checkpoint build identity is invalid");
@@ -213,6 +216,7 @@ function requireBootstrap(value: unknown): ProductionReplayBootstrap {
       rulesetVersion: build.rulesetVersion as string, contentHash: build.contentHash as string, configHash: build.configHash as string,
     }),
     rng: Object.freeze(streams),
+    ...(policy === undefined ? {} : { applicationFramePolicy: Object.freeze({ version: 1 as const, kind: "generated-step-intro" as const, secondsPerStep: 1 / 120 }) }),
   });
 }
 
@@ -435,10 +439,12 @@ export function createProductionHeadlessEnvironment(
       gameplayEvents,
       ...(sourceTracks === undefined ? {} : { recordWaveIntent: (entry) => { sourceTracks.intents.push(entry); } }),
     }).create(snapshot);
+    if (snapshot !== undefined && composed.replay.world.state.bossIntro() !== null && bootstrap?.applicationFramePolicy === undefined) throw new TypeError("restored active intro has unknown generated application-frame policy");
     assertTearSimulationStepSeconds(composed.simulation.stepSeconds);
     gameplayEvents.setTickSource(() => composed.simulation.scheduler.tick);
     const core = Object.freeze({ replay: composed.replay, simulation: composed.combat, waveReward: composed.waveReward,
-      bootstrap: bootstrap ?? composed.bootstrap,
+      bootstrap: bootstrap ?? Object.freeze({ ...composed.bootstrap,
+        applicationFramePolicy: Object.freeze({ version: 1 as const, kind: "generated-step-intro" as const, secondsPerStep: 1 / 120 }) }),
       scenario, routeAction: composed.routeAction, advanceApplicationFrame: composed.advanceApplicationFrame, nativeEvents,
       ...(sourceTracks === undefined ? {} : { sourceTracks }) });
     if (sourceTracks !== undefined) {
@@ -491,6 +497,11 @@ export function createProductionHeadlessEnvironment(
         return normalized.action;
       });
       if (!Number.isSafeInteger(nextCommandId + normalizedActions.length)) throw new RangeError("headless command sequence is exhausted");
+      if (current.replay.world.state.bossIntro() !== null) {
+        const policy = current.bootstrap.applicationFramePolicy;
+        if (policy === undefined) throw new TypeError("active intro requires its declared generated application-frame policy");
+        current.advanceApplicationFrame(policy.secondsPerStep);
+      }
       const envelopes: CommandEnvelope<GameAction>[] = normalizedActions.map((command) =>
         Object.freeze({ kind: "command" as const, id: ++nextCommandId, tick, command }));
       actionTrace.push(...envelopes);

@@ -443,21 +443,52 @@ describe("production replay composition", () => {
     assertUnchanged();
   });
 
-  it("restores boss intro identity without claiming unsupported fixed-tick playback", () => {
+  it("continues a restored boss intro through explicit application frames and resumes real boss AI", () => {
     const composition = createProductionGhostReplayComposition({ seed: "replay-boss-intro", mode: "bossonly" });
     const source = composition.create(undefined);
     const boss = source.replay.world.entities.createEnemy("rootbound", 800, 520,
       source.replay.world.state.run() as never);
     boss.introT = 1.4;
     source.replay.world.state.setEnemies([boss]);
-    source.replay.world.state.setBossIntro({ boss, delay: 0, t: 0, dur: 1.4 });
+    source.replay.world.state.setBossIntro({ boss, delay: 0.15, t: 0, dur: 1.4 });
     const { snapshot } = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "active-intro");
     const target = createProductionReplayWorld({ seed: "replay-boss-intro-target", mode: "bossonly" });
     restoreProductionReplaySnapshot(target, snapshot);
     expect(target.world.state.bossIntro()?.boss).toBe(target.world.state.enemies()[0]);
     expect(target.world.state.bossIntro()?.boss).not.toBe(boss);
-    expect(target.world.state.bossIntro()).toMatchObject({ delay: 0, t: 0, dur: 1.4 });
-    expect(() => composition.create(snapshot)).toThrow(/active boss intro playback is unsupported/);
+    expect(target.world.state.bossIntro()).toMatchObject({ delay: 0.15, t: 0, dur: 1.4 });
+    const restored = composition.create(snapshot);
+    const restoredBoss = restored.replay.world.state.enemies()[0] as (typeof boss & { state: string }) | undefined;
+    if (restoredBoss === undefined) throw new Error("restored boss missing");
+    expect(restored.replay.world.state.bossIntro()?.boss).toBe(restoredBoss);
+    // Physics steps must not substitute for the unrecorded application clock.
+    restored.simulation.advanceOne([]);
+    expect(restoredBoss.introT).toBe(1.4);
+    expect(restoredBoss.state).toBe("intro");
+    const seconds = restored.replay.world.context.services.clock.seconds(), tick = restored.simulation.scheduler.tick;
+    restored.waveReward.restoreScreen("paused"); restored.advanceApplicationFrame(0.1);
+    expect(restored.replay.world.state.bossIntro()).toMatchObject({ delay: 0.15, t: 0 });
+    restored.waveReward.restoreScreen("playing");
+    expect(() => { restored.advanceApplicationFrame(0.101); }).toThrow(/bounded finite seconds/);
+    restored.advanceApplicationFrame(0.1);
+    expect(restored.replay.world.state.bossIntro()?.t).toBe(0);
+    restored.advanceApplicationFrame(0.1);
+    expect(restored.replay.world.state.bossIntro()).toMatchObject({ delay: 0, t: 0 });
+    restored.advanceApplicationFrame(0.1);
+    expect(restored.replay.world.state.bossIntro()?.t).toBe(0.1);
+    for (let frame = 0; frame < 20 && restored.replay.world.state.bossIntro() !== null; frame += 1) restored.advanceApplicationFrame(0.1);
+    expect(restored.replay.world.state.bossIntro()).toBeNull(); expect(restoredBoss.introT).toBe(0);
+    expect(restored.simulation.scheduler.tick).toBe(tick);
+    expect(restored.replay.world.context.services.clock.seconds()).toBe(seconds);
+    for (let index = 0; index < 120 && restoredBoss.state === "intro"; index += 1) restored.simulation.advanceOne([]);
+    expect(restoredBoss.state).not.toBe("intro");
+    expect(restoredBoss.dead).toBe(false);
+    for (const disposition of ["dead", "dying"] as const) {
+      const cancelled = composition.create(snapshot), actor = cancelled.replay.world.state.enemies()[0];
+      if (actor === undefined) throw new Error("cancelled boss missing");
+      actor[disposition] = true; cancelled.advanceApplicationFrame(0.01);
+      expect(cancelled.replay.world.state.bossIntro()).toBeNull(); expect(actor.introT).toBe(0);
+    }
 
     const world = snapshot.state["tear.world.v1"] as Readonly<Record<string, unknown>>;
     const runtime = world.runtime as Readonly<Record<string, unknown>>;

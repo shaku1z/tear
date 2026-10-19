@@ -28,6 +28,30 @@ A real tick-zero campaign opening may be captured on the bootstrap menu before t
 
 Boss status: the unchanged Windows/Chrome/Node 24.14 baseline journey passed before runtime edits. The October 18 Ubuntu/Node 24.21 readiness timeout remains unreproduced and unresolved; retain the original ten-second readiness assertions.
 
+Detached active-intro continuation now admits the restored actor binding and uses
+the same live `advanceFramePrelude` and `commitBossIntroSnapshot` through explicit
+bounded application-frame input. Cinema input precedes the playing prelude;
+paused worlds do not advance it. Delay, terminal cancellation and final actor
+`introT` clearing retain their live owner. Application-frame calls do not consume
+fixed ticks or simulation seconds, and physics ticks do not invent intro frames.
+The focused continuation case reaches real resumed Rootbound AI. This is a
+caller-clock dependency now also has a fresh recording/playback path. Its explicit
+version-one `cinema-and-boss-intro` declaration admits typed events on the existing
+global causal sequence, actual bounded deltas/confirm inputs and installation
+delay witnesses. Receipt extensions bind current frame cursors and unique exact
+keyframes without changing world codecs or canonical gameplay hashes. Zero-tick
+frames and terminal clearing are retained; mid-frame seek skips the prelude
+already reflected in its bound snapshot. Deferred completion cannot finalize a
+replacement recording. Native gameplay-event projection excludes only validated
+clock metadata. Original capsule bytes and custody remain unchanged.
+
+Generated headless hosts separately declare one `1/120`-second intro frame per
+generated step; checkpoint/terminal and candidate context/attestation retain that
+policy. It is never substituted for absent browser timing. Historical absence
+remains unknown, and old bytes are not enriched. Focused development checks cover
+these boundaries; the parent owns the fresh normal record/Vault download/isolated
+continuation browser proof. This feature does not close broader R07 replay work.
+
 Compatibility disposition: historical snapshots that contain null callback array entries have already discarded executable binding identity. They are rejected as unsupported before destination mutation. No same-schema cross-version compatibility or automatic migration is claimed for these snapshots; callback-order-safe historical migration remains outstanding.
 
 HUD observation follow-up starts at scene extraction checkpoint 3cc7a22be358dd1693183c6daa7c00846d7dc2e1. That checkpoint's original native-blur diagnostic rejected a restore correctly at the full-state boundary but failed exact PNG equality at the HP lag-fill edge. Positive restored-PNG acceptance remains pending fresh execution; this source repair does not establish scene or human art acceptance.

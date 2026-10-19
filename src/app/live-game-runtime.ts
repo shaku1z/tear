@@ -1,4 +1,5 @@
 import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./live-ghost-frame-recording";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
 import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveTrainingOperationsScreen, createLiveReplayHub, createLiveInterfaceComposition, GameAgentEvidenceController, RunMonitorController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
@@ -30,7 +31,7 @@ import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
 import { GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
 import { createGhostAuthoritativeReceipt } from "../ghost/authoritative-receipt";
-import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots"; import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
+import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots"; import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs"; import type { TearSnapshotV1 } from "../tearbench/contracts";
 import { stableVerificationHash } from "../replay/hash"; import { createLiveCanonicalWatchComposition } from "./live-canonical-watch-composition";
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
 import { createLiveGhostOpeningCapture } from "./live-ghost-opening-capture";
@@ -51,6 +52,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const currentSignedInActor = (): string | undefined => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined, humanCalibration = createLiveHumanCalibrationCaptureComposition(browserIndexedDb, browserWindow, currentSignedInActor);
   const ghostV3Options = createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search) ?? {}, ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb); bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
   const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb, { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); await humanCalibration.capture?.finalized(manifest, vault); } }); const ghostV3 = ghostV3Session.recorder();
+  const ghostFrames = createLiveGhostFrameRecording({ session: ghostV3Session, tick: () => simulationRuntime.scheduler.tick, introActive: () => hostState.bossIntro() !== null });
   const openingCapture = createLiveGhostOpeningCapture({ screen: () => state, tick: () => simulationRuntime.scheduler.tick,
     replayRunId: () => ghostV3Session.replayContext()?.run.id, nextSequence: ghostV3Session.nextEventSequence,
     record: (event) => { ghostV3?.record("events", event.tick, event); }, failed: (error) => { console.warn("Ghost opening completion capture failed; live play continues", error); } });
@@ -59,6 +61,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   GHOST.setRecordingObserver(ghostV3 === null ? null : {
     started(context) {
       openingCapture.discard();
+      ghostFrames.reset();
       ghostV3Session.reset();
       humanCalibration.input.reset();
       humanCalibration.capture?.started();
@@ -66,7 +69,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       let replayContext: GhostReplayRunContextV1 | undefined;
       try {
         // Context and tick-zero keyframe share the settled opening-initialized boundary.
-        replayContext = openingCapture.createContext(context, liveRun(), liveStateForge.capture().components.get("tear.configuration.v1"), worldContext.services.random.snapshot());
+        replayContext = declareGhostApplicationFrames(openingCapture.createContext(context, liveRun(), liveStateForge.capture().components.get("tear.configuration.v1"), worldContext.services.random.snapshot()));
         provenance = Object.freeze({ ...context, [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: replayContext });
       } catch (error) {
         // Ghost V3 is an observational sidecar. A malformed optional replay
@@ -85,20 +88,16 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
           // randomness or legal upgrade can mutate the live configuration.
           ghostV3.record("rng", 0, worldContext.services.random.snapshot());
           captureGhostAuthoritativeReceipt(0);
-          captureGhostStateSnapshot(0);
           openingCapture.captured(context.runId);
         }
       } catch (error) {
         console.warn("Ghost V3 recorder failed to start; live play continues", error);
       }
     },
-    // Ghost 2/3 observe the canonical input session; run lifecycle owns its
-    // start/stop boundary so non-achievement, tutorial, and playground runs
-    // cannot inherit Ghost 2 recording policy.
+    // Run lifecycle owns canonical recording; an open intro frame closes before finalization.
     stopped(meta) {
       openingCapture.discard();
-      ghostV3Session.setReplayContext(undefined);
-      void ghostV3.finish(meta);
+      ghostFrames.finish(meta);
     },
   });
   GAMEPLAY_EVENTS.subscribe((event) => {
@@ -255,6 +254,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     width: W, height: H, canvas, testMode: TEST_MODE,
     run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(),
     actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
+    observeBossIntro: (actorId, duration, delay) => { ghostFrames.installed(actorId, duration, delay); },
     setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
     selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
     attackPresentation,
@@ -473,7 +473,6 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
         });
         ghostV3.record("rng", tick, random);
         captureGhostAuthoritativeReceipt(tick);
-        captureGhostStateSnapshot(tick);
       }
       if (__TEAR_TEST_BUILD__) {
         const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
@@ -489,6 +488,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       stageName: stageRuntime.current.name, bossWave: hostState.run()?.isBossWave === true, appState: state }),
   } satisfies CombatCompositionInput["frame"];
   const coordinatorContext = {
+    applicationFrameRecording: ghostFrames,
     now: () => performance.now(), state: () => state,
     setState: (screen) => { if (isLegacyScreen(screen)) setState(screen); },
     input: Input, pad: typeof PAD === "undefined" ? null : PAD, navigator: browserNavigator, document: browserDocument, canvas,
@@ -535,7 +535,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(
       tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(),
       hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()));
-    ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot()));
+    const snapshot = captureGhostStateSnapshot(tick);
+    ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot(), ghostFrames.receipt(snapshot === undefined ? undefined : { id: snapshot.id, exactHash: snapshot.hashes.exact })));
   };
   GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick); environment.setAvailableActorIdsSource(() => new Set([stageRuntime.current.id, "player", "blade", ...hostState.enemies().map((enemy) => combatRuntime.id(enemy, "enemy")), ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile"))]));
   const stateForgeRuntime = createLiveStateForgeRuntimeBridge({ tutorial: TUT, captureBossIntro: () => hostState.bossIntro(), restoreBossIntro: (intro) => { hostState.setBossIntro(intro); },
@@ -558,7 +559,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     validateCinema: stateForgeRuntime.validate,
   });
   const ghostSnapshotRegistry = createDefaultStateCodecRegistry(); const launchGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) => launchGhostPracticeChild(child, { registry: ghostSnapshotRegistry, stateForge: liveStateForge, hasLiveWorld: () => hostState.run() !== null, practice: ghostPracticeSession, clearRestoredRecording: () => { GHOST.restoreRuntimeState({ recording: null }); Input.stopSemanticRecording(); }, setPlaying: () => { setState("playing", { practiceLaunch: true }); }, requestPointer: requestLock });
-  const captureGhostStateSnapshot = (tick: number): void => {
+  const captureGhostStateSnapshot = (tick: number): TearSnapshotV1 | undefined => {
     const recorder = ghostV3;
     if (recorder?.active !== true) return;
     const replayContext = ghostV3Session.replayContext();
@@ -573,7 +574,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       return;
     }
     try {
-      recorder.record("keyframes", tick, captureLiveStateForgeSnapshot({
+      const snapshot = captureLiveStateForgeSnapshot({
         id: `ghost-v3-${String(liveRun().runSeed)}-keyframe-${String(tick)}`, tick, stateClass: "recorded-canonical",
         seed: String(liveRun().runSeed), stateForge: liveStateForge, rng: worldContext.services.random.snapshot(), registry: ghostSnapshotRegistry,
         observationClass: "structured-state", producer: "ghost-v3-live-recorder", target: replayContext.build.target,
@@ -581,10 +582,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
         sourceId: ghostLiveBootstrapEventId(recorder.activeSessionId),
         visualHash: stableVerificationHash({ tick, player: { x: livePlayer().x, y: livePlayer().y, facing: livePlayer().facing }, blade: { x: liveBlade().x, y: liveBlade().y, state: liveBlade().state } }),
         actor: "human", executionClass: "engineering", trainingConsent: "no-training",
-      }));
+      }); recorder.record("keyframes", tick, snapshot); return snapshot;
     } catch (error) {
-      // Recording may degrade, but a storage/snapshot problem must never halt a live run.
-      recorder.record("events", tick, { type: "ghost.snapshot-degraded", reason: error instanceof Error ? error.message : String(error) });
+      recorder.record("events", tick, { type: "ghost.snapshot-degraded", reason: error instanceof Error ? error.message : String(error) }); return undefined;
     }
   };
   // full-screen rect INCLUDING the fullscreen overscan bleed â€” use for any fill that

@@ -5,6 +5,15 @@ import { createGhostAuthoritativeReceipt, readGhostAuthoritativeReceipt } from "
 const hash = "a".repeat(16);
 
 describe("Ghost authoritative receipts", () => {
+  it("preserves an optional exact frame frontier without enriching historical receipt bytes", () => {
+    const input = { tick: 0, moveX: 0, moveY: 0, aimTurn: 0, primaryHeld: false };
+    const legacy = createGhostAuthoritativeReceipt(0, hash, input);
+    expect(readGhostAuthoritativeReceipt(legacy)).not.toHaveProperty("applicationFrames");
+    const fresh = createGhostAuthoritativeReceipt(0, hash, input, { version: 1,
+      cursor: { version: 1, ordinal: 0, sequence: 0 }, keyframe: { id: "original", exactHash: hash } });
+    expect(readGhostAuthoritativeReceipt(JSON.parse(JSON.stringify(fresh)))).toEqual(fresh);
+    expect(readGhostAuthoritativeReceipt({ ...fresh, applicationFrames: { ...fresh.applicationFrames, version: 2 } })).toBeUndefined();
+  });
   it("writes explicit full magnitude for fresh receipts while preserving legacy absence on read", () => {
     const input = { tick: 0, moveX: 0, moveY: 0, aimTurn: 0, primaryHeld: false };
     const canonicalBytes = JSON.stringify(input);

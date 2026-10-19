@@ -50,6 +50,8 @@ export interface GhostProductionReplaySession<State> {
   invalidateRecordedOpening?(): void;
   /** Read-only evidence observer; simulation still advances through the existing loop. */
   afterReplayAdvance?(): void;
+  /** Consume admitted between-tick application inputs before this real simulation tick. */
+  beforeReplayAdvance?(tick: number): void;
 }
 
 export interface GhostProductionReplayComposition<State> {
@@ -198,6 +200,7 @@ export class GhostProductionReplayWorld<State> {
     if (targetTick > startingTick) session.completeRecordedOpening?.();
     for (let tick = this.#tick + 1; tick <= targetTick; tick += 1) {
       const actions = this.#ghost.actions.filter((action) => action.tick === tick);
+      session.beforeReplayAdvance?.(tick);
       session.simulation.advanceOne(actions);
       session.afterReplayAdvance?.();
     }

@@ -122,6 +122,22 @@ async function completeCapsule(provenance: Readonly<Record<string, unknown>>) {
 }
 
 describe("Ghost V3 replay admission", () => {
+  it("binds fresh application-frame declarations and refuses accessor authority without reading it", () => {
+    const legacy = createGhostReplayRunContext(replayContextInput());
+    expect(legacy.simulation).not.toHaveProperty("applicationFrames");
+    const fresh = createGhostReplayRunContext(replayContextInput({ applicationFrames: { version: 1, coverage: "cinema-and-boss-intro" } }));
+    expect(readGhostReplayRunContext({ replayContext: JSON.parse(JSON.stringify(fresh)) as unknown })).toEqual(fresh);
+    expect(ghostReplayContextFingerprint(fresh)).not.toBe(ghostReplayContextFingerprint(legacy));
+    let reads = 0;
+    const simulation = { ...fresh.simulation };
+    Object.defineProperty(simulation, "applicationFrames", { get() { reads++; throw new Error("getter ran"); } });
+    expect(readGhostReplayRunContext({ replayContext: { ...fresh, simulation } })).toBeUndefined();
+    expect(reads).toBe(0);
+    expect(() => createGhostReplayRunContext(replayContextInput({ applicationFrames: { version: 1, coverage: "cinema-and-boss-intro" },
+      applicationFramePolicy: { version: 1, kind: "generated-step-intro", secondsPerStep: 1 / 120 } }))).toThrow(/mutually exclusive/);
+    expect(readGhostReplayRunContext({ replayContext: { ...fresh, simulation: { ...fresh.simulation,
+      applicationFrames: { version: 2, coverage: "cinema-and-boss-intro" } } } })).toBeUndefined();
+  });
   it("round-trips explicit opening descriptors and preserves legacy absence", () => {
     const legacy = createGhostReplayRunContext(replayContextInput()); expect(legacy.simulation).not.toHaveProperty("opening");
     const context = createGhostReplayRunContext(replayContextInput({ opening: { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup", destination: "playing", runId: "replay-admission-run" } }));

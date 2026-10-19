@@ -80,6 +80,12 @@ export interface RuntimeFrameCoordinatorOptions {
   readonly handleUi: () => void;
   readonly diagnostics: RuntimeFrameDiagnostics;
   readonly entityCounts: () => Readonly<{ enemies: number; projectiles: number; effects: number }>;
+  /** Passive recording of the already chosen application-frame inputs. */
+  readonly applicationFrameRecording?: Readonly<{
+    begin(seconds: number, confirm: CinemaInputState, cinemaActive: boolean): void;
+    preludeApplied(): void;
+    end(steps: number): void;
+  }>;
 }
 
 /** Owns the real-time frame ordering while fixed-step gameplay remains behind its host port. */
@@ -103,6 +109,7 @@ export class RuntimeFrameCoordinator {
     let simulationSteps = 0;
     if (this.#options.state() === "playing") simulationSteps = this.#advancePlaying(deltaSeconds);
     else this.#advanceInactive();
+    this.#options.applicationFrameRecording?.end(simulationSteps);
     this.#advanceApplication(deltaSeconds);
 
     const simulationFinished = this.#options.now();
@@ -137,14 +144,19 @@ export class RuntimeFrameCoordinator {
       if (input.pressed.has("BracketLeft")) clipper.start();
       if (input.pressed.has("BracketRight")) clipper.stop();
     }
+    const confirm = { key: false, touch: false, pad: false, click: false };
     if (this.#options.state() === "playing" && cinema.active) {
       const gamepad = pad?.connected ? navigator.getGamepads()[pad.index] : null;
-      cinema.update(deltaSeconds, {
+      Object.assign(confirm, {
         key: input.held.has("Space") || input.held.has("Enter") || input.held.has("NumpadEnter"),
         touch: !!input.btnHeld.jump,
         pad: !!gamepad?.buttons[0]?.pressed,
         click: !!input.takeClick() || input.tJump,
       });
+    }
+    if (this.#options.state() === "playing") {
+      this.#options.applicationFrameRecording?.begin(deltaSeconds, confirm, cinema.active);
+      if (cinema.active) cinema.update(deltaSeconds, confirm);
     }
     input.allowLock = this.#options.state() === "playing";
   }
@@ -152,6 +164,7 @@ export class RuntimeFrameCoordinator {
   #advancePlaying(deltaSeconds: number): number {
     const { canvas, document, input } = this.#options;
     this.#options.advancePlayingPrelude(deltaSeconds);
+    this.#options.applicationFrameRecording?.preludeApplied();
     if (input.locked) this.#wasPointerLocked = true;
     const lostCapture = this.#wasPointerLocked && !input.locked;
     const portraitGate = input.touchActive() && canvas.clientHeight > canvas.clientWidth;

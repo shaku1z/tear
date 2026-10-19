@@ -8,6 +8,7 @@ import { mapGhostCapsuleToReplayEnvelope, preflightGhostRecordedCanonicalSnapsho
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { LEGACY_APP_SCREENS, LEGAL_LEGACY_TRANSITIONS, type LegacyAppScreen } from "../app/legacy-state-controller";
+import { GHOST_APPLICATION_FRAMES_V1 } from "./application-frame-events";
 
 export const GHOST_REPLAY_CONTEXT_FORMAT = "tear-ghost-replay-context" as const;
 export const GHOST_REPLAY_CONTEXT_SCHEMA_VERSION = 1 as const;
@@ -37,6 +38,13 @@ export interface GhostRecordedOpeningV1 {
   readonly runId: string;
 }
 
+/** Declared generated-host cadence; never recorded browser frame provenance. */
+export interface GhostGeneratedApplicationFramePolicyV1 {
+  readonly version: 1;
+  readonly kind: "generated-step-intro";
+  readonly secondsPerStep: number;
+}
+
 export interface GhostReplayRunContextV1 {
   readonly format: typeof GHOST_REPLAY_CONTEXT_FORMAT;
   readonly schemaVersion: typeof GHOST_REPLAY_CONTEXT_SCHEMA_VERSION;
@@ -51,6 +59,8 @@ export interface GhostReplayRunContextV1 {
     ticksPerSecond: 120;
     initialState: "seeded-run-start" | "opening-initialized";
     readonly opening?: GhostRecordedOpeningV1;
+    readonly applicationFrames?: typeof GHOST_APPLICATION_FRAMES_V1;
+    readonly applicationFramePolicy?: GhostGeneratedApplicationFramePolicyV1;
   }>;
   readonly build: GhostReplayBuildFingerprint;
   /** Named stream states at tick zero, before gameplay consumes any random values. */
@@ -74,6 +84,8 @@ export interface GhostReplayRunContextInput {
   /** Defaults to the current live durable-capture boundary. */
   readonly initialState?: GhostReplayRunContextV1["simulation"]["initialState"];
   readonly opening?: GhostRecordedOpeningV1;
+  readonly applicationFrames?: typeof GHOST_APPLICATION_FRAMES_V1;
+  readonly applicationFramePolicy?: GhostGeneratedApplicationFramePolicyV1;
 }
 
 export interface GhostReplayRuntimeDescriptor {
@@ -153,6 +165,19 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
   }
   const openingDescriptor = Object.getOwnPropertyDescriptor(simulation, "opening");
   if (openingDescriptor !== undefined && !("value" in openingDescriptor)) throw new TypeError("recorded opening must be data");
+  const frameDescriptor = Object.getOwnPropertyDescriptor(simulation, "applicationFrames");
+  if (frameDescriptor !== undefined && !("value" in frameDescriptor)) throw new TypeError("application-frame declaration must be data");
+  const frameValue: unknown = frameDescriptor?.value, frames = record(frameValue);
+  if (frames !== undefined && Reflect.ownKeys(frames).some((key) => !("value" in (Object.getOwnPropertyDescriptor(frames, key) ?? {})))) throw new TypeError("application-frame declaration must contain data");
+  if (frameValue !== undefined && (frames?.version !== 1 || frames.coverage !== "cinema-and-boss-intro"
+    || Object.keys(frames).some((key) => !["version", "coverage"].includes(key)))) throw new TypeError("unsupported application-frame declaration");
+  const policyDescriptor = Object.getOwnPropertyDescriptor(simulation, "applicationFramePolicy");
+  if (policyDescriptor !== undefined && !("value" in policyDescriptor)) throw new TypeError("generated application-frame policy must be data");
+  const policyValue: unknown = policyDescriptor?.value, policy = record(policyValue);
+  if (policy !== undefined && Reflect.ownKeys(policy).some((key) => !("value" in (Object.getOwnPropertyDescriptor(policy, key) ?? {})))) throw new TypeError("generated application-frame policy must contain data");
+  if (policyValue !== undefined && (policy?.version !== 1 || policy.kind !== "generated-step-intro" || policy.secondsPerStep !== 1 / 120
+    || Object.keys(policy).some((key) => !["version", "kind", "secondsPerStep"].includes(key)))) throw new TypeError("unsupported generated application-frame policy");
+  if (frames !== undefined && policy !== undefined) throw new TypeError("recorded and generated application-frame authorities are mutually exclusive");
   return Object.freeze({
     format: GHOST_REPLAY_CONTEXT_FORMAT,
     schemaVersion: GHOST_REPLAY_CONTEXT_SCHEMA_VERSION,
@@ -164,7 +189,9 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
       weaponId: nonEmptyString(run.weaponId, `${label}.run.weaponId`),
     }),
     simulation: Object.freeze({ ticksPerSecond: 120, initialState: simulation.initialState,
-      ...(openingDescriptor?.value === undefined ? {} : { opening: normalizeOpening(openingDescriptor.value, run.id) }) }),
+      ...(openingDescriptor?.value === undefined ? {} : { opening: normalizeOpening(openingDescriptor.value, run.id) }),
+      ...(frames === undefined ? {} : { applicationFrames: GHOST_APPLICATION_FRAMES_V1 }),
+      ...(policy === undefined ? {} : { applicationFramePolicy: Object.freeze({ version: 1 as const, kind: "generated-step-intro" as const, secondsPerStep: 1 / 120 }) }) }),
     build: fingerprint(candidate.build, `${label}.build`),
     rng: normalizeRng(candidate.rng, `${label}.rng`),
   });
@@ -177,7 +204,9 @@ export function createGhostReplayRunContext(input: GhostReplayRunContextInput): 
     schemaVersion: GHOST_REPLAY_CONTEXT_SCHEMA_VERSION,
     run: { id: input.runId, seed: input.seed, mode: input.mode, difficulty: input.difficulty, weaponId: input.weaponId },
     simulation: { ticksPerSecond: input.ticksPerSecond, initialState: input.initialState ?? "opening-initialized",
-      ...(input.opening === undefined ? {} : { opening: input.opening }) },
+      ...(input.opening === undefined ? {} : { opening: input.opening }),
+      ...(input.applicationFrames === undefined ? {} : { applicationFrames: input.applicationFrames }),
+      ...(input.applicationFramePolicy === undefined ? {} : { applicationFramePolicy: input.applicationFramePolicy }) },
     build: input.build,
     rng: input.rng,
   }, "replay context");

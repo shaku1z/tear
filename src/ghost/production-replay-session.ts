@@ -3,7 +3,8 @@ import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
-import { issueGhostRecordedOpeningPermit } from "./replay-admission";
+import { issueGhostRecordedOpeningPermit, readGhostReplayRunContext } from "./replay-admission";
+import { readGhostApplicationClockSchedule } from "./application-frame-events";
 import { createPracticeFromHere, GhostProductionReplayWorld, type GhostPracticeChild, type GhostPracticeMode, type GhostSeekResult } from "./replay-world";
 
 export interface GhostVerifiedProductionReplaySession {
@@ -38,9 +39,13 @@ export function createGhostProductionReplaySession(
   const verifiedReceiptTicks = new Set(verification.comparisons.filter((comparison) => comparison.equal).map((comparison) => comparison.tick));
   const inputs = new Map(receipts.map((receipt) => [receipt.tick, receipt.input]));
   const openingPermit = issueGhostRecordedOpeningPermit(capsule);
+  const context = readGhostReplayRunContext(capsule.manifest.provenance);
+  const applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);
   const composition = createProductionGhostReplayComposition({
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
     inputSnapshots: inputs,
+    requireRecordedApplicationFrames: true,
+    ...(applicationClock === undefined ? {} : { applicationClock }),
     ...(openingPermit === undefined ? {} : { openingPermit }),
   });
   const checkpointAt = (tick: number) => mapped.ghost.snapshots.find((snapshot) => snapshot.tick === tick);

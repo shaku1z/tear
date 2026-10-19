@@ -30,6 +30,7 @@ export interface ProductionWaveRewardRuntimeOptions {
   readonly currentTick?: () => number;
   readonly beginCampaignChapter?: (index: number, priorOutro?: ChapterPage | null) => void;
   readonly chapterFlowActive?: () => boolean;
+  readonly bossIntroDelay?: (enemy: object, duration: number) => number;
 }
 
 /**
@@ -142,6 +143,8 @@ export function createProductionWaveRewardRuntime(
           arenaFor: (bossId) => (createBossArena(bossId, config.view.w, config.view.h, config.world.groundY,
             config.bossArena.reformWarn)?.map((platform) => ({ ...platform })) ?? null) as never,
         });
+        world.state.setBossIntro({ boss: enemy, t: 0, dur: config.bossTheater.introDur,
+          delay: options.bossIntroDelay?.(enemy, config.bossTheater.introDur) ?? 0 });
         note("bossPresentation")();
       },
     },

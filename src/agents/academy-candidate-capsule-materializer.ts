@@ -56,6 +56,7 @@ export async function materializeAcademyCandidateCapsule(
     runId: candidate.episodeId, seed: scenario.seed, mode: scenario.start.mode,
     difficulty: scenario.start.difficulty, weaponId: scenario.start.weapon,
     ticksPerSecond: 120, build: origin.build, rng: origin.rng,
+    ...(origin.applicationFramePolicy === undefined ? {} : { applicationFramePolicy: origin.applicationFramePolicy }),
   });
   const sourceTracks = captureAcademyCandidateTracks(candidate);
   const recorder = new GhostStreamingRecorder({
