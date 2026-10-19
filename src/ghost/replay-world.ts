@@ -99,11 +99,26 @@ export class GhostReplayWorld {
       if (!result.ok) throw new TypeError(`replay snapshot restore failed: ${result.issues.map((issue) => issue.message).join("; ")}`);
       this.#tick = snapshot.tick;
     }
-    for (const action of this.#ghost.actions) {
-      if (action.tick <= this.#tick || action.tick > targetTick) continue;
-      this.#simulation.advance(this.#world, this.#tick, action.tick);
-      this.#tick = action.tick;
-      this.#simulation.apply(this.#world, action);
+    let actionIndex = 0;
+    while (actionIndex < this.#ghost.actions.length) {
+      const actionTick = this.#ghost.actions[actionIndex]?.tick;
+      if (actionTick === undefined) break;
+      const groupStart = actionIndex;
+      while (actionIndex < this.#ghost.actions.length
+        && this.#ghost.actions[actionIndex]?.tick === actionTick) {
+        actionIndex += 1;
+      }
+      if (actionTick > targetTick) continue;
+      // A snapshot already includes all commands at its tick. Keep the whole
+      // group skipped at/before the restored tick, while applying every
+      // command in a newly reached tick in authored order.
+      if (actionTick <= this.#tick) continue;
+      this.#simulation.advance(this.#world, this.#tick, actionTick);
+      this.#tick = actionTick;
+      for (let index = groupStart; index < actionIndex; index += 1) {
+        const action = this.#ghost.actions[index];
+        if (action !== undefined) this.#simulation.apply(this.#world, action);
+      }
     }
     this.#simulation.advance(this.#world, this.#tick, targetTick);
     this.#tick = targetTick;

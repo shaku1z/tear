@@ -16,6 +16,7 @@ import {
   captureCodecState,
   createDefaultStateCodecRegistry,
   type TearCodecWorld,
+  type TearCodecValue,
   type TearCausalEventV1,
   type TearSnapshotV1,
 } from "../../src/tearbench";
@@ -58,6 +59,9 @@ const simulation: GhostReplaySimulation = {
     if (envelope.command.type === "move") player.x += envelope.command.x / 1_000;
     if (envelope.command.type === "dash") player.x += envelope.command.x / 100;
     world.components.set("tear.player.v1", player);
+    const worldState = structuredClone(world.components.get("tear.world.v1")) as { clock: number; identityState: TearCodecValue; commandTrace?: string[] };
+    worldState.commandTrace = [...(worldState.commandTrace ?? []), envelope.command.type];
+    world.components.set("tear.world.v1", worldState);
   },
   advance(world, _fromTick, toTick) {
     const run = structuredClone(world.components.get("tear.run.v1")) as { elapsedTicks: number };
@@ -119,6 +123,19 @@ function ghost(id = "replay-fixture", eventTick = 20) {
   });
 }
 
+function sameTickGhost() {
+  return createGhostV3({
+    ...ghost("same-tick-replay"),
+    actions: [
+      // The keyframe at tick 5 already includes this group.
+      { kind: "command", id: 1, tick: 5, command: { type: "move", x: 1_000, y: 0 } },
+      { kind: "command", id: 2, tick: 5, command: { type: "dash", x: 1_000, y: 0 } },
+      { kind: "command", id: 3, tick: 10, command: { type: "move", x: 1_000, y: 0 } },
+      { kind: "command", id: 4, tick: 10, command: { type: "dash", x: 1_000, y: 0 } },
+    ],
+  });
+}
+
 describe("Ghost replay world, Theater, and practice", () => {
   it("produces equal semantic hashes for full playback and seek-to-tick", () => {
     const source = ghost();
@@ -127,6 +144,53 @@ describe("Ghost replay world, Theater, and practice", () => {
     expect(seek.semanticHash).toBe(full.semanticHash);
     expect(seek).toMatchObject({ tick: 30, usedSnapshotId: "keyframe-5", presentationFallback: true });
     expect(seek.correction).toBeUndefined();
+  });
+
+  it("applies every command in a same-tick group once and keeps authored order across repeated seeks", () => {
+    const source = sameTickGhost();
+    const advances: [number, number][] = [];
+    const replay = new GhostReplayWorld(source, {
+      ...simulation,
+      advance(world, fromTick, toTick) {
+        advances.push([fromTick, toTick]);
+        simulation.advance(world, fromTick, toTick);
+      },
+    });
+
+    replay.seek(5);
+    expect(replay.world().components.get("tear.player.v1")).toMatchObject({ x: 5 });
+    expect(replay.world().components.get("tear.world.v1")).not.toHaveProperty("commandTrace");
+
+    replay.seek(10);
+    const firstWorld = replay.world();
+    expect(firstWorld.components.get("tear.player.v1")).toMatchObject({ x: 16 });
+    expect(firstWorld.components.get("tear.world.v1")).toMatchObject({ commandTrace: ["move", "dash"] });
+    expect(advances.filter(([from, to]) => from === 5 && to === 10)).toHaveLength(1);
+
+    replay.seek(10);
+    const secondWorld = replay.world();
+    expect(secondWorld.components.get("tear.player.v1")).toMatchObject({ x: 16 });
+    expect(secondWorld.components.get("tear.world.v1")).toMatchObject({ commandTrace: ["move", "dash"] });
+    expect(advances.filter(([from, to]) => from === 5 && to === 10)).toHaveLength(2);
+
+    replay.seek(5);
+    expect(replay.world().components.get("tear.player.v1")).toMatchObject({ x: 5 });
+    expect(replay.world().components.get("tear.world.v1")).not.toHaveProperty("commandTrace");
+  });
+
+  it("skips a future group without discarding later authored commands before the seek target", () => {
+    const source = sameTickGhost();
+    const replay = new GhostReplayWorld(createGhostV3({
+      ...source,
+      actions: [
+        { kind: "command", id: 5, tick: 30, command: { type: "move", x: 99_000, y: 0 } },
+        ...source.actions,
+      ],
+    }), simulation);
+
+    replay.seek(10);
+    expect(replay.world().components.get("tear.player.v1")).toMatchObject({ x: 16 });
+    expect(replay.world().components.get("tear.world.v1")).toMatchObject({ commandTrace: ["move", "dash"] });
   });
 
   it("creates a safe unranked Practice From Here child without mutating its source", () => {

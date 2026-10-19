@@ -840,7 +840,10 @@ frozen evidence record.
   profile, economy, cloud, and recording effects. A dedicated built-browser
   campaign capture now preserves an active chapter director at the explicit
   `opening-initialized` tick-zero boundary and reproduces its receipt through
-  production replay. Pixel/device output fidelity remains C25/C40 work. C29
+  production replay. The codec-only replay fallback retains every same-tick
+  command in authored order and skips groups included in its restored snapshot;
+  `ghost-replay-world.test.ts` covers snapshot boundaries and repeated seeks.
+  Pixel/device output fidelity remains C25/C40 work. C29
   also now exposes
   player-visible semantic comparison: from Profile -> Vault, select two
   through nine healthy completed V3 capsules and use `COMPARE N` to
