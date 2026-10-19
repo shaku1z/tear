@@ -90,6 +90,22 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
+  it("keeps local Vault controls stable and renders an explicit separate owner recovery catalog", () => {
+    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createControlContext(controls));
+    const local = { id: "profile" as const, tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],
+      archive: { status: "idle" as const, detail: "Local files", canPick: true },
+      replays: [{ id: "local-source", title: "Local capsule", detail: "Local bytes", canDownloadArchive: true, available: true }] };
+    const inactive = { status: "unavailable" as const, detail: "Sign in to your account.", catalogVisible: false, canLoad: false, canRecover: false, entries: [] };
+    renderer.profile({ ...local, ownerRecovery: inactive });
+    expect(controls.find((control) => control.label === "LOAD MY CLOUD CAPSULES")).toMatchObject({ enabled: false, action: { type: "profile.loadOwnGhostCapsules" } });
+    expect(controls.find((control) => control.label === "DOWNLOAD")).toMatchObject({ x: 968, y: 504, action: { id: "local-source" } });
+    controls.length = 0;
+    renderer.profile({ ...local, ownerRecovery: { ...inactive, status: "ready", catalogVisible: true, canLoad: true, canRecover: true,
+      entries: [{ capsuleId: "cloud-source", buildId: "source-build", rootIntegrity: "root", byteLength: 123 }] } });
+    expect(controls.find((control) => control.label === "RECOVER TO THIS DEVICE")).toMatchObject({ enabled: true, action: { type: "profile.recoverOwnGhostCapsule", id: "cloud-source" } });
+    expect(controls.some((control) => control.label === "DOWNLOAD" || control.label.includes("THEATER"))).toBe(false);
+    expect(controls.some((control) => control.action.type === "profile.closeOwnGhostCatalog")).toBe(true);
+  });
   it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
     const controls: ScreenControl[] = [], context = createRenderContext(controls), title = vi.spyOn(context.ui, "title"), copy = vi.fn<CanvasRenderingContext2D["fillText"]>();
     context.canvas.fillText = copy;

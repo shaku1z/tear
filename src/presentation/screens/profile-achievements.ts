@@ -11,6 +11,28 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
     canvas.fillRect(context.width / 2 - 65 * context.enterAmount, 108, 130 * context.enterAmount, 3); canvas.globalAlpha = 1;
     passport(view);
     tabs(context, view.tabs, (id) => ({ type: "profile.selectTab", id }), 252);
+    if (view.tab === "vault" && view.ownerRecovery) {
+      const recovery = view.ownerRecovery;
+      context.enqueue({ x: context.width / 2 + 260, y: 64, w: 300, h: 52, size: ui.t.type.micro,
+        label: "LOAD MY CLOUD CAPSULES", sub: ellipsize(canvas, recovery.detail, 280), enabled: recovery.canLoad,
+        action: { type: "profile.loadOwnGhostCapsules" } });
+      if (recovery.catalogVisible) {
+        const left = context.width / 2 - 560, top = 390, bottom = context.height - 110;
+        context.enqueue({ x: left, y: 312, w: 180, h: 36, label: "LOCAL VAULT", action: { type: "profile.closeOwnGhostCatalog" } });
+        ui.text(canvas, ellipsize(canvas, recovery.detail, 900), left + 200, 336, ui.t.type.caption, "left", ui.t.alpha.soft);
+        if (recovery.entries.length === 0 && recovery.status === "ready") ui.text(canvas, "No recoverable cloud capsules.", left, top + 28, ui.t.type.body);
+        recovery.entries.forEach((entry, index) => {
+          const y = top + index * 96 - context.scroll;
+          if (y < top || y + 80 > bottom) return;
+          ui.text(canvas, ellipsize(canvas, entry.capsuleId, 650), left, y + 24, ui.t.type.label);
+          ui.text(canvas, ellipsize(canvas, `${entry.buildId} / ROOT ${entry.rootIntegrity} / ${String(entry.byteLength)} BYTES`, 650), left, y + 46, ui.t.type.micro, "left", ui.t.alpha.muted);
+          if (entry.localStatus) ui.text(canvas, entry.localStatus === "already-recovered" ? "ALREADY STORED ON THIS DEVICE" : "STORED ON THIS DEVICE", left, y + 67, ui.t.type.micro);
+          context.enqueue({ x: left + 770, y: y + 12, w: 350, h: 40, label: "RECOVER TO THIS DEVICE", enabled: recovery.canRecover,
+            action: { type: "profile.recoverOwnGhostCapsule", id: entry.capsuleId } });
+        });
+        scrollHint(context, view.canScrollUp, view.canScrollDown); backControl(context); return;
+      }
+    }
     const panelX = context.width / 2 - 460;
     if (view.message) ui.text(canvas, view.message, context.width / 2, 296, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.tab === "vault" && view.archive) {

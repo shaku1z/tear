@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { LiveGhostOwnerRecoveryController } from "../../src/app/live-ghost-owner-recovery-controller";
+import { createStandaloneGhostPublicationRuntime } from "../../src/platform/ghost-publication-runtime";
 import { GhostForegroundOwnerRecovery } from "../../src/ghost/foreground-owner-recovery";
 import { createMemoryGhostVaultBackend, GhostLocalVault, GhostStreamingRecorder, GHOST_VAULT_STORES,
   ghostCapsuleProtectionKey, parseGhostCapsuleManifest, type GhostVaultBackend } from "../../src/ghost/capsule-vault";
@@ -25,6 +27,66 @@ async function storedState(backend: GhostVaultBackend) {
     await Promise.all((await backend.keys(store)).slice().sort().map(async (key) => [key, await backend.get(store, key)] as const))] as const)));
 }
 describe("foreground Ghost owner recovery", () => {
+  it("wires explicit owner catalog and recovery to the real service and Vault without navigation or automatic work", async () => {
+    const f = await source(), backend = createMemoryGhostVaultBackend(), vault = new GhostLocalVault(backend), recovered = vi.fn();
+    let tokens = 0, objects = 0;
+    const fetcher = vi.fn<typeof fetch>((url) => {
+      if ((url instanceof Request ? url.url : new Request(url).url).includes("?scope=own")) return Promise.resolve(Response.json({ capsules: [f.row] }));
+      objects++; return Promise.resolve(new Response(f.bytes));
+    });
+    const runtime = createStandaloneGhostPublicationRuntime({ target: "standalone", endpoint: "https://publication.test",
+      loadBearer: () => Promise.resolve({ acquireAuthorization: () => { tokens++; return Promise.resolve({ authorization: "Bearer unit-action" }); } }) });
+    const controller = new LiveGhostOwnerRecoveryController({ runtime, currentActor: () => "unit-owner", openVault: () => Promise.resolve(vault), fetch: fetcher, recovered });
+    const before = await storedState(backend);
+    expect(controller.snapshot()).toMatchObject({ status: "idle", canLoad: true, catalogVisible: false, entries: [] });
+    controller.snapshot(); controller.close();
+    expect(fetcher).not.toHaveBeenCalled(); expect(tokens).toBe(0); expect(await storedState(backend)).toEqual(before);
+    await controller.loadOwn();
+    expect(controller.snapshot()).toMatchObject({ status: "ready", catalogVisible: true, entries: [{ capsuleId: f.manifest.id }] });
+    expect(await storedState(backend)).toEqual(before);
+    expect(await controller.recover(f.manifest.id)).toMatchObject({ operationId: 2, status: "recovered", superseded: false });
+    expect(await vault.getManifest(f.manifest.id)).toEqual(f.manifest); expect(recovered).toHaveBeenCalledOnce();
+    const stored = await storedState(backend);
+    expect(await controller.recover(f.manifest.id)).toMatchObject({ operationId: 3, status: "already-recovered", superseded: false });
+    expect(await storedState(backend)).toEqual(stored); expect(objects).toBe(1); expect(tokens).toBe(4);
+    expect(controller.snapshot().entries[0]?.localStatus).toBe("already-recovered");
+    controller.close(); expect(controller.snapshot().entries).toEqual([]);
+  });
+
+  it("refuses pending credentials after A→B→A, body-time account changes, and preserves a committed original operation", async () => {
+    const f = await source(), backend = createMemoryGhostVaultBackend(), vault = new GhostLocalVault(backend);
+    let actor = "account-A", tokenReady: (() => void) | undefined, resolveToken: ((value: { authorization: string }) => void) | undefined;
+    const tokenStarted = new Promise<void>((resolve) => { tokenReady = resolve; });
+    let deferredToken = true;
+    const runtime = createStandaloneGhostPublicationRuntime({ target: "standalone", endpoint: "https://publication.test",
+      loadBearer: () => Promise.resolve({ acquireAuthorization: () => deferredToken ? new Promise((resolve) => { resolveToken = resolve; tokenReady?.(); }) : Promise.resolve({ authorization: "Bearer unit-current" }) }) });
+    let bodyReady: (() => void) | undefined, resolveBody: ((value: ArrayBuffer) => void) | undefined, deferredBody = false;
+    const bodyStarted = new Promise<void>((resolve) => { bodyReady = resolve; });
+    const fetcher = vi.fn<typeof fetch>((url) => {
+      if ((url instanceof Request ? url.url : new Request(url).url).includes("?scope=own")) return Promise.resolve(Response.json({ capsules: [f.row] }));
+      const response = new Response(f.bytes);
+      if (deferredBody) vi.spyOn(response, "arrayBuffer").mockImplementation(() => new Promise((resolve) => { resolveBody = resolve; bodyReady?.(); }));
+      return Promise.resolve(response);
+    });
+    const recovered = vi.fn(), controller = new LiveGhostOwnerRecoveryController({ runtime, currentActor: () => actor, openVault: () => Promise.resolve(vault), fetch: fetcher, recovered });
+    const before = await storedState(backend), pending = controller.loadOwn(); await tokenStarted;
+    actor = "account-B"; controller.accountChanged(); actor = "account-A"; controller.accountChanged();
+    if (resolveToken === undefined) throw new Error("token control not reached"); resolveToken({ authorization: "Bearer superseded" }); await pending;
+    expect(fetcher).not.toHaveBeenCalled(); expect(await storedState(backend)).toEqual(before);
+    deferredToken = false; await controller.loadOwn(); deferredBody = true;
+    const bodyPending = controller.recover(f.manifest.id); await bodyStarted;
+    actor = "account-B"; controller.accountChanged();
+    if (resolveBody === undefined) throw new Error("body control not reached"); resolveBody(Uint8Array.from(f.bytes).buffer); await bodyPending;
+    expect(await storedState(backend)).toEqual(before); expect(controller.snapshot().entries).toEqual([]); expect(recovered).not.toHaveBeenCalled();
+    deferredBody = false; actor = "account-A"; controller.accountChanged(); await controller.loadOwn();
+    const importOriginal = vault.importCapsule.bind(vault);
+    vi.spyOn(vault, "importCapsule").mockImplementation(async (...args) => {
+      const manifest = await importOriginal(...args); actor = "account-B"; controller.accountChanged(); return manifest;
+    });
+    const committed = await controller.recover(f.manifest.id);
+    expect(committed).toMatchObject({ operationId: 5, capsuleId: f.manifest.id, status: "recovered", superseded: true });
+    expect(await vault.getManifest(f.manifest.id)).toEqual(f.manifest); expect(controller.snapshot().entries).toEqual([]); expect(recovered).not.toHaveBeenCalled();
+  });
   it.each(["id", "schema", "root"] as const)("rejects a valid SHA-matching object with mismatched %s authority before any Vault write", async (mismatch) => {
     const f = await source(), retained = await source("retained-local-capsule");
     const backend = createMemoryGhostVaultBackend(), vault = new GhostLocalVault(backend);

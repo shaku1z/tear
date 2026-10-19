@@ -10,6 +10,8 @@ export interface GhostOwnerRecoveryCatalogEntry {
 export interface GhostForegroundOwnerRecoveryOptions {
   readonly endpoint: string; readonly fetch: typeof fetch; readonly bearer: GhostPublicationBearerPort;
   readonly vault: GhostLocalVault; readonly maximumBytes?: number;
+  /** In-memory foreground owner/generation fence. Never credential persistence. */
+  readonly assertCurrent?: () => void;
 }
 export type GhostOwnerRecoveryResult =
   | Readonly<{ readonly status: "recovered"; readonly manifest: TearGhostManifest }>
@@ -37,18 +39,24 @@ function parseEntry(value: unknown): GhostOwnerRecoveryCatalogEntry | undefined 
 export class GhostForegroundOwnerRecovery {
   readonly #o: GhostForegroundOwnerRecoveryOptions;
   constructor(options: GhostForegroundOwnerRecoveryOptions) { this.#o = options; }
-  async #request(path: string): Promise<Response> { const token = await this.#o.bearer.acquireAuthorization(); return this.#o.fetch(`${this.#o.endpoint.replace(/\/$/u, "")}${path}`, { headers: { authorization: token.authorization, accept: "application/json" } }); }
+  async #request(path: string): Promise<Response> {
+    this.#o.assertCurrent?.(); const token = await this.#o.bearer.acquireAuthorization(); this.#o.assertCurrent?.();
+    const response = await this.#o.fetch(`${this.#o.endpoint.replace(/\/$/u, "")}${path}`, { headers: { authorization: token.authorization, accept: "application/json" } });
+    this.#o.assertCurrent?.(); return response;
+  }
   async listOwnOnce(): Promise<readonly GhostOwnerRecoveryCatalogEntry[]> {
     const response = await this.#request("/v1/capsules?scope=own"); if (!response.ok) throw new Error(`Ghost recovery catalog failed: ${String(response.status)}`);
-    const body = record(await response.json()), rows = body.capsules;
+    const raw: unknown = await response.json(); this.#o.assertCurrent?.(); const body = record(raw), rows = body.capsules;
     if (!Array.isArray(rows)) throw new TypeError("malformed Ghost recovery catalog");
     const entries = rows.map(parseEntry).filter((entry): entry is GhostOwnerRecoveryCatalogEntry => entry !== undefined); if (new Set(entries.map((entry) => entry.capsuleId)).size !== entries.length) throw new TypeError("duplicate Ghost recovery catalog id");
     return Object.freeze(entries);
   }
   async recoverOnce(capsuleId: string): Promise<GhostOwnerRecoveryResult> {
     const entry = (await this.listOwnOnce()).find((candidate) => candidate.capsuleId === capsuleId);
+    this.#o.assertCurrent?.();
     if (entry === undefined) return Object.freeze({ status: "absent" });
     const existing = await this.#o.vault.getManifest(capsuleId);
+    this.#o.assertCurrent?.();
     if (existing !== undefined) {
       if (existing.schemaVersion === entry.schemaVersion && existing.rootIntegrity === entry.rootIntegrity) return Object.freeze({ status: "already-recovered", manifest: existing });
       throw new RangeError("local Ghost recovery custody conflicts with cloud capsule");
@@ -57,13 +65,16 @@ export class GhostForegroundOwnerRecovery {
     if (response.status === 404) return Object.freeze({ status: "absent" });
     if (response.status !== 200 || response.headers.has("content-range")) throw new TypeError("Ghost recovery requires one complete object response");
     const maximum = this.#o.maximumBytes ?? DEFAULT_MAXIMUM_BYTES, bytes = new Uint8Array(await response.arrayBuffer());
+    this.#o.assertCurrent?.();
     if (bytes.byteLength !== entry.byteLength || bytes.byteLength > maximum) throw new RangeError("Ghost recovery object length is invalid");
     const encoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     if (new TextEncoder().encode(encoded).byteLength !== bytes.byteLength || await ghostSha256(bytes) !== entry.contentHash) throw new TypeError("Ghost recovery object hash or UTF-8 encoding is invalid");
+    this.#o.assertCurrent?.();
     // Catalog custody must bind the canonical manifest before import can commit
     // any chunks, indexes, protection metadata or the Vault mutation epoch.
     const downloaded = parseGhostCapsuleManifest(record(JSON.parse(encoded) as unknown).manifest);
     if (downloaded.id !== entry.capsuleId || downloaded.schemaVersion !== entry.schemaVersion || downloaded.rootIntegrity !== entry.rootIntegrity) throw new TypeError("recovered Ghost manifest does not match cloud custody");
+    this.#o.assertCurrent?.();
     const manifest = await this.#o.vault.importCapsule(encoded, { maxEncodedBytes: maximum, maxChunks: 20_000, maxChunkBytes: 8 * 1024 * 1024, maxExpansionRatio: 100 });
     if (manifest.id !== entry.capsuleId || manifest.schemaVersion !== entry.schemaVersion || manifest.rootIntegrity !== entry.rootIntegrity) throw new TypeError("recovered Ghost manifest does not match cloud custody");
     // Reopen through the Vault parser after the atomic import boundary.

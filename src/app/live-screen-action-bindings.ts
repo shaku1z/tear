@@ -32,6 +32,7 @@ export interface ScreenActionBindingPorts {
   readonly openGhostLab: (destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence") => void;
   readonly openGhostPublication: (id: string) => void; readonly grantGhostPublication: () => void; readonly runGhostPublicationOnce: () => void; readonly cancelGhostPublication: () => void;
   readonly openGhostSupport: (id: string) => void; readonly createGhostSupport: () => void;
+  readonly loadOwnGhostCapsules: () => void; readonly recoverOwnGhostCapsule: (id: string) => void; readonly closeOwnGhostCatalog: () => void;
   readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;
@@ -107,6 +108,9 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.cancelGhostRestore": (action) => { ports.ghostFiles.cancelArchive(action.id, action.revision); },
     "profile.cancelGhostArchiveSelection": () => { ports.ghostFiles.cancelArchive(); },
     "profile.downloadGhostArchive": (action) => { ports.ghostFiles.downloadArchive(action.id); },
+    "profile.loadOwnGhostCapsules": () => { ports.resetScroll(); ports.loadOwnGhostCapsules(); },
+    "profile.recoverOwnGhostCapsule": (action) => { ports.recoverOwnGhostCapsule(action.id); },
+    "profile.closeOwnGhostCatalog": () => { ports.resetScroll(); ports.closeOwnGhostCatalog(); },
     "profile.openGhostPublication": (action) => { ports.openGhostPublication(action.id); },
     "profile.openGhostSupport": (action) => { ports.openGhostSupport(action.id); },
     "ghostpublication.grant": () => { ports.grantGhostPublication(); },

@@ -14,6 +14,7 @@ import { buildLeaderboardRow, buildProfileRecords, buildProfileReplays, buildPro
 import { ReplayLibraryController } from "./replay-library-controller";
 import { renderReplayThumbnail } from "../presentation/replay-thumbnail";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
+import type { LiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
@@ -38,6 +39,7 @@ export interface LibraryScreenServices {
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly ghostVault: GhostVaultLibraryPort;
+  readonly ownerRecovery?: Pick<LiveGhostOwnerRecoveryController, "snapshot" | "close">;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
   readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
@@ -179,7 +181,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     services.renderers.codex(result.view);
   };
   const renderProfile = (): void => {
-    profileTab = services.stepTab(profileTabs, profileTab, () => { services.setScroll(0); profileMessage = ""; });
+    profileTab = services.stepTab(profileTabs, profileTab, () => { services.setScroll(0); profileMessage = ""; services.ownerRecovery?.close(); });
     let ghostVault = services.ghostVault.snapshot();
     if (profileTab === "vault" && ghostVault.status === "idle") {
       services.ghostVault.refresh();
@@ -230,8 +232,12 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       rarityColor: (rarity) => (Object.entries(d.ACH.RARITY).find(([id]) => id === rarity)?.[1] ?? d.ACH.RARITY.common).color, stages: d.STAGES, bosses: BOSS_ROSTER,
       stat: (key) => d.PROFILE.stat(key), formatTime: services.formatTime,
       difficultyAccent: (id) => difficultyHeat[id] ?? d.UI.t.color.danger });
-    services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll));
-    services.renderers.profile({ ...result.view, ...(profileTab === "vault" && ghostVault.archive !== undefined ? { archive: ghostVault.archive } : {}) });
+    const ownerRecovery = profileTab === "vault" ? services.ownerRecovery?.snapshot() : undefined;
+    const maximumScroll = ownerRecovery?.catalogVisible === true ? Math.max(0, ownerRecovery.entries.length * 96 - (services.height - 110 - 390)) : result.maximumScroll;
+    services.setScroll(services.clamp(services.scroll(), 0, maximumScroll));
+    services.renderers.profile({ ...result.view, ...(ownerRecovery === undefined ? {} : { ownerRecovery }),
+      ...(ownerRecovery?.catalogVisible === true ? { canScrollUp: services.scroll() > 0, canScrollDown: services.scroll() < maximumScroll } : {}),
+      ...(profileTab === "vault" && ghostVault.archive !== undefined ? { archive: ghostVault.archive } : {}) });
   };
   const renderAchievements = (): void => {
     const findAchievement = (source: AchievementSource) => {
@@ -304,7 +310,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     cycleCodexSort: () => { codexSort = codexSort === "category" ? "name" : codexSort === "name" ? "type" : "category"; services.setScroll(0); },
     inspectCodexAbility: (id) => { if (codexTab !== "abilities") return; const upgrade = d.UPGRADES.find((entry) => entry.id === id);
       const count = 1 + (upgrade?.tiers?.length ?? 0); if (count > 1) codexTierView[id] = ((codexTierView[id] ?? 0) + 1) % count; },
-    selectProfileTab: (id) => { profileTab = id; services.setScroll(0); profileMessage = ""; }, setProfileMessage: (message) => { profileMessage = message; },
+    selectProfileTab: (id) => { services.ownerRecovery?.close(); profileTab = id; services.setScroll(0); profileMessage = ""; }, setProfileMessage: (message) => { profileMessage = message; },
     selectAchievementCategory: (id) => { achievementFilter = id; services.setScroll(0); },
     selectLeaderboardTab: (id) => { leaderboardTab = id; services.setScroll(0); leaderboardMessage = ""; },
     selectLeaderboardBoard: (id) => { const [kind, value = ""] = id.split(":"); if (kind === "mode") leaderboardMode = value;

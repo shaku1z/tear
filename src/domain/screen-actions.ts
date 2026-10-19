@@ -36,6 +36,9 @@ export type ScreenAction =
   | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostArchiveSelection" }
   | { readonly type: "profile.downloadGhostArchive"; readonly id: string }
+  | { readonly type: "profile.loadOwnGhostCapsules" }
+  | { readonly type: "profile.recoverOwnGhostCapsule"; readonly id: string }
+  | { readonly type: "profile.closeOwnGhostCatalog" }
   | { readonly type: "profile.openGhostPublication"; readonly id: string }
   | { readonly type: "profile.openGhostSupport"; readonly id: string }
   | { readonly type: "profile.signIn" }

@@ -105,6 +105,12 @@ export interface GhostArchiveOperationView {
   readonly capsuleId?: string; readonly schemaVersion?: number; readonly byteLength?: number; readonly sha256?: string; readonly rootIntegrity?: string;
   readonly canRestore?: boolean; readonly canReselect?: boolean; readonly canCancel?: boolean; readonly canCancelSelection?: boolean;
 }
+export interface GhostOwnerRecoveryView {
+  readonly status: "idle" | "unavailable" | "loading" | "ready" | "recovering" | "failed";
+  readonly detail: string; readonly catalogVisible: boolean; readonly canLoad: boolean; readonly canRecover: boolean;
+  readonly entries: readonly Readonly<{ capsuleId: string; buildId: string; rootIntegrity: string; byteLength: number;
+    localStatus?: "recovered" | "already-recovered" }>[];
+}
 export interface ProgressView {
   readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean;
   /** Section heading the row belongs to on the pause/defeat progress panel (source drawRunProgressPanel). */
@@ -164,6 +170,7 @@ export interface ProfileScreenView {
   readonly journey?: { readonly biomes: readonly ChoiceView[]; readonly bosses: readonly ChoiceView[] };
   readonly emptyMessage?: string;
   readonly archive?: GhostArchiveOperationView;
+  readonly ownerRecovery?: GhostOwnerRecoveryView;
 }
 export interface AchievementsScreenView {
   readonly id: "achievements"; readonly category: string; readonly categories: readonly ChoiceView[];

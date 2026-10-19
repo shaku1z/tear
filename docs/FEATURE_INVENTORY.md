@@ -1547,4 +1547,17 @@ strict UTF-8, and imports/reopens only through the local Vault's existing
 schema/root validation. Exact existing custody is idempotent; absent cloud
 records are explicit and conflicting local custody refuses. It retains no
 cloud catalog metadata or object bytes outside Vault and creates no scan,
-timer, autosync, normal UI, deploy, or account-lifecycle behavior.
+timer, autosync, deploy, or account-lifecycle behavior.
+
+Profile → Vault now has explicit **LOAD MY CLOUD CAPSULES** and per-entry
+**RECOVER TO THIS DEVICE** controls in a separate owner catalog. The existing
+valid standalone capability, non-guest account and local storage are required.
+Navigation/render/refresh stay inert. Actual account notifications invalidate
+actor/generation-bound operations even across A→B→A; stale credentials/responses
+cannot issue later requests or initiate import. Already-started committed imports
+retain their original operation ID and do not repaint a newer account's view.
+Exact existing local custody is idempotent, while local health/playback remain
+separate. Focused controller/service/Vault and UI controls cover this local
+wiring; the parent owns fresh negative normal-browser navigation evidence.
+Positive real-account retrieval, cross-device/outage acceptance, deployment and
+account deletion remain unverified or separate work.

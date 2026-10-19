@@ -3,6 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { createLiveScreenActionBindings, type ScreenActionBindingPorts } from "../../src/app/live-screen-action-bindings";
 
 describe("live screen action bindings", () => {
+  it("routes only explicit cloud catalog and selected recovery actions through eager ports", () => {
+    const loadOwnGhostCapsules = vi.fn(), recoverOwnGhostCapsule = vi.fn(), closeOwnGhostCatalog = vi.fn(), resetScroll = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ loadOwnGhostCapsules, recoverOwnGhostCapsule, closeOwnGhostCatalog, resetScroll } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "profile.loadOwnGhostCapsules" }); dispatch({ type: "profile.recoverOwnGhostCapsule", id: "selected-original" }); dispatch({ type: "profile.closeOwnGhostCatalog" });
+    expect(loadOwnGhostCapsules).toHaveBeenCalledExactlyOnceWith(); expect(recoverOwnGhostCapsule).toHaveBeenCalledExactlyOnceWith("selected-original");
+    expect(closeOwnGhostCatalog).toHaveBeenCalledOnce(); expect(resetScroll).toHaveBeenCalledTimes(2);
+  });
   it("dispatches normal archive picking synchronously through eager ports with exact job revision controls", () => {
     const ghostFiles = { pickArchive: vi.fn(), restoreArchive: vi.fn(), cancelArchive: vi.fn(), downloadArchive: vi.fn() };
     const dispatch = createLiveScreenActionBindings({ ghostFiles } as unknown as ScreenActionBindingPorts);

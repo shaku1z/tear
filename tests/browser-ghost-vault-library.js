@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- direct Node browser evidence consumer. */
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
@@ -32,6 +33,22 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   }), { id: manifest.id, corruptChunkId: manifest.chunks[0].id });
 
   await boot();
+  const recoveryRequests = [];
+  const recoveryPattern = "**/v1/capsules**", blockRecovery = (route) => route.abort("blockedbyclient");
+  await page.route(recoveryPattern, blockRecovery);
+  const observeRecovery = (request) => { if (new URL(request.url()).pathname.startsWith("/v1/capsules")) recoveryRequests.push(request.url()); };
+  page.on("request", observeRecovery);
+  const vaultRecords = () => page.evaluate(async () => {
+    if (!(await indexedDB.databases()).some((entry) => entry.name === "tear-ghost-v3")) return [];
+    const database = await new Promise((resolve, reject) => { const request = indexedDB.open("tear-ghost-v3"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    try {
+      return await Promise.all([...database.objectStoreNames].sort().map((name) => new Promise((resolve, reject) => {
+        const transaction = database.transaction(name, "readonly"), store = transaction.objectStore(name), keys = store.getAllKeys(), values = store.getAll();
+        transaction.oncomplete = () => resolve([name, keys.result.map((key, index) => [key, values.result[index]])]); transaction.onerror = () => reject(transaction.error);
+      })));
+    } finally { database.close(); }
+  });
+  const beforeOwnerNavigation = await vaultRecords();
   await page.evaluate(() => {
     const texts = [];
     const original = CanvasRenderingContext2D.prototype.fillText;
@@ -46,6 +63,17 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await page.mouse.click(875, 271); // VAULT, the third of four profile tabs
   await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("Ghost V3 - COACHING"), undefined, { timeout: 10000 });
   await page.waitForTimeout(250);
+  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("LOAD MY CLOUD CAPSULES"), undefined, { timeout: 10000 });
+  await page.mouse.click(1210, 90); // Disabled for the actual anonymous/unconfigured normal profile.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.deepEqual(recoveryRequests, [], "normal anonymous Vault navigation/click must not request cloud recovery");
+  assert.deepEqual(await vaultRecords(), beforeOwnerNavigation, "opening/refreshing Vault must not mutate retained data");
+  page.off("request", observeRecovery);
+  await page.unroute(recoveryPattern, blockRecovery);
+  if (process.env.TEAR_OWNER_RECOVERY_SCREENSHOT) {
+    assert.ok(require("node:path").isAbsolute(process.env.TEAR_OWNER_RECOVERY_SCREENSHOT), "owner recovery screenshot must use an absolute path");
+    await page.screenshot({ path: process.env.TEAR_OWNER_RECOVERY_SCREENSHOT });
+  }
   const renderedVaultText = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__ ?? []);
   assert.ok(renderedVaultText.some((text) => text.includes("NEEDS REPAIR")), `Vault did not render the Doctor health state: ${renderedVaultText.slice(-80).join(" | ")}`);
   assert.ok(renderedVaultText.some((text) => text.includes("GRAVEYARD")), `Vault did not render the governed Ghost library membership: ${renderedVaultText.slice(-80).join(" | ")}`);
