@@ -116,6 +116,7 @@ export interface LiveTutorialLessonView {
 }
 
 export interface LiveTutorialRuntime {
+  openPractice(tutorialDone: number): boolean;
   session(): TutorialSessionView;
   restart(): boolean;
   selectLesson(id: string): boolean;
@@ -163,6 +164,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     };
   };
   return {
+    openPractice: (tutorialDone) => controller.openPractice(port.viewportWidth, tutorialDone),
     session: () => controller.session(),
     restart: () => { const changed = controller.restart(); if (changed) installPendingArena(); return changed; },
     selectLesson: (id) => { const changed = controller.selectLesson(id); if (changed) installPendingArena(); return changed; },

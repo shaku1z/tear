@@ -114,6 +114,7 @@ export interface ProgressView {
 export interface DailyChallengeView extends ProgressView { readonly reward: string }
 
 export interface MenuScreenView {
+  readonly practiceAvailable?: boolean;
   readonly id: "menu"; readonly playerName: string; readonly signedIn: boolean;
   readonly coins: number; readonly shards: number; readonly unlocked: number;
   readonly modeLabel: string; readonly difficultyLabel: string; readonly biome?: string;
@@ -121,6 +122,7 @@ export interface MenuScreenView {
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
 }
 export interface SetupScreenView {
+  readonly practiceAvailable?: boolean;
   readonly id: "setup"; readonly modes: readonly ChoiceView[]; readonly difficulties: readonly ChoiceView[];
   readonly weapons: readonly ChoiceView[]; readonly showDifficulty: boolean; readonly startSummary: string;
   readonly startGlyph: string;

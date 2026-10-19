@@ -50,6 +50,7 @@ type TrainingRuntime = Readonly<{
 }>;
 
 export interface LiveTrainingHost extends TrainingRuntime {
+  openPractice(): boolean;
   ensureLoaded(): Promise<void>;
   startTutorial(start: () => void): Promise<void>;
 }
@@ -75,6 +76,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     return loading;
   };
   const tutorial: LiveTutorialRuntime = {
+    openPractice: (tutorialDone) => loaded?.tutorial.openPractice(tutorialDone) ?? false,
     session: () => loaded?.tutorial.session() ?? { phase: "inactive", lessonId: "move", courseCompleted: false, helpVisible: false, instruction: "", progress: [0, 0], lessons: [] },
     restart: () => loaded?.tutorial.restart() ?? false, selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
     showHelp: () => { loaded?.tutorial.showHelp(); }, demonstrate: () => loaded?.tutorial.demonstrate() ?? false,
@@ -122,6 +124,12 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     renderLab() { loaded?.presentation.renderLab(); },
   };
   return Object.freeze({ tutorial, runtime: playground, presentation,
+    openPractice: () => {
+      const tutorialDone = context.dependencies.PROFILE.stat("tutorialDone");
+      if (!loaded || !Number.isSafeInteger(tutorialDone) || tutorialDone <= 0) return false;
+      context.selectWeapon("sword"); context.startPractice();
+      return loaded.tutorial.openPractice(tutorialDone);
+    },
     controller: Object.freeze({ get state() { return playground.state; } }), ensureLoaded,
     async startTutorial(start: () => void) {
       await ensureLoaded();

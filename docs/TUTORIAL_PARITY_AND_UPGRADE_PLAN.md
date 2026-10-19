@@ -880,6 +880,27 @@ Never leave a half-installed stage.
 
 ## Practice Lab after first completion
 
+The delivered baseline entry is available from the normal menu and setup after
+a positive saved `tutorialDone` count is loaded, including after reboot. Opening
+it reads that existing completion fact and starts normal-difficulty sword
+practice with permanent upgrades excluded. It neither issues a course UUID nor
+writes completion, achievements or currency. The selector offers the thirteen
+current action exercises; READY remains a course summary rather than a drill.
+
+These are unlocked exercises, not an invented historical lesson transcript.
+The practice session has explicit version-3 `durable-profile-completion` origin,
+the observed eligibility count, an empty course ID and `completionAwarded=false`.
+Historical completed lessons remain unknown; only new local practice attempts
+can populate local exercise progress. Restart, selection and exact State Forge
+restore retain this origin. Practice completion returns to baseline practice and
+cannot emit course credit. Version-1/2 course checkpoint shapes stay unchanged.
+
+Weapon annexes, encountered-enemy catalog, boss-phase selection, gold-trace
+comparison and mastery medals remain future slices. The short browser fixture
+loads an explicitly declared completed profile and uses rendered menu/setup,
+lesson, pause/restart and leave controls across reload; it does not replay a full
+course or claim natural progression/purchase evidence.
+
 The finite tutorial should unlock a separate revisitable Practice Lab:
 
 - replay any completed action block;

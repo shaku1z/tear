@@ -28,6 +28,19 @@ function capture(source: Source) { return captureProductionReplayCheckpoint(sour
 function restore(source: Source) { return composition().create(JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1); }
 
 describe("production tutorial reconstructed-byte continuation", () => {
+  it("continues explicit practice provenance and real movement from bytes without manufacturing a course receipt", () => {
+    const source = composition().create(undefined);
+    expect(source.replay.tutorial.openPractice(1)).toBe(true); expect(source.replay.tutorial.selectLesson("move")).toBe(true);
+    const restored = restore(source);
+    expect(restored.replay.tutorial.captureSession()).toEqual(source.replay.tutorial.captureSession());
+    for (let tick = 1; tick <= 120; tick++) {
+      const actions = tick === 1 ? [{ kind: "command" as const, id: 1, tick, command: { type: "move" as const, x: -1000, y: 0 } }] : [];
+      expect(restored.simulation.advanceOne(actions).state).toEqual(source.simulation.advanceOne(actions).state);
+    }
+    expect(restored.replay.tutorial.n.moveL).toBeGreaterThan(0);
+    expect(restored.replay.tutorial.captureSession()).toMatchObject({ version: 3, completionAwarded: false, courseSessionId: "", practiceOrigin: { kind: "durable-profile-completion", tutorialDone: 1 } });
+    expect(restored.replay.tutorialOutward.some((intent) => intent.startsWith("complete-course:"))).toBe(false);
+  });
   it("restores the inter-wave breath and the installed mixed encounter through the same production owner", () => {
     const source = composition().create(undefined);
     boundary(source, { lessonId: "field-test", reached: [...TUTORIAL_LESSON_IDS.slice(0, 13)],

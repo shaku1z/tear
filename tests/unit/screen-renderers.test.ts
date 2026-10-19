@@ -9,6 +9,8 @@ import { createLegacyScreenRenderers } from "../../src/presentation/screens";
 import { createUiFoundation } from "../../src/presentation/ui-foundation";
 import { campaignDraftGuidance } from "../../src/app/live-run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
+import { CONFIG } from "../../src/config/game-config";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
 import { LiveGhostLabHomeController } from "../../src/app/live-ghost-lab-home";
 import type { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
@@ -88,6 +90,20 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
+  it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
+    const controls: ScreenControl[] = [], context = createRenderContext(controls), title = vi.spyOn(context.ui, "title");
+    const renderer = createLegacyScreenRenderers(context), controller = new TutorialController(CONFIG);
+    controller.openPractice(1600, 1);
+    renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
+    expect(title).toHaveBeenCalledWith(expect.anything(), "PRACTICE LAB", expect.anything(), expect.anything(), expect.anything());
+    const exercises = controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select");
+    expect(exercises).toHaveLength(13);
+    expect(exercises.every((control) => control.enabled && !control.label.includes("✓") && !control.label.includes("LOCKED"))).toBe(true);
+    controls.length = 0;
+    renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
+      modeLabel: "Tutorial", difficultyLabel: "Normal", practiceAvailable: true });
+    expect(controls.find((control) => control.label === "PRACTICE LAB")?.action).toEqual({ type: "tutorial.action", command: "open-practice" });
+  });
   it("wraps onboarding at body size above cards without adding or moving controls at standard and small landscape sizes", () => {
     for (const [width, height] of [[1600, 900], [844, 414]] as const) {
       const controls: ScreenControl[] = [], lines: { text: string; x: number; y: number; width: number; font: string }[] = [];

@@ -8,12 +8,18 @@ describe("menu/setup snapshots", () => {
   it("projects identity and selected defaults", () => {
     expect(buildMenuSnapshot({ username: "Ada", campaignEmblem: true, signedIn: true, coins: 1, shards: 2, unlocked: 3,
       selectedMode: "endless", selectedDifficulty: "normal", modes, difficulties, biome: "Grounds", pendingFinale: false }).playerName).toBe("◇ Ada");
+    const input = { username: "Guest", campaignEmblem: false, signedIn: false, coins: 0, shards: 0, unlocked: 0,
+      selectedMode: "tutorial", selectedDifficulty: "normal", modes, difficulties, biome: "Grounds", pendingFinale: false };
+    expect(buildMenuSnapshot({ ...input, tutorialDone: 0 }).practiceAvailable).toBeUndefined();
+    expect(buildMenuSnapshot({ ...input, tutorialDone: 1 }).practiceAvailable).toBe(true);
+    expect(buildMenuSnapshot({ ...input, tutorialDone: 0.5 }).practiceAvailable).toBeUndefined();
   });
   it("projects weapon identity and best summary", () => {
     const view = buildSetupSnapshot({ selectedMode: "endless", selectedDifficulty: "normal", selectedWeapon: "blade", selectedBoss: "shuffle",
       startGlyph: "▢", modes, difficulties, weapons: [{ id: "blade", name: "Blade", blurb: "cut", tags: ["fast"], throwIdentity: "return",
         ratings: { handling: 5, impact: 3, reach: 4, difficulty: 2 }, weaknesses: ["armor"] }],
-      bosses: [], livePlatform: false, best: { wave: 2, score: 10 }, formatTime: String });
+      bosses: [], livePlatform: false, best: { wave: 2, score: 10 }, formatTime: String, tutorialDone: 1 });
+    expect(view.practiceAvailable).toBe(true);
     expect(view.startSummary).toBe("ENDLESS · NORMAL · BLADE");
     expect(view.startGlyph).toBe("▢");
     expect(view.weapons[0]?.detail).toBe("H 5 · I 3 · R 4 · D 2     WEAK: armor");

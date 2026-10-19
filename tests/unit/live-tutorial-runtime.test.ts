@@ -1,8 +1,33 @@
 import { describe, expect, it, vi } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
+import { createLiveTutorialSessionActions } from "../../src/app/live-tutorial-session-actions";
 
 describe("live tutorial runtime", () => {
+  it("selects a durable-unlocked lesson after the real new-run reset without issuing completion or profile effects", () => {
+    const completeCourse = vi.fn(), addProfileStat = vi.fn(), checkAchievements = vi.fn(), installArena = vi.fn(), beginPractice = vi.fn();
+    const runtime = createLiveTutorialRuntime({ config: CONFIG, viewportWidth: 1600, groundY: () => 800,
+      skipPressed: () => false, movingLeft: () => false, movingRight: () => false,
+      player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 320, facing: 1 }), bladeState: () => "held", enemies: () => [],
+      spawn: () => { throw new Error("unexpected fixture spawn"); }, playSound: vi.fn(), installArena, resetTrainingSpace: vi.fn(),
+      beginPractice, completeCourse, addProfileStat, checkAchievements, terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(), drawGhost: vi.fn() });
+    runtime.openPractice(1);
+    const startLessonRun = vi.fn(() => { runtime.start("unissued"); }), selectBaselineWeapon = vi.fn();
+    const actions = createLiveTutorialSessionActions({ tutorial: runtime, training: { ensureLoaded: () => Promise.resolve(), openPractice: () => false },
+      screen: () => "paused", mode: () => "playground", startLessonRun, selectBaselineWeapon, resetFocus: vi.fn(), resume: vi.fn() });
+    actions.dispatch("select", "missing"); expect(startLessonRun).not.toHaveBeenCalled();
+    actions.dispatch("select", "launch");
+    expect(selectBaselineWeapon).toHaveBeenCalledOnce(); expect(startLessonRun).toHaveBeenCalledOnce();
+    expect(installArena).toHaveBeenLastCalledWith("launch-bay");
+    expect(runtime.captureSession()).toMatchObject({ version: 3, phase: "lesson-practice", courseSessionId: "", completionAwarded: false,
+      practiceOrigin: { kind: "durable-profile-completion", tutorialDone: 1 } });
+    // Avoid unrelated dummy creation: the controller's entry is already real;
+    // MOVE supplies a short complete practice branch with no combat fixture.
+    runtime.selectLesson("move"); for (let tick = 0; tick < 60; tick++) { runtime.mark("moveL"); runtime.mark("moveR"); }
+    runtime.update(0); runtime.update(1.2);
+    expect(beginPractice).toHaveBeenCalledOnce(); expect(completeCourse).not.toHaveBeenCalled();
+    expect(addProfileStat).not.toHaveBeenCalled(); expect(checkAchievements).not.toHaveBeenCalled();
+  });
   it("owns tutorial state, spawning, stabilization and ghost presentation", () => {
     const enemies = [{ kind: "charger", dead: false, tutDummy: true, hp: 10, maxHp: 100,
       stun: 0, x: 0, y: 0, hh: 20, contactDmg: 5 }];

@@ -39,6 +39,7 @@ export function createLiveMenuScreenAdaptersRuntime(state: MenuScreenState, serv
       const selected = state.selection();
       d.UI.ink = "#f1eff9";
       renderers.menu(buildMenuSnapshot({ username: d.PROFILE.username(),
+        tutorialDone: d.PROFILE.stat("tutorialDone"),
         campaignEmblem: d.PROFILE.data.rewards?.campaignEmblem === true, signedIn: d.Cloud.loggedIn(),
         coins: d.META.coins(), shards: d.PROFILE.shards(), unlocked: d.PROFILE.unlockedCount(),
         selectedMode: selected.mode, selectedDifficulty: selected.difficulty,

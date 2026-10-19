@@ -17,7 +17,9 @@ export const TUTORIAL_LESSON_IDS = ["move", "jump", "dash", "cut", "launch", "ju
 export type TutorialLessonId = typeof TUTORIAL_LESSON_IDS[number];
 export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "free-practice";
 type FieldEncounter = "charger" | "breath" | "mixed";
+interface TutorialPracticeOrigin { readonly kind: "durable-profile-completion"; readonly tutorialDone: number }
 export interface TutorialSessionView {
+  readonly practiceOnly?: boolean;
   readonly phase: TutorialSessionPhase; readonly lessonId: TutorialLessonId; readonly courseCompleted: boolean;
   readonly helpVisible: boolean; readonly instruction: string; readonly progress: readonly [number, number];
   readonly lessons: readonly Readonly<{ id: TutorialLessonId; title: string; reached: boolean; completed: boolean; current: boolean; canPractice: boolean }>[];
@@ -29,7 +31,7 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("Invalid tutorial session");
   const data = value as Record<string, unknown>;
   const ids = (entry: unknown): entry is TutorialLessonId[] => Array.isArray(entry) && new Set(entry as unknown[]).size === entry.length && (entry as unknown[]).every((id) => TUTORIAL_LESSON_IDS.some((valid) => valid === id));
-  if ((data.version !== 1 && data.version !== 2) || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
+  if ((data.version !== 1 && data.version !== 2 && data.version !== 3) || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
     typeof data.phase !== "string" || !TUTORIAL_LESSON_IDS.includes(data.lessonId as TutorialLessonId) || !ids(data.reached) || !ids(data.completed) ||
     typeof data.active !== "boolean" || typeof data.completionAwarded !== "boolean" || typeof data.previousGrounded !== "boolean" || typeof data.dashLatched !== "boolean" ||
     typeof data.previousBladeState !== "string" || (data.pendingArena !== null && !TUTORIAL_LESSONS.some((lesson) => lesson.arena === data.pendingArena))) throw new TypeError("Invalid tutorial session fields");
@@ -43,11 +45,18 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   const marks = ["airHit", "dash", "deflect", "jump", "launch", "moveL", "moveR", "evade", "parry", "punish", "recall", "slam", "strike", "superslam", "throwHit", "updraft"];
   if (typeof data.counters !== "object" || data.counters === null || Array.isArray(data.counters) || Object.entries(data.counters).some(([key, number]) => !marks.includes(key) || typeof number !== "number" || !Number.isFinite(number) || number < 0)) throw new TypeError("Invalid tutorial counters");
   const reached = data.reached;
+  if (data.version === 3) {
+    const origin = data.practiceOrigin;
+    if (typeof origin !== "object" || origin === null || Array.isArray(origin) ||
+      (origin as Record<string, unknown>).kind !== "durable-profile-completion" ||
+      !Number.isSafeInteger((origin as Record<string, unknown>).tutorialDone) || Number((origin as Record<string, unknown>).tutorialDone) <= 0 ||
+      data.courseSessionId !== "" || data.completionAwarded || data.phase === "course" || data.lessonId === "ready" || reached.includes("ready")) throw new RangeError("Invalid tutorial practice origin");
+  }
   if (data.active !== (data.phase === "course" || data.phase === "lesson-practice") ||
-    (data.active && (!data.reached.includes(data.lessonId as TutorialLessonId) || !data.courseSessionId)) ||
+    (data.active && (!data.reached.includes(data.lessonId as TutorialLessonId) || (!data.courseSessionId && data.version !== 3))) ||
     data.completed.some((id) => !reached.includes(id)) ||
-    ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded)) throw new RangeError("Inconsistent tutorial session");
-  if (data.version === 2) {
+    ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded && data.version !== 3)) throw new RangeError("Inconsistent tutorial session");
+  if (data.version === 2 || data.version === 3) {
     if (data.curriculumVersion !== 2 || (data.fieldEncounter !== "charger" && data.fieldEncounter !== "breath" && data.fieldEncounter !== "mixed") ||
       typeof data.interWaveRemaining !== "number" || !Number.isFinite(data.interWaveRemaining) || data.interWaveRemaining < 0 || data.interWaveRemaining > FIELD_BREATH_SECONDS ||
       (data.fieldEncounter !== "charger" && data.lessonId !== "field-test") ||
@@ -259,10 +268,12 @@ export class TutorialController {
   private curriculumVersion: 1 | 2 = 2;
   private fieldEncounter: FieldEncounter = "charger";
   private interWaveRemaining = 0;
+  private practiceOrigin: TutorialPracticeOrigin | undefined;
 
   session(): TutorialSessionView {
     const lessonId = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move", lesson = this.step();
     return { phase: this.phase, lessonId, courseCompleted: this.completionAwarded, helpVisible: this.helpVisible,
+      ...(this.practiceOrigin === undefined ? {} : { practiceOnly: true }),
       instruction: lesson.instruction?.(this.counters) ?? lesson.description, progress: lesson.progress(this.counters),
       lessons: TUTORIAL_LESSON_IDS.map((id, index) => ({ id, title: TUTORIAL_LESSONS[index]?.title ?? id,
         reached: this.reached.has(id), completed: this.completed.has(id), current: id === lessonId,
@@ -272,7 +283,7 @@ export class TutorialController {
   selectLesson(id: string): boolean {
     const index = TUTORIAL_LESSON_IDS.findIndex((entry) => entry === id);
     if (index < 0 || id === "ready" || !this.reached.has(id as TutorialLessonId)) return false;
-    this.active = true; this.phase = this.completionAwarded ? "lesson-practice" : "course";
+    this.active = true; this.phase = this.completionAwarded || this.practiceOrigin !== undefined ? "lesson-practice" : "course";
     this.enterLesson(index); return true;
   }
   showHelp(): void { this.helpVisible = !this.helpVisible; }
@@ -288,8 +299,10 @@ export class TutorialController {
       chargeCommitWindow: this.chargeCommitWindow, chargeRecoveryWindow: this.chargeRecoveryWindow, chargeCommitAwayX: this.chargeCommitAwayX,
       bladeAwayTime: this.bladeAwayTime, previousGrounded: this.previousGrounded, previousBladeState: this.previousBladeState,
       dashLatched: this.dashLatched, previousPlayerX: this.previousPlayerX ?? null };
-    return this.curriculumVersion === 1 ? checkpoint : { ...checkpoint, version: 2 as const, curriculumVersion: 2 as const,
+    if (this.curriculumVersion === 1) return checkpoint;
+    const current = { ...checkpoint, version: 2 as const, curriculumVersion: 2 as const,
       fieldEncounter: this.fieldEncounter, interWaveRemaining: this.interWaveRemaining };
+    return this.practiceOrigin === undefined ? current : { ...current, version: 3 as const, practiceOrigin: { ...this.practiceOrigin } };
   }
   capturePresentation() { return { version: 1 as const, ghostTime: this.ghostTime, anchorX: this.anchorX,
     evidencePulse: this.evidencePulse, coachIdle: this.coachIdle, coachDemoTime: this.coachDemoTime, helpVisible: this.helpVisible }; }
@@ -299,6 +312,7 @@ export class TutorialController {
     this.curriculumVersion = data.version === 1 ? 1 : data.curriculumVersion;
     this.fieldEncounter = data.version === 1 ? "charger" : data.fieldEncounter;
     this.interWaveRemaining = data.version === 1 ? 0 : data.interWaveRemaining;
+    this.practiceOrigin = data.version === 3 ? data.practiceOrigin : undefined;
     this.courseSessionId = data.courseSessionId; this.phase = data.phase; this.active = data.active;
     this.lessonIndex = TUTORIAL_LESSON_IDS.indexOf(data.lessonId); this.reached = new Set(data.reached); this.completed = new Set(data.completed);
     this.completionAwarded = data.completionAwarded; this.counters = { ...data.counters }; this.pendingArena = data.pendingArena;
@@ -318,6 +332,7 @@ export class TutorialController {
   }
 
   start(viewportWidth: number, courseSessionId = "tutorial"): void {
+    this.practiceOrigin = undefined;
     this.curriculumVersion = 2; this.fieldEncounter = "charger"; this.interWaveRemaining = 0;
     this.courseSessionId = courseSessionId; this.phase = "course"; this.reached = new Set(["move"]); this.completed.clear(); this.completionAwarded = false; this.helpVisible = false;
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
@@ -327,6 +342,16 @@ export class TutorialController {
     this.counters = {};
     this.pendingArena = this.step().arena ?? "runway";
     this.evidencePulse = false; this.coachIdle = 0; this.coachDemoTime = 0; this.observedLaunches = 0; this.observedStrikes = 0; this.risingCutWindow = 0; this.chargeCommitWindow = 0; this.chargeRecoveryWindow = 0; this.chargeCommitAwayX = 0; this.bladeAwayTime = 0;
+  }
+
+  /** Eligibility is a saved profile fact, never a fabricated historical course. */
+  openPractice(viewportWidth: number, tutorialDone: number): boolean {
+    if (!Number.isSafeInteger(tutorialDone) || tutorialDone <= 0) return false;
+    this.start(viewportWidth, "");
+    this.practiceOrigin = { kind: "durable-profile-completion", tutorialDone };
+    this.active = false; this.phase = "free-practice"; this.pendingArena = null;
+    this.reached = new Set(TUTORIAL_LESSON_IDS.filter((id) => id !== "ready"));
+    return true;
   }
 
   stop(): void { this.active = false; this.phase = "inactive"; }
@@ -491,7 +516,7 @@ export class TutorialController {
         // Completion is a handoff, not an ejection. The Playground is a
         // no-wave training run, preserving the course's zero-upgrade baseline.
         this.stop(); this.phase = "free-practice";
-        if (!this.completionAwarded) {
+        if (!this.completionAwarded && this.practiceOrigin === undefined) {
           this.completionAwarded = true; this.completed.add("ready");
           intents.push({ type: "complete-course", courseSessionId: this.courseSessionId });
         }

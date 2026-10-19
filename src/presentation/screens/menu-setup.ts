@@ -9,6 +9,9 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const railX = 100;
     const railWidth = 320;
     const wordmarkY = 150;
+    if (view.practiceAvailable) context.enqueue({ x: railX + railWidth + 18, y: 318, w: 250, h: 62,
+      label: "PRACTICE LAB", sub: "BASELINE LESSONS · NO REWARDS", ghost: true,
+      action: { type: "tutorial.action", command: "open-practice" } });
     const viewport = context.screenRectangle;
     const gradient = canvas.createLinearGradient(0, 0, 800, 0);
     gradient.addColorStop(0, "rgba(6,7,12,0.90)");
@@ -155,6 +158,9 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       label: "START", glyph: view.startGlyph, sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
       action: { type: "setup.start" },
     });
+    if (view.practiceAvailable) context.enqueue({ x: width / 2 - startWidth / 2 - 270, y: 726, w: 250, h: 62,
+      label: "PRACTICE LAB", sub: "BASELINE SWORD · NO REWARDS", ghost: true,
+      action: { type: "tutorial.action", command: "open-practice" } });
     backControl(context);
   }
 

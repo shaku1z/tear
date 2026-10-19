@@ -13,6 +13,25 @@ function startTutorial() {
 }
 
 describe("tutorial controller", () => {
+  it("opens only explicitly eligible practice without inventing course history or completion credit", () => {
+    const controller = new TutorialController(CONFIG), before = controller.captureSession();
+    expect(controller.openPractice(1600, 0)).toBe(false); expect(controller.captureSession()).toEqual(before);
+    expect(controller.openPractice(1600, 1)).toBe(true);
+    expect(controller.captureSession()).toMatchObject({ version: 3, courseSessionId: "", completed: [], completionAwarded: false,
+      practiceOrigin: { kind: "durable-profile-completion", tutorialDone: 1 } });
+    expect(controller.session().lessons.filter((lesson) => lesson.canPractice)).toHaveLength(13);
+    expect(controller.selectLesson("ready")).toBe(false); expect(controller.selectLesson("move")).toBe(true);
+    controller.update(neutralTutorialFrame);
+    controller.counters = { moveL: 60, moveR: 60 }; controller.update(neutralTutorialFrame);
+    const saved = controller.captureSession(), restored = new TutorialController(CONFIG); restored.restoreSession(JSON.parse(JSON.stringify(saved)) as unknown);
+    expect(restored.captureSession()).toEqual(saved);
+    const completion = restored.update({ ...neutralTutorialFrame, dt: 1.2 });
+    expect(completion).toContainEqual({ type: "begin-practice" });
+    expect(completion.some((intent) => intent.type === "complete-course" || intent.type === "achievement-check")).toBe(false);
+    expect(restored.session()).toMatchObject({ phase: "free-practice", practiceOnly: true, courseCompleted: false });
+    expect(() => { restored.restoreSession({ ...saved, practiceOrigin: undefined }); }).toThrow();
+    expect(() => { restored.restoreSession({ ...saved, version: 2 }); }).toThrow();
+  });
   it("teaches two Field Test waves with fresh transfer evidence and retains historical checkpoint rules", () => {
     const controller = startTutorial();
     controller.restoreSession({ ...controller.captureSession(), lessonId: "field-test", reached: ["move", "field-test"], pendingArena: null });

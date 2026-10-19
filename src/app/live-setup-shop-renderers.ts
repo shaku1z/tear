@@ -14,6 +14,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
           `${String(progress)}/${String(challenge.goal)} · +${String(challenge.shards)}⬡`, done };
       });
       renderers.setup(buildSetupSnapshot({ selectedMode: selected.mode, selectedDifficulty: selected.difficulty,
+        tutorialDone: d.PROFILE.stat("tutorialDone"),
         selectedWeapon: selected.weapon, selectedBoss: selected.boss, startGlyph: d.PAD.glyph(2), modes: d.CONFIG.modes,
         difficulties: d.CONFIG.difficulties, weapons: d.WEAPONS, bosses: BOSS_ROSTER,
         ...(bounties === undefined ? {} : { bounties }), livePlatform: d.CG.live,

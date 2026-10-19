@@ -13,6 +13,7 @@ export interface BossChoiceSource { readonly id: string; readonly name: string }
 export interface BountyChoiceSource { readonly label: string; readonly detail: string; readonly done: boolean }
 
 export function buildMenuSnapshot(input: {
+  readonly tutorialDone?: number;
   readonly username: string; readonly campaignEmblem: boolean; readonly signedIn: boolean;
   readonly coins: number; readonly shards: number; readonly unlocked: number;
   readonly selectedMode: string; readonly selectedDifficulty: string;
@@ -20,6 +21,7 @@ export function buildMenuSnapshot(input: {
   readonly biome: string; readonly pendingFinale: boolean;
 }): MenuScreenView {
   return Object.freeze({ id: "menu", nowPlaying: { label: nowPlayingLabel(), detail: nowPlayingDetail() }, playerName: (input.campaignEmblem ? "◇ " : "") + (input.username || "GUEST"),
+    ...(Number.isSafeInteger(input.tutorialDone) && (input.tutorialDone ?? 0) > 0 ? { practiceAvailable: true } : {}),
     signedIn: input.signedIn, coins: input.coins, shards: input.shards, unlocked: input.unlocked,
     modeLabel: input.modes.find((entry) => entry.id === input.selectedMode)?.label ?? "Endless",
     difficultyLabel: input.difficulties.find((entry) => entry.id === input.selectedDifficulty)?.label ?? "Normal",
@@ -33,6 +35,7 @@ const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>
 });
 
 export function buildSetupSnapshot(input: {
+  readonly tutorialDone?: number;
   readonly selectedMode: string; readonly selectedDifficulty: string; readonly selectedWeapon: string; readonly selectedBoss: string;
   readonly startGlyph: string;
   readonly modes: readonly MenuModeSource[]; readonly difficulties: readonly MenuDifficultySource[]; readonly weapons: readonly WeaponChoiceSource[];
@@ -48,6 +51,7 @@ export function buildSetupSnapshot(input: {
       ...input.bosses.map((boss) => ({ id: boss.id, label: boss.name.toUpperCase(), selected: input.selectedBoss === boss.id }))]
     : undefined;
   return Object.freeze({ id: "setup",
+    ...(Number.isSafeInteger(input.tutorialDone) && (input.tutorialDone ?? 0) > 0 ? { practiceAvailable: true } : {}),
     modes: input.modes.filter((entry) => !entry.debug || !input.livePlatform).map((entry) => ({ id: entry.id, label: entry.label,
       description: entry.blurb, glyph: modeTrim[entry.id]?.glyph, sub: modeTrim[entry.id]?.sub, selected: entry.id === input.selectedMode,
       ...(entry.debug === true ? { debug: true } : {}) })),
