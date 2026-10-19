@@ -10,6 +10,10 @@ import {
   TearFoundryCuratedManifestExecutor,
   TrainingOperationsV3TrainingAdmissionExecutor,
   TrainingOperationsV3EvaluationExecutor,
+  TrainingOperationsV3ScheduledCycle,
+  TearFoundryJobScheduleVault,
+  TearFoundryScheduledExecution,
+  createTearFoundryJobSchedule,
   parseTrainingOperationsV3TrainingReceipt,
   createTearFoundryJobV2,
   createTearFoundryBudgetedJob,
@@ -66,7 +70,7 @@ import {
 } from "../../src/agents";
 import { GhostLocalVault, createMemoryGhostVaultBackend, type GhostVaultStore } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { parseTrainingOperationsBudget, trainingOperationsBudgetKey, trainingOperationsBudgetOwnerKey } from "../../src/agents/training-operations-budget";
+import { parseTrainingOperationsBudget, trainingOperationsBudgetKey, trainingOperationsBudgetOwnerKey, trainingOperationsComputeBudgetHash, trainingOperationsStorageBudgetHash } from "../../src/agents/training-operations-budget";
 import { trainingOperationsTrainingComputeUnits } from "../../src/agents/training-operations-compute-budget";
 import { parseGhostCapsuleManifest, reviseGhostCapsuleManifest } from "../../src/ghost/capsule-contract";
 import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V2 } from "../../src/agents/policy-condition-vector";
@@ -302,6 +306,83 @@ describe("C31 held Academy candidate curation", () => {
       if (typeof chargedBudget !== "string") throw new Error("missing charged evaluation allowance");
       expect(parseTrainingOperationsBudget(JSON.parse(chargedBudget)).computeUsed).toBe(24);
       expect(await context.memory.get("analysis", "policy-active:v1")).toBeUndefined();
+    });
+  });
+
+  describe("native V3 scheduled continuation", () => {
+    async function scheduledFixture() {
+      const context = await numericAdmissionFixture(100), training = await context.executor.start(context.job, context.request);
+      const schedules = new TearFoundryJobScheduleVault(context.input.backend);
+      const schedule = createTearFoundryJobSchedule({ id: context.declaration.scheduleId, jobId: training.job.id, jobHash: training.job.jobHash,
+        intervalMs: 60_000, computeBudgetHash: trainingOperationsComputeBudgetHash(context.declaration),
+        storageBudgetHash: trainingOperationsStorageBudgetHash(context.declaration), stopConditionsHash: training.job.inputs.stopConditionsHash,
+        state: "disabled", configuredAt: "2026-08-03T00:10:00.000Z" });
+      const cycle = () => new TrainingOperationsV3ScheduledCycle(context.jobs, schedules, context.services);
+      const execute = () => new TearFoundryScheduledExecution(context.jobs, schedules, context.services.custody, context.services.corpus, context.services.loader, context.services);
+      return { ...context, training, schedules, schedule, cycle, execute };
+    }
+
+    it("adopts the exact training receipt and schedules native evaluation through reload, exact retries and an inactive decision", async () => {
+      const context = await scheduledFixture(), { training, schedule } = context;
+      const adopted = await context.cycle().adoptAndEnable(schedule, context.job.jobHash, training.receiptHash, context.evaluationCases, schedule.configuredAt);
+      expect(adopted.binding).toMatchObject({ step: "admit", previousBindingHash: null,
+        admittedTraining: { receiptHash: training.receiptHash, jobHash: training.job.jobHash } });
+      expect(await context.jobs.get(training.job.id)).toEqual(training.job);
+      expect(await context.cycle().adoptAndEnable(schedule, context.job.jobHash, training.receiptHash, context.evaluationCases, schedule.configuredAt)).toEqual(adopted);
+      const firstSchedule = adopted.schedule;
+      let activeSchedule = firstSchedule;
+      let first: Awaited<ReturnType<TearFoundryScheduledExecution["runScheduledOnce"]>> | undefined;
+      for (const [minute, phase, step] of [[11, "evaluating", "execute"], [12, "deciding", "decide"], [13, "monitoring", "awaiting-promotion"]] as const) {
+        const source = activeSchedule, at = `2026-08-03T00:${String(minute)}:00.000Z`, lease = `native-${String(minute)}`;
+        const output = await context.execute().runScheduledOnce(source.scheduleHash, at, lease);
+        first ??= output;
+        expect(output.phase).toBe(phase);
+        const rawBudget = await context.memory.get("analysis", trainingOperationsBudgetKey(context.job.id));
+        const calls = context.commitIfMatches.mock.calls.length;
+        expect(await context.execute().runScheduledOnce(source.scheduleHash, at, lease)).toEqual(output);
+        expect(context.commitIfMatches.mock.calls.slice(calls).every(([, writes]) => writes.length === 0)).toBe(true);
+        expect(await context.memory.get("analysis", trainingOperationsBudgetKey(context.job.id))).toBe(rawBudget);
+        const current = await context.schedules.get(schedule.id);
+        if (current === undefined) throw new Error("native current schedule missing");
+        activeSchedule = current;
+        expect((await context.cycle().current(current))?.step).toBe(step);
+      }
+      // A completed earlier wake is still an exact read-only result after later native phases.
+      expect(await context.execute().runScheduledOnce(firstSchedule.scheduleHash, "2026-08-03T00:11:00.000Z", "native-11")).toEqual(first);
+      expect(activeSchedule.state).toBe("disabled");
+      await expect(context.cycle().setEnabledByHash(activeSchedule.scheduleHash, true, "2026-08-03T00:14:00.000Z")).rejects.toThrow(/authorized/u);
+      const budget = await context.memory.get("analysis", trainingOperationsBudgetKey(context.job.id));
+      if (budget === undefined) throw new Error("native budget missing");
+      expect(parseTrainingOperationsBudget(JSON.parse(budget)).computeUsed).toBe(24);
+      expect(await context.memory.get("analysis", `foundry-job-v3-training:v1:${context.job.jobHash}`)).toBe(JSON.stringify(training));
+      expect((await context.jobs.get(context.job.id))?.events.slice(0, training.job.events.length)).toEqual(training.job.events);
+      expect(await context.memory.get("analysis", `training-operations-v3-decision:v1:${context.job.jobHash}`)).toBeDefined();
+      expect(await context.memory.get("analysis", "policy-active:v1")).toBeUndefined();
+    });
+
+    it("refuses late binding drift at the native successor CAS without advancing schedule, job or candidate authority", async () => {
+      const context = await scheduledFixture(), adopted = await context.cycle().adoptAndEnable(context.schedule, context.job.jobHash,
+        context.training.receiptHash, context.evaluationCases, context.schedule.configuredAt);
+      const pointerKey = `training-operations-execution-binding-current:v6:${adopted.schedule.id}:${String(adopted.schedule.revision)}:${adopted.schedule.scheduleHash}`;
+      const receiptKey = `foundry-job-v3-evaluation-admission:v1:${context.job.jobHash}`;
+      const bindingKeys = (await context.memory.keys("analysis")).filter((key) => key.startsWith("training-operations-execution-binding:v6:"));
+      const outputs = await admissionOutputs(context);
+      let finalAttempts = 0;
+      context.commitIfMatches.mockImplementation(async (guards, writes) => {
+        if (writes.some((write) => write.key === receiptKey)) {
+          finalAttempts++;
+          await context.memory.put("analysis", pointerKey, "f".repeat(16));
+        }
+        await context.memory.commitIfMatches(guards, writes);
+      });
+      await expect(context.execute().runScheduledOnce(adopted.schedule.scheduleHash, "2026-08-03T00:11:00.000Z", "late-binding")).rejects.toThrow();
+      expect(finalAttempts).toBe(1);
+      expect(await admissionOutputs(context)).toEqual(outputs);
+      expect(await context.schedules.get(adopted.schedule.id)).toEqual(adopted.schedule);
+      expect(await context.memory.get("analysis", receiptKey)).toBeUndefined();
+      expect((await context.memory.keys("analysis")).filter((key) => key.startsWith("training-operations-execution-binding:v6:"))).toEqual(bindingKeys);
+      expect(await context.memory.get("analysis", pointerKey)).toBe("f".repeat(16));
+      expect(await context.memory.get("analysis", `training-operations-scheduled-attempt:v1:${adopted.schedule.scheduleHash}`)).toBeUndefined();
     });
   });
 

@@ -862,3 +862,30 @@ V2 monitoring bridge cannot consume a native V3 decision by relabeling it.
 Native monitoring and authorized promotion continuation remain separate work;
 this leaf supplies no real-corpus, participant, calibration or unattended
 lifecycle claim.
+
+## Receipt-bound native scheduled continuation
+
+`TrainingOperationsV3ScheduledCycle.adoptAndEnable` accepts an exact retained
+training receipt, its current training head, explicit frozen evaluation cases
+and a declared disabled schedule. It records the admission receipt as the
+initial binding origin with no preceding binding; it does not retrain, rewind
+the job or manufacture legacy launch history. A budgeted job must retain the
+matching numeric schedule declaration. A new explicitly supplied schedule is
+created through that job's metered transaction; existing unowned storage is
+not adopted as free allowance.
+
+The normal `runScheduledOnce` dispatcher and browser scheduler consume these
+persisted native bindings. Each due wake performs one admission, comparison or
+decision transition, joining its job, receipt, attempt, schedule and next
+binding in the same conditional commit. Reload reads the retained current
+binding. Completed wake retries verify native receipts, binding/pointer/index
+bytes, current job lineage, source custody and budget authority without another
+charge or transition. Native pause/resume keeps the same frozen experiment.
+Late binding drift leaves the existing schedule, job and candidate unchanged.
+
+Monitoring-ready disables the schedule at `awaiting-promotion`; an enabled
+schedule never supplies promotion authority. Existing V1–V4 launch profiles
+and bindings keep their historical route. The legacy hash-only profile does
+not supply a native training request or evaluation cases. This completes the
+explicit native scheduled evaluation path, while native monitoring and
+authorized promotion continuation remain separate from it.

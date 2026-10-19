@@ -1,4 +1,4 @@
-import { TearAcademyCandidateCurationStore, TearAcademyCandidateCustodyStore, TearAcademyCandidateQualityStore, TearAcademyCandidateSplitStore, TearAcademyCorpusStore, TearAcademyReviewedSampleStore, TearFoundryBootstrapExecutor, TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryLaunchProfileAuthority, TearFoundryRecoveryController, TearFoundryScheduleController } from "../agents";
+import { TearAcademyCandidateCurationStore, TearAcademyCandidateCustodyStore, TearAcademyCandidateQualityStore, TearAcademyCandidateSplitStore, TearAcademyCorpusStore, TearAcademyReviewedSampleStore, TearAcademyTrainingDatasetLoader, TearFoundryBootstrapExecutor, TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryLaunchProfileAuthority, TearFoundryRecoveryController, TearFoundryScheduleController, TrainingOperationsV3ScheduledCycle } from "../agents";
 import type { GhostVaultBackend } from "../ghost";
 import { createIndexedDbGhostVaultBackend } from "../ghost";
 import type { FoundryScreenView } from "../presentation/screens/contracts";
@@ -32,7 +32,14 @@ export class LiveFoundryScreenController {
     } catch { return this.#set({ id: "foundry", status: "unavailable", subtitle: "Training Operations recovery projections could not be read", automation: "unavailable", launchProfiles: [], jobs: [], schedules: [] }); }
   }
 
-  async setScheduleEnabled(scheduleHash: string, enabled: boolean): Promise<void> { if (this.#backend !== undefined) await new TearFoundryJobScheduleVault(this.#backend).setEnabledByHash(scheduleHash, enabled, new Date().toISOString()); await this.refresh(); }
+  async setScheduleEnabled(scheduleHash: string, enabled: boolean): Promise<void> {
+    if (this.#backend !== undefined) {
+      const { vault, custody, curation, corpus, loader } = this.#services(), schedules = new TearFoundryJobScheduleVault(this.#backend), at = new Date().toISOString();
+      const native = await new TrainingOperationsV3ScheduledCycle(vault, schedules, { custody, curation, corpus, loader }).setEnabledByHash(scheduleHash, enabled, at);
+      if (native === undefined) await schedules.setEnabledByHash(scheduleHash, enabled, at);
+    }
+    await this.refresh();
+  }
   async bootstrap(profileId: string): Promise<void> {
     if (this.#backend === undefined) { await this.refresh(); return; }
     try {
@@ -42,10 +49,10 @@ export class LiveFoundryScreenController {
     } finally { await this.refresh(); }
   }
 
-  #services(): Readonly<{ vault: TearFoundryJobVault; custody: TearAcademyCandidateCustodyStore; corpus: TearAcademyCorpusStore; authority: TearFoundryLaunchProfileAuthority }> {
+  #services() {
     if (this.#backend === undefined) throw new TypeError("Training Operations storage is unavailable");
     const custody = new TearAcademyCandidateCustodyStore(this.#backend), quality = new TearAcademyCandidateQualityStore(this.#backend, custody), curation = new TearAcademyCandidateCurationStore(this.#backend, custody, quality), splits = new TearAcademyCandidateSplitStore(this.#backend, custody, quality, curation), samples = new TearAcademyReviewedSampleStore(this.#backend, custody, quality, curation, splits), corpus = new TearAcademyCorpusStore(this.#backend, custody, curation, splits, samples);
-    return Object.freeze({ vault: new TearFoundryJobVault(this.#backend), custody, corpus, authority: new TearFoundryLaunchProfileAuthority(this.#backend, custody, corpus) });
+    return Object.freeze({ vault: new TearFoundryJobVault(this.#backend), custody, curation, corpus, loader: new TearAcademyTrainingDatasetLoader(corpus, samples), authority: new TearFoundryLaunchProfileAuthority(this.#backend, custody, corpus) });
   }
 
   #set(snapshot: FoundrySnapshot): FoundrySnapshot { this.#snapshot = Object.freeze({ ...snapshot, jobs: Object.freeze(snapshot.jobs), schedules: Object.freeze(snapshot.schedules) }); return this.#snapshot; }

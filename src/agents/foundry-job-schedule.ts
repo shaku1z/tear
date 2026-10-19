@@ -92,6 +92,7 @@ export function dueAtFoundryJobSchedule(input: TearFoundryJobScheduleV1): string
 }
 export class TearFoundryJobScheduleVault {
   readonly #backend: GhostVaultBackend; constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+  backend(): GhostVaultBackend { return this.#backend; }
   async persist(input: TearFoundryJobScheduleV1): Promise<TearFoundryJobScheduleV1> {
     const schedule = parseTearFoundryJobSchedule(input), key = `${KEY}${schedule.id}`, existing = await this.#backend.get("analysis", key);
     if (existing !== undefined) { const current = await this.#read(key, existing); if (current === undefined) throw new RangeError("Foundry schedule is quarantined"); if (current.scheduleHash !== schedule.scheduleHash) throw new RangeError("Foundry schedule already exists"); return current; }

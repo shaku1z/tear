@@ -73,6 +73,6 @@ export function createLiveFoundryScheduler(backend: GhostVaultBackend, onChange?
     const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((entry) => entry.recordHash === hash));
   } };
   const controller = new TearFoundryScheduleController(jobs, schedules, authority);
-  const execution = new TearFoundryScheduledExecution(jobs, schedules, custody, corpus, loader);
+  const execution = new TearFoundryScheduledExecution(jobs, schedules, custody, corpus, loader, { custody, curation, corpus, loader });
   return new LiveFoundryScheduler({ discover: (at) => controller.discoverDue(at), execute: (hash, at, lease) => execution.runScheduledOnce(hash, at, lease), now: () => new Date(), defer: (callback, ms) => { return setTimeout(callback, ms); }, cancel: (handle) => { clearTimeout(handle); }, leaseId: () => `browser-${crypto.randomUUID()}`, ...(onChange === undefined ? {} : { onChange }) });
 }
