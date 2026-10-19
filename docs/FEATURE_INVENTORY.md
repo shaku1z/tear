@@ -1332,8 +1332,13 @@ UNAVAILABLE`: no production media renderer is connected.
 Vault source retention now uses one shared backend with exact transaction
 guards, a manifest mutation fence, reference-safe shared-chunk removal, and
 owner protection acquired with Academy custody. Legacy source protection is
-backfilled before quota upkeep; unavailable sources cannot enter held-custody
-queries. Source removal and its custody tombstone commit together. Publication
+backfilled from durable custody before quota upkeep, including damaged chunks
+and absent manifests. These retention fences preserve forensic evidence and
+future exact source reappearance without certifying chunk health. Malformed or
+conflicting source/protection records stop destructive upkeep. Imports honor
+the reserved source ID/root and guard its exact protection revision. Unavailable
+sources cannot enter held-custody queries. Source removal and its custody
+tombstone commit together. Publication
 enqueue and transport persistence fence the exact validated consent, source
 manifest/chunks, custody, queued job, and prior transport state. Focused race
 regressions cover changes immediately before those transactions; real IndexedDB

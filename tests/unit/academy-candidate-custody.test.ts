@@ -9,7 +9,7 @@ import {
   type TearAcademyCandidateDeclarationV1,
 } from "../../src/agents";
 import { GhostLocalVault, createMemoryGhostVaultBackend, ghostCapsuleProtectionKey, maintainGhostVault,
-  prepareGhostCapsuleProtection, parseGhostCapsuleProtection } from "../../src/ghost";
+  prepareGhostCapsuleProtection, parseGhostCapsuleProtection, reviseGhostCapsuleManifest, ghostRootIntegrity, GHOST_VAULT_STORES } from "../../src/ghost";
 import {
   ProductionHeadlessAcademyIntake,
   createProductionHeadlessEpisodePool,
@@ -93,6 +93,71 @@ describe("C31 Academy candidate custody", () => {
       decidedAt: "2026-08-02T00:01:00.000Z", actor: "academy-curator", reason: "retained source" });
     return { store, custody };
   }
+
+  it.each(["missing", "corrupt", "healthy"] as const)("retains a legacy %s two-chunk source through normal beforeQuota upkeep without granting health", async (health) => {
+    const input = await prepared(), { store, custody } = await acceptPrepared(input), id = input.materialized.capsuleId;
+    const manifest = await input.vault.getManifest(id); if (manifest === undefined) throw new Error("missing fixture"); expect(manifest.chunks).toHaveLength(2);
+    await input.backend.remove("analysis", ghostCapsuleProtectionKey(id));
+    const first = manifest.chunks[0]?.id ?? "", second = manifest.chunks[1]?.id ?? "";
+    if (health === "missing") await input.backend.remove("chunks", first);
+    if (health === "corrupt") await input.backend.put("chunks", first, "retained corrupt forensic bytes");
+    const before = { manifest: await input.backend.get("manifests", id), first: await input.backend.get("chunks", first), second: await input.backend.get("chunks", second) };
+    const report = await maintainGhostVault(input.vault, { maximumBytes: 0, beforeQuota: () => store.ensureSourceProtection().then(() => undefined) });
+    expect(report.evictedCapsuleIds).toEqual([]);
+    expect({ manifest: await input.backend.get("manifests", id), first: await input.backend.get("chunks", first), second: await input.backend.get("chunks", second) }).toEqual(before);
+    expect(await store.get(custody.candidateHash)).toEqual(custody);
+    expect(parseGhostCapsuleProtection(await input.backend.get("analysis", ghostCapsuleProtectionKey(id)) ?? "", id).owners).toContain(custody.candidateHash);
+    expect(await store.held("2026-08-02T00:03:00.000Z")).toHaveLength(health === "healthy" ? 1 : 0);
+  });
+
+  it("fences absent legacy source identity and protects a later exact reappearance without blocking upkeep", async () => {
+    const input = await prepared(), { store, custody } = await acceptPrepared(input), id = input.materialized.capsuleId, exported = await input.vault.exportCapsule(id);
+    await input.backend.remove("analysis", ghostCapsuleProtectionKey(id)); await input.backend.remove("manifests", id);
+    const backfill = await store.ensureSourceProtection(); expect(backfill).toEqual({ protectedCandidateHashes: [custody.candidateHash], unavailableCandidateHashes: [custody.candidateHash] });
+    expect(await store.held("2026-08-02T00:03:00.000Z")).toEqual([]);
+    await maintainGhostVault(input.vault, { maximumBytes: 0, beforeQuota: () => store.ensureSourceProtection().then(() => undefined) });
+    await input.vault.importCapsule(exported);
+    const report = await maintainGhostVault(input.vault, { maximumBytes: 0, beforeQuota: () => store.ensureSourceProtection().then(() => undefined) });
+    expect(report.evictedCapsuleIds).toEqual([]); expect(await input.vault.exportCapsule(id)).toBe(exported); expect(await store.get(custody.candidateHash)).toEqual(custody);
+  });
+
+  it.each(["malformed-source", "mismatched-source", "malformed-protection", "future-protection", "conflicting-protection"] as const)("refuses destructive legacy upkeep for %s without changing any evidence", async (kind) => {
+    const input = await prepared(), { store } = await acceptPrepared(input), id = input.materialized.capsuleId, key = ghostCapsuleProtectionKey(id), manifest = await input.vault.getManifest(id); if (manifest === undefined) throw new Error("missing fixture");
+    await input.backend.remove("analysis", key);
+    if (kind === "malformed-source") await input.backend.put("manifests", id, "retained malformed manifest");
+    if (kind === "mismatched-source") { const chunks = manifest.chunks.slice(1); await input.backend.put("manifests", id, JSON.stringify(reviseGhostCapsuleManifest(manifest, { chunks, rootIntegrity: ghostRootIntegrity(chunks) }))); }
+    if (kind === "malformed-protection") await input.backend.put("analysis", key, "retained malformed protection");
+    if (kind === "future-protection") await input.backend.put("analysis", key, JSON.stringify({ format: "ghost-capsule-protection", schemaVersion: 2 }));
+    if (kind === "conflicting-protection") await input.backend.put("analysis", key, JSON.stringify({ format: "ghost-capsule-protection", schemaVersion: 1, capsuleId: id, rootIntegrity: "0000000000000000", owners: ["retained-owner"] }));
+    const snapshot = async () => Promise.all(GHOST_VAULT_STORES.map(async (name) => ({ name, entries: await Promise.all((await input.backend.keys(name)).map(async (entry) => [entry, await input.backend.get(name, entry)])) })));
+    const before = await snapshot(); await expect(maintainGhostVault(input.vault, { maximumBytes: 0, beforeQuota: () => store.ensureSourceProtection().then(() => undefined) })).rejects.toThrow();
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it.each(["custody", "manifest", "protection", "reappearance"] as const)("rejects final retention-CAS %s drift before quota or maintenance writes", async (drift) => {
+    const base = createMemoryGhostVaultBackend(); let mutate: (() => Promise<void>) | undefined;
+    const backend = { ...base, async commitIfMatches(...args: Parameters<typeof base.commitIfMatches>) {
+      if (mutate !== undefined && args[1].some((write) => write.key.startsWith("ghost-capsule-protection:"))) { const once = mutate; mutate = undefined; await once(); }
+      return base.commitIfMatches(...args);
+    } };
+    const input = await prepared(backend), { store, custody } = await acceptPrepared(input), id = input.materialized.capsuleId, key = ghostCapsuleProtectionKey(id);
+    const manifestRaw = await base.get("manifests", id), custodyStorageKey = `academy-candidate-custody:v1:${custody.candidateHash}`, custodyRaw = await base.get("analysis", custodyStorageKey);
+    if (manifestRaw === undefined || custodyRaw === undefined) throw new Error("missing fixture");
+    await base.remove("analysis", key); if (drift === "reappearance") await base.remove("manifests", id);
+    const chunks = await Promise.all((await base.keys("chunks")).map(async (entry) => [entry, await base.get("chunks", entry)]));
+    const competingProtection = JSON.stringify({ format: "ghost-capsule-protection", schemaVersion: 1, capsuleId: id, rootIntegrity: custody.source.capsuleRange.rootIntegrity, owners: ["competing-owner"] });
+    mutate = async () => {
+      if (drift === "custody") await base.put("analysis", custodyStorageKey, `${custodyRaw} `);
+      if (drift === "manifest") await base.put("manifests", id, `${manifestRaw} `);
+      if (drift === "protection") await base.put("analysis", key, competingProtection);
+      if (drift === "reappearance") await base.put("manifests", id, manifestRaw);
+    };
+    await expect(maintainGhostVault(input.vault, { maximumBytes: 0, beforeQuota: () => store.ensureSourceProtection().then(() => undefined) })).rejects.toThrow();
+    expect(await base.get("analysis", "vault-maintenance:v1")).toBeUndefined(); expect(await store.get(custody.candidateHash)).toEqual(custody);
+    expect(await base.get("manifests", id)).toBe(drift === "manifest" ? `${manifestRaw} ` : manifestRaw);
+    expect(await base.get("analysis", key)).toBe(drift === "protection" ? competingProtection : undefined);
+    expect(await Promise.all((await base.keys("chunks")).map(async (entry) => [entry, await base.get("chunks", entry)]))).toEqual(chunks);
+  });
 
   it.each(["source", "chunk", "custody"] as const)("refuses %s drift at the final custody acceptance transaction without partial protection", async (drift) => {
     const base = createMemoryGhostVaultBackend(); let mutate: (() => Promise<void>) | undefined;

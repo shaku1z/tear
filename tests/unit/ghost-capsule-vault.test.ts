@@ -18,9 +18,31 @@ import {
   type GhostVaultBackend,
   type TearGhostChunkIndexEntry,
   type GhostVaultStore,
+  ghostCapsuleProtectionKey,
+  reviseGhostCapsuleManifest,
 } from "../../src/ghost";
 
 describe("Ghost capsule recorder and local Vault", () => {
+  it("reserves an absent protected capsule id for its exact root and permits that exact source to return", async () => {
+    const source = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const record = async (id: string) => { const recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source }); await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: id } }); return recorder.finalize("2026-08-10T00:00:01.000Z"); };
+    const original = await record("reserved-source"), foreign = await record("foreign-source"), base = createMemoryGhostVaultBackend(), vault = new GhostLocalVault(base);
+    const key = ghostCapsuleProtectionKey(original.id), marker = JSON.stringify({ format: "ghost-capsule-protection", schemaVersion: 1, capsuleId: original.id, rootIntegrity: original.rootIntegrity, owners: ["legacy-owner"] }); await base.put("analysis", key, marker);
+    const foreignExport = JSON.parse(await source.exportCapsule(foreign.id)) as { chunks: Record<string, string> };
+    const occupied = await vault.importCapsule(JSON.stringify({ manifest: reviseGhostCapsuleManifest(foreign, { id: original.id }), chunks: foreignExport.chunks })).then(() => true, () => false);
+    expect(occupied).toBe(false); expect(await base.keys("manifests")).toEqual([]); expect(await base.keys("chunks")).toEqual([]); expect(await base.keys("indexes")).toEqual([]); expect(await base.get("analysis", key)).toBe(marker);
+    await expect(vault.importCapsule(await source.exportCapsule(original.id))).resolves.toEqual(original); expect(await base.get("analysis", key)).toBe(marker);
+  });
+
+  it.each(["absent", "present"] as const)("refuses import when %s protection changes at final CAS without occupying the source id", async (presence) => {
+    const source = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostStreamingRecorder({ sessionId: "protected-import", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source });
+    await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } }); const manifest = await recorder.finalize("2026-08-10T00:00:01.000Z"), exported = await source.exportCapsule(manifest.id);
+    const base = createMemoryGhostVaultBackend(), key = ghostCapsuleProtectionKey(manifest.id), marker = (owner: string) => JSON.stringify({ format: "ghost-capsule-protection", schemaVersion: 1, capsuleId: manifest.id, rootIntegrity: manifest.rootIntegrity, owners: [owner] });
+    if (presence === "present") await base.put("analysis", key, marker("legacy-owner")); let raced = false;
+    const backend: GhostVaultBackend = { ...base, async commitIfMatches(guards, writes) { if (!raced) { raced = true; await base.put("analysis", key, marker("competing-owner")); } return base.commitIfMatches(guards, writes); } };
+    expect(await new GhostLocalVault(backend).importCapsule(exported).then(() => true, () => false)).toBe(false);
+    expect(await base.keys("manifests")).toEqual([]); expect(await base.keys("chunks")).toEqual([]); expect(await base.keys("indexes")).toEqual([]); expect(await base.get("analysis", key)).toBe(marker("competing-owner"));
+  });
   it.each(["replacement", "deletion", "late-occupation"] as const)("refuses import chunk %s immediately before its transaction without adopting changed bytes", async (drift) => {
     const source = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostStreamingRecorder({ sessionId: "atomic-import", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source });
     await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } }); await recorder.finalize("2026-08-10T00:00:01.000Z");

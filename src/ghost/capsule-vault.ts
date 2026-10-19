@@ -494,6 +494,8 @@ export class GhostLocalVault {
     await this.#commitMutation(async () => {
       const existingManifest = await this.#backend.get("manifests", manifest.id);
       if (existingManifest !== undefined) throw new RangeError(`capsule already exists: ${manifest.id}`);
+      const protectionKey = ghostCapsuleProtectionKey(manifest.id), protectionRaw = await this.#backend.get("analysis", protectionKey);
+      if (protectionRaw !== undefined && parseGhostCapsuleProtection(protectionRaw, manifest.id).rootIntegrity !== manifest.rootIntegrity) throw new RangeError("capsule import conflicts with retained source protection");
       const writes: GhostVaultWrite[] = [], chunkGuards: GhostVaultGuard[] = [];
       for (const entry of manifest.chunks) {
         const encoded = chunks[entry.id];
@@ -506,7 +508,7 @@ export class GhostLocalVault {
         if (existing === undefined) writes.push({ store: "chunks", key: entry.id, value: encoded });
       }
       return Object.freeze({
-        guards: Object.freeze([{ store: "manifests" as const, key: manifest.id }, ...chunkGuards]),
+        guards: Object.freeze([{ store: "manifests" as const, key: manifest.id }, { store: "analysis" as const, key: protectionKey, ...(protectionRaw === undefined ? {} : { expected: protectionRaw }) }, ...chunkGuards]),
         writes: Object.freeze([...writes, ...this.#manifestWrites(manifest)]),
       });
     }, true);
