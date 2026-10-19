@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
+import { fork } from "node:child_process";
+import { once } from "node:events";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { ProductionHeadlessWorkerDispatcher } from "../scripts/production-headless-worker-dispatcher.mjs";
+import { ProductionHeadlessJobStore } from "../scripts/production-headless-job-store.mjs";
 
 function request(id, overrides = {}) {
   return {
@@ -36,6 +41,226 @@ async function waitForExit(pid) {
   }
   throw new Error(`worker ${String(pid)} did not exit after SIGTERM`);
 }
+
+function supervisor(context, path, requestPath, stage = "none") {
+  const child = fork(resolve("tests/fixtures/production-headless-job-crash.mjs"), [path, requestPath, stage], { silent: true });
+  let stderr = "";
+  child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+  const messages = [];
+  child.on("message", (message) => messages.push(message));
+  const exited = once(child, "exit");
+  context.after(async () => {
+    if (child.exitCode === null && child.signalCode === null) child.kill();
+    await exited;
+  });
+  return { child, messages, exited, next: async (kind) => {
+    const deadline = Date.now() + 40_000;
+    while (Date.now() < deadline) {
+      const found = messages.find((entry) => entry.kind === kind || entry.kind === "refused");
+      if (found !== undefined) return found;
+      if (child.exitCode !== null || child.signalCode !== null) throw new Error(`supervisor exited: ${stderr}`);
+      await delay(10);
+    }
+    throw new Error(`supervisor did not reach ${kind}: ${stderr}`);
+  } };
+}
+
+test("C30 durable subprocess recovery preserves all four real kill boundaries and exact terminal no-redispatch", async (context) => {
+  for (const stage of ["admitted", "started", "before-publish", "published"]) {
+    await context.test(stage, async (part) => {
+      const folder = mkdtempSync(resolve(tmpdir(), "tear-c30-restart-"));
+      const path = resolve(folder, "jobs.sqlite"), input = resolve(folder, "request.json");
+      writeFileSync(input, JSON.stringify(request(`restart-${stage}`, { retry: "idempotent-on-worker-exit" })));
+      const original = supervisor(part, path, input, stage);
+      const evidence = await original.next("barrier");
+      assert.equal(evidence.kind, "barrier");
+      assert.equal(evidence.stage, stage);
+      const before = evidence.record;
+      assert.equal(before.job.attempts.length, stage === "admitted" ? 0 : 1);
+      if (stage === "started") assert.equal(before.job.attempts[0].started.tick, 1);
+      if (stage === "before-publish") assert.equal(evidence.result.ticks, 120);
+      original.child.kill(); await original.exited;
+      const workerPid = before.job.attempts.at(-1)?.started?.workerPid;
+      if (workerPid !== undefined) await waitForExit(workerPid);
+      // Real time only: no refreshed or synthetic deadline/lease during OS restart.
+      await delay(Math.max(0, (before.job.lease?.expiresAt ?? 0) - Date.now()) + 20);
+      if (stage === "admitted") {
+        const changedInput = resolve(folder, "changed.json");
+        const changed = JSON.parse(JSON.stringify(request(`restart-${stage}`, { retry: "idempotent-on-worker-exit" })));
+        changed.actions[0].actions[0].x = -1000;
+        writeFileSync(changedInput, JSON.stringify(changed));
+        const conflict = supervisor(part, path, changedInput);
+        const refused = await conflict.next("refused"); await conflict.exited;
+        assert.equal(refused.code, "input-conflict"); assert.equal(refused.spawns, 0);
+        const observed = new ProductionHeadlessJobStore({ path, limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 } });
+        try { assert.deepEqual(observed.read(before.job.id), before); } finally { observed.close(); }
+      }
+      const restarted = supervisor(part, path, input);
+      const done = await restarted.next("done"); await restarted.exited;
+      assert.equal(done.kind, "done", JSON.stringify(done));
+      assert.equal(done.result.kind, "completed");
+      assert.equal(done.result.episodeOutcome, "truncated");
+      assert.equal(done.result.ticks, 120);
+      assert.equal(done.record.job.admittedAt, before.job.admittedAt);
+      assert.equal(done.record.job.deadlineAt, before.job.deadlineAt);
+      assert.equal(done.record.requestDigest, before.requestDigest);
+      if (stage === "published") {
+        assert.deepEqual(done.result, before.result);
+        assert.equal(done.spawns, 0, "committed terminal is returned without a worker");
+      } else {
+        assert.equal(done.spawns, 1);
+        assert.equal(done.record.job.attempts.length, stage === "admitted" ? 1 : 2);
+        if (evidence.result !== undefined) assert.equal(done.result.semanticHash, evidence.result.semanticHash,
+          "explicit origin replay matches the actual pre-crash source result");
+      }
+      part.diagnostic(JSON.stringify({ stage, artifactDirectory: folder, supervisorPid: evidence.supervisorPid, originalWorkerPid: workerPid,
+        recoveredWorkerPid: done.result.workerPid, spawns: done.spawns, attempts: done.result.attempts.length,
+        requestDigest: done.record.requestDigest, executionBinding: done.record.input.binding,
+        deadlineAt: done.record.job.deadlineAt, semanticHash: done.result.semanticHash }));
+    });
+  }
+}, { timeout: 120_000 });
+
+test("C30 durable real worker cancellation fences an actual completed result before publication", async (context) => {
+  const folder = mkdtempSync(resolve(tmpdir(), "tear-c30-cancel-"));
+  const store = new ProductionHeadlessJobStore({ path: resolve(folder, "jobs.sqlite"), leaseMilliseconds: 2000,
+    limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 } });
+  let actual;
+  let spawns = 0;
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({ store, maxWorkers: 1, deadlineMilliseconds: 60_000,
+    workerPathForSpawn: () => { spawns += 1; return resolve("scripts/production-headless-worker.mjs"); },
+    onDurableBoundary: async (stage, evidence) => {
+      if (stage === "before-publish") {
+        actual = evidence.result;
+        await assert.rejects(dispatcher.run([request("overlap")]), (error) => error.code === "dispatcher-busy");
+        assert.equal(store.read("overlap"), null, "reentrant batch cannot create extra worker capacity or admissions");
+        assert.equal(await dispatcher.cancel(evidence.requestId), true);
+      }
+    } });
+  context.after(async () => { await dispatcher.close(); store.close(); });
+  const [result] = await dispatcher.run([request("cancel-late")]);
+  assert.equal(actual.kind, "completed");
+  assert.equal(actual.ticks, 120);
+  assert.equal(result.kind, "cancelled");
+  assert.equal(result.dispatch, "durable-cancel");
+  assert.deepEqual(store.read("cancel-late").result, result);
+  const [zero] = await dispatcher.run([request("zero-budget", { deadlineMilliseconds: 0 })]);
+  assert.equal(zero.kind, "timed-out"); assert.equal(zero.attempts.length, 0);
+  assert.equal(spawns, 1, "expired admission does not spawn a replacement worker");
+});
+
+test("review lifecycle: a completed A slot stays owned until publication, so cancelling A cannot kill C", async (context) => {
+  const folder = mkdtempSync(resolve(tmpdir(), "tear-c30-slot-owner-"));
+  const store = new ProductionHeadlessJobStore({ path: resolve(folder, "jobs.sqlite"), leaseMilliseconds: 3000,
+    limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 } });
+  let releaseA, releaseC, signalA, signalC, aPid, cPid;
+  const aPaused = new Promise((done) => { signalA = done; });
+  const cStarted = new Promise((done) => { signalC = done; });
+  const aGate = new Promise((done) => { releaseA = done; });
+  const cGate = new Promise((done) => { releaseC = done; });
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({ store, maxWorkers: 2, deadlineMilliseconds: 90_000,
+    onDurableBoundary: async (stage, evidence) => {
+      if (stage === "before-publish" && evidence.requestId === "slot-a") {
+        aPid = evidence.result.workerPid; signalA(); await aGate;
+      }
+      if (stage === "before-publish" && evidence.requestId === "slot-b") await aPaused;
+      if (stage === "started" && evidence.requestId === "slot-c") {
+        cPid = evidence.workerPid; signalC(); await cGate;
+      }
+    } });
+  context.after(async () => { releaseA(); releaseC(); await dispatcher.close(); store.close(); });
+  const running = dispatcher.run([request("slot-a"), request("slot-b"), request("slot-c")]);
+  const outcome = running.then((results) => ({ results }), (error) => ({ error }));
+  await cStarted;
+  assert.equal(await dispatcher.cancel("slot-a"), true);
+  releaseA(); releaseC();
+  const observed = await outcome;
+  // Drain both real children before inspecting the assertion, including the pre-fix failure.
+  await dispatcher.close();
+  context.diagnostic(JSON.stringify({ aPid, cPid, batchError: observed.error?.code ?? null,
+    cState: store.read("slot-c").job.state, cResult: store.read("slot-c").result?.kind }));
+  assert.notEqual(aPid, cPid, "C must use B's released slot while A owns its completed child");
+  assert.equal(observed.error, undefined);
+  assert.deepEqual(observed.results.map((entry) => entry.kind), ["cancelled", "completed", "completed"]);
+}, { timeout: 90_000 });
+
+test("review lifecycle: duplicate IDs refuse before admission and do not leave an orphan lane", async (context) => {
+  const folder = mkdtempSync(resolve(tmpdir(), "tear-c30-duplicate-"));
+  const store = new ProductionHeadlessJobStore({ path: resolve(folder, "jobs.sqlite"), leaseMilliseconds: 2000,
+    limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 } });
+  let release;
+  const gate = new Promise((done) => { release = done; });
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({ store, maxWorkers: 2,
+    onDurableBoundary: async (stage) => { if (stage === "claimed") await gate; } });
+  context.after(async () => { release(); await dispatcher.close(); store.close(); });
+  const failure = await dispatcher.run([request("duplicate"), request("duplicate")]).then(() => null, (error) => error);
+  const persisted = store.read("duplicate");
+  await dispatcher.close(); release(); await delay(0);
+  context.diagnostic(JSON.stringify({ error: failure?.code, persistedState: persisted?.job.state ?? null }));
+  assert.equal(failure?.code, "duplicate-request");
+  assert.equal(persisted, null);
+});
+
+test("review lifecycle: external claim failure drains the active sibling and keeps the batch busy until cleanup", async (context) => {
+  const folder = mkdtempSync(resolve(tmpdir(), "tear-c30-drain-"));
+  const path = resolve(folder, "jobs.sqlite");
+  const options = { path, leaseMilliseconds: 3000, limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 } };
+  const store = new ProductionHeadlessJobStore(options), peer = new ProductionHeadlessJobStore(options);
+  let release, entered, finished;
+  const gate = new Promise((done) => { release = done; });
+  const claimed = new Promise((done) => { entered = done; });
+  const published = new Promise((done) => { finished = done; });
+  const dispatcher = new ProductionHeadlessWorkerDispatcher({ store, maxWorkers: 2, deadlineMilliseconds: 60_000,
+    onDurableBoundary: async (stage, evidence) => {
+      if (stage === "admitted" && evidence.record.job.id === "external") {
+        peer.claim("external", evidence.record.job.revision, "external-owner");
+      }
+      if (stage === "claimed" && evidence.record.job.id === "drain-a") { entered(); await gate; }
+      if (stage === "published" && evidence.record.job.id === "drain-a") finished();
+    } });
+  context.after(async () => { release(); await dispatcher.close(); peer.close(); store.close(); });
+  let settled = false;
+  const original = dispatcher.run([request("drain-a"), request("external")])
+    .then(() => { settled = true; return null; }, (error) => { settled = true; return error; });
+  await claimed; await delay(20);
+  const settledBeforeRelease = settled;
+  const overlap = await dispatcher.run([request("drain-overlap", { deadlineMilliseconds: 0 })]).then(() => null, (error) => error);
+  const overlapRow = store.read("drain-overlap");
+  release(); await published;
+  const originalError = await original; await dispatcher.close();
+  context.diagnostic(JSON.stringify({ settledBeforeRelease, overlapError: overlap?.code ?? null,
+    overlapPersisted: overlapRow !== null, originalError: originalError?.code }));
+  assert.equal(settledBeforeRelease, false);
+  assert.equal(overlap?.code, "dispatcher-busy"); assert.equal(overlapRow, null);
+  assert.equal(originalError?.code, "conflict");
+});
+
+test("review protocol: injected correct-envelope children cannot adopt wrong versions or contradictory results", async (context) => {
+  for (const fault of ["ready-version", "started-version", "result-version", "outcome", "cancel-outcome", "timeout-outcome", "horizon", "artifact-hash", "native-shape", "artifact-shape", "short-truncation"]) {
+    await context.test(fault, async (part) => {
+      const previous = process.env.TEAR_C30_TEST_WORKER_FAULT;
+      process.env.TEAR_C30_TEST_WORKER_FAULT = fault;
+      const folder = mkdtempSync(resolve(tmpdir(), "tear-c30-protocol-"));
+      const store = new ProductionHeadlessJobStore({ path: resolve(folder, "jobs.sqlite"), leaseMilliseconds: 3000,
+        limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 } });
+      let validated = 0;
+      const dispatcher = new ProductionHeadlessWorkerDispatcher({ store, maxWorkers: 1, deadlineMilliseconds: 30_000,
+        workerPath: resolve("tests/fixtures/production-headless-job-crash.mjs"),
+        onDurableBoundary: (stage) => { if (stage === "before-publish") validated += 1; } });
+      part.after(async () => {
+        await dispatcher.close(); store.close();
+        if (previous === undefined) delete process.env.TEAR_C30_TEST_WORKER_FAULT;
+        else process.env.TEAR_C30_TEST_WORKER_FAULT = previous;
+      });
+      const [result] = await dispatcher.run([request(`protocol-${fault}`)]);
+      part.diagnostic(JSON.stringify({ fault, validated, adopted: result.kind,
+        started: store.read(result.requestId).job.attempts[0].started }));
+      assert.equal(validated, 0, "invalid output cannot reach the validated-result observation barrier");
+      assert.equal(result.kind, "failed");
+      if (fault === "ready-version" || fault === "started-version") assert.equal(store.read(result.requestId).job.attempts[0].started, null);
+    });
+  }
+});
 
 test("C30 dispatcher bounds real workers, short-circuits cancellation, and replaces an exited child", async (context) => {
   const dispatcher = new ProductionHeadlessWorkerDispatcher({

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { fork } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { resolve } from "node:path";
 import test from "node:test";
+import { canonicalJson } from "../scripts/tearbench-task-receipts.mjs";
 
 const workerPath = resolve("scripts", "production-headless-worker.mjs");
 
@@ -35,7 +37,8 @@ function request(id, options = {}) {
 
 test("C30 worker process keeps production worlds behind serialized episode messages", async (context) => {
   const worker = fork(workerPath, { silent: true });
-  context.after(() => { if (worker.connected) worker.disconnect(); });
+  const exited = once(worker, "exit");
+  context.after(async () => { if (worker.connected) worker.disconnect(); await exited; });
   const [ready] = await once(worker, "message");
   assert.equal(ready.format, "tearbench-production-headless-worker");
   assert.equal(ready.schemaVersion, 1);
@@ -87,4 +90,18 @@ test("C30 worker process keeps production worlds behind serialized episode messa
   const rejected = rejectedResult.reply;
   assert.equal(rejected.kind, "failed");
   assert.match(rejected.error, /natural opening/u);
+
+  const durable = { schemaVersion: 1, requestDigest: "d".repeat(64), token: randomUUID(), owner: randomUUID(), ordinal: 1,
+    executionDigest: createHash("sha256").update(canonicalJson(ready.durable.binding)).digest("hex") };
+  const durableResult = await execute({ ...request("durable-worker"), durable });
+  assert.equal(durableResult.reply.kind, "completed");
+  assert.equal(durableResult.reply.episodeOutcome, "truncated", "transport completion does not imply natural termination");
+  assert.deepEqual(durableResult.reply.nativeTerminalEvents, []);
+  assert.deepEqual(durableResult.reply.durable, durable);
+  assert.deepEqual(durableResult.started.map((entry) => entry.durable), [durable]);
+  const invalid = once(worker, "message");
+  worker.send({ ...request("invalid-binding"), durable: { ...durable, schemaVersion: 2 } });
+  const [refused] = await invalid;
+  assert.equal(refused.kind, "failed");
+  assert.match(refused.error, /invalid durable attempt binding/u);
 }, { timeout: 30_000 });

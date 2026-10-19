@@ -894,7 +894,18 @@ frozen evidence record.
    unbounded fleet or target-throughput certification. A parent can also cancel
    one active source worker only after its first fixed tick; that child is
    terminated and the next episode gets a fresh PID, with no checkpoint,
-   restoration, retry, or durable job claim;
+   restoration, retry, or durable job claim in that legacy no-store path.
+   An opt-in local SQLite job store now adds immutable origin-input/source/
+   toolchain binding, guarded joint attempt/job/result publication and explicit
+   process-restart recovery. Real supervisor kills cover admission, actual
+   tick-one start, pre-publication result and post-COMMIT/pre-ACK; exact committed
+   retries launch no worker. Leases fence obsolete output, cancellation wins
+   later success, malformed records remain untouched, and the original absolute
+   admission deadline and one/two-attempt policy survive restart. Recovery
+   restarts from origin; it does not resume a checkpoint. Explicit lower-only
+   8 MiB request / 32 MiB result ceilings are application policy, not whole-heap
+   or target-hardware capacity evidence. Reward/draft/finale checkpoint recovery,
+   natural victory coverage and target capacity remain separate obligations;
    C31 now places a fail-closed Academy admission decision in front of that
    candidate stream. It separately checks local/cloud/analytics/model consent,
    privacy, structured-training provenance, build identity, and a verified raw

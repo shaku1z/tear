@@ -199,9 +199,48 @@ operational boundary it proves.
   proof warms a real worker, cancels a million-tick playground episode after
   that source-tick signal, then completes the next job on a fresh PID. It
   creates no checkpoint, retry, restoration, or durable job state.
-- [ ] Declared-target capacity and durable recovery evidence. Timeout,
-  validation, and ordinary worker-reported failures are not retried. No target
-  host is declared in this repository, and no durable job recovery is claimed.
+- [x] Opt-in durable local worker jobs and origin recovery.
+  `ProductionHeadlessJobStore` uses Node 24's built-in SQLite on an explicit
+  path outside the source tree. The dispatcher admits strict detached origin
+  scenario/action data with its effective policy, observed source fingerprint,
+  revision, dependency digest and toolchain before claiming an attempt or
+  spawning a worker. Requests, job revision, attempts and terminal result are
+  adopted in one guarded SQLite transaction; acknowledgement follows COMMIT.
+  Exact terminal retries return the existing result without spawning. Changed
+  input, unknown schemas and malformed records refuse without repair.
+  A claimed attempt consumes budget before send. Only an explicitly idempotent
+  worker exit or interrupted owner permits a second origin attempt; `never`
+  allows one total. This is origin replay, not checkpoint continuation.
+  The original absolute deadline starts at admission and includes queue,
+  startup and process restart, bounded by any shorter cooperative timeout.
+  Lease renewal and opaque attempt tokens fence stale output; durable
+  cancellation can commit before tick one and wins over a later result.
+  A child slot stays reserved through publication and observation cleanup;
+  cancelling its prior job cannot affect a subsequent owner. Failed batches
+  drain their already-started lanes before accepting another batch, and
+  duplicate request IDs refuse before admission. Ready/start/reply versions and
+  serialized outcome/artifact consistency validate before persistence or the
+  validated-result observer; native-event counts do not infer lifecycle outcome.
+  Clock regression refuses instead of granting additional time. An uncertain
+  commit resolves only exact validated joint rows; unreadable resolution is
+  `commit-indeterminate`, with no cleanup or failure writes.
+  Real supervisor-kill controls cover admission, actual source tick-one start,
+  validated result before publication, and committed publication before ACK.
+  The restarted process preserves the original deadline and consumed attempts;
+  pre-publication origin replay matches the actual source terminal hash.
+  Transport `completed` remains separate from the runner's terminated/truncated
+  disposition and any actual native terminal facts. Legacy dispatch without a
+  store keeps its relative timers and source-tick-one cancellation behavior.
+  Durable callers must explicitly choose positive lower-only limits of at most
+  8 MiB per canonical request and 32 MiB per result. These are application
+  safety bounds, not hardware capacity or whole-heap certification: SQLite
+  reads, Node IPC and canonicalization may allocate before length checks.
+  Local process-crash tests do not certify power loss, network filesystems,
+  exactly-once computation, remote scheduling or training quality.
+- [ ] Declared-target capacity and recovered checkpoint/finale evidence.
+  Timeout, validation, and ordinary worker-reported failures are not retried.
+  No target host is declared in this repository. Durable origin restart does
+  not close reward/draft checkpoint or natural victory/finale continuation.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated

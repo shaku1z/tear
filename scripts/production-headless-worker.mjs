@@ -1,7 +1,15 @@
 import { resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "vite";
+import { readSourceIdentitySync } from "./release-artifact.mjs";
+import { canonicalJson } from "./tearbench-task-receipts.mjs";
+import { executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
 
 const root = resolve(import.meta.dirname, "..");
+const digest = (value) => createHash("sha256").update(value).digest("hex");
+const binding = { source: readSourceIdentitySync(root), dependencySha256: digest(readFileSync(resolve(root, "pnpm-lock.yaml"))),
+  toolchain: executionToolchainBinding(JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"))) };
 const server = await createServer({ root, server: { middlewareMode: true } });
 const { createProductionHeadlessEnvironment } = await server.ssrLoadModule("/src/tearbench/production-headless-environment.ts");
 const { TearHeadlessRunner } = await server.ssrLoadModule("/src/tearbench/headless.ts");
@@ -19,6 +27,17 @@ function request(value) {
   if (value.timeoutMilliseconds !== undefined && (!Number.isFinite(value.timeoutMilliseconds) || value.timeoutMilliseconds < 0)) {
     throw new TypeError("worker timeout must be a non-negative finite number");
   }
+  if (value.durable !== undefined) {
+    const claim = value.durable;
+    if (!record(claim) || claim.schemaVersion !== 1 || Object.keys(claim).sort().join(",")
+      !== "executionDigest,ordinal,owner,requestDigest,schemaVersion,token"
+      || typeof claim.requestDigest !== "string" || !/^[a-f0-9]{64}$/u.test(claim.requestDigest)
+      || claim.executionDigest !== digest(canonicalJson(binding)) || ![1, 2].includes(claim.ordinal)
+      || typeof claim.token !== "string" || !/^[a-f0-9-]{36}$/u.test(claim.token)
+      || typeof claim.owner !== "string" || !/^[a-f0-9-]{36}$/u.test(claim.owner)) {
+      throw new TypeError("invalid durable attempt binding");
+    }
+  }
   const actions = new Map();
   for (const entry of value.actions) {
     if (!record(entry) || !Number.isSafeInteger(entry.tick) || entry.tick < 1 || !Array.isArray(entry.actions)) {
@@ -33,11 +52,12 @@ function request(value) {
     actions,
     cancelled: value.cancelled === true,
     timeoutMilliseconds: value.timeoutMilliseconds,
+    durable: value.durable,
   });
 }
 
 function send(value) {
-  if (typeof process.send === "function") process.send({ ...value, workerPid: process.pid });
+  if (typeof process.send === "function" && process.connected) process.send({ ...value, workerPid: process.pid }, () => undefined);
 }
 
 async function run(message) {
@@ -65,7 +85,8 @@ async function run(message) {
           if (!started && tick === 1) {
             started = true;
             send({ format: "tearbench-production-headless-worker", schemaVersion: 1,
-              kind: "started", requestId: parsed.requestId, ticks: tick });
+              kind: "started", requestId: parsed.requestId, ticks: tick,
+              ...(parsed.durable === undefined ? {} : { durable: parsed.durable }) });
           }
         },
         onArtifact: (_tick, artifact) => { terminal = artifact; },
@@ -77,6 +98,10 @@ async function run(message) {
         kind, requestId: parsed.requestId, ticks: episode.ticks,
         semanticHash: episode.semanticHash,
         ...(terminal === undefined ? {} : { terminal }),
+        ...(parsed.durable === undefined ? {} : {
+          durable: parsed.durable, episodeOutcome: episode.outcome,
+          nativeTerminalEvents: episode.events.filter((event) => ["run.completed", "run.defeated", "run.abandoned"].includes(event.type)),
+        }),
       });
     } finally {
       runner.dispose();
@@ -86,6 +111,7 @@ async function run(message) {
       format: "tearbench-production-headless-worker", schemaVersion: 1,
       kind: "failed", requestId: parsed?.requestId ?? null,
       error: error instanceof Error ? error.message : String(error),
+      ...(parsed?.durable === undefined ? {} : { durable: parsed.durable }),
     });
   }
 }
@@ -94,4 +120,4 @@ process.on("message", (message) => { void run(message); });
 process.on("disconnect", () => {
   void server.close().finally(() => process.exit(0));
 });
-send({ format: "tearbench-production-headless-worker", schemaVersion: 1, kind: "ready" });
+send({ format: "tearbench-production-headless-worker", schemaVersion: 1, kind: "ready", durable: { schemaVersion: 1, binding } });
