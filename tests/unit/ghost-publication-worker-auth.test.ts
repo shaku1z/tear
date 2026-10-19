@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+/// <reference types="node" />
+import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import {
   FirebaseAuthenticationError,
   createFirebaseIdTokenVerifier,
@@ -175,21 +178,36 @@ function manifest(): string {
   });
 }
 
-function deletionEnvironment(input: Readonly<{ readonly failuresBeforePurge?: number }> = {}): { readonly env: Env; readonly statements: string[]; readonly audits: string[]; readonly deleteCalls: () => number } {
-  let row: Record<string, unknown> | null = uploadRow({ status: "finalized", visibility: "public", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}' });
-  let failures = input.failuresBeforePurge ?? 0, calls = 0;
-  const statements: string[] = [], audits: string[] = [];
+const deletionDatabases: DatabaseSync[] = [];
+afterEach(() => { for (const database of deletionDatabases.splice(0)) database.close(); });
+
+function deletionEnvironment(input: Readonly<{ readonly failuresBeforePurge?: number;
+  readonly status?: "uploading" | "verifying" | "finalized"; readonly verifierFetch?: () => Promise<Response>;
+  readonly beforeDeleteRequestBatch?: () => Promise<void>; readonly failRequestBatch?: boolean;
+  readonly beforeFinalizeBatch?: () => Promise<void> }> = {}) {
+  const database = new DatabaseSync(":memory:"); deletionDatabases.push(database);
+  for (const migration of ["0001_ghost_publication", "0002_ghost_upload_topology", "0003_ghost_capsule_deletion_saga", "0004_ghost_verdict_and_report_intake", "0005_ghost_reviewer_moderation"]) {
+    database.exec(readFileSync(new URL(`../../migrations/ghost/${migration}.sql`, import.meta.url), "utf8"));
+  }
+  const row = uploadRow({ status: input.status ?? "finalized", visibility: "public", privacy_class: "pseudonymous", verdict_json: '{"status":"verified"}',
+    created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" });
+  const value = (entry: unknown): SQLInputValue => {
+    if (entry === null || typeof entry === "string" || typeof entry === "number" || typeof entry === "bigint" || entry instanceof Uint8Array) return entry;
+    throw new TypeError("unsupported D1 fixture binding");
+  };
+  database.prepare(`INSERT INTO ghost_uploads (${Object.keys(row).join(", ")}) VALUES (${Object.keys(row).map(() => "?").join(", ")})`).run(...Object.values(row).map(value));
+  const current = () => database.prepare("SELECT * FROM ghost_uploads WHERE capsule_id = ?").get("capsule-1");
+  let failures = input.failuresBeforePurge ?? 0, calls = 0, reads = 0, aborts = 0, beforeDeleteRequestBatch = input.beforeDeleteRequestBatch;
+  const statements: string[] = [], rowsAtDelete: unknown[] = [];
   const statement = (sql: string) => ({
     bind: (...values: unknown[]) => {
-      const execute = () => {
-        statements.push(sql);
-        if (sql.includes("SET status = 'deleting'")) row = row === null ? null : { ...row, status: "deleting", visibility: "private" };
-        if (sql.includes("SET status = 'deleted'")) row = row === null ? null : { ...row, status: "deleted", visibility: "private" };
-        if (sql.includes("INSERT INTO ghost_audit")) audits.push(/'((?:capsule|upload)\.[^']+)'/u.exec(sql)?.[1] ?? "unknown");
-      };
+      const bound = values.map(value);
+      const execute = () => { statements.push(sql); return database.prepare(sql).run(...bound); };
       return {
-        first: () => Promise.resolve(row), all: () => Promise.resolve({ results: [] }), run: () => { execute(); return Promise.resolve({ success: true }); },
-        sql, values, execute,
+        first: () => Promise.resolve(database.prepare(sql).get(...bound) ?? null),
+        all: () => Promise.resolve({ results: database.prepare(sql).all(...bound) }),
+        run: () => { const result = execute(); return Promise.resolve({ success: true, meta: { changes: Number(result.changes) } }); },
+        sql, execute,
       };
     },
   });
@@ -197,15 +215,31 @@ function deletionEnvironment(input: Readonly<{ readonly failuresBeforePurge?: nu
     FIREBASE_PROJECT_ID: "tear-682cf",
     GHOST_METADATA: {
       prepare: statement,
-      batch: (queued: readonly { execute?: () => void }[]) => { queued.forEach((entry) => entry.execute?.()); return Promise.resolve([]); },
+      batch: async (queued: readonly { sql: string; execute: () => { changes: number | bigint } }[]) => {
+        if (queued.some((entry) => entry.sql.includes("INSERT INTO ghost_verdict_receipts") || entry.sql.includes("upload.verdict.quarantined"))) await input.beforeFinalizeBatch?.();
+        if (beforeDeleteRequestBatch !== undefined && queued.some((entry) => entry.sql.includes("capsule.delete.requested"))) {
+          const concurrent = beforeDeleteRequestBatch; beforeDeleteRequestBatch = undefined;
+          await concurrent();
+        }
+        database.exec("BEGIN");
+        try {
+          const results = queued.map((entry) => ({ success: true, meta: { changes: Number(entry.execute().changes) } }));
+          if (input.failRequestBatch && queued.some((entry) => entry.sql.includes("capsule.delete.requested"))) throw new Error("injected D1 batch failure");
+          database.exec("COMMIT"); return results;
+        } catch (error) { database.exec("ROLLBACK"); throw error; }
+      },
     } as unknown as D1Database,
     GHOST_CAPSULES: {
-      delete: () => { calls += 1; if (failures > 0) { failures -= 1; return Promise.reject(new Error("R2 unavailable")); } return Promise.resolve(); },
-      get: () => Promise.resolve(null),
+      delete: () => { calls += 1; rowsAtDelete.push(current()); if (failures > 0) { failures -= 1; return Promise.reject(new Error("R2 unavailable")); } return Promise.resolve(); },
+      get: () => { reads += 1; return Promise.resolve(null); },
+      resumeMultipartUpload: () => ({ abort: () => { aborts += 1; return Promise.resolve(); } }),
     } as unknown as R2Bucket,
-    GHOST_VERIFIER: {} as Fetcher,
+    GHOST_VERIFIER: { fetch: input.verifierFetch } as unknown as Fetcher,
   } as Env;
-  return { env, statements, audits, deleteCalls: () => calls };
+  return { env, statements, rowsAtDelete, row: current, deleteCalls: () => calls, readCalls: () => reads, abortCalls: () => aborts,
+    deletions: () => database.prepare("SELECT * FROM ghost_capsule_deletions").all(),
+    receipts: () => database.prepare("SELECT * FROM ghost_verdict_receipts").all(),
+    audits: () => database.prepare("SELECT action FROM ghost_audit ORDER BY id").all().map((entry) => entry.action) };
 }
 
 function reviewerEnvironment(): { readonly env: Env; readonly row: () => Record<string, unknown>; readonly held: () => boolean; readonly audits: readonly string[]; readonly reads: () => number } {
@@ -583,13 +617,115 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     expect(await pending.json()).toMatchObject({ capsuleId: "capsule-1", status: "deleting", purge: "pending", retryable: true, localRetentionUnaffected: true });
     expect(f.deleteCalls()).toBe(1);
     const requestIndex = f.statements.findIndex((sql) => sql.includes("SET status = 'deleting'"));
-    const auditIndex = f.audits.indexOf("capsule.delete.requested");
+    const auditIndex = f.audits().indexOf("capsule.delete.requested");
     expect(requestIndex).toBeGreaterThanOrEqual(0);
     expect(auditIndex).toBeGreaterThanOrEqual(0);
     const denied = await handler.fetch(request("/v1/capsules/capsule-1/object"), f.env, context());
     expect(denied.status).toBe(404);
     const hiddenStatus = await handler.fetch(request("/v1/uploads/capsule-1"), f.env, context());
     expect(hiddenStatus.status).toBe(404);
+  });
+
+  it("deletes a verifying capsule through the durable deny state before R2, including outage and owner retry", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() }), f = deletionEnvironment({ status: "verifying", failuresBeforePurge: 1 });
+    const foreign = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1", { method: "DELETE", headers: { authorization: "Bearer valid-b.token.signature" } }), f.env, context());
+    expect(foreign.status).toBe(404); expect(f.deleteCalls()).toBe(0);
+    const pending = await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    expect(pending.status).toBe(202);
+    expect(await pending.json()).toMatchObject({ status: "deleting", purge: "pending", retryable: true });
+    expect(f.rowsAtDelete).toEqual([expect.objectContaining({ status: "deleting", visibility: "private" })]);
+    expect(f.row()).toMatchObject({ status: "deleting", visibility: "private" });
+    expect((await handler.fetch(request("/v1/capsules/capsule-1/object"), f.env, context())).status).toBe(404);
+    expect((await handler.fetch(request("/v1/uploads/capsule-1"), f.env, context())).status).toBe(404);
+    expect(f.readCalls()).toBe(0);
+    const purged = await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    expect(await purged.json()).toMatchObject({ status: "deleted", purge: "purged", localRetentionUnaffected: true });
+    expect(f.row()).toMatchObject({ status: "deleted", visibility: "private" });
+    await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    expect(f.deleteCalls()).toBe(2);
+  });
+
+  it("does not touch R2 after a zero-row deletion transition or a failed D1 batch", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const concurrent = deletionEnvironment({ status: "verifying", beforeDeleteRequestBatch: async () => {
+      expect((await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), concurrent.env, context())).status).toBe(200);
+      expect(concurrent.deleteCalls()).toBe(1);
+    } });
+    const alreadyDeleted = await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), concurrent.env, context());
+    expect(await alreadyDeleted.json()).toMatchObject({ status: "deleted", purge: "purged" });
+    expect(concurrent.deleteCalls()).toBe(1); // Only the concurrent winning request calls R2.
+    expect(concurrent.deletions()).toEqual([expect.objectContaining({ state: "purged", attempts: 1 })]);
+    // A zero-row UPDATE is successful SQL: its request/audit intent persists,
+    // while the existing journal remains purged and no second R2 call occurs.
+    expect(concurrent.audits().filter((action) => action === "capsule.delete.requested")).toHaveLength(2);
+    const failed = deletionEnvironment({ status: "verifying", failRequestBatch: true });
+    expect((await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), failed.env, context())).status).toBe(409);
+    expect(failed.row()).toMatchObject({ status: "verifying", visibility: "public" });
+    expect(failed.audits()).toEqual([]); expect(failed.deletions()).toEqual([]); expect(failed.deleteCalls()).toBe(0);
+  });
+
+  it.each([
+    { outcome: "success", purgeFailures: 0 }, { outcome: "outage", purgeFailures: 0 }, { outcome: "throw", purgeFailures: 0 },
+    { outcome: "success", purgeFailures: 1 }, { outcome: "outage", purgeFailures: 1 }, { outcome: "throw", purgeFailures: 1 },
+  ])("keeps late verifier $outcome truthful after deletion (purge failures=$purgeFailures)", async ({ outcome, purgeFailures }) => {
+    let release: ((response: Response) => void) | undefined, started: (() => void) | undefined;
+    let reject: ((reason: Error) => void) | undefined;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    const pending = new Promise<Response>((resolve, rejectPromise) => { release = resolve; reject = rejectPromise; });
+    const f = deletionEnvironment({ status: "verifying", failuresBeforePurge: purgeFailures, verifierFetch: () => { started?.(); return pending; } });
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const verification = handler.fetch(request("/v1/uploads/capsule-1/verify", { method: "POST" }), f.env, context());
+    await ready;
+    await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    const verdict = { status: "verified", capsuleId: "capsule-1", buildId: "tear-1", contentHash: "content-hash", resultHash: "result-hash", signature: "signature", verifierId: "tear-verifier", verificationVersion: "v1", moderation: "cleared", issuedAt: "2026-01-01T00:00:00.000Z" };
+    if (outcome === "throw") reject?.(new Error("verifier unavailable"));
+    else release?.(outcome === "success" ? Response.json(verdict) : new Response("down", { status: 503 }));
+    const result = await verification;
+    expect(result.status).toBe(404); expect(await result.json()).toEqual({ error: "not found" });
+    expect(f.row()).toMatchObject({ status: purgeFailures === 0 ? "deleted" : "deleting", visibility: "private" });
+    expect((await handler.fetch(request("/v1/capsules/capsule-1/object"), f.env, context())).status).toBe(404);
+    expect(f.readCalls()).toBe(0);
+    expect(f.receipts()).toEqual([]);
+    expect(f.audits()).not.toContain("upload.finalize");
+    expect(f.audits()).not.toContain("upload.verdict.quarantined");
+  });
+
+  it.each([false, true])("does not adopt verifier output after deletion wins the actual SQL CAS (malformed=%s)", async (malformed) => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const verdict = { status: "verified", capsuleId: "capsule-1", buildId: "tear-1", contentHash: "content-hash", resultHash: "result-hash", signature: "signature", verifierId: "tear-verifier", verificationVersion: "v1", moderation: "cleared", issuedAt: "2026-01-01T00:00:00.000Z" };
+    const f = deletionEnvironment({ status: "verifying", verifierFetch: () => Promise.resolve(Response.json(malformed ? {} : verdict)),
+      beforeFinalizeBatch: async () => { expect((await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context())).status).toBe(200); },
+    });
+    const result = await handler.fetch(request("/v1/uploads/capsule-1/verify", { method: "POST" }), f.env, context());
+    expect(f.statements.some((sql) => sql.includes(malformed ? "SET status = 'quarantined'" : "UPDATE ghost_uploads SET status = ?, visibility"))).toBe(true);
+    expect(f.row()).toMatchObject({ status: "deleted", visibility: "private", active_verdict_id: "verdict-1" });
+    expect(result.status).toBe(404); expect(await result.json()).toEqual({ error: "not found" });
+    expect(f.receipts()).toEqual([]);
+    expect(f.audits()).not.toContain("upload.finalize");
+    expect(f.audits()).not.toContain("upload.verdict.quarantined");
+  });
+
+  it("retains a valid adopted verdict receipt and audit when the owner deletes later", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() });
+    const verdict = { status: "verified", capsuleId: "capsule-1", buildId: "tear-1", contentHash: "content-hash", resultHash: "result-hash", signature: "signature", verifierId: "tear-verifier", verificationVersion: "v1", moderation: "cleared", issuedAt: "2026-01-01T00:00:00.000Z" };
+    const f = deletionEnvironment({ status: "verifying", verifierFetch: () => Promise.resolve(Response.json(verdict)) });
+    expect((await handler.fetch(request("/v1/uploads/capsule-1/verify", { method: "POST" }), f.env, context())).status).toBe(200);
+    const receipts = f.receipts();
+    expect(receipts).toHaveLength(1);
+    expect(f.row()).toMatchObject({ status: "finalized", active_verdict_id: receipts[0]?.verdict_id });
+    expect(f.audits().filter((action) => action === "upload.finalize")).toHaveLength(1);
+    await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context());
+    expect(f.receipts()).toEqual(receipts);
+    expect(f.audits().filter((action) => action === "upload.finalize")).toHaveLength(1);
+  });
+
+  it("keeps uploading deletion on the existing explicit multipart-abort path", async () => {
+    const handler = createGhostPublicationHandler({ verifier: verifier() }), f = deletionEnvironment({ status: "uploading" });
+    expect((await handler.fetch(request("/v1/capsules/capsule-1", { method: "DELETE" }), f.env, context())).status).toBe(409);
+    expect(f.deleteCalls()).toBe(0);
+    const aborted = await handler.fetch(request("/v1/uploads/capsule-1/abort", { method: "POST" }), f.env, context());
+    expect(aborted.status).toBe(200); expect(f.abortCalls()).toBe(1);
+    expect(f.row()).toMatchObject({ status: "deleted", visibility: "private" });
   });
 
   it("retries only the exact owner deletion request and terminally records R2 purge without local-vault semantics", async () => {
@@ -599,7 +735,7 @@ describe("Ghost publication Worker Firebase owner authentication", () => {
     expect(purged.status).toBe(200);
     expect(await purged.json()).toEqual({ capsuleId: "capsule-1", status: "deleted", purge: "purged", localRetentionUnaffected: true });
     expect(f.deleteCalls()).toBe(2);
-    expect(f.audits).toEqual(expect.arrayContaining(["capsule.delete.requested", "capsule.delete.pending", "capsule.delete.purged"]));
+    expect(f.audits()).toEqual(expect.arrayContaining(["capsule.delete.requested", "capsule.delete.pending", "capsule.delete.purged"]));
     const foreign = await handler.fetch(new Request("https://publication.test/v1/capsules/capsule-1", { method: "DELETE", headers: { authorization: "Bearer valid-b.token.signature" } }), f.env, context());
     expect(foreign.status).toBe(404); expect(await foreign.json()).toEqual({ error: "not found" });
   });

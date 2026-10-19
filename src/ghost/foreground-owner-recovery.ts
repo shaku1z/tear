@@ -1,5 +1,5 @@
 import { ghostSha256 } from "./cloud-publication";
-import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
+import { parseGhostCapsuleManifest, type GhostLocalVault, type TearGhostManifest } from "./capsule-vault";
 import type { GhostPublicationBearerPort } from "../platform/firebase-publication-bearer";
 
 export interface GhostOwnerRecoveryCatalogEntry {
@@ -60,6 +60,10 @@ export class GhostForegroundOwnerRecovery {
     if (bytes.byteLength !== entry.byteLength || bytes.byteLength > maximum) throw new RangeError("Ghost recovery object length is invalid");
     const encoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     if (new TextEncoder().encode(encoded).byteLength !== bytes.byteLength || await ghostSha256(bytes) !== entry.contentHash) throw new TypeError("Ghost recovery object hash or UTF-8 encoding is invalid");
+    // Catalog custody must bind the canonical manifest before import can commit
+    // any chunks, indexes, protection metadata or the Vault mutation epoch.
+    const downloaded = parseGhostCapsuleManifest(record(JSON.parse(encoded) as unknown).manifest);
+    if (downloaded.id !== entry.capsuleId || downloaded.schemaVersion !== entry.schemaVersion || downloaded.rootIntegrity !== entry.rootIntegrity) throw new TypeError("recovered Ghost manifest does not match cloud custody");
     const manifest = await this.#o.vault.importCapsule(encoded, { maxEncodedBytes: maximum, maxChunks: 20_000, maxChunkBytes: 8 * 1024 * 1024, maxExpansionRatio: 100 });
     if (manifest.id !== entry.capsuleId || manifest.schemaVersion !== entry.schemaVersion || manifest.rootIntegrity !== entry.rootIntegrity) throw new TypeError("recovered Ghost manifest does not match cloud custody");
     // Reopen through the Vault parser after the atomic import boundary.
