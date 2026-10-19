@@ -845,6 +845,7 @@ The shipped Cutting Room now additionally includes:
 - [x] Add launch/projectile mixed transfer and two-wave miniature cadence.
 - [x] Add contextual early-campaign draft and first-purchase shop guidance;
   keep them absent from the tutorial.
+- [x] Reopen baseline exercises from menu/setup using saved completion eligibility.
 - Retire version 1 only after completion and abandonment metrics meet targets.
 
 - activation tick;
@@ -896,10 +897,17 @@ restore retain this origin. Practice completion returns to baseline practice and
 cannot emit course credit. Version-1/2 course checkpoint shapes stay unchanged.
 
 Weapon annexes, encountered-enemy catalog, boss-phase selection, gold-trace
-comparison and mastery medals remain future slices. The short browser fixture
-loads an explicitly declared completed profile and uses rendered menu/setup,
-lesson, pause/restart and leave controls across reload; it does not replay a full
-course or claim natural progression/purchase evidence.
+comparison and mastery medals remain future slices. On clean `dcf67a2e`, the
+fresh standalone build and short browser fixture passed rendered menu entry,
+LAUNCH selection, pause/restart, quit and setup reentry after reload. The fixture
+loads a declared historical completed profile plus an owned shop rank into the
+test adapter, observes that adapter's actual storage, and reconstructs it from
+its retained bytes on reload. Completion credit, achievements, earnings,
+spending and purchases remain unchanged. The first fixture attempt incorrectly
+seeded localStorage instead of test mode's isolated adapter; that fixture-only
+repair leaves product eligibility unchanged. This proves loaded-profile entry
+and controls, not production localStorage persistence, a natural full-course
+replay, physical-device use or purchase progression.
 
 The finite tutorial should unlock a separate revisitable Practice Lab:
 
