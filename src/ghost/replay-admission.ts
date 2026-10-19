@@ -4,6 +4,10 @@ import { ghostLiveBootstrapEventId } from "./live-causal-events";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { validateTearContract } from "../tearbench/validation";
+import { mapGhostCapsuleToReplayEnvelope, preflightGhostRecordedCanonicalSnapshot } from "./capsule-replay-envelope";
+import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
+import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
+import { LEGACY_APP_SCREENS, LEGAL_LEGACY_TRANSITIONS, type LegacyAppScreen } from "../app/legacy-state-controller";
 
 export const GHOST_REPLAY_CONTEXT_FORMAT = "tear-ghost-replay-context" as const;
 export const GHOST_REPLAY_CONTEXT_SCHEMA_VERSION = 1 as const;
@@ -25,6 +29,14 @@ export interface GhostReplayRngState {
   readonly cursor?: number;
 }
 
+export interface GhostRecordedOpeningV1 {
+  readonly version: 1;
+  readonly phase: "opening-initialized-before-run-start";
+  readonly previousScreen: string;
+  readonly destination: "playing";
+  readonly runId: string;
+}
+
 export interface GhostReplayRunContextV1 {
   readonly format: typeof GHOST_REPLAY_CONTEXT_FORMAT;
   readonly schemaVersion: typeof GHOST_REPLAY_CONTEXT_SCHEMA_VERSION;
@@ -38,6 +50,7 @@ export interface GhostReplayRunContextV1 {
   readonly simulation: Readonly<{
     ticksPerSecond: 120;
     initialState: "seeded-run-start" | "opening-initialized";
+    readonly opening?: GhostRecordedOpeningV1;
   }>;
   readonly build: GhostReplayBuildFingerprint;
   /** Named stream states at tick zero, before gameplay consumes any random values. */
@@ -60,6 +73,7 @@ export interface GhostReplayRunContextInput {
   }>>>;
   /** Defaults to the current live durable-capture boundary. */
   readonly initialState?: GhostReplayRunContextV1["simulation"]["initialState"];
+  readonly opening?: GhostRecordedOpeningV1;
 }
 
 export interface GhostReplayRuntimeDescriptor {
@@ -137,6 +151,8 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
   if (simulation.initialState !== "seeded-run-start" && simulation.initialState !== "opening-initialized") {
     throw new TypeError(`${label}.simulation.initialState is unsupported`);
   }
+  const openingDescriptor = Object.getOwnPropertyDescriptor(simulation, "opening");
+  if (openingDescriptor !== undefined && !("value" in openingDescriptor)) throw new TypeError("recorded opening must be data");
   return Object.freeze({
     format: GHOST_REPLAY_CONTEXT_FORMAT,
     schemaVersion: GHOST_REPLAY_CONTEXT_SCHEMA_VERSION,
@@ -147,7 +163,8 @@ function normalizeContext(value: unknown, label: string): GhostReplayRunContextV
       difficulty: nonEmptyString(run.difficulty, `${label}.run.difficulty`),
       weaponId: nonEmptyString(run.weaponId, `${label}.run.weaponId`),
     }),
-    simulation: Object.freeze({ ticksPerSecond: 120, initialState: simulation.initialState }),
+    simulation: Object.freeze({ ticksPerSecond: 120, initialState: simulation.initialState,
+      ...(openingDescriptor?.value === undefined ? {} : { opening: normalizeOpening(openingDescriptor.value, run.id) }) }),
     build: fingerprint(candidate.build, `${label}.build`),
     rng: normalizeRng(candidate.rng, `${label}.rng`),
   });
@@ -159,10 +176,129 @@ export function createGhostReplayRunContext(input: GhostReplayRunContextInput): 
     format: GHOST_REPLAY_CONTEXT_FORMAT,
     schemaVersion: GHOST_REPLAY_CONTEXT_SCHEMA_VERSION,
     run: { id: input.runId, seed: input.seed, mode: input.mode, difficulty: input.difficulty, weaponId: input.weaponId },
-    simulation: { ticksPerSecond: input.ticksPerSecond, initialState: input.initialState ?? "opening-initialized" },
+    simulation: { ticksPerSecond: input.ticksPerSecond, initialState: input.initialState ?? "opening-initialized",
+      ...(input.opening === undefined ? {} : { opening: input.opening }) },
     build: input.build,
     rng: input.rng,
   }, "replay context");
+}
+
+function openingPredecessor(value: unknown): LegacyAppScreen {
+  const screen = LEGACY_APP_SCREENS.find((candidate) => candidate === value);
+  // APP.transition returns early for self-playing; other predecessors require
+  // its canonical playing edge. Completion evidence still attests actual exposure.
+  if (screen === undefined || (screen !== "playing" && !LEGAL_LEGACY_TRANSITIONS[screen].includes("playing"))) {
+    throw new TypeError("recorded opening predecessor is unknown or has no legal playing transition");
+  }
+  return screen;
+}
+
+function normalizeOpening(value: unknown, runId: unknown): GhostRecordedOpeningV1 {
+  const candidate = record(value);
+  if (candidate === undefined || Object.getPrototypeOf(candidate) !== Object.prototype
+    || Reflect.ownKeys(candidate).length !== 5
+    || Reflect.ownKeys(candidate).some((key) => typeof key !== "string" || !["version", "phase", "previousScreen", "destination", "runId"].includes(key)
+      || !("value" in (Object.getOwnPropertyDescriptor(candidate, key) ?? {})))) {
+    throw new TypeError("recorded opening must be a plain data descriptor");
+  }
+  if (candidate.version !== 1 || candidate.phase !== "opening-initialized-before-run-start"
+    || candidate.destination !== "playing" || candidate.runId !== runId
+    || typeof candidate.previousScreen !== "string" || candidate.previousScreen.length === 0 || candidate.previousScreen.length > 64) {
+    throw new TypeError("recorded opening descriptor is invalid or unsupported");
+  }
+  return Object.freeze({ version: 1, phase: candidate.phase, previousScreen: openingPredecessor(candidate.previousScreen),
+    destination: "playing", runId: nonEmptyString(runId, "opening.runId") });
+}
+
+declare const openingPermitBrand: unique symbol;
+/** Opaque linkage capability; it establishes neither authenticity nor replay truth. */
+export interface GhostRecordedOpeningPermit { readonly [openingPermitBrand]: true }
+export interface GhostRecordedOpeningEvidence {
+  readonly kind: "explicit" | "legacy-inferred";
+  readonly previousScreen: string;
+  readonly started: TearCausalEventV1;
+  readonly input: AuthoritativeInputSnapshot;
+}
+const openingPermits = new WeakMap<GhostRecordedOpeningPermit, Readonly<{ snapshotHash: string; rootIntegrity: string; contextFingerprint: string; evidence: GhostRecordedOpeningEvidence }>>();
+
+/** Requires complete, reader-verified capsule linkage before allowing the exceptional opening UI. */
+export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): GhostRecordedOpeningPermit | undefined {
+  const mapping = mapGhostCapsuleToReplayEnvelope(capsule);
+  if (mapping.issues.length > 0) throw new TypeError(`capsule replay mapping is invalid: ${mapping.issues.map((issue) => `${issue.track}@${String(issue.tick)}: ${issue.reason}`).join("; ")}`);
+  const anchors = capsule.tracks.keyframes.flatMap((entry) => {
+    const snapshot = recordedSnapshot(entry.value); return snapshot?.tick === 0 && entry.tick === 0 ? [snapshot] : [];
+  });
+  const anchor = anchors[0], ui = record(anchor?.state["tear.ui.v1"]);
+  const context = readGhostReplayRunContext(capsule.manifest.provenance);
+  const rawSimulation = record(record(record(capsule.manifest.provenance)?.[GHOST_REPLAY_CONTEXT_PROVENANCE_KEY])?.simulation);
+  if (context === undefined && rawSimulation !== undefined && Object.hasOwn(rawSimulation, "opening")) throw new TypeError("supplied recorded opening descriptor is malformed or unsupported");
+  if (context?.simulation.opening === undefined && (ui === undefined || ["playing", "paused", "draft", "reserve", "tierup"].includes(String(ui.screen)))) return undefined;
+  const issue = replayableManifest(capsule.manifest) ?? (context === undefined ? "opening lacks replay context" : assessGhostReplayBootstrap(capsule, context));
+  if (issue !== undefined || context === undefined || anchor === undefined || anchors.length !== 1) throw new TypeError(issue ?? "opening anchor is not unique");
+  const preflight = preflightGhostRecordedCanonicalSnapshot(anchor);
+  if (!preflight.ok) throw new TypeError(`opening anchor ${preflight.reason}`);
+  const receipts = capsule.tracks.results.flatMap((entry) => { const receipt = readGhostAuthoritativeReceipt(entry.value); return entry.tick === 0 && receipt?.tick === 0 ? [receipt] : []; });
+  if (receipts.length !== 1 || receipts[0] === undefined) throw new TypeError("opening requires one original tick-zero held-input receipt");
+  const run = record(anchor.state["tear.run.v1"]), world = record(anchor.state["tear.world.v1"]), runtime = record(world?.runtime), lifecycle = record(runtime?.lifecycle);
+  const opening = context.simulation.opening;
+  if (context.simulation.initialState !== "opening-initialized" || run?.tick !== 0 || run.runTime !== 0
+    || String(run.runSeed) !== context.run.seed || run.mode !== context.run.mode || run.diff !== context.run.difficulty || run.weaponId !== context.run.weaponId
+    || lifecycle?.sessionId !== context.run.id || lifecycle.outcome !== null
+    || (world?.simulationSeconds !== undefined && world.simulationSeconds !== 0)
+    || typeof ui?.screen !== "string" || (opening !== undefined && opening.previousScreen !== ui.screen)
+    || !["endless", "campaign"].includes(context.run.mode)) throw new TypeError("opening run/UI/session facts do not match capsule context");
+  openingPredecessor(ui.screen);
+  const starts = capsule.tracks.events.flatMap((entry) => { const event = causalEvent(entry.value); return event?.type === "run.started" ? [{ entry, event }] : []; });
+  const bootstrapId = ghostLiveBootstrapEventId(capsule.manifest.id);
+  const bootstrap = capsule.tracks.events.map((entry) => causalEvent(entry.value)).find((event) => event?.id === bootstrapId);
+  const start = starts[0], payload = record(start?.event.payload);
+  if (starts.length !== 1 || start?.entry.tick !== 0 || start.event.tick !== 0 || start.event.source !== "engine"
+    || start.event.phase !== "pre-simulation" || bootstrap?.sequence !== 0 || start.event.sequence <= bootstrap.sequence || payload?.runId !== context.run.id
+    || payload.mode !== run.mode || payload.difficulty !== run.diff || payload.weapon !== run.weaponId
+    // The current native publisher receives the original new RunSession (wave0);
+    // installed opening content has advanced its separate live run to wave1.
+    || payload.wave !== 0 || run.wave !== 1 || payload.score !== run.score || payload.runTimeSeconds !== 0
+    || capsule.tracks.events.some((entry) => { const event = causalEvent(entry.value); return event?.tick === 0 && ["run.completed", "run.defeated", "run.abandoned"].includes(event.type); })) {
+    throw new TypeError("opening requires one matching native tick-zero run.started fact");
+  }
+  const completions = capsule.tracks.events.flatMap((entry) => {
+    const event = causalEvent(entry.value);
+    return record(event?.payload)?.boundary === "recorded-opening-playing-exposed" ? [{ entry, event }] : [];
+  });
+  const completion = completions[0];
+  if (opening !== undefined || completions.length > 0) {
+    if (completions.length !== 1 || completion?.entry.tick !== 0 || completion.event?.tick !== 0
+      || completion.event.type !== "system.checkpoint" || completion.event.source !== "engine" || completion.event.phase !== "pre-simulation"
+      || completion.event.sequence <= start.event.sequence || completion.event.payload.runId !== context.run.id || completion.event.payload.screen !== "playing") {
+      throw new TypeError("opening lacks its matching post-transition playing completion fact");
+    }
+  } else {
+    // Old producers did not seal completion. A later canonical playing anchor and
+    // its aligned held-input receipt are necessary inference, never an invented fact.
+    const laterPlaying = capsule.tracks.keyframes.some((entry) => {
+      const later = recordedSnapshot(entry.value), laterRun = record(later?.state["tear.run.v1"]), laterWorld = record(later?.state["tear.world.v1"]);
+      const laterLifecycle = record(record(laterWorld?.runtime)?.lifecycle);
+      if (later === undefined) return false;
+      return entry.tick === later.tick && later.tick > 0 && record(later.state["tear.ui.v1"])?.screen === "playing"
+        && laterRun?.mode === context.run.mode && String(laterRun.runSeed) === context.run.seed && Number(laterRun.runTime) > 0
+        && laterLifecycle?.sessionId === context.run.id && preflightGhostRecordedCanonicalSnapshot(later).ok
+        && capsule.tracks.results.some((result) => { const receipt = readGhostAuthoritativeReceipt(result.value); return receipt?.tick === later.tick && result.tick === later.tick; });
+    });
+    if (!laterPlaying) throw new TypeError("legacy opening completion is unavailable without a later canonical playing receipt");
+  }
+  const permit = Object.freeze({}) as GhostRecordedOpeningPermit;
+  openingPermits.set(permit, Object.freeze({ snapshotHash: stableVerificationHash(anchor), rootIntegrity: capsule.manifest.rootIntegrity,
+    contextFingerprint: ghostReplayContextFingerprint(context), evidence: Object.freeze({
+    kind: opening === undefined ? "legacy-inferred" : "explicit", previousScreen: ui.screen, started: structuredClone(start.event), input: receipts[0].input,
+  }) }));
+  return permit;
+}
+
+/** Revalidate the exact anchor at the destination boundary; structural/copy tokens do not authorize anything. */
+export function readGhostRecordedOpeningPermit(permit: GhostRecordedOpeningPermit, snapshot: TearSnapshotV1): GhostRecordedOpeningEvidence {
+  const entry = openingPermits.get(permit);
+  if (entry?.snapshotHash !== stableVerificationHash(snapshot)) throw new TypeError("recorded opening permit is invalid or belongs to another anchor");
+  return structuredClone(entry.evidence);
 }
 
 /** Returns no context for legacy/malformed provenance; callers must fail closed instead of guessing. */
@@ -243,7 +379,7 @@ export function assessGhostReplayBootstrap(capsule: GhostReadCapsule, context: G
   const bootstrap = causalEvent(bootstrapEntry.value);
   const payload = bootstrap === undefined ? undefined : record(bootstrap.payload);
   if (bootstrap === undefined || bootstrapEntry.tick !== 0 || bootstrap.tick !== 0
-    || bootstrap.type !== "system.checkpoint" || bootstrap.phase !== "pre-simulation"
+    || bootstrap.type !== "system.checkpoint" || bootstrap.phase !== "pre-simulation" || bootstrap.sequence !== 0
     || bootstrap.source !== "engine" || payload?.boundary !== "v3-sidecar-opened") {
     return "capsule bootstrap event is malformed or not a tick-zero V3 opening boundary";
   }

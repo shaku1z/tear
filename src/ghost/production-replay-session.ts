@@ -3,6 +3,7 @@ import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
+import { issueGhostRecordedOpeningPermit } from "./replay-admission";
 import { createPracticeFromHere, GhostProductionReplayWorld, type GhostPracticeChild, type GhostPracticeMode, type GhostSeekResult } from "./replay-world";
 
 export interface GhostVerifiedProductionReplaySession {
@@ -34,9 +35,11 @@ export function createGhostProductionReplaySession(
   });
   const verifiedReceiptTicks = new Set(verification.comparisons.filter((comparison) => comparison.equal).map((comparison) => comparison.tick));
   const inputs = new Map(receipts.map((receipt) => [receipt.tick, receipt.input]));
+  const openingPermit = issueGhostRecordedOpeningPermit(capsule);
   const composition = createProductionGhostReplayComposition({
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
     inputSnapshots: inputs,
+    ...(openingPermit === undefined ? {} : { openingPermit }),
   });
   const checkpointAt = (tick: number) => mapped.ghost.snapshots.find((snapshot) => snapshot.tick === tick);
   const seek = (tick: number): GhostSeekResult => new GhostProductionReplayWorld(mapped.ghost, composition).seek(tick);

@@ -122,6 +122,27 @@ async function completeCapsule(provenance: Readonly<Record<string, unknown>>) {
 }
 
 describe("Ghost V3 replay admission", () => {
+  it("round-trips explicit opening descriptors and preserves legacy absence", () => {
+    const legacy = createGhostReplayRunContext(replayContextInput()); expect(legacy.simulation).not.toHaveProperty("opening");
+    const context = createGhostReplayRunContext(replayContextInput({ opening: { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup", destination: "playing", runId: "replay-admission-run" } }));
+    expect(readGhostReplayRunContext({ replayContext: JSON.parse(JSON.stringify(context)) as unknown })).toEqual(context);
+    expect(Object.isFrozen(context.simulation.opening)).toBe(true);
+    expect(ghostReplayContextFingerprint(context)).not.toBe(ghostReplayContextFingerprint(legacy));
+  });
+
+  it.each([{ version: 2 }, { phase: "playing" }, { previousScreen: "" }, { destination: "menu" }, { runId: "old-run" }, { extra: true }])("rejects malformed supplied opening descriptor %j", (patch) => {
+    expect(() => createGhostReplayRunContext(replayContextInput({ opening: { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup", destination: "playing", runId: "replay-admission-run", ...patch } as never }))).toThrow(/opening/);
+  });
+
+  it("refuses opening accessors without invoking them", () => {
+    let reads = 0;
+    const context = createGhostReplayRunContext(replayContextInput());
+    const simulation = { ...context.simulation }; Object.defineProperty(simulation, "opening", { get() { reads++; throw new Error("getter ran"); } });
+    expect(readGhostReplayRunContext({ replayContext: { ...context, simulation } })).toBeUndefined(); expect(reads).toBe(0);
+    const opening = { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup", destination: "playing", runId: context.run.id };
+    Object.defineProperty(opening, "previousScreen", { get() { reads++; throw new Error("getter ran"); } });
+    expect(readGhostReplayRunContext({ replayContext: { ...context, simulation: { ...context.simulation, opening } } })).toBeUndefined(); expect(reads).toBe(0);
+  });
   it("creates an immutable, canonical 120 Hz bootstrap context", () => {
     const context = createGhostReplayRunContext({
       ...replayContextInput(),

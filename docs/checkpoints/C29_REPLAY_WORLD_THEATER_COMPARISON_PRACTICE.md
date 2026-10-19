@@ -161,3 +161,29 @@ visible comparison of two durable capsules and a repeated semantic occurrence.
 `test:browser:c29-active-campaign-cinematic` adds the settled-boundary campaign
 capture and same-tick production replay comparison. Neither is a substitute
 for pixel/device-output fidelity.
+
+Recorded openings now retain their captured UI/focus at seek zero. A capsule-linked
+permit admits the source start transaction only for supported Endless or prepared
+Campaign openings: the explicit versioned descriptor, native start fact and a
+separate checkpoint recorded after playing exposure must agree with the exact
+anchor. Legacy inference requires a later canonical playing anchor and aligned
+receipt; missing completion is unavailable, never invented. This proves linkage,
+not authenticity. Raw Campaign restoration alone grants no playback transition.
+Native start currently describes the initial session at wave zero, while its
+opening-initialized installed world is wave one; publication order is preserved.
+
+The separate opening-continuation verifier derives an explicitly disclosed
+in-memory envelope containing only the original opening anchor, executes exactly
+180 existing-runtime steps, and compares source state and held input at 60/120/180.
+It leaves archive bytes unchanged and never injects later receipt input. Normal
+browser input is neutral in the reset tick-zero receipt; keyboard movement held
+before start is queued for tick one. A unit fixture also injects nonneutral tick-zero
+input to test restoration, without claiming that fixture is normal device evidence.
+The optional `TEAR_C29_OPENING_JOURNEY=1` consumer requires a unique empty
+`TEAR_OPENING_ARTIFACT_DIR` and uses rendered menu/setup controls, browser keyboard/
+pointer input, held/released/repressed movement and edge actions, and natural
+One-Hit Endless/Chainblade defeat and results retry in the forensic-QA test build.
+Fresh execution is required before claiming this browser acceptance. Its test-only
+inspector mode is `verify(id, "opening-continuation")`; unknown modes refuse.
+This bounded source/input proof does not verify the entire causal event track,
+native output, or a natural full Campaign/finale.

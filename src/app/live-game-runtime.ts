@@ -29,12 +29,13 @@ import { createLiveStateForgeRuntimeBridge } from "./live-state-forge-runtime-br
 import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, seekBrowserGhostCapsuleProductionReplay, verifyBrowserGhostCapsuleProductionReplay } from "../ghost/browser-capsule-vault";
 import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../ghost/live-causal-events"; import { verdantTelemetryIntents } from "../gameplay/progression/verdant-telemetry"; import { executeEnvironmentTelemetryIntents } from "../gameplay/progression/environment-telemetry"; import { paleTelemetryIntents } from "../gameplay/progression/pale-telemetry"; import { tracksAchievements } from "../gameplay/progression/achievement-runtime";
 import { createGhostV3BrowserTestOptions } from "./ghost-v3-browser-test-options";
-import { createGhostReplayRunContext, GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
+import { GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../ghost/replay-admission";
 import { createGhostAuthoritativeReceipt } from "../ghost/authoritative-receipt";
 import { captureLiveStateForgeSnapshot } from "../tearbench/live-runtime-snapshots"; import { createDefaultStateCodecRegistry } from "../tearbench/state-codecs";
-import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { stableVerificationHash } from "../replay/hash"; import { createLiveCanonicalWatchComposition } from "./live-canonical-watch-composition";
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
+import { createLiveGhostOpeningCapture } from "./live-ghost-opening-capture";
+import { verifyGhostCapsuleOpeningContinuation } from "../ghost/production-replay-verification";
 import { createLiveHumanCalibrationCaptureComposition } from "./live-human-calibration-capture-composition";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller";
 import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch"; import { bindLiveBloomWellActors } from "./live-bloom-well-wiring"; import { bindLiveAuroraTrackActors } from "./live-aurora-track-wiring";
@@ -51,10 +52,14 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const currentSignedInActor = (): string | undefined => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined, humanCalibration = createLiveHumanCalibrationCaptureComposition(browserIndexedDb, browserWindow, currentSignedInActor);
   const ghostV3Options = createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search) ?? {};
   const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb, { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); await humanCalibration.capture?.finalized(manifest, vault); } }); const ghostV3 = ghostV3Session.recorder();
+  const openingCapture = createLiveGhostOpeningCapture({ screen: () => state, tick: () => simulationRuntime.scheduler.tick,
+    replayRunId: () => ghostV3Session.replayContext()?.run.id, nextSequence: ghostV3Session.nextEventSequence,
+    record: (event) => { ghostV3?.record("events", event.tick, event); }, failed: (error) => { console.warn("Ghost opening completion capture failed; live play continues", error); } });
   const academyScreen = createLiveAcademyScreen(browserIndexedDb, currentSignedInActor), foundryScreen = createLiveTrainingOperationsScreen(browserIndexedDb), ghostPublicationScreen = new LiveGhostPublicationController(browserIndexedDb, ghostPublication, currentSignedInActor), ghostSupportScreen = new LiveGhostSupportController(browserIndexedDb);
   // Keyframes attest the immutable bootstrap identity saved at recording boundary; never rebuild a divergent fingerprint later in the live loop.
   GHOST.setRecordingObserver(ghostV3 === null ? null : {
     started(context) {
+      openingCapture.discard();
       ghostV3Session.reset();
       humanCalibration.input.reset();
       humanCalibration.capture?.started();
@@ -62,25 +67,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       let replayContext: GhostReplayRunContextV1 | undefined;
       try {
         // Context and tick-zero keyframe share the settled opening-initialized boundary.
-        const configuration = liveStateForge.capture().components.get("tear.configuration.v1");
-        if (configuration === undefined) throw new Error("Ghost V3 replay bootstrap lacks a configuration projection");
-        replayContext = createGhostReplayRunContext({
-          runId: context.runId,
-          seed: context.seed,
-          mode: liveRun().mode,
-          difficulty: liveRun().diff,
-          weaponId: liveRun().weaponId,
-          ticksPerSecond: context.ticksPerSecond,
-          build: {
-            version: context.build.version,
-            revision: context.build.revision,
-            target: context.build.target,
-            rulesetVersion: context.rulesetVersion,
-            contentHash: stableVerificationHash(ENTITY_KIND_REGISTRY.ids),
-            configHash: stableVerificationHash(configuration),
-          },
-          rng: worldContext.services.random.snapshot(),
-        });
+        replayContext = openingCapture.createContext(context, liveRun(), liveStateForge.capture().components.get("tear.configuration.v1"), worldContext.services.random.snapshot());
         provenance = Object.freeze({ ...context, [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: replayContext });
       } catch (error) {
         // Ghost V3 is an observational sidecar. A malformed optional replay
@@ -100,6 +87,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
           ghostV3.record("rng", 0, worldContext.services.random.snapshot());
           captureGhostAuthoritativeReceipt(0);
           captureGhostStateSnapshot(0);
+          openingCapture.captured(context.runId);
         }
       } catch (error) {
         console.warn("Ghost V3 recorder failed to start; live play continues", error);
@@ -109,6 +97,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     // start/stop boundary so non-achievement, tutorial, and playground runs
     // cannot inherit Ghost 2 recording policy.
     stopped(meta) {
+      openingCapture.discard();
       ghostV3Session.setReplayContext(undefined);
       void ghostV3.finish(meta);
     },
@@ -279,6 +268,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       transient.resetOpening(); },
     resetAuthoritativeClocks: () => { simulationRuntime.reset(0); }, resetCombatIdentity: () => { combatRuntime.resetIdentity(); },
     createRunSeed: () => session.takeRunSeed() ?? dependencies.createRunSeed(),
+    withOpeningCapture: openingCapture.withCapture, openingExposed: openingCapture.exposed, discardOpeningCapture: openingCapture.discard,
     authoritativeResult: () => authoritativeStep.lastResult,
     setScreen: (screen, detail) => { setState(screen, detail); }, requestPointerLock: requestOwnedPointerLock,
     beginWipe: () => { Wipe.begin(); }, wipeRemainingSeconds: () => Wipe.remainingSeconds,
@@ -639,7 +629,12 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       read: (id: string) => readBrowserGhostCapsule(browserIndexedDb, id),
       replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
       admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
-      verify: (id: string) => verifyBrowserGhostCapsuleProductionReplay(browserIndexedDb, id),
+      // Test-only observation seam; an unknown mode must never fall back to weaker verification.
+      verify: (id: string, mode?: string) => {
+        if (mode !== undefined && mode !== "opening-continuation") return Promise.reject(new RangeError("unsupported Ghost verification mode"));
+        return mode === "opening-continuation" ? readBrowserGhostCapsule(browserIndexedDb, id).then((capsule) => capsule === undefined ? undefined : verifyGhostCapsuleOpeningContinuation(capsule))
+          : verifyBrowserGhostCapsuleProductionReplay(browserIndexedDb, id);
+      },
       seek: (id: string, tick: number) => seekBrowserGhostCapsuleProductionReplay(browserIndexedDb, id, tick),
       practice: (id: string, tick: number, mode) => forkBrowserGhostCapsulePractice(browserIndexedDb, id, tick, mode),
       active: () => ghostV3?.active === true, activePractice: ghostPracticeSession.active,

@@ -37,8 +37,10 @@ import { ENTITY_KIND_REGISTRY } from "./registries";
 import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from "./state-codecs";
 import { rebaseEnvironmentSnapshot } from "./environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
+import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../ghost/replay-admission";
 
 const productionChapterBindings = new WeakMap<ProductionReplayWorld, StagedCampaignChapterBinding>();
+const productionFocus = new WeakMap<ProductionReplayWorld, number>();
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly seed: string;
@@ -54,6 +56,7 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly recordWaveIntent?: (entry: ProductionWaveRewardIntent) => void;
   /** Optional portable terminal endpoint; device/persistence behavior stays outside this composition. */
   readonly endRun?: () => void;
+  readonly openingPermit?: GhostRecordedOpeningPermit;
 }
 
 export interface ProductionReplayCheckpointCapture {
@@ -254,7 +257,7 @@ export function captureProductionReplayCheckpoint(
     screen: waveReward.screen,
     // The fresh host restores the captured screen after installing its reward owner.
     setScreen: () => undefined,
-    focus: () => -1,
+    focus: () => productionFocus.get(replay) ?? -1,
     setFocus: () => undefined,
     tick: () => simulation.simulationRuntime.scheduler.tick,
     setTick: (tick) => { simulation.simulationRuntime.reset(tick); },
@@ -291,7 +294,8 @@ export function captureProductionReplayCheckpoint(
 }
 
 /** Applies a saved State Forge world transactionally to a newly composed production replay world. */
-export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, snapshot: TearSnapshotV1) {
+export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, snapshot: TearSnapshotV1, openingPermit?: GhostRecordedOpeningPermit) {
+  const opening = openingPermit === undefined ? undefined : readGhostRecordedOpeningPermit(openingPermit, snapshot);
   let decoded: TearCodecWorld | undefined;
   const decodedResult = restoreSnapshotTransactionally(snapshot, createDefaultStateCodecRegistry(), {
     createEmpty: () => ({ components: new Map(), references: new Map(), entityIds: new Set() }),
@@ -338,12 +342,19 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   // The executable chapter/lifecycle above must already be coherent before admitting that anchor.
   const noPendingReward = staged.reward === null || (staged.reward.phase === "idle" && staged.reward.mode === staged.run.mode
     && staged.reward.choices.length === 0 && staged.reward.reserveChoices.length === 0 && staged.reward.reservedChoice === null);
-  const openingMenu = staged.screen === "menu" && staged.run.mode === "campaign" && snapshot.tick === 0
+  const openingCampaign = staged.run.mode === "campaign" && snapshot.tick === 0
     && staged.run.runTime === 0 && noPendingReward
     && preparedRuntime.chapter?.spec.flowState === "LORE_ENTER"
     && preparedRuntime.lifecycle.phase === "wave-prepared" && preparedRuntime.lifecycle.activationDeferred
     && preparedRuntime.cinema.active && preparedRuntime.cinema.beatId === "enter" && preparedRuntime.cinema.elapsedSeconds === 0;
-  if (!["playing", "paused", "draft", "reserve", "tierup"].includes(staged.screen) && !openingMenu) {
+  const admittedOpening = opening !== undefined && snapshot.tick === 0 && staged.run.runTime === 0 && noPendingReward
+    && preparedRuntime.lifecycle.reward === null && preparedRuntime.lifecycle.outcome === null
+    && restoredBossIntro === null
+    && (openingCampaign || (staged.run.mode === "endless" && preparedRuntime.chapter === null
+      && preparedRuntime.lifecycle.phase === "wave-active" && preparedRuntime.lifecycle.wave === staged.run.wave
+      && !preparedRuntime.lifecycle.activationDeferred && !preparedRuntime.cinema.active));
+  if (opening !== undefined && !admittedOpening) throw new RangeError("recorded opening runtime is incoherent or unsupported");
+  if (!["playing", "paused", "draft", "reserve", "tierup"].includes(staged.screen) && !admittedOpening && !(openingCampaign && staged.screen === "menu")) {
     throw new RangeError(`production replay UI screen is invalid: ${staged.screen}`);
   }
   if (["draft", "reserve", "tierup"].includes(staged.screen) && staged.reward?.phase !== staged.screen) {
@@ -351,6 +362,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   }
   staged.run.reservedUpgrade = hydrateRewardUpgrade(UPGRADES, staged.run.reservedUpgrade);
   replay.world.state.setRun(staged.run);
+  productionFocus.set(replay, staged.focus);
   replay.world.state.setPlayer(staged.player);
   replay.world.state.setBlade(staged.blade);
   replay.world.state.setEnemies(staged.enemies);
@@ -413,7 +425,11 @@ export function createProductionGhostReplayComposition(
         }),
         rng: replay.world.context.services.random.snapshot(),
       } satisfies ProductionReplayBootstrap);
-      const staged = snapshot === undefined ? undefined : restoreProductionReplaySnapshot(replay, snapshot);
+      const openingPermit = snapshot?.tick === 0 ? options.openingPermit : undefined;
+      const opening = openingPermit === undefined || snapshot === undefined ? undefined : readGhostRecordedOpeningPermit(openingPermit, snapshot);
+      if (opening !== undefined && options.inputSnapshots?.get(0) !== undefined
+        && stableVerificationHash(options.inputSnapshots.get(0)) !== stableVerificationHash(opening.input)) throw new TypeError("opening held input does not match its capsule receipt");
+      const staged = snapshot === undefined ? undefined : restoreProductionReplaySnapshot(replay, snapshot, openingPermit);
       if (replay.world.state.bossIntro() !== null) {
         throw new Error("production detached active boss intro playback is unsupported without application-frame timing; use the live backend");
       }
@@ -437,16 +453,33 @@ export function createProductionGhostReplayComposition(
       if (staged === undefined) waveReward.startNaturalOpening();
       if (staged !== undefined) {
         waveReward.reward.restore(staged.reward);
-        // Only the validated live bootstrap anchor can reach this host with a menu screen.
-        waveReward.restoreScreen(staged.screen === "menu" ? "playing" : staged.screen);
+        waveReward.restoreScreen(staged.screen);
         core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
         for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
       }
       core.simulationRuntime.reset(snapshot?.tick ?? 0);
       if (snapshot !== undefined) {
-        const input = options.inputSnapshots?.get(snapshot.tick);
+        const input = opening?.input ?? options.inputSnapshots?.get(snapshot.tick);
         if (input !== undefined) core.simulationRuntime.input.restore(input);
       }
+      let openingStatus: "pending" | "publishing" | "completed" | "failed" = "pending";
+      const completeRecordedOpening = () => {
+        if (openingStatus === "completed") return;
+        if (openingStatus !== "pending") { openingStatus = "failed"; throw new Error("recorded opening completion failed or is reentrant"); }
+        if (opening === undefined) {
+          if (staged !== undefined && !["playing", "paused", "draft", "reserve", "tierup"].includes(staged.screen)) throw new TypeError("recorded opening requires a capsule linkage permit before advancement");
+          return;
+        }
+        const payload = opening.started.payload;
+        openingStatus = "publishing";
+        try {
+          options.gameplayEvents?.publish({ kind: "run", tick: 0, transition: "started", runId: String(payload.runId),
+            mode: String(payload.mode), difficulty: String(payload.difficulty), weaponId: String(payload.weapon),
+            wave: Number(payload.wave), score: Number(payload.score), runTimeSeconds: Number(payload.runTimeSeconds) });
+          if ((openingStatus as string) !== "publishing") throw new Error("recorded opening completion was invalidated during publication");
+          waveReward.restoreScreen("playing"); openingStatus = "completed";
+        } catch (error) { openingStatus = "failed"; throw error; }
+      };
       return Object.freeze({
         replay,
         bootstrap,
@@ -455,6 +488,8 @@ export function createProductionGhostReplayComposition(
         outcome,
         waveReward,
         routeAction: waveReward.routeAction,
+        completeRecordedOpening,
+        invalidateRecordedOpening: () => { openingStatus = "failed"; },
         semanticProjection: () => core.simulationRuntime.lastResult?.state
           ?? projectProductionReplayCanonicalState(replay, core.simulationRuntime.scheduler.tick, core.simulationRuntime.input),
       });

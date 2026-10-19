@@ -56,6 +56,12 @@ interface PlaygroundPort {
 interface TutorialPort { start(): void }
 interface InstalledRunStartController { start(mode: RunMode, difficulty: RunDifficulty): GameRun }
 
+export interface LiveOpeningCaptureBoundary {
+  readonly phase: "opening-initialized-before-run-start";
+  readonly runId: string;
+  readonly seed: number;
+}
+
 interface RunStartHostContext {
   readonly dependencies: GameRuntimeDependencies;
   readonly state: LiveGameHostState;
@@ -87,6 +93,10 @@ interface RunStartHostContext {
   readonly startNextWave: () => void;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
+  /** Scoped around the existing synchronous recorder call; never a second start transaction. */
+  readonly withOpeningCapture?: (boundary: LiveOpeningCaptureBoundary, record: () => void) => void;
+  readonly openingExposed?: (runId: string) => void;
+  readonly discardOpeningCapture?: () => void;
   /** A new ordinary run must never inherit Ghost practice's non-persistent disposition. */
   readonly clearPracticeSession?: () => void;
   readonly resetRewards: () => void;
@@ -122,6 +132,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
 
   const controller = new LiveRunStartController({
     replaceActiveRun: () => {
+      context.discardOpeningCapture?.();
       try { replacement.sealActiveRecording(); }
       finally { Input.stopSemanticRecording(); }
     },
@@ -248,13 +259,17 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       // current held movement state.
       Input.startSemanticRecording();
       Input.syncSemanticMovement();
-      if (context.achievementTracking()) GHOST.startRec({ runId, seed: String(seed), weaponId: migrateWeaponSelection(requireRun(state).weaponId), weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION });
+      if (context.achievementTracking()) {
+        const record = () => { GHOST.startRec({ runId, seed: String(seed), weaponId: migrateWeaponSelection(requireRun(state).weaponId), weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION }); };
+        if (context.withOpeningCapture === undefined) record();
+        else context.withOpeningCapture({ phase: "opening-initialized-before-run-start", runId, seed }, record);
+      }
     },
     publishRunStarted: (session, runId) => {
-      GAMEPLAY_EVENTS.emit({
+      try { GAMEPLAY_EVENTS.emit({
         kind: "run", transition: "started", runId, mode: session.mode, difficulty: session.diff,
         weaponId: session.weaponId, wave: session.wave, score: session.score, runTimeSeconds: session.runTime,
-      });
+      }); } catch (error) { context.discardOpeningCapture?.(); throw error; }
     },
     configureMode: (mode) => {
       const run = requireRun(state);
@@ -295,7 +310,10 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
         run.pg = context.playground.state; run.pgArena = -1;
       } else context.tutorial.start();
     },
-    enterPlayingState: (sessionId) => { context.setScreen("playing", { runId: sessionId }); },
+    enterPlayingState: (sessionId) => {
+      try { context.setScreen("playing", { runId: sessionId }); context.openingExposed?.(sessionId); }
+      catch (error) { context.discardOpeningCapture?.(); throw error; }
+    },
     beginMusic: (runId, seed) => { context.music.begin({ runId, runSeed: String(seed), rulesetVersion: CURRENT_RULESET_VERSION,
       gameVersion: "0.1.0", scoreVersion: SFX.musicScoreVersion() }); },
     requestPointerLock: context.requestPointerLock,

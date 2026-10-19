@@ -1,7 +1,323 @@
-import { describe, expect, it } from "vitest";
+/// <reference types="vite/client" />
+import { describe, expect, it, vi } from "vitest";
 import { LiveRunStartController } from "../../src/gameplay/run/live-run-start-controller";
+import { createLiveRunStartHost } from "../../src/app/live-run-start-host";
+import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
+import { REMOTE } from "../../src/config/game-config";
+import { applyWeapon } from "../../src/gameplay/weapons";
+import { newMods } from "../../src/gameplay/upgrades";
+import { GhostCapsuleReader, GhostLocalVault, GhostStreamingRecorder, createLiveGhostBootstrapEvent, createMemoryGhostVaultBackend, ghostLiveBootstrapEventId } from "../../src/ghost";
+import { assessGhostReplayBootstrap, createGhostReplayRunContext, issueGhostRecordedOpeningPermit, readGhostRecordedOpeningPermit, readGhostReplayRunContext, type GhostRecordedOpeningPermit } from "../../src/ghost/replay-admission";
+import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
+import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-receipt";
+import { mapGhostCapsuleToReplayEnvelope } from "../../src/ghost/capsule-replay-envelope";
+import { GhostProductionReplayWorld } from "../../src/ghost/replay-world";
+import { createGhostV3 } from "../../src/ghost/truth-kernel";
+import { TearGameplayEventBus, type UntickedTearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
+import { verifyGhostCapsuleProductionReplay, verifyGhostCapsuleOpeningContinuation } from "../../src/ghost/production-replay-verification";
+import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
+import { stableVerificationHash } from "../../src/replay/hash";
+import type { ReplayActionEnvelope } from "../../src/replay/envelope";
+import { restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
+import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench/state-codecs";
+import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
+import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
+
+function rehashOpening(snapshot: TearSnapshotV1): TearSnapshotV1 {
+  const registry = createDefaultStateCodecRegistry(), world: TearCodecWorld = { components: new Map(Object.entries(snapshot.state) as never), references: new Map(), entityIds: new Set() };
+  return { ...snapshot, hashes: { ...snapshot.hashes, exact: stableVerificationHash(snapshot.state),
+    semantic: stableVerificationHash(Object.fromEntries(registry.list().map((codec) => [codec.id, codec.hashProjection(world)]))) } };
+}
+
+function openingDestinationEvidence(target: ReturnType<typeof createProductionReplayWorld>) {
+  const refs = [target.world.state.run(), target.world.state.player(), target.world.state.blade(), target.world.state.enemies(), target.world.state.projectiles(), target.configuration.value, target.stage.platforms];
+  const capture = () => ({ actors: JSON.parse(JSON.stringify({ run: target.world.state.run(), player: target.world.state.player(), blade: target.world.state.blade(), enemies: target.world.state.enemies(), projectiles: target.world.state.projectiles(), floaters: target.world.state.floaters() })) as unknown,
+    configuration: target.configuration.snapshot(), gameplay: target.random.streams.snapshot(), entropy: target.cosmeticEmissionRandom.snapshot(), effects: target.effects.list,
+    lifecycle: target.world.lifecycle.snapshot(), cinema: target.world.context.cinema.captureState(), environment: target.world.context.environment.snapshot(), clock: target.clock.sim,
+    stage: target.stage.index, platforms: target.stage.platforms, transient: { opening: target.transient.opening, impact: target.transient.impact, feel: target.transient.feel } });
+  const before = structuredClone(capture());
+  return () => { expect([target.world.state.run(), target.world.state.player(), target.world.state.blade(), target.world.state.enemies(), target.world.state.projectiles(), target.configuration.value, target.stage.platforms]).toEqual(refs);
+    [target.world.state.run(), target.world.state.player(), target.world.state.blade(), target.world.state.enemies(), target.world.state.projectiles(), target.configuration.value, target.stage.platforms].forEach((ref, i) => { expect(ref).toBe(refs[i]); }); expect(capture()).toEqual(before); };
+}
+
+function actualOpeningHost(previousScreen = "setup", failStarted = false, injectedHeldInput = false) {
+  const source = createProductionGhostReplayComposition({ seed: "actual-opening-source" }).create(undefined);
+  const { replay } = source, noop = () => undefined, order: string[] = [];
+  let screen = previousScreen, captured: ReturnType<typeof captureProductionReplayCheckpoint> | undefined;
+  let boundary: { phase: "opening-initialized-before-run-start"; runId: string; seed: number } | undefined;
+  let pending = false;
+  const native = new TearGameplayEventBus(() => 0), events: ReturnType<typeof createLiveGhostCausalEvent>[] = [];
+  native.subscribe((event) => { if (captured !== undefined) events.push(createLiveGhostCausalEvent(event, events.length + 1)); });
+  const dependencies = { ...replay.dependencies, REMOTE,
+    PROFILE: { data: { stats: {}, ach: {}, rewards: {} }, markMode: noop }, META: { level: () => 0, apply: noop },
+    SFX: { setVoidDescent: noop, setMusicDuck: noop, musicScoreVersion: () => "unit" }, newMods,
+    Input: { startSemanticRecording: () => { order.push("input"); }, syncSemanticMovement: () => { order.push("held");
+      // Deliberate held-input restore edge fixture only. Normal browser sync queues
+      // movement for tick1 and leaves its reset authoritative tick0 receipt neutral.
+      if (injectedHeldInput) source.simulation.input.restore({ tick: 0, moveX: 0.75, moveY: 0, aimTurn: 37, primaryHeld: true }); }, stopSemanticRecording: noop },
+    GAMEPLAY_EVENTS: { emit: (event: UntickedTearGameplayEvent) => { order.push("started"); native.emit(event); if (failStarted) throw new Error("source start listener failed"); } },
+    GHOST: { recording: () => false, startRec: () => { order.push("recording"); source.waveReward.restoreScreen(screen);
+      captured = captureProductionReplayCheckpoint(replay, source.combat, source.waveReward, "actual-host-opening"); } },
+  };
+  const context = { dependencies, state: { ...replay.world.state, selectedWeapon: () => "chainblade", setSelectedWeapon: noop }, width: replay.configuration.value.view.w,
+    services: replay.world.context.services, environment: replay.world.context.environment,
+    prepareWorld: noop, applySettings: noop, configureBlade: (blade: { weapon: unknown; model: unknown }, id: string) => { const weapon = applyWeapon(replay.configuration.value, id); blade.weapon = weapon; blade.model = weapon.model; },
+    createPlayer: (x: number, y: number) => replay.world.entities.createPlayer(x, y), createBlade: () => replay.world.entities.createBlade(),
+    installRun: (run: unknown) => { replay.world.state.setRun(run as never); }, world: { resetTransient: noop, finishReset: () => { replay.transient.resetOpening(); } },
+    resetAuthoritativeClocks: () => { source.simulation.reset(0); }, resetCombatIdentity: () => { source.combat.combatEntityRuntime.resetIdentity(); }, createRunSeed: () => 12345,
+    loadStage: noop, stage: { platforms: [], resetBanner: noop }, story: { resetChapter: noop, resetFinale: noop }, lifecycle: replay.world.lifecycle, install: noop,
+    setScreen: (next: string) => { order.push("playing"); screen = next; source.waveReward.restoreScreen(next); },
+    selectedBoss: () => "shuffle", shuffledRoster: () => [], bossBiome: () => 0, trainingPlatforms: () => [], playground: { state: {}, reset: noop }, tutorial: { start: noop },
+    startNextWave: () => { order.push("opening"); source.waveReward.waves.startNextWave(); }, achievementTracking: () => true, achievementCheck: noop,
+    resetRewards: () => { source.waveReward.reward.reset(); }, music: { begin: noop }, requestPointerLock: noop, testMode: false, window: {},
+    withOpeningCapture: (value: NonNullable<typeof boundary>, record: () => void) => { order.push("boundary"); boundary = value; pending = true; record(); },
+    discardOpeningCapture: () => { pending = false; },
+    openingExposed: (runId: string) => { pending = false; order.push("completion"); events.push({ format: "tear-contract", kind: "event", schemaVersion: 1,
+      id: `ghost-opening-playing-${runId}`, type: "system.checkpoint", tick: 0, phase: "pre-simulation", sequence: events.length + 1, source: "engine",
+      payload: { boundary: "recorded-opening-playing-exposed", runId, screen } }); },
+  } as unknown as Parameters<typeof createLiveRunStartHost>[0];
+  const controller = createLiveRunStartHost(context);
+  return { controller, source, order, events, captured: () => captured, boundary: () => boundary, pending: () => pending };
+}
+
+async function sealedActualOpening(previousScreen = "menu", legacy = false, continuation = false,
+  mutate?: (snapshot: TearSnapshotV1) => TearSnapshotV1,
+  tracks?: Readonly<{ bootstrapSequence?: number; sealedPredecessor?: string; entries?: readonly Readonly<{ kind: "commands" | "events"; tick: number; value: unknown }>[] }>) {
+  const fixture = actualOpeningHost(previousScreen, false, continuation); fixture.controller.start("endless", "normal");
+  const capture = fixture.captured(), boundary = fixture.boundary(); if (capture === undefined || boundary === undefined) throw new Error("actual capture boundary missing");
+  const run = fixture.source.replay.world.state.run(); if (run === null) throw new Error("run missing");
+  const capturedContext = createGhostReplayRunContext({ runId: boundary.runId, seed: boundary.seed, mode: run.mode, difficulty: run.diff, weaponId: run.weaponId,
+    ticksPerSecond: 120, build: capture.snapshot.provenance.build, rng: fixture.source.replay.random.streams.snapshot(),
+    ...(legacy ? {} : { opening: { version: 1, phase: boundary.phase, previousScreen, destination: "playing", runId: boundary.runId } }) });
+  // Model untrusted archival bytes after a real valid producer capture. Recompute
+  // their envelope hashes and let the actual recorder seal a new integrity root.
+  const context = tracks?.sealedPredecessor === undefined || capturedContext.simulation.opening === undefined ? capturedContext
+    : { ...capturedContext, simulation: { ...capturedContext.simulation, opening: { ...capturedContext.simulation.opening, previousScreen: tracks.sealedPredecessor } } };
+  const id = "actual-host-capsule", provenance = { replayContext: context };
+  const rawSnapshot = { ...capture.snapshot, stateClass: "recorded-canonical" as const, provenance: { ...capture.snapshot.provenance, sourceId: ghostLiveBootstrapEventId(id) } };
+  let snapshot = mutate === undefined ? rawSnapshot : rehashOpening(mutate(structuredClone(rawSnapshot)));
+  if (tracks?.sealedPredecessor !== undefined) snapshot = rehashOpening({ ...snapshot, state: { ...snapshot.state,
+    "tear.ui.v1": { ...(snapshot.state["tear.ui.v1"] as object), screen: tracks.sealedPredecessor } } });
+  const vault = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-10-19T00:00:00Z", chunkEntries: 16, maxPendingWrites: 16, vault, provenance });
+  await recorder.start(); await recorder.append({ kind: "events", tick: 0, value: { ...createLiveGhostBootstrapEvent(id, provenance), sequence: tracks?.bootstrapSequence ?? 0 } });
+  for (const event of fixture.events) if (!legacy || event.type !== "system.checkpoint") await recorder.append({ kind: "events", tick: 0, value: event });
+  for (const entry of tracks?.entries ?? []) await recorder.append(entry);
+  await recorder.append({ kind: "keyframes", tick: 0, value: snapshot });
+  await recorder.append({ kind: "results", tick: 0, value: createGhostAuthoritativeReceipt(0, capture.semanticHash, capture.input) });
+  const sourceReceipts = new Map<number, { stateHash: string; input: typeof capture.input }>();
+  if (continuation) {
+    for (let tick = 1; tick <= 180; tick++) {
+      const actions: ReplayActionEnvelope[] = tick === 1 ? [{ kind: "command", id: 1, tick, command: { type: "move", x: 0, y: 0 } }]
+        : tick === 2 ? [{ kind: "command", id: 2, tick, command: { type: "weapon", intent: "primary", phase: "released" } }]
+        : tick === 3 ? [{ kind: "command" as const, id: 3, tick, command: { type: "move" as const, x: -500, y: 0 } }]
+        : tick === 4 ? [{ kind: "command", id: 4, tick, command: { type: "weapon", intent: "primary", phase: "pressed" } }]
+        : tick === 15 ? [{ kind: "command" as const, id: 5, tick, command: { type: "jump" as const, phase: "pressed" as const } }]
+        : tick === 75 ? [{ kind: "command" as const, id: 6, tick, command: { type: "dash" as const, x: 1000, y: 0 } }]
+        : tick === 121 ? [{ kind: "command", id: 7, tick, command: { type: "weapon", intent: "primary", phase: "released" } }] : [];
+      for (const action of actions) await recorder.append({ kind: "commands", tick, value: action });
+      const result = fixture.source.simulation.advanceOne(actions);
+      if ([1, 60, 120, 180].includes(tick)) {
+        const input = fixture.source.simulation.input.snapshot(); sourceReceipts.set(tick, { stateHash: result.stateHash, input });
+        await recorder.append({ kind: "results", tick, value: createGhostAuthoritativeReceipt(tick, result.stateHash, input) });
+        const checkpoint = captureProductionReplayCheckpoint(fixture.source.replay, fixture.source.combat, fixture.source.waveReward, `actual-host-${String(tick)}`);
+        await recorder.append({ kind: "keyframes", tick, value: { ...checkpoint.snapshot, stateClass: "recorded-canonical", provenance: { ...checkpoint.snapshot.provenance, sourceId: ghostLiveBootstrapEventId(id) } } });
+      }
+    }
+  }
+  await recorder.finalize("2026-10-19T00:00:01Z");
+  return { fixture, snapshot, sourceReceipts, capsule: await new GhostCapsuleReader(vault).read(id) };
+}
 
 describe("LiveRunStartController", () => {
+  it.each(["menu", "setup", "gameover", "win", "playing", "ghostlab", "paused"])("retains the canonical %s predecessor/playing edge", async (screen) => {
+    const { capsule, snapshot } = await sealedActualOpening(screen), permit = issueGhostRecordedOpeningPermit(capsule);
+    if (permit === undefined) throw new Error("valid predecessor lost opening permit");
+    expect(readGhostRecordedOpeningPermit(permit, snapshot).previousScreen).toBe(screen);
+    expect(createGhostProductionReplaySession(capsule).seek(0).tick).toBe(0);
+  });
+
+  it.each([
+    { legacy: false, screen: "invalid-state-forge-screen" }, { legacy: true, screen: "invalid-state-forge-screen" },
+    { legacy: false, screen: "settings" }, { legacy: true, screen: "settings" },
+  ])("refuses fully resealed predecessor $screen (legacy=$legacy) before target replacement", async ({ legacy, screen }) => {
+    const { capsule, snapshot } = await sealedActualOpening("menu", legacy, legacy, undefined, { sealedPredecessor: screen });
+    const target = createProductionReplayWorld({ seed: "rejected-predecessor" }), unchanged = openingDestinationEvidence(target);
+    let setters = 0, issued = false, restored = false;
+    const destination = { ...target, world: { ...target.world, state: { ...target.world.state, setRun: (run: Parameters<typeof target.world.state.setRun>[0]) => { setters++; target.world.state.setRun(run); } } } };
+    try { const permit = issueGhostRecordedOpeningPermit(capsule); issued = permit !== undefined;
+      if (permit !== undefined) { restoreProductionReplaySnapshot(destination, snapshot, permit); restored = true; } } catch { /* refusal */ }
+    const observed = { issued, restored, setters };
+    expect(observed, JSON.stringify(observed)).toEqual({ issued: false, restored: false, setters: 0 }); unchanged();
+  });
+
+  it.each(["unknown command", "malformed command", "nonmonotonic commands", "invalid event", "unrelated noncausal event", "bootstrap5/start1/completion2"])("refuses a fully resealed %s before issuer/standard verifier/Theater acceptance", async (kind) => {
+    const command = { kind: "command", id: 1, tick: 1, command: { type: "move", x: 1000, y: 0 } };
+    const entries: { kind: "commands" | "events"; tick: number; value: unknown }[] = [];
+    if (kind === "unknown command") entries.push({ kind: "commands", tick: 1, value: { ...command, command: { type: "future-action" } } });
+    if (kind === "malformed command") entries.push({ kind: "commands", tick: 1, value: { ...command, command: { type: "move", x: "bad", y: 0 } } });
+    if (kind === "nonmonotonic commands") entries.push({ kind: "commands", tick: 1, value: { ...command, id: 2 } }, { kind: "commands", tick: 1, value: command });
+    if (kind === "invalid event") entries.push({ kind: "events", tick: 1, value: { format: "tear-contract", kind: "event", schemaVersion: 1, id: "invalid-event", type: "unknown-event", tick: 1, sequence: 3, phase: "pre-simulation", source: "engine", payload: {} } });
+    if (kind === "unrelated noncausal event") entries.push({ kind: "events", tick: 1, value: { note: "unrelated non-causal object in required event track" } });
+    // Recorder encodes a new manifest/root/chunks; reader reopens those bytes.
+    // These are not mutations of an already-read capsule with stale integrity metadata.
+    const { capsule, fixture } = await sealedActualOpening("menu", false, false, undefined, { entries, bootstrapSequence: kind === "bootstrap5/start1/completion2" ? 5 : 0 });
+    const sourceHash = stableVerificationHash(capsule), unchangedSourceWorld = openingDestinationEvidence(fixture.source.replay);
+    let permitIssued = false, theaterOpened = false;
+    try { permitIssued = issueGhostRecordedOpeningPermit(capsule) !== undefined; } catch { /* refusal */ }
+    const verification = verifyGhostCapsuleProductionReplay(capsule);
+    try { theaterOpened = createGhostProductionReplaySession(capsule).seek(0).tick === 0; } catch { /* refusal */ }
+    const observed = { permitIssued, standardStatus: verification.status, theaterOpened };
+    unchangedSourceWorld(); expect(stableVerificationHash(capsule)).toBe(sourceHash);
+    expect(observed, JSON.stringify(observed)).toEqual({ permitIssued: false, standardStatus: "mismatch", theaterOpened: false });
+    if (kind === "bootstrap5/start1/completion2") {
+      const context = readGhostReplayRunContext(capsule.manifest.provenance); if (context === undefined) throw new Error("fixture lost context");
+      expect(assessGhostReplayBootstrap(capsule, context)).toMatch(/sequence|boundary/);
+    }
+  });
+
+  it.each(["tick", "mode", "clock", "runtime", "reward", "outcome", "cinema"])("rejects a fully sealed opening with invalid %s before all destination setters", async (kind) => {
+    const { capsule, snapshot } = await sealedActualOpening("menu", false, false, (source) => {
+      const raw = source as unknown as { state: Record<string, Record<string, unknown>> };
+      const run = raw.state["tear.run.v1"], world = raw.state["tear.world.v1"], reward = raw.state["tear.reward.v1"];
+      if (run === undefined || world === undefined || reward === undefined) throw new Error("fixture missing required components");
+      if (kind === "tick") { run.tick = 1; return { ...source, tick: 1 }; }
+      if (kind === "mode") run.mode = "tutorial";
+      if (kind === "clock") world.simulationSeconds = 0.5;
+      if (kind === "runtime") run.runTime = 0.1;
+      if (kind === "reward") (reward.selection as Record<string, unknown>).phase = "draft";
+      if (kind === "outcome") Object.assign((world.runtime as { lifecycle: object }).lifecycle, { phase: "terminated", outcome: "defeat" });
+      if (kind === "cinema") raw.state["tear.cinematic.v1"] = { version: 1, active: true, scriptId: "missing-opening", scriptRevision: 1, beatId: "enter", beatIndex: 0, elapsedSeconds: 0, context: {} };
+      return source;
+    });
+    const target = createProductionReplayWorld({ seed: "invalid-sealed-opening" }), unchanged = openingDestinationEvidence(target);
+    const set = vi.fn(), destination = { ...target, world: { ...target.world, state: { ...target.world.state, setRun: set, setPlayer: set, setBlade: set, setEnemies: set } } };
+    expect(() => { const permit = issueGhostRecordedOpeningPermit(capsule); if (permit === undefined) throw new Error("missing permit"); restoreProductionReplaySnapshot(destination, snapshot, permit); }).toThrow();
+    expect(set).not.toHaveBeenCalled(); unchanged();
+  });
+
+  it.each(["root", "context", "start", "completion", "duplicate completion", "missing receipt"])("refuses %s linkage without issuing an opening capability", async (kind) => {
+    const { capsule } = await sealedActualOpening(), bad = structuredClone(capsule) as unknown as { manifest: { rootIntegrity: string; provenance: { replayContext: { run: { id: string } } } }; tracks: { events: { value: { type: string; payload: Record<string, unknown> } }[]; results: unknown[] } };
+    if (kind === "root") bad.manifest.rootIntegrity = "wrong-root";
+    if (kind === "context") bad.manifest.provenance.replayContext.run.id = "old-session";
+    if (kind === "start") { const event = bad.tracks.events.find((entry) => entry.value.type === "run.started"); if (event) event.value.payload.runId = "old-run"; }
+    const completion = bad.tracks.events.find((entry) => entry.value.payload.boundary === "recorded-opening-playing-exposed");
+    if (kind === "completion" && completion) completion.value.payload.runId = "old-run";
+    if (kind === "duplicate completion" && completion) bad.tracks.events.push(completion);
+    if (kind === "missing receipt") bad.tracks.results = [];
+    expect(() => issueGhostRecordedOpeningPermit(bad as unknown as GhostReadCapsule)).toThrow();
+  });
+
+  it("does not treat a malformed supplied descriptor as legacy absence when the captured UI is already playing", async () => {
+    const { capsule } = await sealedActualOpening("playing");
+    const bad = structuredClone(capsule) as unknown as { manifest: { provenance: { replayContext: { simulation: { opening: { version: number } } } } } };
+    bad.manifest.provenance.replayContext.simulation.opening.version = 2;
+    expect(() => issueGhostRecordedOpeningPermit(bad as unknown as GhostReadCapsule)).toThrow(/malformed or unsupported/);
+    expect(verifyGhostCapsuleProductionReplay(bad as unknown as GhostReadCapsule).status).toBe("mismatch");
+  });
+
+  it("does not attest completion when an actual source start listener throws before playing", () => {
+    const fixture = actualOpeningHost("gameover", true);
+    expect(() => fixture.controller.start("endless", "normal")).toThrow(/source start listener/);
+    expect(fixture.events.map((event) => event.type)).toEqual(["run.started"]);
+    expect(fixture.order).not.toContain("playing"); expect(fixture.order).not.toContain("completion");
+    expect(fixture.pending()).toBe(false);
+  });
+
+  it("uses a constructed win predecessor to prove descend-again host ordering and new Campaign identity only", () => {
+    const fixture = actualOpeningHost("win"), previous = fixture.source.replay.world.lifecycle.snapshot().sessionId;
+    fixture.controller.start("campaign", "normal");
+    expect(fixture.captured()?.snapshot.state["tear.ui.v1"]).toMatchObject({ screen: "win" });
+    expect(fixture.source.replay.world.lifecycle.snapshot().sessionId).not.toBe(previous);
+    expect(fixture.events[0]).toMatchObject({ type: "run.started", payload: { mode: "campaign", runId: "run-9ix" } });
+    expect(fixture.order.slice(-3)).toEqual(["started", "playing", "completion"]);
+    // Constructed route fixture: this does not attest a natural60-wave Campaign/finale.
+  });
+
+  it("advances the disclosed injected-held-input production fixture180 ticks without later keyframes or receipt-input injection", async () => {
+    const { capsule, fixture } = await sealedActualOpening("setup", false, true), before = stableVerificationHash(capsule);
+    const mapped = mapGhostCapsuleToReplayEnvelope(capsule), permit = issueGhostRecordedOpeningPermit(capsule);
+    expect(mapped.issues).toEqual([]); if (permit === undefined) throw new Error("permit missing");
+    const anchor = mapped.ghost.snapshots.find((snapshot) => snapshot.tick === 0); if (anchor === undefined) throw new Error("anchor missing");
+    // Deliberately derived in-memory test envelope: source archive and later anchors stay immutable.
+    const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
+    const initialInput = fixture.captured()?.input; if (initialInput === undefined) throw new Error("input missing");
+    expect(initialInput).toMatchObject({ tick: 0, moveX: 0.75, primaryHeld: true });
+    const composition = createProductionGhostReplayComposition({ seed: "unused", openingPermit: permit, inputSnapshots: new Map([[0, initialInput]]) });
+    const sampled = new Map<number, { stateHash: string; input: typeof initialInput }>(), created: ReturnType<typeof composition.create>[] = [], advances: number[] = [];
+    const recording = { create(snapshot: Parameters<typeof composition.create>[0]) {
+      const session = composition.create(snapshot), advance = session.simulation.advanceOne.bind(session.simulation), restore = vi.spyOn(session.simulation.input, "restore");
+      created.push(session); let count = 0;
+      vi.spyOn(session.simulation, "advanceOne").mockImplementation((actions) => { const result = advance(actions); count++; advances[created.length - 1] = count;
+        if ([1, 60, 120, 180].includes(result.tick)) sampled.set(result.tick, { stateHash: result.stateHash, input: session.simulation.input.snapshot() }); return result; });
+      expect(session.simulation.input.snapshot()).toEqual(initialInput); expect(restore).not.toHaveBeenCalled();
+      return session;
+    } };
+    const world = new GhostProductionReplayWorld(derived, recording);
+    world.seek(0); expect(created[0]?.waveReward.screen()).toBe("setup");
+    world.seek(180); expect(advances[1]).toBe(180); expect(created[1]?.waveReward.screen()).toBe("playing");
+    for (const [tick, observed] of sampled) {
+      const receiptEntry = capsule.tracks.results.find((entry) => entry.tick === tick);
+      expect(receiptEntry?.value).toMatchObject(observed);
+    }
+    expect(sampled.size).toBe(4);
+    const repeated = world.seek(180); expect(repeated.semanticHash).toBe(sampled.get(180)?.stateHash); expect(advances[2]).toBe(180);
+    expect(stableVerificationHash(capsule)).toBe(before);
+    const verification = verifyGhostCapsuleOpeningContinuation(capsule);
+    expect(verification.status).toBe("verified"); expect(verification.continuation).toMatchObject({ steps: 180, laterKeyframesUsed: false, sourceRootIntegrity: capsule.manifest.rootIntegrity });
+    expect(verification.comparisons.map((entry) => [entry.tick, entry.equal, entry.inputEqual])).toEqual([[60, true, true], [120, true, true], [180, true, true]]);
+    expect(verifyGhostCapsuleOpeningContinuation({ ...capsule, tracks: { ...capsule.tracks, results: capsule.tracks.results.filter((entry) => entry.tick !== 120) } }).status).toBe("unavailable");
+    expect(stableVerificationHash(capsule)).toBe(before);
+  });
+
+  it.each(["throw", "reenter-caught"])("fails the actual replay session before UI/advance when its start sink %s", async (kind) => {
+    const { capsule } = await sealedActualOpening(), mapped = mapGhostCapsuleToReplayEnvelope(capsule), openingPermit = issueGhostRecordedOpeningPermit(capsule);
+    if (openingPermit === undefined) throw new Error("permit missing");
+    const bus = new TearGameplayEventBus(), composition = createProductionGhostReplayComposition({ seed: "unused", openingPermit, gameplayEvents: bus });
+    let session: ReturnType<typeof composition.create> | undefined, calls = 0;
+    const world = new GhostProductionReplayWorld(mapped.ghost, { create(snapshot) { session = composition.create(snapshot); return session; } });
+    bus.subscribe(() => { calls++; if (kind === "throw") throw new Error("sink failed");
+      try { world.seek(1); } catch { /* A caught nested error must still poison the outer transition. */ }
+    });
+    expect(() => world.seek(1)).toThrow(/sink failed|invalidated/);
+    expect(calls).toBe(1); expect(session?.waveReward.screen()).toBe("menu"); expect(session?.simulation.scheduler.tick).toBe(0);
+    expect(() => session?.completeRecordedOpening()).toThrow(/failed|reentrant/); expect(calls).toBe(1);
+  });
+
+  it("requires complete source evidence for legacy inference and rejects forged/cross-anchor permits before setters", async () => {
+    const incomplete = await sealedActualOpening("menu", true);
+    expect(() => issueGhostRecordedOpeningPermit(incomplete.capsule)).toThrow(/legacy opening completion is unavailable/);
+    const legacy = await sealedActualOpening("menu", true, true), permit = issueGhostRecordedOpeningPermit(legacy.capsule);
+    if (permit === undefined) throw new Error("permit missing"); expect(readGhostRecordedOpeningPermit(permit, legacy.snapshot).kind).toBe("legacy-inferred");
+    const target = createProductionReplayWorld({ seed: "rejected-opening-target" }), before = target.world.state.run(), setter = vi.fn();
+    const observed = { ...target, world: { ...target.world, state: { ...target.world.state, setRun: setter } } };
+    expect(() => restoreProductionReplaySnapshot(observed, legacy.snapshot, {} as GhostRecordedOpeningPermit)).toThrow(/permit/);
+    expect(() => restoreProductionReplaySnapshot(observed, { ...legacy.snapshot, id: "other-anchor" }, permit)).toThrow(/another anchor/);
+    expect(setter).not.toHaveBeenCalled(); expect(target.world.state.run()).toBe(before);
+  });
+  it("scopes actual host capture after opening/input and before native start/playing", () => {
+    const fixture = actualOpeningHost(); fixture.controller.start("endless", "normal");
+    expect(fixture.order).toEqual(["opening", "input", "held", "boundary", "recording", "started", "playing", "completion"]);
+    expect(fixture.boundary()).toMatchObject({ phase: "opening-initialized-before-run-start", runId: "run-9ix", seed: 12345 });
+    expect(fixture.captured()?.snapshot.state["tear.ui.v1"]).toMatchObject({ screen: "setup" });
+    expect(fixture.events[0]).toMatchObject({ type: "run.started", tick: 0, phase: "pre-simulation", payload: { wave: 0, runTimeSeconds: 0 } });
+    expect(fixture.captured()?.snapshot.state["tear.run.v1"]).toMatchObject({ wave: 1, runTime: 0 });
+  });
+
+  it("preserves actual host opening UI through a sealed capsule permit and completes it once", async () => {
+    const { snapshot, capsule } = await sealedActualOpening();
+    const permit = issueGhostRecordedOpeningPermit(capsule); if (permit === undefined) throw new Error("permit missing");
+    expect(readGhostRecordedOpeningPermit(permit, snapshot).kind).toBe("explicit");
+    const events: string[] = [], bus = new TearGameplayEventBus(); bus.subscribe((event) => { events.push(event.kind); });
+    const composition = createProductionGhostReplayComposition({ seed: "temporary", openingPermit: permit, gameplayEvents: bus }), restored = composition.create(snapshot);
+    expect(restored.waveReward.screen()).toBe("menu"); expect(events).toEqual([]);
+    const clock = restored.replay.clock.sim, rng = restored.replay.random.streams.snapshot(), entropy = restored.replay.cosmeticEmissionRandom.snapshot();
+    restored.completeRecordedOpening(); restored.completeRecordedOpening();
+    expect(restored.waveReward.screen()).toBe("playing"); expect(events).toEqual(["run"]);
+    expect(restored.replay.clock.sim).toBe(clock); expect(restored.replay.random.streams.snapshot()).toEqual(rng); expect(restored.replay.cosmeticEmissionRandom.snapshot()).toEqual(entropy);
+    expect(verifyGhostCapsuleProductionReplay(capsule).status).toBe("verified");
+    expect(createGhostProductionReplaySession(capsule).seek(0).tick).toBe(0);
+  });
   it("owns the ordered replacement-to-play transaction and deterministic identities", () => {
     const events: string[] = [];
     let installedSeed = 0;

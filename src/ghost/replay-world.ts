@@ -45,6 +45,11 @@ export interface GhostProductionReplaySession<State> {
   semanticProjection(): unknown;
   /** Optional State Forge semantic hash, only when its codec projection is available. */
   snapshotSemanticHash?(): string;
+  /** Complete an admitted post-capture start transaction before its first simulation tick. */
+  completeRecordedOpening?(): void;
+  invalidateRecordedOpening?(): void;
+  /** Read-only evidence observer; simulation still advances through the existing loop. */
+  afterReplayAdvance?(): void;
 }
 
 export interface GhostProductionReplayComposition<State> {
@@ -158,6 +163,7 @@ export class GhostProductionReplayWorld<State> {
   readonly #composition: GhostProductionReplayComposition<State>;
   #session: GhostProductionReplaySession<State> | null = null;
   #tick = 0;
+  #seeking = false;
 
   constructor(ghost: GhostEnvelopeV3, composition: GhostProductionReplayComposition<State>) {
     this.#ghost = ghost;
@@ -172,6 +178,12 @@ export class GhostProductionReplayWorld<State> {
   }
 
   seek(targetTick: number): GhostSeekResult {
+    if (this.#seeking) { this.#session?.invalidateRecordedOpening?.(); throw new Error("production replay seek is reentrant"); }
+    this.#seeking = true;
+    try { return this.#seek(targetTick); } finally { this.#seeking = false; }
+  }
+
+  #seek(targetTick: number): GhostSeekResult {
     if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
     const snapshot = [...this.#ghost.snapshots]
       .filter((candidate) => candidate.tick <= targetTick)
@@ -183,9 +195,11 @@ export class GhostProductionReplayWorld<State> {
     }
     this.#session = session;
     this.#tick = startingTick;
+    if (targetTick > startingTick) session.completeRecordedOpening?.();
     for (let tick = this.#tick + 1; tick <= targetTick; tick += 1) {
       const actions = this.#ghost.actions.filter((action) => action.tick === tick);
       session.simulation.advanceOne(actions);
+      session.afterReplayAdvance?.();
     }
     this.#tick = targetTick;
     const semanticHash = this.semanticHash();

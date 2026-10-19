@@ -15,7 +15,7 @@ import type { LiveTrainingHost } from "./live-training-host";
 import type { createLiveWeaponRuntime } from "../gameplay/combat/live-weapon-runtime";
 import { createLiveContentComposition } from "./live-content-composition";
 import { createLiveOutcomeComposition } from "./live-outcome-composition";
-import { createLiveRunStartHost } from "./live-run-start-host";
+import { createLiveRunStartHost, type LiveOpeningCaptureBoundary } from "./live-run-start-host";
 import { createLiveVictoryProgressionExecutor } from "./live-victory-progression-host";
 import { createLiveWaveComposition } from "./live-wave-composition";
 import type { OutcomeChronologyEffect } from "../gameplay/run/outcome-chronology-journal";
@@ -64,6 +64,9 @@ export interface LiveRunOrchestrationOptions {
   readonly resetAuthoritativeClocks: () => void;
   readonly resetCombatIdentity: () => void;
   readonly createRunSeed?: () => number;
+  readonly withOpeningCapture?: (boundary: LiveOpeningCaptureBoundary, record: () => void) => void;
+  readonly openingExposed?: (runId: string) => void;
+  readonly discardOpeningCapture?: () => void;
   readonly authoritativeResult: () => Readonly<{ tick: number; stateHash: string }> | null;
   readonly setScreen: (screen: LegacyAppScreen, context?: LegacyTransitionContext) => void;
   readonly requestPointerLock: () => void;
@@ -130,6 +133,9 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     resetAuthoritativeClocks: options.resetAuthoritativeClocks, environment: options.environment,
     resetCombatIdentity: options.resetCombatIdentity,
     ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
+    ...(options.withOpeningCapture === undefined ? {} : { withOpeningCapture: options.withOpeningCapture }),
+    ...(options.openingExposed === undefined ? {} : { openingExposed: options.openingExposed }),
+    ...(options.discardOpeningCapture === undefined ? {} : { discardOpeningCapture: options.discardOpeningCapture }),
     loadStage: (index) => { options.controllers.api.loadStage(index); setEnvironmentStage(index, "new-run"); }, stage, story, lifecycle: options.lifecycle,
     install: (controller) => { options.controllers.installRunStart(controller); },
     setScreen: (screen, detail) => { options.setScreen(screen, detail); },

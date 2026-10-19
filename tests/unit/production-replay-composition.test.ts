@@ -160,13 +160,16 @@ describe("production replay composition", () => {
     unchanged();
     expect(target.world.context.services.clock.seconds()).toBe(0.75);
   });
-  it("normalizes only the detached entry screen of a valid tick-zero campaign opening anchor", () => {
+  it("retains raw Campaign opening UI without treating raw restoration as completed-start permission", () => {
     const fixture = activeChapterCheckpoint(false, true);
     const snapshot: TearSnapshotV1 = { ...fixture.snapshot, state: { ...fixture.snapshot.state,
       "tear.ui.v1": { screen: "menu", focusId: "0" } } };
     const before = structuredClone(snapshot);
     const restored = fixture.composition.create(snapshot);
-    expect(restored.waveReward.screen()).toBe("playing");
+    expect(restored.waveReward.screen()).toBe("menu");
+    expect(() => { restored.completeRecordedOpening(); }).toThrow(/capsule linkage permit/);
+    const recaptured = captureProductionReplayCheckpoint(restored.replay, restored.combat, restored.waveReward, "raw-opening-recapture");
+    expect(recaptured.snapshot.state["tear.ui.v1"]).toMatchObject({ screen: "menu", focusId: "0" });
     expect(restored.replay.world.context.cinema.captureState()).toEqual(snapshot.state["tear.cinematic.v1"]);
     expect(stableVerificationHash(restored.semanticProjection())).toBe(fixture.semanticHash);
     expect(snapshot).toEqual(before);

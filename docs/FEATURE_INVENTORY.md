@@ -843,6 +843,13 @@ frozen evidence record.
   production replay. The codec-only replay fallback retains every same-tick
   command in authored order and skips groups included in its restored snapshot;
   `ghost-replay-world.test.ts` covers snapshot boundaries and repeated seeks.
+  Supported recorded openings retain captured UI/focus at seek zero and require
+  capsule-linked start/completion evidence before the one-shot playing transition.
+  A separate disclosed opening-only continuation verifier executes 180 shared-runtime
+  steps and compares source state/input at 60/120/180; same-keyframe verification
+  alone makes no continuation claim. Legacy completion inference needs a later
+  playing anchor/receipt. Fresh normal-browser acceptance remains required for
+  the new route; constructed win fixtures do not establish a full Campaign run.
   Pixel/device output fidelity remains C25/C40 work. C29
   also now exposes
   player-visible semantic comparison: from Profile -> Vault, select two

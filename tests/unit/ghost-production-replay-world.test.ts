@@ -37,6 +37,17 @@ function productionComposition(created: unknown[]) {
 }
 
 describe("Ghost production replay world", () => {
+  it("propagates observation failure and releases its seek guard without claiming completed advancement", () => {
+    const ghost = createGhostV3({ id: "observation-failure", rulesetVersion: "tear-rules-2026.07", sourceClassification: "native-v3", trident, actions: [], snapshots: [], events: [] });
+    const created: unknown[] = [], source = productionComposition(created);
+    let fail = true;
+    const replay = new GhostProductionReplayWorld(ghost, { create(snapshot: undefined) {
+      const session = source.create(snapshot);
+      return { ...session, afterReplayAdvance() { if (fail) throw new Error("observation failed"); } };
+    } });
+    expect(() => replay.seek(2)).toThrow(/observation failed/); expect(replay.simulation()?.scheduler.tick).toBe(1);
+    fail = false; expect(replay.seek(2).tick).toBe(2); expect(created).toHaveLength(2);
+  });
   it("drives the C27A production combat composition through its one supplied runtime", () => {
     const ghost = createGhostV3({
       id: "c29-production-replay", rulesetVersion: "tear-rules-2026.07", sourceClassification: "native-v3", trident,
