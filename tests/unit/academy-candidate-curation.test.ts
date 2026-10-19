@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { writeFile } from "node:fs/promises";
+import { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
+import { createPlayerWatchObservation, previousPlayerWatchObservation } from "../../src/app/live-player-watch-observation";
+import { TearC32CanonicalActivePolicyRuntime } from "../../src/agents/c32-canonical-active-policy-runtime";
+import { parseTearPolicyActivation } from "../../src/agents/policy-artifact-registry";
 
 import {
   TearAcademyCandidateCurationStore,
@@ -70,7 +75,7 @@ import {
   type TearAcademyCandidateCapsuleMaterializationReceiptV1,
   type TearAcademyCandidateDeclarationV1,
 } from "../../src/agents";
-import { GhostLocalVault, createMemoryGhostVaultBackend, type GhostVaultStore } from "../../src/ghost";
+import { GhostLocalVault, createMemoryGhostVaultBackend, GHOST_VAULT_STORES, type GhostVaultStore } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { parseTrainingOperationsBudget, trainingOperationsBudgetKey, trainingOperationsBudgetOwnerKey, trainingOperationsComputeBudgetHash, trainingOperationsStorageBudgetHash } from "../../src/agents/training-operations-budget";
 import { trainingOperationsTrainingComputeUnits } from "../../src/agents/training-operations-compute-budget";
@@ -447,6 +452,67 @@ describe("C31 held Academy candidate curation", () => {
       expect((await context.jobs.get(context.job.id))?.phase).toBe("monitoring");
       expect((await context.memory.keys("analysis")).some((key) => key.startsWith("foundry-job-v3-monitoring-bridge:") || key.startsWith("foundry-job-decision:v1:"))).toBe(false);
     });
+    it("retains a normal Run Monitor observation from actual native promotion and refuses a changed activation", async () => {
+      // Synthetic source corpus and real native training/evaluation receipts; no learned-quality or human evidence claim.
+      const context = await promotionFixture();
+      if (process.env.TEAR_C37_NATIVE_FIXTURE !== undefined) {
+        const stores: Record<string, readonly (readonly [string, string])[]> = {};
+        for (const store of GHOST_VAULT_STORES) {
+          const rows: [string, string][] = [];
+          for (const key of await context.memory.keys(store)) {
+            const raw = await context.memory.get(store, key);
+            if (raw !== undefined) rows.push([key, raw]);
+          }
+          stores[store] = rows;
+        }
+        await writeFile(process.env.TEAR_C37_NATIVE_FIXTURE, JSON.stringify({ format: "tear-c37-native-promotion-fixture", schemaVersion: 1,
+          classification: "engineering-synthetic-source-control", scheduleHash: context.schedule.scheduleHash, stores }), { flag: "wx" });
+      }
+      const at = "2026-08-03T00:14:00.000Z", prepared = await context.promotion().prepare(context.schedule.scheduleHash, at);
+      const promotion = await context.promotion().promote(context.schedule.scheduleHash, prepared.intent.intentHash, at);
+      const activeRaw = await context.memory.get("analysis", "policy-active:v1");
+      if (activeRaw === undefined) throw new Error("missing promoted activation");
+      const active = parseTearPolicyActivation(JSON.parse(activeRaw));
+      const observation = await createPlayerWatchObservation(context.input.backend, active);
+      if (observation === undefined) throw new Error("missing native observation");
+      const runtime = new TearC32CanonicalActivePolicyRuntime(context.input.backend, () => [], true); await runtime.reset();
+      const environment = createProductionHeadlessEnvironment();
+      try {
+        let state = environment.reset(scenario("normal-watch-control", "normal-watch-seed", 8));
+        const actions: Parameters<typeof environment.step>[0][number][] = [];
+        const authority = vi.fn(), controller = new LivePlayerWatchController(undefined, { canonicalState: () => state,
+          availableActions: () => environment.policyObservation().availableActions, pushAction: (action) => { actions.push(action); },
+          setSemanticAuthority: authority, startNormalRun: () => undefined }, () => Promise.resolve({ decide: runtime.decide.bind(runtime), observation }));
+        await controller.refresh(); await controller.start(); controller.advance(); state = environment.step(actions.splice(0)).observation;
+        controller.pause(); controller.advance();
+        expect((await context.memory.keys("analysis")).filter((key) => key.startsWith("foundry-job-v3-post-promotion-monitor:"))).toHaveLength(0);
+        controller.resume(); controller.advance(); controller.stop(); controller.stop();
+        await vi.waitFor(() => { expect(controller.snapshot().detail).toContain("Observation retained: stopped"); });
+        const keys = (await context.memory.keys("analysis")).filter((key) => key.startsWith("foundry-job-v3-post-promotion-monitor:"));
+        expect(keys).toHaveLength(1);
+        expect(authority).toHaveBeenLastCalledWith(false);
+        expect(await previousPlayerWatchObservation(context.input.backend, active)).toContain("Previous observation retained: stopped");
+        const budgetRaw = await context.memory.get("analysis", trainingOperationsBudgetKey(context.job.id));
+        if (budgetRaw === undefined) throw new Error("missing native observation allowance");
+        const budget = parseTrainingOperationsBudget(JSON.parse(budgetRaw));
+        expect(budget.computeUsed).toBe(24);
+        expect(budget.records.some((record) => record.key.startsWith("policy-decision-journal:"))).toBe(true);
+        expect(budget.records.some((record) => record.key === keys[0])).toBe(true);
+        expect(await observation.finish({ status: "completed", tick: state.tick })).toContain("retained: stopped");
+        expect(await context.memory.get("analysis", trainingOperationsBudgetKey(context.job.id))).toBe(budgetRaw);
+        const changed = await createPlayerWatchObservation(context.input.backend, active);
+        if (changed === undefined) throw new Error("missing second bounded observation");
+        await changed.begin();
+        const artifact = await new TearC34V3C32CandidateRegistry(context.input.backend).get(context.baseline.artifactId);
+        if (artifact === undefined) throw new Error("missing rollback artifact");
+        await new TearPolicyArtifactRegistry(context.input.backend, artifact.compatibility).activate(artifact.id, "2026-08-03T00:15:00.000Z");
+        changed.record(state, runtime.decide(state, environment.policyObservation().availableActions));
+        expect(await changed.finish({ status: "stopped", tick: state.tick })).toContain("not retained");
+        expect((await context.memory.keys("analysis")).filter((key) => key.startsWith("foundry-job-v3-post-promotion-monitor:"))).toEqual(keys);
+        expect(promotion.activationHash).toBe(active.activationHash);
+      } finally { environment.dispose(); }
+    });
+
     it("refuses late source binding drift at activation CAS without partial job, receipt, binding or budget writes", async () => {
       const context = await promotionFixture(), at = "2026-08-03T00:14:00.000Z";
       const prepared = await context.promotion().prepare(context.schedule.scheduleHash, at);

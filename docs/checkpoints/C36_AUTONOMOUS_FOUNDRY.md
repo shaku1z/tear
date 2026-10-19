@@ -913,3 +913,33 @@ origin using their common frozen policy and baseline fields. This does not creat
 observations, auto-run a Watch session, claim learned quality or participant evidence,
 or complete the remaining unattended post-promotion orchestration. Browser evidence
 for the new explicit action remains pending.
+
+
+### Normal Run Monitor durable native observations
+
+The existing normal Replay Hub START RUN MONITOR path now binds the exact local
+active artifact/activation and its promotion/approval records. It runs the canonical
+V3 policy, journals the actual decision receipts/actions, and preserves one session
+across pause/resume. The production run-domain started/completed/defeated/abandoned
+facts bind its run identity and finalize genuine terminal outcomes; screen navigation
+or restoration alone cannot report completion. Outgoing canonical state is ignored
+until the new run supplies its first source tick. A replacement run stops the old
+observation rather than inheriting it.
+
+Each observation is explicitly limited to 256 decisions, stopping before decision
+257. User stop and the decision limit are retained as stopped, never passed health.
+The normal loop/input remain available. Finalization runs once, waits for the bounded
+journal flush/read, and only then invokes the existing C36 monitor. Partial, refused,
+dropped or changed-policy evidence visibly reports that it was not retained. Native
+journal and monitor records/indexes consume the existing job's numeric retained-byte
+budget, with no new compute charge, activation or automatic rollback. Legacy monitor
+records keep their existing route. Reopening Replay Hub/reloading projects an exact
+historical retained observation through the existing detail text.
+
+The focused integration fixture uses actual native training/evaluation/promotion
+owners over an engineering synthetic corpus and canonical source worlds. It can export
+an awaiting-promotion fixture using TEAR_C37_NATIVE_FIXTURE (exclusive new file).
+The updated browser-c37-player-watch journey imports those source receipts into its
+isolated context, clicks normal PROMOTE, then START/pause/resume/STOP and verifies the
+exact durable observation after reload. Browser proof awaits the next fresh build;
+this is no learned-quality, participant, natural-victory or unattended-lifecycle claim.

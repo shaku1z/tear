@@ -1,4 +1,5 @@
 import type { GhostVaultBackend } from "../ghost";
+import { commitTrainingOperationsJobWrites } from "./training-operations-budget";
 import { stableVerificationHash } from "../replay/hash";
 import { parseTearFoundryV3PromotionReceipt } from "./foundry-job-v3-promotion";
 import { parseTearFoundryV3PromotionApprovalOrigin } from "./foundry-job-v3-promotion-approval";
@@ -79,6 +80,25 @@ export class TearFoundryV3PostPromotionMonitor {
     const jobRaw = await this.#backend.get("analysis", `foundry-job:v1:${approval.job.id}`); if (jobRaw === undefined) throw new RangeError("post-promotion monitoring job is unavailable");
     const job = parseTearFoundryJob(JSON.parse(jobRaw)), protocol = requireTearFoundryEvaluationProtocol(job); if (job.jobHash !== approval.job.jobHash || protocol.protocolHash !== approval.job.protocolHash || job.inputs.stopConditionsHash !== approval.job.stopConditionsHash) throw new RangeError("post-promotion monitoring policy changed");
     const evidence = journalEvidence(journal, exact.promotion), draft = { format: "tear-foundry-v3-post-promotion-monitor" as const, schemaVersion: 1 as const, promotion: { approvalHash: exact.promotion.approvalHash, promotionReceiptHash: exact.promotion.receiptHash, artifactId: exact.promotion.artifactId, artifactHash: exact.promotion.artifactHash, activationHash: exact.promotion.activationHash }, policy: { protocolHash: protocol.protocolHash, stopConditionsHash: job.inputs.stopConditionsHash, thresholds: protocol.thresholds, regressionPolicy: "classify-only-no-rollback" as const }, evidence: { terminalReceiptHash: terminalReceipt.receiptHash, ...evidence, terminalStatus: terminalReceipt.terminal.status, terminalTick: terminalReceipt.terminal.tick }, classification: terminalReceipt.terminal.status === "completed" ? "observation" as const : "threshold-breach" as const, recordedAt }, output = monitor(draft), key = `${RECORD}${output.recordHash}`;
+    if (approval.format === "training-operations-v3-native-promotion-approval") {
+      const event = job.events.at(-1), promotionKey = `${RECEIPT}${approval.approvalHash}`;
+      const promotionRaw = await this.#backend.get("analysis", promotionKey);
+      if (event === undefined || promotionRaw !== JSON.stringify(exact.promotion)) throw new RangeError("native post-promotion receipt changed");
+      const indexKey = `foundry-job-v3-post-promotion-monitor:${exact.promotion.artifactHash}:${output.recordHash}`;
+      const index = JSON.stringify({ classification: output.classification, active: true, aggregateOnly: true });
+      const guards = [guard("policy-active:v1", exact.activeRaw), guard(`policy-decision-journal:v1:${terminalReceipt.journalId}`, journalRaw),
+        guard(`${APPROVAL}${approval.approvalHash}`, approvalRaw), guard(`foundry-job:v1:${job.id}`, jobRaw), guard(promotionKey, promotionRaw),
+        guard(`foundry-job-event:v1:${job.id}:${String(event.sequence)}:${event.eventHash}`, JSON.stringify(event)),
+        { store: "indexes" as const, key: `foundry-job-current:${job.id}`, expected: JSON.stringify({ jobHash: job.jobHash, phase: job.phase }) }];
+      const previous = await this.#backend.get("analysis", key);
+      if (previous !== undefined) {
+        if (previous !== JSON.stringify(output)) throw new RangeError("native post-promotion observation changed");
+        await commitTrainingOperationsJobWrites(this.#backend, job, [...guards, guard(key, previous),
+          { store: "indexes", key: indexKey, expected: index }], []);
+      } else await commitTrainingOperationsJobWrites(this.#backend, job, [...guards, guard(key, undefined), { store: "indexes", key: indexKey }],
+        [{ store: "analysis", key, value: JSON.stringify(output) }, { store: "indexes", key: indexKey, value: index }]);
+      return output;
+    }
     const previous = await this.#backend.get("analysis", key); if (previous !== undefined) { try { return parseTearFoundryV3PostPromotionMonitorRecord(JSON.parse(previous)); } catch { await this.#backend.put("quarantine", `${key}:read`, previous); throw new RangeError("post-promotion monitor record is corrupt"); } }
     await this.#backend.commitIfMatches(Object.freeze([guard("policy-active:v1", exact.activeRaw), guard(`policy-decision-journal:v1:${terminalReceipt.journalId}`, journalRaw), guard(`${APPROVAL}${approval.approvalHash}`, approvalRaw), guard(`foundry-job:v1:${approval.job.id}`, jobRaw), guard(key, undefined)]), Object.freeze([{ store: "analysis", key, value: JSON.stringify(output) }, { store: "indexes", key: `foundry-job-v3-post-promotion-monitor:${exact.promotion.artifactHash}:${output.recordHash}`, value: JSON.stringify(Object.freeze({ classification: output.classification, active: true, aggregateOnly: true })) }]));
     return output;
