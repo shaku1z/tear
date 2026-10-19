@@ -96,10 +96,23 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       return { from: (center + side * arc + 1_000_000) % 1_000_000,
         to: (center - side * arc + 1_000_000) % 1_000_000 };
     };
-    const risingCutThroughDummy = (settle, recover) => {
+    const prepareRisingAim = (settle) => {
       const aim = risingAimAtDummy();
+      if (!aim) return null;
+      step({ type: "aim", turn: aim.from, magnitude: 1000 }); idle(settle);
+      // A lowering contact can spend the dummy's hit cooldown. Let that
+      // player action settle before asking the next contact to be a launch.
+      for (let tick = 0; tick < 120; tick += 1) {
+        const enemy = window.__PANTHEON_TEST.state().enemyTrace.find((entry) => entry.kind === "charger");
+        if (environment.observe().blade.tipSpeed < 200 && (!enemy || enemy.hitCooldown <= 0)) break;
+        step();
+      }
+      return aim;
+    };
+    const risingCutThroughDummy = (settle, recover) => {
+      const aim = prepareRisingAim(settle);
       if (!aim) { idle(recover); return; }
-      swing(aim.from, aim.to, settle, recover);
+      step({ type: "aim", turn: aim.to, magnitude: 1000 }); idle(recover);
     };
     const jump = () => {
       step({ type: "jump", phase: "pressed" });
@@ -210,9 +223,8 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       // An updraft is not merely an upward cut: the player must still be in
       // the strong rising window when the blade crosses the target.
       approachDummy(70); waitGrounded();
-      const aim = risingAimAtDummy();
+      const aim = prepareRisingAim(8);
       if (!aim) { step(); continue; }
-      step({ type: "aim", turn: aim.from, magnitude: 1000 }); idle(8);
       jump(); idle(2);
       step({ type: "aim", turn: aim.to, magnitude: 1000 });
       idle(75);
