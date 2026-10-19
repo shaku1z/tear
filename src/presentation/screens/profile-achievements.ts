@@ -18,10 +18,10 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       context.enqueue({ x: left, y: 312, w: 180, h: 36, label: "SELECT ARCHIVE", enabled: archive.canPick, action: { type: "profile.pickGhostArchive" } });
       if (archive.jobId !== undefined && archive.revision !== undefined) {
         if (archive.canReselect) context.enqueue({ x: left + 192, y: 312, w: 180, h: 36, label: "RESELECT FILE", action: { type: "profile.reselectGhostArchive", id: archive.jobId } });
-        if (archive.canRestore) context.enqueue({ x: left + 384, y: 312, w: 180, h: 36, label: "RESTORE / RESUME", action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision } });
-        if (archive.canCancel) context.enqueue({ x: left + 576, y: 312, w: 150, h: 36, label: "CANCEL RESTORE", action: { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision } });
+        if (archive.canRestore) context.enqueue({ x: left + 384, y: 312, w: 180, h: 36, label: "RESTORE", action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision } });
+        if (archive.canCancel) context.enqueue({ x: left + 576, y: 312, w: 150, h: 36, label: "CANCEL", action: { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision } });
       }
-      if (archive.canCancelSelection) context.enqueue({ x: left + 768, y: 312, w: 180, h: 36, label: "CANCEL SELECTION", action: { type: "profile.cancelGhostArchiveSelection" } });
+      if (archive.canCancelSelection) context.enqueue({ x: left + 768, y: 312, w: 180, h: 36, label: "CANCEL FILE", action: { type: "profile.cancelGhostArchiveSelection" } });
       ui.text(canvas, ellipsize(canvas, `${archive.status.toUpperCase()} / ${archive.detail}`, 1120), left, 372, ui.t.type.caption, "left", ui.t.alpha.soft);
       if (archive.sha256) ui.text(canvas, ellipsize(canvas, `SCHEMA ${String(archive.schemaVersion)} / ${String(archive.byteLength)} BYTES / ROOT ${archive.rootIntegrity ?? ""} / SHA256 ${archive.sha256}`, 1120), left, 396, ui.t.type.micro, "left", ui.t.alpha.muted);
       ui.divider(canvas, left, 418, 1120, 0.12);
