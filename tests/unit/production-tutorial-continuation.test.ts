@@ -10,6 +10,9 @@ import { createProductionHeadlessEnvironment, type ProductionHeadlessCheckpoint,
 import type { TearScenarioV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
 import { firstProductionC27AHashDivergence, replayProductionC27ATrace, type ProductionC27ATrace } from "../../src/tearbench/production-c27a-matrix";
 import { ProductionHeadlessAcademyIntake } from "../../src/tearbench/production-headless-academy-intake";
+import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
+import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
+import type { createBlade } from "../../src/gameplay/entities/blade";
 
 const scenario: TearScenarioV1 = {
   format: "tear-contract", kind: "scenario", schemaVersion: 1, id: "retained-tutorial", version: 1,
@@ -28,6 +31,72 @@ function capture(source: Source) { return captureProductionReplayCheckpoint(sour
 function restore(source: Source) { return composition().create(JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1); }
 
 describe("production tutorial reconstructed-byte continuation", () => {
+  it.each(WEAPON_IDS)("advances the %s annex through actual baseline weapon effects and continues its v4 bytes", (weaponId) => {
+    const owner = createProductionGhostReplayComposition({ seed: `annex-${weaponId}`, mode: "tutorial", weaponId, difficulty: "normal" });
+    const source = owner.create(undefined), tutorial = source.replay.tutorial;
+    expect(tutorial.openPractice(1)).toBe(true); expect(tutorial.selectAnnex(weaponId)).toBe(true);
+    source.simulation.advanceOne([]); // The shared tutorial owner spawns its real baseline target.
+    const enemy = source.replay.world.state.enemies()[0], player = source.replay.world.state.player();
+    const blade = source.replay.world.state.blade() as unknown as InstanceType<ReturnType<typeof createBlade>>;
+    if (!enemy || !player) throw new Error("annex production actors missing");
+    const collision = () => { runLiveCollisionPhase(source.combat.collision, 1 / 120); };
+    const heldContact = (verticalSpeed: number, airborne = false) => {
+      Object.assign(player, { onGround: !airborne, vy: airborne ? 700 : 0 });
+      Object.assign(enemy, { hitCd: 0, spawnT: 0, x: player.x + 90, y: player.y - 10 });
+      Object.assign(blade, { state: "held", angle: 0, x: enemy.x - 70, y: enemy.y, tipX: enemy.x + 70,
+        tipY: enemy.y, tipVX: 0, tipVY: verticalSpeed, tipSpeed: Math.abs(verticalSpeed), vx: 0, vy: verticalSpeed });
+      blade.swingId++; collision();
+    };
+    const throwContact = () => {
+      Object.assign(enemy, { hitCd: 0, spawnT: 0 });
+      Object.assign(blade, { state: "flying", x: enemy.x - 30, y: enemy.y, tipX: enemy.x, tipY: enemy.y,
+        vx: 600, vy: 0, tipVX: 600, tipVY: 0, tipSpeed: 600, throwDmg: 20, impactResolved: false });
+      blade.throwId++; blade.pierced.clear(); collision();
+    };
+    if (weaponId === "sword") {
+      heldContact(2200);
+      expect(tutorial.session().progress[0]).toBe(0); // A generic cut is not a Reversal.
+      const reversal = blade.reversals[0]; if (!reversal) throw new Error("first real cut did not arm Reversal");
+      blade.tipX = reversal.x + CONFIG.weapons.sword.reversalExitRadius + 2; blade.tipY = reversal.y;
+      blade._updateReversalState(); heldContact(-2200);
+      expect(tutorial.session().progress[0]).toBe(1); // Same contact's launch cannot satisfy the next step.
+      heldContact(-2200);
+    } else if (weaponId === "hammer") {
+      heldContact(2200, true);
+      expect(tutorial.session().progress[0]).toBe(1);
+      for (let attempt = 0; attempt < 8 && tutorial.session().progress[0] < 2; attempt++) heldContact(2200, true);
+      expect(source.replay.world.state.run()?.weaponStats.breakTriggers).toBeGreaterThan(0);
+    } else if (weaponId === "greatsword") {
+      heldContact(2200); expect(tutorial.session().progress[0]).toBe(1); throwContact();
+    } else {
+      throwContact(); expect(tutorial.session().progress[0]).toBe(1);
+      expect(blade.hookTarget).toBe(enemy);
+      if (weaponId === "chainblade") {
+        blade.aimX = CONFIG.weapons.chainblade.minRadius; blade.aimY = 0;
+        blade._updateHookThrown(1 / 120, player, []);
+        expect(blade._releaseHook(player as never)).toBe("recalled");
+        expect(Math.hypot(enemy.vx, enemy.vy)).toBeGreaterThan(0);
+      } else {
+        blade.aimX = 1000; blade.aimY = 0;
+        expect(blade._fireRazorRound(player as never)).toBe(true);
+      }
+      source.combat.opening.flushWeaponActions?.(blade.drainWeaponEvents()); collision();
+    }
+    expect(tutorial.session().progress).toEqual([2, 2]);
+    const saved = capture(source), restored = owner.create(JSON.parse(JSON.stringify(saved.snapshot)) as TearSnapshotV1);
+    expect(tutorial.captureSession()).toMatchObject({ version: 4, courseSessionId: "", completionAwarded: false,
+      annex: { id: weaponId, weaponId, progress: 2, pendingEvidence: false } });
+    expect(restored.replay.tutorial.captureSession()).toEqual(tutorial.captureSession());
+    for (let tick = 0; tick < 150; tick++) expect(restored.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+    expect(restored.replay.tutorial.session()).toMatchObject({ phase: "free-practice", practiceOnly: true, annex: { id: weaponId, progress: 2 } });
+    expect(restored.replay.tutorialOutward).toContain("awaiting-next-run");
+    expect(restored.replay.tutorialOutward.some((intent) => intent.startsWith("complete-course:"))).toBe(false);
+    const incompatible = structuredClone(saved.snapshot);
+    const runtime = (incompatible.state["tear.world.v1"] as Record<string, unknown>).runtime as Record<string, unknown>;
+    const session = runtime.tutorialSession as Record<string, unknown>;
+    session.annex = { id: weaponId === "sword" ? "hammer" : "sword", weaponId: weaponId === "sword" ? "hammer" : "sword", progress: 2, pendingEvidence: false };
+    expect(() => owner.create(incompatible)).toThrow(/annex weapon/);
+  });
   it("continues explicit practice provenance and real movement from bytes without manufacturing a course receipt", () => {
     const source = composition().create(undefined);
     expect(source.replay.tutorial.openPractice(1)).toBe(true); expect(source.replay.tutorial.selectLesson("move")).toBe(true);

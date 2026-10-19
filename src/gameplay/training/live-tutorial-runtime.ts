@@ -83,6 +83,7 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly player: () => LiveTutorialPlayer;
   readonly bladeState: () => string;
   readonly bladeTipVY?: () => number;
+  readonly weaponId?: () => string;
   readonly enemies: () => TEnemy[];
   readonly playSound: (cue: "rankup" | "ui") => void;
   readonly spawn: (kind: "charger" | "ranged", hpScale: number) => TEnemy;
@@ -120,10 +121,13 @@ export interface LiveTutorialRuntime {
   session(): TutorialSessionView;
   restart(): boolean;
   selectLesson(id: string): boolean;
+  selectAnnex(id: string): boolean;
+  showAnnexes(): void;
+  weaponEffect(weaponId: string, effect: string): void;
   showHelp(): void;
   demonstrate(): boolean;
   captureSession(): ReturnType<TutorialController["captureSession"]> | undefined;
-  validateSession(value: unknown): void;
+  validateSession(value: unknown, candidateWeaponId?: string): void;
   restoreSession(value: unknown): void;
   capturePresentation(): ReturnType<TutorialController["capturePresentation"]>;
   restorePresentation(value: ReturnType<TutorialController["capturePresentation"]> | undefined): void;
@@ -168,10 +172,20 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     session: () => controller.session(),
     restart: () => { const changed = controller.restart(); if (changed) installPendingArena(); return changed; },
     selectLesson: (id) => { const changed = controller.selectLesson(id); if (changed) installPendingArena(); return changed; },
+    selectAnnex: (id) => { const changed = controller.selectAnnex(id); if (changed) installPendingArena(); return changed; },
+    showAnnexes: () => { controller.showAnnexes(); }, weaponEffect: (weaponId, effect) => { controller.weaponEffect(weaponId, effect); },
     showHelp: () => { controller.showHelp(); }, demonstrate: () => controller.demonstrate(),
     captureSession: () => controller.session().phase === "inactive" ? undefined : controller.captureSession(),
-    validateSession: (value) => { parseTutorialSessionCheckpoint(value); },
-    restoreSession: (value) => { controller.restoreSession(value); },
+    validateSession: (value, candidateWeaponId) => {
+      const data = parseTutorialSessionCheckpoint(value);
+      const weaponId = candidateWeaponId ?? port.weaponId?.();
+      if (data?.version === 4 && weaponId !== undefined && data.annex.weaponId !== weaponId) throw new RangeError("Tutorial annex weapon does not match its world");
+    },
+    restoreSession: (value) => {
+      const data = parseTutorialSessionCheckpoint(value);
+      if (data?.version === 4 && port.weaponId !== undefined && data.annex.weaponId !== port.weaponId()) throw new RangeError("Tutorial annex weapon does not match its world");
+      controller.restoreSession(data);
+    },
     capturePresentation: () => controller.capturePresentation(), restorePresentation: (value) => { controller.restorePresentation(value); },
     get active() { return controller.active; },
     get idx() { return controller.lessonIndex; },

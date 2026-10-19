@@ -140,15 +140,17 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   function tutorialPaused(session: NonNullable<PausedScreenView["tutorial"]>): void {
     const { canvas } = context;
     ui.dim(canvas, width, height, 0.9);
-    const lab = session.practiceOnly === true, complete = (session.courseCompleted || lab) && session.phase === "free-practice", current = session.lessons.find((lesson) => lesson.current);
+    const lab = session.practiceOnly === true, annexes = lab && session.annexSelector === true,
+      complete = (session.courseCompleted || lab) && session.phase === "free-practice", current = session.lessons.find((lesson) => lesson.current);
     const compact = height < 650, titleY = compact ? 34 : 78, top = compact ? 84 : 170;
     ui.title(canvas, lab ? "PRACTICE LAB" : complete ? "TECHNIQUES LEARNED" : "CUTTING ROOM", width / 2, titleY, compact ? ui.t.type.lead : ui.t.type.display);
-    ui.text(canvas, complete ? lab ? "Choose a technique · baseline sword · no rewards" : "Course complete · baseline practice · no waves" : `${current?.title ?? ""} · ${String(session.progress[0])} / ${String(session.progress[1])}`, width / 2, titleY + (compact ? 25 : 34), compact ? ui.t.type.caption : ui.t.type.body, "center", ui.t.alpha.soft);
+    ui.text(canvas, complete ? lab ? annexes ? "Choose a weapon · baseline loadout · no rewards" : "Choose a technique · baseline sword · no rewards" : "Course complete · baseline practice · no waves" : `${session.annex ? `${session.annex.id.toUpperCase()} ANNEX` : current?.title ?? ""} · ${String(session.progress[0])} / ${String(session.progress[1])}`, width / 2, titleY + (compact ? 25 : 34), compact ? ui.t.type.caption : ui.t.type.body, "center", ui.t.alpha.soft);
     const menu: { label: string; action: ScreenAction }[] = [
       { label: complete ? "CONTINUE PRACTICE" : "RESUME LESSON", action: { type: "run.resume" } },
-      ...(current?.canPractice ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }] : []),
+      ...(current?.canPractice || session.annex ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }] : []),
       { label: session.helpVisible ? "HIDE HELP" : "LESSON HELP", action: { type: "tutorial.action", command: "help" } },
-      ...(session.phase !== "free-practice" && current?.canPractice ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }] : []),
+      ...(session.phase !== "free-practice" && current?.canPractice && !session.annex ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }] : []),
+      ...(lab ? [{ label: annexes ? "BASELINE EXERCISES" : "WEAPON ANNEXES", action: { type: "tutorial.action", command: "annexes" } as const }] : []),
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ];
@@ -156,17 +158,20 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     menu.forEach((item, index) => { context.enqueue({ x: width * 0.06, y: top + index * (menuH + 8),
       w: width * 0.29, h: menuH, label: item.label, action: item.action, size: compact ? ui.t.type.micro : ui.t.type.caption }); });
     const panelX = width * 0.39, panelW = width * 0.54, rowTop = top + (compact ? 38 : 45), helpH = compact ? 90 : 130;
-    ui.tag(canvas, lab ? "UNLOCKED EXERCISES" : complete ? "PRACTICE A TECHNIQUE" : "REACHED LESSONS", panelX, top, ui.t.color.accent, "left", ui.t.type.micro);
-    ui.text(canvas, lab ? "Restart any exercise, or use help and demos." : "Help and demos give no credit.", panelX, top + 21, ui.t.type.micro, "left", ui.t.alpha.soft);
+    ui.tag(canvas, annexes ? "CHOOSE A WEAPON" : lab ? "UNLOCKED EXERCISES" : complete ? "PRACTICE A TECHNIQUE" : "REACHED LESSONS", panelX, top, ui.t.color.accent, "left", ui.t.type.micro);
+    ui.text(canvas, annexes ? "Real weapon effects · restart any attempt · no rewards" : lab ? "Restart any exercise, or use help and demos." : "Help and demos give no credit.", panelX, top + 21, ui.t.type.micro, "left", ui.t.alpha.soft);
     const rowH = Math.min(46, (height - rowTop - helpH - 16) / 7);
-    session.lessons.filter((lesson) => lesson.id !== "ready").forEach((lesson, index) => {
+    const exercises = annexes ? (session.annexes ?? []).map((annex) => ({ ...annex, completed: false, reached: true, canPractice: true })) : session.lessons.filter((lesson) => lesson.id !== "ready");
+    exercises.forEach((lesson, index) => {
       const column = index % 2, row = Math.floor(index / 2);
       context.enqueue({ x: panelX + column * (panelW / 2 + 4), y: rowTop + row * rowH, w: panelW / 2 - 8, h: rowH - 4,
         label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${lesson.reached ? "" : " · LOCKED"}`,
         enabled: lesson.canPractice, selected: lesson.current,
-        action: { type: "tutorial.action", command: "select", lessonId: lesson.id }, size: compact ? ui.t.type.micro : ui.t.type.caption });
+        action: { type: "tutorial.action", command: annexes ? "select-annex" : "select", lessonId: lesson.id }, size: compact ? ui.t.type.micro : ui.t.type.caption });
     });
-    const help = session.helpVisible ? session.instruction : complete
+    const help = session.helpVisible || session.annex ? session.instruction : annexes
+      ? "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Select a weapon to try its real mechanics."
+      : complete
       ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then evade and punish. Select any technique above to revisit its baseline exercise."
       : "Pause at any time to restart a block or revisit a reached lesson. Complete the action yourself to advance.";
     wrapText(help, panelX, rowTop + 7 * rowH + 18, panelW, compact ? 15 : 20, compact ? ui.t.type.micro : ui.t.type.body, ui.ink);

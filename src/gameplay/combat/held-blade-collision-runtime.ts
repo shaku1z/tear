@@ -146,6 +146,10 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     if (airborne) fx.tutorial("airHit");
     if (hooks.achievementsEnabled()) trackAchievements(input, enemy, strike.damage, airborne, strike.launch, strike.slam, strike.empoweredLaunch, strike.spike, strike.empoweredSlam);
     hooks.fireHit(enemy, point.px, point.py); hooks.fireSwingHit(enemy, point.px, point.py, dealt, quality, weaponEffect?.mechanic);
+    if (dealt > 0 && run.weaponId !== undefined) {
+      hooks.weaponEffect?.(run.weaponId, strikeType);
+      if (weaponEffect?.mechanic !== undefined && (weaponEffect.mechanic !== "break" || weaponEffect.broke)) hooks.weaponEffect?.(run.weaponId, weaponEffect.mechanic);
+    }
     if (strike.slam) hooks.fireSlam(enemy);
     if (strike.slam && run.mods.bleedDetonate) applyRupture(input, enemy);
     if (strike.empoweredSlam && run.mods.crater) {

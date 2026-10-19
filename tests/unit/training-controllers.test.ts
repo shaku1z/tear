@@ -13,6 +13,29 @@ function startTutorial() {
 }
 
 describe("tutorial controller", () => {
+  it("keeps annex authority, ordered activation and older checkpoint meaning distinct", () => {
+    const controller = startTutorial();
+    expect(controller.selectAnnex("sword")).toBe(false);
+    controller.openPractice(1600, 1); const historical = controller.captureSession();
+    expect(controller.selectAnnex("sword")).toBe(true);
+    controller.weaponEffect("sword", "reversal"); controller.mark("launch");
+    controller.update(neutralTutorialFrame); expect(controller.session().progress).toEqual([0, 2]);
+    controller.weaponEffect("hammer", "reversal"); controller.weaponEffect("sword", "launch");
+    controller.update(neutralTutorialFrame); expect(controller.session().progress).toEqual([0, 2]);
+    controller.weaponEffect("sword", "reversal"); controller.weaponEffect("sword", "launch");
+    controller.update(neutralTutorialFrame); expect(controller.session().progress).toEqual([1, 2]);
+    controller.showHelp(); expect(controller.demonstrate()).toBe(false);
+    const saved = controller.captureSession();
+    expect(() => parseTutorialSessionCheckpoint({ ...saved, phase: "free-practice", active: false })).toThrow();
+    expect(() => parseTutorialSessionCheckpoint({ ...saved, annex: { id: "sword", weaponId: "hammer", progress: 1, pendingEvidence: false } })).toThrow();
+    expect(() => parseTutorialSessionCheckpoint({ ...saved, practiceOrigin: undefined })).toThrow();
+    controller.weaponEffect("sword", "launch"); controller.update(neutralTutorialFrame);
+    const completion = controller.update({ ...neutralTutorialFrame, dt: 1.2 });
+    expect(completion).toContainEqual({ type: "begin-practice" });
+    expect(completion.some((intent) => intent.type === "complete-course" || intent.type === "achievement-check")).toBe(false);
+    controller.restoreSession(historical); expect(controller.captureSession()).toEqual(historical);
+    expect(controller.session().annex).toBeUndefined();
+  });
   it("opens only explicitly eligible practice without inventing course history or completion credit", () => {
     const controller = new TutorialController(CONFIG), before = controller.captureSession();
     expect(controller.openPractice(1600, 0)).toBe(false); expect(controller.captureSession()).toEqual(before);

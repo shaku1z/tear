@@ -100,6 +100,12 @@ describe("legacy screen renderer registry", () => {
     expect(exercises).toHaveLength(13);
     expect(exercises.every((control) => control.enabled && !control.label.includes("✓") && !control.label.includes("LOCKED"))).toBe(true);
     controls.length = 0;
+    controller.showAnnexes(); controller.selectAnnex("hammer");
+    renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
+    expect(controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-annex").map((control) => control.label))
+      .toEqual(["SWORD", "HAMMER", "GREATSWORD", "CHAINBLADE", "RIFTLOCK"]);
+    expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
+    controls.length = 0;
     renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Tutorial", difficultyLabel: "Normal", practiceAvailable: true });
     expect(controls.find((control) => control.label === "PRACTICE LAB")?.action).toEqual({ type: "tutorial.action", command: "open-practice" });

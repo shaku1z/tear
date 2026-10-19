@@ -203,7 +203,9 @@ export function createProductionCombatPhases(
       if (hit.secondary && Number((world.state.run() as never as { mods?: { secondPass?: number } }).mods?.secondPass)) {
         damage *= (world.state.run() as never as { mods: { secondPass: number } }).mods.secondPass;
       }
+      const priorHp = target.hp;
       enemy.hit(damage, hit.dx, hit.dy, { playerOwned: true });
+      if (target.hp !== undefined && priorHp !== undefined && target.hp < priorHp) replay.tutorial.weaponEffect(hit.weaponId, hit.secondary ? "backblastRoundHit" : "razorRoundHit");
       weaponRuntime?.noteFirstDamage(enemy, first);
       projectile.dead = true;
       if (enemy.dead) resolveKill(enemy, "skill");
@@ -287,6 +289,7 @@ export function createProductionCombatPhases(
     flushWeaponActions: (events: readonly BladeWeaponEvent[]) => {
       for (const event of events) {
         if (event.type === "slingRelease") {
+          replay.tutorial.weaponEffect("chainblade", "slingRelease");
           outward.push(`weapon:${event.type}`);
           continue;
         }
@@ -447,6 +450,7 @@ export function createProductionCombatPhases(
     },
     runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
     logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
+    weaponEffect: (weaponId: string, effect: string) => { replay.tutorial.weaponEffect(weaponId, effect); },
     emitThrowResolve: (enemy: LiveWeaponEnemy | null, damage: number) => {
       outward.push("emitThrowResolve");
       emitWeaponFact("throw-resolved", undefined, damage);

@@ -17,6 +17,7 @@ export interface TutorialLessonSource {
 export function buildTutorialCardSnapshot(index: number, count: number, lesson: TutorialLessonSource, doneTime: number): TutorialCardSnapshot {
   const progress = lesson.prog !== undefined && lesson.final !== true ? lesson.prog() : undefined;
   return Object.freeze({ lessonIndex: index, lessonCount: count, title: lesson.t, description: lesson.d,
+    ...(lesson.t.endsWith(" ANNEX") ? { annex: true } : {}),
     keys: lesson.keys ?? [], final: lesson.final === true, completedBeat: doneTime,
     arenaLabel: lesson.arenaLabel ?? "TRAINING", teachingFocus: lesson.teachingFocus ?? "movement",
     progress: progress === undefined ? undefined : { current: progress[0], goal: progress[1] } });

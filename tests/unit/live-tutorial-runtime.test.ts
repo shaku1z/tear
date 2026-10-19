@@ -5,19 +5,20 @@ import { createLiveTutorialSessionActions } from "../../src/app/live-tutorial-se
 
 describe("live tutorial runtime", () => {
   it("selects a durable-unlocked lesson after the real new-run reset without issuing completion or profile effects", () => {
+    let selectedWeapon = "sword", selectedMode = "playground";
     const completeCourse = vi.fn(), addProfileStat = vi.fn(), checkAchievements = vi.fn(), installArena = vi.fn(), beginPractice = vi.fn();
     const runtime = createLiveTutorialRuntime({ config: CONFIG, viewportWidth: 1600, groundY: () => 800,
       skipPressed: () => false, movingLeft: () => false, movingRight: () => false,
-      player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 320, facing: 1 }), bladeState: () => "held", enemies: () => [],
+      player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 320, facing: 1 }), bladeState: () => "held", weaponId: () => selectedWeapon, enemies: () => [],
       spawn: () => { throw new Error("unexpected fixture spawn"); }, playSound: vi.fn(), installArena, resetTrainingSpace: vi.fn(),
       beginPractice, completeCourse, addProfileStat, checkAchievements, terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(), drawGhost: vi.fn() });
     runtime.openPractice(1);
-    const startLessonRun = vi.fn(() => { runtime.start("unissued"); }), selectBaselineWeapon = vi.fn();
+    const startLessonRun = vi.fn(() => { selectedMode = "tutorial"; runtime.start("unissued"); }), selectPracticeWeapon = vi.fn((id: string) => { selectedWeapon = id; });
     const actions = createLiveTutorialSessionActions({ tutorial: runtime, training: { ensureLoaded: () => Promise.resolve(), openPractice: () => false },
-      screen: () => "paused", mode: () => "playground", startLessonRun, selectBaselineWeapon, resetFocus: vi.fn(), resume: vi.fn() });
+      screen: () => "paused", mode: () => selectedMode, startLessonRun, selectPracticeWeapon, resetFocus: vi.fn(), resume: vi.fn() });
     actions.dispatch("select", "missing"); expect(startLessonRun).not.toHaveBeenCalled();
     actions.dispatch("select", "launch");
-    expect(selectBaselineWeapon).toHaveBeenCalledOnce(); expect(startLessonRun).toHaveBeenCalledOnce();
+    expect(selectPracticeWeapon).toHaveBeenCalledWith("sword"); expect(startLessonRun).toHaveBeenCalledOnce();
     expect(installArena).toHaveBeenLastCalledWith("launch-bay");
     expect(runtime.captureSession()).toMatchObject({ version: 3, phase: "lesson-practice", courseSessionId: "", completionAwarded: false,
       practiceOrigin: { kind: "durable-profile-completion", tutorialDone: 1 } });
@@ -27,6 +28,19 @@ describe("live tutorial runtime", () => {
     runtime.update(0); runtime.update(1.2);
     expect(beginPractice).toHaveBeenCalledOnce(); expect(completeCourse).not.toHaveBeenCalled();
     expect(addProfileStat).not.toHaveBeenCalled(); expect(checkAchievements).not.toHaveBeenCalled();
+    actions.dispatch("select-annex", "sword");
+    runtime.weaponEffect("sword", "reversal");
+    const retained = runtime.captureSession();
+    expect(retained).toMatchObject({ version: 4, annex: { id: "sword", pendingEvidence: true } });
+    expect(() => { runtime.validateSession(retained, "hammer"); }).toThrow(/annex weapon/);
+    expect(runtime.captureSession()).toEqual(retained);
+    actions.dispatch("select-annex", "missing"); expect(runtime.captureSession()).toEqual(retained);
+    actions.dispatch("select-annex", "hammer"); expect(selectedWeapon).toBe("hammer");
+    expect(runtime.captureSession()).toMatchObject({ version: 4, annex: { id: "hammer", progress: 0, pendingEvidence: false } });
+    actions.dispatch("restart"); expect(runtime.session().progress).toEqual([0, 2]);
+    actions.dispatch("select", "launch"); expect(selectedWeapon).toBe("sword");
+    expect(runtime.captureSession()).toMatchObject({ version: 3, lessonId: "launch", completionAwarded: false });
+    expect(completeCourse).not.toHaveBeenCalled(); expect(addProfileStat).not.toHaveBeenCalled();
   });
   it("owns tutorial state, spawning, stabilization and ghost presentation", () => {
     const enemies = [{ kind: "charger", dead: false, tutDummy: true, hp: 10, maxHp: 100,

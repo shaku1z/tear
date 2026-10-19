@@ -99,7 +99,23 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().difficulty), "normal");
     await pressUntilScreen("p", "paused"); await clickLabel("RESTART LESSON"); await waitScreen("playing");
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().counters.launch ?? 0), 0);
-    await pressUntilScreen("p", "paused"); await clickLabel("MAIN MENU"); await waitScreen("confirmquit");
+    await pressUntilScreen("p", "paused"); await clickLabel("WEAPON ANNEXES");
+    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-weapon-annexes.png") });
+    for (const weapon of ["sword", "hammer", "greatsword", "chainblade", "riftlock"]) {
+      await clickLabel(weapon.toUpperCase()); await waitScreen("playing");
+      const attempt = await page.evaluate(() => ({ state: window.__PANTHEON_TEST.state(),
+        tutorial: window.__PANTHEON_TEST.tutorial().session,
+        run: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").captureSnapshot("annex-baseline", "recorded-canonical").state["tear.run.v1"] }));
+      assert.equal(attempt.state.weapon, weapon); assert.equal(attempt.state.difficulty, "normal");
+      assert.equal(attempt.tutorial.practiceOnly, true); assert.equal(attempt.tutorial.courseCompleted, false);
+      assert.equal(attempt.tutorial.annex.id, weapon); assert.equal(attempt.tutorial.annex.progress, 0);
+      assert.deepEqual(attempt.run.mods.owned, {}, "annexes must start without run upgrades");
+      await pressUntilScreen("p", "paused"); await clickLabel("RESTART LESSON"); await waitScreen("playing");
+      assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session.annex.progress), 0);
+      assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().weapon), weapon);
+      await pressUntilScreen("p", "paused");
+    }
+    await clickLabel("MAIN MENU"); await waitScreen("confirmquit");
     await clickLabel("QUIT"); await waitScreen("menu");
     assert.deepEqual(await savedEffects(), before, "practice must leave actual adapter completion/reward state unchanged before reload");
     await page.evaluate(() => sessionStorage.setItem("practice-lab-fixture-storage",
@@ -111,7 +127,7 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
     assert.equal(session.practiceOnly, true); assert.equal(session.phase, "free-practice");
     assert.deepEqual(await savedEffects(), before, "opening/restarting practice must not add completion, achievements, coins or purchases");
-    console.log("Practice Lab UI fixture passed: completed-profile adapter bytes reconstructed after reload, normal menu/setup entry, lesson/restart/leave; no full course or reward grant");
+    console.log("Practice Lab UI fixture passed: completed-profile adapter bytes reconstructed after reload, normal menu/setup entry, lesson plus all five weapon annex selections/restarts/leave; no full course or reward grant");
     return;
   }
 

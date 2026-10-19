@@ -50,6 +50,7 @@ export interface LiveCollisionPhaseHost {
   throwHit: (enemy: LiveEnemy, secondary: boolean, throwId: number) => ThrowEffect | null | undefined;
   runDamageMultiplier: () => number; noteFirstDamage: (enemy: LiveEnemy, first: boolean) => void;
   logWeapon: (type: string, detail: Readonly<Record<string, unknown>>) => void; emitThrowResolve: (enemy: ThrownEnemy | null, damage: number) => void;
+  weaponEffect?: (weaponId: string, effect: string) => void;
   onKill: (enemy: LiveEnemy, cause?: string) => void; addFloater: (x: number, y: number, text: string, big: boolean, color?: string) => void;
   readonly effects: HeldBladeCollisionInput["effects"];
   sound: (cue: string, big?: boolean) => void; flare: (x: number, y: number, color: string, radius: number, seconds: number) => void;
@@ -140,6 +141,7 @@ function heldEffects(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["eff
 }
 function heldHooks(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["hooks"] {
   return { weaponHit: host.weaponHit, noteFirstDamage: host.noteFirstDamage,
+    ...(host.weaponEffect === undefined ? {} : { weaponEffect: host.weaponEffect }),
     logHit: (damage, quality, observation, mechanic) => {
       host.logWeapon("heldHit", { damage, quality, ...observation, ...(mechanic ? { mechanic } : {}) });
     },
@@ -164,6 +166,7 @@ function runThrown(host: LiveCollisionPhaseHost): void {
     distance: host.distance, clamp: host.clamp, weaponHit: host.throwHit, runDamageMultiplier: host.runDamageMultiplier,
     noteFirstDamage: host.noteFirstDamage, logHit: (throwId, damage, secondary, mechanic) => { host.logWeapon("throwHit", { throwId, damage, secondary, ...(mechanic ? { mechanic } : {}) }); },
     emitResolve: host.emitThrowResolve, onKill: host.onKill,
+    ...(host.weaponEffect === undefined ? {} : { weaponEffect: host.weaponEffect }),
     burst: (...args) => { host.effects.burst(...args); }, ribbon: (...args) => { host.effects.ribbon(...args); },
     ring: (...args) => { host.effects.ring(...args); }, floater: host.addFloater,
     soundDeflect: () => { host.sound("deflect"); }, shake: host.addShake, setHitStop: (value) => { state.hitStop = value; }, style: host.addStyle,

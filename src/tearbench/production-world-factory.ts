@@ -110,7 +110,7 @@ export function createProductionReplayRun(
     isBossWave: false, horde: false, miniBoss: null, waveTag: "", waveKinds: [],
     bossOrder: [], bossIdx: 0, bossesBeaten: 0, curBoss: null, pendingBossOutro: null,
     _dmgThisWave: false, _dmgThisStage: false,
-    weaponStats: { distanceMoved: 0, throws: 0 }, voidScroll: null, bossAdds: [], echoClones: null,
+    weaponStats: { heldHits: 0, reversals: 0, trueCuts: 0, throws: 0, throwHits: 0, perfectParries: 0, breakTriggers: 0, distanceMoved: 0 }, voidScroll: null, bossAdds: [], echoClones: null,
   };
 }
 
@@ -198,6 +198,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   let tutorialSpawn: ((kind: "charger" | "ranged", hpScale: number) => ReturnType<typeof entities.createEnemy>) | undefined;
   const requirePlayer = () => { const value = world.state.player(); if (value === undefined) throw new Error("tutorial requires its world player"); return value; };
   const tutorial = createLiveTutorialRuntime({
+    weaponId: () => world.state.run()?.weaponId ?? "sword",
     config, viewportWidth: config.view.w, groundY: () => config.world.groundY,
     skipPressed: () => false,
     movingLeft: () => requirePlayer().aiInput?.left() === true,

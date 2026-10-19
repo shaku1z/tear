@@ -896,8 +896,29 @@ can populate local exercise progress. Restart, selection and exact State Forge
 restore retain this origin. Practice completion returns to baseline practice and
 cannot emit course credit. Version-1/2 course checkpoint shapes stay unchanged.
 
-Weapon annexes, encountered-enemy catalog, boss-phase selection, gold-trace
-comparison and mastery medals remain future slices. On clean `dcf67a2e`, the
+The Lab now also offers five optional weapon annexes, each using its own normal
+baseline loadout and real target effects: Sword Reversal followed by a fresh
+launch; Hammer airborne slam followed by an actual Break; Greatsword Cleave
+followed by a Wheel Cut target hit; Chainblade established Hook followed by
+tangential Sling release; Riftlock established Capture followed by a real Razor
+Round or Backblast target hit. A successful step activates the next objective
+at the tutorial's fixed update boundary, so one contact cannot complete both.
+Selection and restart clear the attempt, replace the actual weapon/arena/targets,
+and never issue a course identity, completion credit, purchases or currency.
+Help describes the mechanic; no annex demo is offered without a matching trace.
+
+Annex attempts have explicit version-4 practice checkpoints, including the
+canonical weapon, ordered progress and pending effect. The selected weapon must
+match the restored run before restoration can commit. The baseline/annex selector
+tab remains presentation data. Existing version-1/2 course and version-3 baseline
+practice checkpoint meanings and byte shapes remain unchanged; annexes do not
+invent historical completion. Production collision/release/projectile controls
+exercise all five drills and reconstructed-byte continuation. The short normal
+UI fixture selects and resets the five weapons; built-browser acceptance remains
+separate from these local controls.
+
+Encountered-enemy catalog, boss-phase selection, gold-trace comparison and
+mastery medals remain future slices. On clean `dcf67a2e`, the
 fresh standalone build and short browser fixture passed rendered menu entry,
 LAUNCH selection, pause/restart, quit and setup reentry after reload. The fixture
 loads a declared historical completed profile plus an owned shop rank into the
@@ -920,13 +941,19 @@ The finite tutorial should unlock a separate revisitable Practice Lab:
 - turn coaching overlays on or off;
 - reset instantly without profile or currency effects.
 
-Weapon-specific annexes belong here:
+Current weapon-specific annexes:
 
-- sword cut and launch precision;
-- hammer committed slam timing;
-- spear line, embed, and reel behavior;
-- chainblade latch/yank grammar;
-- ringblade orbit/circuit control.
+- Sword Reversal and launch precision;
+- Hammer committed slam and Break timing;
+- Greatsword Cleave and Wheel Cut;
+- Chainblade Hook and Sling grammar;
+- Riftlock Capture and Razor Round control.
+
+The earlier spear and ringblade proposal predates the canonical Final Five.
+Current selection migration maps `spear` to `greatsword` and `ringblade` to
+`riftlock`; it does not rename historical telemetry or replay mechanics. These
+annexes teach the current definitions and do not claim retired embed/reel or
+orbit/circuit behavior.
 
 The annex is selected by semantic capability, not by duplicating the whole
 tutorial for each weapon.

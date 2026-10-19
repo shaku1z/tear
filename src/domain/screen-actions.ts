@@ -123,4 +123,4 @@ export type ScreenAction =
   | { readonly type: "results.watchReplay" }
   | { readonly type: "results.descendAgain" }
   | { readonly type: "playground.action"; readonly id: string }
-  | { readonly type: "tutorial.action"; readonly command: "open-practice" | "restart" | "select" | "help" | "demo"; readonly lessonId?: string };
+  | { readonly type: "tutorial.action"; readonly command: "open-practice" | "restart" | "select" | "help" | "demo" | "annexes" | "select-annex"; readonly lessonId?: string };

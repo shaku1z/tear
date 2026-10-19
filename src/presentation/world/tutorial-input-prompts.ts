@@ -22,6 +22,12 @@ export function tutorialInputPrompt(
   gamepad: Pick<LegacyGamepad, "bindingLabel">,
 ): TutorialInputPrompt {
   if (mode === "keyboard" || mode === "mouse") return keyboardPrompt(description, keys);
+  if (title.endsWith(" ANNEX")) {
+    const projected = keys.map((key) => mode === "touch"
+      ? ({ MOUSE: "DRAG — SWING", "MOUSE UP": "DRAG ↑", "MOUSE DOWN": "DRAG ↓", RMB: "THROW", LMB: "TETHER / FIRE", W: "JUMP" } as Readonly<Record<string, string>>)[key] ?? key
+      : ({ MOUSE: "RS — SWING", "MOUSE UP": "RS ↑", "MOUSE DOWN": "RS ↓", RMB: gamepad.bindingLabel("throw"), LMB: gamepad.bindingLabel("tether"), W: gamepad.bindingLabel("jump") } as Readonly<Record<string, string>>)[key] ?? key);
+    return { description, keys: projected };
+  }
   if (title === "FIELD TEST" && keys.length === 0) return { description, keys: [] };
   if (title === "FIELD TEST" && keys.includes("MOUSE UP")) return {
     description, keys: mode === "touch" ? ["DRAG ↑", "DRAG — SWING"] : ["RS ↑", "RS — SWING"],

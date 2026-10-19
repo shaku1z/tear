@@ -40,7 +40,9 @@ export function createLiveCombatActions<
       if (hit.secondary && Number(run().mods.secondPass)) damage *= Number(run().mods.secondPass);
       damage *= f.runDamageMultiplier() * enemy.damageTakenMult();
       const first = enemy.firstPlayerDamageAt == null;
+      const priorHp = enemy.hp;
       enemy.hit(damage, hit.dx, hit.dy);
+      if (enemy.hp < priorHp) ports.tutorial.weaponEffect?.(hit.weaponId, hit.secondary ? "backblastRoundHit" : "razorRoundHit");
       f.noteFirstDamage(enemy, first);
       const event = f.makeEvent(enemy.x, enemy.y, enemy, hit.secondary ? "secondary" : "weaponProjectile", {
         type: "weaponProjectileHit", weaponId: hit.weaponId, attackId: hit.attackId,
@@ -93,6 +95,7 @@ export function createLiveCombatActions<
     flushWeaponActions(events) {
       for (const event of events) {
         if (event.type === "slingRelease") {
+          ports.tutorial.weaponEffect?.("chainblade", "slingRelease");
           context.attackPresentation.emit({ weaponId: "chainblade", attackId: event.attackId, throwId: event.throwId,
             action: "secondary", phase: "return", variant: "sling", sourceX: event.sourceX, sourceY: event.sourceY,
             x: event.x, y: event.y, directionX: event.vx, directionY: event.vy,
@@ -240,6 +243,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
     throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
     runDamageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage, logWeapon: f.logWeapon,
+    weaponEffect: (weaponId, effect) => { ports.tutorial.weaponEffect?.(weaponId, effect); },
     emitThrowResolve: f.emitThrowResolve, onKill: context.resolveKill,
     addFloater: f.addFloater, addShake: f.addShake, addZoom: f.addZoom, addFlash: f.addFlash, addStyle: f.addStyle,
     effects: { burst: (...args) => { d.FX.burst(...args); }, ring: (...args) => { d.FX.ring(...args); }, flash: (...args) => { d.FX.flash(...args); },

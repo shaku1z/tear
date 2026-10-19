@@ -44,6 +44,7 @@ export interface ThrownCollisionTuning {
   colors: { deflected: string; armoredShield: string; perfect: string; charger: string; bladeTrail: string };
 }
 export interface ThrownCollisionHooks {
+  weaponEffect?(weaponId: string, effect: string): void;
   segmentCircle(segment: { x1: number; y1: number; x2: number; y2: number }, x: number, y: number, radius: number): boolean;
   distance(x: number, y: number): number; clamp(value: number, min: number, max: number): number;
   weaponHit(enemy: ThrownEnemy, secondary: boolean, throwId: number): ThrowEffect | null | undefined;
@@ -106,7 +107,7 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
   if (run.mods.berserk && player.hp < player.maxHp * 0.5) damage *= 1.25;
   if (player.tempoT > 0 && run.mods.tempo) damage *= 1 + run.mods.tempo * player.tempoStk;
   damage *= hooks.runDamageMultiplier() * enemy.damageTakenMult();
-  const first = enemy.firstPlayerDamageAt == null; enemy.hit(damage, blade.vx, blade.vy); hooks.noteFirstDamage(enemy, first);
+  const first = enemy.firstPlayerDamageAt == null; const dealt = enemy.hit(damage, blade.vx, blade.vy); hooks.noteFirstDamage(enemy, first);
   blade.recordHit(enemy); run.weaponStats.throwHits++; hooks.logHit(blade.throwId, damage, secondary, effect?.mechanic);
   const presentedAttack = applyThrowEffect(blade, enemy, effect, run, t, hooks); hooks.emitResolve(enemy, damage);
   if (player.rallySource === enemy) {
@@ -129,8 +130,10 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
       blade.linkT = t.riftCaptureDuration * blade.channel("controlDuration");
       if (!enemy.isBoss) enemy.boundT = Math.max(enemy.boundT ?? 0, blade.linkT);
     }
+    if (dealt > 0 && !enemy.dead && !enemy.dying && (effect.mechanic === "hook" || effect.mechanic === "capture")) hooks.weaponEffect?.(run.weaponId, effect.mechanic);
     return true;
   }
+  if (dealt > 0 && effect?.mechanic !== undefined) hooks.weaponEffect?.(run.weaponId, effect.mechanic);
   if ((run.mods.redirect || effect?.redirect) && blade.state === "flying") redirectBlade(blade, enemies, t, hooks);
   return false;
 }

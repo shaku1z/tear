@@ -17,7 +17,7 @@ interface StagedChapterBinding {
 export interface LiveStateForgeRuntimeBridgeOptions {
   readonly tutorial?: Readonly<{
     captureSession(): unknown;
-    validateSession(value: unknown): void;
+    validateSession(value: unknown, candidateWeaponId?: string): void;
     restoreSession(value: unknown): void;
   }>;
   readonly captureBossIntro: () => BossIntroState | null;
@@ -188,7 +188,7 @@ export function createLiveStateForgeRuntimeBridge(
     validateTransient(normalizeTransient(snapshot));
     stageBanner(snapshot.stageBanner);
     cinemaProtection(snapshot.cinemaProtection);
-    options.tutorial?.validateSession(snapshot.tutorialSession);
+    options.tutorial?.validateSession(snapshot.tutorialSession, candidateRun.weaponId);
     const tutorial = snapshot.tutorialSession;
     if (typeof tutorial === "object" && tutorial !== null && "active" in tutorial && tutorial.active === true && candidateRun.mode !== "tutorial") {
       throw new RangeError("active tutorial session requires a tutorial run");
