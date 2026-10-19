@@ -75,6 +75,18 @@ function withoutPresentation(snapshot: TearSnapshotV1): TearSnapshotV1 {
 }
 
 describe("production replay composition", () => {
+  it("accepts a portable live HUD checkpoint without changing replay semantics", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "presentation-portability" });
+    const source = composition.create(undefined);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "presentation");
+    const snapshot = JSON.parse(JSON.stringify(checkpoint.snapshot)) as TearSnapshotV1;
+    const ui = snapshot.state["tear.ui.v1"] as Record<string, unknown>;
+    ui.hudPresentation = { version: 1, clockSeconds: 7.25, lagHp: 0.8, multiplier: 2, multiplierPop: 0.5 };
+    const restored = composition.create(snapshot);
+    expect(stableVerificationHash(restored.semanticProjection())).toBe(checkpoint.semanticHash);
+    expect(ui.hudPresentation).toEqual({ version: 1, clockSeconds: 7.25, lagHp: 0.8, multiplier: 2, multiplierPop: 0.5 });
+  });
+
   it("restores exact checkpoint seconds without inferring historical time", () => {
     const composition = createProductionGhostReplayComposition({ seed: "checkpoint-clock" });
     const source = composition.create(undefined);

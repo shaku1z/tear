@@ -529,7 +529,7 @@ export function createLiveTearRuntimeEnvironment(
       return bloomWellPresentation(environment, options);
     },
     presentation() { return context.presentation(); },
-    screenshot(policy?: TearCaptureLayerPolicyV1) { screenshotCount += 1; return context.screenshot(policy); },
+    screenshot(policy?: TearCaptureLayerPolicyV1) { screenshotCount += 1; return context.captureScreenshot(policy); },
   };
   if (accessClass === "A") return Object.freeze({
     ...environment,

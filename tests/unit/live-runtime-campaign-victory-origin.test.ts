@@ -134,6 +134,7 @@ function fixture(options: Readonly<{
     random: () => ({ combat: { algorithm: "mulberry32", state: 1 } }),
     render: () => undefined,
     screenshot: () => "data:image/png;base64,",
+    captureScreenshot: () => "data:image/png;base64,",
     subscribeEngineEvent: () => () => undefined,
     drainConsumedActions: () => [],
     emitPhysicalInput: () => undefined,

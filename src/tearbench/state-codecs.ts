@@ -201,6 +201,14 @@ export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
         ? dataIssues
         : Object.freeze(validateLiveCodecPayload(id, payload));
     },
+    hashProjection(world: TearCodecWorld): TearCodecValue {
+      const payload = dataCodec.hashProjection(world);
+      if (id !== "tear.ui.v1" || payload === null || typeof payload !== "object" || Array.isArray(payload)) return payload;
+      // Exact capture retains this new field. Existing UI fields/extensions stay semantic.
+      const projection = structuredClone(payload);
+      Reflect.deleteProperty(projection, "hudPresentation");
+      return projection;
+    },
   });
 }
 

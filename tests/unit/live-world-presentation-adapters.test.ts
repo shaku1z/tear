@@ -3,10 +3,44 @@ import { CONFIG } from "../../src/config/game-config";
 import { createLiveWorldPresentationAdapters, type WorldPresentationServices,
   type WorldPresentationState } from "../../src/app/live-world-presentation-adapters";
 import { renderLegacyWorldFrame } from "../../src/presentation/world/legacy-world-frame";
+import { createLiveHudFeedbackState } from "../../src/app/live-hud-feedback-state";
 
 vi.mock("../../src/presentation/world/legacy-world-frame", () => ({ renderLegacyWorldFrame: vi.fn() }));
 
 describe("live world capture layers", () => {
+  it("does not advance lag, pop, boss flash or pulse on repeated fixed-frame HUD draws", () => {
+    const feedback = createLiveHudFeedbackState();
+    feedback.set({ lagHp: 0.9, multiplier: 2, multiplierPop: 0.5 });
+    const boss = { isBoss: true, hp: 100, maxHp: 100, _phaseFlashT: 0.5 };
+    const worldHud = vi.fn();
+    const state = {
+      run: () => ({ mode: "endless", wave: 2, score: 0, runTime: 1, mult: 2, comboTimer: 1, spawnQueue: [], mods: { owned: {} } }),
+      player: () => ({ hp: 79, maxHp: 100, dashCd: 0, shield: 0, maxShield: 0 }),
+      enemies: () => [boss], bossIntro: () => null, hud: feedback.snapshot, advanceHud: feedback.advance,
+      hudClockSeconds: feedback.clockSeconds, lastUiDelta: () => 1 / 60,
+    } as unknown as WorldPresentationState;
+    const services = {
+      dependencies: { CONFIG, A11Y: { flashScale: 1 }, UPGRADES: [], UI: { t: { color: { accent: "#abc" } } },
+        Backdrop: { needsHudTextContrast: () => true } },
+      world: { hud: worldHud }, stage: { current: { accent: "#abc" } }, formatTime: String,
+      trickColor: () => "#fff", ease: (value: number) => value,
+    } as unknown as WorldPresentationServices;
+    const adapter = createLiveWorldPresentationAdapters(state, services);
+    const before = feedback.snapshot();
+    const clock = vi.spyOn(performance, "now").mockReturnValueOnce(100).mockReturnValueOnce(600);
+    try { adapter.drawHud(); adapter.drawHud(); expect(clock).not.toHaveBeenCalled(); } finally { clock.mockRestore(); }
+    expect(feedback.snapshot()).toEqual(before);
+    expect(boss._phaseFlashT).toBe(0.5);
+    expect(worldHud.mock.calls[1]?.[0]).toEqual(worldHud.mock.calls[0]?.[0]);
+    adapter.advanceHudFrame(1 / 60);
+    expect(feedback.snapshot()).toEqual({ lagHp: 0.8923, multiplier: 2, multiplierPop: 0.44 });
+    expect(feedback.clockSeconds()).toBe(1 / 60);
+    expect(boss._phaseFlashT).toBe(0.5);
+    adapter.drawHud();
+    expect(worldHud.mock.calls[2]?.[0]).toMatchObject({ boss: { phaseFlash: 0.5 } });
+    adapter.completeHudFrame(1 / 60);
+    expect(boss._phaseFlashT).toBe(0.5 - 1 / 60);
+  });
   it.each(["include", "exclude"] as const)("preserves physical backdrop input with actors %s", (actors) => {
     const drawPlayer = vi.fn(), drawBlade = vi.fn(), drawGhost = vi.fn(), drawBackdrop = vi.fn(), drawEffects = vi.fn();
     const player = { x: 137, y: 500, hw: 10, hh: 20, draw: drawPlayer };

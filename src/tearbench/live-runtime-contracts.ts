@@ -252,7 +252,10 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly random: () => RunRandomStreamsSnapshot;
   readonly render: () => void;
   readonly presentation: () => TearLivePresentationStateV1;
-  readonly screenshot: (policy?: TearCaptureLayerPolicyV1) => string;
+  /** Raw readback for snapshot hashing; never renders. */
+  readonly screenshot: () => string;
+  /** Public policy capture renders exactly once. */
+  readonly captureScreenshot: (policy?: TearCaptureLayerPolicyV1) => string;
   readonly subscribeEngineEvent: (listener: (event: TearGameplayEvent) => void) => () => void;
   readonly drainConsumedActions: () => readonly CommandEnvelope<GameAction>[];
   readonly emitPhysicalInput: (input: TearPhysicalInput) => void;

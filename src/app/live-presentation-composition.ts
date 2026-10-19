@@ -212,18 +212,20 @@ export function createLivePresentationFrameHost<Screen extends string,
           ui.sheet(context, sheet.x, sheet.y, sheet.w, sheet.h, services.screenHue(screen));
         }
       },
-      renderScreen: services.renderScreen, drawButtons: host.drawButtons,
+      renderScreen: (screen) => { if (services.capturePolicy().ui === "include") services.renderScreen(screen); },
+      drawButtons: () => { if (services.capturePolicy().ui === "include") host.drawButtons(); },
       drawPostLayers: () => { if (services.capturePolicy().ui === "include") { services.wipe.draw(state.deltaSeconds()); services.drawAchievementToast(state.deltaSeconds()); } },
       drawCursor: () => { ui.cursor(context, services.input.mouseX, services.input.mouseY); },
       showCanvasCursor: () => services.capturePolicy().ui === "include" && shouldDrawCanvasCursor(state.screen()),
       drawControllerToast: () => {
+        if (services.capturePolicy().ui !== "include") return;
         const controller = services.controller();
         if (controller === null || controller.toastSeconds <= 0 || !controller.toastText) return;
         context.save(); context.globalAlpha = services.clamp(controller.toastSeconds / 0.6, 0, 1);
         ui.badge(context, `◎ ${controller.toastText}`, services.width / 2, 34 + services.safeTop(),
           ui.t.color.accent, "center", 13); context.restore(); context.globalAlpha = 1;
       },
-      drawRotationGate: () => { ui.rotateGate(context, host.screenRectangle(), state.timeSeconds()); },
+      drawRotationGate: () => { if (services.capturePolicy().ui === "include") ui.rotateGate(context, host.screenRectangle(), state.timeSeconds()); },
       firstEnabledButton: host.firstEnabledButton, setFocus: state.setFocus,
       updateDomHints: (screen) => {
         if (services.lockHint !== null) services.lockHint.style.display = services.capturePolicy().pointerLock === "include" && screen === "playing" &&

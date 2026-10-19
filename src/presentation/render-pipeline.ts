@@ -44,6 +44,7 @@ export interface RenderPipelinePorts<Screen extends string> {
 
 const zoomScreens = new Set(["draft", "tierup", "paused", "confirmquit", "gameover", "win", "continue"]);
 const worldScreens = new Set(["playing", "draft", "tierup", "paused", "gameover", "win", "confirmquit", "continue", "pgmenu", "pglab"]);
+export const isWorldScreen = (screen: string): boolean => worldScreens.has(screen);
 
 /** Stable, testable ordering for the canvas presentation frame. */
 export function renderPresentationFrame<Screen extends string>(ports: RenderPipelinePorts<Screen>): void {

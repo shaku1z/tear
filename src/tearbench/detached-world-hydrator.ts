@@ -1,6 +1,7 @@
 import type { TearCodecValue, TearCodecWorld } from "./state-codecs";
 import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import { parseUiHudPresentationCheckpoint, type UiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
 
 /**
  * The identity graph is validated before construction. Hydration only needs
@@ -62,6 +63,7 @@ export interface TearStagedWorld<
   readonly platforms: Platform[];
   readonly screen: string;
   readonly focus: number;
+  readonly hudPresentation?: UiHudPresentationCheckpoint;
   readonly tick: number;
   /** Historical snapshots omit accumulated seconds; never infer scaled time. */
   readonly simulationSeconds?: number;
@@ -252,6 +254,7 @@ export function hydrateTearCodecWorld<
   const worldPayload = component(world, "tear.world.v1");
   const hazards = component(world, "tear.hazard.v1");
   const ui = component(world, "tear.ui.v1");
+  const hudPresentation = parseUiHudPresentationCheckpoint(record(ui) ? ui.hudPresentation : undefined);
   return Object.freeze({
     run,
     player,
@@ -267,6 +270,7 @@ export function hydrateTearCodecWorld<
     platforms: decodeTearCodecValue(component(world, "tear.platform.v1"), identities) as Platform[],
     screen: stringField(ui, "screen"),
     focus: Number.parseInt(stringField(ui, "focusId"), 10),
+    ...(hudPresentation === undefined ? {} : { hudPresentation }),
     tick: numberField(runPayload, "tick"),
     ...(record(worldPayload) && worldPayload.simulationSeconds !== undefined
       ? { simulationSeconds: numberField(worldPayload, "simulationSeconds") } : {}),

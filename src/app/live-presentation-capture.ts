@@ -49,7 +49,9 @@ export function createLivePresentationCaptureController(state: () => TearLivePre
     ports: (render: () => void, screenshot: () => string) => Object.freeze({
       render,
       presentation: state,
-      screenshot: (next?: TearCaptureLayerPolicyV1) => {
+      // Snapshot visual hashes observe the existing surface without advancing a frame.
+      screenshot,
+      captureScreenshot: (next?: TearCaptureLayerPolicyV1) => {
         const previous = policy; policy = normalizeLiveCapturePolicy(next);
         try { render(); return screenshot(); } finally { policy = previous; }
       },

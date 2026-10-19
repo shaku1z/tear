@@ -187,6 +187,16 @@ function objectValue(value: unknown, message: string): Record<string, unknown> {
 }
 
 describe("detached Tear codec world hydrator", () => {
+  it("retains a detached JSON HUD checkpoint without consulting outgoing UI", () => {
+    const source = completeCodecWorld();
+    const hud = { version: 1, clockSeconds: 3.125, lagHp: 0.8, multiplier: 2, multiplierPop: 0.5 };
+    source.components.set("tear.ui.v1", JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", hudPresentation: hud })) as { screen: string; focusId: string; hudPresentation: typeof hud });
+    const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
+    source.components.set("tear.ui.v1", { screen: "menu", focusId: "0" });
+    expect(staged.hudPresentation).toEqual(hud);
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).hudPresentation).toBeUndefined();
+  });
+
   it("retains exact fractional seconds and historical absence separately from ticks", () => {
     const source = completeCodecWorld();
     expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBeUndefined();

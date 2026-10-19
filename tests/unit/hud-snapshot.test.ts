@@ -13,6 +13,9 @@ describe("HUD snapshot", () => {
     expect(result.snapshot.player.abilities).toEqual(["CUT ×2"]);
     expect(result.snapshot.run.remaining).toBe(4);
     expect(result.snapshot.boss?.hpFraction).toBe(0.5);
-    expect(result.bossPhaseFlashTime).toBe(0.4);
+    expect(result.snapshot.boss?.phaseFlash).toBe(0.5);
+    expect(result.snapshot.player.lagHpFraction).toBe(1);
+    expect(result.snapshot.run.multiplierPop).toBe(0);
+    expect(boss._phaseFlashT).toBe(0.5);
   });
 });

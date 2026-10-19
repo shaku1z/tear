@@ -3,6 +3,7 @@ import type { TearCodecIssue } from "./state-codecs";
 import { findVariant } from "../gameplay/variants";
 import { ROOTBOUND_LAST_SPRING } from "../gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_REGROWTH_CONNECTION_COUNT, ROOTBOUND_REGROWTH_OUTCOMES } from "../gameplay/environment/regrowth-link";
+import { parseUiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
 
 function issue(codecId: TearCodecId, path: string, message: string): TearCodecIssue {
   return Object.freeze({ codecId, path, message });
@@ -199,6 +200,8 @@ export function validateLiveCodecPayload(
     if (typeof payload.screen !== "string" || typeof payload.focusId !== "string") {
       issues.push(issue(codecId, "$", "UI codec requires screen and focusId"));
     }
+    try { parseUiHudPresentationCheckpoint(payload.hudPresentation); }
+    catch (error) { issues.push(issue(codecId, "$.hudPresentation", error instanceof Error ? error.message : "invalid HUD presentation")); }
   } else if (codecId === "tear.reward.v1") {
     if (!("selection" in payload)) issues.push(issue(codecId, "$.selection", "reward codec requires selection"));
   } else if (codecId === "tear.configuration.v1") {

@@ -9,8 +9,9 @@ import type { RootboundGraftEffects } from "../../src/gameplay/environment/graft
 import { STAGES, PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 import { UPGRADES } from "../../src/gameplay/upgrades";
 import { applyWeapon } from "../../src/gameplay/weapons";
+import { createLiveHudFeedbackState } from "../../src/app/live-hud-feedback-state";
 
-type Failure = "clear" | "replace" | "late";
+type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {
   maxHp: number;
   graftDamageTakenMultiplier: number;
@@ -33,6 +34,7 @@ function fixture() {
   const observations: { phase: string; actor: unknown; id: string }[] = [];
   let failure: Failure | undefined;
   let screen = "playing", focus = -1;
+  const hud = createLiveHudFeedbackState();
   let runtime: Readonly<Record<string, unknown>> = { sentinel: 1, cinema: INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 };
   const observe = (phase: string) => {
     for (const actor of state.enemies()) observations.push({ phase, actor, id: identities.id(actor, "enemy") });
@@ -63,7 +65,7 @@ function fixture() {
     captureGhost: () => ({ recording: null }), restoreGhost: () => undefined,
     captureIdentityState: identities.captureIdentityState.bind(identities),
     restoreIdentityState: identities.restoreIdentityState.bind(identities),
-    runtimeState: () => runtime, restoreRuntimeState: (value) => { runtime = value; },
+    runtimeState: () => runtime, restoreRuntimeState: (value) => { runtime = value; fail("runtime"); }, hudPresentation: hud,
     captureCinema: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1, validateCinema: () => undefined,
   });
   const registry = createDefaultStateCodecRegistry();
@@ -80,11 +82,51 @@ function fixture() {
     actor.applyGraftEffects({ incomingDamageMultiplier: damage, cadenceMultiplier: 1.15, activeTypes: ["bastion", "haste"] });
     expect(actor.startRootCage(800)).toBe(true);
   };
-  return { replay, state, adapter, capture, restore, facts, observations,
+  return { replay, state, adapter, capture, restore, facts, observations, hud,
     failNext: (phase: Failure) => { failure = phase; } };
 }
 
 describe("live State Forge adapter ownership boundary", () => {
+  it("restores JSON-portable staged HUD exactly and retains boss flash only on its actor codec", () => {
+    const host = fixture();
+    const hud = { version: 1, clockSeconds: 2.3456789, lagHp: 0.87, multiplier: 3, multiplierPop: 0.42 };
+    host.hud.restore(hud);
+    Object.assign(host.state.enemies()[0] ?? {}, { _phaseFlashT: 0.5 });
+    const snapshot = JSON.parse(JSON.stringify(host.capture())) as ReturnType<typeof host.capture>;
+    expect(snapshot.state["tear.ui.v1"]).toEqual({ screen: "playing", focusId: "-1", hudPresentation: hud });
+    expect(snapshot.state["tear.boss.v1"]).toEqual(expect.arrayContaining([expect.objectContaining({ _phaseFlashT: 0.5 })]));
+    host.hud.restore({ ...hud, clockSeconds: 99, lagHp: 0.1 });
+    expect(host.restore(snapshot).ok).toBe(true);
+    expect(host.hud.capture()).toEqual(hud);
+    expect(host.capture().state).toEqual(snapshot.state);
+  });
+
+  it("resets missing historical HUD rather than inheriting outgoing feedback", () => {
+    const host = fixture(), snapshot = structuredClone(host.capture());
+    delete (snapshot.state["tear.ui.v1"] as Record<string, unknown>).hudPresentation;
+    host.hud.restore({ version: 1, clockSeconds: 9, lagHp: 0.2, multiplier: 5, multiplierPop: 0.8 });
+    expect(host.restore(snapshot).ok).toBe(true);
+    expect(host.hud.capture()).toEqual({ version: 1, clockSeconds: 0, lagHp: 1, multiplier: 1, multiplierPop: 0 });
+  });
+
+  it("rejects invalid HUD before live mutation and restores outgoing HUD after a later runtime failure", () => {
+    const host = fixture();
+    host.hud.restore({ version: 1, clockSeconds: 1, lagHp: 0.8, multiplier: 2, multiplierPop: 0.5 });
+    const candidate = structuredClone(host.capture()), invalid = structuredClone(candidate);
+    (invalid.state["tear.ui.v1"] as Record<string, unknown>).hudPresentation = { version: 1, clockSeconds: -1 };
+    const actor = host.state.enemies()[0];
+    expect(host.restore(invalid)).toMatchObject({ ok: false, phase: "decode", rolledBack: false });
+    expect(host.observations).toEqual([]);
+    expect(host.state.enemies()[0]).toBe(actor);
+    expect(host.capture().state).toEqual(candidate.state);
+    host.hud.restore({ version: 1, clockSeconds: 5, lagHp: 0.2, multiplier: 3, multiplierPop: 0.7 });
+    const outgoing = host.capture();
+    host.failNext("runtime");
+    expect(host.restore(candidate)).toMatchObject({ ok: false, phase: "commit", rolledBack: true });
+    expect(host.capture().state).toEqual(outgoing.state);
+    expect(host.hud.capture()).toEqual((outgoing.state["tear.ui.v1"] as Record<string, unknown>).hudPresentation);
+  });
+
   it("cleans outgoing actors and identities before installing intact candidate Graft and Root Cage state", () => {
     const host = fixture();
     host.facts(0.8);

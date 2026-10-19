@@ -57,7 +57,8 @@ export interface WorldPresentationState {
   readonly bannerSeconds: () => number;
   readonly bossIntro: () => { boss: GameEnemy; t: number; dur: number; delay: number } | null;
   readonly hud: () => Readonly<{ lagHp: number; multiplier: number; multiplierPop: number }>;
-  readonly setHud: (value: Readonly<{ lagHp: number; multiplier: number; multiplierPop: number }>) => void;
+  readonly hudClockSeconds: () => number;
+  readonly advanceHud: (input: Readonly<{ hpFraction: number; multiplier: number; deltaSeconds: number }>) => void;
 }
 
 export interface WorldPresentationServices {
@@ -83,6 +84,8 @@ export interface WorldPresentationServices {
 }
 
 export interface LiveWorldPresentationAdapters {
+  readonly advanceHudFrame: (deltaSeconds: number) => void;
+  readonly completeHudFrame: (deltaSeconds: number) => void;
   readonly renderWorld: () => WorldCamera;
   readonly drawHud: () => void;
   readonly drawAchievementToast: (deltaSeconds: number) => void;
@@ -243,19 +246,27 @@ export function createLiveWorldPresentationAdapters(
       ...(intro ? { bossIntro: { boss: intro.boss, delay: intro.delay, elapsed: intro.t, duration: intro.dur } } : {}),
       upgrades: d.UPGRADES, enemyCount: enemies.length, previousLagHp: previous.lagHp,
       previousMultiplier: previous.multiplier, multiplierPop: previous.multiplierPop,
-      nowMilliseconds: performance.now(), flashScale: d.A11Y.flashScale, deltaSeconds: state.lastUiDelta(),
+      nowMilliseconds: state.hudClockSeconds() * 1000, flashScale: d.A11Y.flashScale, deltaSeconds: state.lastUiDelta(),
       stageAccent: stage.current.accent, fallbackAccent: d.UI.t.color.accent, bossColor: d.CONFIG.colors.boss,
       dashCooldown: d.CONFIG.dash.cooldown, dashColor: d.CONFIG.colors.perfect,
       shieldColor: d.CONFIG.colors.armoredShield, trickDecay: d.CONFIG.trick.decay,
       formatTime: services.formatTime, trickColor: services.trickColor, ease: services.ease });
-    state.setHud({ lagHp: result.lagHp, multiplier: result.multiplier, multiplierPop: result.multiplierPop });
-    if (boss && result.bossPhaseFlashTime !== undefined) boss._phaseFlashT = result.bossPhaseFlashTime;
     world.hud({ ...result.snapshot, protectTextContrast: d.Backdrop.needsHudTextContrast(stage.current) });
     if (run.mode === "tutorial") drawTutorialCard();
     else if (run.mode === "playground") drawPlaygroundHelp();
   };
 
   return Object.freeze({ renderWorld, drawHud,
+    advanceHudFrame(deltaSeconds: number): void {
+      const player = state.player();
+      if (!player) return;
+      state.advanceHud({ hpFraction: Math.max(0, Math.min(1, player.hp / player.maxHp)), multiplier: state.run().mult, deltaSeconds });
+    },
+    completeHudFrame(deltaSeconds: number): void {
+      // Boss flash stays on its existing actor codec owner; no duplicate HUD field.
+      const boss = state.enemies().find((enemy) => enemy.isBoss);
+      if (boss && boss._phaseFlashT > 0) boss._phaseFlashT = Math.max(0, boss._phaseFlashT - deltaSeconds);
+    },
     drawAchievementToast(deltaSeconds: number): void {
       const snapshot = services.achievementToast.step(deltaSeconds, { pending: d.ACH.pending, rarities: d.ACH.RARITY,
         commonRarity: d.ACH.RARITY.common, categories: d.ACH.CATS,

@@ -95,6 +95,10 @@ function sha256(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
+function assertPNGEqual(actual, expected, message = "PNG bytes must match exactly") {
+  assert.ok(pngBuffer(actual).equals(pngBuffer(expected)), message);
+}
+
 async function recordCombatVideo(page, filename = "tearbench-wave-attempt.mp4") {
   const executable = process.env.TEAR_FFMPEG_EXE;
   assert.ok(executable && fs.existsSync(executable), "Combat recording requires an explicit existing TEAR_FFMPEG_EXE");
@@ -216,11 +220,11 @@ withJourney({
         await page.evaluate((value) => window.__TEAR_CATALOG_DEBUG__.verdantCalibration.setView(value), view);
         const isolated = await capture(`living-${view}`, cleanEnvironment, { view });
         assert.equal(isolated.exactHash, neutral.exactHash, "Layer isolation cannot mutate gameplay");
-        assert.notEqual(isolated.image, neutral.image, "Layer isolation must visibly change the composite");
+        assert.ok(!pngBuffer(isolated.image).equals(pngBuffer(neutral.image)), "Layer isolation must visibly change the composite");
       }
       await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.verdantCalibration.setView("composite"));
       const restored = await capture("living-restored", cleanEnvironment);
-      assert.equal(restored.image, neutral.image, "Composite restoration must reproduce exact pixels");
+      assertPNGEqual(restored.image, neutral.image, "Composite restoration must reproduce exact pixels");
       assert.deepEqual(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.verdantCalibration.report()), resourceReport);
       let video = null, motionSamples = [], waterMotionProbe = null;
       const renderProbe = [];
@@ -649,7 +653,7 @@ withJourney({
         if (!first) first = frame;
         assert.deepEqual(frame.platforms, first.platforms, "Accessibility must preserve platform state");
         assert.deepEqual(frame.observation.player, first.observation.player, "Accessibility must preserve player state");
-        if (label === "default-restored") assert.equal(frame.image, first.image, "Restored settings must reproduce exact pixels");
+        if (label === "default-restored") assertPNGEqual(frame.image, first.image, "Restored settings must reproduce exact pixels");
         if (imageNativeLiving) {
           const probe = await page.evaluate(async (capturePolicy) => {
             const environment = window.__A2_CAPTURE_ENV__;
@@ -1008,15 +1012,24 @@ withJourney({
           invalid.state["tear.ui.v1"].screen = "invalid-state-forge-screen";
           return window.__A2_CAPTURE_ENV__.restoreSnapshot(invalid);
         }, snapshot);
-        assert.equal(failedRestore.ok, false);
         const rejectionResult = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-rejection-result", "reconstructed-reachable"));
-        assert.deepEqual(rejectionResult.state, rejectionOrigin.state, "Rejected restore must preserve the entire existing world");
         const rolledBack = await capture(`response-${profile}-graft-rejected`, cleanPlayable, { profile, restorePhase: failedRestore.phase, rolledBack: failedRestore.rolledBack });
+        const rejectionAfterCapture = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-rejection-after-capture", "reconstructed-reachable"));
+        fs.writeFileSync(path.join(phaseDirectory, `rejection-${profile}-diagnostic.json`), `${JSON.stringify({
+          build: buildInfo, profile, responseSequence, failedRestore, requestedSettings: settings, actualSettings,
+          before: rejectionOrigin, after: rejectionResult, afterCapture: rejectionAfterCapture,
+          fullStateEqual: isDeepStrictEqual(rejectionOrigin.state, rejectionResult.state),
+          captureStateEqual: isDeepStrictEqual(rejectionResult.state, rejectionAfterCapture.state),
+          beforeImageSHA256: sha256(pngBuffer(cleaned.image)), afterImageSHA256: sha256(pngBuffer(rolledBack.image)),
+          exactPNGEqual: pngBuffer(cleaned.image).equals(pngBuffer(rolledBack.image)), certifying: false,
+        }, null, 2)}\n`);
+        assert.equal(failedRestore.ok, false);
+        assert.deepEqual(rejectionResult.state, rejectionOrigin.state, "Rejected restore must preserve the entire existing world");
+        assert.deepEqual(rejectionAfterCapture.state, rejectionResult.state, "Observation capture must preserve full snapshot state");
         assert.equal(rolledBack.exactHash, cleaned.exactHash);
-        assert.equal(rolledBack.image, cleaned.image);
+        assertPNGEqual(rolledBack.image, cleaned.image, "Rejected restore PNG bytes must match exactly");
         }
         const restore = await page.evaluate((snapshot) => window.__A2_CAPTURE_ENV__.restoreSnapshot(snapshot), snapshot);
-        assert.equal(restore.ok, true, JSON.stringify(restore));
         const restored = await capture(`response-${profile}-graft-restored`, cleanPlayable, { profile });
         const restoredSnapshot = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-graft-restored", "reconstructed-reachable"));
         const contextAttributes = await page.evaluate(() => ({ userAgent: navigator.userAgent,
@@ -1028,9 +1041,10 @@ withJourney({
           ...(responseDrawTrace ? { drawTrace: { original: original.drawTrace, restored: restored.drawTrace,
             certifying: false, limitation: "Observational fillRect wrapper can perturb timing; native pixel assertions remain required" } } : {}),
         }, null, 2)}\n`);
+        assert.equal(restore.ok, true, JSON.stringify(restore));
         assert.deepEqual(restoredSnapshot.state, snapshot.state, "Restored Graft full snapshot state must match");
         assert.equal(restored.exactHash, original.exactHash);
-        assert.equal(sha256(pngBuffer(restored.image)), sha256(pngBuffer(original.image)), "Restored Graft pixels must match");
+        assertPNGEqual(restored.image, original.image, "Restored Graft PNG bytes must match exactly");
         responses.push({ profile, bloomForge, graftForge, phaseTwo, receipts, failedRestore, restore });
       }
       fs.writeFileSync(path.join(phaseDirectory, "manifest.json"), `${JSON.stringify({
@@ -1146,7 +1160,7 @@ withJourney({
       }
       await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.verdantCalibration.setView("composite"));
       const restored = await capture("verdant-image-native-neutral-restored", cleanEnvironment, { view: "composite" });
-      assert.equal(restored.image, neutral.image, "Restoring composite must reproduce the same runtime pixels");
+      assertPNGEqual(restored.image, neutral.image, "Restoring composite must reproduce the same runtime pixels");
       assert.deepEqual(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.verdantCalibration.report()), resourceReport,
         "Diagnostics must not reload or change resources");
     }
@@ -1187,7 +1201,7 @@ withJourney({
         if (!neutralMotion) neutralMotion = frame;
         else {
           assert.equal(frame.exactHash, neutralMotion.exactHash, "Decorative extrema cannot mutate gameplay");
-          if (motion === "neutral") assert.equal(frame.image, neutralMotion.image, "Neutral pose must restore exact runtime pixels");
+          if (motion === "neutral") assertPNGEqual(frame.image, neutralMotion.image, "Neutral pose must restore exact runtime pixels");
         }
       }
       await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.verdantCalibration.setMotion("live"));

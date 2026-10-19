@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createLiveStateCodec } from "../../src/tearbench/state-codecs";
+import { stableVerificationHash } from "../../src/replay/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import {
@@ -55,6 +56,26 @@ function populatedWorld(): TearCodecWorld {
   candidate.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
   return candidate;
 }
+
+describe("presentation-only UI checkpoints", () => {
+  it("retains HUD exactly while preserving semantic projection and historical extension fields", () => {
+    const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld();
+    const legacy = { screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 } };
+    const hud = { version: 1, clockSeconds: 3.25, lagHp: 0.9, multiplier: 2, multiplierPop: 0.5 };
+    a.components.set("tear.ui.v1", legacy);
+    b.components.set("tear.ui.v1", { ...legacy, hudPresentation: hud });
+    expect(codec.capture(b)).toEqual({ ...legacy, hudPresentation: hud });
+    expect(codec.hashProjection(b)).toEqual(codec.hashProjection(a));
+    expect(codec.hashProjection(a)).toEqual(legacy);
+    expect(codec.migrate(legacy, 1)).toEqual(legacy);
+    const aState = captureCodecState(a, createDefaultStateCodecRegistry());
+    const bState = captureCodecState(b, createDefaultStateCodecRegistry());
+    expect(bState.state).not.toEqual(aState.state);
+    expect(stableVerificationHash(bState.state)).not.toBe(stableVerificationHash(aState.state));
+    const semantic = (candidate: TearCodecWorld) => Object.fromEntries(createDefaultStateCodecRegistry().list().map((entry) => [entry.id, entry.hashProjection(candidate)]));
+    expect(stableVerificationHash(semantic(b))).toBe(stableVerificationHash(semantic(a)));
+  });
+});
 
 function snapshotFrom(candidate: TearCodecWorld): TearSnapshotV1 {
   const captured = captureCodecState(candidate, createDefaultStateCodecRegistry());

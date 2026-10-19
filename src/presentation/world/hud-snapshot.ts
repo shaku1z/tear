@@ -29,18 +29,16 @@ export interface HudSnapshotInput {
 }
 export interface HudSnapshotResult {
   readonly snapshot: HudSnapshot; readonly lagHp: number; readonly multiplier: number;
-  readonly multiplierPop: number; readonly bossPhaseFlashTime?: number;
+  readonly multiplierPop: number;
 }
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 
 export function buildHudSnapshot(input: HudSnapshotInput): HudSnapshotResult {
   const hpFraction = clamp01(input.player.hp / input.player.maxHp);
-  const lagHp = hpFraction < input.previousLagHp
-    ? input.previousLagHp + (hpFraction - input.previousLagHp) * 0.07 : hpFraction;
-  const multiplierPop = Math.max(0, (input.run.mult > input.previousMultiplier ? 1 : input.multiplierPop) - 0.06);
+  const lagHp = input.previousLagHp;
+  const multiplierPop = input.multiplierPop;
   const boss = input.boss;
   let bossSnapshot: HudSnapshot["boss"];
-  let bossPhaseFlashTime: number | undefined;
   if (boss !== undefined) {
     const phaseFlashTime = boss._phaseFlashT ?? 0;
     let introSweep = 1;
@@ -53,7 +51,6 @@ export function buildHudSnapshot(input: HudSnapshotInput): HudSnapshotResult {
       phaseMarks: boss.phaseMarks, phaseFlash: phaseFlashTime * input.flashScale,
       guard: boss.guardMeter, introSweep,
     };
-    bossPhaseFlashTime = phaseFlashTime > 0 ? Math.max(0, phaseFlashTime - input.deltaSeconds) : phaseFlashTime;
   }
   const snapshot: HudSnapshot = {
     player: {
@@ -78,6 +75,5 @@ export function buildHudSnapshot(input: HudSnapshotInput): HudSnapshotResult {
     },
     boss: bossSnapshot,
   };
-  return Object.freeze({ snapshot: Object.freeze(snapshot), lagHp, multiplier: input.run.mult, multiplierPop,
-    ...(bossPhaseFlashTime === undefined ? {} : { bossPhaseFlashTime }) });
+  return Object.freeze({ snapshot: Object.freeze(snapshot), lagHp, multiplier: input.run.mult, multiplierPop });
 }

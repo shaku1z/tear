@@ -6,6 +6,14 @@ import {
 } from "../../src/app/live-presentation-capture";
 
 describe("live presentation capture", () => {
+  it("keeps raw snapshot readback free of rendering", () => {
+    const render = vi.fn(), readback = vi.fn(() => "raw");
+    const controller = createLivePresentationCaptureController(() => ({ simulationTick: 0 } as never));
+    const ports = controller.ports(render, readback);
+    expect(ports.screenshot()).toBe("raw");
+    expect(render).not.toHaveBeenCalled();
+    expect(readback).toHaveBeenCalledTimes(1);
+  });
   it("normalizes omitted and partial layer policies without mutating the default", () => {
     expect(normalizeLiveCapturePolicy()).toEqual({
       ui: "include", debug: "include", pointerLock: "include", actors: "include",
@@ -65,13 +73,13 @@ describe("live presentation capture", () => {
       () => "frame",
     );
 
-    expect(ports.screenshot({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }))
+    expect(ports.captureScreenshot({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }))
       .toBe("frame");
     expect(observed).toEqual([{ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }]);
     expect(controller.policy()).toEqual({ ui: "include", debug: "include", pointerLock: "include", actors: "include" });
 
     const failing = controller.ports(() => undefined, () => { throw new Error("capture failed"); });
-    expect(() => failing.screenshot({ ui: "exclude", debug: "include", pointerLock: "include" }))
+    expect(() => failing.captureScreenshot({ ui: "exclude", debug: "include", pointerLock: "include" }))
       .toThrow("capture failed");
     expect(controller.policy()).toEqual({ ui: "include", debug: "include", pointerLock: "include", actors: "include" });
   });

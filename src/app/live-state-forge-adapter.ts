@@ -32,6 +32,7 @@ import {
   type TearWorldConstructionPort,
 } from "../tearbench/detached-world-hydrator";
 import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import type { UiHudPresentationCheckpoint } from "../tearbench/ui-presentation-checkpoint";
 
 interface Platform {
   readonly x: number;
@@ -94,6 +95,7 @@ export interface LiveStateForgeAdapterOptions {
   readonly restoreIdentityState: (state: CombatEntityIdentityState) => void;
   readonly runtimeState: () => Readonly<Record<string, unknown>>;
   readonly restoreRuntimeState: (state: Readonly<Record<string, unknown>>) => void;
+  readonly hudPresentation?: Readonly<{ capture(): UiHudPresentationCheckpoint; restore(value: UiHudPresentationCheckpoint | undefined): void }>;
   readonly captureCinema: () => unknown;
   /** Validates the candidate's behavior-bearing cinematic binding before commit mutation. */
   readonly validateCinema: (runtime: Readonly<Record<string, unknown>>, run: GameRun, stageIndex: number,
@@ -212,7 +214,8 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     combatObjects: encode(environment.combatObjects, identities),
     routes: encode(environment.routes, identities),
   }));
-  components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()) }));
+  components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()),
+    ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}) }));
   components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
   components.set("tear.configuration.v1", Object.freeze({
     rulesetVersion: "live", values: Object.freeze({
@@ -359,6 +362,7 @@ export function createLiveStateForgeAdapter(
       // cinema snapshot destructively clears its current binding; no later
       // commit action may throw and make the prior active binding unavailable
       // to the transactional rollback candidate.
+      options.hudPresentation?.restore(candidate.hudPresentation);
       options.restoreRuntimeState(candidate.runtime);
     },
   };

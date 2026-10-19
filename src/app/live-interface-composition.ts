@@ -12,6 +12,7 @@ import type { LivePresentationHost } from "./live-presentation-host";
 import { AchievementToastController } from "./achievement-toast-controller";
 import { TouchOnboardingController } from "./touch-onboarding-controller";
 import { createLiveInterfacePresentationCapture, type LivePresentationCaptureSource } from "./live-presentation-capture";
+import { isWorldScreen } from "../presentation/render-pipeline";
 
 export { createLiveAcademyScreen } from "./live-academy-screen";
 export { createLiveTrainingArchiveScreen } from "./training-archive";
@@ -57,6 +58,7 @@ export interface LiveInterfaceCompositionOptions {
 }
 
 export interface LiveInterfaceComposition {
+  readonly renderPresentationFrame: (deltaSeconds: number) => void;
   readonly capture: ReturnType<typeof createLiveInterfacePresentationCapture>;
   readonly wipe: TearWipe;
   readonly world: LegacyWorldRendererRegistry;
@@ -103,5 +105,12 @@ export function createLiveInterfaceComposition(
     achievementToast: new AchievementToastController(options.worldServices.ease),
     touchOnboarding: new TouchOnboardingController(),
   });
-  return Object.freeze({ capture, wipe: surface.wipe, world: surface.world, screens, frame, worldAdapters });
+  return Object.freeze({ capture, wipe: surface.wipe, world: surface.world, screens, frame, worldAdapters,
+    renderPresentationFrame(deltaSeconds: number): void {
+      const hudVisible = isWorldScreen(options.frameState.screen()) && !options.frameServices.cinema.hideHud && Boolean(options.worldState.player());
+      if (hudVisible) worldAdapters.advanceHudFrame(deltaSeconds);
+      frame.render();
+      if (hudVisible) worldAdapters.completeHudFrame(deltaSeconds);
+    },
+  });
 }
