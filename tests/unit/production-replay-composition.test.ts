@@ -16,6 +16,7 @@ import type { ProductionReplayWorld } from "../../src/tearbench/production-world
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
 import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
 import { legacyCosmeticEmissionSnapshot } from "../../src/domain/cosmetic-emission-random";
+import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 
 const timing: CampaignChapterTiming = Object.freeze({
   loreReveal: 0.1, chapterIn: 0.2, loreExit: 0.3, biomeRevealBrief: 0.4,
@@ -26,6 +27,8 @@ const timing: CampaignChapterTiming = Object.freeze({
 function activeChapterCheckpoint(slowText = false, opening = false) {
   const composition = createProductionGhostReplayComposition({ seed: "runtime-atomic-chapter", mode: "campaign" });
   const source = composition.create(undefined);
+  // This is a constructed chapter boundary; retire the now-real natural launch before installing it.
+  source.replay.world.context.cinema.cancel("constructed chapter fixture");
   if (slowText) source.replay.configuration.value.presentation.revealCharsPerSec = 1;
   const spec = { ...createCampaignChapterBindingSpec({ stageIndex: 0, priorOutro: null,
     brief: false, prologueShownBefore: false, timing: slowText ? { ...timing, biomeRevealFull: 60 } : timing }),
@@ -77,6 +80,121 @@ function withoutPresentation(snapshot: TearSnapshotV1): TearSnapshotV1 {
 }
 
 describe("production replay composition", () => {
+  it.each([0, 250])("retains held aim magnitude %s through an input keyframe and its next command-free tick", (magnitude) => {
+    const options = { seed: "held-aim-frontier", mode: "endless" };
+    const source = createProductionGhostReplayComposition(options).create(undefined);
+    source.simulation.advanceOne([{ kind: "command", id: 1, tick: 1, command: { type: "aim", turn: 125000, magnitude } }]);
+    const saved = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "held-aim");
+    const restored = createProductionGhostReplayComposition({ ...options, inputSnapshots: new Map([[saved.snapshot.tick, saved.input]]) }).create(saved.snapshot);
+    expect(restored.combat.authoritativeInput.aimVector()).toEqual(source.combat.authoritativeInput.aimVector());
+    expect(restored.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+    expect((restored.replay.world.state.blade() as never as { aimOverride: unknown }).aimOverride)
+      .toEqual((source.replay.world.state.blade() as never as { aimOverride: unknown }).aimOverride);
+  });
+  it.each(["reservePick", "expandedDraft", "reservedChoice", "unowned-tier"] as const)("refuses reward/run coherence drift %s before replacement", (field) => {
+    const source = createProductionGhostReplayComposition({ seed: `reward-incoherent-${field}`, mode: "endless" }).create(undefined);
+    Object.assign(source.replay.world.state.run() ?? {}, { spawnQueue: [] }); source.replay.world.state.setEnemies([]); source.waveReward.update(1);
+    const { snapshot } = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, `incoherent-${field.toLowerCase()}`);
+    const invalid = structuredClone(snapshot), selection = (invalid.state["tear.reward.v1"] as Record<string, unknown>).selection as Record<string, unknown>;
+    if (field === "unowned-tier") {
+      selection.phase = "tierup"; selection.choices = [{ id: "fleet" }];
+      (invalid.state["tear.ui.v1"] as Record<string, unknown>).screen = "tierup";
+      const runtime = (invalid.state["tear.world.v1"] as Record<string, unknown>).runtime as Record<string, unknown>;
+      runtime.lifecycle = { ...(runtime.lifecycle as Record<string, unknown>), reward: "boss", bossWave: true };
+    } else if (field === "reservedChoice") selection.reservedChoice = { id: "fleet" };
+    else selection[field] = true;
+    const target = createProductionReplayWorld({ seed: "unmodified-reward-target" }), unchanged = unchangedDestination(target);
+    expect(() => restoreProductionReplaySnapshot(target, invalid)).toThrow(/reward|choices/);
+    unchanged();
+  });
+  it.each(["draft", "reserve", "tierup"] as const)("continues a constructed %s boundary through the real reward owner without hydration effects", (phase) => {
+    const composition = createProductionGhostReplayComposition({ seed: `reward-boundary-${phase}`, mode: "endless" });
+    const source = composition.create(undefined), independent = composition.create(undefined);
+    const run = source.replay.world.state.run() as never as { spawnQueue: unknown[]; wave: number; mods: { reservePick: boolean; draftRerolls: number } };
+    run.mods.reservePick = true; run.mods.draftRerolls = 2; run.spawnQueue = [];
+    source.replay.world.state.setEnemies([]); source.waveReward.update(1);
+    const fleet = UPGRADES.find((choice) => choice.id === "fleet"), vitality = UPGRADES.find((choice) => choice.id === "vitality");
+    if (fleet === undefined || vitality === undefined) throw new Error("production choices missing");
+    const draft = source.waveReward.reward.snapshot(); if (draft === null) throw new Error("fixture draft missing");
+    source.waveReward.reward.restore({ ...draft, choices: [fleet, vitality] });
+    if (phase === "reserve") source.waveReward.reward.selectDraft(0);
+    if (phase === "tierup") {
+      const tier = UPGRADES.find((choice) => choice.tiers !== undefined); if (tier === undefined) throw new Error("tier missing");
+      applyUpgrade(tier, { config: source.replay.configuration.value, player: source.replay.world.state.player() as never,
+        blade: source.replay.world.state.blade() as never, mods: source.replay.world.state.run()?.mods as never });
+      source.replay.world.lifecycle.restore({ ...source.replay.world.lifecycle.snapshot(), reward: "boss", bossWave: true });
+      source.waveReward.reward.openTier([tier]);
+    }
+    source.waveReward.restoreUi(phase, 1);
+    const before = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, `reward-${phase}`);
+    const restored = composition.create(JSON.parse(JSON.stringify(before.snapshot)) as TearSnapshotV1);
+    expect(restored.waveReward.outward).toEqual([]);
+    expect(restored.waveReward.reward.snapshot()).toEqual(source.waveReward.reward.snapshot());
+    expect(restored.waveReward.focus()).toBe(1);
+    expect(restored.replay.configuration.snapshot()).toEqual(source.replay.configuration.snapshot());
+    expect(restored.replay.world.context.services.random.snapshot()).toEqual(source.replay.world.context.services.random.snapshot());
+    const sourceConfig = source.replay.configuration.value, restoredConfig = restored.replay.configuration.value;
+    expect(restoredConfig).not.toBe(sourceConfig);
+    const independentConfig = independent.replay.configuration.snapshot();
+    if (phase === "draft") {
+      source.waveReward.reward.reroll(); restored.waveReward.reward.reroll();
+      expect(restored.waveReward.focus()).toBe(-1);
+      expect(restored.waveReward.reward.snapshot()).toEqual(source.waveReward.reward.snapshot());
+    }
+    const select = (runtime: typeof source.waveReward) => {
+      if (phase === "reserve") runtime.reward.selectReserve(0);
+      else if (phase === "tierup") runtime.reward.selectTier(0);
+      else runtime.reward.selectDraft(0);
+    };
+    select(source.waveReward); select(restored.waveReward);
+    expect(restored.waveReward.reward.snapshot()).toEqual(source.waveReward.reward.snapshot());
+    expect(restored.replay.configuration.value).toBe(restoredConfig);
+    expect(restored.replay.configuration.snapshot()).toEqual(source.replay.configuration.snapshot());
+    expect(restored.replay.world.context.services.random.snapshot()).toEqual(source.replay.world.context.services.random.snapshot());
+    expect(restored.replay.world.lifecycle.snapshot()).toEqual(source.replay.world.lifecycle.snapshot());
+    expect(independent.replay.configuration.snapshot()).toEqual(independentConfig);
+    for (let tick = 1; tick <= 10; tick += 1) expect(restored.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+  });
+  it("launches the natural chapter and advances only explicit application frames and confirm inputs", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "natural-explicit-chapter", mode: "campaign" });
+    const source = composition.create(undefined);
+    const cinema = source.replay.world.context.cinema;
+    expect(source.replay.world.lifecycle.snapshot()).toMatchObject({ phase: "wave-prepared", activationDeferred: true });
+    expect(cinema.captureState()).toMatchObject({ active: true, beatId: "enter", elapsedSeconds: 0 });
+    source.simulation.advanceOne([]);
+    expect(cinema.captureState()).toMatchObject({ beatId: "enter", elapsedSeconds: 0 });
+    source.advanceApplicationFrame(1 / 120);
+    const saved = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "explicit-frame");
+    const restored = composition.create(JSON.parse(JSON.stringify(saved.snapshot)) as TearSnapshotV1);
+    expect(restored.replay.world.context.cinema.captureState()).toEqual(cinema.captureState());
+    for (let frame = 0; frame < 105; frame += 1) {
+      source.advanceApplicationFrame(0.1); restored.advanceApplicationFrame(0.1);
+    }
+    expect(cinema.captureState()).toMatchObject({ beatId: "page-0" });
+    expect(source.replay.world.lifecycle.phase).toBe("wave-prepared");
+    expect(restored.replay.world.context.cinema.captureState()).toEqual(cinema.captureState());
+    // Explicit test policy: release for latch arming, then one confirm. Never auto-confirm in the host.
+    for (let frame = 0; frame < 1000 && cinema.active; frame += 1) {
+      const controls = { key: frame % 20 === 19 };
+      source.advanceApplicationFrame(0.1, controls); restored.advanceApplicationFrame(0.1, controls);
+      expect(restored.replay.world.context.cinema.captureState()).toEqual(cinema.captureState());
+    }
+    expect(cinema.active).toBe(false);
+    expect(source.replay.world.lifecycle.snapshot()).toMatchObject({ phase: "wave-active", revision: 3 });
+    expect(restored.replay.world.lifecycle.snapshot()).toEqual(source.replay.world.lifecycle.snapshot());
+    const activation = { spawnTimer: source.replay.configuration.value.run.startDelay, waveTime: 0, waveKills: 0,
+      wavePeak: (source.replay.world.state.run() as never as { mult: number }).mult };
+    expect(source.replay.world.state.run()).toMatchObject(activation);
+    expect(restored.replay.world.state.run()).toMatchObject(activation);
+    expect(source.waveReward.outward).toEqual(expect.arrayContaining(["showWaveBanner", "playWaveSound"]));
+    expect(restored.waveReward.outward).toEqual(expect.arrayContaining(["showWaveBanner", "playWaveSound"]));
+    expect(source.simulation.scheduler.tick).toBe(1);
+    expect(() => { source.advanceApplicationFrame(Number.NaN); }).toThrow(/frame/);
+    expect(() => { source.advanceApplicationFrame(0.101); }).toThrow(/frame/);
+    source.waveReward.routeAction({ type: "pause" });
+    const stopped = cinema.captureState(); source.advanceApplicationFrame(0.1, { key: true });
+    expect(cinema.captureState()).toEqual(stopped);
+  });
   it("derives legacy v1 entropy only from staged run/tick and never claims old exact protocol identity", () => {
     const composition = createProductionGhostReplayComposition({ seed: "legacy-emission-custody" }), source = composition.create(undefined);
     source.replay.effects.spark(800, 775, 1, 0);

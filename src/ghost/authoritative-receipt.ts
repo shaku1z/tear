@@ -1,3 +1,5 @@
+import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
+
 /** A sealed live authoritative-state hash recorded beside a V3 keyframe. */
 export interface GhostAuthoritativeReceiptV1 {
   readonly format: "tearghost-authoritative-receipt";
@@ -18,7 +20,9 @@ export function createGhostAuthoritativeReceipt(
     throw new TypeError("authoritative receipt requires a canonical 64-bit verification hash");
   }
   if (input.tick !== tick || !Number.isFinite(input.moveX) || !Number.isFinite(input.moveY)
-    || !Number.isFinite(input.aimTurn) || typeof input.primaryHeld !== "boolean") {
+    || !Number.isFinite(input.aimTurn) || typeof input.primaryHeld !== "boolean"
+    || input.aimMagnitude !== undefined && (!Number.isSafeInteger(input.aimMagnitude)
+      || input.aimMagnitude < 0 || input.aimMagnitude > AIM_MAGNITUDE_SCALE)) {
     throw new TypeError("authoritative receipt requires its same-tick held-input snapshot");
   }
   return Object.freeze({ format: "tearghost-authoritative-receipt", schemaVersion: 1, kind: "authoritative-hash", tick, stateHash,

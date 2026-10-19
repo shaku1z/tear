@@ -17,6 +17,7 @@ import { applyUpgrade, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } 
 import type { GameAction } from "../input/game-action";
 import { routeLiveTearBenchAction } from "./live-runtime-action-routing";
 import type { ProductionReplayWorld } from "./production-world-factory";
+import type { ChapterPage } from "../gameplay/campaign/chapter-controller";
 
 export interface ProductionWaveRewardRuntimeOptions {
   readonly gameplayEvents?: TearGameplayEventPort;
@@ -27,6 +28,8 @@ export interface ProductionWaveRewardRuntimeOptions {
   readonly recordIntent?: (entry: ProductionWaveRewardIntent) => void;
   /** The authoritative scheduler tick when an intent is applied. */
   readonly currentTick?: () => number;
+  readonly beginCampaignChapter?: (index: number, priorOutro?: ChapterPage | null) => void;
+  readonly chapterFlowActive?: () => boolean;
 }
 
 /**
@@ -44,6 +47,8 @@ export interface ProductionWaveRewardRuntime {
   readonly routeAction: (action: GameAction) => boolean;
   readonly screen: () => string;
   readonly restoreScreen: (screen: string) => void;
+  readonly focus: () => number;
+  readonly restoreUi: (screen: string, focus: number) => void;
   readonly startNaturalOpening: () => void;
   readonly outward: readonly string[];
 }
@@ -161,6 +166,7 @@ export function createProductionWaveRewardRuntime(
 
   let reward: RewardRuntime<UpgradeDefinition> | null = null;
   let screen = "playing";
+  let focus = -1;
   const waves = new LiveWaveController({
     run,
     tuning: () => config.run,
@@ -170,7 +176,7 @@ export function createProductionWaveRewardRuntime(
     modeDefinition: (mode) => config.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: stage.index, accent: stageAt(stage.index).accent }),
     stageHasChapter: () => true,
-    chapterFlowActive: () => false,
+    chapterFlowActive: options.chapterFlowActive ?? (() => false),
     lifecycle: {
       hasPreparedWave: () => world.lifecycle.hasPreparedWave,
       isWaveActive: () => world.lifecycle.isWaveActive,
@@ -180,7 +186,7 @@ export function createProductionWaveRewardRuntime(
       beginWipe: note("beginWipe"),
       loadStage: (index) => { stage.index = index; stage.platforms = stagePlatforms(index, config); },
       setStageBanner: note("setStageBanner"),
-      beginCampaignChapter: () => undefined,
+      beginCampaignChapter: options.beginCampaignChapter ?? (() => undefined),
       recordWave: publishWave,
       snapshotReplay: note("snapshotReplay"),
       prepareWave: (wave, boss, deferred) => { world.lifecycle.prepareWave(wave, boss, deferred); },
@@ -214,7 +220,7 @@ export function createProductionWaveRewardRuntime(
     }); },
     spawn: (spec) => { content.spawn(spec); },
     enemyCount: () => world.state.enemies().length,
-    loreBusy: () => false,
+    loreBusy: options.chapterFlowActive ?? (() => false),
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
     availableTierUpCount: () => eligibleTierChoices(UPGRADES, run().mods.owned, run().mods.tier).length,
@@ -235,7 +241,7 @@ export function createProductionWaveRewardRuntime(
         options.gameplayEvents?.emit({ kind: "effect", effect, x: player.x, y: player.y });
       },
       consumeInput: note("consumeInput"),
-      resetUi: note("resetUi"),
+      resetUi: (intent) => { if (intent.focus) focus = -1; note("resetUi")(); },
       setScreen: (next) => { screen = next; },
       startNextWave: () => { waves.startNextWave(); },
       requestPointer: note("requestPointer"),
@@ -253,7 +259,7 @@ export function createProductionWaveRewardRuntime(
     dispatchPlayground: () => undefined,
     renderControls: () => undefined,
     controls: () => [],
-    focus: () => -1,
+    focus: () => focus,
   };
   const startNaturalOpening = () => {
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
@@ -274,6 +280,11 @@ export function createProductionWaveRewardRuntime(
     routeAction: (action: GameAction) => routeLiveTearBenchAction(routing, action),
     screen: () => screen,
     restoreScreen: (next: string) => { screen = next; },
+    focus: () => focus,
+    restoreUi: (next: string, nextFocus: number) => {
+      if (!Number.isSafeInteger(nextFocus) || nextFocus < -1) throw new RangeError("production UI focus is invalid");
+      screen = next; focus = nextFocus;
+    },
     startNaturalOpening,
     get outward() { return Object.freeze([...outward]); },
   });

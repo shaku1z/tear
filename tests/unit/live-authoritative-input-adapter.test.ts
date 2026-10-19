@@ -6,6 +6,17 @@ import type { PlayerInputPort } from "../../src/gameplay/entities/player";
 import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
 
 describe("live authoritative input adapter", () => {
+  it.each([0, 250])("projects restored held aim magnitude %s on the next command-free tick", (magnitude) => {
+    const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
+    const blade: { aimOverride?: { x: number; y: number }; handPos(): { x: number; y: number } } = { handPos: () => ({ x: 14, y: 16 }) };
+    const adapter = createLiveAuthoritativeInputAdapter({ player: () => player, blade: () => blade, aimRadius: () => 100 });
+    const input = new AuthoritativeInputState();
+    adapter.actionPort.apply(input, 1, [{ kind: "command", id: 1, tick: 1, command: { type: "aim", turn: 0, magnitude } }]);
+    const before = blade.aimOverride, restored = new AuthoritativeInputState(); restored.restore(input.snapshot());
+    adapter.clear(); adapter.actionPort.apply(restored, 2, []);
+    expect(blade.aimOverride).toEqual(before);
+    expect(blade.aimOverride).toEqual({ x: 14 + magnitude / 10, y: 16 });
+  });
   it("contains legacy player and blade overrides behind the simulation action port", () => {
     const player: { x: number; y: number; vx: number; vy: number; facing: number; aiInput?: PlayerInputPort } = {
       x: 10, y: 20, vx: 0, vy: 0, facing: 1,

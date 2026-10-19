@@ -4,6 +4,17 @@ import { createProductionReplayWorld } from "../../src/tearbench/production-worl
 import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
 
 describe("production wave and reward runtime", () => {
+  it("preserves restored focus until a source transition explicitly resets it", () => {
+    const replay = createProductionReplayWorld({ seed: "reward-focus", mode: "endless" });
+    const runtime = createProductionWaveRewardRuntime(replay); runtime.startNaturalOpening();
+    Object.assign(replay.world.state.run()?.mods ?? {}, { draftRerolls: 1 });
+    Object.assign(replay.world.state.run() ?? {}, { spawnQueue: [] }); replay.world.state.setEnemies([]); runtime.update(1);
+    runtime.restoreUi("draft", 2); expect(runtime.focus()).toBe(2);
+    runtime.reward.reroll(); expect(runtime.focus()).toBe(-1);
+    runtime.restoreUi("playing", 1); runtime.routeAction({ type: "pause" });
+    expect(runtime.screen()).toBe("paused"); expect(runtime.focus()).toBe(1);
+    expect(() => { runtime.restoreUi("playing", Number.NaN); }).toThrow(/focus/);
+  });
   it("owns a natural opening and routes its real draft transition without a host screen", () => {
     const replay = createProductionReplayWorld({ seed: "production-wave-reward", mode: "endless" });
     const runtime = createProductionWaveRewardRuntime(replay);

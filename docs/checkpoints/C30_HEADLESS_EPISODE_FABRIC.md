@@ -181,17 +181,39 @@ operational boundary it proves.
   verifies that unmarked input remains failed with one attempt, then verifies
   that explicitly idempotent serialized input retains the exit record and
   completes in the real production worker on a different PID.
-- [x] In-memory active-episode checkpoint restore. A C30 environment captures
-  only an active, non-draft natural episode through the existing State Forge
-  codec boundary, including its source snapshot, durable held-input state,
-  accepted command envelopes, and canonical hash. A fresh C29 production
-  composition restores the keyframe and must reproduce the captured canonical
-  state before it is accepted; the permanent tick-60 movement/jump/dash proof
-  then reaches an exactly equal tick-120 terminal artifact. Malformed command
-  traces, surgical snapshots, and snapshot/scenario mismatches fail closed.
-  This is caller-retained, in-process custody only — not storage, a worker
-  message, durable job recovery, or a claim that a draft/reward route can yet
-  be checkpointed.
+- [x] In-memory nonterminal checkpoint continuation. Prepared Campaign chapters,
+  active waves and pending draft/reserve/tier-up selections use the existing
+  State Forge codec and reward owners. Original scenario/bootstrap, current RNG,
+  lifecycle, exact seconds/chapter binding, configuration, choices/revisions,
+  rerolls, focus, held input and ordered command envelopes survive hydration.
+  A required delivery frontier binds the complete checkpoint to its next engine
+  sequence and emitted-but-undelivered facts. Pending facts retain their original
+  IDs, ticks and order once; subsequent facts continue the sequence. Hydration
+  emits no original facts. Schema-two checkpoints require explicit bounded held
+  aim magnitude, including zero and full scale. Legacy schema-one checkpoints
+  and missing frontiers/magnitudes refuse before world replacement. Accepted
+  command IDs are contiguous; a malformed action batch leaves the frontier
+  unchanged. The scenario seed uses the canonical production run-seed mapping.
+  Natural Campaign opening now reuses `launchCampaignChapter`; callers explicitly
+  supply application-frame seconds and confirm sources before simulation. The
+  detached API rejects nonfinite or out-of-domain deltas outside 0–0.1 seconds
+  rather than truncating time; fixed ticks neither time nor auto-confirm pages.
+  JSON roundtrips and same-input continuations cover prepared ticks 0/1, held
+  actions, actual reward-owner transitions and the existing tick-60→120 proof.
+  Malformed frontier, choices, configuration and UI/lifecycle pairs refuse before
+  replacing the active destination. The environment namespace rebases, so raw
+  snapshot hashes need not equal the original; owned runtime components and
+  semantic state remain equal, and repeated destination captures are stable.
+  This is caller-retained in-memory custody, not durable checkpoint/worker
+  transport or original full-trace attestation. Explicit external frame inputs
+  are not recorded in terminal command artifacts. Opt-in native source tracks
+  label restored output as a suffix; surgical State Forge hydration does not
+  deliver the natural source's pending facts as original evidence.
+  Canonical input snapshots/receipts retain their old full-scale shape and
+  carry an optional magnitude only for nonfull input. Older missing-magnitude
+  snapshots assume full scale for compatibility, without claiming recovery of
+  historical partial aim. Historical capsule exact-verification classification
+  remains a separate open obligation; this slice does not repair that policy.
 - [x] Explicit mid-run process cancellation. A worker reports `started` only
   after its first actual source fixed tick. `cancel(requestId)` waits for that
   signal, terminates only that active child, and returns one serializable
@@ -240,7 +262,7 @@ operational boundary it proves.
 - [ ] Declared-target capacity and recovered checkpoint/finale evidence.
   Timeout, validation, and ordinary worker-reported failures are not retried.
   No target host is declared in this repository. Durable origin restart does
-  not close reward/draft checkpoint or natural victory/finale continuation.
+  not close durable checkpoint transport or natural victory/finale continuation.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -330,5 +352,6 @@ episode-fabric budgets, then run it on that declared target host and retain the
 artifact before capacity can be assessed. While that waits, the next
 implementation boundary is C31 eligibility, consent, and provenance before its
 Academy candidate intake can become a corpus. Keep all completed C30 boundaries
-restricted to active, non-draft natural episodes: they must not become a new
-simulator, storage format, or durable job-recovery claim.
+restricted to their stated natural or constructed boundary evidence. In-memory
+nonterminal continuation must not become a new simulator, storage format,
+durable checkpoint-recovery claim, or natural full-Campaign acceptance.

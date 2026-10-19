@@ -31,8 +31,8 @@ export interface CampaignCinematicChannel extends FinaleCinematicChannel {
 }
 
 export interface ChapterSequenceLaunchOptions {
-  readonly runtime: CampaignRuntimeState;
-  readonly cinema: CampaignCinematicChannel;
+  readonly runtime: Pick<CampaignRuntimeState, "chapterController" | "installChapterBinding" | "clearChapterBinding">;
+  readonly cinema: Pick<CampaignCinematicChannel, "startBinding">;
   readonly stageIndex: number;
   readonly stage: CampaignStage;
   readonly priorOutro: ChapterPage | null;

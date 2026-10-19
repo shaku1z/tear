@@ -5,6 +5,14 @@ import { createGhostAuthoritativeReceipt, readGhostAuthoritativeReceipt } from "
 const hash = "a".repeat(16);
 
 describe("Ghost authoritative receipts", () => {
+  it.each([0, 250, 1000])("retains a strict optional held aim magnitude %s without rewriting legacy receipts", (aimMagnitude) => {
+    const input = { tick: 1, moveX: 0, moveY: 0, aimTurn: 125000, primaryHeld: true, aimMagnitude };
+    const receipt = createGhostAuthoritativeReceipt(1, hash, input);
+    expect(readGhostAuthoritativeReceipt(JSON.parse(JSON.stringify(receipt)))).toEqual(receipt);
+    for (const invalid of [-1, 1001, 0.5, "250", null]) {
+      expect(readGhostAuthoritativeReceipt({ ...receipt, input: { ...input, aimMagnitude: invalid } })).toBeUndefined();
+    }
+  });
   it("round-trips a bounded hash receipt and rejects generic or malformed result entries", () => {
     const receipt = createGhostAuthoritativeReceipt(120, hash, {
       tick: 120, moveX: 1, moveY: 0, aimTurn: 0, primaryHeld: false,

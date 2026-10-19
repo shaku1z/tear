@@ -865,13 +865,25 @@ frozen evidence record.
    fact. An untouched one-hit source opening also reaches a real tick-222
    failure, retained as an immutable terminal artifact and visibly rerun at the
    same terminal tick/disposition in the Class-A browser; it is not durable or
-   training-stream output. An active, non-draft C30 episode can also carry an
-   in-memory State Forge source keyframe, held-input state, accepted command
-   envelopes, and canonical hash into a fresh C29 production composition. The
-   tick-60 movement/jump/dash proof restores that exact source state and reaches
-   an exactly equal tick-120 terminal artifact; malformed traces, surgical state,
-   and snapshot/scenario mismatches fail closed. This is not persistence,
-   worker-job recovery, or a draft/reward-route checkpoint claim. C30 also has
+   training-stream output. C30 in-memory nonterminal checkpoints now continue
+   prepared Campaign chapters, active waves and pending draft/reserve/tier-up
+   selections through the existing production/codec owners. They preserve
+   original bootstrap, current RNG, lifecycle, exact clocks/binding, configuration,
+   choices, focus, held input and authored command order. A required integrity-bound
+   frontier preserves pending original engine facts once and continues their IDs/
+   sequences; malformed or missing frontiers and inconsistent source state refuse
+   before destination replacement. Natural chapters reuse the canonical launcher
+   with explicit bounded application-frame seconds/confirm inputs before simulation,
+   never a tick-derived cinema clock or auto-confirm. Focused JSON/transition tests
+   retain the tick-60→120 active proof; rebased environment namespaces do not claim
+   original raw snapshot identity. Restored source tracks identify suffixes, and
+   external frame inputs are not in terminal command artifacts. This is not durable
+   checkpoint transport, full-trace attestation or natural full-Campaign/finale proof.
+   Schema-two C30 checkpoints require explicit held aim magnitude and reject older
+   or missing frontiers before replacement. Canonical input/receipts add an optional
+   nonfull magnitude while preserving full-scale legacy bytes/hashes; absent legacy
+   magnitude assumes full scale and does not recover historical partial aim.
+   Historical capsule exact-verification classification remains open separately.
    Every recorded-canonical keyframe now additionally passes an all-or-nothing
    isolated versioned-codec restore and declared exact/semantic-hash preflight
    before C29 can treat its state track as seekable. The preflight has no

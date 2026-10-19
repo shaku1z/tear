@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import { createGhostV3, GhostProductionReplayWorld, type GhostReplayTrident } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
+import { captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
+import type { GameAction } from "../../src/input/game-action";
 import {
   createProductionGhostReplayComposition,
   createProductionHeadlessEnvironment,
@@ -12,6 +14,7 @@ import {
   createOneFrameBoundaryLaunchMatrix,
   TearHeadlessRunner,
   type ProductionHeadlessTerminalArtifact,
+  type ProductionHeadlessCheckpoint,
   forgeExitLaunchSnapshot,
   type TearScenarioV1,
 } from "../../src/tearbench";
@@ -46,7 +49,81 @@ function normalizeLegacyFixtureRevision(value: unknown): unknown {
   return clone;
 }
 
+function bindCheckpoint(value: ProductionHeadlessCheckpoint): ProductionHeadlessCheckpoint {
+  const delivery = { nextSequence: value.delivery.nextSequence, pendingEvents: value.delivery.pendingEvents };
+  return { ...value, delivery: { ...delivery, hash: stableVerificationHash({ ...value, delivery }) } };
+}
+
+function expectContinuation(actual: ProductionHeadlessCheckpoint, source: ProductionHeadlessCheckpoint) {
+  expect(actual.checkpoint).toEqual(source.checkpoint);
+  expect(actual.bootstrap).toEqual(source.bootstrap); expect(actual.scenario).toEqual(source.scenario);
+  expect(actual.input).toEqual(source.input); expect(actual.actions).toEqual(source.actions);
+  expect(actual.delivery.nextSequence).toBe(source.delivery.nextSequence);
+  expect(actual.delivery.pendingEvents).toEqual(source.delivery.pendingEvents);
+  // The destination environment namespace is intentionally rebased; source-owned components stay exact.
+  for (const key of Object.keys(source.snapshot.state).filter((key) => key !== "tear.hazard.v1")) {
+    expect(actual.snapshot.state[key]).toEqual(source.snapshot.state[key]);
+  }
+  expect(actual.snapshot.hashes.semantic).toBe(source.snapshot.hashes.semantic);
+  expect(actual.snapshot.hashes.environment).toBe(source.snapshot.hashes.environment);
+}
+
 describe("C30 production headless environment", () => {
+  it("checkpoint admission refuses a gapped accepted trace and step rejects an invalid batch atomically", () => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario);
+    source.step([{ type: "move", x: 1000, y: 0 }]); source.step([{ type: "move", x: 0, y: 0 }]);
+    const checkpoint = source.captureCheckpoint(), target = createProductionHeadlessEnvironment(); target.reset(scenario);
+    const gap = bindCheckpoint({ ...checkpoint, actions: checkpoint.actions.map((entry, index) => ({ ...entry, id: index === 1 ? 3 : 1 })),
+      checkpoint: { ...checkpoint.checkpoint, nextCommandId: 3 } });
+    expect.soft(() => target.restoreCheckpoint(gap)).toThrow(/trace|sequence/);
+    const before = source.captureCheckpoint();
+    expect(() => source.step([{ type: "move", x: -1000, y: 0 }, { type: "move", x: "invalid", y: 0 } as unknown as GameAction])).toThrow(/action/);
+    expect.soft(source.captureCheckpoint()).toEqual(before);
+    source.dispose(); target.dispose();
+  });
+
+  it("checkpoint admission refuses a malformed pending actor identifier", () => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario);
+    const checkpoint = source.captureCheckpoint(), target = createProductionHeadlessEnvironment(); target.reset(scenario);
+    const pendingEvents = checkpoint.delivery.pendingEvents.map((event) => ({ ...event, actorId: 7 }));
+    const invalid = bindCheckpoint({ ...checkpoint, delivery: { ...checkpoint.delivery, pendingEvents } } as unknown as ProductionHeadlessCheckpoint);
+    expect(() => target.restoreCheckpoint(invalid)).toThrow(/frontier/);
+    source.dispose(); target.dispose();
+  });
+
+  it("checkpoint admission refuses a changed natural scenario seed even with a rebound integrity hash", () => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario);
+    const checkpoint = source.captureCheckpoint(), target = createProductionHeadlessEnvironment(); target.reset(scenario);
+    const invalid = bindCheckpoint({ ...checkpoint, scenario: { ...checkpoint.scenario, seed: "different-natural-origin" } });
+    expect(() => target.restoreCheckpoint(invalid)).toThrow(/scenario|seed/);
+    source.dispose(); target.dispose();
+  });
+
+  it("requires schema-two explicit aim state before replacing a destination, while capturing full scale explicitly", () => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario);
+    const checkpoint = source.captureCheckpoint(), target = createProductionHeadlessEnvironment(); target.reset({ ...scenario, seed: "preserved-v2-target" });
+    expect(checkpoint.schemaVersion).toBe(2); expect(checkpoint.input.aimMagnitude).toBe(1000);
+    const before = target.captureCheckpoint(), missing = structuredClone(checkpoint);
+    Reflect.deleteProperty(missing.input, "aimMagnitude");
+    const legacy = { ...checkpoint, schemaVersion: 1 } as unknown as ProductionHeadlessCheckpoint;
+    for (const invalid of [missing, legacy, ...[-1, 1001, 0.5, "250", null].map((aimMagnitude) =>
+      ({ ...checkpoint, input: { ...checkpoint.input, aimMagnitude } }) as unknown as ProductionHeadlessCheckpoint)]) {
+      expect(() => target.restoreCheckpoint(invalid)).toThrow(/format|coordinate/);
+      expect(target.captureCheckpoint()).toEqual(before);
+    }
+    source.dispose(); target.dispose();
+  });
+
+  it.each([0, 250])("continues checkpoint held aim magnitude %s without a new aim command", (magnitude) => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario);
+    source.step([{ type: "aim", turn: 125000, magnitude }, { type: "weapon", intent: "primary", phase: "pressed" }]);
+    const saved = source.captureCheckpoint(), restored = createProductionHeadlessEnvironment();
+    expect(saved.input.aimMagnitude).toBe(magnitude);
+    restored.restoreCheckpoint(JSON.parse(JSON.stringify(saved)) as ProductionHeadlessCheckpoint);
+    for (let tick = 2; tick < 30; tick += 1) expect(restored.step([])).toEqual(source.step([]));
+    expectContinuation(restored.captureCheckpoint(), source.captureCheckpoint());
+    source.dispose(); restored.dispose();
+  });
   it("uses an injected build identity for headless bootstrap and marks absent identity unbound", () => {
     const injected = {
       version: "0.1.0", revision: "c30-test-revision", target: "test-standalone",
@@ -93,6 +170,135 @@ describe("C30 production headless environment", () => {
     expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
     expect(new Set(events.map((event) => event.id)).size).toBe(events.length);
     expect(execute()).toEqual(events);
+  });
+
+  it("checkpoint frontier retains undelivered tick-zero facts and later event sequences", () => {
+    const original = createProductionHeadlessEnvironment();
+    original.reset(scenario);
+    const restored = createProductionHeadlessEnvironment();
+    restored.restoreCheckpoint(JSON.parse(JSON.stringify(original.captureCheckpoint())) as ProductionHeadlessCheckpoint);
+    expect(restored.step([])).toEqual(original.step([]));
+    for (let tick = 2; tick <= 20; tick += 1) {
+      expect(restored.step([])).toEqual(original.step([]));
+    }
+    const second = createProductionHeadlessEnvironment();
+    second.restoreCheckpoint(JSON.parse(JSON.stringify(original.captureCheckpoint())) as ProductionHeadlessCheckpoint);
+    for (let tick = 21; tick <= 100; tick += 1) {
+      expect(second.step([])).toEqual(original.step([]));
+    }
+    original.dispose(); restored.dispose(); second.dispose();
+  });
+
+  it("checkpoint frontier captures a naturally prepared Campaign opening", () => {
+    const original = createProductionHeadlessEnvironment();
+    original.reset({ ...scenario, start: { ...scenario.start, mode: "campaign" } });
+    const checkpoint = original.captureCheckpoint();
+    expect(checkpoint.snapshot.state["tear.world.v1"]).toMatchObject({
+      runtime: { lifecycle: { phase: "wave-prepared", activationDeferred: true },
+        chapterBinding: { flowState: "LORE_ENTER" } },
+    });
+    const restored = createProductionHeadlessEnvironment();
+    restored.restoreCheckpoint(JSON.parse(JSON.stringify(checkpoint)) as ProductionHeadlessCheckpoint);
+    expectContinuation(restored.captureCheckpoint(), checkpoint);
+    expect(restored.captureCheckpoint()).toEqual(restored.captureCheckpoint());
+    original.advanceApplicationFrame(1 / 120); restored.advanceApplicationFrame(1 / 120);
+    expect(restored.step([])).toEqual(original.step([]));
+    const atOne = original.captureCheckpoint();
+    const next = createProductionHeadlessEnvironment({ captureSourceTracks: true }); next.restoreCheckpoint(JSON.parse(JSON.stringify(atOne)) as ProductionHeadlessCheckpoint);
+    expectContinuation(next.captureCheckpoint(), atOne);
+    expect(next.sourceTracks()).toMatchObject({ origin: "checkpoint-suffix", nativeEvents: [] });
+    next.advanceApplicationFrame(0.1, { key: false }); original.advanceApplicationFrame(0.1, { key: false });
+    expect(next.step([])).toEqual(original.step([])); next.dispose();
+    original.dispose(); restored.dispose();
+  });
+
+  it("retains held input and authored same-tick command order through repeated JSON checkpoints", () => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario);
+    source.step([{ type: "move", x: -1000, y: 0 }, { type: "move", x: 1000, y: 0 },
+      { type: "weapon", intent: "primary", phase: "pressed" }]);
+    const saved = source.captureCheckpoint(), restored = createProductionHeadlessEnvironment();
+    expect(saved.input).toMatchObject({ moveX: 1, primaryHeld: true });
+    restored.restoreCheckpoint(JSON.parse(JSON.stringify(saved)) as ProductionHeadlessCheckpoint);
+    expectContinuation(restored.captureCheckpoint(), saved);
+    for (let tick = 2; tick <= 60; tick += 1) expect(restored.step(actionsAt(tick))).toEqual(source.step(actionsAt(tick)));
+    expectContinuation(restored.captureCheckpoint(), source.captureCheckpoint());
+    source.dispose(); restored.dispose();
+  });
+
+  it("refuses missing, tampered or malformed frontier before replacing an active destination", () => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario);
+    const saved = source.captureCheckpoint();
+    const target = createProductionHeadlessEnvironment(); target.reset({ ...scenario, seed: "destination-active" }); target.step(actionsAt(1));
+    const before = target.captureCheckpoint();
+    const missing = structuredClone(saved); Reflect.deleteProperty(missing, "delivery");
+    const cases = [missing,
+      { ...saved, delivery: { ...saved.delivery, nextSequence: saved.delivery.nextSequence + 1 } },
+      bindCheckpoint({ ...saved, delivery: { ...saved.delivery, pendingEvents: saved.delivery.pendingEvents.map((event) => ({ ...event, source: "derived" })) } }),
+      bindCheckpoint({ ...saved, delivery: { ...saved.delivery, pendingEvents: saved.delivery.pendingEvents.map((event) => ({ ...event, tick: 5 })) } }),
+      bindCheckpoint({ ...saved, delivery: { ...saved.delivery, pendingEvents: [...saved.delivery.pendingEvents].reverse() } }),
+      { ...saved, bootstrap: { ...saved.bootstrap, build: { ...saved.bootstrap.build, revision: "changed" } } },
+    ];
+    for (const invalid of cases) {
+      expect(() => target.restoreCheckpoint(invalid)).toThrow(/frontier|binding/);
+      expect(target.captureCheckpoint()).toEqual(before);
+    }
+    source.dispose(); target.dispose();
+  });
+
+  it("checkpoint frontier continues sequence after already delivered source facts", () => {
+    const source = createProductionHeadlessEnvironment(); source.reset(scenario); source.step([]);
+    const restored = createProductionHeadlessEnvironment(); restored.restoreCheckpoint(source.captureCheckpoint());
+    const actual = [], expected = [];
+    for (let tick = 2; tick <= 100; tick += 1) {
+      actual.push(...restored.step([]).events ?? []); expected.push(...source.step([]).events ?? []);
+    }
+    expect(expected.length).toBeGreaterThan(0);
+    expect(actual).toEqual(expected);
+    source.dispose(); restored.dispose();
+  });
+
+  it("checkpoint frontier admits a source-owned pending draft without rerolling it", () => {
+    // Boundary fixture: clear the source queue, then use the real wave-clear/reward owner.
+    const source = createProductionGhostReplayComposition({ seed: scenario.seed, mode: "endless" }).create(undefined);
+    Object.assign(source.replay.world.state.run() ?? {}, { spawnQueue: [] });
+    source.replay.world.state.setEnemies([]);
+    source.waveReward.update(1);
+    const captured = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "pending-draft");
+    const baseline = createProductionHeadlessEnvironment(); baseline.reset(scenario);
+    const checkpoint = { ...baseline.captureCheckpoint(), snapshot: captured.snapshot, input: { ...captured.input, aimMagnitude: captured.input.aimMagnitude ?? 1000 },
+      checkpoint: { ...baseline.captureCheckpoint().checkpoint, semanticHash: captured.semanticHash } };
+    const restored = createProductionHeadlessEnvironment();
+    const bound = bindCheckpoint(checkpoint);
+    restored.restoreCheckpoint(bound);
+    expect(restored.captureCheckpoint().snapshot.state["tear.reward.v1"]).toEqual(captured.snapshot.state["tear.reward.v1"]);
+    const before = restored.captureCheckpoint();
+    const recordAt = (value: ProductionHeadlessCheckpoint, key: string) => value.snapshot.state[key] as Record<string, unknown>;
+    const mutations: readonly ((value: ProductionHeadlessCheckpoint) => void)[] = [
+      (value) => { recordAt(value, "tear.ui.v1").screen = "playing"; },
+      (value) => { recordAt(value, "tear.ui.v1").screen = "menu"; },
+      (value) => {
+        const runtime = recordAt(value, "tear.world.v1").runtime as Record<string, unknown>;
+        runtime.lifecycle = { ...(runtime.lifecycle as Record<string, unknown>), phase: "wave-active", reward: null };
+      },
+      (value) => {
+        const selection = recordAt(value, "tear.reward.v1").selection as { choices: { id: string }[] };
+        const choice = selection.choices[0]; if (choice !== undefined) choice.id = "unknown-production-upgrade";
+      },
+      (value) => {
+        const selection = recordAt(value, "tear.reward.v1").selection as { choices: unknown[] };
+        selection.choices = [];
+      },
+      (value) => {
+        const config = recordAt(value, "tear.configuration.v1").values as { player: Record<string, unknown> };
+        config.player.moveSpeed = "malformed";
+      },
+    ];
+    for (const mutate of mutations) {
+      const invalid = structuredClone(bound); mutate(invalid);
+      expect(() => restored.restoreCheckpoint(bindCheckpoint(invalid))).toThrow();
+      expect(restored.captureCheckpoint()).toEqual(before);
+    }
+    baseline.dispose(); restored.dispose();
   });
 
   it("retains source-owned transition facts on ordinary completed headless episodes", () => {
@@ -157,7 +363,7 @@ describe("C30 production headless environment", () => {
     for (let tick = 1; tick <= 60; tick += 1) originAtCheckpoint = original.step(actionsAt(tick)).observation;
     const checkpoint = original.captureCheckpoint();
     expect(checkpoint).toMatchObject({
-      format: "tearbench-production-headless-checkpoint", schemaVersion: 1,
+      format: "tearbench-production-headless-checkpoint", schemaVersion: 2,
       checkpoint: { tick: 60, nextCommandId: 3, semanticHash: stableVerificationHash(originAtCheckpoint) },
       snapshot: { kind: "snapshot", stateClass: "recorded-canonical", tick: 60 },
       input: { tick: 60 },

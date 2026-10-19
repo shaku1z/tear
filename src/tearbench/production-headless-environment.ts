@@ -1,5 +1,5 @@
 import type { CommandEnvelope } from "../domain/envelopes";
-import { normalizeGameAction, type GameAction } from "../input/game-action";
+import { AIM_MAGNITUDE_SCALE, normalizeGameAction, type GameAction } from "../input/game-action";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
@@ -10,8 +10,9 @@ import {
   createProductionGhostReplayComposition,
   projectProductionReplayCanonicalState,
   type ProductionReplayBootstrap,
+  type ProductionApplicationFrameConfirm,
 } from "./production-replay-composition";
-import type { ProductionReplayWorld } from "./production-world-factory";
+import { productionRunSeed, type ProductionReplayWorld } from "./production-world-factory";
 import type { ProductionWaveRewardRuntime } from "./production-wave-reward-runtime";
 import type { ProductionWaveRewardIntent } from "./production-wave-reward-runtime";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearCausalEventV1, type TearObservationV1, type TearScenarioV1, type TearSnapshotV1 } from "./contracts";
@@ -37,6 +38,7 @@ type ProductionHeadlessCore = Readonly<{
   bootstrap: ProductionReplayBootstrap;
   scenario: TearScenarioV1;
   routeAction: (action: GameAction) => boolean;
+  advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => void;
   nativeEvents: TearGameplayEvent[];
   sourceTracks?: ProductionHeadlessSourceTrackState;
 }>;
@@ -54,6 +56,8 @@ export interface ProductionHeadlessSourceTracks {
   readonly intents: readonly ProductionWaveRewardIntent[];
   /** Headless runs have no hardware input surface; their source device is semantic. */
   readonly device: "semantic";
+  /** Restored captures contain a suffix, never a fabricated full native source trace. */
+  readonly origin: "fresh" | "checkpoint-suffix" | "state-forge-suffix";
 }
 
 export interface ProductionHeadlessEnvironmentOptions {
@@ -87,9 +91,9 @@ export interface ProductionHeadlessTerminalArtifact {
  */
 export interface ProductionHeadlessCheckpoint {
   readonly format: "tearbench-production-headless-checkpoint";
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly scenario: TearScenarioV1;
-  /** Original run-start identity, retained so restored artifacts attest the same source run. */
+  /** Original run-start identity; this alone does not attest a complete source trace. */
   readonly bootstrap: ProductionReplayBootstrap;
   readonly checkpoint: Readonly<{
     tick: number;
@@ -97,8 +101,14 @@ export interface ProductionHeadlessCheckpoint {
     nextCommandId: number;
   }>;
   readonly snapshot: TearSnapshotV1;
-  readonly input: AuthoritativeInputSnapshot;
+  readonly input: AuthoritativeInputSnapshot & Readonly<{ aimMagnitude: number }>;
   readonly actions: readonly CommandEnvelope<GameAction>[];
+  readonly delivery: Readonly<{
+    nextSequence: number;
+    pendingEvents: readonly TearCausalEventV1[];
+    /** Complete checkpoint integrity binding, not provenance authority. */
+    hash: string;
+  }>;
 }
 
 /** A State Forge recovery frontier bound to one natural source checkpoint; arbitrary surgical snapshot execution stays unavailable. */
@@ -116,6 +126,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   policyObservation(): TearObservationV1;
   /** Build provenance remains available outside checkpointable lifecycle states. */
   sourceBuild(): ProductionReplayBootstrap["build"];
+  /** Before the associated fixed step; no implicit cadence or confirm policy. */
+  advanceApplicationFrame(seconds: number, confirm?: ProductionApplicationFrameConfirm): void;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   restoreStateForgeEvaluation(evaluation: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState;
@@ -192,7 +204,7 @@ function requireBootstrap(value: unknown): ProductionReplayBootstrap {
 }
 
 function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
-  if (!record(value) || value.format !== "tearbench-production-headless-checkpoint" || value.schemaVersion !== 1) {
+  if (!record(value) || value.format !== "tearbench-production-headless-checkpoint" || value.schemaVersion !== 2) {
     throw new TypeError("production headless checkpoint format is invalid");
   }
   const scenario = requireScenario(value.scenario);
@@ -217,6 +229,7 @@ function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
   const moveX = input.moveX;
   const moveY = input.moveY;
   const aimTurn = input.aimTurn;
+  const aimMagnitude = input.aimMagnitude;
   const primaryHeld = input.primaryHeld;
   if (typeof checkpointTick !== "number" || !Number.isSafeInteger(checkpointTick) || checkpointTick < 0
     || typeof inputTick !== "number" || !Number.isSafeInteger(inputTick) || inputTick < 0
@@ -226,6 +239,7 @@ function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
     || typeof moveX !== "number" || !Number.isFinite(moveX)
     || typeof moveY !== "number" || !Number.isFinite(moveY)
     || typeof aimTurn !== "number" || !Number.isFinite(aimTurn)
+    || typeof aimMagnitude !== "number" || !Number.isSafeInteger(aimMagnitude) || aimMagnitude < 0 || aimMagnitude > AIM_MAGNITUDE_SCALE
     || typeof primaryHeld !== "boolean") {
     throw new TypeError("production headless checkpoint coordinate is invalid");
   }
@@ -233,23 +247,23 @@ function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
     tick: checkpointTick, nextCommandId, semanticHash,
   });
   const validInput = Object.freeze({
-    tick: inputTick, moveX, moveY, aimTurn, primaryHeld,
+    tick: inputTick, moveX, moveY, aimTurn, aimMagnitude, primaryHeld,
   });
   const run = snapshot.value.state["tear.run.v1"];
   const blade = snapshot.value.state["tear.blade.v1"];
   if (!record(run) || !record(blade) || run.mode !== scenario.start.mode
     || run.difficulty !== scenario.start.difficulty || blade.weaponId !== scenario.start.weapon
-    || String(run.runSeed) !== snapshot.value.seed) {
+    || String(run.runSeed) !== snapshot.value.seed || run.runSeed !== productionRunSeed(scenario.seed)) {
     throw new RangeError("production headless checkpoint does not match its natural scenario");
   }
-  let previousId = 0;
+  let previousId = 0, previousTick = 0;
   const actions: CommandEnvelope<GameAction>[] = [];
   for (const entry of value.actions) {
     if (!record(entry)) throw new TypeError("production headless checkpoint action trace is invalid");
     const id = entry.id;
     const tick = entry.tick;
-    if (entry.kind !== "command" || typeof id !== "number" || !Number.isSafeInteger(id) || id <= previousId
-      || typeof tick !== "number" || !Number.isSafeInteger(tick) || tick < 1 || tick > validCheckpoint.tick) {
+    if (entry.kind !== "command" || typeof id !== "number" || !Number.isSafeInteger(id) || id !== previousId + 1
+      || typeof tick !== "number" || !Number.isSafeInteger(tick) || tick < 1 || tick < previousTick || tick > validCheckpoint.tick) {
       throw new TypeError("production headless checkpoint action trace is invalid");
     }
     const normalized = normalizeGameAction(entry.command);
@@ -258,17 +272,40 @@ function validateCheckpoint(value: unknown): ProductionHeadlessCheckpoint {
     const actionTick = tick;
     actions.push(Object.freeze({ kind: "command", id: actionId, tick: actionTick, command: normalized.action }));
     previousId = actionId;
+    previousTick = actionTick;
   }
   if (previousId !== validCheckpoint.nextCommandId) {
     throw new TypeError("production headless checkpoint command sequence is incomplete");
   }
-  return Object.freeze({
-    format: "tearbench-production-headless-checkpoint", schemaVersion: 1, scenario, snapshot: snapshot.value,
+  if (!record(value.delivery) || !Number.isSafeInteger(value.delivery.nextSequence) || Number(value.delivery.nextSequence) < 0
+    || !Array.isArray(value.delivery.pendingEvents) || typeof value.delivery.hash !== "string") {
+    throw new TypeError("production headless checkpoint delivery frontier is required");
+  }
+  const nextSequence = Number(value.delivery.nextSequence), pendingEvents: TearCausalEventV1[] = [];
+  let pendingTick = 0;
+  for (const [index, raw] of value.delivery.pendingEvents.entries()) {
+    const result = validateTearContract(raw);
+    const sequence = nextSequence - value.delivery.pendingEvents.length + index;
+    if (!result.ok || result.value.kind !== "event" || result.value.source !== "engine"
+      || sequence < 0 || result.value.sequence !== sequence || result.value.tick < pendingTick || result.value.tick > checkpointTick
+      || result.value.id !== `headless:${String(result.value.tick)}:${String(sequence)}`) {
+      throw new TypeError("production headless checkpoint pending event frontier is invalid");
+    }
+    pendingEvents.push(Object.freeze(structuredClone(result.value))); pendingTick = result.value.tick;
+  }
+  const valid = {
+    format: "tearbench-production-headless-checkpoint", schemaVersion: 2, scenario, snapshot: snapshot.value,
     bootstrap,
     input: validInput,
     checkpoint: validCheckpoint,
     actions: cloneActions(actions),
-  });
+  } as const;
+  const delivery = Object.freeze({ nextSequence, pendingEvents: Object.freeze(pendingEvents), hash: value.delivery.hash });
+  if (delivery.hash !== stableVerificationHash({ ...valid, delivery: { nextSequence, pendingEvents } })) {
+    throw new TypeError("production headless checkpoint delivery integrity binding is invalid");
+  }
+  if (checkpointTick >= scenario.maxTicks) throw new RangeError("production headless checkpoint exhausted its horizon");
+  return Object.freeze({ ...valid, delivery });
 }
 
 function validateStateForgeEvaluation(value: unknown): Readonly<{ source: ProductionHeadlessCheckpoint; forgedSnapshot: TearSnapshotV1 }> {
@@ -298,6 +335,28 @@ export function createProductionHeadlessEnvironment(
   let nextCommandId = 0;
   let actionTrace: CommandEnvelope<GameAction>[] = [];
   let deliveredCausalEventCount = 0;
+  let eventSequenceBase = 0;
+  let pendingEvents: readonly TearCausalEventV1[] = [];
+  let origin: ProductionHeadlessSourceTracks["origin"] = "fresh";
+  const undelivered = (current: ProductionHeadlessCore): readonly TearCausalEventV1[] => [
+    ...pendingEvents, ...current.nativeEvents.slice(deliveredCausalEventCount).map((event, offset) => {
+      const sequence = eventSequenceBase + deliveredCausalEventCount + offset;
+      return createGameplayCausalEvent(event, sequence, `headless:${String(event.tick)}:${String(sequence)}`, "engine");
+    }),
+  ];
+  const assertCheckpointable = (current: ProductionHeadlessCore): void => {
+    const phase = current.replay.world.lifecycle.phase, selection = current.waveReward.reward.snapshot();
+    const screen = current.waveReward.screen();
+    const selecting = selection !== null && ["draft", "reserve", "tierup"].includes(selection.phase);
+    if (!["wave-active", "wave-prepared", "reward-pending"].includes(phase)
+      || (phase === "reward-pending") !== selecting
+      || phase === "wave-prepared" && (!current.replay.world.lifecycle.activationDeferred
+        || !current.replay.world.context.cinema.active || current.replay.world.context.cinema.script?.kind !== "chapter")
+      || (selecting ? screen !== selection.phase : !["playing", "paused"].includes(screen))
+      || current.simulation.simulationRuntime.scheduler.tick >= current.scenario.maxTicks) {
+      throw new RangeError("production headless checkpoints require a coherent nonterminal prepared, active or reward episode");
+    }
+  };
 
   const requireCore = (): ProductionHeadlessCore => {
     if (core === null) throw new Error("production headless environment must be reset before stepping");
@@ -365,7 +424,7 @@ export function createProductionHeadlessEnvironment(
     gameplayEvents.setTickSource(() => composed.simulation.scheduler.tick);
     const core = Object.freeze({ replay: composed.replay, simulation: composed.combat, waveReward: composed.waveReward,
       bootstrap: bootstrap ?? composed.bootstrap,
-      scenario, routeAction: composed.routeAction, nativeEvents,
+      scenario, routeAction: composed.routeAction, advanceApplicationFrame: composed.advanceApplicationFrame, nativeEvents,
       ...(sourceTracks === undefined ? {} : { sourceTracks }) });
     if (sourceTracks !== undefined) {
       sourceTracks.rewardComponents.push(Object.freeze({ tick: composed.simulation.scheduler.tick,
@@ -381,18 +440,23 @@ export function createProductionHeadlessEnvironment(
       nextCommandId = 0;
       actionTrace = [];
       deliveredCausalEventCount = 0;
+      eventSequenceBase = 0; pendingEvents = []; origin = "fresh";
       return observation(core);
     },
     policyObservation: () => policyObservation(requireCore()),
     sourceBuild: () => Object.freeze({ ...requireCore().bootstrap.build }),
+    advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => { requireCore().advanceApplicationFrame(seconds, confirm); },
     step(actions: readonly GameAction[]): TearHeadlessTransition<CanonicalGameplayState> {
       const current = requireCore();
       const tick = current.simulation.simulationRuntime.scheduler.tick + 1;
-      const envelopes: CommandEnvelope<GameAction>[] = actions.map((action) => {
+      const normalizedActions = actions.map((action) => {
         const normalized = normalizeGameAction(action);
         if (!normalized.ok) throw new TypeError(`invalid headless action: ${normalized.reason}`);
-        return Object.freeze({ kind: "command" as const, id: ++nextCommandId, tick, command: normalized.action });
+        return normalized.action;
       });
+      if (!Number.isSafeInteger(nextCommandId + normalizedActions.length)) throw new RangeError("headless command sequence is exhausted");
+      const envelopes: CommandEnvelope<GameAction>[] = normalizedActions.map((command) =>
+        Object.freeze({ kind: "command" as const, id: ++nextCommandId, tick, command }));
       actionTrace.push(...envelopes);
       const result = current.simulation.simulationRuntime.advanceOne(envelopes.filter(
         (entry) => !current.routeAction(entry.command),
@@ -407,12 +471,9 @@ export function createProductionHeadlessEnvironment(
       // termination, not a truncation. Keep the two terminal dispositions
       // mutually exclusive for browser and artifact consumers.
       const truncated = !terminated && result.tick >= current.scenario.maxTicks;
-      const causalEvents: TearCausalEventV1[] = current.nativeEvents.slice(deliveredCausalEventCount)
-        .map((event, offset) => {
-          const sequence = deliveredCausalEventCount + offset;
-          return createGameplayCausalEvent(event, sequence, `headless:${String(event.tick)}:${String(sequence)}`, "engine");
-        });
+      const causalEvents = undelivered(current);
       deliveredCausalEventCount = current.nativeEvents.length;
+      pendingEvents = [];
       return Object.freeze({
         observation: result.state,
         events: Object.freeze(causalEvents),
@@ -434,24 +495,25 @@ export function createProductionHeadlessEnvironment(
     captureCheckpoint(): ProductionHeadlessCheckpoint {
       const current = requireCore();
       const tick = current.simulation.simulationRuntime.scheduler.tick;
-      if (!current.replay.world.lifecycle.isWaveActive || current.waveReward.reward.snapshot() !== null
-        || current.waveReward.screen() !== "playing" || tick >= current.scenario.maxTicks) {
-        throw new RangeError("production headless checkpoints require an active non-draft interrupted episode");
-      }
+      assertCheckpointable(current);
       const captured = captureProductionReplayCheckpoint(
         current.replay, current.simulation, current.waveReward,
         `c30.${current.scenario.id}.checkpoint.${String(tick)}`,
       );
-      return Object.freeze({
-        format: "tearbench-production-headless-checkpoint", schemaVersion: 1,
+      const value = {
+        format: "tearbench-production-headless-checkpoint", schemaVersion: 2,
         scenario: current.scenario, bootstrap: current.bootstrap,
         checkpoint: Object.freeze({ tick, semanticHash: captured.semanticHash, nextCommandId }),
-        snapshot: captured.snapshot, input: Object.freeze({ ...captured.input }), actions: cloneActions(actionTrace),
-      });
+        snapshot: captured.snapshot, input: Object.freeze({ ...captured.input, aimMagnitude: captured.input.aimMagnitude ?? AIM_MAGNITUDE_SCALE }), actions: cloneActions(actionTrace),
+      } as const;
+      const delivery = { nextSequence: eventSequenceBase + current.nativeEvents.length, pendingEvents: Object.freeze(structuredClone(undelivered(current))) };
+      return Object.freeze({ ...value, delivery: Object.freeze({ ...delivery, hash: stableVerificationHash({ ...value, delivery }) }) });
     },
     restoreCheckpoint(value: ProductionHeadlessCheckpoint): CanonicalGameplayState {
       const checkpoint = validateCheckpoint(value);
       const restored = compose(checkpoint.scenario, checkpoint.snapshot, checkpoint.input, checkpoint.bootstrap);
+      assertCheckpointable(restored);
+      if (restored.nativeEvents.length !== 0) throw new RangeError("checkpoint hydration emitted unexpected native facts");
       const restoredObservation = observation(restored);
       if (stableVerificationHash(restoredObservation) !== checkpoint.checkpoint.semanticHash) {
         throw new RangeError("production headless checkpoint semantic state does not restore exactly");
@@ -460,6 +522,7 @@ export function createProductionHeadlessEnvironment(
       nextCommandId = checkpoint.checkpoint.nextCommandId;
       actionTrace = [...checkpoint.actions];
       deliveredCausalEventCount = 0;
+      eventSequenceBase = checkpoint.delivery.nextSequence; pendingEvents = checkpoint.delivery.pendingEvents; origin = "checkpoint-suffix";
       return restoredObservation;
     },
     restoreStateForgeEvaluation(value: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState {
@@ -474,6 +537,8 @@ export function createProductionHeadlessEnvironment(
       nextCommandId = evaluation.source.checkpoint.nextCommandId;
       actionTrace = [...evaluation.source.actions];
       deliveredCausalEventCount = 0;
+      // Surgical hydration must not relabel pending natural-source facts as its own evidence.
+      eventSequenceBase = evaluation.source.delivery.nextSequence; pendingEvents = []; origin = "state-forge-suffix";
       return restoredObservation;
     },
     sourceTracks(): ProductionHeadlessSourceTracks {
@@ -484,12 +549,14 @@ export function createProductionHeadlessEnvironment(
         rewardComponents: Object.freeze(tracks.rewardComponents.map((entry) => Object.freeze(structuredClone(entry)))),
         intents: Object.freeze(tracks.intents.map((entry) => Object.freeze(structuredClone(entry)) as ProductionWaveRewardIntent)),
         device: "semantic",
+        origin,
       });
     },
     dispose(): void {
       core = null;
       nextCommandId = 0;
       actionTrace = [];
+      pendingEvents = []; eventSequenceBase = 0; deliveredCausalEventCount = 0; origin = "fresh";
     },
   });
 }

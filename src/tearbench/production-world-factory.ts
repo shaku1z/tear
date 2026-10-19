@@ -70,7 +70,7 @@ function detachedPresentationPorts(effects: ReturnType<typeof createParticleSyst
 }
 
 /** The minimal legal run shape used before a captured State Forge snapshot replaces it. */
-function productionRunSeed(seed: string): number {
+export function productionRunSeed(seed: string): number {
   let hash = 0x811c9dc5;
   for (let index = 0; index < seed.length; index += 1) {
     hash ^= seed.charCodeAt(index);

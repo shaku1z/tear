@@ -1,10 +1,14 @@
 import { applyWeapon } from "../gameplay/weapons";
 import { A11Y, GFX } from "../config/game-config";
+import { launchCampaignChapter } from "../app/live-campaign-sequences";
+import { createCampaignChapterController } from "../app/campaign-controller-factory";
+import { createUiState } from "../presentation/ui-tokens";
 import { createLiveParticlePresentationState } from "../app/live-particle-presentation-state";
 import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
 import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 import { UPGRADES } from "../gameplay/upgrades";
+import { eligibleTierChoices } from "../gameplay/run/reward-selection";
 import { restoreUpgradeHooks } from "../gameplay/upgrade-hooks";
 import { hydrateRewardCodecPayload, hydrateRewardUpgrade } from "./reward-codec-hydrator";
 import { captureCampaignChapterBindingSpec, parseCampaignChapterBindingSpec, stageCampaignChapterBinding,
@@ -41,6 +45,10 @@ import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from 
 
 const productionChapterBindings = new WeakMap<ProductionReplayWorld, StagedCampaignChapterBinding>();
 const productionFocus = new WeakMap<ProductionReplayWorld, number>();
+const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
+
+/** Explicit application-frame inputs, independent of fixed simulation ticks. */
+export type ProductionApplicationFrameConfirm = NonNullable<Parameters<InstanceType<typeof CinematicTimeline.Director>["update"]>[1]>;
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly seed: string;
@@ -122,10 +130,7 @@ export function projectProductionReplayCanonicalState(
   );
 }
 
-function stageProductionChapter(replay: ProductionReplayWorld, rawSpec: unknown): StagedCampaignChapterBinding | null {
-  if (rawSpec === null || rawSpec === undefined) return null;
-  const spec = parseCampaignChapterBindingSpec(rawSpec);
-  const dispatch = (intents: readonly ChapterIntent[]): void => {
+function dispatchProductionChapter(replay: ProductionReplayWorld, intents: readonly ChapterIntent[]): void {
     for (const intent of intents) {
       if (intent.type === "chapter-state") {
         const run = replay.world.state.run() as never as { chapterState: string };
@@ -133,12 +138,20 @@ function stageProductionChapter(replay: ProductionReplayWorld, rawSpec: unknown)
       } else if (intent.type === "clear-projectiles") {
         replay.world.state.setProjectiles([]);
       } else if (intent.type === "activate-prepared-wave" && replay.world.lifecycle.hasPreparedWave) {
-        replay.world.lifecycle.activateWave();
+        // Bare snapshot helpers have no composition root yet. Lazily use the same
+        // canonical owner; a subsequently installed event-enabled owner takes precedence.
+        let owner = productionWaveRewards.get(replay);
+        if (owner === undefined) { owner = createProductionWaveRewardRuntime(replay); productionWaveRewards.set(replay, owner); }
+        owner.waves.activatePreparedWave();
       }
     }
-  };
+}
+
+function stageProductionChapter(replay: ProductionReplayWorld, rawSpec: unknown): StagedCampaignChapterBinding | null {
+  if (rawSpec === null || rawSpec === undefined) return null;
+  const spec = parseCampaignChapterBindingSpec(rawSpec);
   return stageCampaignChapterBinding(spec, stageAt(spec.stageIndex), {
-    dispatch,
+    dispatch: (intents) => { dispatchProductionChapter(replay, intents); },
     preparedWave: () => replay.world.lifecycle.hasPreparedWave,
     activationDeferred: () => replay.world.lifecycle.activationDeferred,
     clear: () => { productionChapterBindings.delete(replay); },
@@ -257,7 +270,7 @@ export function captureProductionReplayCheckpoint(
     screen: waveReward.screen,
     // The fresh host restores the captured screen after installing its reward owner.
     setScreen: () => undefined,
-    focus: () => productionFocus.get(replay) ?? -1,
+    focus: waveReward.focus,
     setFocus: () => undefined,
     tick: () => simulation.simulationRuntime.scheduler.tick,
     setTick: (tick) => { simulation.simulationRuntime.reset(tick); },
@@ -360,7 +373,29 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   if (["draft", "reserve", "tierup"].includes(staged.screen) && staged.reward?.phase !== staged.screen) {
     throw new RangeError("production replay reward screen requires a matching selection");
   }
-  staged.run.reservedUpgrade = hydrateRewardUpgrade(UPGRADES, staged.run.reservedUpgrade);
+  const selectingReward = staged.reward !== null && ["draft", "reserve", "tierup"].includes(staged.reward.phase);
+  if (selectingReward && (staged.screen !== staged.reward.phase || preparedRuntime.lifecycle.phase !== "reward-pending"
+    || staged.reward.mode !== staged.run.mode)
+    || preparedRuntime.lifecycle.phase === "reward-pending" && !selectingReward) {
+    throw new RangeError("production replay reward selection requires coherent UI and lifecycle");
+  }
+  const reservedUpgrade = hydrateRewardUpgrade(UPGRADES, staged.run.reservedUpgrade);
+  if (selectingReward) {
+    const selection = staged.reward, choices = selection.phase === "reserve" ? selection.reserveChoices : selection.choices;
+    if (choices.length === 0 || new Set(choices.map((choice) => choice.id)).size !== choices.length
+      || selection.phase !== "tierup" && selection.wave !== staged.run.wave
+      || selection.rerolls !== staged.run.mods.draftRerolls || selection.specialBlock !== staged.run.specialBlock
+      || selection.specialsOffered !== staged.run.specialsOffered
+      || selection.reservePick !== staged.run.mods.reservePick
+      || selection.expandedDraft !== staged.run.mods.expandedDraft
+      || selection.reservedChoice?.id !== reservedUpgrade?.id
+      || selection.phase === "reserve" && !selection.reservePick
+      || selection.phase === "tierup" && choices.some((choice) => !eligibleTierChoices(UPGRADES, staged.run.mods.owned, staged.run.mods.tier)
+        .some((eligible) => eligible.id === choice.id))) {
+      throw new RangeError("production replay reward choices disagree with their source run");
+    }
+  }
+  staged.run.reservedUpgrade = reservedUpgrade;
   replay.world.state.setRun(staged.run);
   productionFocus.set(replay, staged.focus);
   replay.world.state.setPlayer(staged.player);
@@ -449,11 +484,32 @@ export function createProductionGhostReplayComposition(
         ...(options.recordWaveIntent === undefined ? {} : { recordIntent: options.recordWaveIntent }),
         currentTick: () => core.simulationRuntime.scheduler.tick,
         actorId: (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+        chapterFlowActive: () => productionChapterBindings.has(replay),
+        beginCampaignChapter: (index, priorOutro = null) => {
+          const run = replay.world.state.run() as never as { _prologueShown?: boolean };
+          launchCampaignChapter({
+            runtime: {
+              chapterController: createCampaignChapterController(createUiState(replay.configuration.value.colors).t.motion, replay.configuration.value),
+              installChapterBinding: (chapter) => { installProductionChapter(replay, chapter); },
+              clearChapterBinding: () => { productionChapterBindings.delete(replay); },
+            },
+            cinema: {
+              startBinding: (binding) => { replay.world.context.cinema.start(binding.script, binding.context); },
+            }, stageIndex: index, stage: stageAt(index), priorOutro,
+            brief: false, play: true, prologueShown: run._prologueShown === true,
+            preparedWave: () => replay.world.lifecycle.hasPreparedWave,
+            activationDeferred: () => replay.world.lifecycle.activationDeferred,
+            dispatch: (intents) => { dispatchProductionChapter(replay, intents); },
+            rememberPrologue: (shown) => { run._prologueShown = shown; },
+            clearBossBeat: () => undefined,
+          });
+        },
       });
+      productionWaveRewards.set(replay, waveReward);
       if (staged === undefined) waveReward.startNaturalOpening();
       if (staged !== undefined) {
         waveReward.reward.restore(staged.reward);
-        waveReward.restoreScreen(staged.screen);
+        waveReward.restoreUi(staged.screen, productionFocus.get(replay) ?? -1);
         core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
         for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
       }
@@ -488,6 +544,15 @@ export function createProductionGhostReplayComposition(
         outcome,
         waveReward,
         routeAction: waveReward.routeAction,
+        advanceApplicationFrame: (deltaSeconds: number, confirm: ProductionApplicationFrameConfirm = {}) => {
+          // RuntimeFrameDriver caps canonical application-frame deltas at 0.1s.
+          // This detached API rejects outside that domain instead of silently truncating caller time.
+          if (!Number.isFinite(deltaSeconds) || deltaSeconds < 0 || deltaSeconds > 0.1
+            || Object.entries(confirm).some(([key, value]) => !["key", "touch", "pad", "mouse", "click"].includes(key) || typeof value !== "boolean")) {
+            throw new RangeError("production application frame requires bounded finite seconds and boolean confirm sources");
+          }
+          if (waveReward.screen() === "playing" && replay.world.context.cinema.active) replay.world.context.cinema.update(deltaSeconds, confirm);
+        },
         completeRecordedOpening,
         invalidateRecordedOpening: () => { openingStatus = "failed"; },
         semanticProjection: () => core.simulationRuntime.lastResult?.state
