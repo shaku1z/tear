@@ -119,4 +119,34 @@ withJourney({ name: "normal native Run Monitor observation", port: 8180, deferBo
   await page.waitForFunction(() => window.__C37_TEXT__?.some((entry) => entry.text.startsWith("Previous observation retained: stopped")));
   const reload = await readAnalysis(page); save("reloaded", { buildInfo, stores: reload });
   assert.deepEqual(monitorRows(reload), rows); assert.equal(value(reload, "policy-active:v1"), activeRaw);
-}).then(() => { console.log("normal native Run Monitor durable observation passed (engineering synthetic source fixture)"); }).catch((error) => { console.error(error); process.exit(1); });
+  await clickText(page, "‹  BACK"); await waitScreen("menu");
+  await page.mouse.click(548, 757); await waitScreen("foundry");
+  await clickText(page, "RESTORE BASELINE");
+  await waitForBrowserValue(page, async () => {
+    const database = await new Promise((resolve, reject) => { const request = indexedDB.open("tear-ghost-v3", 2); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    try { return await new Promise((resolve, reject) => { const tx = database.transaction("analysis", "readonly"), request = tx.objectStore("analysis").getAllKeys(); request.onsuccess = () => resolve(request.result.some((key) => key.startsWith("training-operations-v3-post-promotion-cycle:v1:"))); request.onerror = () => reject(request.error); }); }
+    finally { database.close(); }
+  });
+  const restored = await readAnalysis(page); save("baseline-restored", { buildInfo, stores: restored, text: await page.evaluate(() => window.__C37_TEXT__) });
+  if (evidence) await page.screenshot({ path: path.join(evidence, "baseline-restored.png") });
+  const approval = JSON.parse(promoted.analysis.find(([key, raw]) => key.startsWith("foundry-job-v3-promotion-approval:") && JSON.parse(raw).format === "training-operations-v3-native-promotion-approval")[1]);
+  const restoredActiveRaw = value(restored, "policy-active:v1"), restoredActive = JSON.parse(restoredActiveRaw);
+  assert.equal(restoredActive.artifactId, approval.rollbackBaseline.artifactId);
+  assert.equal(restoredActive.artifactHash, approval.rollbackBaseline.artifactHash);
+  assert.equal(restoredActive.revision, active.revision + 1);
+  assert.equal(restoredActive.previousArtifactId, active.artifactId);
+  const terminals = restored.analysis.filter(([key]) => key.startsWith("training-operations-v3-post-promotion-cycle:v1:"));
+  assert.equal(terminals.length, 1);
+  const terminal = JSON.parse(terminals[0][1]);
+  assert.equal(terminal.intent.baselineActivationHash, approval.rollbackBaseline.activationHash);
+  assert.equal(terminal.intent.monitorHash, record.recordHash);
+  assert.equal(terminal.receipt.rollback.activationHash, restoredActive.activationHash);
+  assert.deepEqual(monitorRows(restored), rows, "explicit restoration relabelled its stopped observation");
+  const allowance = restored.analysis.filter(([key]) => key.startsWith("training-operations-budget:v1:"));
+  await boot(); await page.mouse.click(548, 757); await waitScreen("foundry");
+  await page.waitForFunction(() => window.__C37_TEXT__?.some((entry) => entry.text === "BASELINE RESTORED / retained after reload"));
+  const restoredReload = await readAnalysis(page); save("restored-reloaded", { buildInfo, stores: restoredReload });
+  assert.equal(value(restoredReload, "policy-active:v1"), restoredActiveRaw);
+  assert.deepEqual(restoredReload.analysis.filter(([key]) => key.startsWith("training-operations-v3-post-promotion-cycle:v1:")), terminals);
+  assert.deepEqual(restoredReload.analysis.filter(([key]) => key.startsWith("training-operations-budget:v1:")), allowance, "reload recharged restoration");
+}).then(() => { console.log("normal native Run Monitor observation and explicit baseline restoration passed (engineering synthetic source fixture)"); }).catch((error) => { console.error(error); process.exit(1); });

@@ -950,3 +950,30 @@ pointer unchanged. This engineering synthetic source fixture does not establish
 learned quality, participant evidence, natural victory or a complete unattended
 lifecycle. Replay Hub route cards draw their wrapped copy once and retain normal
 pointer/keyboard focus through the existing hidden-box control contract.
+
+
+### Explicit native monitored baseline restoration
+
+A disabled native promoted cycle with an eligible retained breach now exposes
+RESTORE BASELINE in normal Training Operations. The displayed action token binds its
+schedule, promoted binding, job, named monitor, native approval/promotion, exact active
+candidate and frozen rollback activation. The monitor remains classify-only. A stopped
+observation's existing threshold-breach classification establishes neither learned
+regression nor automatic restoration authority; the deliberate action supplies intent.
+
+The existing V3 rollback executor remains the sole restoration pointer writer. Its
+native branch validates current source/custody/consent/curation, decision lineage,
+monitor/index and budget ownership, then atomically restores the frozen artifact with
+a new policy activation revision and meters the receipt/index/cycle-terminal/new-binding
+outputs. The policy pointer/history remain policy-owned. The retained native binding
+is restored and scheduling stays disabled; the monitoring job and original observation
+are not relabelled as passed or retrained. Exact retries and reload verify the active
+successor, terminal bytes/indexes and metered ownership without activation or charge.
+Late drift refuses the entire transaction.
+
+One focused engineering source control covers actual native promotion/observation,
+stale intent, final-CAS drift, restoration, exact retry and malformed terminal refusal.
+The existing normal browser journey now continues after its retained stopped
+observation/reload through normal RESTORE BASELINE and verifies the original frozen
+artifact plus native terminal after a second reload. Fresh-build browser proof remains
+pending; no learned quality, human evidence or unattended rollback claim is made.

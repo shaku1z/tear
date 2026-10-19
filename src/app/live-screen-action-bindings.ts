@@ -26,6 +26,7 @@ export interface ScreenActionBindingPorts {
   readonly revokeHumanCalibration: () => void;
   readonly refreshFoundry: () => void;
   readonly bootstrapFoundry: (profileId: string) => void;
+  readonly restoreFoundryBaseline?: (scheduleHash: string, intentHash: string) => void;
   readonly promoteFoundry?: (scheduleHash: string, intentHash: string) => void;
   readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
   readonly openGhostLab: (destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence") => void;
@@ -78,6 +79,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "academy.humanCalibration.revoke": () => { ports.revokeHumanCalibration(); },
     "training-operations.open": () => { ports.setScreen("foundry"); ports.refreshFoundry(); ports.resetScroll(); },
     "training-operations.refresh": () => { ports.refreshFoundry(); },
+    "training-operations.restoreBaseline": (action) => { ports.restoreFoundryBaseline?.(action.scheduleHash, action.intentHash); },
     "training-operations.promote": (action) => { ports.promoteFoundry?.(action.scheduleHash, action.intentHash); },
     "training-operations.bootstrap": (action) => { ports.bootstrapFoundry(action.profileId); },
     "training-operations.schedule.enable": (action) => { ports.setFoundryScheduleEnabled(action.scheduleHash, true); },

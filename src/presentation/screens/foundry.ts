@@ -35,13 +35,27 @@ export function createFoundryRenderers(context: ScreenRenderContext) {
         ui.text(canvas, schedule === undefined ? "SCHEDULE: NOT CONFIGURED" : `SCHEDULE: ${schedule.runtimeStatus.toUpperCase()} / ${schedule.disposition.replaceAll("-", " ").toUpperCase()}`, panelX + 24, scheduleY, ui.t.type.caption, "left", ui.t.alpha.muted);
         if (schedule !== undefined) context.enqueue({ x: panelX + 420, y: scheduleY - 26, w: 172, h: 34, label: schedule.state === "enabled" ? "DISABLE SCHEDULE" : "ENABLE SCHEDULE",
           action: schedule.state === "enabled" ? { type: TRAINING_OPERATIONS_ACTIONS.scheduleDisable, scheduleHash: schedule.scheduleHash } : { type: TRAINING_OPERATIONS_ACTIONS.scheduleEnable, scheduleHash: schedule.scheduleHash } });
-        if (view.promotion !== undefined) context.enqueue({ x: panelX + 24, y: scheduleY + 12, w: 160, h: 34, label: "PROMOTE",
-          action: { type: TRAINING_OPERATIONS_ACTIONS.promote, scheduleHash: view.promotion.scheduleHash, intentHash: view.promotion.intentHash } });
+        let actionY = scheduleY + 12;
+        if (view.promotion !== undefined) {
+          context.enqueue({ x: panelX + 24, y: actionY, w: 160, h: 34, label: "PROMOTE",
+            action: { type: TRAINING_OPERATIONS_ACTIONS.promote, scheduleHash: view.promotion.scheduleHash, intentHash: view.promotion.intentHash } });
+          actionY += 48;
+        }
+        if (view.restoration !== undefined) {
+          context.enqueue({ x: panelX + 24, y: actionY, w: 240, h: 36, label: "RESTORE BASELINE",
+            action: { type: TRAINING_OPERATIONS_ACTIONS.restoreBaseline, scheduleHash: view.restoration.scheduleHash, intentHash: view.restoration.intentHash } });
+          ui.text(canvas, "Stopped / breach observation. Restoration is your explicit choice.", panelX + 24, actionY + 58, ui.t.type.caption, "left", ui.t.alpha.muted);
+          actionY += 80;
+        }
+        if (view.restored !== undefined) {
+          ui.text(canvas, "BASELINE RESTORED / retained after reload", panelX + 24, actionY + 18, ui.t.type.caption, "left", ui.t.alpha.soft);
+          actionY += 44;
+        }
         const pageSize = 4;
         const offset = Math.max(0, Math.min(Math.max(0, view.jobs.length - pageSize), Math.floor(context.scroll / 100)));
         const jobs = view.jobs.slice(offset, offset + pageSize);
         const height = Math.max(108, 50 + jobs.length * 100);
-        const jobsY = scheduleY + 16 + (view.promotion === undefined ? 0 : 48);
+        const jobsY = actionY + 4;
         ui.panel(canvas, panelX, jobsY, 640, height);
         ui.sectionLabel(canvas, `LOCAL HASH-ONLY JOBS ${String(offset + 1)}-${String(offset + jobs.length)} / ${String(view.jobs.length)}`, panelX + 24, jobsY + 30, 592);
         if (jobs.length === 0) ui.text(canvas, "No validated local Training Operations jobs are stored.", panelX + 24, jobsY + 64, ui.t.type.caption, "left", ui.t.alpha.muted);

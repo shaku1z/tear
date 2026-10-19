@@ -17,6 +17,7 @@ import {
   TrainingOperationsV3EvaluationExecutor,
   TrainingOperationsV3ScheduledCycle,
   TrainingOperationsV3PromotionCycle,
+  TrainingOperationsV3PostPromotionCycle,
   parseTearFoundryV3PromotionApprovalOrigin,
   TearFoundryJobScheduleVault,
   TearFoundryScheduledExecution,
@@ -510,6 +511,67 @@ describe("C31 held Academy candidate curation", () => {
         expect(await changed.finish({ status: "stopped", tick: state.tick })).toContain("not retained");
         expect((await context.memory.keys("analysis")).filter((key) => key.startsWith("foundry-job-v3-post-promotion-monitor:"))).toEqual(keys);
         expect(promotion.activationHash).toBe(active.activationHash);
+      } finally { environment.dispose(); }
+    });
+
+    it("restores the native monitored baseline only by explicit token with atomic outputs and exact retained retries", async () => {
+      const context = await promotionFixture(), promotedAt = "2026-08-03T00:14:00.000Z";
+      const prepared = await context.promotion().prepare(context.schedule.scheduleHash, promotedAt);
+      await context.promotion().promote(context.schedule.scheduleHash, prepared.intent.intentHash, promotedAt);
+      const activeRaw = await context.memory.get("analysis", "policy-active:v1");
+      if (activeRaw === undefined) throw new Error("missing promoted activation");
+      const active = parseTearPolicyActivation(JSON.parse(activeRaw)), observation = await createPlayerWatchObservation(context.input.backend, active);
+      if (observation === undefined) throw new Error("missing native observation");
+      const runtime = new TearC32CanonicalActivePolicyRuntime(context.input.backend, () => [], true); await runtime.reset();
+      const environment = createProductionHeadlessEnvironment();
+      try {
+        const state = environment.reset(scenario("restore-baseline-control", "restore-baseline-seed", 8));
+        await observation.begin(); observation.record(state, runtime.decide(state, environment.policyObservation().availableActions));
+        expect(await observation.finish({ status: "stopped", tick: state.tick })).toContain("retained: stopped");
+        const post = () => new TrainingOperationsV3PostPromotionCycle(context.jobs, context.schedules, context.services);
+        const at = new Date(Date.now() + 1_000).toISOString(), selected = await post().prepare(context.schedule.scheduleHash, at);
+        const budgetKey = trainingOperationsBudgetKey(context.job.id), budgetBefore = await context.memory.get("analysis", budgetKey);
+        expect(await context.memory.get("analysis", "policy-active:v1")).toBe(activeRaw);
+        await expect(post().restore(context.schedule.scheduleHash, "f".repeat(16), at)).rejects.toThrow(/stale/u);
+        expect(await context.memory.get("analysis", budgetKey)).toBe(budgetBefore);
+        const pointer = `training-operations-execution-binding-current:v6:${context.schedule.id}:${String(context.schedule.revision)}:${context.schedule.scheduleHash}`;
+        const sourcePointer = await context.memory.get("analysis", pointer);
+        if (sourcePointer === undefined) throw new Error("missing promoted binding pointer");
+        let final = 0;
+        context.commitIfMatches.mockImplementation(async (guards, writes) => {
+          if (writes.some((write) => write.key === "policy-active:v1")) { final++; await context.memory.put("analysis", pointer, "e".repeat(16)); }
+          await context.memory.commitIfMatches(guards, writes);
+        });
+        await expect(post().restore(context.schedule.scheduleHash, selected.intent.intentHash, at)).rejects.toThrow();
+        expect(final).toBe(1);
+        expect(await context.memory.get("analysis", "policy-active:v1")).toBe(activeRaw);
+        expect(await context.memory.get("analysis", budgetKey)).toBe(budgetBefore);
+        expect(await context.memory.get("analysis", `foundry-job-v3-post-promotion-rollback:v1:${selected.intent.monitorHash}`)).toBeUndefined();
+        await context.memory.put("analysis", pointer, sourcePointer);
+        context.commitIfMatches.mockImplementation(context.memory.commitIfMatches.bind(context.memory));
+        const calls = context.commitIfMatches.mock.calls.length;
+        const restored = await post().restore(context.schedule.scheduleHash, selected.intent.intentHash, at);
+        expect(restored.rollback).toMatchObject({ artifactId: context.baseline.artifactId, artifactHash: context.baseline.artifactHash, revision: active.revision + 1 });
+        expect(context.commitIfMatches.mock.calls.slice(calls).filter(([, writes]) => writes.some((write) => write.key === "policy-active:v1"))).toHaveLength(1);
+        const restoredRaw = await context.memory.get("analysis", "policy-active:v1"), budgetAfter = await context.memory.get("analysis", budgetKey);
+        if (budgetAfter === undefined) throw new Error("missing restoration allowance");
+        expect(parseTrainingOperationsBudget(JSON.parse(budgetAfter)).computeUsed).toBe(24);
+        expect((await context.cycle.current(context.schedule))?.step).toBe("restored");
+        const retryCalls = context.commitIfMatches.mock.calls.length;
+        expect(await post().restore(context.schedule.scheduleHash, selected.intent.intentHash, at)).toEqual(restored);
+        expect(await post().terminal(context.schedule.scheduleHash, at)).toEqual(restored);
+        expect(context.commitIfMatches.mock.calls.slice(retryCalls).every(([, writes]) => writes.length === 0)).toBe(true);
+        expect(await context.memory.get("analysis", "policy-active:v1")).toBe(restoredRaw);
+        expect(await context.memory.get("analysis", budgetKey)).toBe(budgetAfter);
+        const terminalKey = `training-operations-v3-post-promotion-cycle:v1:${context.schedule.scheduleHash}:${selected.intent.intentHash}`;
+        const terminalRaw = await context.memory.get("analysis", terminalKey);
+        if (terminalRaw === undefined) throw new Error("missing retained restoration terminal");
+        await context.memory.put("analysis", terminalKey, "{}");
+        await expect(post().restore(context.schedule.scheduleHash, selected.intent.intentHash, at)).rejects.toThrow();
+        expect(await context.memory.get("analysis", "policy-active:v1")).toBe(restoredRaw);
+        expect(await context.memory.get("analysis", budgetKey)).toBe(budgetAfter);
+        await context.memory.put("analysis", terminalKey, terminalRaw);
+        expect(await post().terminal(context.schedule.scheduleHash, at)).toEqual(restored);
       } finally { environment.dispose(); }
     });
 
