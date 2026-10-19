@@ -84,6 +84,16 @@ export interface ProductionHeadlessTerminalArtifact {
   }>;
 }
 
+/** Distinct from a game terminal: existing production-terminal consumers must refuse it. */
+export interface ProductionTutorialHandoffArtifact {
+  readonly format: "tearbench-production-tutorial-handoff";
+  readonly schemaVersion: 1;
+  readonly tutorialHandoff: NonNullable<ReturnType<ProductionReplayWorld["tutorialHandoff"]>>;
+  readonly tick: number;
+  readonly semanticHash: string;
+  readonly reason: "tutorial-episode-completed-awaiting-next-run";
+}
+
 /**
  * An in-memory source keyframe for one interrupted C30 episode. It is not a
  * worker message, durable job record, or storage format; callers explicitly
@@ -128,6 +138,9 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   sourceBuild(): ProductionReplayBootstrap["build"];
   /** Before the associated fixed step; no implicit cadence or confirm policy. */
   advanceApplicationFrame(seconds: number, confirm?: ProductionApplicationFrameConfirm): void;
+  tutorialHandoff(): ReturnType<ProductionReplayWorld["tutorialHandoff"]>;
+  /** A new episode from caller-supplied identity, never an inferred historical next-run seed. */
+  continueTutorialPractice(nextScenario: TearScenarioV1): CanonicalGameplayState;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   restoreStateForgeEvaluation(evaluation: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState;
@@ -348,7 +361,9 @@ export function createProductionHeadlessEnvironment(
     const phase = current.replay.world.lifecycle.phase, selection = current.waveReward.reward.snapshot();
     const screen = current.waveReward.screen();
     const selecting = selection !== null && ["draft", "reserve", "tierup"].includes(selection.phase);
-    if (!["wave-active", "wave-prepared", "reward-pending"].includes(phase)
+    if (!["wave-active", "wave-prepared", "reward-pending", "training-active"].includes(phase)
+      || phase === "training-active" && !["tutorial", "playground"].includes(current.replay.world.state.run()?.mode ?? "")
+      || phase === "training-active" && current.replay.world.state.run()?.mode === "tutorial" && current.replay.tutorial.captureSession() === undefined
       || (phase === "reward-pending") !== selecting
       || phase === "wave-prepared" && (!current.replay.world.lifecycle.activationDeferred
         || !current.replay.world.context.cinema.active || current.replay.world.context.cinema.script?.kind !== "chapter")
@@ -446,8 +461,29 @@ export function createProductionHeadlessEnvironment(
     policyObservation: () => policyObservation(requireCore()),
     sourceBuild: () => Object.freeze({ ...requireCore().bootstrap.build }),
     advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => { requireCore().advanceApplicationFrame(seconds, confirm); },
+    tutorialHandoff: () => requireCore().replay.tutorialHandoff(),
+    continueTutorialPractice: (source: TearScenarioV1): CanonicalGameplayState => {
+      const current = requireCore();
+      if (current.replay.tutorialHandoff() === null) throw new RangeError("tutorial has not reached its next-run handoff");
+      const next = requireScenario(source);
+      if (next.start.mode !== "playground" || next.start.difficulty !== "normal" || next.start.weapon !== "sword"
+        || next.seed === current.scenario.seed || productionRunSeed(next.seed) === current.replay.world.state.run()?.runSeed) {
+        throw new RangeError("tutorial practice requires a fresh supplied normal playground sword identity");
+      }
+      const candidate = compose(next);
+      candidate.replay.tutorial.restoreSession(current.replay.tutorial.captureSession());
+      candidate.replay.tutorial.restorePresentation(current.replay.tutorial.capturePresentation());
+      candidate.waveReward.restoreUi("paused", -1);
+      const state = observation(candidate);
+      core = candidate; nextCommandId = 0; actionTrace = []; deliveredCausalEventCount = 0;
+      eventSequenceBase = 0; pendingEvents = []; origin = "fresh";
+      return state;
+    },
     step(actions: readonly GameAction[]): TearHeadlessTransition<CanonicalGameplayState> {
       const current = requireCore();
+      if (current.replay.tutorialHandoff() !== null) throw new RangeError("tutorial episode completed; awaiting a supplied next-run identity");
+      if (current.replay.world.lifecycle.phase === "training-active" && current.waveReward.screen() === "paused"
+        && !actions.some((action) => action.type === "pause")) throw new RangeError("paused training episode must resume before a simulation step");
       const tick = current.simulation.simulationRuntime.scheduler.tick + 1;
       const normalizedActions = actions.map((action) => {
         const normalized = normalizeGameAction(action);
@@ -466,7 +502,8 @@ export function createProductionHeadlessEnvironment(
           value: structuredClone(current.waveReward.reward.snapshot()) }));
       }
       const lifecycle = current.replay.world.lifecycle.snapshot();
-      const terminated = lifecycle.phase === "terminated";
+      const tutorialHandoff = current.replay.tutorialHandoff();
+      const terminated = lifecycle.phase === "terminated" || tutorialHandoff !== null;
       // A terminal lifecycle transition at the horizon is a natural
       // termination, not a truncation. Keep the two terminal dispositions
       // mutually exclusive for browser and artifact consumers.
@@ -483,7 +520,10 @@ export function createProductionHeadlessEnvironment(
           tick: result.tick,
           livingEnemies: current.replay.world.state.enemies().filter((enemy) => !enemy.dead).length,
         }),
-        ...(terminated || truncated ? { artifact: Object.freeze<ProductionHeadlessTerminalArtifact>({
+        ...(tutorialHandoff !== null ? { artifact: Object.freeze<ProductionTutorialHandoffArtifact>({
+          format: "tearbench-production-tutorial-handoff", schemaVersion: 1, tutorialHandoff,
+          tick: result.tick, semanticHash: stableVerificationHash(result.state), reason: "tutorial-episode-completed-awaiting-next-run",
+        }) } : terminated || truncated ? { artifact: Object.freeze<ProductionHeadlessTerminalArtifact>({
           format: "tearbench-production-headless-terminal", schemaVersion: 1,
           scenario: current.scenario, bootstrap: current.bootstrap, actions: Object.freeze([...actionTrace]),
           terminal: Object.freeze({

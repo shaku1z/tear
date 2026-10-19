@@ -3,7 +3,7 @@ import type { LiveGameHostState } from "./live-game-host-state";
 import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
 import type { LiveTutorialRuntime } from "../gameplay/training/live-tutorial-runtime";
 import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
-import type { TutorialMark } from "../gameplay/training/tutorial-controller";
+import { isTutorialMark } from "../gameplay/training/tutorial-controller";
 
 export interface LiveStyleHostServices {
   readonly dependencies: GameRuntimeDependencies;
@@ -20,12 +20,6 @@ function required<T>(value: T | null | undefined, label: string): T {
   if (value == null) throw new Error(`style host requires ${label}`);
   return value;
 }
-
-const TUTORIAL_MARKS: ReadonlySet<string> = new Set([
-  "airHit", "dash", "deflect", "jump", "launch", "moveL", "moveR", "parry",
-  "recall", "slam", "strike", "superslam", "throwHit", "updraft",
-]);
-function isTutorialMark(value: string): value is TutorialMark { return TUTORIAL_MARKS.has(value); }
 
 /** Owns style scoring, achievement tracking, and split-projectile construction. */
 export function createLiveStyleHost(services: LiveStyleHostServices) {

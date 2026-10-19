@@ -25,6 +25,45 @@ The governing principle is:
 
 ## Cutting Room 2.0 implementation status
 
+Retained tutorial behavior now has an executable detached owner. Production replay
+and headless worlds use the same `createLiveTutorialRuntime`, lesson controller,
+content spawning and shared actor reset/recovery helpers as live. Restoration
+loads the versioned `world.runtime.tutorialSession` without starting a new course,
+issuing an ID, installing an already retained arena or consulting persistence.
+Actual pending lesson transitions still reset actors and install their authored
+arena. Style/collision marks and the existing post-collision tutorial update feed
+that owner at the authoritative simulation delta; ghost/help/display cadence is
+separate and is excluded from canonical behavior.
+
+Canonical live and detached state in tutorial mode includes a noninactive session's
+behavior, including its course ID, completion guard, evidence, windows and timers.
+Ordinary/inactive runs omit that field and retain their prior canonical shape.
+An active tutorial snapshot with missing behavior refuses explicitly. Existing
+codec bytes and historical receipts are not rewritten: executing retained behavior
+does not retroactively verify tutorial hashes recorded before that behavior was
+part of the canonical projection.
+
+READY executes the real controller's once-only completion and practice handoff.
+Detached completion emits only a nonpersistent intent. Headless reports an explicit
+`awaiting-next-run` episode boundary, without inventing a lifecycle victory or
+`run.completed` event, and refuses further steps in that old episode. The live
+handoff creates a fresh run seed which is absent from the retained tutorial bytes.
+`continueTutorialPractice(nextScenario)` therefore requires a separately supplied,
+fresh Normal/Playground/Sword scenario identity. It constructs the actual baseline
+practice world, carries the completed course guard, and leaves the new episode
+paused. It neither substitutes the old seed nor claims exact continuation into an
+unrecorded future run. Callers must resume before advancing its fixed simulation;
+the tutorial does not add a presentation clock or advance while the host is paused.
+
+The distinct `tearbench-production-tutorial-handoff` artifact is intentionally
+refused by ordinary production-terminal Academy/durable worker consumers; it is
+not an ordinary terminal receipt or a natural victory. Explicit support in those
+consumers is a separate contract. The existing full-course browser journey can
+optionally export its actual Field Test-to-READY snapshot, held input, commands
+and canonical receipts with `TEAR_TUTORIAL_CONTINUATION_TRACE`; the focused
+continuation test consumes that path only when explicitly provided. Constructed
+snapshot round trips alone prove reconstructed-byte continuation, not live parity.
+
 The live tutorial now uses the Cutting Room curriculum rather than the old
 shared playground layout. This is deliberately a baseline-only teaching run:
 

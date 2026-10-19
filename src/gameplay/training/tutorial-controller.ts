@@ -6,6 +6,13 @@ export type TutorialMark =
   | "airHit" | "dash" | "deflect" | "jump" | "launch" | "moveL" | "moveR"
   | "evade" | "parry" | "punish" | "recall" | "slam" | "strike" | "superslam" | "throwHit" | "updraft";
 
+/** Style events accepted by the live tutorial host; encounter marks have their own controller owner. */
+export const TUTORIAL_MARKS: ReadonlySet<string> = new Set([
+  "airHit", "dash", "deflect", "jump", "launch", "moveL", "moveR", "parry",
+  "recall", "slam", "strike", "superslam", "throwHit", "updraft",
+]);
+export function isTutorialMark(value: string): value is TutorialMark { return TUTORIAL_MARKS.has(value); }
+
 export const TUTORIAL_LESSON_IDS = ["move", "jump", "dash", "cut", "launch", "juggle", "slam", "power-slam", "updraft", "throw", "parry", "read-the-charge", "field-test", "ready"] as const;
 export type TutorialLessonId = typeof TUTORIAL_LESSON_IDS[number];
 export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "free-practice";
@@ -211,7 +218,8 @@ function interpolate(frames: readonly TutorialGhostFrame[], time: number): Reado
 }
 
 export class TutorialController {
-  private readonly ghostTraces: Readonly<Record<string, GhostScript>>;
+  private ghostTraces: Readonly<Record<string, GhostScript>> | undefined;
+  private readonly configuration: typeof GameConfiguration;
   counters: Partial<Record<TutorialMark, number>> = {};
   active = false;
   lessonIndex = 0;
@@ -290,7 +298,7 @@ export class TutorialController {
   }
 
   constructor(config: typeof GameConfiguration) {
-    this.ghostTraces = productionGhostTraces(config);
+    this.configuration = config;
   }
 
   start(viewportWidth: number, courseSessionId = "tutorial"): void {
@@ -444,6 +452,7 @@ export class TutorialController {
   }
 
   ghostSnapshot(groundY: number): TutorialGhostSnapshot {
+    this.ghostTraces ??= productionGhostTraces(this.configuration);
     const lesson = this.step(), script = this.ghostTraces[lesson.title];
     const hidden: TutorialGhostSnapshot = { visible: false, demonstrating: false, lesson: lesson.title, time: 0, actor: { x: 0, y: 0, facing: 1, dashAfterimages: [] }, target: { visible: false, x: 0, y: 0, hit: false }, blade: { x: 0, y: 0, angle: 0.25, swinging: false, thrown: false, hit: false }, shot: { visible: false, x: 0, y: 0, deflected: false } };
     if (lesson.final || !script || this.coachDemoTime <= 0) return hidden;

@@ -3,6 +3,7 @@ import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-w
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import { parseUiTutorialPresentationCheckpoint, type UiTutorialPresentationCheckpoint, parseUiHudPresentationCheckpoint, type UiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
 import { parseParticlePresentationCheckpoint, type ParticlePresentationCheckpoint } from "./particle-presentation-checkpoint";
+import { parseTutorialSessionCheckpoint } from "../gameplay/training/tutorial-controller";
 
 /**
  * The identity graph is validated before construction. Hydration only needs
@@ -258,6 +259,14 @@ export function hydrateTearCodecWorld<
   const hazards = component(world, "tear.hazard.v1");
   const ui = component(world, "tear.ui.v1");
   const tutorialPresentation = parseUiTutorialPresentationCheckpoint(record(ui) ? ui.tutorialPresentation : undefined);
+  const runtime = decodeTearCodecValue(record(worldPayload) && record(worldPayload.runtime) ? worldPayload.runtime : {}, identities) as Readonly<Record<string, unknown>>;
+  const tutorialSession = parseTutorialSessionCheckpoint(runtime.tutorialSession);
+  if (record(run) && run.mode === "tutorial" && tutorialSession === undefined) {
+    throw new RangeError("tutorial replay requires retained tutorial behavior; historical missing behavior is unsupported");
+  }
+  if (record(run) && run.mode === "tutorial" && tutorialSession?.phase === "inactive"
+    && record(runtime.lifecycle) && runtime.lifecycle.phase !== "terminated") throw new RangeError("active tutorial run cannot restore inactive behavior");
+  if (tutorialSession?.active === true && (!record(run) || run.mode !== "tutorial")) throw new RangeError("active tutorial behavior requires tutorial mode");
   const hudPresentation = parseUiHudPresentationCheckpoint(record(ui) ? ui.hudPresentation : undefined);
   const particlesPresentation = parseParticlePresentationCheckpoint(record(ui) ? ui.particlesPresentation : undefined);
   return Object.freeze({
@@ -294,8 +303,7 @@ export function hydrateTearCodecWorld<
       : { nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] } as IdentityState,
     identityBindings: Object.freeze(identityBindings),
     runtime: Object.freeze({
-      ...(decodeTearCodecValue(record(worldPayload) && record(worldPayload.runtime)
-        ? worldPayload.runtime : {}, identities) as Readonly<Record<string, unknown>>),
+      ...runtime,
       cinema: decodeTearCodecValue(component(world, "tear.cinematic.v1"), identities),
     }),
     environment: Object.freeze({

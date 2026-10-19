@@ -27,6 +27,9 @@ import { BLOOM_WELL_VALIDATION } from "../gameplay/environment/bloom-well";
 import { PALE_TRACK_VALIDATION } from "../gameplay/environment/aurora-track";
 import { createVerdantEnvironmentFeature } from "../gameplay/environment/verdant-environment-feature";
 import { createPaleEnvironmentFeature } from "../gameplay/environment/pale-environment-feature";
+import { createLiveTutorialRuntime, recoverTutorialBlade, resetTutorialActors } from "../gameplay/training/live-tutorial-runtime";
+import { createTutorialArena } from "../gameplay/training/tutorial-arenas";
+import { trainingPlatforms } from "../gameplay/training/playground-controller";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
@@ -39,6 +42,8 @@ export interface ProductionReplayWorldOptions {
   readonly difficulty?: RunDifficulty;
   /** Source-owned persisted discovery projection for detached Endless/Gauntlet runs. */
   readonly discoveredVariantIds?: readonly string[];
+  /** Host-only notification; completion never issues a new run seed or writes progress. */
+  readonly tutorialHandoff?: () => void;
 }
 
 /** Ground plus a one-way ledge, owned by each detached production world. */
@@ -189,9 +194,47 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     aimRadius: () => config.blade.aimRadius,
   });
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
+  const tutorialOutward: string[] = [];
+  let tutorialSpawn: ((kind: "charger" | "ranged", hpScale: number) => ReturnType<typeof entities.createEnemy>) | undefined;
+  const requirePlayer = () => { const value = world.state.player(); if (value === undefined) throw new Error("tutorial requires its world player"); return value; };
+  const tutorial = createLiveTutorialRuntime({
+    config, viewportWidth: config.view.w, groundY: () => config.world.groundY,
+    skipPressed: () => false,
+    movingLeft: () => requirePlayer().aiInput?.left() === true,
+    movingRight: () => requirePlayer().aiInput?.right() === true,
+    player: requirePlayer, bladeState: () => world.state.blade()?.state ?? "held",
+    bladeTipVY: () => world.state.blade()?.tipVY ?? 0, enemies: () => world.state.enemies(),
+    spawn: (kind, hpScale) => {
+      if (tutorialSpawn === undefined) throw new Error("tutorial source content owner is not installed");
+      return tutorialSpawn(kind, hpScale);
+    },
+    playSound: (cue) => { tutorialOutward.push(`sound:${cue}`); },
+    installArena: (arena) => { stage.platforms = createTutorialArena(arena, config.view.w, config.view.h, config.world.groundY); },
+    resetTrainingSpace: () => {
+      world.context.transient.resetOpening(); world.context.transient.impact.hitStop = 0;
+      world.state.setEnemies([]); world.state.setProjectiles([]);
+      resetTutorialActors(config, config.view.w, requirePlayer(), world.state.blade());
+    },
+    recoverBlade: () => { recoverTutorialBlade(config, requirePlayer(), world.state.blade()); },
+    beginPractice: () => { tutorialOutward.push("awaiting-next-run"); options.tutorialHandoff?.(); },
+    terminateRun: (reason) => { world.lifecycle.terminate(reason); },
+    navigate: (screen) => { tutorialOutward.push(`navigate:${screen}`); },
+    releasePointer: () => { tutorialOutward.push("release-pointer"); },
+    addProfileStat: () => { throw new Error("detached tutorial cannot write profile progress"); },
+    completeCourse: (id) => { tutorialOutward.push(`complete-course:${id}`); return Promise.resolve("nonpersistent"); },
+    checkAchievements: () => { tutorialOutward.push("achievement-check"); }, drawGhost: () => undefined,
+  });
   return Object.freeze({
     dependencies, world, configuration, clock, effects, random, cosmeticEmissionRandom, factories,
     transient: world.context.transient, input, run, stage,
+    tutorial, tutorialOutward,
+    bindTutorialSpawn: (spawn: NonNullable<typeof tutorialSpawn>) => { tutorialSpawn = spawn; },
+    tutorialHandoff: () => {
+      const session = tutorial.captureSession();
+      return world.state.run()?.mode === "tutorial" && session?.phase === "free-practice"
+        ? Object.freeze({ status: "awaiting-next-run" as const, courseSessionId: session.courseSessionId }) : null;
+    },
+    installTrainingHome: () => { stage.platforms = trainingPlatforms(config.view.w, config.view.h, config.world.groundY).map((platform) => ({ ...platform })); },
   });
 }
 

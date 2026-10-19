@@ -1,4 +1,5 @@
 import type { AuthoritativeInputSnapshot } from "./authoritative-input";
+import type { TutorialSessionCheckpoint } from "../training/tutorial-controller";
 import type { EnvironmentSnapshot } from "../environment/environment-contracts";
 import { projectEnvironmentSemanticSnapshot } from "../../tearbench/environment-codec";
 
@@ -79,6 +80,8 @@ export interface CanonicalWhiteHartState {
 }
 
 export interface CanonicalGameplayState {
+  /** Behavior only. Display/help/ghost cadence never affects simulation verification. */
+  readonly tutorial?: TutorialSessionCheckpoint;
   readonly tick: number;
   readonly input: AuthoritativeInputSnapshot;
   readonly run: Readonly<{ mode: string; wave: number; score: number; time: number; seed: number }> | null;
@@ -104,6 +107,7 @@ export function projectCanonicalGameplayState(
   blade: RuntimeBladeState | null,
   enemies: readonly RuntimeEnemyState[],
   environment?: EnvironmentSnapshot,
+  tutorial?: TutorialSessionCheckpoint,
 ): CanonicalGameplayState {
   return Object.freeze({
     tick,
@@ -147,5 +151,6 @@ export function projectCanonicalGameplayState(
       }) } : {}),
     })).sort((left, right) => left.id - right.id || left.kind.localeCompare(right.kind))),
     ...(environment === undefined ? {} : { environment: projectEnvironmentSemanticSnapshot(environment) }),
+    ...(run?.mode !== "tutorial" || tutorial === undefined || tutorial.phase === "inactive" ? {} : { tutorial: Object.freeze(structuredClone(tutorial)) }),
   });
 }

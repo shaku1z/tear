@@ -127,6 +127,7 @@ export function projectProductionReplayCanonicalState(
       };
     }),
     replay.world.context.environment.snapshot(),
+    replay.tutorial.captureSession(),
   );
 }
 
@@ -200,6 +201,7 @@ interface PreparedRuntimeOwners {
 function productionRuntimeState(replay: ProductionReplayWorld, prepared?: PreparedRuntimeOwners) {
   const transient = replay.world.context.transient;
   return createLiveStateForgeRuntimeBridge({
+    tutorial: replay.tutorial,
     captureBossIntro: () => replay.world.state.bossIntro(),
     restoreBossIntro: (intro) => { replay.world.state.setBossIntro(intro); },
     captureTransient: () => Object.freeze({
@@ -283,6 +285,9 @@ export function captureProductionReplayCheckpoint(
     restoreIdentityState: simulation.combatEntityRuntime.restoreIdentityState.bind(simulation.combatEntityRuntime),
     runtimeState: runtime.capture,
     particlesPresentation: createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }), replay.cosmeticEmissionRandom),
+    ...(replay.tutorial.captureSession() === undefined ? {} : {
+      tutorialPresentation: { capture: () => replay.tutorial.capturePresentation(), restore: (value) => { replay.tutorial.restorePresentation(value); } },
+    }),
     restoreRuntimeState: runtime.restore,
     captureCinema: replay.world.context.cinema.captureState.bind(replay.world.context.cinema),
     validateCinema: runtime.validate,
@@ -442,10 +447,13 @@ export function createProductionGhostReplayComposition(
 ) {
   return Object.freeze({
     create(snapshot: TearSnapshotV1 | undefined) {
+      let waveReward: ProductionWaveRewardRuntime | null = null;
       const replay = createProductionReplayWorld({ seed: snapshot?.seed ?? options.seed,
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
-        ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }) });
+        ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }),
+        tutorialHandoff: () => { waveReward?.restoreScreen("paused"); },
+      });
       const runtimeBuild = injectedBuildIdentity("production-headless", stableVerificationHash(ENTITY_KIND_REGISTRY.ids));
       const inheritedBuild = snapshot?.provenance.build;
       const suppliedBuild = inheritedBuild === undefined ? (options.buildIdentity ?? runtimeBuild) : undefined;
@@ -469,7 +477,6 @@ export function createProductionGhostReplayComposition(
         throw new Error("production detached active boss intro playback is unsupported without application-frame timing; use the live backend");
       }
       if (staged !== undefined) assertDetachedSourceVoidSupported(staged.run);
-      let waveReward: ProductionWaveRewardRuntime | null = null;
       let outcome: ProductionRunOutcomeRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
         ...(staged === undefined || staged.platforms.length === 0 ? {} : { platforms: staged.platforms }),
@@ -506,10 +513,12 @@ export function createProductionGhostReplayComposition(
         },
       });
       productionWaveRewards.set(replay, waveReward);
+      replay.bindTutorialSpawn(waveReward.spawnTutorial);
       if (staged === undefined) waveReward.startNaturalOpening();
       if (staged !== undefined) {
         waveReward.reward.restore(staged.reward);
         waveReward.restoreUi(staged.screen, productionFocus.get(replay) ?? -1);
+        replay.tutorial.restorePresentation(staged.tutorialPresentation);
         core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
         for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
       }

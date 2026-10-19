@@ -14,6 +14,7 @@ import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-style-achievement-runtime";
 import { BossArenaRules, type ArenaActor, type ArenaPlatform } from "../gameplay/training/arena-rules";
 import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime-bridge";
+import { isTutorialMark } from "../gameplay/training/tutorial-controller";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import type { BladeWeaponEvent } from "../gameplay/entities/blade-contracts";
 import { STAGES, stageAt } from "../gameplay/stages";
@@ -97,7 +98,7 @@ export function createProductionCombatPhases(
     colors: () => config.colors,
     ghostRecording: () => options.gameplayEvents !== undefined,
     styleIntents: {
-      tutorialMark: (kind) => { outward.push(`tutorial:${kind}`); },
+      tutorialMark: (kind) => { if (isTutorialMark(kind)) replay.tutorial.mark(kind); outward.push(`tutorial:${kind}`); },
       ghostCapture: (kind, x, y) => { options.gameplayEvents?.emit({ kind: "effect", effect: kind, x, y }); },
       playerTrick: (kind, at) => {
         const activePlayer = player() as { lastTrickKind?: string; lastTrickT?: number };
@@ -424,7 +425,7 @@ export function createProductionCombatPhases(
     explode: (...args: Parameters<typeof effects.explode>) => { outward.push("fx:explode"); effects.explode(...args); },
     floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
     buzz: note("fx:buzz"), sound: (name: string) => { outward.push(`hit:${name}`); },
-    style: (kind: string) => { style.addStyle(kind); }, tutorial: note("fx:tutorial"),
+    style: (kind: string) => { style.addStyle(kind); }, tutorial: (kind: "strike" | "airHit") => { replay.tutorial.mark(kind); outward.push("fx:tutorial"); },
   };
   const collision = {
     config,
@@ -488,7 +489,7 @@ export function createProductionCombatPhases(
     },
     profileAdd: () => undefined, profileMax: () => undefined, dailyBump: () => undefined,
     achievementsEnabled: nativeTracking, achievement: note("achievement"), checkAchievements: () => undefined,
-    tutorialMark: () => undefined,
+    tutorialMark: (kind: "strike" | "airHit") => { replay.tutorial.mark(kind); },
     enemyDefeated: (enemy: object & { id?: string }) => {
       if (options.gameplayEvents === undefined || actorId === null) return;
       options.gameplayEvents.emit({ kind: "death", actorId: actorId(enemy), cause: "combat" });
@@ -496,7 +497,7 @@ export function createProductionCombatPhases(
     ghostRecording: () => nativeTracking() && actorId !== null,
     ghostSample: () => undefined, ghostRevive: note("ghostRevive"),
     updateTrick: (seconds: number) => { style.update(seconds); },
-    achievementTick: (seconds: number) => { style.achievements.tick(seconds); }, updateTutorial: () => undefined,
+    achievementTick: (seconds: number) => { style.achievements.tick(seconds); }, updateTutorial: (seconds: number) => { replay.tutorial.update(seconds); },
     updatePlayground: () => undefined, overlap: aabbOverlap,
     onShieldAbsorb: note("onShieldAbsorb"), loseStyle: () => { style.loseStyle(); }, buzz: () => undefined,
     requestAdContinue: note("requestAdContinue"), adAvailable: () => false,

@@ -522,7 +522,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     authoritative: {
       actionPort: liveInputAdapter.actionPort,
       snapshot: (tick, input) => projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
-        hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot()),
+        hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()),
     },
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
@@ -534,7 +534,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     const result = authoritativeStep.lastResult;
     const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(
       tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(),
-      hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot()));
+      hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()));
     ghostV3.record("results", tick, createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot()));
   };
   GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick); environment.setAvailableActorIdsSource(() => new Set([stageRuntime.current.id, "player", "blade", ...hostState.enemies().map((enemy) => combatRuntime.id(enemy, "enemy")), ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile"))]));

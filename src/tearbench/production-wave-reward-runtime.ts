@@ -50,6 +50,7 @@ export interface ProductionWaveRewardRuntime {
   readonly focus: () => number;
   readonly restoreUi: (screen: string, focus: number) => void;
   readonly startNaturalOpening: () => void;
+  readonly spawnTutorial: (kind: "charger" | "ranged", hpScale: number) => ReturnType<ProductionReplayWorld["world"]["entities"]["createEnemy"]>;
   readonly outward: readonly string[];
 }
 
@@ -271,12 +272,15 @@ export function createProductionWaveRewardRuntime(
     options.gameplayEvents?.emit({ kind: "run", transition: "started", runId: session.sessionId,
       mode: active.mode, difficulty: active.diff, weaponId: active.weaponId,
       wave: active.wave, score: active.score, runTimeSeconds: active.runTime });
-    waves.startNextWave();
+    if (active.mode === "tutorial" || active.mode === "playground") {
+      active.wave = 1; world.lifecycle.activateTraining(); replay.installTrainingHome();
+      if (active.mode === "tutorial") replay.tutorial.start("unissued");
+    } else waves.startNextWave();
   };
   return Object.freeze({
     waves,
     reward: activeReward,
-    update: (seconds: number) => { waves.update(seconds); },
+    update: (seconds: number) => { if (run().mode !== "tutorial" && run().mode !== "playground") waves.update(seconds); },
     routeAction: (action: GameAction) => routeLiveTearBenchAction(routing, action),
     screen: () => screen,
     restoreScreen: (next: string) => { screen = next; },
@@ -286,6 +290,11 @@ export function createProductionWaveRewardRuntime(
       screen = next; focus = nextFocus;
     },
     startNaturalOpening,
+    spawnTutorial: (kind: "charger" | "ranged", hpScale: number) => {
+      content.spawn({ type: kind, hpScale });
+      const enemy = world.state.enemies().at(-1); if (enemy === undefined) throw new Error("tutorial content spawn did not install its actor");
+      return enemy;
+    },
     get outward() { return Object.freeze([...outward]); },
   });
 }

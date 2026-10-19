@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Browser journey scripts run directly under Node CommonJS. */
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 
 const scenario = {
@@ -25,7 +27,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("tutorial", "normal"));
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing"
     && window.__PANTHEON_TEST.tutorial().active, undefined, { timeout: 15_000 });
-  const result = await page.evaluate((scenarioValue) => {
+  const result = await page.evaluate(({ scenarioValue, captureContinuation }) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     environment.reset(scenarioValue);
     window.__tutorialJourneyEnvironment = environment;
@@ -35,7 +37,26 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     const command = (value) => ({
       kind: "command", tick: environment.observe().tick + 1, id: ++commandId, command: value,
     });
-    const step = (...values) => environment.step(values.map(command));
+    let continuationTrace;
+    let capturing = false;
+    const step = (...values) => {
+      const before = environment.observe().tick;
+      const actions = values.map(command);
+      const transition = environment.step(actions);
+      if (capturing) {
+        if (transition.observation.tick !== before + 1) throw new Error("Field Test trace requires one authoritative tick per step");
+        continuationTrace.segments.push({ kind: "fixed", fromTick: before, toTick: transition.observation.tick, actions });
+        continuationTrace.hashes.push({ tick: transition.observation.tick,
+          canonical: transition.info.canonicalStateHash, state: environment.canonicalState() });
+        if (tutorial().lessonIndex === 13) {
+          continuationTrace.engineEventProjection.events = environment.engineEventProjection()
+            .filter((event) => event.tick > continuationTrace.origin.tick)
+            .map((event, sequence) => ({ ...event, sequence }));
+          capturing = false;
+        }
+      }
+      return transition;
+    };
     const idle = (ticks) => {
       for (let index = 0; index < ticks; index += 1) step();
     };
@@ -275,6 +296,15 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     if (!/STEP 1: WATCH THE CHARGER/u.test(tutorial().description)) {
       throw new Error("Field Test must state its first action instead of hiding a compound objective");
     }
+    if (captureContinuation) {
+      const origin = environment.captureSnapshot("tutorial-field-test-origin", "recorded-canonical");
+      continuationTrace = { scenario: scenarioValue, origin, originInput: environment.canonicalState().input,
+        schedule: {}, hashes: [], segments: [], engineEventProjection: {
+          format: "tear-semantic-engine-events", schemaVersion: 1,
+          boundary: { kind: "post-origin-snapshot", originTick: origin.tick }, events: [],
+        } };
+      capturing = true;
+    }
     for (let tick = 0; tick < 8_400 && tutorial().lessonIndex === 12; tick += 1) {
       const counters = tutorial().counters, enemy = coach();
       if ((counters.evade ?? 0) === 0) {
@@ -294,11 +324,18 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
       mode: window.__PANTHEON_TEST.state().mode,
       metrics: environment.metrics(),
       trace,
+      ...(continuationTrace === undefined ? {} : { continuationTrace }),
     };
-  }, scenario);
+  }, { scenarioValue: scenario, captureContinuation: Boolean(process.env.TEAR_TUTORIAL_CONTINUATION_TRACE) });
 
   const last = result.trace.at(-1);
   assert.equal(result.reachedReady, true, `tutorial did not reach READY: ${JSON.stringify(last)}`);
+  if (process.env.TEAR_TUTORIAL_CONTINUATION_TRACE) {
+    assert.ok(result.continuationTrace?.hashes.length > 0, "Field Test continuation trace must include actual authoritative ticks");
+    const target = path.resolve(process.env.TEAR_TUTORIAL_CONTINUATION_TRACE);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${JSON.stringify(result.continuationTrace, null, 2)}\n`);
+  }
   assert.equal(result.active, false, `tutorial remained active: ${JSON.stringify(last)}`);
   assert.equal(result.mode, "playground", `tutorial did not hand off to practice: ${JSON.stringify(last)}`);
   assert.equal(result.screen, "paused", `completion did not open its technique summary: ${JSON.stringify(last)}`);
