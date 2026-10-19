@@ -122,4 +122,5 @@ export type ScreenAction =
   | { readonly type: "results.retry" }
   | { readonly type: "results.watchReplay" }
   | { readonly type: "results.descendAgain" }
-  | { readonly type: "playground.action"; readonly id: string };
+  | { readonly type: "playground.action"; readonly id: string }
+  | { readonly type: "tutorial.action"; readonly command: "restart" | "select" | "help" | "demo"; readonly lessonId?: string };

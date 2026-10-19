@@ -59,6 +59,17 @@ function populatedWorld(): TearCodecWorld {
 }
 
 describe("presentation-only UI checkpoints", () => {
+  it("retains tutorial help/demo exactly but keeps lesson progress semantic", () => {
+    const ui = createLiveStateCodec("tear.ui.v1"), world = createLiveStateCodec("tear.world.v1"), a = populatedWorld(), b = populatedWorld();
+    const display = { version: 1, ghostTime: 1, anchorX: 320, evidencePulse: false, coachIdle: 0, coachDemoTime: 4, helpVisible: true };
+    a.components.set("tear.ui.v1", { screen: "paused", focusId: "0", tutorialPresentation: display });
+    b.components.set("tear.ui.v1", { screen: "paused", focusId: "0", tutorialPresentation: { ...display, ghostTime: 2 } });
+    expect(ui.capture(a)).not.toEqual(ui.capture(b)); expect(ui.hashProjection(a)).toEqual(ui.hashProjection(b));
+    a.components.set("tear.world.v1", { runtime: { tutorialSession: { lessonId: "jump" } } });
+    b.components.set("tear.world.v1", { runtime: { tutorialSession: { lessonId: "dash" } } });
+    expect(world.hashProjection(a)).not.toEqual(world.hashProjection(b));
+  });
+
   it("retains v2 entropy exactly without widening semantic RNG or hiding existing UI extensions", () => {
     const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld(), entropy = createCosmeticEmissionRandom();
     const common = { screen: "playing", focusId: "-1", extension: 7 };

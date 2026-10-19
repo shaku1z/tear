@@ -7,6 +7,25 @@ export type UiHudPresentationCheckpoint = Readonly<{
   multiplierPop: number;
 }>;
 
+export type UiTutorialPresentationCheckpoint = Readonly<{
+  version: 1; ghostTime: number; anchorX: number; evidencePulse: boolean;
+  coachIdle: number; coachDemoTime: number; helpVisible: boolean;
+}>;
+
+export function parseUiTutorialPresentationCheckpoint(value: unknown): UiTutorialPresentationCheckpoint | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("Tutorial presentation must be an object");
+  const data = value as Record<string, unknown>;
+  const numbers = ["ghostTime", "anchorX", "coachIdle", "coachDemoTime"];
+  const flags = ["evidencePulse", "helpVisible"];
+  if (data.version !== 1 || Object.keys(data).some((key) => !["version", ...numbers, ...flags].includes(key)) ||
+    numbers.some((key) => typeof data[key] !== "number" || !Number.isFinite(data[key]) || (key !== "anchorX" && data[key] < 0)) ||
+    flags.some((key) => typeof data[key] !== "boolean")) throw new TypeError("Invalid tutorial presentation");
+  return Object.freeze({ version: 1, ghostTime: data.ghostTime as number, anchorX: data.anchorX as number,
+    evidencePulse: data.evidencePulse as boolean, coachIdle: data.coachIdle as number,
+    coachDemoTime: data.coachDemoTime as number, helpVisible: data.helpVisible as boolean });
+}
+
 export function parseUiHudPresentationCheckpoint(value: unknown): UiHudPresentationCheckpoint | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("HUD presentation must be a versioned object");

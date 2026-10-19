@@ -4,6 +4,8 @@ import {
   type TutorialGhostSnapshot,
   type TutorialLesson,
   type TutorialMark,
+  type TutorialSessionView,
+  parseTutorialSessionCheckpoint,
 } from "./tutorial-controller";
 import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
@@ -76,6 +78,16 @@ export interface LiveTutorialLessonView {
 }
 
 export interface LiveTutorialRuntime {
+  session(): TutorialSessionView;
+  restart(): boolean;
+  selectLesson(id: string): boolean;
+  showHelp(): void;
+  demonstrate(): boolean;
+  captureSession(): ReturnType<TutorialController["captureSession"]> | undefined;
+  validateSession(value: unknown): void;
+  restoreSession(value: unknown): void;
+  capturePresentation(): ReturnType<TutorialController["capturePresentation"]>;
+  restorePresentation(value: ReturnType<TutorialController["capturePresentation"]> | undefined): void;
   readonly active: boolean;
   readonly idx: number;
   readonly doneT: number;
@@ -97,6 +109,10 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
   port: LiveTutorialPort<TEnemy>,
 ): LiveTutorialRuntime {
   const controller = new TutorialController(port.config);
+  const installPendingArena = (): void => {
+    const arena = controller.consumePendingArena();
+    if (arena !== null) { port.resetTrainingSpace(); port.installArena(arena); }
+  };
   const lessonView = (): LiveTutorialLessonView => {
     const lesson = controller.step();
     return {
@@ -109,6 +125,14 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     };
   };
   return {
+    session: () => controller.session(),
+    restart: () => { const changed = controller.restart(); if (changed) installPendingArena(); return changed; },
+    selectLesson: (id) => { const changed = controller.selectLesson(id); if (changed) installPendingArena(); return changed; },
+    showHelp: () => { controller.showHelp(); }, demonstrate: () => controller.demonstrate(),
+    captureSession: () => controller.session().phase === "inactive" ? undefined : controller.captureSession(),
+    validateSession: (value) => { parseTutorialSessionCheckpoint(value); },
+    restoreSession: (value) => { controller.restoreSession(value); },
+    capturePresentation: () => controller.capturePresentation(), restorePresentation: (value) => { controller.restorePresentation(value); },
     get active() { return controller.active; },
     get idx() { return controller.lessonIndex; },
     get doneT() { return controller.completionDelay; },
@@ -117,7 +141,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     get gT() { return controller.ghostTime; },
     get anchor() { return controller.anchorX; },
     steps: TUTORIAL_LESSONS,
-    start() { controller.start(port.viewportWidth); },
+    start() { controller.start(port.viewportWidth, crypto.randomUUID()); installPendingArena(); },
     stop() { controller.stop(); },
     mark(kind) { controller.mark(kind); },
     step: lessonView,
@@ -179,6 +203,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
           case "achievement-check": port.checkAchievements(); break;
         }
       }
+      installPendingArena();
     },
   };
 }

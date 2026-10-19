@@ -12,6 +12,8 @@ import { applyWeapon } from "../../src/gameplay/weapons";
 import { createLiveHudFeedbackState } from "../../src/app/live-hud-feedback-state";
 import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
 
+import { TutorialController, parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
+
 type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {
   maxHp: number;
@@ -24,7 +26,7 @@ interface BossFacts {
   startRootCage(centerX: number): boolean;
 }
 
-function fixture() {
+function fixture(includeTutorial = false) {
   const host = createProductionGhostReplayComposition({ seed: "live-adapter-ownership", mode: "endless" }).create(undefined);
   const { replay, combat } = host;
   const state = replay.world.state, environment = replay.world.context.environment;
@@ -36,6 +38,8 @@ function fixture() {
   let failure: Failure | undefined;
   let screen = "playing", focus = -1;
   const hud = createLiveHudFeedbackState();
+  const tutorial = includeTutorial ? new TutorialController(replay.configuration.value) : undefined;
+  if (tutorial) { Object.assign(state.run() ?? {}, { mode: "tutorial" }); tutorial.start(1600); tutorial.consumePendingArena(); }
   const particles = createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: false, reducedMotion: false }), replay.cosmeticEmissionRandom);
   const runtimeParticles: ReturnType<typeof particles.capture>[] = [];
   const stagedEntropy: ReturnType<typeof replay.cosmeticEmissionRandom.snapshot>[] = [];
@@ -69,8 +73,9 @@ function fixture() {
     captureGhost: () => ({ recording: null }), restoreGhost: () => undefined,
     captureIdentityState: identities.captureIdentityState.bind(identities),
     restoreIdentityState: identities.restoreIdentityState.bind(identities),
-    runtimeState: () => runtime, restoreRuntimeState: (value) => { runtime = value; runtimeParticles.push(particles.capture()); fail("runtime"); }, hudPresentation: hud, particlesPresentation: particles,
-    captureCinema: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1, validateCinema: () => undefined,
+    runtimeState: () => ({ ...runtime, ...(tutorial ? { tutorialSession: tutorial.captureSession() } : {}) }), restoreRuntimeState: (value) => { runtime = value; tutorial?.restoreSession(value.tutorialSession); runtimeParticles.push(particles.capture()); fail("runtime"); }, hudPresentation: hud, particlesPresentation: particles,
+    ...(tutorial ? { tutorialPresentation: { capture: () => tutorial.capturePresentation(), restore: (value: ReturnType<TutorialController["capturePresentation"]> | undefined) => { tutorial.restorePresentation(value); } } } : {}),
+    captureCinema: () => INACTIVE_CINEMATIC_DIRECTOR_STATE_V1, validateCinema: (value) => { if (tutorial) parseTutorialSessionCheckpoint(value.tutorialSession); },
   });
   const registry = createDefaultStateCodecRegistry();
   const capture = () => captureLiveStateForgeSnapshot({ id: "live-adapter-boundary", tick: combat.simulationRuntime.scheduler.tick,
@@ -88,11 +93,35 @@ function fixture() {
     actor.applyGraftEffects({ incomingDamageMultiplier: damage, cadenceMultiplier: 1.15, activeTypes: ["bastion", "haste"] });
     expect(actor.startRootCage(800)).toBe(true);
   };
-  return { replay, state, adapter, capture, restore, facts, observations, hud, particles, runtimeParticles, stagedEntropy,
+  return { tutorial, replay, state, adapter, capture, restore, facts, observations, hud, particles, runtimeParticles, stagedEntropy,
     failNext: (phase: Failure) => { failure = phase; } };
 }
 
 describe("live State Forge adapter ownership boundary", () => {
+  it("restores tutorial behavior/help exactly, refuses malformed sessions before mutation and rolls back a late failure", () => {
+    const host = fixture(true), tutorial = host.tutorial;
+    if (!tutorial) throw new Error("tutorial fixture missing");
+    tutorial.mark("moveL"); tutorial.showHelp(); tutorial.demonstrate();
+    const saved = host.capture(), session = tutorial.captureSession(), presentation = tutorial.capturePresentation();
+    tutorial.restart(); tutorial.consumePendingArena();
+    expect(host.restore(saved).ok).toBe(true);
+    expect(tutorial.captureSession()).toEqual(session); expect(tutorial.capturePresentation()).toEqual(presentation);
+    const invalid = structuredClone(saved);
+    const runtime = (invalid.state["tear.world.v1"] as { runtime: { tutorialSession: { completionDelay: unknown } } }).runtime;
+    runtime.tutorialSession.completionDelay = "invalid";
+    const unchanged = host.capture(); host.observations.length = 0;
+    expect(host.restore(invalid).ok).toBe(false); expect(host.observations).toEqual([]); expect(host.capture().state).toEqual(unchanged.state);
+    tutorial.mark("moveR"); tutorial.showHelp();
+    const outgoing = host.capture(); host.failNext("runtime");
+    expect(host.restore(saved)).toMatchObject({ ok: false, phase: "commit", rolledBack: true });
+    expect(host.capture().state).toEqual(outgoing.state);
+    const historical = structuredClone(saved);
+    delete (historical.state["tear.ui.v1"] as Record<string, unknown>).tutorialPresentation;
+    delete (historical.state["tear.world.v1"] as { runtime: Record<string, unknown> }).runtime.tutorialSession;
+    expect(host.restore(historical).ok).toBe(true);
+    expect(tutorial.session()).toMatchObject({ phase: "inactive", helpVisible: false });
+  });
+
   it("captures and restores actual particles after three fixed steps and rolls back after installed FX on late failure", () => {
     const host = fixture(), fx = host.replay.effects;
     fx.spark(800, 775, 1, -1); fx.drip(800, 775); fx.setViewRect({ left: 0, top: 0, right: 1200, bottom: 900 });

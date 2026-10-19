@@ -29,6 +29,7 @@ export interface LiveTrainingHostContext {
   readonly wipe: () => void;
   readonly resetRun: (difficulty: RunDifficulty) => void;
   readonly startPractice: () => void;
+  readonly resetTrainingCarry?: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
   readonly addFloater: (x: number, y: number, text: string, emphasis: boolean, color: string) => void;
@@ -72,6 +73,14 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     return loading;
   };
   const tutorial: LiveTutorialRuntime = {
+    session: () => loaded?.tutorial.session() ?? { phase: "inactive", lessonId: "move", courseCompleted: false, helpVisible: false, instruction: "", progress: [0, 0], lessons: [] },
+    restart: () => loaded?.tutorial.restart() ?? false, selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
+    showHelp: () => { loaded?.tutorial.showHelp(); }, demonstrate: () => loaded?.tutorial.demonstrate() ?? false,
+    captureSession: () => loaded?.tutorial.captureSession(),
+    validateSession: (value) => { if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session"); loaded?.tutorial.validateSession(value); },
+    restoreSession: (value) => { if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session"); loaded?.tutorial.restoreSession(value); },
+    capturePresentation: () => loaded?.tutorial.capturePresentation() ?? { version: 1, ghostTime: 0, anchorX: 0, evidencePulse: false, coachIdle: 0, coachDemoTime: 0, helpVisible: false },
+    restorePresentation: (value) => { loaded?.tutorial.restorePresentation(value); },
     get active() { return loaded?.tutorial.active ?? false; },
     get idx() { return loaded?.tutorial.idx ?? 0; },
     get doneT() { return loaded?.tutorial.doneT ?? 0; },

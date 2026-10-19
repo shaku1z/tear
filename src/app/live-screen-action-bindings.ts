@@ -34,6 +34,7 @@ export interface ScreenActionBindingPorts {
   readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;
+  readonly tutorialAction?: (command: "restart" | "select" | "help" | "demo", lessonId?: string) => void;
   readonly library: LibraryScreenAdapters; readonly replay: ReplayScreenAdapter; readonly settings: SettingsRenameAdapters;
 }
 
@@ -134,6 +135,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.studio.createCutList": () => { ports.replay.createStudioCutList(); },
     "replay.toggleInfo": () => { ports.replay.toggleInfo(); }, "replay.speed": (action) => { ports.replay.setSpeed(action.value); },
     "replay.exit": () => { ports.replay.exit(); }, "playground.action": (action) => { ports.dispatchPlayground(action.id); },
+    "tutorial.action": (action) => { ports.tutorialAction?.(action.command, action.lessonId); },
     "codex.selectTab": (action) => { ports.library.selectCodexTab(action.id); },
     "codex.selectFilter": (action) => { ports.library.selectCodexFilter(action.id); },
     "codex.cycleSort": () => { ports.library.cycleCodexSort(); }, "codex.inspect": (action) => { ports.library.inspectCodexAbility(action.id); },

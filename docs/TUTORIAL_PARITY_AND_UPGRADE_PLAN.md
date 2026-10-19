@@ -62,9 +62,22 @@ shared playground layout. This is deliberately a baseline-only teaching run:
 - The coach ghosts for both encounter rooms are sampled from the production
   Player movement model, so their escape routes are physically possible.
 
-Selectable checkpoints, explicit assist controls, a technique summary, and a
-post-completion practice selector remain follow-up work; they are not implied by
-the completed enemy-language and field-test slice.
+The tutorial pause panel now provides restart-current-lesson, reached-lesson
+selection, explicit lesson help and a labeled ghost demo. Restart and selection
+clear task evidence, actors, dash carry, blade latches and cooldowns. Help/demo
+never provide objective credit. READY remains a summary rather than a selectable
+exercise. Completion opens a technique summary with a baseline, no-wave practice
+selector; completed exercises return to that summary without repeating course
+credit. Ordinary Playground starts retain their existing progression behavior.
+
+State Forge captures the behavior-bearing tutorial session in world runtime and
+keeps help/ghost display cadence in a separate presentation-only UI field. Exact
+restore does not reinstall an already installed room; malformed or cold-loaded
+sessions are refused before mutation, and historical absence clears stale state.
+A cold host must load training before restoring a tutorial session. Autonomous
+detached tutorial replay and durable completion/reward deduplication across an
+intentional pre-award rewind or reload remain separate required work. The session
+guard preserves ordinary restart/revisit semantics; it is not a durable receipt.
 
 ## Version 1 repair status
 

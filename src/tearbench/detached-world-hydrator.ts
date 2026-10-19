@@ -1,7 +1,7 @@
 import type { TearCodecValue, TearCodecWorld } from "./state-codecs";
 import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
-import { parseUiHudPresentationCheckpoint, type UiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
+import { parseUiTutorialPresentationCheckpoint, type UiTutorialPresentationCheckpoint, parseUiHudPresentationCheckpoint, type UiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
 import { parseParticlePresentationCheckpoint, type ParticlePresentationCheckpoint } from "./particle-presentation-checkpoint";
 
 /**
@@ -65,6 +65,7 @@ export interface TearStagedWorld<
   readonly screen: string;
   readonly focus: number;
   readonly hudPresentation?: UiHudPresentationCheckpoint;
+  readonly tutorialPresentation?: UiTutorialPresentationCheckpoint;
   readonly particlesPresentation?: ParticlePresentationCheckpoint;
   readonly tick: number;
   /** Historical snapshots omit accumulated seconds; never infer scaled time. */
@@ -256,6 +257,7 @@ export function hydrateTearCodecWorld<
   const worldPayload = component(world, "tear.world.v1");
   const hazards = component(world, "tear.hazard.v1");
   const ui = component(world, "tear.ui.v1");
+  const tutorialPresentation = parseUiTutorialPresentationCheckpoint(record(ui) ? ui.tutorialPresentation : undefined);
   const hudPresentation = parseUiHudPresentationCheckpoint(record(ui) ? ui.hudPresentation : undefined);
   const particlesPresentation = parseParticlePresentationCheckpoint(record(ui) ? ui.particlesPresentation : undefined);
   return Object.freeze({
@@ -273,6 +275,7 @@ export function hydrateTearCodecWorld<
     platforms: decodeTearCodecValue(component(world, "tear.platform.v1"), identities) as Platform[],
     screen: stringField(ui, "screen"),
     focus: Number.parseInt(stringField(ui, "focusId"), 10),
+    ...(tutorialPresentation === undefined ? {} : { tutorialPresentation }),
     ...(hudPresentation === undefined ? {} : { hudPresentation }),
     ...(particlesPresentation === undefined ? {} : { particlesPresentation }),
     tick: numberField(runPayload, "tick"),

@@ -31,6 +31,11 @@ describe("live tutorial runtime", () => {
     expect(drawGhost).toHaveBeenCalledOnce();
     expect(runtime.step().t).toBe("MOVE");
     expect(typeof runtime.step().d).toBe("string");
+    runtime.stop();
+    expect(runtime.captureSession()).toBeUndefined();
+    runtime.restoreSession(undefined); runtime.restorePresentation(undefined);
+    expect(runtime.session()).toMatchObject({ phase: "inactive", helpVisible: false });
+    expect(runtime.capturePresentation()).toMatchObject({ ghostTime: 0, coachDemoTime: 0, anchorX: 0 });
   });
 
   it("spawns and configures a missing tutorial dummy", () => {

@@ -40,6 +40,7 @@ export interface LiveRunOrchestrationOptions {
   readonly controllers: Controllers;
   readonly campaign: CampaignHost;
   readonly training: TrainingHost;
+  readonly baselinePractice?: () => boolean;
   readonly weapon: WeaponRuntime;
   readonly music: MusicDirector;
   readonly width: number;
@@ -141,6 +142,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     setScreen: (screen, detail) => { options.setScreen(screen, detail); },
     selectedBoss: options.selectedBoss, shuffledRoster: content.shuffledRoster, bossBiome: content.bossBiome,
     trainingPlatforms: () => playgroundRuntime.homePlatforms(), playground: playgroundRuntime, tutorial,
+    ...(options.baselinePractice === undefined ? {} : { baselinePractice: options.baselinePractice }),
     startNextWave: options.controllers.api.startNextWave,
     achievementTracking: options.achievementTracking, achievementCheck: options.achievementCheck,
     ...(options.practiceSession === undefined ? {} : { clearPracticeSession: options.practiceSession.clear }),

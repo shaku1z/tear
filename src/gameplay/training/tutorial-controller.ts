@@ -6,6 +6,42 @@ export type TutorialMark =
   | "airHit" | "dash" | "deflect" | "jump" | "launch" | "moveL" | "moveR"
   | "evade" | "parry" | "punish" | "recall" | "slam" | "strike" | "superslam" | "throwHit" | "updraft";
 
+export const TUTORIAL_LESSON_IDS = ["move", "jump", "dash", "cut", "launch", "juggle", "slam", "power-slam", "updraft", "throw", "parry", "read-the-charge", "field-test", "ready"] as const;
+export type TutorialLessonId = typeof TUTORIAL_LESSON_IDS[number];
+export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "free-practice";
+export interface TutorialSessionView {
+  readonly phase: TutorialSessionPhase; readonly lessonId: TutorialLessonId; readonly courseCompleted: boolean;
+  readonly helpVisible: boolean; readonly instruction: string; readonly progress: readonly [number, number];
+  readonly lessons: readonly Readonly<{ id: TutorialLessonId; title: string; reached: boolean; completed: boolean; current: boolean; canPractice: boolean }>[];
+}
+
+export type TutorialSessionCheckpoint = ReturnType<TutorialController["captureSession"]>;
+export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionCheckpoint | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("Invalid tutorial session");
+  const data = value as Record<string, unknown>;
+  const ids = (entry: unknown): entry is TutorialLessonId[] => Array.isArray(entry) && new Set(entry as unknown[]).size === entry.length && (entry as unknown[]).every((id) => TUTORIAL_LESSON_IDS.some((valid) => valid === id));
+  if (data.version !== 1 || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
+    typeof data.phase !== "string" || !TUTORIAL_LESSON_IDS.includes(data.lessonId as TutorialLessonId) || !ids(data.reached) || !ids(data.completed) ||
+    typeof data.active !== "boolean" || typeof data.completionAwarded !== "boolean" || typeof data.previousGrounded !== "boolean" || typeof data.dashLatched !== "boolean" ||
+    typeof data.previousBladeState !== "string" || (data.pendingArena !== null && !TUTORIAL_LESSONS.some((lesson) => lesson.arena === data.pendingArena))) throw new TypeError("Invalid tutorial session fields");
+  for (const key of ["completionDelay", "endingTime", "observedLaunches", "observedStrikes", "risingCutWindow", "chargeCommitWindow", "chargeRecoveryWindow", "bladeAwayTime"]) {
+    if (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0) throw new TypeError(`Invalid tutorial ${key}`);
+  }
+  for (const key of ["chargeCommitAwayX", "previousPlayerX"]) {
+    if (key === "previousPlayerX" && data[key] === null) continue;
+    if (typeof data[key] !== "number" || !Number.isFinite(data[key])) throw new TypeError(`Invalid tutorial ${key}`);
+  }
+  const marks = ["airHit", "dash", "deflect", "jump", "launch", "moveL", "moveR", "evade", "parry", "punish", "recall", "slam", "strike", "superslam", "throwHit", "updraft"];
+  if (typeof data.counters !== "object" || data.counters === null || Array.isArray(data.counters) || Object.entries(data.counters).some(([key, number]) => !marks.includes(key) || typeof number !== "number" || !Number.isFinite(number) || number < 0)) throw new TypeError("Invalid tutorial counters");
+  const reached = data.reached;
+  if (data.active !== (data.phase === "course" || data.phase === "lesson-practice") ||
+    (data.active && (!data.reached.includes(data.lessonId as TutorialLessonId) || !data.courseSessionId)) ||
+    data.completed.some((id) => !reached.includes(id)) ||
+    ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded)) throw new RangeError("Inconsistent tutorial session");
+  return structuredClone(value) as TutorialSessionCheckpoint;
+}
+
 export interface TutorialLesson {
   readonly title: string;
   readonly description: string;
@@ -198,12 +234,67 @@ export class TutorialController {
   private previousBladeState = "held";
   private dashLatched = false;
   private previousPlayerX: number | undefined;
+  private phase: TutorialSessionPhase = "inactive";
+  private courseSessionId = "";
+  private reached = new Set<TutorialLessonId>();
+  private completed = new Set<TutorialLessonId>();
+  private completionAwarded = false;
+  private helpVisible = false;
+
+  session(): TutorialSessionView {
+    const lessonId = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move", lesson = this.step();
+    return { phase: this.phase, lessonId, courseCompleted: this.completionAwarded, helpVisible: this.helpVisible,
+      instruction: lesson.instruction?.(this.counters) ?? lesson.description, progress: lesson.progress(this.counters),
+      lessons: TUTORIAL_LESSON_IDS.map((id, index) => ({ id, title: TUTORIAL_LESSONS[index]?.title ?? id,
+        reached: this.reached.has(id), completed: this.completed.has(id), current: id === lessonId,
+        canPractice: id !== "ready" && this.reached.has(id) })) };
+  }
+  restart(): boolean { return this.selectLesson(this.session().lessonId); }
+  selectLesson(id: string): boolean {
+    const index = TUTORIAL_LESSON_IDS.findIndex((entry) => entry === id);
+    if (index < 0 || id === "ready" || !this.reached.has(id as TutorialLessonId)) return false;
+    this.active = true; this.phase = this.completionAwarded ? "lesson-practice" : "course";
+    this.enterLesson(index); return true;
+  }
+  showHelp(): void { this.helpVisible = !this.helpVisible; }
+  demonstrate(): boolean {
+    if (!this.active || this.step().final) return false;
+    this.helpVisible = true; this.ghostTime = 0; this.coachDemoTime = 6; this.coachIdle = 0; return true;
+  }
+  captureSession() {
+    return { version: 1 as const, courseSessionId: this.courseSessionId, phase: this.phase, active: this.active,
+      lessonId: this.session().lessonId, reached: [...this.reached], completed: [...this.completed], completionAwarded: this.completionAwarded,
+      counters: { ...this.counters }, pendingArena: this.pendingArena, completionDelay: this.completionDelay, endingTime: this.endingTime,
+      observedLaunches: this.observedLaunches, observedStrikes: this.observedStrikes, risingCutWindow: this.risingCutWindow,
+      chargeCommitWindow: this.chargeCommitWindow, chargeRecoveryWindow: this.chargeRecoveryWindow, chargeCommitAwayX: this.chargeCommitAwayX,
+      bladeAwayTime: this.bladeAwayTime, previousGrounded: this.previousGrounded, previousBladeState: this.previousBladeState,
+      dashLatched: this.dashLatched, previousPlayerX: this.previousPlayerX ?? null };
+  }
+  capturePresentation() { return { version: 1 as const, ghostTime: this.ghostTime, anchorX: this.anchorX,
+    evidencePulse: this.evidencePulse, coachIdle: this.coachIdle, coachDemoTime: this.coachDemoTime, helpVisible: this.helpVisible }; }
+  restoreSession(value: unknown): void {
+    const data = parseTutorialSessionCheckpoint(value);
+    if (data === undefined) { this.start(0, ""); this.stop(); this.reached.clear(); this.completed.clear(); this.pendingArena = null; return; }
+    this.courseSessionId = data.courseSessionId; this.phase = data.phase; this.active = data.active;
+    this.lessonIndex = TUTORIAL_LESSON_IDS.indexOf(data.lessonId); this.reached = new Set(data.reached); this.completed = new Set(data.completed);
+    this.completionAwarded = data.completionAwarded; this.counters = { ...data.counters }; this.pendingArena = data.pendingArena;
+    this.completionDelay = data.completionDelay; this.endingTime = data.endingTime; this.observedLaunches = data.observedLaunches;
+    this.observedStrikes = data.observedStrikes; this.risingCutWindow = data.risingCutWindow; this.chargeCommitWindow = data.chargeCommitWindow;
+    this.chargeRecoveryWindow = data.chargeRecoveryWindow; this.chargeCommitAwayX = data.chargeCommitAwayX; this.bladeAwayTime = data.bladeAwayTime;
+    this.previousGrounded = data.previousGrounded; this.previousBladeState = data.previousBladeState; this.dashLatched = data.dashLatched;
+    this.previousPlayerX = data.previousPlayerX ?? undefined;
+  }
+  restorePresentation(value: ReturnType<TutorialController["capturePresentation"]> | undefined): void {
+    this.ghostTime = value?.ghostTime ?? 0; this.anchorX = value?.anchorX ?? 0; this.evidencePulse = value?.evidencePulse ?? false;
+    this.coachIdle = value?.coachIdle ?? 0; this.coachDemoTime = value?.coachDemoTime ?? 0; this.helpVisible = value?.helpVisible ?? false;
+  }
 
   constructor(config: typeof GameConfiguration) {
     this.ghostTraces = productionGhostTraces(config);
   }
 
-  start(viewportWidth: number): void {
+  start(viewportWidth: number, courseSessionId = "tutorial"): void {
+    this.courseSessionId = courseSessionId; this.phase = "course"; this.reached = new Set(["move"]); this.completed.clear(); this.completionAwarded = false; this.helpVisible = false;
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
     this.ghostTime = 0; this.anchorX = viewportWidth * 0.2; this.previousGrounded = true;
     this.previousBladeState = "held"; this.dashLatched = false;
@@ -213,7 +304,8 @@ export class TutorialController {
     this.evidencePulse = false; this.coachIdle = 0; this.coachDemoTime = 0; this.observedLaunches = 0; this.observedStrikes = 0; this.risingCutWindow = 0; this.chargeCommitWindow = 0; this.chargeRecoveryWindow = 0; this.chargeCommitAwayX = 0; this.bladeAwayTime = 0;
   }
 
-  stop(): void { this.active = false; }
+  stop(): void { this.active = false; this.phase = "inactive"; }
+  consumePendingArena(): TutorialArenaId | null { const arena = this.pendingArena; this.pendingArena = null; return arena; }
   mark(mark: TutorialMark): void {
     if (!this.active) return;
     this.counters[mark] = count(this.counters, mark) + 1;
@@ -228,7 +320,10 @@ export class TutorialController {
   private enterLesson(index: number): void {
     this.lessonIndex = Math.min(index, TUTORIAL_LESSONS.length - 1);
     const lesson = this.step();
+    this.reached.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
+    this.counters = {}; this.completionDelay = 0; this.endingTime = 0; this.helpVisible = false;
     for (const mark of lesson.entryMarks ?? []) this.counters[mark] = 0;
+    this.previousGrounded = true; this.previousBladeState = "held"; this.dashLatched = false; this.previousPlayerX = undefined;
     this.ghostTime = 0;
     this.pendingArena = lesson.arena ?? "runway";
     this.evidencePulse = false; this.coachIdle = 0; this.coachDemoTime = 0;
@@ -245,6 +340,8 @@ export class TutorialController {
     if (this.pendingArena !== null) {
       intents.push({ type: "reset-training-space" }, { type: "install-arena", arena: this.pendingArena });
       this.pendingArena = null;
+      // Installation replaces actors. Never read the outgoing encounter as new evidence.
+      return intents;
     }
     const horizontalDelta = this.previousPlayerX === undefined ? 0 : player.x - this.previousPlayerX;
     this.previousPlayerX = player.x;
@@ -315,8 +412,12 @@ export class TutorialController {
     }
 
     if (this.completionDelay > 0) {
-      this.completionDelay -= dt;
+      this.completionDelay = Math.max(0, this.completionDelay - dt);
       if (this.completionDelay <= 0) {
+        if (this.phase === "lesson-practice") {
+          this.active = false; this.phase = "free-practice";
+          return [...intents, { type: "release-pointer" }, { type: "begin-practice" }];
+        }
         this.enterLesson(this.lessonIndex + 1);
         if ((this.step().dummyCount ?? 0) > 0) {
           const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 180, snapshot.viewportWidth - 160));
@@ -328,10 +429,15 @@ export class TutorialController {
       if (this.endingTime > READY_RETURN_SECONDS) {
         // Completion is a handoff, not an ejection. The Playground is a
         // no-wave training run, preserving the course's zero-upgrade baseline.
-        this.stop(); intents.push({ type: "profile-stat", stat: "tutorialDone", amount: 1 },
-          { type: "achievement-check" }, { type: "release-pointer" }, { type: "begin-practice" });
+        this.stop(); this.phase = "free-practice";
+        if (!this.completionAwarded) {
+          this.completionAwarded = true; this.completed.add("ready");
+          intents.push({ type: "profile-stat", stat: "tutorialDone", amount: 1 }, { type: "achievement-check" });
+        }
+        intents.push({ type: "release-pointer" }, { type: "begin-practice" });
       }
     } else if (lesson.complete(this.counters)) {
+      this.completed.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
       this.completionDelay = 1.1; intents.push({ type: "sound", cue: "rankup" });
     }
     return intents;

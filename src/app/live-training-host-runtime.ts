@@ -33,6 +33,7 @@ export interface LiveTrainingHostContext {
   readonly wipe: () => void;
   readonly resetRun: (difficulty: RunDifficulty) => void;
   readonly startPractice: () => void;
+  readonly resetTrainingCarry?: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
   readonly addFloater: (x: number, y: number, text: string, emphasis: boolean, color: string) => void;
@@ -72,15 +73,33 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       context.stage.platforms = createTutorialArena(arena, context.width, context.height, d.CONFIG.world.groundY);
     },
     resetTrainingSpace: () => {
+      context.resetTrainingCarry?.();
       state.setEnemies([]); state.setProjectiles([]);
       const actor = player();
       actor.x = context.width * 0.20; actor.y = d.CONFIG.world.groundY - actor.hh;
       actor.vx = 0; actor.vy = 0; actor.onGround = true; actor.hp = actor.maxHp;
+      Object.assign(actor, { coyote: 0, jumpBuf: 0, dashTimer: 0, dashCd: 0, dashX: 0, dashY: 0,
+        dashCharges: actor.maxDashCharges, dashEndT: 0, afterimageT: 0, downBufferT: 0, airTime: 0,
+        _wasGround: true, iframe: 0, rootT: 0, hazardT: 0, voidSlowT: 0, voidTransferT: 0,
+        voidLane: null, supportPlatform: null, rallyT: 0, rallyPool: 0, rallySource: null, tookHit: false });
       const blade = state.blade();
       if (blade !== undefined) {
         const handX = actor.x + d.CONFIG.blade.handOffsetX, handY = actor.y + d.CONFIG.blade.handOffsetY;
         blade.state = "held"; blade.x = handX; blade.y = handY; blade.vx = 0; blade.vy = 0;
         blade.flyTime = 0; blade.throwOrigin = null; blade.pierced.clear(); blade.trail.length = 0;
+        Object.assign(blade, { angle: -Math.PI / 2, aimX: 0, aimY: -d.CONFIG.blade.aimRadius,
+          tipX: handX, tipY: handY - blade.curLength, prevTipX: handX, prevTipY: handY - blade.curLength,
+          reticleX: handX, reticleY: handY - d.CONFIG.blade.aimRadius, tipVX: 0, tipVY: 0, tipSpeed: 0,
+          glowV: 0, tetherFactor: 1, throwDmg: 0, throwBaseDmg: 0, embeddedNew: false, caughtNew: false,
+          throwResolved: false, impactResolved: false, secondaryActive: false, secondaryQueued: false,
+          secondaryStartedNew: false, hookTarget: null, threadcutIndex: -1, linkT: 0, linkBrokenNew: false,
+          tension: 0, _lastHand: null, hostile: false, stolenBy: null, wheelSpin: 0, looseCannonT: 0,
+          slingRadius: 0, slingAngle: 0, slingAngularVelocity: 0, swingActive: false, slingWorldCooldown: 0 });
+        blade.threadcutRoute.length = 0; blade._repeatHits.clear(); blade.reversals.length = 0;
+        blade.chainPoints.length = 0; blade.chainPrevious.length = 0; blade.slingCollided?.clear();
+        delete blade.aimOverride; delete blade.lmbOverride; delete blade.impactVX; delete blade.impactVY;
+        delete blade.redirectSpent; delete blade.releaseVX; delete blade.releaseVY; delete blade.retraceDone; delete blade.retraceReturn;
+        blade.resetRiftlock();
       }
     },
     recoverBlade: () => {

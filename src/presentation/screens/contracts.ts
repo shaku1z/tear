@@ -1,4 +1,5 @@
 import type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
+import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
 export type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
 
 export interface ScreenControl {
@@ -235,6 +236,7 @@ export interface TierUpScreenView {
   readonly id: "tierup"; readonly cards: readonly DraftCardView[]; readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
 }
 export interface PausedScreenView {
+  readonly tutorial?: TutorialSessionView;
   readonly id: "paused"; readonly runSummary?: string; readonly abilities: readonly CardView[]; readonly progress: readonly ProgressView[];
   /** Present only for a locally running Player Watch; never a Foundry operation. */
   readonly playerWatch?: Readonly<{ readonly status: "running" | "paused"; readonly decisions: number }>;

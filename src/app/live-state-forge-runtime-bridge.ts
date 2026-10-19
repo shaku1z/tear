@@ -15,6 +15,11 @@ interface StagedChapterBinding {
 }
 
 export interface LiveStateForgeRuntimeBridgeOptions {
+  readonly tutorial?: Readonly<{
+    captureSession(): unknown;
+    validateSession(value: unknown): void;
+    restoreSession(value: unknown): void;
+  }>;
   readonly captureBossIntro: () => BossIntroState | null;
   readonly restoreBossIntro: (intro: BossIntroState | null) => void;
   readonly captureTransient: () => Readonly<Record<string, unknown>>;
@@ -157,6 +162,7 @@ export function createLiveStateForgeRuntimeBridge(
     chapterBinding: options.captureChapterBinding(),
     stageBanner: options.captureStageBanner(),
     cinemaProtection: options.captureCinemaProtection(),
+    ...(options.tutorial?.captureSession() === undefined ? {} : { tutorialSession: options.tutorial.captureSession() }),
   });
   const restore = (snapshot: Readonly<Record<string, unknown>>): void => {
     const intro = bossIntro(snapshot.bossIntro, snapshot.bossIntroVersion);
@@ -170,6 +176,7 @@ export function createLiveStateForgeRuntimeBridge(
     options.restoreBossIntro(intro);
     const binding = options.installChapterBinding(snapshot.chapterBinding);
     options.cinema.restoreState(snapshot.cinema, binding);
+    options.tutorial?.restoreSession(snapshot.tutorialSession);
   };
   const validate = (
     snapshot: Readonly<Record<string, unknown>>,
@@ -181,6 +188,11 @@ export function createLiveStateForgeRuntimeBridge(
     validateTransient(normalizeTransient(snapshot));
     stageBanner(snapshot.stageBanner);
     cinemaProtection(snapshot.cinemaProtection);
+    options.tutorial?.validateSession(snapshot.tutorialSession);
+    const tutorial = snapshot.tutorialSession;
+    if (typeof tutorial === "object" && tutorial !== null && "active" in tutorial && tutorial.active === true && candidateRun.mode !== "tutorial") {
+      throw new RangeError("active tutorial session requires a tutorial run");
+    }
     const cinema = activeCinema(snapshot.cinema);
     const lifecycle = validateRunLifecycleSnapshot(snapshot.lifecycle);
     const chapter = options.stageChapterBinding(snapshot.chapterBinding);

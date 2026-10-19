@@ -6,6 +6,7 @@ import { buildAbilityCards, buildDraftCard, buildGameoverSnapshot, buildPausedSn
   buildResultLog, buildRunProgressSnapshot, buildTierCards, buildWinSnapshot,
   type AchievementProgressSource, type UpgradePresentationSource } from "../presentation/run-screen-snapshots";
 import type { RunResultInfo } from "../gameplay/run/outcome-planner";
+import type { TutorialSessionView } from "../gameplay/training/tutorial-controller";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "CG" | "CONFIG" | "DAILY" | "FX" | "PROFILE" |
   "SFX" | "UPGRADES" | "nextTierDesc">;
@@ -53,6 +54,7 @@ export interface RunScreenServices {
   readonly addFlash: (amount: number) => void;
   readonly requestPointer: () => void;
   readonly playerWatch: () => Readonly<{ readonly status: string; readonly decisions: number }>;
+  readonly tutorialSession?: () => TutorialSessionView | undefined;
 }
 
 export interface LiveRunScreenAdapters {
@@ -125,6 +127,8 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     },
     renderPaused(): void {
       const run = state.run();
+      const tutorial = services.tutorialSession?.();
+      if (tutorial !== undefined) { renderers.paused({ id: "paused", abilities: [], progress: [], tutorial }); return; }
       const playerWatch = services.playerWatch();
       renderers.paused({ ...buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
         "   ·   " + String(run.score) + " pts   ·   " + services.formatTime(run.runTime),

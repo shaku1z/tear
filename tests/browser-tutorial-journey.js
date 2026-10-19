@@ -28,6 +28,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   const result = await page.evaluate((scenarioValue) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     environment.reset(scenarioValue);
+    window.__tutorialJourneyEnvironment = environment;
     let commandId = 0;
     const trace = [];
     const tutorial = () => window.__PANTHEON_TEST.tutorial();
@@ -265,7 +266,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
   assert.equal(result.reachedReady, true, `tutorial did not reach READY: ${JSON.stringify(last)}`);
   assert.equal(result.active, false, `tutorial remained active: ${JSON.stringify(last)}`);
   assert.equal(result.mode, "playground", `tutorial did not hand off to practice: ${JSON.stringify(last)}`);
-  assert.equal(result.screen, "playing", `practice did not enter a playable arena: ${JSON.stringify(last)}`);
+  assert.equal(result.screen, "paused", `completion did not open its technique summary: ${JSON.stringify(last)}`);
   assert.ok(result.metrics.acceptedActions > 0, "journey must use player-valid actions");
   const launchEntry = result.trace.find((entry) => entry.label === "after-3");
   const powerSlamEntry = result.trace.find((entry) => entry.label === "after-6");
@@ -277,5 +278,18 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     "runway", "vertical-gate", "dash-lane", "blade-range", "launch-bay", "air-chain", "drop-well",
     "dive-channel", "liftwell", "throw-lane", "counterline", "read-line", "field-floor", "ready-room",
   ], "every tutorial block must install its own arena");
+  // Select the actual rendered completed LAUNCH control in this same course.
+  // Class A stopped the browser loop; advance its application frame to consume
+  // the physical click through the normal UI owner.
+  await page.mouse.click(830, 328);
+  await page.evaluate(() => window.__tutorialJourneyEnvironment.advanceApplicationFrame(1 / 120));
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "tutorial"
+    && window.__PANTHEON_TEST.tutorial().active && window.__PANTHEON_TEST.tutorial().lessonIndex === 4);
+  const practice = await page.evaluate(() => window.__PANTHEON_TEST.tutorial());
+  assert.equal(practice.arena, "launch-bay", "completed LAUNCH selection must install its own arena after the new-run boundary");
+  assert.deepEqual(await page.evaluate(() => window.__tutorialJourneyEnvironment.observe().navigation.surfaces.map((surface) => surface.id).sort()), ["tutorial:launch-bay:0", "tutorial:launch-bay:floor"], "selected lesson must own the physical collision surfaces");
+  assert.equal(practice.session.phase, "lesson-practice");
+  assert.equal(practice.session.courseCompleted, true, "practice must retain the course completion guard");
+  await page.evaluate(() => { delete window.__tutorialJourneyEnvironment; });
   console.log(`Tutorial journey passed in ${result.metrics.fixedTicks} fixed ticks`);
 });

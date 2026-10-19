@@ -90,6 +90,7 @@ interface RunStartHostContext {
   readonly trainingPlatforms: () => unknown[];
   readonly playground: PlaygroundPort;
   readonly tutorial: TutorialPort;
+  readonly baselinePractice?: () => boolean;
   readonly startNextWave: () => void;
   readonly achievementTracking: () => boolean;
   readonly achievementCheck: () => void;
@@ -295,7 +296,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     },
     applyMetaProgression: () => {
       const run = requireRun(state);
-      if (!tutorialUsesBaselineLoadout(run.mode)) {
+      if (!tutorialUsesBaselineLoadout(run.mode) && context.baselinePractice?.() !== true) {
         META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
       }
       context.resetRewards();

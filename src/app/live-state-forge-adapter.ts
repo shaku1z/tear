@@ -32,7 +32,7 @@ import {
   type TearWorldConstructionPort,
 } from "../tearbench/detached-world-hydrator";
 import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
-import type { UiHudPresentationCheckpoint } from "../tearbench/ui-presentation-checkpoint";
+import type { UiTutorialPresentationCheckpoint, UiHudPresentationCheckpoint } from "../tearbench/ui-presentation-checkpoint";
 import { parseParticlePresentationCheckpoint, validateParticlePresentationBinding } from "../tearbench/particle-presentation-checkpoint";
 import type { LiveParticlePresentationState } from "./live-particle-presentation-state";
 import type { PreparedParticlePresentationRestore } from "../tearbench/particle-presentation-checkpoint";
@@ -98,6 +98,7 @@ export interface LiveStateForgeAdapterOptions {
   readonly restoreIdentityState: (state: CombatEntityIdentityState) => void;
   readonly runtimeState: () => Readonly<Record<string, unknown>>;
   readonly restoreRuntimeState: (state: Readonly<Record<string, unknown>>) => void;
+  readonly tutorialPresentation?: Readonly<{ capture(): UiTutorialPresentationCheckpoint; restore(value: UiTutorialPresentationCheckpoint | undefined): void }>;
   readonly hudPresentation?: Readonly<{ capture(): UiHudPresentationCheckpoint; restore(value: UiHudPresentationCheckpoint | undefined): void }>;
   readonly particlesPresentation?: LiveParticlePresentationState;
   readonly captureCinema: () => unknown;
@@ -219,6 +220,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     routes: encode(environment.routes, identities),
   }));
   components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()),
+    ...(options.tutorialPresentation ? { tutorialPresentation: options.tutorialPresentation.capture() } : {}),
     ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}),
     ...(options.particlesPresentation ? { particlesPresentation: encode(options.particlesPresentation.capture(), identities) } : {}) }));
   components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
@@ -384,6 +386,7 @@ export function createLiveStateForgeAdapter(
       // to the transactional rollback candidate.
       if (candidate.particleRestore !== undefined) options.particlesPresentation?.restore(candidate.particleRestore);
       options.hudPresentation?.restore(candidate.hudPresentation);
+      options.tutorialPresentation?.restore(candidate.tutorialPresentation);
       options.restoreRuntimeState(candidate.runtime);
     },
   };
