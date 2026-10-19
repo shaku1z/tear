@@ -911,8 +911,8 @@ legacy bridge bytes remain separate; no V2 decision or monitoring receipt is fab
 The existing V3 Watch journal monitor and rollback owners can read either approval
 origin using their common frozen policy and baseline fields. This does not create Watch
 observations, auto-run a Watch session, claim learned quality or participant evidence,
-or complete the remaining unattended post-promotion orchestration. Browser evidence
-for the new explicit action remains pending.
+or complete the remaining unattended post-promotion orchestration. The normal Run
+Monitor journey below now includes browser evidence for the explicit action.
 
 
 ### Normal Run Monitor durable native observations
@@ -941,5 +941,12 @@ owners over an engineering synthetic corpus and canonical source worlds. It can 
 an awaiting-promotion fixture using TEAR_C37_NATIVE_FIXTURE (exclusive new file).
 The updated browser-c37-player-watch journey imports those source receipts into its
 isolated context, clicks normal PROMOTE, then START/pause/resume/STOP and verifies the
-exact durable observation after reload. Browser proof awaits the next fresh build;
-this is no learned-quality, participant, natural-victory or unattended-lifecycle claim.
+exact durable observation after reload. On clean `ef5e8a5c`, the fresh standalone
+build and normal browser journey passed actual PROMOTE, START, pause/resume and
+STOP. One journal retained 68 actual decisions with zero drops, bound to activation
+`6554b4059ec697ba`; observation `8c7e24a115df0130` remained byte-identical after
+reload. The user stop remains `stopped` / `threshold-breach`, with the active
+pointer unchanged. This engineering synthetic source fixture does not establish
+learned quality, participant evidence, natural victory or a complete unattended
+lifecycle. Replay Hub route cards draw their wrapped copy once and retain normal
+pointer/keyboard focus through the existing hidden-box control contract.
