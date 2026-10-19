@@ -125,6 +125,7 @@ async function main() {
     const natural = await observe("A-natural-closed", page, buildInfo), manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
     save("A-natural-manifest", manifest); assert.equal(natural.ui.recorderFailure, null); assert.equal(manifest.status, "complete");
     await boot(); await openVault(journey); await settle(page);
+    await page.waitForFunction(() => window.__C39_FILE_TEXT__?.recent?.includes("DOWNLOAD"), undefined, { timeout: 15000 });
     await observe("A-populated-before-download", page, buildInfo); await page.screenshot({ path: path.join(directory, "A-populated-before-download.png") });
     const [download] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), page.mouse.click(1026, 518)]);
     await download.saveAs(archivePath); // Preserve the real normal-player download before parsing/assertions.
