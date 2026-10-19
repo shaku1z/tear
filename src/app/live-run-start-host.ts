@@ -249,6 +249,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       };
     },
     updateProgressionTracking: (mode) => {
+      if (context.baselinePractice?.() === true) return;
       if (context.achievementTracking() && META.level("reach") > 0 && META.level("throwarm") > 0
         && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
       if (tracksModeProgress(mode)) { PROFILE.markMode(mode); context.achievementCheck(); }

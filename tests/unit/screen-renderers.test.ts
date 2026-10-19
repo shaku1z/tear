@@ -91,7 +91,8 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 
 describe("legacy screen renderer registry", () => {
   it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
-    const controls: ScreenControl[] = [], context = createRenderContext(controls), title = vi.spyOn(context.ui, "title");
+    const controls: ScreenControl[] = [], context = createRenderContext(controls), title = vi.spyOn(context.ui, "title"), copy = vi.fn<CanvasRenderingContext2D["fillText"]>();
+    context.canvas.fillText = copy;
     const renderer = createLegacyScreenRenderers(context), controller = new TutorialController(CONFIG);
     controller.openPractice(1600, 1);
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
@@ -106,6 +107,7 @@ describe("legacy screen renderer registry", () => {
       .toEqual(["SWORD", "HAMMER", "GREATSWORD", "CHAINBLADE", "RIFTLOCK"]);
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     controls.length = 0;
+      copy.mockClear();
       controller.showCatalog();
       renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: { ...controller.session(), enemyCatalog: [
         { id: "charger", title: "CHARGER", knowledge: "confirmed-defeated", canPractice: true },
@@ -114,6 +116,11 @@ describe("legacy screen renderer registry", () => {
       expect(controls.find((control) => control.label === "CHARGER")).toMatchObject({ enabled: true, sub: "CONFIRMED DEFEATED", action: { command: "select-enemy", lessonId: "charger" } });
       expect(controls.find((control) => control.label === "MENDER")).toMatchObject({ enabled: false, sub: "HISTORY NOT RECORDED" });
       expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
+      expect(copy.mock.calls.map(([line]) => line).join(" ")).toContain("Confirmed defeated uses an existing recorded kill.");
+      expect(copy.mock.calls.map(([line]) => line).join(" ")).not.toContain("slam");
+      const lastRowBottom = Math.max(...controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-enemy").map((control) => control.y + control.h));
+      expect(copy.mock.calls.every(([, , y]) => y >= lastRowBottom + 28)).toBe(true);
+      expect(context.canvas.textBaseline).toBe("alphabetic");
       controls.length = 0;
     renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Tutorial", difficultyLabel: "Normal", practiceAvailable: true });

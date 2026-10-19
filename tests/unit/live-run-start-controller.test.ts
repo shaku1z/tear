@@ -96,7 +96,7 @@ function openingDestinationEvidence(target: ReturnType<typeof createProductionRe
 }
 
 function actualOpeningHost(previousScreen = "setup", failStarted = false, injectedHeldInput = false,
-  observer?: Readonly<{ captured: (capture: ReturnType<typeof captureProductionReplayCheckpoint>, boundary: { runId: string; seed: number }) => void; event: (event: TearCausalEventV1) => void }>) {
+  observer?: Readonly<{ captured: (capture: ReturnType<typeof captureProductionReplayCheckpoint>, boundary: { runId: string; seed: number }) => void; event: (event: TearCausalEventV1) => void }>, baselinePractice = false) {
   const source = createProductionGhostReplayComposition({ seed: "actual-opening-source" }).create(undefined);
   const { replay } = source, noop = () => undefined, order: string[] = [];
   let screen = previousScreen, captured: ReturnType<typeof captureProductionReplayCheckpoint> | undefined;
@@ -107,8 +107,9 @@ function actualOpeningHost(previousScreen = "setup", failStarted = false, inject
   native.subscribe((event) => { if (captured !== undefined) recordEvent(createLiveGhostCausalEvent(event, events.length + 1)); });
   const openingCapture = createLiveGhostOpeningCapture({ screen: () => screen, tick: () => source.simulation.scheduler.tick,
     replayRunId: () => boundary?.runId, nextSequence: () => events.length + 1, record: recordEvent, failed: (error) => { throw error; } });
+  const markMode = vi.fn(), achievementCheck = vi.fn();
   const dependencies = { ...replay.dependencies, REMOTE,
-    PROFILE: { data: { stats: {}, ach: {}, rewards: {} }, markMode: noop }, META: { level: () => 0, apply: noop },
+    PROFILE: { data: { stats: {}, ach: {}, rewards: {} }, markMode }, META: { level: () => 0, apply: noop },
     SFX: { setVoidDescent: noop, setMusicDuck: noop, musicScoreVersion: () => "unit" }, newMods,
     Input: { startSemanticRecording: () => { order.push("input"); }, syncSemanticMovement: () => { order.push("held");
       // Deliberate held-input restore edge fixture only. Normal browser sync queues
@@ -128,14 +129,14 @@ function actualOpeningHost(previousScreen = "setup", failStarted = false, inject
     loadStage: noop, stage: { platforms: [], resetBanner: noop }, story: { resetChapter: noop, resetFinale: noop }, lifecycle: replay.world.lifecycle, install: noop,
     setScreen: (next: string) => { order.push("playing"); screen = next; source.waveReward.restoreScreen(next); },
     selectedBoss: () => "shuffle", shuffledRoster: () => [], bossBiome: () => 0, trainingPlatforms: () => [], playground: { state: {}, reset: noop }, tutorial: { start: noop },
-    startNextWave: () => { order.push("opening"); source.waveReward.waves.startNextWave(); }, achievementTracking: () => true, achievementCheck: noop,
+    startNextWave: () => { order.push("opening"); source.waveReward.waves.startNextWave(); }, achievementTracking: () => true, achievementCheck, baselinePractice: () => baselinePractice,
     resetRewards: () => { source.waveReward.reward.reset(); }, music: { begin: noop }, requestPointerLock: noop, testMode: false, window: {},
     withOpeningCapture: (value: NonNullable<typeof boundary>, record: () => void) => { order.push("boundary"); boundary = value; pending = true; openingCapture.withCapture(value, record); },
     discardOpeningCapture: () => { pending = false; openingCapture.discard(); },
     openingExposed: (runId: string) => { pending = false; order.push("completion"); openingCapture.exposed(runId); },
   } as unknown as Parameters<typeof createLiveRunStartHost>[0];
   const controller = createLiveRunStartHost(context);
-  return { controller, source, native, order, events, captured: () => captured, boundary: () => boundary, pending: () => pending };
+  return { controller, source, native, order, events, markMode, achievementCheck, captured: () => captured, boundary: () => boundary, pending: () => pending };
 }
 
 /** Actual source-owned host/helper/bus/recorder; adversarial edits are resealed before Reader validation. */
@@ -230,6 +231,17 @@ async function sealedActualOpening(previousScreen = "menu", legacy = false, cont
 }
 
 describe("LiveRunStartController", () => {
+  it("keeps explicit baseline practice starts out of mode progression without changing ordinary or course starts", () => {
+    for (const mode of ["playground", "tutorial", "endless"] as const) {
+      const practice = actualOpeningHost("menu", false, false, undefined, true);
+      practice.controller.start(mode, "normal");
+      expect(practice.markMode).not.toHaveBeenCalled(); expect(practice.achievementCheck).not.toHaveBeenCalled();
+      const ordinary = actualOpeningHost("menu");
+      ordinary.controller.start(mode, "normal");
+      expect(ordinary.markMode).toHaveBeenCalledExactlyOnceWith(mode);
+      expect(ordinary.achievementCheck).toHaveBeenCalledOnce();
+    }
+  });
   it.each([{ magnitudes: [250] }, { magnitudes: [0] }, { magnitudes: [1000, 250] }])("refuses same-tick exact authority for sealed legacy missing magnitude after original aim $magnitudes", async ({ magnitudes }) => {
     const capsule = await sealedLegacyAim(magnitudes), before = JSON.stringify(capsule);
     expect(mapGhostCapsuleToReplayEnvelope(capsule).issues).toEqual([]);

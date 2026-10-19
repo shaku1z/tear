@@ -240,7 +240,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     addKillScore, fire, makeEvent: makeEv } = weaponRuntime;
   const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost; const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
   const tutorialSessionActions = createLiveTutorialSessionActions({ training: trainingHost, tutorial: TUT, screen: () => state, mode: () => liveRun().mode,
-    selectPracticeWeapon: (id) => { hostState.setSelectedWeapon(id); }, startLessonRun: () => { startRunImmediate("tutorial", "normal"); },
+    selectPracticeWeapon: (id) => { hostState.setSelectedWeapon(id); }, startLessonRun: () => { tutorialPracticeStart = TUT.session().practiceOnly === true; try { startRunImmediate("tutorial", "normal"); } finally { tutorialPracticeStart = false; } },
     resetFocus: () => { interfaceInteraction.setFocus(0); }, resume: () => { setState("playing"); requestLock(); } });
   const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => sourceVoidRuntime.syncPlayer(...args); const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { sourceVoidRuntime.update(...args); };
   const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = cinematicRuntime;

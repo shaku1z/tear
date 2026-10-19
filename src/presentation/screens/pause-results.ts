@@ -172,14 +172,16 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         enabled: lesson.canPractice, selected: lesson.current,
         action: { type: "tutorial.action", command: catalog ? "select-enemy" : annexes ? "select-annex" : "select", lessonId: lesson.id }, size: compact ? ui.t.type.micro : ui.t.type.caption });
     });
-    const help = session.helpVisible || session.annex || session.enemyPractice ? session.instruction : catalog
+    const help = catalog
       ? "Confirmed defeated uses an existing recorded kill. Encountered means an opponent was exposed in ordinary live play. Missing older history is not proof you have never met it. Practice uses a real opponent; pause to reset."
+      : session.helpVisible || session.annex || session.enemyPractice ? session.instruction
       : annexes
       ? "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Select a weapon to try its real mechanics."
       : complete
       ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then evade and punish. Select any technique above to revisit its baseline exercise."
       : "Pause at any time to restart a block or revisit a reached lesson. Complete the action yourself to advance.";
-    wrapText(help, panelX, rowTop + rows * rowH + 18, panelW, compact ? 15 : 20, compact ? ui.t.type.micro : ui.t.type.body, ui.ink);
+    canvas.textBaseline = "alphabetic";
+    wrapText(help, panelX, rowTop + rows * rowH + (catalog ? 28 : 18), panelW, compact ? 15 : 20, compact ? ui.t.type.micro : ui.t.type.body, ui.ink);
   }
 
   function paused(view: PausedScreenView): void {
