@@ -285,7 +285,7 @@ withJourney({ name: "tutorial full journey", port: 4187 }, async ({ page }) => {
     }
     waitForLessonToAdvance(12, 720);
     const reachedReady = tutorial().lessonIndex === 13;
-    idle(240);
+    for (let tick = 0; tick < 240 && tutorial().active; tick += 1) step();
     record("terminal");
     return {
       reachedReady,
