@@ -6,12 +6,12 @@ import { SemanticInputBuffer } from "../../src/input/semantic-buffer";
 
 const CONFIG: LegacyInputConfig = { view: { w: 1_600, h: 900 }, touch: {} };
 
-function createInput(semantic = new SemanticInputBuffer()) {
+function createInput(semantic = new SemanticInputBuffer(), windowTarget = new EventTarget(), config = CONFIG) {
   return createLegacyInput({
-    config: CONFIG,
+    config,
     safeArea: { l: 0, r: 0, t: 0, b: 0 },
     overscan: { x: 0, y: 0 },
-    window: new EventTarget() as Window,
+    window: windowTarget as Window,
     document: new EventTarget() as Document,
     navigator: { vibrate: () => true },
     performance,
@@ -43,6 +43,22 @@ function controllerEvent(type: string, activeGamepad: Gamepad): Event {
   const event = new Event(type);
   Object.defineProperty(event, "gamepad", { value: activeGamepad });
   return event;
+}
+
+function controllerFixture() {
+  const config: LegacyInputConfig = { view: { w: 1_600, h: 900 }, touch: {} };
+  const windowTarget = new EventTarget();
+  const input = createInput(new SemanticInputBuffer(), windowTarget, config);
+  input.init(new EventTarget() as HTMLCanvasElement, () => undefined);
+  const buttons = Array.from({ length: 16 }, () => button());
+  const axes = [0, 0, 0, 0];
+  const activeGamepad = gamepad(buttons, axes);
+  const { PAD } = createLegacyGamepad({ config, input, window: windowTarget as Window,
+    navigator: { getGamepads: () => [activeGamepad] }, semantic: input.semantic });
+  windowTarget.dispatchEvent(controllerEvent("gamepadconnected", activeGamepad));
+  const settings = config.pad;
+  if (settings === undefined) throw new Error("controller settings missing");
+  return { input, PAD, buttons, axes, windowTarget, settings };
 }
 
 describe("legacy input adapter", () => {
@@ -119,6 +135,105 @@ describe("legacy input adapter", () => {
 });
 
 describe("legacy gamepad adapter", () => {
+  it.each(["hold", "toggle"] as const)("requires a new tether press after switching presets through a menu in %s mode", (mode) => {
+    const { input, PAD, buttons, settings } = controllerFixture();
+    settings.tetherMode = mode;
+    buttons[7] = button(true);
+    PAD.poll(1 / 120, true);
+    input.endFrame();
+    PAD.setPreset("standard");
+    PAD.poll(1 / 120, true);
+    PAD.poll(1 / 120, true);
+    PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(false);
+    expect(input.tDash).toBe(false);
+    expect(input.rmb).toBe(false);
+    buttons[7] = button();
+    PAD.poll(1 / 120, false);
+    buttons[7] = button(true);
+    PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(true);
+  });
+
+  it.each([false, true])("clears a toggled tether across blur with its button still held = %s", (stillHeld) => {
+    const { input, PAD, buttons, windowTarget, settings } = controllerFixture();
+    settings.tetherMode = "toggle";
+    buttons[4] = button(true);
+    PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(true);
+    if (!stillHeld) { buttons[4] = button(); PAD.poll(1 / 120, false); }
+    input.lmb = true;
+    expect(input.locked).toBe(false);
+    windowTarget.dispatchEvent(new Event("blur"));
+    expect(input.padTether).toBe(false);
+    expect(input.tetherHeld).toBe(true);
+    PAD.poll(1 / 120, false);
+    windowTarget.dispatchEvent(new Event("focus"));
+    PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(false);
+    input.lmb = false;
+    expect(input.tetherHeld).toBe(false);
+    buttons[4] = button();
+    PAD.poll(1 / 120, false);
+    buttons[4] = button(true);
+    PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(true);
+  });
+
+  it("preserves ordinary hold tether behavior after a blur requires release and a new press", () => {
+    const { input, PAD, buttons, windowTarget } = controllerFixture();
+    buttons[4] = button(true);
+    PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(true);
+    windowTarget.dispatchEvent(new Event("blur"));
+    PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(false);
+    buttons[4] = button(); PAD.poll(1 / 120, false);
+    buttons[4] = button(true); PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(true);
+    buttons[4] = button(); PAD.poll(1 / 120, false);
+    expect(input.padTether).toBe(false);
+  });
+
+  it("navigates immediately on a direction change, then repeats normally and resets at neutral", () => {
+    const { input, PAD, axes, settings } = controllerFixture();
+    axes[0] = 0.9;
+    PAD.poll(0.01, true);
+    expect([...input.pressed]).toEqual(["ArrowRight"]);
+    input.endFrame();
+    axes[0] = 0; axes[1] = 0.9;
+    PAD.poll(0.01, true);
+    expect([...input.pressed]).toEqual(["ArrowDown"]);
+    input.endFrame();
+    PAD.poll(settings.menuRepeat / 2, true);
+    expect([...input.pressed]).toEqual([]);
+    PAD.poll(settings.menuRepeat / 2 + 0.001, true);
+    expect([...input.pressed]).toEqual(["ArrowDown"]);
+    input.endFrame();
+    axes[1] = 0; PAD.poll(0.01, true);
+    axes[0] = 0.9; axes[1] = -0.7;
+    PAD.poll(0.01, true);
+    expect([...input.pressed]).toEqual(["ArrowRight"]);
+    input.endFrame();
+    axes[0] = 0.7; axes[1] = -0.9;
+    PAD.poll(0.01, true);
+    expect([...input.pressed]).toEqual(["ArrowUp"]);
+  });
+
+  it.each([6, 7])("claims gamepad ownership for analog trigger %i at the existing action threshold", (trigger) => {
+    const { input, PAD, buttons, settings } = controllerFixture();
+    buttons[trigger] = button(false, settings.triggerThreshold - 0.001);
+    PAD.poll(1 / 120, false);
+    expect(input.mode).toBe("mouse");
+    expect(input.tDash).toBe(false);
+    expect(input.rmb).toBe(false);
+    buttons[trigger] = button(false, settings.triggerThreshold);
+    PAD.poll(1 / 120, false);
+    expect(trigger === 7 ? input.tDash : input.rmb).toBe(true);
+    expect(input.mode).toBe("gamepad");
+    expect(PAD.active).toBe(true);
+  });
+
   it("keeps the five shipped presets and safely falls back to default", () => {
     const input = createInput();
     const windowTarget = new EventTarget();

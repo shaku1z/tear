@@ -21,13 +21,19 @@ describe("tutorial input prompts", () => {
     expect(tutorialInputPrompt("THROW", "Current curriculum", ["RMB"], "gamepad", pad).keys).toEqual(["R1"]);
   });
 
-  it("teaches current touch gestures and the mixed-verbs field test", () => {
+  it("teaches current touch gestures and the evade-then-punish field test", () => {
     expect(tutorialInputPrompt("LAUNCH", "Current curriculum", ["MOUSE ↑"], "touch", pad)).toEqual({
       description: "Current curriculum", keys: ["DRAG ↑"],
     });
     expect(tutorialInputPrompt("FIELD TEST", "Carry the route", [], "touch", pad).keys)
       .toEqual(["DASH", "DRAG SWING"]);
     expect(tutorialInputPrompt("READ THE CHARGE", "Wait for recovery", [], "gamepad", pad).keys)
-      .toEqual(["R2", "RS — SWING"]);
+      .toEqual(["R2"]);
+    expect(tutorialInputPrompt("READ THE CHARGE", "Evade the charge", [], "touch", pad).keys)
+      .toEqual(["DASH"]);
+    expect(tutorialInputPrompt("FIELD TEST", "Evade, then punish", ["SHIFT", "MOUSE"], "gamepad", pad).keys)
+      .toEqual(["R2", "RS SWING"]);
+    expect(tutorialInputPrompt("FIELD TEST", "Evade, then punish", ["SHIFT", "MOUSE"], "keyboard", pad).keys)
+      .toEqual(["SHIFT", "MOUSE"]);
   });
 });

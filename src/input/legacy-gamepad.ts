@@ -26,15 +26,18 @@ interface LegacyGamepadInternal extends LegacyGamepad {
   _activeT: number;
   _prev: Record<number, boolean | undefined>;
   _navT: number;
+  _navKey: string | null;
   _held: Set<string>;
   _resync: boolean;
   _tetherLatched: boolean;
   _tetherWas: boolean;
+  _tetherBlocked: boolean;
   _dtDir: number;
   _dtLastDir: number;
   _dtT: number;
   _stickWas: boolean;
   _release(): void;
+  _resetTether(): void;
   _detectDoubleTapDash(gamepad: Gamepad, horizontalAxis: number, dt: number): void;
   _glyphStyle(): GlyphStyle;
   _setHeld(code: string, on: boolean): void;
@@ -99,10 +102,12 @@ const PAD: LegacyGamepadInternal = {
   _activeT: 0,
   _prev: {},          // button id -> was pressed last frame
   _navT: 0,           // menu-nav repeat timer
+  _navKey: null,
   _held: new Set(),   // synthetic key codes we injected into Input.held
   preset: "default",  // active controller preset (key into PAD_PRESETS)
   _resync: false,     // snapshot physical buttons without firing edges (post preset-switch)
   _tetherLatched: false, _tetherWas: false,   // toggle-mode tether state
+  _tetherBlocked: false, // lifecycle resets require release before another tether press
   _dtDir: 0, _dtLastDir: 0, _dtT: 999,        // directional double-tap-dash tracking
   _stickWas: false,
 
@@ -115,9 +120,13 @@ const PAD: LegacyGamepadInternal = {
       if (e.gamepad.index === this.index) {
         this.connected = false; this.index = -1; this.active = false;
         this.toastT = 2.4; this.toastText = "CONTROLLER DISCONNECTED";
-        this._release(); Input.setPadTether(false); this._tetherLatched = false;   // never leave the tether stuck on after unplug
+        this._release(); this._resetTether();   // never leave the tether stuck on after unplug
         Input.padScrollX = 0; Input.padScrollY = 0;
       }
+    });
+    window.addEventListener("blur", () => {
+      this._release(); this._resetTether(); this._resync = true;
+      this._navT = 0; this._navKey = null;
     });
   },
 
@@ -128,13 +137,18 @@ const PAD: LegacyGamepadInternal = {
     if (this._stickWas) { Input.stickAim = null; Input.touchAim = false; this._stickWas = false; }
   },
 
+  _resetTether() {
+    Input.setPadTether(false);
+    this._tetherLatched = false; this._tetherWas = false; this._tetherBlocked = true;
+  },
+
   // Switch preset safely: drop synthetic movement, release the held tether (never
   // inherit it into the new map), and flag a resync so a button already held across
   // the switch is not read as a fresh press in the new layout.
   setPreset(name) {
     this.preset = isPadPresetName(name) ? name : "default";
     this._release();
-    Input.setPadTether(false); this._tetherLatched = false; this._dtDir = 0;
+    this._resetTether(); this._dtDir = 0;
     this._resync = true;
     return this.preset;
   },
@@ -244,7 +258,7 @@ const PAD: LegacyGamepadInternal = {
     const lMag = Math.hypot(ax, ay), rMag = Math.hypot(rx, ry);
 
     // pad-activity detector (hides the on-screen touch controls while padding)
-    const anyBtn = gp.buttons.some((b) => b.pressed);
+    const anyBtn = gp.buttons.some((_button, index) => this._isDown(gp, index));
     if (anyBtn || lMag > dead || rMag > dead) this._activeT = 2.5;
     this._activeT = Math.max(0, this._activeT - dt);
     this.active = this._activeT > 0;
@@ -253,6 +267,8 @@ const PAD: LegacyGamepadInternal = {
     // deadzone so resting-stick drift can never steal the cursor from mouse/touch.
     const actThresh = dead + PAD_CONFIG.activityBias;
     if (anyBtn || lMag > actThresh || rMag > actThresh) Input.setMode("gamepad");
+    const P = PAD_PRESETS[this.preset], tDown = this._downAny(gp, P.tether);
+    if (!tDown) this._tetherBlocked = false;
 
     if (uiMode) {
       // ---- menus: dpad / left stick step focus in ALL FOUR directions, A confirms,
@@ -271,10 +287,11 @@ const PAD: LegacyGamepadInternal = {
         else if (dx !== 0) navKey = dx < 0 ? "ArrowLeft" : "ArrowRight";
         else navKey = dy < 0 ? "ArrowUp" : "ArrowDown";
       }
-      if (navKey && this._navT <= 0) {
+      if (navKey && (navKey !== this._navKey || this._navT <= 0)) {
         Input.pressed.add(navKey);   // menuUp/Down/Left/Right (and the Prev/Next wrappers) read these
         this._navT = PAD_CONFIG.menuRepeat;
       } else if (!navKey) this._navT = 0;
+      this._navKey = navKey;
       if (this._edge(gp, 0)) Input.pressed.add("Enter");         // A = confirm
       if (this._edge(gp, 1)) Input.padBack = true;               // B = back (game routes to BACK)
       if (this._edge(gp, 2)) {
@@ -298,10 +315,13 @@ const PAD: LegacyGamepadInternal = {
       if (this._edge(gp, 7)) Input._uiPageDown = true;           // R2 = page down
       this._edge(gp, 9);                                        // keep prev[] fresh for shared buttons
       this._release(); Input.setPadTether(false); this._tetherLatched = false;   // no movement or tether while in menus
+      this._tetherWas = tDown;
+      if (tDown) this._tetherBlocked = true;
       return;
     }
 
     // ---- gameplay ----
+    this._navKey = null; this._navT = 0;
     Input.padScrollX = 0; Input.padScrollY = 0;   // scroll intent is menu-only
     const deadL = PAD_CONFIG.deadL, deadR = PAD_CONFIG.deadR;
     // movement: left stick beyond the (tunable) left deadzone, or dpad, -> held keys
@@ -313,7 +333,6 @@ const PAD: LegacyGamepadInternal = {
 
     // actions resolved from the active preset (match the touch edges so every
     // consumer just works). Any button assigned to an action fires it.
-    const P = PAD_PRESETS[this.preset];
     if (this._edgeAny(gp, P.jump)) { Input.tJump = true; semantic.push({ type: "jump", phase: "pressed" }); }
     if (this._edgeAny(gp, P.dash)) {
       Input.tDash = true;
@@ -328,12 +347,11 @@ const PAD: LegacyGamepadInternal = {
     if (PAD_CONFIG.doubleTapDash) this._detectDoubleTapDash(gp, ax, dt);
     // tether-tighten: HOLD (held button) or TOGGLE (edge flips a latch). Its own channel,
     // so a real mouse hold is never overwritten.
-    const tDown = this._downAny(gp, P.tether);
     if (PAD_CONFIG.tetherMode === "toggle") {
-      if (tDown && !this._tetherWas) this._tetherLatched = !this._tetherLatched;
+      if (tDown && !this._tetherWas && !this._tetherBlocked) this._tetherLatched = !this._tetherLatched;
       Input.setPadTether(this._tetherLatched);
     } else {
-      Input.setPadTether(tDown); this._tetherLatched = false;
+      Input.setPadTether(tDown && !this._tetherBlocked); this._tetherLatched = false;
     }
     this._tetherWas = tDown;
 
