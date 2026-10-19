@@ -30,6 +30,12 @@ export type ScreenAction =
   | { readonly type: "profile.compareGhostCapsule"; readonly id: string }
   | { readonly type: "profile.openGhostComparison" }
   | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
+  | { readonly type: "profile.pickGhostArchive" }
+  | { readonly type: "profile.reselectGhostArchive"; readonly id: string }
+  | { readonly type: "profile.restoreGhostArchive"; readonly id: string; readonly revision: number }
+  | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
+  | { readonly type: "profile.cancelGhostArchiveSelection" }
+  | { readonly type: "profile.downloadGhostArchive"; readonly id: string }
   | { readonly type: "profile.openGhostPublication"; readonly id: string }
   | { readonly type: "profile.openGhostSupport"; readonly id: string }
   | { readonly type: "profile.signIn" }

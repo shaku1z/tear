@@ -196,6 +196,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       available: capsule.healthy && capsule.status === "complete" && capsule.theaterEligible,
       theaterUnavailable: !capsule.theaterEligible,
       repairable: capsule.repairable,
+      canDownloadArchive: capsule.healthy && capsule.status === "complete",
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
       comparisonSelected: comparisonSources.includes(capsule.id),
       comparisonSourceCount: comparisonSources.length,
@@ -213,7 +214,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     const stats = profileTab === "stats" ? buildProfileStats((key) => d.PROFILE.stat(key),
       services.ease(services.clamp(services.enterSeconds() / 0.5, 0, 1)),
       { danger: d.UI.t.color.danger, cyan: "#13c4d6", green: "#2f9e6b", gold: "#e0a326" }, services.formatTime) : [];
-    const result = buildProfileSnapshot({ tab: profileTab, tabs: profileTabs, signedIn,
+    const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? 120 : 0;
+    const result = buildProfileSnapshot({ tab: profileTab, tabs: profileTabs, signedIn, replayListInset: archiveInset,
       firebase: d.Cloud.provider === d.FirebaseProvider, canSignIn, canRename: signedIn && d.Cloud.canRename(),
       hasCustomName: signedIn && d.Cloud.hasCustomName(), renameCooldownDays: signedIn ? d.Cloud.renameCooldownDays() : 0,
       authRetryPrompt: canSignIn && d.Cloud.authRetryPrompt, signInLabel: canSignIn ? d.Cloud.signInLabel() : "",
@@ -229,7 +231,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       stat: (key) => d.PROFILE.stat(key), formatTime: services.formatTime,
       difficultyAccent: (id) => difficultyHeat[id] ?? d.UI.t.color.danger });
     services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll));
-    services.renderers.profile(result.view);
+    services.renderers.profile({ ...result.view, ...(profileTab === "vault" && ghostVault.archive !== undefined ? { archive: ghostVault.archive } : {}) });
   };
   const renderAchievements = (): void => {
     const findAchievement = (source: AchievementSource) => {

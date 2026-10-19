@@ -97,7 +97,13 @@ export interface CardView extends ChoiceView {
   readonly boss?: boolean;
 }
 export interface StatView { readonly label: string; readonly value: string; readonly detail?: string; readonly glyph?: string; readonly accent?: string }
-export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly repairable?: boolean; readonly theaterUnavailable?: boolean; readonly comparisonSelected?: boolean; readonly comparisonSourceCount?: number; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
+export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly repairable?: boolean; readonly canDownloadArchive?: boolean; readonly theaterUnavailable?: boolean; readonly comparisonSelected?: boolean; readonly comparisonSourceCount?: number; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
+export interface GhostArchiveOperationView {
+  readonly status: "idle" | "unavailable" | "picking" | "validating" | "ready" | "restoring" | "reselect-required" | "complete" | "cancelled" | "failed" | "download-requested";
+  readonly detail: string; readonly canPick: boolean; readonly jobId?: string; readonly revision?: number;
+  readonly capsuleId?: string; readonly schemaVersion?: number; readonly byteLength?: number; readonly sha256?: string; readonly rootIntegrity?: string;
+  readonly canRestore?: boolean; readonly canReselect?: boolean; readonly canCancel?: boolean; readonly canCancelSelection?: boolean;
+}
 export interface ProgressView {
   readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean;
   /** Section heading the row belongs to on the pause/defeat progress panel (source drawRunProgressPanel). */
@@ -153,6 +159,7 @@ export interface ProfileScreenView {
   readonly records?: readonly { readonly mode: string; readonly difficulty: string; readonly wave: string; readonly time: string; readonly score: string; readonly accent?: string }[];
   readonly journey?: { readonly biomes: readonly ChoiceView[]; readonly bosses: readonly ChoiceView[] };
   readonly emptyMessage?: string;
+  readonly archive?: GhostArchiveOperationView;
 }
 export interface AchievementsScreenView {
   readonly id: "achievements"; readonly category: string; readonly categories: readonly ChoiceView[];

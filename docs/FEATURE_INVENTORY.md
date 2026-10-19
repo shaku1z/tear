@@ -1488,6 +1488,23 @@ publication, or transport path; unhealthy sources are unavailable. The screen
 explicitly names its excluded data and no-training/no-cloud/no-submission
 boundary. Focused unit and renderer evidence preserve this local UI boundary.
 
+### C39 normal local capsule files
+
+Profile → Vault exposes local archive selection in empty and populated views,
+bounded metadata preview, separate explicit Restore/Resume, exact-file
+reselection after reload, and revision-bound cancellation. Healthy complete
+capsules have an independent Download action even when Theater is unavailable.
+Ordinary downloads validate the original encoded chunks and source fence;
+forensic partial export and sanitized support bundles retain their separate
+contracts. The UI reports download requested, not saved-file confirmation.
+Initial and operation catalog inspection performs no maintenance, eviction,
+index rebuilding, repair, source-protection or consent/training/publication
+mutation. File bytes remain transient; BFCache clears selection while retaining
+the durable intent. Focused DOM, facade, controller, action and renderer tests
+cover these local boundaries. A fresh-build normal download and independent
+browser-process cold-file restore journey remains pending; this is not remote
+redundancy, historical-runtime availability, device-quota or full C39 acceptance.
+
 ### C38 explicit foreground owner recovery
 
 The authenticated own-capsule catalog now carries immutable recovery custody

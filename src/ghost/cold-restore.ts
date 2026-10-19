@@ -56,10 +56,11 @@ export class GhostColdRestore {
     const cancelled = ghostColdRestoreRevision(job, { state: "cancelled", lease: null, resultHash: null, failure: null }, this.#now());
     await this.#metadata([{ store: "analysis", key, expected: raw }], [{ store: "analysis", key, value: JSON.stringify(cancelled) }]); return cancelled;
   }
-  async restore(id: string, bytes: Uint8Array, limits?: Partial<NormalGhostArchiveLimits>): Promise<GhostColdRestoreResult> {
+  async restore(id: string, bytes: Uint8Array, limits?: Partial<NormalGhostArchiveLimits>, expectedJob?: GhostColdRestoreJob): Promise<GhostColdRestoreResult> {
     const backend = this.#vault.backend(), key = ghostColdRestoreJobKey(id), initialRaw = await backend.get("analysis", key);
     if (initialRaw === undefined) throw new GhostColdRestoreError("input-required", "select an explicit archive before restoring");
     const initial = this.#job(initialRaw, id);
+    if (expectedJob !== undefined && canonicalStringify(initial) !== canonicalStringify(expectedJob)) throw new GhostColdRestoreError("conflict", "displayed restore job revision changed before claim");
     if (initial.state === "cancelled") throw new GhostColdRestoreError("cancelled", "cancelled cold restore requires a new intent");
     const archive = await this.#archive(bytes, limits ?? initial.limits);
     if (canonicalStringify(archive.binding) !== canonicalStringify(initial.binding) || canonicalStringify(archive.limits) !== canonicalStringify(initial.limits)) throw new GhostColdRestoreError("input-mismatch", "reselection differs from the immutable cold restore input");

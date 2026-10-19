@@ -82,12 +82,13 @@ export function buildProfileSnapshot(input: {
   readonly coins: number; readonly shards: number; readonly unlockedCount: number; readonly totalAchievements: number;
   readonly records: readonly ProfileRecordSource[]; readonly replays: readonly ReplayView[]; readonly stats: readonly StatView[];
   readonly message: string; readonly height: number; readonly scroll: number; readonly achievements: readonly ProfileAchievementSource[];
+  readonly replayListInset?: number;
   readonly unlocked: (id: string) => boolean; readonly categoryIcon: (category: string) => string;
   readonly rarityColor: (rarity: string) => string; readonly stages: readonly ProfileStageSource[]; readonly bosses: readonly ProfileBossSource[];
   readonly stat: (key: string) => number; readonly formatTime: (seconds: number) => string;
   readonly difficultyAccent: (difficultyId: string) => string;
 }): ProfileSnapshotResult {
-  const maximumScroll = Math.max(0, input.replays.length * 96 - (input.height - 432));
+  const maximumScroll = Math.max(0, input.replays.length * 96 - (input.height - 432 - (input.replayListInset ?? 0)));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const rarityRank: Readonly<Record<string, number>> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
   const showcases = input.achievements.filter((entry) => input.unlocked(entry.id))

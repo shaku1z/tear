@@ -4,8 +4,10 @@ import type { LibraryScreenAdapters } from "./live-library-screen-adapters";
 import type { ReplayScreenAdapter } from "./live-replay-screen-adapter";
 import type { SettingsRenameAdapters } from "./live-settings-rename-adapters";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
+import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 
 export interface ScreenActionBindingPorts {
+  readonly ghostFiles: Pick<GhostVaultLibraryPort, "pickArchive" | "restoreArchive" | "cancelArchive" | "downloadArchive">;
   readonly setScreen: (screen: LegacyAppScreen) => void; readonly resetScroll: () => void;
   readonly setSetupSelection: (kind: "mode" | "difficulty" | "weapon" | "boss", id: string) => void;
   readonly startSelectedRun: () => void; readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
@@ -94,6 +96,12 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.compareGhostCapsule": (action) => { ports.library.compareGhostCapsule(action.id); },
     "profile.openGhostComparison": () => { ports.library.openGhostComparison(); },
     "profile.repairGhostCapsule": (action) => { ports.library.repairGhostCapsule(action.id); },
+    "profile.pickGhostArchive": () => { ports.ghostFiles.pickArchive(); },
+    "profile.reselectGhostArchive": (action) => { ports.ghostFiles.pickArchive(action.id); },
+    "profile.restoreGhostArchive": (action) => { ports.ghostFiles.restoreArchive(action.id, action.revision); },
+    "profile.cancelGhostRestore": (action) => { ports.ghostFiles.cancelArchive(action.id, action.revision); },
+    "profile.cancelGhostArchiveSelection": () => { ports.ghostFiles.cancelArchive(); },
+    "profile.downloadGhostArchive": (action) => { ports.ghostFiles.downloadArchive(action.id); },
     "profile.openGhostPublication": (action) => { ports.openGhostPublication(action.id); },
     "profile.openGhostSupport": (action) => { ports.openGhostSupport(action.id); },
     "ghostpublication.grant": () => { ports.grantGhostPublication(); },

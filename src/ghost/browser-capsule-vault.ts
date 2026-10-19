@@ -11,6 +11,7 @@ import { createGhostProductionReplaySession } from "./production-replay-session"
 import type { GhostPracticeChild, GhostPracticeMode } from "./replay-world";
 import { GhostDoctor } from "./ghost-doctor";
 import { maintainGhostVault, type GhostVaultMaintenanceOptions, type GhostVaultMaintenanceReport } from "./vault-maintenance";
+import { GhostVaultKnowledgeLibraries } from "./durable-knowledge-libraries";
 
 export interface BrowserGhostVaultCatalog {
   readonly manifests: readonly TearGhostManifest[];
@@ -51,6 +52,17 @@ export async function inspectBrowserGhostVault(
     manifests: Object.freeze(values.filter((manifest): manifest is TearGhostManifest => manifest !== undefined)),
     maintenance,
   });
+}
+
+/** File operations inspect custody without quota eviction, index repair or maintenance receipts. */
+export async function inspectBrowserGhostVaultReadOnly(factory: IDBFactory | undefined): Promise<BrowserGhostVaultCatalog> {
+  if (factory === undefined) throw new Error("Ghost Vault is unavailable in this browser");
+  const vault = await openBrowserGhostVault(factory), doctor = new GhostDoctor(vault);
+  const manifests = await listBrowserGhostCapsuleManifests(factory);
+  const integrity = await Promise.all(manifests.map(async (manifest) => Object.freeze({ id: manifest.id, healthy: (await doctor.scan(manifest.id)).healthy })));
+  return Object.freeze({ manifests, maintenance: Object.freeze({ schemaVersion: 1, checkedAt: new Date().toISOString(), maximumBytes: 0,
+    evictedCapsuleIds: Object.freeze([]), integrity: Object.freeze(integrity), rebuiltIndexes: 0,
+    libraries: await new GhostVaultKnowledgeLibraries(vault.backend()).inventory() }) });
 }
 
 /** Repairs an unhealthy source into a new child while retaining the source evidence. */

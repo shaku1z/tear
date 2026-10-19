@@ -1,7 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createGhostVaultLibraryController } from "../../src/app/ghost-vault-library-controller";
 import type { TearGhostManifest } from "../../src/ghost/capsule-vault";
 import { refuseGhostTheater } from "../../src/ghost/theater-open-result";
+import { createMemoryGhostVaultBackend, GhostLocalVault, GhostStreamingRecorder } from "../../src/ghost/capsule-vault";
+import { createGhostColdRestoreBrowserPort } from "../../src/ghost/browser-cold-restore";
+import type { GhostArchiveFile } from "../../src/app/browser-ghost-archive-files";
+import { NORMAL_GHOST_ARCHIVE_LIMITS } from "../../src/ghost/capsule-archive";
+
+async function archiveBytes(id = "selected-capsule") {
+  const vault = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-10-19T00:00:00Z", vault, chunkEntries: 1, maxPendingWrites: 1 });
+  await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } }); await recorder.finalize("2026-10-19T00:00:01Z");
+  return new TextEncoder().encode(await vault.exportCapsule(id));
+}
+function archiveController(backend = createMemoryGhostVaultBackend()) {
+  const actual = createGhostColdRestoreBrowserPort(new GhostLocalVault(backend)), cancel = vi.fn(actual.cancel), restore = { ...actual, cancel };
+  let selected: ((file: GhostArchiveFile) => void) | undefined, cancelled: (() => void) | undefined;
+  const cleanup = vi.fn(), download = vi.fn();
+  const controller = createGhostVaultLibraryController({ newIntent: () => crypto.randomUUID(), restore, files: {
+    pick: (onSelected, onCancelled) => { selected = onSelected; cancelled = onCancelled; return cleanup; }, download,
+  }, repair: () => Promise.reject(new Error("not requested")), inspect: () => Promise.resolve({ manifests: [], maintenance: { schemaVersion: 1, checkedAt: "2026-10-19", maximumBytes: 0,
+    evictedCapsuleIds: [], integrity: [], rebuiltIndexes: 0, libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] } } }) });
+  return { controller, restore, backend, cancel, cleanup, download, choose: (bytes: Uint8Array) => { selected?.({ size: bytes.byteLength, arrayBuffer: () => Promise.resolve(Uint8Array.from(bytes).buffer) }); },
+    chooseFile: (file: GhostArchiveFile) => { selected?.(file); }, cancelPicker: () => { cancelled?.(); } };
+}
 
 function manifest(id: string, createdAt: string): TearGhostManifest {
   return Object.freeze({
@@ -18,6 +39,63 @@ function manifest(id: string, createdAt: string): TearGhostManifest {
 }
 
 describe("Ghost Vault library controller", () => {
+  it("previews only, requires exact reselection after reload, then explicitly restores and labels current custody", async () => {
+    const f = archiveController(), bytes = await archiveBytes(); f.controller.pickArchive(); f.choose(bytes);
+    await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("ready"); });
+    expect(await f.backend.keys("manifests")).toEqual([]); const ready = f.controller.snapshot().archive;
+    expect(ready?.sha256).toHaveLength(64); expect(Object.isFrozen(ready)).toBe(true); expect(JSON.stringify(ready)).not.toContain("chunks");
+    f.controller.dispose(); expect(f.cancel).not.toHaveBeenCalled();
+    const reload = archiveController(f.backend); reload.controller.refresh();
+    await vi.waitFor(() => { expect(reload.controller.snapshot().archive?.status).toBe("reselect-required"); });
+    const history = reload.controller.snapshot().archive; if (!history?.jobId) throw new Error("missing job");
+    reload.controller.restoreArchive(history.jobId, history.revision ?? 0); expect(await f.backend.keys("manifests")).toEqual([]);
+    reload.controller.pickArchive(history.jobId); reload.choose(await archiveBytes("unrelated-capsule"));
+    await vi.waitFor(() => { expect(reload.controller.snapshot().archive?.status).toBe("failed"); });
+    expect(reload.controller.snapshot().archive?.detail).toMatch(/differs/u);
+    reload.controller.pickArchive(history.jobId); reload.choose(bytes);
+    await vi.waitFor(() => { expect(reload.controller.snapshot().archive?.status).toBe("ready"); });
+    const selected = reload.controller.snapshot().archive; reload.controller.restoreArchive(history.jobId, selected?.revision ?? 0);
+    await vi.waitFor(() => { expect(reload.controller.snapshot().archive?.status).toBe("complete"); });
+    expect(await f.backend.keys("manifests")).toEqual(["selected-capsule"]); expect(reload.controller.snapshot().archive?.canCancel).toBe(false);
+  });
+  it("treats retained completion as historical and refuses missing current custody after exact reselection", async () => {
+    const f = archiveController(), bytes = await archiveBytes(); const { job } = await f.restore.select("historical", bytes); await f.restore.restore(job, bytes);
+    f.controller.refresh(); await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("reselect-required"); });
+    expect(f.controller.snapshot().archive?.detail).toMatch(/Historical/u);
+    const manifest = await new GhostLocalVault(f.backend).getManifest("selected-capsule"); if (!manifest?.chunks[0]) throw new Error("missing chunk");
+    await f.backend.remove("chunks", manifest.chunks[0].id); f.controller.pickArchive("historical"); f.choose(bytes);
+    await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("ready"); });
+    f.controller.restoreArchive("historical", f.controller.snapshot().archive?.revision ?? 0);
+    await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("failed"); });
+    expect(f.controller.snapshot().archive?.detail).toMatch(/could not be confirmed/u);
+  });
+  it("preflights file size before allocation and discards late reads after transient cancellation or disposal", async () => {
+    const f = archiveController(), arrayBuffer = vi.fn(); f.controller.pickArchive();
+    f.chooseFile({ size: NORMAL_GHOST_ARCHIVE_LIMITS.maxEncodedBytes + 1, arrayBuffer });
+    await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("failed"); }); expect(arrayBuffer).not.toHaveBeenCalled();
+    let resolve: ((value: ArrayBuffer) => void) | undefined;
+    f.controller.pickArchive(); f.chooseFile({ size: 3, arrayBuffer: () => new Promise((done) => { resolve = done; }) });
+    f.controller.cancelArchive(); resolve?.(new ArrayBuffer(3)); await Promise.resolve();
+    expect(f.controller.snapshot().archive?.status).toBe("idle"); expect(await f.restore.jobs()).toEqual([]); expect(f.cancel).not.toHaveBeenCalled();
+    f.controller.pickArchive(); f.controller.dispose(); f.choose(await archiveBytes()); await Promise.resolve();
+    expect(await f.restore.jobs()).toEqual([]); expect(f.cleanup).toHaveBeenCalled();
+  });
+  it("keeps actions usable after transient BFCache clearing, and cancellation never becomes automatic restore", async () => {
+    const f = archiveController(), bytes = await archiveBytes(); f.controller.pickArchive(); f.choose(bytes);
+    await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("ready"); });
+    const ready = f.controller.snapshot().archive; if (!ready?.jobId) throw new Error("missing job");
+    f.controller.cancelArchive(); f.controller.refresh(); expect(f.cancel).not.toHaveBeenCalled();
+    f.controller.restoreArchive(ready.jobId, ready.revision ?? 0); expect(await f.backend.keys("manifests")).toEqual([]);
+    f.controller.pickArchive(ready.jobId); f.cancelPicker(); expect(f.controller.snapshot().archive?.status).toBe("reselect-required");
+    f.controller.pickArchive(ready.jobId); f.choose(bytes); await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("ready"); });
+    f.controller.cancelArchive(ready.jobId, ready.revision); await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("cancelled"); });
+    expect(await f.backend.keys("manifests")).toEqual([]);
+  });
+  it("requests download only after complete original-byte validation and does not claim saved-file success", async () => {
+    const f = archiveController(), bytes = await archiveBytes(); await new GhostLocalVault(f.backend).importCapsule(new TextDecoder().decode(bytes));
+    f.controller.downloadArchive("selected-capsule"); await vi.waitFor(() => { expect(f.controller.snapshot().archive?.status).toBe("download-requested"); });
+    expect(f.download).toHaveBeenCalledOnce(); expect(f.controller.snapshot().archive?.detail).toMatch(/save is not confirmed/u);
+  });
   it("publishes immutable, newest-first custody metadata after a real catalog refresh", async () => {
     const controller = createGhostVaultLibraryController({
       repair: () => Promise.resolve({ sourceId: "older", childId: "older:repaired:1", reused: false }),
