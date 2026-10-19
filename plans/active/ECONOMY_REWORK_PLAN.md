@@ -279,3 +279,39 @@ behavior remain unchanged. That failed zero-run attempt is retained at
 ordinary save readbacks and four terminal captures are retained at
 `C:/tmp/tear-r18-controlled-cohort-20261019-attempt2/`. No completed Ghost
 capsules were available at final readback; none were constructed.
+
+### Riftlock control repair and purchase evidence
+
+The follow-up found a real input-authority defect: Riftlock's firing edge read
+physical tether input while canonical actions supplied `lmbOverride`. Source
+`43dd1490edd4574eafdc504558908bad56f30fd6` uses the effective input and gives
+the scripted motor an actual public fire cooldown for release/press cycles.
+The real-weapon reproduction failed before the fix (zero rounds instead of
+one); fixed controls cover repeated shots, held-input suppression, physical
+fallback and explicit canonical ownership. This does not prove the defect
+caused the earlier deaths.
+
+One post-fix cohort retained the same four seeds and conditions:
+
+| Seed | Actual defeat wave | Score | Run coins | Achievement coins |
+| --- | ---: | ---: | ---: | ---: |
+| 117 | 7 | 3,491 | 139 | 1,525 |
+| 118 | 6 | 1,576 | 91 | 200 |
+| 119 | 7 | 3,311 | 136 | 400 |
+| 120 | 6 | 1,806 | 96 | 0 |
+
+Earned-only coins reached **366 after run 3** and **462 after run 4**. The
+ordinary rendered shop then bought Toughness for 325, with no earlier purchase.
+The separate 2,125 achievement coins and legitimate 75-coin first-buy reward
+reconcile persisted lifetime earned **2,662**, spent **325**, wallet **2,337**
+and `buy.tough: 1`. An ordinary reload preserved the entire observed save
+snapshot exactly. This proves earned-only affordability and purchase/reload in
+this shallower cohort. The wave 8–10 depth criterion still failed, so target-depth
+pacing remains open. No reward, price or save migration was changed.
+
+The 168,708 ms cohort had no timeouts, revivals or replacement runs. The strict
+journey exited unsuccessfully only on the depth criterion. Report and captures:
+`C:/tmp/tear-r18-controlled-cohort-20261019-after-riftlock-fix/`.
+No completed capsule was selected at final readback. The retained report lacks
+recorder failure and noncomplete manifest statuses, so it cannot establish why
+completion was absent; neither privacy gating nor staging overflow is inferred.
