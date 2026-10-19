@@ -230,11 +230,13 @@ cannot independently buy out the expanded shop.
 6. Playtest fresh-profile progression before changing live prices or reward grants.
 
 Numerical gates 1, 2 and 5 are supported by the source-bound model/receipts;
-gate 3 is conditional on the stated style assumptions. Gates 4 and 6 remain
-open. The cheapest ordinary rank costs 325 coins: at typical 2.0x style, equal
+gate 3 is conditional on the stated style assumptions. Gate 4 remains open;
+gate 6 now has the bounded fresh-profile playtest below. The cheapest ordinary
+rank costs 325 coins: at typical 2.0x style, equal
 full-clear Normal runs at waves 5 / 8 / 10 / 15 earn **72 / 158 / 211 / 379**,
-requiring **5 / 3 / 2 / 1** identical runs respectively. "Decent" has no defined
-depth, score or survival distribution, so these estimates cannot establish
+requiring **5 / 3 / 2 / 1** identical runs respectively. The owner defined a
+decent Normal run as reaching **waves 8–10** on 2026-10-19. Score and survival
+distributions remain unmeasured, so these estimates alone cannot establish
 actual first-purchase pacing.
 
 The smallest outstanding gameplay trace uses one isolated fresh local profile,
@@ -246,3 +248,34 @@ target. Preserve natural outcomes, perform the production purchase when
 eligible, and report earlier/later crossings honestly. One trace is not
 population acceptance. Do not reset existing saves, inject currency, or change
 prices/rewards to manufacture the result.
+
+## Controlled Normal cohort — observed result
+
+Source `cbb855530e7b646b16d16f274188ed715ca62dc8` completed one predeclared
+four-seed competent/Riftlock cohort on a fresh ordinary browser profile.
+All permanent ranks and spending stayed zero. The policy would withdraw at
+wave 9, but every run ended naturally before that boundary:
+
+| Seed | Actual defeat wave | Score | Run coins | Achievement coins |
+| --- | ---: | ---: | ---: | ---: |
+| 117 | 7 | 2,607 | 122 | 1,975 |
+| 118 | 4 | 596 | 51 | 200 |
+| 119 | 5 | 891 | 67 | 0 |
+| 120 | 5 | 802 | 66 | 0 |
+
+Run earnings totaled **306**, below 325; the actual wallet was **2,481** after
+the separate **2,175** achievement grants. No purchase/reload branch ran.
+All outcomes stayed within the declared budgets, with no revival, replacement
+run or injected progression. The cohort took 216,116 ms. Its acceptance
+assertion failed on depth, affordability and purchase evidence. Gate 4 remains
+open; these early bot deaths do not establish wave 8–10 player pacing or
+justify changing rewards or prices.
+
+The initial attempt stopped before gameplay because the engineering Watch
+bridge and harness readiness required disposable test mode. A test-build-only
+explicit Watch opt-in now supports ordinary storage; default and release
+behavior remain unchanged. That failed zero-run attempt is retained at
+`C:/tmp/tear-r18-controlled-cohort-20261019/report.json`. The actual cohort,
+ordinary save readbacks and four terminal captures are retained at
+`C:/tmp/tear-r18-controlled-cohort-20261019-attempt2/`. No completed Ghost
+capsules were available at final readback; none were constructed.
