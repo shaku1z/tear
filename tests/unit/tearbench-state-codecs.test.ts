@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createLiveStateCodec } from "../../src/tearbench/state-codecs";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import {
@@ -107,6 +108,17 @@ function advance(candidate: TearCodecWorld, direction: -1 | 1): void {
 }
 
 describe("TearBench shared state codec registry", () => {
+  it.each(["tear.world.v1", "tear.run.v1"] as const)("versions %s without inventing historical time or callback order", (id) => {
+    const codec = createLiveStateCodec(id);
+    expect(codec.version).toBe(2);
+    const legacy = { clock: 42, mods: { onHit: [null] }, extension: { retained: true } };
+    const migrated = codec.migrate(legacy, 1);
+    expect(migrated).toEqual(legacy);
+    expect(migrated).not.toBe(legacy);
+    const current = { simulationSeconds: 0.173456789, mods: { onHit: [{ $upgradeHook: "rupture" }] } };
+    expect(codec.migrate(codec.migrate(current, 2), 2)).toEqual(current);
+    expect(() => codec.migrate(current, 3)).toThrow(/cannot migrate/);
+  });
   it("migrates pre-cinematic v1 snapshots to the canonical inactive component", () => {
     const registry = createDefaultStateCodecRegistry();
     const base = structuredClone(snapshotFrom(populatedWorld()));

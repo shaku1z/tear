@@ -63,6 +63,8 @@ export interface TearStagedWorld<
   readonly screen: string;
   readonly focus: number;
   readonly tick: number;
+  /** Historical snapshots omit accumulated seconds; never infer scaled time. */
+  readonly simulationSeconds?: number;
   readonly stageIndex: number;
   readonly rng: Rng;
   readonly configuration: TearCodecValue;
@@ -266,6 +268,8 @@ export function hydrateTearCodecWorld<
     screen: stringField(ui, "screen"),
     focus: Number.parseInt(stringField(ui, "focusId"), 10),
     tick: numberField(runPayload, "tick"),
+    ...(record(worldPayload) && worldPayload.simulationSeconds !== undefined
+      ? { simulationSeconds: numberField(worldPayload, "simulationSeconds") } : {}),
     stageIndex: numberField(runPayload, "stage"),
     rng: decodeTearCodecValue(component(world, "tear.rng.v1"), identities) as Rng,
     configuration: decodeTearCodecValue(component(world, "tear.configuration.v1"), identities) as TearCodecValue,

@@ -364,6 +364,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   replay.stage.platforms = [...staged.platforms] as unknown[];
   productionRuntimeState(replay, { ...preparedRuntime, director: replay.world.context.cinema })
     .restore({ ...staged.runtime, lifecycle: preparedRuntime.lifecycle, cinema: preparedRuntime.cinema, bossIntro: restoredBossIntro });
+  if (staged.simulationSeconds !== undefined) replay.world.context.services.clock.set(staged.simulationSeconds);
   return staged;
 }
 

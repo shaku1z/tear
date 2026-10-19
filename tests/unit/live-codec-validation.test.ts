@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { validateLiveCodecPayload } from "../../src/tearbench/live-codec-validation";
 
+describe("live world simulation clock", () => {
+  const base = { clock: 42, identityState: {} };
+  it("accepts historical tick-only and exact fractional seconds", () => {
+    expect(validateLiveCodecPayload("tear.world.v1", base)).toEqual([]);
+    expect(validateLiveCodecPayload("tear.world.v1", { ...base, simulationSeconds: 0.173456789 })).toEqual([]);
+  });
+  it.each([-1, NaN, Infinity, "12", null])("rejects invalid simulation seconds %s", (simulationSeconds) => {
+    expect(validateLiveCodecPayload("tear.world.v1", { ...base, simulationSeconds })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "$.simulationSeconds" })]),
+    );
+  });
+});
+
 describe("live enemy codec variant identity", () => {
   const base = { id: "enemy:1", factoryId: "charger", x: 10, y: 20 };
 

@@ -187,6 +187,13 @@ function objectValue(value: unknown, message: string): Record<string, unknown> {
 }
 
 describe("detached Tear codec world hydrator", () => {
+  it("retains exact fractional seconds and historical absence separately from ticks", () => {
+    const source = completeCodecWorld();
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBeUndefined();
+    const world = objectValue(source.components.get("tear.world.v1"), "world is missing");
+    source.components.set("tear.world.v1", { ...world, simulationSeconds: 0.173456789 });
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBe(0.173456789);
+  });
   it("restores stable references and dispatches each factory with the decoded Echo run", () => {
     const calls: EnemyConstruction[] = [];
     const identity = hydrationContext();

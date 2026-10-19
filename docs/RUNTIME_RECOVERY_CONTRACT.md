@@ -4,6 +4,10 @@ Base: origin/main 7c5362817d41ae43937fd9181ff7fb31b42c5b32. Owner: this recovery
 
 The atomicity follow-up starts at parent-reviewed a1ff3cb0717eaa5d98deab58d95cc2de868dcd4e, including separate publication/cohort and verifier integration. The exclusions below bound this runtime worker's edits; they do not describe every existing branch commit.
 
+The clock/restore-order follow-up starts at parent-reviewed 831275a81dabd2b9aecc20cae0a1fb2859cb031d, retaining its separate storage/retention integration. New run/world payload captures use codec version 2 under their stable IDs. Pure v1 migration preserves extensions and missing accumulated seconds; it cannot invent scaled time or erased callback order. Exact fractional simulation seconds are captured and consumed by live and detached restore. Invalid recorded seconds reject before live mutation; historical absent seconds leave the destination clock unchanged.
+
+Live environment cleanup/replacement retains outgoing actors and their identity map until completion, then installs candidate actors. Focused full-state regressions cover Graft/Root Cage preservation and rollback after clear, replace and late commit failures. Ordinary scenario-reset wasSwinging and native restored-PNG equality remain separate unresolved evidence; this slice does not claim to fix either or repeat prior scene coverage.
+
 Desired behavior: bosses finish arrival and ritual gates on current source; reward draft/reserve/tier-up snapshots rebind production upgrades and preserve configuration aliases; rejected restores leave existing worlds unchanged.
 
 Allowed scope: this recovery worktree; minimal boss/cinematic runtime, reward hydrator, replay snapshot restore prerequisites and their focused tests. Inventory hashes remain outside source. Preserve canonical root, oracle, and every retained worktree. No training, scene art, publication, CI, replay command scheduler, integration or external changes.

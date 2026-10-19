@@ -184,6 +184,12 @@ export function validateLiveCodecPayload(
     issues.push(...finiteField(codecId, payload, "wave"), ...finiteField(codecId, payload, "tick"));
   } else if (codecId === "tear.world.v1") {
     issues.push(...finiteField(codecId, payload, "clock"));
+    if (payload.simulationSeconds !== undefined) {
+      issues.push(...finiteField(codecId, payload, "simulationSeconds"));
+      if (typeof payload.simulationSeconds === "number" && payload.simulationSeconds < 0) {
+        issues.push(issue(codecId, "$.simulationSeconds", "simulationSeconds must be nonnegative"));
+      }
+    }
     if (!record(payload.identityState)) issues.push(issue(codecId, "$.identityState", "world requires identity allocator state"));
   } else if (codecId === "tear.hazard.v1") {
     if (!Array.isArray(payload.slowZones) || !Array.isArray(payload.walls)) {

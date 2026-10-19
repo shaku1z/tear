@@ -58,7 +58,7 @@ type Candidate = TearStagedWorld<
 >;
 type StateForgeWorldServices = Pick<
   TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource, GameRuntimeDependencies["CONFIG"]>,
-  "configuration" | "random"
+  "configuration" | "random" | "clock"
 >;
 
 export interface LiveStateForgeAdapterOptions {
@@ -190,6 +190,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   }));
   components.set("tear.world.v1", Object.freeze({
     clock: options.tick(), runtime: encode(options.runtimeState(), identities),
+    simulationSeconds: options.worldServices.clock.seconds(),
     floaters: encode(options.state.floaters(), identities),
     ghost: encode(options.captureGhost(), identities),
     identityState: encode(options.captureIdentityState(), identities),
@@ -304,6 +305,25 @@ export function createLiveStateForgeAdapter(
     },
     commit(candidate) {
       cleanupBossEncounterActors(options.state.enemies(), "restore");
+      // Environment cleanup acts on bound actors. Retain outgoing actors and
+      // their identity map until clear/replace complete, before installing candidates.
+      options.restoreStageIndex(candidate.stageIndex);
+      // Keep the same preview-slot resolution used by validation. Surgical
+      // Pale bossonly restores intentionally use a playground stage index,
+      // while their run mode remains bossonly for the boss contract.
+      const previewStageIndex = candidate.stageIndex >= options.dependencies.STAGES.length;
+      const availableStages = candidate.run.mode === "playground" || previewStageIndex
+        ? options.dependencies.PLAYGROUND_STAGES
+        : options.dependencies.STAGES;
+      const restoredStage = availableStages[candidate.stageIndex];
+      const currentWorldId = options.environment().snapshot().worldId;
+      const environment = {
+        ...candidate.environment,
+        ...(candidate.environment.stageId === "unknown" && restoredStage !== undefined ? { stageId: restoredStage.id } : {}),
+        ...(candidate.environment.worldId === undefined && currentWorldId !== undefined ? { worldId: currentWorldId } : {}),
+      };
+      options.clearEnvironmentRestore?.();
+      options.restoreEnvironment(environment);
       // Rebind the detached candidate before any host/environment owner can
       // observe it and allocate a competing ID from the restored sequence.
       options.restoreIdentityState(candidate.identityState);
@@ -325,28 +345,13 @@ export function createLiveStateForgeAdapter(
       options.state.setFloaters(candidate.floaters);
       options.state.setSlowZones(candidate.slowZones);
       options.state.setTemporaryWalls(candidate.walls);
-      options.restoreStageIndex(candidate.stageIndex);
-      // Keep the same preview-slot resolution used by validation. Surgical
-      // Pale bossonly restores intentionally use a playground stage index,
-      // while their run mode remains bossonly for the boss contract.
-      const previewStageIndex = candidate.stageIndex >= options.dependencies.STAGES.length;
-      const availableStages = candidate.run.mode === "playground" || previewStageIndex
-        ? options.dependencies.PLAYGROUND_STAGES
-        : options.dependencies.STAGES;
-      const restoredStage = availableStages[candidate.stageIndex];
-      const currentWorldId = options.environment().snapshot().worldId;
-      const environment = {
-        ...candidate.environment,
-        ...(candidate.environment.stageId === "unknown" && restoredStage !== undefined ? { stageId: restoredStage.id } : {}),
-        ...(candidate.environment.worldId === undefined && currentWorldId !== undefined ? { worldId: currentWorldId } : {}),
-      };
-      options.clearEnvironmentRestore?.();
-      options.restoreEnvironment(environment);
       options.replacePlatforms(candidate.platforms);
       options.worldServices.random.restore(candidate.rng);
       options.restoreGhost(candidate.ghost);
       options.restoreReward(candidate.reward);
       options.setTick(candidate.tick);
+      // Ticks do not encode accumulated time under slow motion or hit-stop.
+      if (candidate.simulationSeconds !== undefined) options.worldServices.clock.set(candidate.simulationSeconds);
       options.clearInputProjection();
       options.setFocus(candidate.focus);
       options.setScreen(candidate.screen);

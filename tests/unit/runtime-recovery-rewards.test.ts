@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint,
   restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
+import { UPGRADES, applyUpgrade, tierUp } from "../../src/gameplay/upgrades";
 import { upgradeHookIdentity } from "../../src/gameplay/upgrade-hooks";
 
 function upgradeContext(replay: ProductionReplayWorld) {
@@ -12,6 +12,28 @@ function upgradeContext(replay: ProductionReplayWorld) {
 }
 
 describe("runtime recovery reward checkpoints", () => {
+  it("preserves interleaved acquisition and tier callback order without repeating numeric effects", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "interleaved-tier-hooks", mode: "endless" });
+    const source = composition.create(undefined);
+    for (const id of ["riposte", "tempo"]) {
+      const choice = UPGRADES.find((upgrade) => upgrade.id === id);
+      if (choice === undefined) throw new Error(`missing ${id}`);
+      applyUpgrade(choice, upgradeContext(source.replay));
+    }
+    tierUp("riposte", upgradeContext(source.replay));
+    const { snapshot } = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "interleaved-tier-hooks");
+    const restored = composition.create(JSON.parse(JSON.stringify(snapshot)) as typeof snapshot);
+    const mods = upgradeContext(restored.replay).mods;
+    expect(mods.onParry.map(upgradeHookIdentity)).toEqual(["tempo", "riposte:2"]);
+    expect(mods.ownedList).toEqual(["riposte", "tempo"]);
+    expect(mods.tier).toEqual(upgradeContext(source.replay).mods.tier);
+    expect(restored.replay.configuration.snapshot()).toEqual(source.replay.configuration.snapshot());
+    const order: string[] = [];
+    const player = { tempoStk: 0, tempoT: 0, dashCd: 1, maxDashCharges: 2,
+      set dashCharges(_value: number) { order.push("tempo"); }, heal: () => { order.push("riposte"); } };
+    for (const callback of mods.onParry) callback({ player } as unknown as Parameters<typeof callback>[0]);
+    expect(order).toEqual(["tempo", "riposte"]);
+  });
   it("restores production draft choices and resumes the same reward without rerolling", () => {
     const composition = createProductionGhostReplayComposition({ seed: "runtime-recovery-draft", mode: "endless" });
     const source = composition.create(undefined);

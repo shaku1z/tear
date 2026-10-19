@@ -187,6 +187,14 @@ export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
   const dataCodec = createDataOnlyCodec(id);
   return Object.freeze({
     ...dataCodec,
+    version: id === "tear.world.v1" || id === "tear.run.v1" ? 2 : dataCodec.version,
+    migrate(payload: unknown, fromVersion: number): unknown {
+      if (id !== "tear.world.v1" && id !== "tear.run.v1") return dataCodec.migrate(payload, fromVersion);
+      if (fromVersion !== 1 && fromVersion !== 2) throw new RangeError(`${id} cannot migrate schema version ${String(fromVersion)}`);
+      // Preserve extensions and historical absence of exact seconds. Legacy
+      // null callbacks remain unsupported; acquisition IDs cannot recover order.
+      return structuredClone(payload);
+    },
     validate(payload: unknown) {
       const dataIssues = dataCodec.validate(payload);
       return dataIssues.length > 0

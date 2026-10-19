@@ -75,6 +75,34 @@ function withoutPresentation(snapshot: TearSnapshotV1): TearSnapshotV1 {
 }
 
 describe("production replay composition", () => {
+  it("restores exact checkpoint seconds without inferring historical time", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "checkpoint-clock" });
+    const source = composition.create(undefined);
+    source.replay.world.context.services.clock.set(0.173456789);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "clock");
+    expect((checkpoint.snapshot.state["tear.world.v1"] as Record<string, unknown>).simulationSeconds).toBe(0.173456789);
+    const target = createProductionReplayWorld({ seed: "checkpoint-clock-target" });
+    restoreProductionReplaySnapshot(target, checkpoint.snapshot);
+    expect(target.world.context.services.clock.seconds()).toBe(0.173456789);
+    const legacy = structuredClone(checkpoint.snapshot);
+    delete (legacy.state["tear.world.v1"] as Record<string, unknown>).simulationSeconds;
+    target.world.context.services.clock.set(0.75);
+    restoreProductionReplaySnapshot(target, legacy);
+    expect(target.world.context.services.clock.seconds()).toBe(0.75);
+  });
+
+  it.each([-1, "12", null])("rejects invalid checkpoint seconds %s before clock or world mutation", (seconds) => {
+    const source = createProductionGhostReplayComposition({ seed: "invalid-clock" }).create(undefined);
+    const { snapshot } = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "invalid-clock");
+    const invalid = structuredClone(snapshot);
+    (invalid.state["tear.world.v1"] as Record<string, unknown>).simulationSeconds = seconds;
+    const target = createProductionReplayWorld({ seed: "invalid-clock-target" });
+    target.world.context.services.clock.set(0.75);
+    const unchanged = unchangedDestination(target);
+    expect(() => restoreProductionReplaySnapshot(target, invalid)).toThrow(/simulationSeconds/);
+    unchanged();
+    expect(target.world.context.services.clock.seconds()).toBe(0.75);
+  });
   it("normalizes only the detached entry screen of a valid tick-zero campaign opening anchor", () => {
     const fixture = activeChapterCheckpoint(false, true);
     const snapshot: TearSnapshotV1 = { ...fixture.snapshot, state: { ...fixture.snapshot.state,
