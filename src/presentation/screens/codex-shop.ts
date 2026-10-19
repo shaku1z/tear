@@ -225,6 +225,8 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     ui.tag(canvas, "COINS", width - 220, 130, ui.t.color.muted, "right", ui.t.type.micro);
     ui.tag(canvas, `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString()}`,
       240, 130, ui.t.color.muted, "left", ui.t.type.micro);
+    if (view.onboarding) ui.wrappedText(canvas, view.onboarding, width / 2, 151,
+      Math.min(1120, width - 64), 20, ui.t.type.body, "center", ui.t.alpha.soft);
     const columnX = [240, 830] as const, columnWidth = 550, cardHeight = 62, rowHeight = 74;
     const viewTop = 158, viewBottom = height - 104;
     const split = Math.ceil(view.sections.length / 2);

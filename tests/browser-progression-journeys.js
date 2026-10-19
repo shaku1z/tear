@@ -1,4 +1,6 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 
 withJourney({ name: "progression journeys", port: 8142 }, async ({ page, boot, waitScreen, clickAndWait }) => {
@@ -7,6 +9,41 @@ withJourney({ name: "progression journeys", port: 8142 }, async ({ page, boot, w
   }
   async function settleInput() {
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  }
+
+  if (process.env.TEAR_CONTEXTUAL_ONBOARDING_ONLY === "1") {
+    // UI fixture routing only: real screen models/renderers/controls, without
+    // claiming a naturally played campaign clear or a purchase-pacing result.
+    await page.addInitScript(() => {
+      const captured = [], original = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function captureOnboarding(value, ...rest) {
+        captured.push(String(value));
+        if (captured.length > 1000) captured.splice(0, 500);
+        return original.call(this, value, ...rest);
+      };
+      window.__TEAR_ONBOARDING_TEXT__ = captured;
+    });
+    const directory = process.env.TEAR_CONTEXTUAL_ONBOARDING_ARTIFACT_DIR;
+    if (directory) fs.mkdirSync(path.resolve(directory), { recursive: true });
+    await boot();
+    await page.evaluate(async () => {
+      window.__PANTHEON_TEST.setOptions({ cinematics: "off" });
+      await window.__PANTHEON_TEST.startMode("campaign", "normal");
+      window.__PANTHEON_TEST.prepareCurrentGameplayScenario();
+      window.__PANTHEON_TEST.openDraft({ preserveRun: true, expanded: false, rerolls: 0, reserve: false });
+    });
+    await waitScreen("draft");
+    await page.waitForFunction(() => (window.__TEAR_ONBOARDING_TEXT__ ?? []).join(" ").includes("This choice lasts for this run only."));
+    assert.ok(await page.evaluate(() => (window.__TEAR_ONBOARDING_TEXT__ ?? []).join(" ").includes("face the chapter boss.")));
+    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "campaign-first-draft.png") });
+    await page.keyboard.press("1"); await waitScreen("playing");
+    await boot(); await clickAndWait(260, 452, "shop");
+    await page.waitForFunction(() => (window.__TEAR_ONBOARDING_TEXT__ ?? []).join(" ").includes("Buying is optional."));
+    assert.ok(await page.evaluate(() => (window.__TEAR_ONBOARDING_TEXT__ ?? []).join(" ").includes("Spend coins on permanent upgrades for future runs.")));
+    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "first-purchase-shop.png") });
+    await clickAndWait(800, 850, "menu");
+    console.log("Contextual onboarding UI fixture passed: campaign draft choice and optional shop, no purchase performed");
+    return;
   }
 
   await page.evaluate(() => window.__PANTHEON_TEST.openDraft({ expanded: true, rerolls: 2, reserve: true }));

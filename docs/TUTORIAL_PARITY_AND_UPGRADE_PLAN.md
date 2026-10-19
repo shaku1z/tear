@@ -25,6 +25,23 @@ The governing principle is:
 
 ## Cutting Room 2.0 implementation status
 
+### Contextual campaign choices and shop guidance
+
+The first-wave campaign draft shows: “This choice lasts for this run only. Clear
+waves, build your abilities, then face the chapter boss.” It appears while both
+`stageClears` and `campaignClears` are zero, including retries; this is an
+early-campaign policy, not a first-ever-run claim. Other modes and later drafts
+do not show it.
+
+Before the first shop purchase, inline copy reads: “Spend coins on permanent
+upgrades for future runs. Buying is optional.” It requires zero owned ranks,
+zero `shopBuys` and zero META `lifetimeSpent`. Both notices use existing facts,
+wrap at normal body size in the existing header/card gap, and add no persistence
+flag, modal, timer, confirmation or forced purchase. Prices, controls and tutorial
+baseline behavior are unchanged. The focused browser fixture visits these normal
+renderers through existing debug routing; it is UI evidence, not a natural
+campaign-completion or purchase-pacing claim.
+
 ### Additive Field Test transfer contract
 
 Current courses keep all fourteen lesson IDs. Field Test starts with the unchanged
@@ -826,7 +843,7 @@ The shipped Cutting Room now additionally includes:
 - [x] Hand off immediately to the no-wave practice arena after course completion.
 - [x] Add a technique summary and post-completion reached-lesson practice selector.
 - [x] Add launch/projectile mixed transfer and two-wave miniature cadence.
-- Add contextual first-run campaign onboarding for the real draft/shop screens;
+- [x] Add contextual early-campaign draft and first-purchase shop guidance;
   keep them absent from the tutorial.
 - Retire version 1 only after completion and abandonment metrics meet targets.
 
@@ -932,7 +949,7 @@ Keep Version 1 available as a fallback until Version 2 meets every gate.
 - Implement miniature wave cadence and mixed encounter.
 - Add style-meter introduction and technique summary.
 - Add immediate campaign handoff.
-- Add first-campaign contextual draft/shop onboarding outside the tutorial.
+- [x] Add early-campaign draft and first-purchase shop guidance outside the tutorial.
 
 ### T6: Practice Lab and retirement decision
 

@@ -19,6 +19,13 @@ type AbilityCategory = Parameters<typeof buildDraftCard>[3];
 type RewardChoice = Upgrade;
 type Achievement = NonNullable<ReturnType<Dependencies["ACH"]["byId"]>>;
 
+/** Early-campaign/retry guidance, rather than a persisted first-ever-run flag. */
+export function campaignDraftGuidance(mode: string, wave: number, stageClears: number, campaignClears: number): string | undefined {
+  return mode === "campaign" && wave === 1 && stageClears === 0 && campaignClears === 0
+    ? "This choice lasts for this run only. Clear waves, build your abilities, then face the chapter boss."
+    : undefined;
+}
+
 export interface RunScreenState {
   readonly screen: () => string;
   readonly run: () => ActionRun;
@@ -107,8 +114,11 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
   return Object.freeze({
     renderDraft(): void {
       const snapshot = reward.snapshot();
-      if (snapshot) renderers.draft({ id: "draft", wave: snapshot.wave, rerolls: snapshot.rerolls,
-        cards: snapshot.choices.map(draftCard) });
+      if (!snapshot) return;
+      const onboarding = campaignDraftGuidance(state.run().mode, snapshot.wave,
+        d.PROFILE.stat("stageClears"), d.PROFILE.stat("campaignClears"));
+      renderers.draft({ id: "draft", wave: snapshot.wave, rerolls: snapshot.rerolls,
+        cards: snapshot.choices.map(draftCard), ...(onboarding === undefined ? {} : { onboarding }) });
     },
     renderReserve(): void {
       const snapshot = reward.snapshot();

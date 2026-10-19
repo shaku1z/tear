@@ -95,6 +95,8 @@ export function createDraftRenderers(context: ScreenRenderContext) {
     ui.title(canvas, `WAVE ${String(view.wave)} CLEARED`, width / 2, 122, ui.t.type.display);
     ui.accentStrip(canvas, width / 2 - 80, 140, 160, ui.t.color.accent, 3);
     ui.text(canvas, `CHOOSE AN UPGRADE  ·  press 1 / 2 / 3${view.cards.length > 3 ? " / 4" : ""}`, width / 2, 176, ui.t.type.caption, "center", ui.t.alpha.muted);
+    if (view.onboarding) ui.wrappedText(canvas, view.onboarding, width / 2, 208,
+      Math.min(960, width - 64), 20, ui.t.type.body, "center", ui.t.alpha.soft);
     view.cards.forEach((card, i) => {
       choiceCard(i, view.cards.length, {
         accent: card.accent ?? ui.t.color.accent,

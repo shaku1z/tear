@@ -6,6 +6,9 @@ import type {
   ScreenControl, ScreenRenderContext, ScreenUiPort,
 } from "../../src/presentation/screens";
 import { createLegacyScreenRenderers } from "../../src/presentation/screens";
+import { createUiFoundation } from "../../src/presentation/ui-foundation";
+import { campaignDraftGuidance } from "../../src/app/live-run-screen-adapters";
+import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
 import { LiveGhostLabHomeController } from "../../src/app/live-ghost-lab-home";
 import type { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
@@ -85,6 +88,34 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
+  it("wraps onboarding at body size above cards without adding or moving controls at standard and small landscape sizes", () => {
+    for (const [width, height] of [[1600, 900], [844, 414]] as const) {
+      const controls: ScreenControl[] = [], lines: { text: string; x: number; y: number; width: number; font: string }[] = [];
+      const base = createRenderContext(controls), ui: ScreenUiPort = new TestUi(), canvas = base.canvas;
+      let wrapping = false;
+      canvas.measureText = (text) => ({ width: text.length * 9.6 } as TextMetrics);
+      canvas.fillText = (text, x, y) => { if (wrapping) lines.push({ text, x, y, width: canvas.measureText(text).width, font: canvas.font }); };
+      const wrapped = createUiFoundation({ presentation: { overscan: {}, view: {} } } as never).wrappedText.bind(ui as never);
+      ui.wrappedText = (...args: Parameters<ScreenUiPort["wrappedText"]>) => { wrapping = true; try { wrapped(...args); } finally { wrapping = false; } };
+      const renderer = createLegacyScreenRenderers({ ...base, width, height, ui, canvas });
+      const draft = { id: "draft" as const, wave: 1, rerolls: 0, cards: [{ id: "speed", label: "SPEED" }] };
+      renderer.draft(draft); const draftControls = [...controls]; controls.length = 0;
+      renderer.draft({ ...draft, onboarding: campaignDraftGuidance("campaign", 1, 0, 0) ?? "" });
+      expect(controls).toEqual(draftControls);
+      expect(lines.map((line) => line.text).join(" ")).toContain("this run only");
+      expect(lines.every((line) => line.font.startsWith("16px") && line.y > 176 && line.y < 248 && line.x - line.width / 2 >= 32)).toBe(true);
+      controls.length = 0; lines.length = 0;
+      const shop = buildShopSnapshot({ items: [{ id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" }],
+        realCoins: 0, displayedCoins: 0, lifetimeEarned: 0, shopBuys: 0, lifetimeSpent: 0,
+        height, scroll: 0, now: 0, level: () => 0, cost: () => 325, canBuy: () => false }).view;
+      const unguided = { ...shop }; delete unguided.onboarding;
+      renderer.shop(unguided); const shopControls = [...controls]; controls.length = 0;
+      renderer.shop(shop);
+      expect(controls).toEqual(shopControls);
+      expect(lines.map((line) => line.text).join(" ")).toContain("Buying is optional");
+      expect(lines.every((line) => line.font.startsWith("16px") && line.y > 130 && line.y < 158 && line.x - line.width / 2 >= 32)).toBe(true);
+    }
+  });
   it("is exhaustive for every canonical application screen", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
     const registry = createLegacyScreenRenderers(createControlContext([]));

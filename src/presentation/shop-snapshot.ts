@@ -9,6 +9,7 @@ export interface ShopSnapshotResult { readonly view: ShopScreenView; readonly di
 export function buildShopSnapshot(input: {
   readonly items: readonly ShopItemSource[]; readonly realCoins: number; readonly displayedCoins: number | null;
   readonly lifetimeEarned: number; readonly height: number; readonly scroll: number; readonly now: number;
+  readonly shopBuys?: number; readonly lifetimeSpent?: number;
   readonly flash?: Readonly<{ id: string; time: number }>; readonly level: (id: string) => number;
   readonly cost: (item: ShopItemSource) => number; readonly canBuy: (item: ShopItemSource) => boolean;
 }): ShopSnapshotResult {
@@ -20,8 +21,11 @@ export function buildShopSnapshot(input: {
     height + 36 + input.items.filter((item) => item.cat === id).length * 74, 0) + Math.max(0, categories.length - 1) * 12;
   const maximumScroll = Math.max(0, Math.max(...groups.map(columnHeight)) - (input.height - 262));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
+  const ownedLevels = input.items.reduce((total, item) => total + input.level(item.id), 0);
+  const onboarding = ownedLevels === 0 && input.shopBuys === 0 && input.lifetimeSpent === 0
+    ? "Spend coins on permanent upgrades for future runs. Buying is optional." : undefined;
   const view: ShopScreenView = { id: "shop", coins: Math.round(displayedCoins),
-    ownedLevels: input.items.reduce((total, item) => total + input.level(item.id), 0),
+    ...(onboarding === undefined ? {} : { onboarding }), ownedLevels,
     totalLevels: input.items.reduce((total, item) => total + item.maxLevel, 0), lifetimeEarned: input.lifetimeEarned,
     sections: SHOP_CATEGORIES.map(([id, label]) => ({ label, items: input.items.filter((item) => item.cat === id).map((item) => {
       const level = input.level(item.id), maximumLevel = item.maxLevel;

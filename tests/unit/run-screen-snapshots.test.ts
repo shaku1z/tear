@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { buildAbilityCards, buildDraftCard, buildResultLog, buildRunProgressSnapshot, fortuneDraftDescription } from "../../src/presentation/run-screen-snapshots";
+import { campaignDraftGuidance } from "../../src/app/live-run-screen-adapters";
 
 const categories = { utility: { name: "UTILITY", color: "#123" } };
 
 describe("run screen snapshots", () => {
+  it("offers early-campaign first-draft guidance on retries without labeling other modes or experienced profiles", () => {
+    expect(campaignDraftGuidance("campaign", 1, 0, 0)).toContain("this run only");
+    expect(campaignDraftGuidance("campaign", 1, 0, 0)).toContain("chapter boss");
+    expect(campaignDraftGuidance("campaign", 2, 0, 0)).toBeUndefined();
+    expect(campaignDraftGuidance("campaign", 1, 1, 0)).toBeUndefined();
+    expect(campaignDraftGuidance("campaign", 1, 0, 1)).toBeUndefined();
+    expect(campaignDraftGuidance("tutorial", 1, 0, 0)).toBeUndefined();
+    expect(campaignDraftGuidance("endless", 1, 0, 0)).toBeUndefined();
+  });
   it("describes every Fortune threshold", () => {
     expect(fortuneDraftDescription(0)).toContain("PROSPERITY unlocks");
     expect(fortuneDraftDescription(2)).toContain("×1.61");

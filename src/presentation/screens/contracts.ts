@@ -142,6 +142,7 @@ export interface CodexScreenView {
   };
 }
 export interface ShopScreenView {
+  readonly onboarding?: string;
   readonly id: "shop"; readonly coins: number; readonly ownedLevels: number; readonly totalLevels: number;
   readonly lifetimeEarned: number; readonly sections: readonly { readonly label: string; readonly items: readonly CardView[] }[];
   readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
@@ -229,6 +230,7 @@ export interface RenameScreenView {
 }
 export interface DraftCardView extends CardView { readonly tier?: number; readonly nextTier?: number; readonly badgeColor?: string }
 export interface DraftScreenView {
+  readonly onboarding?: string;
   readonly id: "draft"; readonly wave: number; readonly cards: readonly DraftCardView[]; readonly rerolls: number;
 }
 export interface ReserveScreenView { readonly id: "reserve"; readonly cards: readonly DraftCardView[] }

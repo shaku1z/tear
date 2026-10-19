@@ -22,6 +22,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
     renderShop(): void {
       const current = state.shop(), realCoins = d.META.coins();
       const result = buildShopSnapshot({ items: d.SHOP, realCoins, displayedCoins: current.displayedCoins,
+        shopBuys: d.PROFILE.stat("shopBuys"), lifetimeSpent: d.META.data.lifetimeSpent,
         lifetimeEarned: d.META.data.lifetimeEarned || 0, height: services.height, scroll: state.scroll(), now: state.time(),
         ...(current.flash ? { flash: current.flash } : {}), level: (id) => d.META.level(id),
         cost: (item) => { const source = d.SHOP.find((entry) => entry.id === item.id); return source ? d.META.cost(source) : 0; },
