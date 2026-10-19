@@ -214,7 +214,11 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()) }));
   components.set("tear.reward.v1", Object.freeze({ selection: encode(options.reward(), identities) }));
   components.set("tear.configuration.v1", Object.freeze({
-    rulesetVersion: "live", values: encode(options.worldServices.configuration.value, identities),
+    rulesetVersion: "live", values: Object.freeze({
+      ...(encode(options.worldServices.configuration.value, identities) as Readonly<Record<string, TearCodecValue>>),
+      // Actor presentation ports stay excluded; canonical cinematic tuning is data owned by this configuration codec.
+      presentation: encode(options.worldServices.configuration.value.presentation, identities),
+    }),
   }));
   components.set("tear.rng.v1", encode(options.worldServices.random.snapshot(), identities));
   components.set("tear.cinematic.v1", encode(options.captureCinema(), identities));

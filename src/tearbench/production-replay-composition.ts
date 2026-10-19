@@ -3,12 +3,15 @@ import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-con
 import { UPGRADES } from "../gameplay/upgrades";
 import { restoreUpgradeHooks } from "../gameplay/upgrade-hooks";
 import { hydrateRewardCodecPayload, hydrateRewardUpgrade } from "./reward-codec-hydrator";
-import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from "../gameplay/campaign/chapter-cinematic-binding";
+import { captureCampaignChapterBindingSpec, parseCampaignChapterBindingSpec, stageCampaignChapterBinding,
+  type StagedCampaignChapterBinding } from "../gameplay/campaign/chapter-cinematic-binding";
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
+import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
+import { CinematicTimeline, type CinematicDirectorBinding, type CinematicDirectorPort } from "../gameplay/runtime/cinematic-director";
 import { createLiveStateForgeAdapter } from "../app/live-state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge, resolveStateForgeBossIntro } from "../app/live-state-forge-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
-import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
+import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
@@ -30,6 +33,8 @@ import { ENTITY_KIND_REGISTRY } from "./registries";
 import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from "./state-codecs";
 import { rebaseEnvironmentSnapshot } from "./environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
+
+const productionChapterBindings = new WeakMap<ProductionReplayWorld, StagedCampaignChapterBinding>();
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly seed: string;
@@ -110,17 +115,8 @@ export function projectProductionReplayCanonicalState(
   );
 }
 
-/** Restores a data-bound active chapter without reviving any browser/UI owner. */
-export function restoreProductionReplayChapterBinding(
-  replay: ProductionReplayWorld,
-  runtime: Readonly<Record<string, unknown>>,
-): void {
-  replay.world.lifecycle.restore(runtime.lifecycle as never);
-  const rawSpec = runtime.chapterBinding;
-  if (rawSpec === null || rawSpec === undefined) {
-    replay.world.context.cinema.restoreState(runtime.cinema);
-    return;
-  }
+function stageProductionChapter(replay: ProductionReplayWorld, rawSpec: unknown): StagedCampaignChapterBinding | null {
+  if (rawSpec === null || rawSpec === undefined) return null;
   const spec = parseCampaignChapterBindingSpec(rawSpec);
   const dispatch = (intents: readonly ChapterIntent[]): void => {
     for (const intent of intents) {
@@ -134,16 +130,54 @@ export function restoreProductionReplayChapterBinding(
       }
     }
   };
-  const staged = stageCampaignChapterBinding(spec, stageAt(spec.stageIndex), {
+  return stageCampaignChapterBinding(spec, stageAt(spec.stageIndex), {
     dispatch,
     preparedWave: () => replay.world.lifecycle.hasPreparedWave,
     activationDeferred: () => replay.world.lifecycle.activationDeferred,
-    clear: () => undefined,
+    clear: () => { productionChapterBindings.delete(replay); },
   });
-  replay.world.context.cinema.restoreState(runtime.cinema, staged.binding);
 }
 
-function productionRuntimeState(replay: ProductionReplayWorld) {
+function installProductionChapter(replay: ProductionReplayWorld, chapter: StagedCampaignChapterBinding | null) {
+  if (chapter === null) productionChapterBindings.delete(replay);
+  else productionChapterBindings.set(replay, chapter);
+  return chapter?.binding;
+}
+
+function prepareProductionChapter(replay: ProductionReplayWorld, runtime: Readonly<Record<string, unknown>>,
+  configuration = replay.configuration.value, existingBinding?: CinematicDirectorBinding) {
+  const lifecycle = validateRunLifecycleSnapshot(runtime.lifecycle);
+  const chapter = stageProductionChapter(replay, runtime.chapterBinding);
+  // Validate timing and executable identities without changing the destination's director/configuration.
+  const director = new CinematicTimeline.Director(configuration);
+  const cinema = director.validateState(runtime.cinema, chapter?.binding ?? existingBinding);
+  if (chapter !== null && (!cinema.active || lifecycle.phase !== "wave-prepared" || !lifecycle.activationDeferred)) {
+    throw new RangeError("active campaign chapter requires a deferred prepared-wave lifecycle");
+  }
+  return { lifecycle, chapter, cinema, director };
+}
+
+/** Restores a prepared data-bound chapter without replaying start/enter callbacks. */
+export function restoreProductionReplayChapterBinding(
+  replay: ProductionReplayWorld, runtime: Readonly<Record<string, unknown>>,
+): void {
+  const cinema = replay.world.context.cinema;
+  // This helper retains the same world. Only here may an already-bound owner be
+  // validated on the isolated director; full-world replacement supplies no fallback.
+  const existingBinding = cinema.script === null ? undefined : { script: cinema.script, context: cinema.context ?? {} };
+  const prepared = prepareProductionChapter(replay, runtime, replay.configuration.value, existingBinding);
+  replay.world.lifecycle.restore(prepared.lifecycle);
+  replay.world.context.cinema.restoreState(prepared.cinema, prepared.chapter?.binding);
+  installProductionChapter(replay, prepared.chapter);
+}
+
+interface PreparedRuntimeOwners {
+  readonly chapter: StagedCampaignChapterBinding | null;
+  readonly lifecycle: RunLifecycleSnapshot;
+  readonly director: Pick<CinematicDirectorPort, "captureState" | "restoreState" | "validateState">;
+}
+
+function productionRuntimeState(replay: ProductionReplayWorld, prepared?: PreparedRuntimeOwners) {
   const transient = replay.world.context.transient;
   return createLiveStateForgeRuntimeBridge({
     captureBossIntro: () => replay.world.state.bossIntro(),
@@ -168,16 +202,20 @@ function productionRuntimeState(replay: ProductionReplayWorld) {
         bannerSeconds: Number(state.bannerT), worldZoom: Number(state.worldZoom), worldZoomTarget: Number(state.worldZoomTarget),
         rankPopupSeconds: Number(state.rankPopT), rankPopupText: String(state.rankPopText) });
     },
-    captureLifecycle: replay.world.lifecycle.snapshot.bind(replay.world.lifecycle),
+    captureLifecycle: prepared === undefined ? replay.world.lifecycle.snapshot.bind(replay.world.lifecycle) : () => prepared.lifecycle,
     restoreLifecycle: replay.world.lifecycle.restore.bind(replay.world.lifecycle),
-    captureChapterBinding: () => null,
-    stageChapterBinding: () => null,
-    installChapterBinding: () => undefined,
+    captureChapterBinding: () => {
+      const chapter = productionChapterBindings.get(replay);
+      return chapter === undefined ? null : captureCampaignChapterBindingSpec(chapter.spec, chapter.flow);
+    },
+    stageChapterBinding: (value) => prepared === undefined ? stageProductionChapter(replay, value) : prepared.chapter,
+    installChapterBinding: (value) => installProductionChapter(replay,
+      prepared === undefined ? stageProductionChapter(replay, value) : prepared.chapter),
     captureCinemaProtection: () => Object.freeze({ ...transient.protection }),
     restoreCinemaProtection: transient.assignProtection.bind(transient),
     captureStageBanner: () => Object.freeze({ name: "", seconds: transient.feel.bannerSeconds }),
     restoreStageBanner: (_name, seconds) => { transient.feel.bannerSeconds = seconds; },
-    cinema: replay.world.context.cinema,
+    cinema: prepared?.director ?? replay.world.context.cinema,
   });
 }
 
@@ -281,11 +319,24 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   if (rebasedEnvironment.stageId !== "unknown" && expectedStage !== undefined && rebasedEnvironment.stageId !== expectedStage) {
     throw new RangeError("production replay environment stage does not match the restored world stage");
   }
-  const candidateConfiguration = replay.configuration.snapshot();
-  applyWeapon(candidateConfiguration, staged.weaponId);
+  const candidateConfiguration = replay.configuration.baseSnapshot();
+  const weapon = applyWeapon(candidateConfiguration, staged.weaponId);
   applyTearCodecConfiguration(candidateConfiguration, staged.configuration);
-  createTearWorldConfiguration(replay.configuration.snapshot()).restore(candidateConfiguration);
-  if (!["playing", "paused", "draft", "reserve", "tierup"].includes(staged.screen)) {
+  createTearWorldConfiguration(replay.configuration.baseSnapshot()).restore(candidateConfiguration);
+  const preparedRuntime = prepareProductionChapter(replay, staged.runtime, candidateConfiguration);
+  productionRuntimeState(replay, preparedRuntime).validate(staged.runtime, staged.run, staged.stageIndex, staged.enemies);
+  // Exercise the same portable RNG restore before any destination stream changes.
+  new RunRandomStreams().restore(staged.rng as RunRandomStreamsSnapshot);
+  // Live opening capture precedes the menu -> playing route in the same start-run call.
+  // The executable chapter/lifecycle above must already be coherent before admitting that anchor.
+  const noPendingReward = staged.reward === null || (staged.reward.phase === "idle" && staged.reward.mode === staged.run.mode
+    && staged.reward.choices.length === 0 && staged.reward.reserveChoices.length === 0 && staged.reward.reservedChoice === null);
+  const openingMenu = staged.screen === "menu" && staged.run.mode === "campaign" && snapshot.tick === 0
+    && staged.run.runTime === 0 && noPendingReward
+    && preparedRuntime.chapter?.spec.flowState === "LORE_ENTER"
+    && preparedRuntime.lifecycle.phase === "wave-prepared" && preparedRuntime.lifecycle.activationDeferred
+    && preparedRuntime.cinema.active && preparedRuntime.cinema.beatId === "enter" && preparedRuntime.cinema.elapsedSeconds === 0;
+  if (!["playing", "paused", "draft", "reserve", "tierup"].includes(staged.screen) && !openingMenu) {
     throw new RangeError(`production replay UI screen is invalid: ${staged.screen}`);
   }
   if (["draft", "reserve", "tierup"].includes(staged.screen) && staged.reward?.phase !== staged.screen) {
@@ -300,11 +351,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   replay.world.state.setFloaters(staged.floaters as never);
   replay.world.state.setSlowZones(staged.slowZones as never);
   replay.world.state.setTemporaryWalls(staged.walls as never);
-  replay.configuration.resetToBase();
-  const weapon = applyWeapon(replay.configuration.value, staged.weaponId);
-  const restoredConfiguration = replay.configuration.snapshot();
-  applyTearCodecConfiguration(restoredConfiguration, staged.configuration);
-  replay.configuration.restore(restoredConfiguration);
+  replay.configuration.restore(candidateConfiguration);
   const blade = staged.blade as { weapon: unknown; model: unknown };
   blade.weapon = weapon; blade.model = weapon.model;
   replay.world.context.services.random.restore(staged.rng as never);
@@ -315,18 +362,8 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   replay.world.context.environment.setStage(environmentStage, "restore");
   replay.world.context.environment.replace({ ...rebasedEnvironment, stageId: environmentStage });
   replay.stage.platforms = [...staged.platforms] as unknown[];
-  restoreProductionReplayChapterBinding(replay, staged.runtime);
-  const transient = replay.world.context.transient;
-  transient.assignImpact({ hitStop: Number(staged.runtime.hitStop), slowMotion: Number(staged.runtime.slowmo), shake: Number(staged.runtime.shake) });
-  transient.assignOpening({ throwCooldown: Number(staged.runtime.throwCd), dashGhostTime: Number(staged.runtime.dashGhostT),
-    landingVelocity: Number(staged.runtime.landingV), wasDashing: Boolean(staged.runtime.wasDashing),
-    wasSwinging: Boolean(staged.runtime.wasSwinging), wasOnGround: Boolean(staged.runtime.wasOnGround) });
-  Object.assign(transient.feel, { timeScale: Number(staged.runtime.timeScale), zoom: Number(staged.runtime.zoom), flash: Number(staged.runtime.flash),
-    bannerSeconds: Number(staged.runtime.bannerT), worldZoom: Number(staged.runtime.worldZoom), worldZoomTarget: Number(staged.runtime.worldZoomTarget),
-    rankPopupSeconds: Number(staged.runtime.rankPopT), rankPopupText: String(staged.runtime.rankPopText) });
-  const protection = staged.runtime.cinemaProtection as Readonly<{ active?: unknown; lastMode?: unknown }> | undefined;
-  transient.assignProtection({ active: Boolean(protection?.active), lastMode: typeof protection?.lastMode === "string" ? protection.lastMode : null });
-  replay.world.state.setBossIntro(restoredBossIntro);
+  productionRuntimeState(replay, { ...preparedRuntime, director: replay.world.context.cinema })
+    .restore({ ...staged.runtime, lifecycle: preparedRuntime.lifecycle, cinema: preparedRuntime.cinema, bossIntro: restoredBossIntro });
   return staged;
 }
 
@@ -390,7 +427,8 @@ export function createProductionGhostReplayComposition(
       if (staged === undefined) waveReward.startNaturalOpening();
       if (staged !== undefined) {
         waveReward.reward.restore(staged.reward);
-        waveReward.restoreScreen(staged.screen);
+        // Only the validated live bootstrap anchor can reach this host with a menu screen.
+        waveReward.restoreScreen(staged.screen === "menu" ? "playing" : staged.screen);
         core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
         for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
       }

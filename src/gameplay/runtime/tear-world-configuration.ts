@@ -11,6 +11,8 @@ export interface TearWorldConfiguration<Configuration extends object> {
   readonly value: Configuration;
   /** Returns a deep copy that can be held as a rollback point. */
   snapshot(): Configuration;
+  /** Returns a detached copy of this owner's initial tuning, independent of current mutations. */
+  baseSnapshot(): Configuration;
   /** Reconciles a prior snapshot into the stable world-owned configuration. */
   restore(snapshot: Configuration): void;
   /** Restores the world-owned configuration to its initial data-only base. */
@@ -93,6 +95,7 @@ export function createTearWorldConfiguration<Configuration extends object>(
   return Object.freeze({
     value,
     snapshot: () => clone(value),
+    baseSnapshot: () => clone(baseline),
     restore,
     resetToBase: () => { reconcile(value, baseline); },
   } satisfies TearWorldConfiguration<Configuration>);
