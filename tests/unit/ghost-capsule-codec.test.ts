@@ -1,4 +1,21 @@
 import { describe, expect, it } from "vitest";
+
+describe("strict measured Ghost archive decoding", () => {
+  it("reports actual identity byte counts while keeping forensic replacement decoding unchanged", async () => {
+    const bytes = new Uint8Array([34, 255, 34]), encoded = btoa(String.fromCharCode(...bytes));
+    await expect(GHOST_CHUNK_CODECS.decode("utf8-base64-v1", encoded)).resolves.toBe("\ufffd");
+    await expect(GHOST_CHUNK_CODECS.decodeMeasured("utf8-base64-v1", encoded, 3, 3)).rejects.toThrow();
+    await expect(GHOST_CHUNK_CODECS.decodeMeasured("utf8-base64-v1", btoa("[]"), 2, 2)).resolves.toEqual({ value: [], compressedBytes: 2, decodedBytes: 2 });
+  });
+  it("enforces compressed and expanded byte bounds with the existing gzip codec", async () => {
+    const encoded = await GHOST_CHUNK_CODECS.encode([{ text: "repeat".repeat(1000) }]);
+    expect(encoded.encoding).toBe("gzip-base64-v1");
+    const measured = await GHOST_CHUNK_CODECS.decodeMeasured(encoded.encoding, encoded.encoded, encoded.compressedBytes, encoded.uncompressedBytes);
+    expect(measured.compressedBytes).toBe(encoded.compressedBytes); expect(measured.decodedBytes).toBe(encoded.uncompressedBytes);
+    await expect(GHOST_CHUNK_CODECS.decodeMeasured(encoded.encoding, encoded.encoded, encoded.compressedBytes - 1, encoded.uncompressedBytes)).rejects.toThrow(/compressed/);
+    await expect(GHOST_CHUNK_CODECS.decodeMeasured(encoded.encoding, encoded.encoded, encoded.compressedBytes, 10)).rejects.toThrow(/decoded/);
+  });
+});
 import {
   decodeGhostChunkPayload,
   encodeGhostChunkPayload,

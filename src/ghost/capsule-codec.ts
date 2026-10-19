@@ -156,6 +156,19 @@ export class GhostChunkCodecRegistry {
     return JSON.parse(new TextDecoder().decode(decoded)) as unknown;
   }
 
+  /** Strict normal-file lane; forensic decode above intentionally remains unchanged. */
+  async decodeMeasured(encoding: string, encoded: string, maxCompressedBytes: number, maxDecodedBytes: number): Promise<Readonly<{ value: unknown; compressedBytes: number; decodedBytes: number }>> {
+    if (encoding === "gzip-base64-v1" && typeof DecompressionStream !== "function") throw new DOMException("Ghost archive gzip decode is unavailable", "NotSupportedError");
+    if (![maxCompressedBytes, maxDecodedBytes].every((limit) => Number.isSafeInteger(limit) && limit > 0)) throw new RangeError("Ghost measured decode limits must be positive safe integers");
+    if (encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/u.test(encoded)) throw new TypeError("Ghost chunk is not bounded base64");
+    const length = encoded.length / 4 * 3 - (encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0);
+    if (length > maxCompressedBytes) throw new RangeError("Ghost chunk exceeds compressed byte limit");
+    const bytes = base64ToBytes(encoded);
+    const decoded = await this.#requireEncoding(encoding).decode(bytes, maxDecodedBytes);
+    return Object.freeze({ value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decoded)) as unknown,
+      compressedBytes: bytes.byteLength, decodedBytes: decoded.byteLength });
+  }
+
   #require(encoding: GhostChunkEncoding): GhostChunkCodec {
     const codec = this.#codecs.get(encoding);
     if (codec === undefined) throw new TypeError(`unsupported Ghost chunk encoding: ${encoding}`);

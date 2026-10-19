@@ -1,8 +1,10 @@
 import { stableVerificationHash } from "../replay/hash";
 import { decodeGhostChunkPayload } from "./capsule-codec";
+import { prepareForensicGhostImport, prepareGhostCapsuleImport, commitGhostCapsuleImport, ghostRootIntegrity, parseGhostCapsuleManifest, type GhostCapsuleImportPlan, type GhostImportBaseline } from "./capsule-import-plan";
+import { ghostArchiveData, type PreparedGhostCapsuleArchive } from "./capsule-archive";
+import { readGhostColdRestoreCompletion, type GhostColdRestoreCompletion } from "./cold-restore-job";
 import {
   createGhostCapsuleManifestV2,
-  parseGhostCapsuleManifest as parseCapsuleContractManifest,
   reviseGhostCapsuleManifest,
   type TearGhostManifest,
 } from "./capsule-contract";
@@ -53,29 +55,25 @@ function parseMutationEpoch(raw: string | undefined): number {
   return value;
 }
 
-export function ghostRootIntegrity(chunks: readonly TearGhostChunkIndexEntry[]): string {
-  return stableVerificationHash(chunks.map((chunk) => ({
-    id: chunk.id, checksum: chunk.checksum, kind: chunk.kind,
-    sequence: chunk.sequence, fromTick: chunk.fromTick, toTick: chunk.toTick,
-  })));
-}
-
-export function parseGhostCapsuleManifest(value: unknown): TearGhostManifest {
-  const manifest = parseCapsuleContractManifest(value);
-  if (manifest.schemaVersion === 2 && ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) {
-    throw new TypeError("capsule manifest integrity mismatch");
-  }
-  return manifest;
-}
+export { ghostRootIntegrity, parseGhostCapsuleManifest } from "./capsule-import-plan";
 
 export class GhostLocalVault {
   readonly #backend: GhostVaultBackend;
+  readonly #importOwner = Object.freeze({});
 
   constructor(backend: GhostVaultBackend) {
     this.#backend = backend;
   }
 
   backend(): GhostVaultBackend { return this.#backend; }
+
+  async prepareCapsuleImport(archive: PreparedGhostCapsuleArchive, baseline?: GhostImportBaseline): Promise<GhostCapsuleImportPlan> {
+    return prepareGhostCapsuleImport(this.#backend, this.#importOwner, ghostArchiveData(archive), baseline);
+  }
+
+  async commitCapsuleImport(plan: GhostCapsuleImportPlan, completion: GhostColdRestoreCompletion): Promise<"imported" | "existing-exact"> {
+    return commitGhostCapsuleImport(this.#backend, this.#importOwner, plan, readGhostColdRestoreCompletion(completion), (build) => this.#commitMutation(build, true));
+  }
 
   #manifestWrites(manifest: TearGhostManifest): readonly GhostVaultWrite[] {
     // Every schema-v2 write re-validates the hash-bound contract. This guards
@@ -491,27 +489,7 @@ export class GhostLocalVault {
       // turn a small compressed import into an unbounded allocation.
       await decodeGhostChunkPayload(entry.encoding, encoded, entry.uncompressedBytes);
     }
-    await this.#commitMutation(async () => {
-      const existingManifest = await this.#backend.get("manifests", manifest.id);
-      if (existingManifest !== undefined) throw new RangeError(`capsule already exists: ${manifest.id}`);
-      const protectionKey = ghostCapsuleProtectionKey(manifest.id), protectionRaw = await this.#backend.get("analysis", protectionKey);
-      if (protectionRaw !== undefined && parseGhostCapsuleProtection(protectionRaw, manifest.id).rootIntegrity !== manifest.rootIntegrity) throw new RangeError("capsule import conflicts with retained source protection");
-      const writes: GhostVaultWrite[] = [], chunkGuards: GhostVaultGuard[] = [];
-      for (const entry of manifest.chunks) {
-        const encoded = chunks[entry.id];
-        if (typeof encoded !== "string") throw new TypeError(`capsule chunk is missing: ${entry.id}`);
-        const existing = await this.#backend.get("chunks", entry.id);
-        chunkGuards.push({ store: "chunks", key: entry.id, ...(existing === undefined ? {} : { expected: existing }) });
-        if (existing !== undefined && existing !== encoded) {
-          throw new RangeError(`capsule chunk id conflicts with stored evidence: ${entry.id}`);
-        }
-        if (existing === undefined) writes.push({ store: "chunks", key: entry.id, value: encoded });
-      }
-      return Object.freeze({
-        guards: Object.freeze([{ store: "manifests" as const, key: manifest.id }, { store: "analysis" as const, key: protectionKey, ...(protectionRaw === undefined ? {} : { expected: protectionRaw }) }, ...chunkGuards]),
-        writes: Object.freeze([...writes, ...this.#manifestWrites(manifest)]),
-      });
-    }, true);
+    await this.#commitMutation(() => prepareForensicGhostImport(this.#backend, manifest, chunks, this.#manifestWrites(manifest)), true);
     return manifest;
   }
 
