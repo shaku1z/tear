@@ -59,6 +59,7 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly navigate: (screen: "menu") => void;
   readonly releasePointer: () => void;
   readonly addProfileStat: (stat: "tutorialDone", amount: 1) => void;
+  readonly completeCourse?: (id: string) => Promise<unknown>;
   readonly checkAchievements: () => void;
   readonly drawGhost: (snapshot: TutorialGhostSnapshot) => void;
 }
@@ -96,7 +97,7 @@ export interface LiveTutorialRuntime {
   readonly gT: number;
   readonly anchor: number;
   readonly steps: readonly TutorialLesson[];
-  start(): void;
+  start(courseSessionId?: string): void;
   stop(): void;
   mark(kind: TutorialMark): void;
   step(): LiveTutorialLessonView;
@@ -141,7 +142,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     get gT() { return controller.ghostTime; },
     get anchor() { return controller.anchorX; },
     steps: TUTORIAL_LESSONS,
-    start() { controller.start(port.viewportWidth, crypto.randomUUID()); installPendingArena(); },
+    start(courseSessionId = "unissued") { controller.start(port.viewportWidth, courseSessionId); installPendingArena(); },
     stop() { controller.stop(); },
     mark(kind) { controller.mark(kind); },
     step: lessonView,
@@ -199,7 +200,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
           case "terminate-run": port.terminateRun(intent.reason); break;
           case "navigate": port.navigate(intent.screen); break;
           case "release-pointer": port.releasePointer(); break;
-          case "profile-stat": port.addProfileStat(intent.stat, intent.amount); break;
+          case "complete-course": void port.completeCourse?.(intent.courseSessionId); break;
           case "achievement-check": port.checkAchievements(); break;
         }
       }

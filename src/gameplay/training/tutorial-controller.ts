@@ -111,7 +111,7 @@ export type TutorialIntent =
   | Readonly<{ type: "terminate-run"; reason: "quit" }>
   | Readonly<{ type: "navigate"; screen: "menu" }>
   | Readonly<{ type: "release-pointer" }>
-  | Readonly<{ type: "profile-stat"; stat: "tutorialDone"; amount: 1 }>
+  | Readonly<{ type: "complete-course"; courseSessionId: string }>
   | Readonly<{ type: "achievement-check" }>;
 
 export interface TutorialGhostSnapshot {
@@ -432,7 +432,7 @@ export class TutorialController {
         this.stop(); this.phase = "free-practice";
         if (!this.completionAwarded) {
           this.completionAwarded = true; this.completed.add("ready");
-          intents.push({ type: "profile-stat", stat: "tutorialDone", amount: 1 }, { type: "achievement-check" });
+          intents.push({ type: "complete-course", courseSessionId: this.courseSessionId });
         }
         intents.push({ type: "release-pointer" }, { type: "begin-practice" });
       }

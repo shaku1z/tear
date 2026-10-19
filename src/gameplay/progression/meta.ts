@@ -1,4 +1,6 @@
+import { currencyEarned, currencyLedger, mergeCurrencyLedgers, type AcknowledgedStorage, type CompletionStatus } from "../../domain/reward-receipts";
 export interface MetaStorePort {
+  readonly acknowledged?: AcknowledgedStorage;
   get(key: string): string | null;
   set(key: string, value: string): void;
 }
@@ -60,12 +62,15 @@ export interface MetaData {
   lifetimeEarned: number;
   lifetimeSpent: number;
   buy: Record<string, number>;
+  rewardReceipts?: unknown;
 }
 
 export interface MetaProgression<ApplyContext extends ProgressionApplyContext = ProgressionApplyContext> {
   data: MetaData;
   load(): MetaData;
   save(): void;
+  grantReward(id: string, coins: number): Promise<CompletionStatus>;
+  flushAcknowledged(): Promise<CompletionStatus>;
   coins(): number;
   level(id: string): number;
   addCoins(amount: number): void;
@@ -104,11 +109,26 @@ export function migrateMetaData(value: unknown): MetaData {
   if (rawPurchases) {
     for (const [id, level] of Object.entries(rawPurchases)) purchases[id] = Math.floor(amount(level));
   }
+  const extensions = { ...source }; delete extensions.coins;
   return {
+    ...extensions,
     lifetimeEarned: source.lifetimeEarned === undefined ? legacyCoins : amount(source.lifetimeEarned),
     lifetimeSpent: source.lifetimeEarned === undefined ? 0 : amount(source.lifetimeSpent),
     buy: purchases,
   };
+}
+
+export function mergeMetaData(local: MetaData, remote: unknown): MetaData {
+  const incoming = migrateMetaData(remote), merged: MetaData = { ...incoming, ...local, buy: { ...local.buy } };
+  merged.lifetimeEarned = Math.max(local.lifetimeEarned, incoming.lifetimeEarned);
+  merged.lifetimeSpent = Math.max(local.lifetimeSpent, incoming.lifetimeSpent);
+  for (const [id, level] of Object.entries(incoming.buy)) merged.buy[id] = Math.max(merged.buy[id] ?? 0, level);
+  if (local.rewardReceipts !== undefined || incoming.rewardReceipts !== undefined) {
+    const left = currencyLedger(local.rewardReceipts), right = currencyLedger(incoming.rewardReceipts);
+    left.floor = Math.max(left.floor, local.lifetimeEarned); right.floor = Math.max(right.floor, incoming.lifetimeEarned);
+    const ledger = mergeCurrencyLedgers(left, right); merged.rewardReceipts = ledger; merged.lifetimeEarned = currencyEarned(ledger);
+  }
+  return merged;
 }
 
 export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyContext extends ProgressionApplyContext>(
@@ -132,6 +152,17 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
       throw new TypeError("Meta progression context missing mods");
     }
   }
+  const commit = async (change: (candidate: MetaData) => void = () => undefined, newReceipt: () => boolean = () => false): Promise<CompletionStatus> => {
+    if (!dependencies.store.acknowledged) return "unavailable";
+    const result = await dependencies.store.acknowledged.update("tear_meta", (text) => {
+      const candidate = mergeMetaData(structuredClone(meta.data), text === null ? {} : JSON.parse(text) as unknown);
+      change(candidate); return JSON.stringify(candidate);
+    });
+    if (result.status !== "committed") return result.status;
+    const committed = migrateMetaData(JSON.parse(result.value) as unknown);
+    if (newReceipt() && meta.data.rewardReceipts === undefined) meta.data.rewardReceipts = currencyLedger(undefined, meta.data.lifetimeEarned);
+    meta.data = mergeMetaData(meta.data, committed); return "committed";
+  };
   const meta: MetaProgression<ApplyContext> = {
     data: migrateMetaData({}),
     load() {
@@ -143,10 +174,26 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
       if (source?.coins !== undefined && source.lifetimeEarned === undefined) this.save();
       return this.data;
     },
-    save() { try { dependencies.store.set("tear_meta", JSON.stringify(this.data)); } catch { /* offline memory remains authoritative */ } },
+    save() { if (dependencies.store.acknowledged) { void commit(); return; } try { dependencies.store.set("tear_meta", JSON.stringify(this.data)); } catch { /* offline memory remains playable */ } },
+    flushAcknowledged: () => commit(),
+    async grantReward(id, coins) {
+      if (!/^achievement:[a-z0-9_]+$/u.test(id) || !Number.isSafeInteger(coins) || coins < 0) return "unknown";
+      let already = false;
+      const receiptExists = (): boolean => already;
+      const status = await commit((candidate) => {
+        const ledger = currencyLedger(candidate.rewardReceipts, candidate.lifetimeEarned);
+        if (ledger.receipts[id] !== undefined && ledger.receipts[id] !== coins) throw new Error("Conflicting reward receipt");
+        already = ledger.receipts[id] !== undefined;
+        if (!already) ledger.baseline = currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, value) => sum + value, 0);
+        ledger.receipts[id] = coins;
+        candidate.rewardReceipts = ledger; candidate.lifetimeEarned = currencyEarned(ledger);
+      }, () => !already);
+      return status === "committed" && receiptExists() ? "already" : status;
+    },
     coins() { return Math.max(0, this.data.lifetimeEarned - this.data.lifetimeSpent); },
     level(id) { return this.data.buy[id] ?? 0; },
-    addCoins(value) { this.data.lifetimeEarned += amount(value); this.save(); },
+    addCoins(value) { const added = amount(value); this.data.lifetimeEarned += added;
+      if (this.data.rewardReceipts !== undefined) { try { const ledger = currencyLedger(this.data.rewardReceipts); ledger.baseline = currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, coins) => sum + coins, 0) + added; this.data.rewardReceipts = ledger; } catch { /* unsupported ledger remains intact */ } } this.save(); },
     cost(item) {
       const level = this.level(item.id);
       if (item.costs) return item.costs[Math.min(level, item.costs.length - 1)] ?? 0;
@@ -169,12 +216,7 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
         if (level > 0) item.apply(level, context);
       }
     },
-    merge(remote) {
-      const incoming = migrateMetaData(remote);
-      this.data.lifetimeEarned = Math.max(this.data.lifetimeEarned, incoming.lifetimeEarned);
-      this.data.lifetimeSpent = Math.max(this.data.lifetimeSpent, incoming.lifetimeSpent);
-      for (const [id, level] of Object.entries(incoming.buy)) this.data.buy[id] = Math.max(this.level(id), level);
-    },
+    merge(remote) { this.data = mergeMetaData(this.data, remote); },
   };
 
   shop = [

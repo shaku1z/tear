@@ -6,8 +6,7 @@ import { createLiveRunOrchestration } from "./live-run-orchestration-composition
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration"; import { commitBossIntroSnapshot } from "./live-frame-runtime";
 import { RuntimeFrameDriver } from "./runtime-frame-driver"; import { createLiveMusicObservation, projectLiveMusicRun } from "./live-music-observation-adapter";
-import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
-import { createLiveProductionWorld } from "./live-production-world";
+import { isMenuScreen, renderRegisteredScreen } from "./screen-registry"; import { createLiveProductionWorld } from "./live-production-world";
 import { createLiveHudFeedbackState } from "./live-hud-feedback-state"; import { createLiveParticlePresentationState } from "./live-particle-presentation-state";
 import { createLiveInterfaceFrameState } from "./live-interface-frame-state";
 import { createLiveInterfaceInteractionState } from "./live-interface-interaction-state";
@@ -209,7 +208,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll,
     requestPointerLock: requestOwnedPointerLock, selectStage: loadStage, beginWipe: () => { Wipe.begin(); },
     resetRun: (difficulty) => { startRunWithPreflight("playground", difficulty); },
-    startPractice: () => { tutorialPracticeStart = true; try { startRunImmediate("playground", "normal"); } finally { tutorialPracticeStart = false; } setState("paused"); document.exitPointerLock(); }, resetTrainingCarry: () => { transient.resetOpening(); impact.hitStop = 0; },
+    startPractice: () => { tutorialPracticeStart = true; try { startRunImmediate("playground", "normal"); } finally { tutorialPracticeStart = false; } setState("paused"); browserDocument.exitPointerLock(); }, resetTrainingCarry: () => { transient.resetOpening(); impact.hitStop = 0; },
     applySettingsCinematicPreference: () => settings.cinematics, shakeScale: () => settingsController.shakeScale,
     getShake: () => impact.shake, setShake: (value) => { impact.shake = value; },
     getZoom: () => feel.zoom, setZoom: (value) => { feel.zoom = value; },
@@ -225,8 +224,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   const { campaign: campaignHost, training: trainingHost, cinematic: cinematicHost,
     style: styleAchievementRuntime, weapon: weaponRuntime, addFloater } = campaignTraining;
-  const CINEMA = worldContext.cinema; const { stage: stageRuntime, story, runtime: campaignRuntime } = campaignHost;
-  const startRunWithPreflight = (mode: RunMode, difficulty: RunDifficulty): void => {
+  const CINEMA = worldContext.cinema; const { stage: stageRuntime, story, runtime: campaignRuntime } = campaignHost; const startRunWithPreflight = (mode: RunMode, difficulty: RunDifficulty): void => {
+    if (mode === "tutorial") { void trainingHost.startTutorial(() => { startRunImmediate(mode, difficulty); }).catch((error: unknown) => { console.warn("Tear training runtime failed to load", error); }); return; }
     if (!trainingRunRequiresPreflight(mode)) { startRunImmediate(mode, difficulty); return; }
     void trainingHost.ensureLoaded().then(() => { startRunImmediate(mode, difficulty); }).catch((error: unknown) => {
       console.warn("Tear training runtime failed to load", error); });

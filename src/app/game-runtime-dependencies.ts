@@ -44,6 +44,7 @@ import type { ShopPurchaseProgressPersistence } from "./live-shop-purchase-progr
 import type { StyleAchievementPersistence } from "./live-style-achievement-persistence";
 import type { PlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
 import type { VictoryProfileProgressPersistence } from "./live-victory-profile-progress-persistence";
+import type { TutorialCompletionPersistence } from "./live-tutorial-completion-persistence";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -53,6 +54,7 @@ type ReplayCompatibility = ReturnType<typeof createLegacyReplayCompatibility>;
 
 /** Inferred composition contract shared by the strict runtime host and platform composition root. */
 export interface GameRuntimeDependencies {
+  readonly tutorialCompletionPersistence?: TutorialCompletionPersistence;
   readonly A11Y: typeof A11Y; readonly ACH: ReturnType<typeof createAchievements>;
   readonly achievementToastPersistence: AchievementToastPersistence;
   readonly biomeProgressPersistence: BiomeProgressPersistence;

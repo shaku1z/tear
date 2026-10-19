@@ -17,12 +17,14 @@ export function createLivePlatformBootstrapPersistence(
   profile: Profile,
   meta: Meta,
   shop: Shop,
+  retryTutorialRewards?: () => Promise<unknown>,
 ): PlatformBootstrapPersistence {
   return Object.freeze({
     backfillShopProgress: () => {
       profile.maxStat("shopMaxed", shop.filter((item) => meta.level(item.id) >= item.maxLevel).length);
       achievements.check();
       profile.save();
+      void retryTutorialRewards?.();
     },
   });
 }

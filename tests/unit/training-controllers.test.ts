@@ -47,7 +47,7 @@ describe("tutorial controller", () => {
       controller.update(neutralTutorialFrame); controller.update({ ...neutralTutorialFrame, dt: 1.2 }); controller.update(neutralTutorialFrame);
     }
     const completion = controller.update({ ...neutralTutorialFrame, dt: 2 });
-    expect(completion.filter((intent) => intent.type === "profile-stat")).toHaveLength(1);
+    expect(completion.filter((intent) => intent.type === "complete-course")).toHaveLength(1);
     expect(controller.session().lessons.filter((lesson) => lesson.completed)).toHaveLength(14);
     expect(controller.selectLesson("ready")).toBe(false);
     expect(controller.selectLesson("move")).toBe(true);
@@ -57,7 +57,7 @@ describe("tutorial controller", () => {
     const saved = controller.captureSession(), restored = new TutorialController(CONFIG); restored.restoreSession(saved);
     const revisited = restored.update({ ...neutralTutorialFrame, dt: 1.2 });
     expect(revisited).toContainEqual({ type: "begin-practice" });
-    expect(revisited.some((intent) => intent.type === "profile-stat" || intent.type === "achievement-check")).toBe(false);
+    expect(revisited.some((intent) => intent.type === "complete-course" || intent.type === "achievement-check")).toBe(false);
     expect(restored.session()).toMatchObject({ phase: "free-practice", courseCompleted: true });
     expect(() => parseTutorialSessionCheckpoint(restored.captureSession())).not.toThrow();
   });
@@ -242,8 +242,8 @@ describe("tutorial controller", () => {
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [],
     };
     const completion = controller.update(snapshot);
-    expect(completion.filter((intent) => intent.type === "profile-stat")).toEqual([
-      { type: "profile-stat", stat: "tutorialDone", amount: 1 },
+    expect(completion.filter((intent) => intent.type === "complete-course")).toEqual([
+      { type: "complete-course", courseSessionId: "tutorial" },
     ]);
     expect(completion).toContainEqual({ type: "begin-practice" });
     expect(completion).not.toContainEqual({ type: "navigate", screen: "menu" });

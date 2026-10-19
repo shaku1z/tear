@@ -18,7 +18,7 @@ const verdantStats = Object.freeze({
 });
 
 describe("Verdant/Pale profile envelope compatibility", () => {
-  it("keeps the current profile schema because source-owned statistics need no structural migration", () => {
+  it("retains current profile statistics and extensions alongside versioned receipt support", () => {
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
       schemaVersion: PROFILE_ENVELOPE_VERSION,
@@ -32,19 +32,19 @@ describe("Verdant/Pale profile envelope compatibility", () => {
       ok: true,
       migratedFrom: null,
       value: {
-        schemaVersion: 2,
+        schemaVersion: PROFILE_ENVELOPE_VERSION,
         profile: { stats: verdantStats, ach: { boss_rootbound: 1, rootbound_regrowth: 1 } },
         extensions: { future: { retained: true } },
       },
     });
   });
 
-  it("preserves Verdant/Pale statistics and unknown legacy data without publishing a new schema", () => {
+  it("preserves Verdant/Pale statistics and unknown legacy data through current envelope migration", () => {
     const result = migrateProfileEnvelope({ stats: verdantStats, unknownFutureValue: "kept" }, 500);
     expect(result).toMatchObject({
       ok: true,
       migratedFrom: "legacy",
-      value: { schemaVersion: 2, profile: { stats: verdantStats, unknownFutureValue: "kept" } },
+      value: { schemaVersion: PROFILE_ENVELOPE_VERSION, profile: { stats: verdantStats, unknownFutureValue: "kept" } },
     });
   });
 });

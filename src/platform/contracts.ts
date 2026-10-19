@@ -46,6 +46,8 @@ export interface KeyValueStorage {
   remove(key: string): Promise<void>;
 }
 
+export type { AcknowledgedStorage, StorageAcknowledgement } from "../domain/reward-receipts";
+
 export interface CloudSaveRecord {
   readonly value: string;
   readonly revision: number;

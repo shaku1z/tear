@@ -112,6 +112,14 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     terminateRun: (reason) => { context.lifecycle.terminate(reason); },
     navigate: (screen) => { context.navigate(screen); }, releasePointer: context.releasePointer,
     addProfileStat: d.profileStatsPersistence.add,
+    completeCourse: async (id) => {
+      const status = await (d.tutorialCompletionPersistence?.complete(id) ?? Promise.resolve("unavailable"));
+      const actor = state.player();
+      if (actor !== undefined) context.addFloater(actor.x, actor.y - 70,
+        status === "committed" || status === "already" ? "TUTORIAL PROGRESS SAVED" : "TUTORIAL COMPLETE · SAVE NOT CONFIRMED",
+        true, status === "committed" || status === "already" ? d.CONFIG.colors.perfect : "#e0a326");
+      return status;
+    },
     checkAchievements: () => { d.ACH.check(); }, drawGhost: context.drawGhost,
   });
 

@@ -75,9 +75,30 @@ keeps help/ghost display cadence in a separate presentation-only UI field. Exact
 restore does not reinstall an already installed room; malformed or cold-loaded
 sessions are refused before mutation, and historical absence clears stale state.
 A cold host must load training before restoring a tutorial session. Autonomous
-detached tutorial replay and durable completion/reward deduplication across an
-intentional pre-award rewind or reload remain separate required work. The session
-guard preserves ordinary restart/revisit semantics; it is not a durable receipt.
+detached tutorial replay remains separate required work. The session guard means
+that a completion request was emitted; durable profile receipts decide whether
+that request earns credit after an intentional pre-award rewind or reload.
+
+Normal course start issues an independent UUID through acknowledged profile
+storage. Profile schema 3 retains issued/completed course receipts and commits
+the completion receipt, additive `tutorialDone` count, Apprentice unlock and
+pending reward together. META commits the stable achievement grant receipt and
+its existing 75-coin payout together; only then does the profile acknowledge the
+outbox entry. Boot and subsequent commits drain pending entries, including the
+normal mastery achievement cascade. Repeating a completed course ID cannot add
+credit or coins. A fresh course adds credit; an already earned Apprentice does
+not pay again. Restart, practice and State Forge restore retain the course ID;
+restore neither issues IDs nor writes persistence.
+
+Historical counts, balances and unlocks remain baseline values; migration does
+not mint rewards for old unlocks. Receipt unions are retained through profile
+and META merges and ordinary saves. An unavailable or indeterminate write leaves
+the course playable and explicitly shows that progress storage is unavailable
+or completion was not confirmed. A write that never reached backing cannot be
+recovered after process loss. This is a recoverable two-owner outbox, not an
+atomic transaction across profile and META keys. Standalone stored-byte failure
+and reload controls and an asynchronous fake-provider control cover this path;
+live provider and cross-device durability have not been demonstrated.
 
 ## Version 1 repair status
 
@@ -99,10 +120,11 @@ The current parity repair now establishes a trustworthy baseline:
 - Tutorial prompts adapt to the active keyboard/mouse, controller, or touch
   input mode. Controller action labels come from the configured preset and
   glyph resolver.
-- Completion stops the controller before awarding `tutorialDone`, checking
-  achievements, releasing the pointer, and handing off synchronously to the
-  no-wave practice arena. A regression test proves that credit is emitted once
-  and the browser journey proves the live handoff.
+- Completion stops the controller, emits a course completion request, releases
+  the pointer, and hands off synchronously to the no-wave practice arena. The
+  acknowledged profile and META owners apply credit and achievement rewards
+  asynchronously. The browser journey proves the live course and handoff;
+  focused persistence controls prove retry and stored-byte recovery semantics.
 - A deterministic browser journey completes every lesson using real semantic
   gameplay actions. It does not mutate counters, skip lessons, or call tutorial
   internals to manufacture success.
@@ -733,8 +755,8 @@ The shipped Cutting Room now additionally includes:
 - [x] Add enemy-language training and a baseline-only Field Test with actual
   Charger `commit`/`recover` evidence: evade the charge, then punish recovery.
 - [x] Hand off immediately to the no-wave practice arena after course completion.
-- [ ] Add launch/projectile mixed testing, explicit wave cadence, a technique
-  summary, and a post-completion practice selector.
+- [x] Add a technique summary and post-completion reached-lesson practice selector.
+- [ ] Add launch/projectile mixed testing and explicit wave cadence.
 - Add contextual first-run campaign onboarding for the real draft/shop screens;
   keep them absent from the tutorial.
 - Retire version 1 only after completion and abandonment metrics meet targets.
@@ -883,7 +905,9 @@ Keep Version 1 available as a fallback until Version 2 meets every gate.
 - A struggling policy receives nudge, demonstration, and disclosed assistance.
 - Exit/resume restores the current sealed block.
 - Skip advanced returns a completable path.
-- Completing or exiting never mutates currency, drafts, reserves, or upgrades.
+- Completing or exiting never grants run currency, drafts, reserves, or upgrades.
+  The existing one-time Apprentice achievement payout follows the durable reward
+  path above; baseline practice never repeats it.
 
 ### Failure and recovery gates
 
@@ -916,7 +940,7 @@ Track:
 - final-exam techniques and elevations used;
 - stationary time during combat blocks;
 - first real-run mechanic use and survival after tutorial;
-- any tutorial upgrade, currency, shop, or draft mutation, target zero;
+- any tutorial upgrade, run currency, shop, or draft mutation, target zero;
 - duplicate tutorial completion credit, target zero.
 
 Success is not merely a higher completion rate. A good tutorial should improve:

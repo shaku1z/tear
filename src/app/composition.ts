@@ -1,3 +1,4 @@
+import { createLiveTutorialCompletionPersistence } from "./live-tutorial-completion-persistence";
 import { createLegacySynthFacade } from "../audio/legacy-synth";
 import { createBrowserAudioContextHandoff } from "../audio/audio-context-handoff";
 import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
@@ -193,6 +194,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
 
   const PROFILE = createLegacyProfile({
     store: CG.store,
+    onCommitted: () => { if (PROFILE.pendingRewards().length > 0) void tutorialCompletionPersistence.retry(); },
+    onLoaded: () => { void tutorialCompletionPersistence.retry(); },
     getAchievements: () => ACH,
     getMeta: () => META,
     writerId: () => CG.live ? "crazygames" : "browser",
@@ -230,6 +233,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     applyUpgrade: (upgrade, context) => { applyUpgrade(upgrade, context); },
   });
   const ACH = createAchievements({ meta: META, profile: PROFILE, audio: SFX, shop: SHOP, clamp });
+  const tutorialCompletionPersistence = createLiveTutorialCompletionPersistence(PROFILE, META, ACH);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new LegacyAppStateController();
   const DIAG = new PerformanceMonitor();
@@ -240,14 +244,14 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const profileStatsPersistence = createLiveProfileStatsPersistence(PROFILE);
   const victoryProfileProgressPersistence = createLiveVictoryProfileProgressPersistence(PROFILE, profileStatsPersistence);
   const styleAchievementPersistence = createLiveStyleAchievementPersistence(ACH, PROFILE);
-  const platformBootstrapPersistence = createLivePlatformBootstrapPersistence(ACH, PROFILE, META, SHOP);
+  const platformBootstrapPersistence = createLivePlatformBootstrapPersistence(ACH, PROFILE, META, SHOP, () => tutorialCompletionPersistence.retry());
   const shopPurchaseProgressPersistence = createLiveShopPurchaseProgressPersistence(PROFILE, META, SHOP);
 
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, biomeProgressPersistence, Bomber, Boss, achievementToastPersistence,
     browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
-    MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
+    MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, tutorialCompletionPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, Rimehound, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, PLAYGROUND_STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, WhiteHart, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,

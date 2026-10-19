@@ -1,6 +1,9 @@
-import { migrateProfileEnvelope, mutableProfileWorkingCopy, type ProfileEnvelopeV2 } from "./profile-envelope";
+import type { AcknowledgedStorage } from "../platform/contracts";
+import { achievementOutbox, isTutorialCourseId, mergeAchievementOutboxes, mergeTutorialLedgers, outboxCoins, outboxShards, tutorialCount, tutorialLedger, type AchievementGrant, type CompletionStatus } from "../domain/reward-receipts";
+import { PROFILE_ENVELOPE_VERSION, migrateProfileEnvelope, mutableProfileWorkingCopy, type ProfileEnvelopeV2 } from "./profile-envelope";
 
 interface SyncStore {
+  readonly acknowledged?: AcknowledgedStorage;
   get(key: string): string | null;
   set(key: string, value: string): void;
 }
@@ -14,6 +17,7 @@ interface AchievementDefinition {
 interface AchievementsPort {
   byId(id: string): AchievementDefinition | null | undefined;
   coinsFor(achievement: AchievementDefinition): number;
+  shardsFor?(achievement: AchievementDefinition): number;
 }
 
 interface MetaPort {
@@ -45,6 +49,11 @@ export interface LegacyProfile {
   readonly ENVELOPE_KEY: "tear_profile_v2";
   data: LegacyProfileData;
   load(): LegacyProfileData;
+  flushAcknowledged(): Promise<CompletionStatus>;
+  issueTutorial(id: string): Promise<CompletionStatus>;
+  completeTutorial(id: string): Promise<CompletionStatus>;
+  acknowledgeReward(id: string): Promise<CompletionStatus>;
+  pendingRewards(): readonly Readonly<{ id: string; coins: number }>[];
   save(): void;
   retrofitCoins(): void;
   username(): string;
@@ -73,6 +82,8 @@ export interface LegacyProfileOptions {
   readonly getAchievements: () => AchievementsPort | undefined;
   readonly getMeta: () => MetaPort | undefined;
   readonly writerId: () => string;
+  readonly onCommitted?: () => void;
+  readonly onLoaded?: () => void;
   readonly log?: (message: string) => void;
   /** Published biome display names whose discovery counts toward progression. */
   readonly countedBiomeNames?: readonly string[];
@@ -100,6 +111,18 @@ function numberMap(value: unknown): Record<string, number> {
   return output;
 }
 
+const RECEIPT_OWNED_FIELDS = new Set(["tutorialCompletion", "achievementOutbox", "ach", "stats", "shards", "seen", "modes", "weaponsWon", "advDiffs"]);
+function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
+  for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
+    if (root && RECEIPT_OWNED_FIELDS.has(key)) continue;
+    if (JSON.stringify(baseline[key]) === JSON.stringify(current[key])) continue;
+    if (!(key in current)) { Reflect.deleteProperty(target, key); continue; }
+    const before = record(baseline[key]), after = record(current[key]), destination = record(target[key]);
+    if (before && after && destination) overlayNormalChanges(destination, before, after, false);
+    else target[key] = structuredClone(current[key]);
+  }
+}
+
 export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfile {
   const countedBiomeNames = options.countedBiomeNames === undefined ? null : new Set(options.countedBiomeNames);
   const countBiomes = (value: unknown): number => Object.keys(record(value) ?? {})
@@ -111,10 +134,132 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
     v: 1, shards: 0, ach: {}, stats: {}, seen: {}, modes: {}, created: now(), achCoinsRetrofit: false,
   });
 
+  let knownProfile = fresh();
+  const mergeData = (target: LegacyProfileData, remote: unknown): void => {
+      const source = record(remote);
+      if (!source) return;
+      target.shards = Math.max(target.shards, finite(source.shards));
+      const remoteStats = record(source.stats);
+      if (remoteStats) for (const [key, value] of Object.entries(remoteStats)) {
+        if (key.startsWith("_") && record(value)) {
+          target.stats[key] = { ...(record(target.stats[key]) ?? {}), ...record(value) };
+        } else target.stats[key] = Math.max(finite(target.stats[key]), finite(value));
+      }
+      const remoteAchievements = numberMap(source.ach);
+      for (const [id, timestamp] of Object.entries(remoteAchievements)) {
+        const local = target.ach[id];
+        if (local === undefined || timestamp < local) target.ach[id] = timestamp;
+      }
+      if (typeof source.username === "string" && finite(source.usernameSetAt) > finite(target.usernameSetAt)) {
+        target.username = source.username;
+        target.usernameSetAt = finite(source.usernameSetAt);
+      }
+      Object.assign(target.modes, boolMap(source.modes));
+      Object.assign(target.seen, boolMap(source.seen));
+      const rewards = record(source.rewards);
+      if (rewards) target.rewards = { ...(target.rewards ?? {}), ...rewards };
+      const remoteFinale = record(source.pendingFinale);
+      if (remoteFinale && (!target.pendingFinale || finite(remoteFinale.savedAt) > finite(target.pendingFinale.savedAt))) {
+        target.pendingFinale = remoteFinale;
+      }
+      const mergeSet = (key: "weaponsWon" | "advDiffs") => {
+        const incoming = numberMap(source[key]);
+        if (Object.keys(incoming).length === 0) return;
+        const values = target[key] ?? {};
+        for (const id of Object.keys(incoming)) values[id] = 1;
+        target[key] = values;
+      };
+      mergeSet("weaponsWon");
+      mergeSet("advDiffs");
+      target.stats.biomesSeen = Math.max(finite(target.stats.biomesSeen), countBiomes(target.stats._biomes));
+      target.stats.modesPlayed = Math.max(finite(target.stats.modesPlayed), Object.keys(target.modes).length);
+      if (target.weaponsWon) target.stats.distinctWeaponsWon = Math.max(finite(target.stats.distinctWeaponsWon), Object.keys(target.weaponsWon).length);
+      if (target.advDiffs) target.stats.clearAdvAll = Math.max(finite(target.stats.clearAdvAll), Object.keys(target.advDiffs).length);
+      if (target.tutorialCompletion !== undefined || source.tutorialCompletion !== undefined) {
+        const left = tutorialLedger(target.tutorialCompletion), right = tutorialLedger(source.tutorialCompletion);
+        left.floor = Math.max(left.floor, finite(target.stats.tutorialDone)); right.floor = Math.max(right.floor, finite(remoteStats?.tutorialDone));
+        const ledger = mergeTutorialLedgers(left, right); target.tutorialCompletion = ledger; target.stats.tutorialDone = tutorialCount(ledger);
+      }
+      if (target.achievementOutbox !== undefined || source.achievementOutbox !== undefined) {
+        const left = achievementOutbox(target.achievementOutbox), right = achievementOutbox(source.achievementOutbox);
+        left.floorCoins = Math.max(left.floorCoins, finite(target.stats.coinsEarned)); right.floorCoins = Math.max(right.floorCoins, finite(remoteStats?.coinsEarned));
+        left.floorShards = Math.max(left.floorShards, target.shards); right.floorShards = Math.max(right.floorShards, finite(source.shards));
+        const ledger = mergeAchievementOutboxes(left, right); target.achievementOutbox = ledger;
+        target.shards = outboxShards(ledger); target.stats.coinsEarned = outboxCoins(ledger);
+      }
+      for (const [key, value] of Object.entries(source)) if (!(key in target)) target[key] = structuredClone(value);
+  };
+  const unlockInto = (target: LegacyProfileData, achievement: AchievementDefinition): boolean => {
+    if (target.ach[achievement.id] !== undefined) return false;
+    const outbox = achievementOutbox(target.achievementOutbox, finite(target.stats.coinsEarned), target.shards);
+    const grant: AchievementGrant = { coins: achievement.coins ?? options.getAchievements()?.coinsFor(achievement) ?? 0,
+      shards: achievement.shards ?? options.getAchievements()?.shardsFor?.(achievement) ?? 0, acknowledged: false };
+    outbox.baselineCoins = outboxCoins(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.coins, 0);
+    outbox.baselineShards = outboxShards(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.shards, 0);
+    outbox.grants[`achievement:${achievement.id}`] ??= grant;
+    target.ach[achievement.id] = now(); target.achievementOutbox = outbox;
+    target.shards = outboxShards(outbox); target.stats.coinsEarned = outboxCoins(outbox); return true;
+  };
+  const commit = async (change: (target: LegacyProfileData) => void = () => undefined): Promise<CompletionStatus> => {
+    if (!options.store.acknowledged) return "unavailable";
+    let atWrite = structuredClone(profile.data);
+    const result = await options.store.acknowledged.update("tear_profile_v2", (text) => {
+      if (!envelopeWritable) throw new Error("Profile envelope is not writable");
+      const persisted = text === null ? null : migrateProfileEnvelope(JSON.parse(text) as unknown, now());
+      if (persisted && !persisted.ok) throw new Error("Unsupported stored profile");
+      atWrite = structuredClone(profile.data);
+      const candidate = persisted?.ok ? Object.assign(fresh(), mutableProfileWorkingCopy(persisted.value)) : structuredClone(atWrite);
+      mergeData(candidate, atWrite); overlayNormalChanges(candidate, knownProfile, atWrite);
+      change(candidate);
+      const migrated = migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: PROFILE_ENVELOPE_VERSION,
+        revision: Math.max(envelope?.revision ?? 0, persisted?.ok ? persisted.value.revision : 0) + 1,
+        updatedAtMs: now(), writerId: options.writerId(), profile: candidate,
+        extensions: persisted?.ok ? persisted.value.extensions : envelope?.extensions ?? {} }, now());
+      if (!migrated.ok) throw new Error("Invalid candidate profile"); return JSON.stringify(migrated.value);
+    });
+    if (result.status !== "committed") return result.status;
+    const migrated = migrateProfileEnvelope(JSON.parse(result.value) as unknown, now());
+    if (!migrated.ok) return "unknown";
+    envelope = migrated.value;
+    const committed: LegacyProfileData = Object.assign(fresh(), mutableProfileWorkingCopy(migrated.value)), current = profile.data;
+    const merged = structuredClone(committed);
+    if (merged.achievementOutbox !== undefined && current.achievementOutbox === undefined) {
+      const ledger = achievementOutbox(merged.achievementOutbox);
+      ledger.baselineCoins += Math.max(0, finite(current.stats.coinsEarned) - finite(atWrite.stats.coinsEarned));
+      ledger.baselineShards += Math.max(0, current.shards - atWrite.shards); merged.achievementOutbox = ledger;
+    }
+    mergeData(merged, current); overlayNormalChanges(merged, atWrite, current);
+    profile.data = merged; knownProfile = structuredClone(committed);
+    // Compatibility mirror is not the acknowledged authority.
+    try { options.store.set("tear_profile", JSON.stringify(profile.data)); } catch { /* mirror is not authority */ }
+    options.onCommitted?.(); return "committed";
+  };
   const profile: LegacyProfile = {
     KEY: "tear_profile",
     ENVELOPE_KEY: "tear_profile_v2",
     data: fresh(),
+    flushAcknowledged: () => commit(),
+    async issueTutorial(id) {
+      if (!isTutorialCourseId(id)) return "unknown";
+      return commit((target) => { const ledger = tutorialLedger(target.tutorialCompletion, finite(target.stats.tutorialDone)); ledger.courses[id] ??= "issued"; target.tutorialCompletion = ledger; });
+    },
+    async completeTutorial(id) {
+      if (!isTutorialCourseId(id)) return "unknown";
+      let outcome: CompletionStatus = "unknown";
+      const status = await commit((target) => {
+        const ledger = tutorialLedger(target.tutorialCompletion, finite(target.stats.tutorialDone));
+        if (ledger.courses[id] === undefined) return;
+        if (ledger.courses[id] === "completed") { outcome = "already"; return; }
+        ledger.baseline = tutorialCount(ledger) - Object.values(ledger.courses).filter((state) => state === "completed").length;
+        ledger.courses[id] = "completed"; target.tutorialCompletion = ledger; target.stats.tutorialDone = tutorialCount(ledger);
+        const apprentice = options.getAchievements()?.byId("student");
+        if (apprentice) unlockInto(target, apprentice); else throw new Error("Apprentice definition unavailable");
+        outcome = "committed";
+      });
+      return status === "committed" ? outcome : status;
+    },
+    pendingRewards() { return Object.entries(achievementOutbox(this.data.achievementOutbox).grants).filter(([, grant]) => !grant.acknowledged).map(([id, grant]) => ({ id, coins: grant.coins })); },
+    acknowledgeReward(id) { return commit((target) => { const outbox = achievementOutbox(target.achievementOutbox); const grant = outbox.grants[id]; if (grant) grant.acknowledged = true; target.achievementOutbox = outbox; }); },
     load() {
       let raw: Tracker | null = null;
       envelopeWritable = true;
@@ -139,13 +284,17 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
         seen: boolMap(source.seen),
         modes: boolMap(source.modes),
       });
+      knownProfile = structuredClone(this.data);
+      if (options.store.acknowledged) this.data.achCoinsRetrofit = true;
       if (options.getAchievements() && options.getMeta()?.data && !this.data.achCoinsRetrofit) this.retrofitCoins();
+      options.onLoaded?.();
       return this.data;
     },
     save() {
+      if (options.store.acknowledged) { void commit(); return; }
       try {
         const migrated = migrateProfileEnvelope({
-          schema: "tear.profile", schemaVersion: 2, revision: (envelope?.revision ?? 0) + 1,
+          schema: "tear.profile", schemaVersion: PROFILE_ENVELOPE_VERSION, revision: (envelope?.revision ?? 0) + 1,
           updatedAtMs: now(), writerId: options.writerId(), profile: this.data,
           extensions: envelope?.extensions ?? {},
         }, now());
@@ -177,9 +326,11 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
     usernameSetAt() { return finite(this.data.usernameSetAt); },
     setUsername(name) { this.data.username = name; this.data.usernameSetAt = now(); this.save(); },
     shards() { return finite(this.data.shards); },
-    addShards(amount) { this.data.shards = finite(this.data.shards) + amount; this.save(); },
+    addShards(amount) { this.data.shards = finite(this.data.shards) + amount;
+      if (this.data.achievementOutbox !== undefined) { const ledger = achievementOutbox(this.data.achievementOutbox); ledger.baselineShards = outboxShards(ledger) - Object.values(ledger.grants).reduce((sum, entry) => sum + entry.shards, 0) + amount; this.data.achievementOutbox = ledger; } this.save(); },
     stat(key) { return finite(this.data.stats[key]); },
-    addStat(key, amount = 1) { this.data.stats[key] = finite(this.data.stats[key]) + amount; },
+    addStat(key, amount = 1) { this.data.stats[key] = finite(this.data.stats[key]) + amount;
+      if (key === "coinsEarned" && this.data.achievementOutbox !== undefined) { const ledger = achievementOutbox(this.data.achievementOutbox); ledger.baselineCoins = outboxCoins(ledger) - Object.values(ledger.grants).reduce((sum, entry) => sum + entry.coins, 0) + amount; this.data.achievementOutbox = ledger; } },
     maxStat(key, value) { if (value > finite(this.data.stats[key])) this.data.stats[key] = value; },
     markBiome(name) {
       const seen = record(this.data.stats._biomes) ?? {};
@@ -196,6 +347,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
     clearPendingFinale() { delete this.data.pendingFinale; this.save(); },
     unlocked(id) { return this.data.ach[id] !== undefined; },
     unlock(achievement) {
+      if (options.store.acknowledged) { const unlocked = unlockInto(this.data, achievement); if (unlocked) this.save(); return unlocked; }
       if (this.unlocked(achievement.id)) return false;
       this.data.ach[achievement.id] = now();
       this.data.shards += achievement.shards ?? 0;
@@ -204,47 +356,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
       return true;
     },
     unlockedCount() { return Object.keys(this.data.ach).length; },
-    merge(remote) {
-      const source = record(remote);
-      if (!source) return;
-      this.data.shards = Math.max(this.data.shards, finite(source.shards));
-      const remoteStats = record(source.stats);
-      if (remoteStats) for (const [key, value] of Object.entries(remoteStats)) {
-        if (key.startsWith("_") && record(value)) {
-          this.data.stats[key] = { ...(record(this.data.stats[key]) ?? {}), ...record(value) };
-        } else this.data.stats[key] = Math.max(finite(this.data.stats[key]), finite(value));
-      }
-      const remoteAchievements = numberMap(source.ach);
-      for (const [id, timestamp] of Object.entries(remoteAchievements)) {
-        const local = this.data.ach[id];
-        if (local === undefined || timestamp < local) this.data.ach[id] = timestamp;
-      }
-      if (typeof source.username === "string" && finite(source.usernameSetAt) > this.usernameSetAt()) {
-        this.data.username = source.username;
-        this.data.usernameSetAt = finite(source.usernameSetAt);
-      }
-      Object.assign(this.data.modes, boolMap(source.modes));
-      Object.assign(this.data.seen, boolMap(source.seen));
-      const rewards = record(source.rewards);
-      if (rewards) this.data.rewards = { ...(this.data.rewards ?? {}), ...rewards };
-      const remoteFinale = record(source.pendingFinale);
-      if (remoteFinale && (!this.data.pendingFinale || finite(remoteFinale.savedAt) > finite(this.data.pendingFinale.savedAt))) {
-        this.data.pendingFinale = remoteFinale;
-      }
-      const mergeSet = (key: "weaponsWon" | "advDiffs") => {
-        const incoming = numberMap(source[key]);
-        if (Object.keys(incoming).length === 0) return;
-        const target = this.data[key] ?? {};
-        for (const id of Object.keys(incoming)) target[id] = 1;
-        this.data[key] = target;
-      };
-      mergeSet("weaponsWon");
-      mergeSet("advDiffs");
-      this.data.stats.biomesSeen = Math.max(finite(this.data.stats.biomesSeen), countBiomes(this.data.stats._biomes));
-      this.data.stats.modesPlayed = Math.max(finite(this.data.stats.modesPlayed), Object.keys(this.data.modes).length);
-      if (this.data.weaponsWon) this.data.stats.distinctWeaponsWon = Math.max(finite(this.data.stats.distinctWeaponsWon), Object.keys(this.data.weaponsWon).length);
-      if (this.data.advDiffs) this.data.stats.clearAdvAll = Math.max(finite(this.data.stats.clearAdvAll), Object.keys(this.data.advDiffs).length);
-    },
+    merge(remote) { mergeData(this.data, remote); },
   };
   return profile;
 }

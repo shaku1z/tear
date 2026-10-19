@@ -51,6 +51,7 @@ type TrainingRuntime = Readonly<{
 
 export interface LiveTrainingHost extends TrainingRuntime {
   ensureLoaded(): Promise<void>;
+  startTutorial(start: () => void): Promise<void>;
 }
 
 function emptyProgress(): readonly [number, number] { return [0, 0]; }
@@ -64,6 +65,7 @@ const fallbackLesson: ReturnType<LiveTutorialRuntime["step"]> = Object.freeze({
 export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTrainingHost {
   let loaded: TrainingRuntime | undefined;
   let loading: Promise<void> | undefined;
+  let preparedCourseId: string | undefined;
   const fallbackState = { god: false, freeze: false, slow: false, hpMultiplier: 1, count: 1, arena: -1, labFilter: "all" };
 
   const ensureLoaded = (): Promise<void> => {
@@ -89,7 +91,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     get gT() { return loaded?.tutorial.gT ?? 0; },
     get anchor() { return loaded?.tutorial.anchor ?? context.width / 2; },
     get steps() { return loaded?.tutorial.steps ?? Object.freeze([]); },
-    start() { if (loaded === undefined) throw new Error("Training preflight must complete before tutorial start"); loaded.tutorial.start(); },
+    start() { if (loaded === undefined) throw new Error("Training preflight must complete before tutorial start"); loaded.tutorial.start(preparedCourseId ?? "unissued"); },
     stop() { loaded?.tutorial.stop(); },
     mark(kind: TutorialMark) { loaded?.tutorial.mark(kind); },
     step() { return loaded?.tutorial.step() ?? fallbackLesson; },
@@ -120,7 +122,16 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     renderLab() { loaded?.presentation.renderLab(); },
   };
   return Object.freeze({ tutorial, runtime: playground, presentation,
-    controller: Object.freeze({ get state() { return playground.state; } }), ensureLoaded });
+    controller: Object.freeze({ get state() { return playground.state; } }), ensureLoaded,
+    async startTutorial(start: () => void) {
+      await ensureLoaded();
+      const issued = await context.dependencies.tutorialCompletionPersistence?.issue();
+      preparedCourseId = issued?.id ?? "unissued";
+      try {
+        start();
+        if (issued?.status !== "committed") { const actor = context.state.player(); if (actor !== undefined) context.addFloater(actor.x, actor.y - 70, "PROGRESS STORAGE UNAVAILABLE · COURSE IS PLAYABLE", true, "#e0a326"); }
+      } finally { preparedCourseId = undefined; }
+    } });
 }
 
 export function trainingRunRequiresPreflight(mode: GameRun["mode"]): boolean {
