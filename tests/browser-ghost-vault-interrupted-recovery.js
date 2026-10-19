@@ -1,6 +1,22 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
+async function waitForDurableValue(page, predicate, argument) {
+  let cancelled = false, timer;
+  const deadline = new Promise((resolve, reject) => { void resolve; timer = setTimeout(() => reject(new Error("durable recovery condition did not become truthy within 20000ms")), 20000); });
+  const poll = async () => {
+    while (!cancelled) {
+      const value = await page.evaluate(predicate, argument);
+      if (cancelled) return undefined;
+      if (value) return value;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return undefined;
+  };
+  try { return await Promise.race([poll(), deadline]); }
+  finally { cancelled = true; clearTimeout(timer); }
+}
+
 function scenario(id, seed) {
   return {
     format: "tear-contract", kind: "scenario", schemaVersion: 1,
@@ -39,9 +55,7 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
     for (let tick = 1; tick <= 120; tick += 1) environment.step([]);
     environment.pause();
   }, scenario("c28-vault-interrupted", "c28-vault-interrupted-seed"));
-  await page.waitForFunction(async (ids) => (await window.__TEAR_GHOST_V3__.manifests())
-    .some((manifest) => !ids.includes(manifest.id) && manifest.status === "recording" && manifest.chunks.length > 0), knownIds, { timeout: 20000 });
-  const interruptedId = await page.evaluate(async (ids) => (await window.__TEAR_GHOST_V3__.manifests())
+  const interruptedId = await waitForDurableValue(page, async (ids) => (await window.__TEAR_GHOST_V3__.manifests())
     .find((manifest) => !ids.includes(manifest.id) && manifest.status === "recording" && manifest.chunks.length > 0)?.id ?? null, knownIds);
   assert.equal(typeof interruptedId, "string", "interrupted run did not create a durable Vault journal");
 
@@ -53,12 +67,12 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
     environment.step([]);
     environment.terminate();
   }, scenario("c28-vault-recovery-trigger", "c28-vault-recovery-trigger-seed"));
-  await page.waitForFunction(async (id) => (await window.__TEAR_GHOST_V3__.manifests())
-    .some((manifest) => manifest.id === id && manifest.status === "recovered"), interruptedId, { timeout: 20000 });
+  await waitForDurableValue(page, async (id) => (await window.__TEAR_GHOST_V3__.manifests())
+    .some((manifest) => manifest.id === id && manifest.status === "recovered"), interruptedId);
   // The public Vault catalog has observed recovery, but the final assertion is
   // about raw durable stores. Wait for the IndexedDB transaction itself rather
   // than sampling it in the small visibility window between those observers.
-  await page.waitForFunction((id) => new Promise((resolve, reject) => {
+  await waitForDurableValue(page, (id) => new Promise((resolve, reject) => {
     const open = window.indexedDB.open("tear-ghost-v3");
     open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
     open.onsuccess = () => {
@@ -76,7 +90,7 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
       };
       transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error("IndexedDB recovery read failed")); };
     };
-  }), interruptedId, { timeout: 20000 });
+  }), interruptedId);
 
   const persisted = await readRecoveryStores(page, interruptedId);
   const manifest = JSON.parse(persisted.manifest);

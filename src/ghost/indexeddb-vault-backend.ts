@@ -5,7 +5,7 @@ import {
   type GhostVaultBackend,
   type GhostVaultStore,
   type GhostVaultWrite,
-} from "./capsule-vault";
+} from "./capsule-vault-backend";
 
 function applyWrites(transaction: IDBTransaction, operations: readonly GhostVaultWrite[]): void {
   for (const operation of operations) {
@@ -64,27 +64,71 @@ export async function createIndexedDbGhostVaultBackend(
       return new Promise<void>((resolve, reject) => {
         const stores = [...new Set([...guards.map((guard) => guard.store), ...operations.map((operation) => operation.store)])];
         const tx = database.transaction(stores, "readwrite"); let error: Error | undefined; let remaining = guards.length;
-        const apply = (): void => { if (remaining !== 0) return; applyWrites(tx, operations); };
+        const fail = (reason: Error): void => {
+          if (error !== undefined) return;
+          error = reason;
+          tx.abort();
+        };
+        const apply = (): void => { if (error !== undefined || remaining !== 0) return; applyWrites(tx, operations); };
         if (guards.length === 0) apply();
-        for (const guard of guards) { const request = tx.objectStore(guard.store).get(guard.key); request.onerror = () => { error = request.error ?? new Error("Vault conditional read failed"); tx.abort(); }; request.onsuccess = () => { if ((typeof request.result === "string" ? request.result : undefined) !== guard.expected) { error = new Error("Vault conditional write no longer matches"); tx.abort(); return; } remaining -= 1; apply(); }; }
+        for (const guard of guards) {
+          const request = tx.objectStore(guard.store).get(guard.key);
+          request.onerror = () => { fail(request.error ?? new Error("Vault conditional read failed")); };
+          request.onsuccess = () => {
+            if (error !== undefined) return;
+            if (request.result !== guard.expected) {
+              fail(new Error("Vault conditional write no longer matches"));
+              return;
+            }
+            remaining -= 1;
+            apply();
+          };
+        }
         tx.oncomplete = () => { resolve(); }; tx.onerror = () => { reject(error ?? tx.error ?? new Error("Vault conditional write failed")); }; tx.onabort = () => { reject(error ?? tx.error ?? new Error("Vault conditional write aborted")); };
       });
     },
-    commitWhileJournalMatches(sessionId, leaseId, operations) {
+    commitWhileJournalMatches(sessionId, leaseId, operations, guards = []) {
       return new Promise<void>((resolve, reject) => {
-        const stores = [...new Set(["journals" as const, ...operations.map((operation) => operation.store)])];
+        const stores = [...new Set(["journals" as const, ...operations.map((operation) => operation.store), ...guards.map((guard) => guard.store)])];
         const tx = database.transaction(stores, "readwrite");
         let guardError: Error | undefined;
-        const guard = tx.objectStore("journals").get(sessionId);
-        guard.onerror = () => { guardError = guard.error ?? new Error("IndexedDB recording journal read failed"); tx.abort(); };
-        guard.onsuccess = () => {
-          if (ghostVaultJournalLease(typeof guard.result === "string" ? guard.result : undefined) !== leaseId) {
-            guardError = new Error(`recording journal is no longer active: ${sessionId}`);
-            tx.abort();
-            return;
-          }
+        let remaining = guards.length;
+        let journalChecked = false;
+        const fail = (reason: Error): void => {
+          // Aborting cancels the remaining reads, which each dispatch onerror.
+          // Keep the original conflict and never abort the same transaction twice.
+          if (guardError !== undefined) return;
+          guardError = reason;
+          tx.abort();
+        };
+        const apply = (): void => {
+          if (guardError !== undefined || !journalChecked || remaining !== 0) return;
           applyWrites(tx, operations);
         };
+        const journal = tx.objectStore("journals").get(sessionId);
+        journal.onerror = () => { fail(journal.error ?? new Error("IndexedDB recording journal read failed")); };
+        journal.onsuccess = () => {
+          if (guardError !== undefined) return;
+          if (ghostVaultJournalLease(typeof journal.result === "string" ? journal.result : undefined) !== leaseId) {
+            fail(new Error(`recording journal is no longer active: ${sessionId}`));
+            return;
+          }
+          journalChecked = true;
+          apply();
+        };
+        for (const expected of guards) {
+          const request = tx.objectStore(expected.store).get(expected.key);
+          request.onerror = () => { fail(request.error ?? new Error("IndexedDB recording guard read failed")); };
+          request.onsuccess = () => {
+            if (guardError !== undefined) return;
+            if (request.result !== expected.expected) {
+              fail(new Error("Vault conditional write no longer matches"));
+              return;
+            }
+            remaining -= 1;
+            apply();
+          };
+        }
         tx.oncomplete = () => { resolve(); };
         tx.onerror = () => { reject(guardError ?? tx.error ?? new Error("IndexedDB recording commit failed")); };
         tx.onabort = () => { reject(guardError ?? tx.error ?? new Error("IndexedDB recording commit aborted")); };

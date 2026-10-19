@@ -120,9 +120,16 @@ export function createTearPolicyArtifact(input: TearPolicyArtifactDraft): TearPo
   return parseTearPolicyArtifact({ ...draft, artifactHash: artifactHash(draft) });
 }
 
+/** The source-authored identity subset is valid before a candidate model exists. */
+export function isTearPolicyArtifactIdentity(value: unknown): boolean {
+  return record(value) && text(value.id) && timestamp(value.createdAt) && (value.levelTarget === "class-a" || value.levelTarget === "class-b")
+    && record(value.signature) && value.signature.kind === "local-unsigned" && text(value.signature.keyId);
+}
+
 export function parseTearPolicyArtifact(value: unknown): TearPolicyArtifactV1 {
   if (!record(value) || value.format !== "tear-policy-artifact" || value.schemaVersion !== 1
-    || !text(value.id) || !timestamp(value.createdAt) || !record(value.model) || !text(value.model.format)
+    || !isTearPolicyArtifactIdentity(value)
+    || !record(value.model) || !text(value.model.format)
     || !text(value.model.payload) || !hashes(value.model.modelHash) || stableVerificationHash(value.model.payload) !== value.model.modelHash
     || !record(value.encoder) || !text(value.encoder.id) || !integer(value.encoder.schemaVersion) || value.encoder.schemaVersion < 1
     || (value.encoder.observationClass !== "structured-state" && value.encoder.observationClass !== "pixel-only") || !hashes(value.encoder.normalizationHash)
@@ -130,9 +137,8 @@ export function parseTearPolicyArtifact(value: unknown): TearPolicyArtifactV1 {
     || !["none", "gru", "lstm"].includes(String(value.recurrentState.kind)) || !integer(value.recurrentState.schemaVersion) || value.recurrentState.schemaVersion < 1
     || !record(value.trainingManifest) || !text(value.trainingManifest.id) || !integer(value.trainingManifest.version) || value.trainingManifest.version < 1 || !hashes(value.trainingManifest.rootHash)
     || !text(value.rewardVersion) || !validBuild(value.build) || !finiteMetrics(value.metrics)
-    || (value.levelTarget !== "class-a" && value.levelTarget !== "class-b") || !record(value.lineage) || !text(value.lineage.trainingRunId)
-    || (value.lineage.parentArtifactId !== undefined && !text(value.lineage.parentArtifactId)) || !record(value.signature)
-    || value.signature.kind !== "local-unsigned" || !text(value.signature.keyId) || !validCompatibility(value.compatibility)
+    || !record(value.lineage) || !text(value.lineage.trainingRunId)
+    || (value.lineage.parentArtifactId !== undefined && !text(value.lineage.parentArtifactId)) || !validCompatibility(value.compatibility)
     || (value.extensions !== undefined && !record(value.extensions)) || !hashes(value.artifactHash)) throw new TypeError("invalid policy artifact");
   const typed = value as unknown as Omit<TearPolicyArtifactV1, "artifactHash"> & { artifactHash: string };
   const { artifactHash: recorded, ...draft } = typed;
@@ -198,19 +204,37 @@ export class TearPolicyArtifactRegistry {
     }
   }
 
+  async #registeredPair(artifact: TearPolicyArtifactV1): Promise<TearPolicyArtifactV1> {
+    const key = artifactKey(artifact.id), indexKey = `policy-artifact:${artifact.id}`;
+    const [raw, indexRaw] = await Promise.all([this.#backend.get("analysis", key), this.#backend.get("indexes", indexKey)]);
+    if (raw === undefined || indexRaw === undefined) throw new TypeError("policy artifact/index pair is incomplete");
+    const current = parseTearPolicyArtifact(JSON.parse(raw)), index: unknown = JSON.parse(indexRaw);
+    if (current.id !== artifact.id || current.artifactHash !== artifact.artifactHash || !record(index)
+      || Object.keys(index).length !== 2 || index.artifactHash !== current.artifactHash || index.createdAt !== current.createdAt) throw new TypeError("policy artifact/index pair is inconsistent");
+    await this.#backend.commitIfMatches([{ store: "analysis", key, expected: raw }, { store: "indexes", key: indexKey, expected: indexRaw }], []);
+    return current;
+  }
+
   async register(input: TearPolicyArtifactV1): Promise<TearPolicyArtifactV1> {
     const artifact = parseTearPolicyArtifact(input);
     if (!compatible(artifact, this.#runtime)) throw new RangeError("policy artifact is incompatible with this runtime");
     const key = artifactKey(artifact.id), existing = await this.#backend.get("analysis", key);
     if (existing !== undefined) {
-      const current = await this.get(artifact.id);
-      if (current?.artifactHash === artifact.artifactHash) return current;
-      throw new TypeError("policy artifact id is already occupied");
+      return this.#registeredPair(artifact);
     }
-    await this.#backend.commit(Object.freeze([
-      { store: "analysis", key, value: JSON.stringify(artifact) },
-      { store: "indexes", key: `policy-artifact:${artifact.id}`, value: JSON.stringify({ artifactHash: artifact.artifactHash, createdAt: artifact.createdAt }) },
-    ]));
+    const indexKey = `policy-artifact:${artifact.id}`;
+    try {
+      await this.#backend.commitIfMatches(Object.freeze([
+        { store: "analysis", key }, { store: "indexes", key: indexKey },
+      ]), Object.freeze([
+        { store: "analysis", key, value: JSON.stringify(artifact) },
+        { store: "indexes", key: indexKey, value: JSON.stringify({ artifactHash: artifact.artifactHash, createdAt: artifact.createdAt }) },
+      ]));
+    } catch (error) {
+      // A concurrent identical registration is an idempotent success. A different
+      // winner, orphan index, or failed storage commit must never be overwritten.
+      try { return await this.#registeredPair(artifact); } catch { throw error; }
+    }
     return artifact;
   }
 

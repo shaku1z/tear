@@ -1,5 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
-import type { GhostVaultBackend } from "./capsule-vault";
+import type { GhostVaultBackend, GhostVaultGuard } from "./capsule-vault";
 import type { GhostPrivacyClass, GhostVisibility } from "./cloud-publication";
 
 const PREFIX = "ghost-publication-consent:v1:";
@@ -32,6 +32,7 @@ export interface GhostPublicationConsentDecision {
 
 export interface GhostPublicationConsentValidator {
   acceptForJob(value: GhostPublicationConsentRecordV1): Promise<GhostPublicationConsentRecordV1>;
+  prepareForJob(value: GhostPublicationConsentRecordV1): Promise<Readonly<{ record: GhostPublicationConsentRecordV1; guards: readonly GhostVaultGuard[] }>>;
 }
 
 function text(value: unknown): value is string { return typeof value === "string" && value.trim().length > 0; }
@@ -100,6 +101,10 @@ export class GhostLocalPublicationConsentLedger implements GhostPublicationConse
 
   /** Rechecks the current durable revision immediately before local job custody is accepted. */
   async acceptForJob(value: GhostPublicationConsentRecordV1): Promise<GhostPublicationConsentRecordV1> {
+    return (await this.prepareForJob(value)).record;
+  }
+
+  async prepareForJob(value: GhostPublicationConsentRecordV1): Promise<Readonly<{ record: GhostPublicationConsentRecordV1; guards: readonly GhostVaultGuard[] }>> {
     const supplied = parseGhostPublicationConsentRecord(value);
     if (supplied.cloudPublication !== "granted") throw new RangeError("cloud publication consent is not granted");
     const raw = await this.#backend.get("analysis", key(supplied.actorHash));
@@ -109,6 +114,6 @@ export class GhostLocalPublicationConsentLedger implements GhostPublicationConse
     if (current.recordHash !== supplied.recordHash || current.revision !== supplied.revision || current.cloudPublication !== "granted") {
       throw new RangeError("publication consent changed or was revoked");
     }
-    return current;
+    return Object.freeze({ record: current, guards: Object.freeze([{ store: "analysis" as const, key: key(supplied.actorHash), expected: raw }]) });
   }
 }

@@ -1329,6 +1329,17 @@ UNAVAILABLE`: no production media renderer is connected.
 
 ### C38 local publication review
 
+Vault source retention now uses one shared backend with exact transaction
+guards, a manifest mutation fence, reference-safe shared-chunk removal, and
+owner protection acquired with Academy custody. Legacy source protection is
+backfilled before quota upkeep; unavailable sources cannot enter held-custody
+queries. Source removal and its custody tombstone commit together. Publication
+enqueue and transport persistence fence the exact validated consent, source
+manifest/chunks, custody, queued job, and prior transport state. Focused race
+regressions cover changes immediately before those transactions; real IndexedDB
+journeys separately check atomic guard rejection and preserved corrupt bytes.
+These checks do not establish full-run device storage or real cloud publication.
+
 Healthy complete Ghost Vault rows now expose a normal local publication-review
 route. It fails closed when standalone publication capability is unconfigured,
 the account is anonymous, browser Vault storage is absent, or the source is

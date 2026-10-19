@@ -1,5 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
-import { parseGhostCapsuleManifest, type GhostLocalVault, type GhostVaultBackend, type TearGhostManifest } from "./capsule-vault";
+import { parseGhostCapsuleManifest, prepareGhostCapsuleSourceGuards, type GhostLocalVault, type GhostVaultBackend, type GhostVaultGuard, type TearGhostManifest } from "./capsule-vault";
 import { ghostSha256, type GhostPrivacyClass, type GhostRunEligibilityInput, type GhostVisibility } from "./cloud-publication";
 import { parseGhostPublicationConsentRecord, type GhostPublicationConsentRecordV1, type GhostPublicationConsentValidator } from "./publication-consent-ledger";
 
@@ -154,13 +154,15 @@ export class GhostLocalPublicationJobs {
     let manifest: TearGhostManifest | undefined;
     try { manifest = await this.#vault.getManifest(input.capsuleId); } catch { throw new RangeError("publication requires a complete healthy capsule"); }
     if (manifest?.status !== "complete") throw new RangeError("publication requires a complete healthy capsule");
+    const sourceGuards = await prepareGhostCapsuleSourceGuards(this.#backend, manifest.id, manifest.rootIntegrity);
+    if (hash16(parseGhostCapsuleManifest(JSON.parse(sourceGuards[0]?.expected ?? "null"))) !== hash16(manifest)) throw new RangeError("publication source changed during review");
     const exported = await this.#vault.exportCapsule(input.capsuleId);
     const parsed = object(JSON.parse(exported) as unknown), chunks = parsed === undefined ? undefined : object(parsed.chunks);
     let exportedManifest: TearGhostManifest;
     try { exportedManifest = parsed === undefined ? (() => { throw new TypeError("missing export"); })() : parseGhostCapsuleManifest(parsed.manifest); } catch { throw new TypeError("publication export is incomplete or malformed"); }
     if (chunks === undefined || Object.keys(chunks).length !== manifest.chunks.length || exportedManifest.rootIntegrity !== manifest.rootIntegrity) throw new TypeError("publication export is incomplete or malformed");
     for (const chunk of manifest.chunks) if (typeof chunks[chunk.id] !== "string") throw new TypeError("publication export is missing a source chunk");
-    const publicationConsent = await this.#publicationConsent.acceptForJob(input.custody.publicationConsent);
+    const consentAuthority = await this.#publicationConsent.prepareForJob(input.custody.publicationConsent), publicationConsent = consentAuthority.record;
     const custody = freezeCustody({ format: "tear-ghost-publication-custody", schemaVersion: 1, capsuleId: input.capsuleId, sourceConsent: input.custody.sourceConsent, publicationConsent,
       privacy: input.custody.privacy, visibility: input.custody.visibility, eligibility: input.custody.eligibility, decidedAt: input.custody.decidedAt });
     if (custody.sourceConsent.capsuleId !== manifest.id || custody.sourceConsent.rootIntegrity !== manifest.rootIntegrity || custody.sourceConsent.actorHash !== publicationConsent.actorHash || custody.sourceConsent.revision !== publicationConsent.revision || custody.sourceConsent.decidedAt !== publicationConsent.decidedAt) throw new RangeError("publication source consent does not match current capsule authority");
@@ -171,7 +173,7 @@ export class GhostLocalPublicationJobs {
     const oldJob = await this.#backend.get("uploadJobs", jobKey(id)), oldCustody = await this.#backend.get("analysis", custodyKey(input.capsuleId));
     if (oldJob !== undefined) { const existing = parseJob(oldJob); if (existing.jobHash === job.jobHash) return existing; throw new TypeError("publication job id conflicts with different durable bytes"); }
     if (oldCustody !== undefined) { const existing = parseCustody(oldCustody); if (existing.custodyHash !== custody.custodyHash) throw new RangeError("publication custody has changed; create a new explicit job after review"); }
-    await this.#backend.commitIfMatches([{ store: "manifests", key: input.capsuleId, expected: JSON.stringify(manifest) }, { store: "uploadJobs", key: jobKey(id) }, { store: "analysis", key: custodyKey(input.capsuleId), ...(oldCustody === undefined ? {} : { expected: oldCustody }) }], [
+    await this.#backend.commitIfMatches([...sourceGuards, ...consentAuthority.guards, { store: "uploadJobs", key: jobKey(id) }, { store: "analysis", key: custodyKey(input.capsuleId), ...(oldCustody === undefined ? {} : { expected: oldCustody }) }], [
       { store: "analysis", key: custodyKey(input.capsuleId), value: JSON.stringify(custody) }, { store: "uploadJobs", key: jobKey(id), value: JSON.stringify(job) },
     ]);
     return job;
@@ -211,6 +213,24 @@ export class GhostLocalPublicationJobs {
     const key = jobKey(id), raw = await this.#backend.get("uploadJobs", key);
     if (raw === undefined || parseJob(raw).status !== "queued") return undefined;
     return Object.freeze({ store: "uploadJobs", key, expected: raw });
+  }
+
+  /** Validated exact authority snapshot, composed into the final transport transaction. */
+  async authorityGuards(id: string): Promise<readonly GhostVaultGuard[]> {
+    const key = jobKey(id), raw = await this.#backend.get("uploadJobs", key);
+    if (raw === undefined) throw new RangeError("publication job is unavailable");
+    const job = parseJob(raw); if (job.status !== "queued") throw new RangeError("publication job is cancelled");
+    const custodyRaw = await this.#backend.get("analysis", custodyKey(job.source.capsuleId));
+    if (custodyRaw === undefined) throw new RangeError("publication custody is unavailable");
+    const custody = parseCustody(custodyRaw), consent = await this.#publicationConsent.prepareForJob(custody.publicationConsent);
+    const source = await prepareGhostCapsuleSourceGuards(this.#backend, job.source.capsuleId, job.source.rootIntegrity);
+    const manifestRaw = source[0]?.expected; if (manifestRaw === undefined) throw new RangeError("publication source is unavailable");
+    const manifest = parseGhostCapsuleManifest(JSON.parse(manifestRaw));
+    if (manifest.status !== "complete" || hash16(manifest) !== job.source.manifestHash || custody.custodyHash !== job.custodyHash
+      || custody.sourceConsent.capsuleId !== manifest.id || custody.sourceConsent.rootIntegrity !== manifest.rootIntegrity
+      || custody.sourceConsent.actorHash !== consent.record.actorHash || custody.sourceConsent.revision !== consent.record.revision
+      || custody.sourceConsent.decidedAt !== consent.record.decidedAt) throw new RangeError("publication authority changed");
+    return Object.freeze([{ store: "uploadJobs", key, expected: raw }, { store: "analysis", key: custodyKey(manifest.id), expected: custodyRaw }, ...consent.guards, ...source]);
   }
 
   /** Rehydrates only a queued job owned by the supplied account authority. */

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import {
   TearPolicyArtifactRegistry,
@@ -27,6 +27,63 @@ function artifact(id: string, parentArtifactId?: string): TearPolicyArtifactV1 {
 }
 
 describe("C32 durable policy artifact registry", () => {
+  it.each(["missing", "mismatched"] as const)("refuses an existing matching artifact with an inconsistent %s index", async (kind) => {
+    const backend = createMemoryGhostVaultBackend(), candidate = artifact("inconsistent-pair"), raw = JSON.stringify(candidate);
+    await backend.put("analysis", `policy-artifact:v1:${candidate.id}`, raw);
+    if (kind === "mismatched") await backend.put("indexes", `policy-artifact:${candidate.id}`, "bad retained index");
+    const registry = new TearPolicyArtifactRegistry(backend, compatibility);
+    await expect(registry.register(candidate)).rejects.toThrow();
+    expect(await backend.get("analysis", `policy-artifact:v1:${candidate.id}`)).toBe(raw);
+    expect(await backend.get("indexes", `policy-artifact:${candidate.id}`)).toBe(kind === "missing" ? undefined : "bad retained index");
+  });
+
+  it("refuses an inconsistent matching artifact/index pair written by a concurrent winner", async () => {
+    const base = createMemoryGhostVaultBackend(), candidate = artifact("inconsistent-winner"); let raced = false;
+    const backend = { ...base, async commitIfMatches(...args: Parameters<typeof base.commitIfMatches>) {
+      if (!raced) { raced = true; await base.put("analysis", `policy-artifact:v1:${candidate.id}`, JSON.stringify(candidate)); await base.put("indexes", `policy-artifact:${candidate.id}`, "bad winner index"); }
+      return base.commitIfMatches(...args);
+    } };
+    await expect(new TearPolicyArtifactRegistry(backend, compatibility).register(candidate)).rejects.toThrow();
+    expect(await base.get("indexes", `policy-artifact:${candidate.id}`)).toBe("bad winner index");
+  });
+  it("admits only one concurrent artifact per id and keeps its index consistent", async () => {
+    const backend = createMemoryGhostVaultBackend();
+    const registry = new TearPolicyArtifactRegistry(backend, compatibility);
+    const first = artifact("racing-policy"), second = artifact("racing-policy", "different-parent");
+    const results = await Promise.allSettled([registry.register(first), registry.register(second)]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const retained = await registry.get(first.id);
+    expect([first.artifactHash, second.artifactHash]).toContain(retained?.artifactHash);
+    expect(JSON.parse((await backend.get("indexes", `policy-artifact:${first.id}`)) ?? "null"))
+      .toEqual({ artifactHash: retained?.artifactHash, createdAt: first.createdAt });
+    expect(await registry.active()).toBeUndefined();
+  });
+
+  it("supports concurrent identical registration and exact retry after storage failure", async () => {
+    const backend = createMemoryGhostVaultBackend();
+    const commitIfMatches = vi.fn(backend.commitIfMatches.bind(backend)).mockRejectedValueOnce(new Error("storage unavailable"));
+    const registry = new TearPolicyArtifactRegistry({ ...backend, commitIfMatches }, compatibility);
+    const candidate = artifact("retry-policy");
+    await expect(registry.register(candidate)).rejects.toThrow("storage unavailable");
+    expect(await backend.get("analysis", `policy-artifact:v1:${candidate.id}`)).toBeUndefined();
+    expect(await backend.get("indexes", `policy-artifact:${candidate.id}`)).toBeUndefined();
+    expect(await Promise.all([registry.register(candidate), registry.register(candidate)]))
+      .toEqual([candidate, candidate]);
+    expect(await registry.register(candidate)).toEqual(candidate);
+    expect(await registry.active()).toBeUndefined();
+  });
+
+  it("refuses an orphan registration index without overwriting either record", async () => {
+    const backend = createMemoryGhostVaultBackend();
+    const registry = new TearPolicyArtifactRegistry(backend, compatibility);
+    const candidate = artifact("orphan-index");
+    await backend.put("indexes", `policy-artifact:${candidate.id}`, "retained orphan evidence");
+    await expect(registry.register(candidate)).rejects.toThrow();
+    expect(await backend.get("analysis", `policy-artifact:v1:${candidate.id}`)).toBeUndefined();
+    expect(await backend.get("indexes", `policy-artifact:${candidate.id}`)).toBe("retained orphan evidence");
+  });
+
   it("round-trips a compatible artifact and atomically switches then rolls back the active pointer", async () => {
     const backend = createMemoryGhostVaultBackend();
     const registry = new TearPolicyArtifactRegistry(backend, compatibility);

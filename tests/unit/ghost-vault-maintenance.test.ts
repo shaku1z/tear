@@ -8,6 +8,11 @@ import {
 } from "../../src/ghost";
 
 describe("Ghost Vault maintenance", () => {
+  it("stops destructive upkeep and receipt writes when app-owned protection backfill fails", async () => {
+    const backend = createMemoryGhostVaultBackend(), vault = new GhostLocalVault(backend);
+    await expect(maintainGhostVault(vault, { maximumBytes: 0, beforeQuota: () => Promise.reject(new Error("protection unavailable")) })).rejects.toThrow("protection unavailable");
+    expect(await backend.get("analysis", GHOST_VAULT_MAINTENANCE_KEY)).toBeUndefined(); expect(await backend.keys("indexes")).toEqual([]);
+  });
   it("enforces retention, rebuilds indexes, scans surviving records, and writes a durable receipt", async () => {
     const backend = createMemoryGhostVaultBackend();
     const vault = new GhostLocalVault(backend);

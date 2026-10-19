@@ -31,8 +31,18 @@ export function installGhostVaultConditionalCommitInspector(target: Window): voi
       await backend.commitIfMatches([{ store: "analysis", key: "missing" }], [{ store: "analysis", key: "first", value: "one" }, { store: "indexes", key: "second", value: "two" }]);
       await backend.put("analysis", "guard", "after"); let staleRefused = false;
       try { await backend.commitIfMatches([{ store: "analysis", key: "guard", expected: "before" }], [{ store: "analysis", key: "first", value: "overwritten" }, { store: "indexes", key: "stale", value: "must-not-write" }]); } catch { staleRefused = true; }
+      const rawDatabase = await new Promise<IDBDatabase>((resolve, reject) => { const request = target.indexedDB.open(databaseName); request.onsuccess = () => { resolve(request.result); }; request.onerror = () => { reject(request.error ?? new Error("raw IndexedDB request failed")); }; });
+      let nonStringRefused = false, journalGuardRefused = false; let nonStringPreserved: boolean;
+      try {
+        await new Promise<void>((resolve, reject) => { const tx = rawDatabase.transaction("analysis", "readwrite"); tx.objectStore("analysis").put({ retained: "non-string evidence" }, "non-string"); tx.oncomplete = () => { resolve(); }; tx.onabort = () => { reject(tx.error ?? new Error("raw IndexedDB transaction aborted")); }; });
+        try { await backend.commitIfMatches([{ store: "analysis", key: "non-string" }], [{ store: "analysis", key: "non-string", value: "overwritten" }, { store: "indexes", key: "corrupt-partial", value: "must-not-write" }]); } catch { nonStringRefused = true; }
+        await backend.put("journals", "recording", JSON.stringify({ leaseId: "lease" }));
+        try { await backend.commitWhileJournalMatches("recording", "lease", [{ store: "analysis", key: "first", value: "overwritten" }, { store: "indexes", key: "journal-partial", value: "must-not-write" }], [{ store: "analysis", key: "non-string" }, { store: "analysis", key: "guard", expected: "before" }]); } catch (error) { journalGuardRefused = error instanceof Error && error.message === "Vault conditional write no longer matches"; }
+        const retained: unknown = await new Promise((resolve, reject) => { const request = rawDatabase.transaction("analysis", "readonly").objectStore("analysis").get("non-string"); request.onsuccess = () => { resolve(request.result as unknown); }; request.onerror = () => { reject(request.error ?? new Error("raw IndexedDB request failed")); }; });
+        nonStringPreserved = JSON.stringify(retained) === JSON.stringify({ retained: "non-string evidence" });
+      } finally { rawDatabase.close(); }
       const refreshed = await createIndexedDbGhostVaultBackend(target.indexedDB, databaseName);
-      return Object.freeze({ staleRefused, guard: await refreshed.get("analysis", "guard"), first: await refreshed.get("analysis", "first"), second: await refreshed.get("indexes", "second"), stale: await refreshed.get("indexes", "stale") });
+      return Object.freeze({ staleRefused, nonStringRefused, journalGuardRefused, nonStringPreserved, guard: await refreshed.get("analysis", "guard"), first: await refreshed.get("analysis", "first"), second: await refreshed.get("indexes", "second"), stale: await refreshed.get("indexes", "stale"), corruptPartial: await refreshed.get("indexes", "corrupt-partial"), journalPartial: await refreshed.get("indexes", "journal-partial") });
     },
   }) });
 }

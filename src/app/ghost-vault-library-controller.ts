@@ -5,6 +5,7 @@ import {
   type BrowserGhostVaultRepairResult,
 } from "../ghost/browser-capsule-vault";
 import type { TearGhostManifest } from "../ghost/capsule-vault";
+import { TearAcademyCandidateCustodyStore } from "../agents/academy-candidate-custody";
 import type { GhostLibraryKind } from "../ghost/knowledge-libraries";
 import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
 
@@ -157,6 +158,8 @@ export function createBrowserGhostVaultLibrary(factory: IDBFactory | undefined):
       setTheaterEligibility: () => undefined,
     } satisfies GhostVaultLibraryPort);
   }
-  return createGhostVaultLibraryController({ inspect: () => inspectBrowserGhostVault(factory),
+  return createGhostVaultLibraryController({ inspect: () => inspectBrowserGhostVault(factory, {
+    beforeQuota: async (vault) => { await new TearAcademyCandidateCustodyStore(vault.backend()).ensureSourceProtection(); },
+  }),
     repair: (id) => repairBrowserGhostCapsule(factory, id) });
 }

@@ -43,6 +43,10 @@ export class GhostPublicationTransport {
   async state(jobId: string): Promise<GhostPublicationTransportStateV1 | undefined> { const raw = await this.#o.vault.backend().get("analysis", key(jobId)); return raw === undefined ? undefined : parse(raw); }
   async #save(state: GhostPublicationTransportStateV1, expectedState: GhostPublicationTransportStateV1 | undefined): Promise<GhostPublicationTransportStateV1> {
     if (state.terminal !== "cancelled") await this.#o.jobs.readAuthority(state.jobId);
+    const authorityGuards = state.terminal === "cancelled" ? [] : await this.#o.jobs.authorityGuards(state.jobId).catch(async (error: unknown) => {
+      if ((await this.#o.jobs.read(state.jobId))?.status !== "queued") return [];
+      throw error;
+    });
     const queuedGuard = state.terminal === "cancelled" ? undefined : await this.#o.jobs.queuedGuard(state.jobId);
     if (state.terminal !== "cancelled" && queuedGuard === undefined) state = freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: "cancelled-by-player" } });
     const backend = this.#o.vault.backend(), stateKey = key(state.jobId), raw = await backend.get("analysis", stateKey), current = raw === undefined ? undefined : parse(raw);
@@ -52,7 +56,7 @@ export class GhostPublicationTransport {
       if (current !== undefined) return current;
       throw new Error("publication transport state changed");
     }
-    try { await backend.commitIfMatches([{ store: "analysis", key: stateKey, ...(raw === undefined ? {} : { expected: raw }) }, ...(queuedGuard === undefined ? [] : [queuedGuard])], [{ store: "analysis", key: stateKey, value: JSON.stringify(state) }]); }
+    try { await backend.commitIfMatches([{ store: "analysis", key: stateKey, ...(raw === undefined ? {} : { expected: raw }) }, ...authorityGuards, ...(queuedGuard === undefined ? [] : [queuedGuard])], [{ store: "analysis", key: stateKey, value: JSON.stringify(state) }]); }
     catch (error) {
       const latest = await backend.get("analysis", stateKey); if (latest !== undefined && latest !== raw) return parse(latest);
       if (queuedGuard !== undefined && await this.#o.jobs.queuedGuard(state.jobId) === undefined) return this.#save(freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: "cancelled-by-player" } }), expectedState);

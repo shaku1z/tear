@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createGhostPlayerPublicationSourceConsent, GhostLocalPublicationJobs, GhostLocalPublicationConsentLedger, GhostStreamingRecorder, GhostLocalVault, createMemoryGhostVaultBackend, reviseGhostCapsuleManifest } from "../../src/ghost";
+import type { GhostVaultBackend } from "../../src/ghost";
 
-async function fixture() {
-  const backend = createMemoryGhostVaultBackend(), vault = new GhostLocalVault(backend), capsuleId = "publishable-capsule";
+async function fixture(backend: GhostVaultBackend = createMemoryGhostVaultBackend()) {
+  const vault = new GhostLocalVault(backend), capsuleId = "publishable-capsule";
   const recorder = new GhostStreamingRecorder({ sessionId: capsuleId, createdAt: "2026-08-09T00:00:00.000Z", vault, chunkEntries: 1, maxPendingWrites: 1 });
   await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { command: "move" } }); await recorder.finalize("2026-08-09T00:00:01.000Z");
   const ledger = new GhostLocalPublicationConsentLedger(backend), actor = { subject: "signed-in-player", isAnonymous: false };
@@ -16,6 +17,23 @@ async function input(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe("C38 local immutable publication jobs", () => {
+  it.each(["source", "manifest", "chunk", "consent", "custody"] as const)("rejects %s drift immediately before enqueue without partial custody or job writes", async (drift) => {
+    const base = createMemoryGhostVaultBackend(); let mutate: (() => Promise<void>) | undefined;
+    const backend: GhostVaultBackend = { ...base, async commitIfMatches(guards, writes) {
+      if (mutate !== undefined && writes.some((write) => write.store === "uploadJobs")) { const once = mutate; mutate = undefined; await once(); }
+      return base.commitIfMatches(guards, writes);
+    } };
+    const f = await fixture(backend), value = await input(f), manifest = await f.vault.getManifest(f.capsuleId); if (manifest === undefined) throw new Error("missing source");
+    mutate = async () => {
+      if (drift === "source") await base.remove("manifests", f.capsuleId);
+      if (drift === "manifest") await base.put("manifests", f.capsuleId, JSON.stringify(reviseGhostCapsuleManifest(manifest, { completedAt: "2026-08-09T00:00:02.000Z" })));
+      if (drift === "chunk") await base.put("chunks", manifest.chunks[0]?.id ?? "", "replaced");
+      if (drift === "consent") await new GhostLocalPublicationConsentLedger(base).decide(f.actor, { revision: 2, cloudPublication: "revoked", decidedAt: "2026-08-09T00:02:00.000Z" });
+      if (drift === "custody") await base.put("analysis", `ghost-publication-custody:v1:${f.capsuleId}`, "competing custody");
+    };
+    await expect(f.jobs.enqueue(value)).rejects.toThrow(); expect(await base.keys("uploadJobs")).toEqual([]);
+    expect(await base.get("analysis", `ghost-publication-custody:v1:${f.capsuleId}`)).toBe(drift === "custody" ? "competing custody" : undefined);
+  });
   it("binds a complete healthy Vault export and is idempotent without persisting raw export or identity", async () => {
     const f = await fixture(), first = await f.jobs.enqueue(await input(f)), retry = await f.jobs.enqueue(await input(f));
     expect(retry).toEqual(first); expect(first.status).toBe("queued"); expect(first.transfer.parts.length).toBeGreaterThan(1);

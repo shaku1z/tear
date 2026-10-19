@@ -6,6 +6,7 @@ import {
   type GhostEncoderWorkerPort,
   type TearGhostManifest,
   type GhostVaultWrite,
+  type GhostVaultGuard,
 } from "./capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
 import { createLiveGhostBootstrapEvent } from "./live-causal-events";
@@ -273,9 +274,21 @@ export function createBrowserGhostLiveRecorder(
           await beforeCommit(operations);
           await backend.commit(operations);
         },
-        commitWhileJournalMatches: async (sessionId: string, leaseId: string, operations: readonly GhostVaultWrite[]): Promise<void> => {
+        commitIfMatches: async (
+          guards: readonly GhostVaultGuard[],
+          operations: readonly GhostVaultWrite[],
+        ): Promise<void> => {
           await beforeCommit(operations);
-          await backend.commitWhileJournalMatches(sessionId, leaseId, operations);
+          await backend.commitIfMatches(guards, operations);
+        },
+        commitWhileJournalMatches: async (
+          sessionId: string,
+          leaseId: string,
+          operations: readonly GhostVaultWrite[],
+          guards?: readonly GhostVaultGuard[],
+        ): Promise<void> => {
+          await beforeCommit(operations);
+          await backend.commitWhileJournalMatches(sessionId, leaseId, operations, guards);
         },
       }));
     },

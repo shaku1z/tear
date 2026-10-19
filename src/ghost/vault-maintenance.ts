@@ -5,6 +5,8 @@ import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
 export type GhostVaultRetentionTier = "pinned" | "standard" | "temporary";
 
 export interface GhostVaultMaintenanceOptions {
+  /** App-owned migrations run on this exact Vault before destructive upkeep. */
+  readonly beforeQuota?: (vault: GhostLocalVault) => Promise<void>;
   /** A deliberately conservative local default until player-configurable policy lands. */
   readonly maximumBytes?: number;
   readonly retention?: Readonly<Record<string, GhostVaultRetentionTier>>;
@@ -51,6 +53,7 @@ export async function maintainGhostVault(
   if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 0) {
     throw new RangeError("Ghost Vault maximum bytes must be a non-negative safe integer");
   }
+  await options.beforeQuota?.(vault);
   const evictedCapsuleIds = await vault.enforceQuota(maximumBytes, options.retention ?? {});
   const remaining = await manifests(vault);
   const doctor = new GhostDoctor(vault);
