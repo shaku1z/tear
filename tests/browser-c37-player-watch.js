@@ -29,7 +29,14 @@ async function installText(page) {
   });
 }
 async function clickText(page, label) {
-  await page.waitForFunction((text) => window.__C37_TEXT__?.some((entry) => entry.text === text && performance.now() - entry.at < 250), label);
+  try {
+    await page.waitForFunction((text) => window.__C37_TEXT__?.some((entry) => entry.text === text && performance.now() - entry.at < 250), label);
+  } catch (error) {
+    const context = await page.evaluate(() => ({ labelState: window.__PANTHEON_TEST?.state(), text: window.__C37_TEXT__ }));
+    console.error(`Missing Run Monitor control ${label}: ${JSON.stringify(context)}`);
+    if (evidence) await page.screenshot({ path: path.join(evidence, "missing-control.png") });
+    throw error;
+  }
   const position = await page.evaluate((text) => window.__C37_TEXT__.filter((entry) => entry.text === text).at(-1), label);
   await page.mouse.click(position.x, position.y - 4); await settle(page);
 }
@@ -65,7 +72,9 @@ withJourney({ name: "normal native Run Monitor observation", port: 8180, deferBo
     }); } finally { database.close(); }
   }, fixture);
   await boot();
-  await clickText(page, "TRAINING OPERATIONS"); await waitScreen("foundry");
+  // The normal 220px menu button clips this long label through fitLine.
+  // Click its authored logical center and require the actual screen transition.
+  await page.mouse.click(548, 757); await waitScreen("foundry");
   await clickText(page, "PROMOTE");
   await page.waitForFunction(async () => {
     const database = await new Promise((resolve) => { const request = indexedDB.open("tear-ghost-v3", 2); request.onsuccess = () => resolve(request.result); });
