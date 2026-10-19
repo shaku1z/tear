@@ -5,6 +5,13 @@ const { withJourney } = require("./browser-journey-harness");
 const openingJourney = process.env.TEAR_C29_OPENING_JOURNEY === "1";
 if (openingJourney && !process.env.TEAR_OPENING_ARTIFACT_DIR) throw new Error("opening journey requires a unique TEAR_OPENING_ARTIFACT_DIR evidence destination");
 if (openingJourney && fs.existsSync(process.env.TEAR_OPENING_ARTIFACT_DIR) && fs.readdirSync(process.env.TEAR_OPENING_ARTIFACT_DIR).length > 0) throw new Error("opening evidence destination must be empty; preserve prior evidence");
+const diagnosticDirectory = process.env.TEAR_C29_DIAGNOSTIC_DIR ? path.resolve(process.env.TEAR_C29_DIAGNOSTIC_DIR) : undefined;
+if (diagnosticDirectory && fs.existsSync(diagnosticDirectory) && fs.readdirSync(diagnosticDirectory).length > 0) throw new Error("C29 diagnostic destination must be empty; preserve prior evidence");
+function writeDiagnostic(name, value) {
+  if (diagnosticDirectory === undefined) return;
+  fs.mkdirSync(diagnosticDirectory, { recursive: true });
+  fs.writeFileSync(path.join(diagnosticDirectory, `${name}.json`), JSON.stringify(value, null, 2), { flag: "wx" });
+}
 
 withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async ({ page, boot, waitScreen, clickAndWait, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined,
@@ -27,13 +34,15 @@ withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
   assert.equal(manifest.provenance.replayContext.simulation.initialState, "opening-initialized");
   const capsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
+  writeDiagnostic("default-capture", { manifest, buildInfo, capsule });
   const anchor = capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value;
   assert.equal(anchor?.state?.["tear.cinematic.v1"]?.active, true,
     "the durable opening anchor must contain the active campaign director");
   assert.equal(manifest.provenance.replayContext.simulation.opening?.phase, "opening-initialized-before-run-start");
   assert.ok(capsule.tracks.events.some((entry) => entry.value.payload?.boundary === "recorded-opening-playing-exposed"), "real Campaign opening must seal playing exposure after native start");
   const verification = await page.evaluate((id) => window.__TEAR_GHOST_V3__.verify(id), manifest.id);
-  assert.equal(verification.status, "verified");
+  writeDiagnostic("default-verification", { manifest, buildInfo, verification });
+  assert.equal(verification.status, "verified", JSON.stringify(verification));
   assert.deepEqual(verification.comparisons.map((entry) => [entry.tick, entry.equal]), [[0, true]]);
   if (!openingJourney) return;
 
@@ -65,6 +74,7 @@ withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async
     await page.waitForFunction((oldId) => { const manifest = window.__TEAR_GHOST_V3__.manifest(); return manifest !== null && manifest.id !== oldId; }, firstId ?? null, { timeout: 20000 });
     const current = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
     const source = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), current.id);
+    writeDiagnostic(`${predecessor}-capture`, { manifest: current, buildInfo, capsule: source });
     const initial = source.tracks.keyframes.find((entry) => entry.tick === 0).value;
     assert.equal(initial.state["tear.ui.v1"].screen, predecessor);
     assert.equal(current.provenance.replayContext.simulation.opening.previousScreen, predecessor);
@@ -76,6 +86,7 @@ withJourney({ name: "C29 durable active campaign cinematic", port: 8164 }, async
     assert.ok(movements.includes(0) && movements.filter((value) => value !== 0).length >= 2, "held movement must release and repress");
     const encoded = await archive(current.id);
     const continued = await page.evaluate((id) => window.__TEAR_GHOST_V3__.verify(id, "opening-continuation"), current.id);
+    writeDiagnostic(`${predecessor}-verification`, { manifest: current, buildInfo, verification: continued });
     assert.equal(continued.status, "verified", JSON.stringify(continued));
     assert.equal(continued.continuation.steps, 180); assert.equal(continued.continuation.laterKeyframesUsed, false);
     assert.deepEqual(continued.comparisons.map((entry) => [entry.tick, entry.equal, entry.inputEqual]), [[60, true, true], [120, true, true], [180, true, true]]);
