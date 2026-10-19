@@ -69,6 +69,105 @@ export function clearPreparedOrActiveDebugWave(lifecycle: DebugLifecycle): void 
   lifecycle.clearWave();
 }
 
+type DiagnosticData = null | boolean | number | string | DiagnosticData[] | { [key: string]: DiagnosticData };
+const particleVariantFields: Readonly<Record<string, readonly string[]>> = {
+  spark: ["vx", "vy"], ring: ["r"], ribbon: ["x1", "y1"], edgeTrace: ["x1", "y1", "thickness"],
+  contactMark: ["tx", "ty", "length", "thickness"], groundPulse: ["nx", "ny", "halfWidth"],
+  muzzleWedge: ["dx", "dy", "length", "halfWidth"], shard: ["vx", "vy", "rot", "spin", "size"],
+  flash: ["r"], shock: ["r", "vr", "thick"], smoke: ["vx", "vy", "size"], ghost: ["hw", "hh"],
+  ember: ["vx", "vy", "size"], drip: ["vx", "vy", "size"],
+};
+const invalidParticleDiagnostic = (): never => { throw new TypeError("invalid particle diagnostic data"); };
+const diagnosticQuotaExceeded = (): never => { throw new RangeError("presentation diagnostic clone quota exceeded"); };
+// A transport quota, independent of valid effect-admission budgets and renderer geometry.
+const rendererDiagnosticArrayQuota = 65536;
+function diagnosticOwn(value: object, key: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor) return undefined;
+  if (!("value" in descriptor)) return invalidParticleDiagnostic();
+  return descriptor.value as unknown;
+}
+function cloneDiagnosticData(value: unknown, maximumArray: number, depth = 0, budget = { remaining: Math.min(65536, maximumArray * 64 + 256) }): DiagnosticData {
+  if (depth > 8 || --budget.remaining < 0) return diagnosticQuotaExceeded();
+  if (value === null || typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : invalidParticleDiagnostic();
+  if (typeof value === "string") return value.length <= 256 ? value : invalidParticleDiagnostic();
+  if (typeof value !== "object" || Object.getOwnPropertySymbols(value).length > 0) return invalidParticleDiagnostic();
+  if (Array.isArray(value)) {
+    if (value.length > maximumArray || value.length > budget.remaining) return diagnosticQuotaExceeded();
+    if (Object.getOwnPropertyNames(value).length !== value.length + 1 || Object.keys(value).length !== value.length) return invalidParticleDiagnostic();
+    return Array.from({ length: value.length }, (_, index) => cloneDiagnosticData(diagnosticOwn(value, String(index)), maximumArray, depth + 1, budget));
+  }
+  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return invalidParticleDiagnostic();
+  const keys = Object.getOwnPropertyNames(value).sort();
+  if (keys.length > 64 || keys.some((key) => ["__proto__", "constructor", "prototype"].includes(key) || !Object.getOwnPropertyDescriptor(value, key)?.enumerable)) return invalidParticleDiagnostic();
+  return Object.fromEntries(keys.map((key) => [key, cloneDiagnosticData(diagnosticOwn(value, key), maximumArray, depth + 1, budget)]));
+}
+function diagnosticObject(value: unknown): Record<string, DiagnosticData> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return invalidParticleDiagnostic();
+  return value as Record<string, DiagnosticData>;
+}
+function diagnosticProjection(value: object | undefined, fields: readonly string[], maximumArray: number): Record<string, DiagnosticData> | null {
+  if (!value) return null;
+  return Object.fromEntries(fields.flatMap((key) => {
+    const entry = diagnosticOwn(value, key);
+    return entry === undefined ? [] : [[key, cloneDiagnosticData(entry, maximumArray)]];
+  }));
+}
+/** Observes detached presentation inputs only; never emits, updates or rewinds effects. */
+function presentationDiagnostics(context: LiveDebugHarnessContext) {
+  const d = context.dependencies, fx = d.FX;
+  const effects = diagnosticObject(cloneDiagnosticData(d.CONFIG.effects, 64));
+  const high = effects.highBudget, low = effects.lowBudget;
+  if (typeof high !== "number" || typeof low !== "number" || !Number.isSafeInteger(high) || !Number.isSafeInteger(low) || high < 0 || low < 0) return invalidParticleDiagnostic();
+  if (typeof effects.cullMargin !== "number" || effects.cullMargin < 0) return invalidParticleDiagnostic();
+  const capacity = Math.max(high, low), list = diagnosticOwn(fx, "list");
+  if (!Array.isArray(list) || list.length > capacity) return invalidParticleDiagnostic();
+  const particles = cloneDiagnosticData(list, capacity);
+  if (!Array.isArray(particles)) return invalidParticleDiagnostic();
+  for (const entry of particles) {
+    const particle = diagnosticObject(entry), type = particle.type;
+    if (typeof type !== "string" || !Object.hasOwn(particleVariantFields, type)) return invalidParticleDiagnostic();
+    const numeric = ["x", "y", "life", "max", ...(particleVariantFields[type] ?? [])];
+    const allowed = new Set(["type", ...numeric, "col", "priority"]);
+    if (Object.keys(particle).some((key) => !allowed.has(key)) || numeric.some((key) => typeof particle[key] !== "number")) return invalidParticleDiagnostic();
+    if (typeof particle.life !== "number" || typeof particle.max !== "number" || particle.life < 0 || particle.max <= 0) return invalidParticleDiagnostic();
+    if (["r", "thickness", "length", "halfWidth", "size", "hw", "hh", "thick"].some((key) => typeof particle[key] === "number" && particle[key] < 0)) return invalidParticleDiagnostic();
+    if (Object.hasOwn(particle, "col") && particle.col !== null && typeof particle.col !== "string") return invalidParticleDiagnostic();
+    if (Object.hasOwn(particle, "priority") && (typeof particle.priority !== "string" || !["cosmetic", "combat", "hazard"].includes(particle.priority))) return invalidParticleDiagnostic();
+  }
+  const view = cloneDiagnosticData(diagnosticOwn(fx, "view"), 4);
+  if (view !== null) {
+    const rectangle = diagnosticObject(view), keys = ["left", "top", "right", "bottom"];
+    if (Object.keys(rectangle).length !== 4 || keys.some((key) => typeof rectangle[key] !== "number")) return invalidParticleDiagnostic();
+    if (Number(rectangle.left) > Number(rectangle.right) || Number(rectangle.top) > Number(rectangle.bottom)) return invalidParticleDiagnostic();
+  }
+  const cursor = diagnosticOwn(fx, "_replacementCursor");
+  // Compaction can shrink the list below this existing admission cursor.
+  if (typeof cursor !== "number" || !Number.isSafeInteger(cursor) || cursor < 0) return invalidParticleDiagnostic();
+  const player = context.state.player(), blade = context.state.blade();
+  const playerInput = diagnosticProjection(player, ["x", "y", "vy", "hw", "hh", "facing", "onGround", "iframe", "dashTimer", "cinematicGraceT"], rendererDiagnosticArrayQuota);
+  const bladeInput = diagnosticProjection(blade, ["x", "y", "angle", "tipX", "tipY", "glowV", "state", "throwSizeMult", "model", "trailColor", "glowColor", "restoredTrail", "tension", "riftChambers", "riftChamberCooldown", "finalFree", "hostile", "hideThrowUI"], rendererDiagnosticArrayQuota);
+  if (blade && bladeInput) {
+    for (const [key, fields] of [["trail", ["hx", "hy", "tx", "ty"]], ["chainPoints", ["x", "y"]], ["reversals", ["x", "y", "directionX", "directionY", "exited"]]] as const) {
+      const points = diagnosticOwn(blade, key);
+      if (!Array.isArray(points)) return invalidParticleDiagnostic();
+      if (points.length > rendererDiagnosticArrayQuota) return diagnosticQuotaExceeded();
+      bladeInput[key] = Array.from({ length: points.length }, (_, index) => diagnosticProjection(diagnosticObject(diagnosticOwn(points, String(index))), fields, rendererDiagnosticArrayQuota));
+    }
+    const stolenBy = diagnosticOwn(blade, "stolenBy");
+    if (typeof stolenBy === "function") return invalidParticleDiagnostic();
+    bladeInput.stolenByPresent = Boolean(stolenBy);
+    const lastHand = diagnosticOwn(blade, "_lastHand");
+    if (lastHand !== undefined) bladeInput.lastHand = lastHand === null ? null : diagnosticProjection(diagnosticObject(lastHand), ["x", "y"], rendererDiagnosticArrayQuota);
+  }
+  return cloneDiagnosticData({ format: "tear-presentation-input-diagnostic", version: 1, particles: { list: particles, view, _replacementCursor: cursor },
+    policy: { effects, settings: { lowGraphics: d.GFX.low, reducedMotion: d.A11Y.reducedMotion, highContrast: d.A11Y.highContrast, flashScale: d.A11Y.flashScale }, entropyOwner: "Math.random; outside captured RunRandomStreams" },
+    renderInputs: { player: playerInput, blade: bladeInput, clockSeconds: d.CLOCK.sim,
+      handOffset: diagnosticProjection(d.CONFIG.blade, ["handOffsetX", "handOffsetY"], rendererDiagnosticArrayQuota),
+      theme: { dark: d.THEME.dark, ink: d.THEME.ink, rim: d.THEME.rim }, colors: { eye: d.CONFIG.colors.eye, perfect: d.CONFIG.colors.perfect } } }, Math.max(capacity, rendererDiagnosticArrayQuota));
+}
+
 /** Installs the browser-journey control surface without leaking it into production. */
 export function installLiveDebugHarness(context: LiveDebugHarnessContext): void {
   if (!context.enabled) return;
@@ -94,6 +193,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       kinds: Object.freeze(kinds) });
   };
   context.install(Object.freeze({
+    presentationDiagnostics: () => presentationDiagnostics(context),
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
     prepareCurrentGameplayScenario: prepareCurrentGameplay,
     prepareCalibrationMovement() {

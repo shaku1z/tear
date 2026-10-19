@@ -881,6 +881,33 @@ withJourney({
         ["combined", { gfx: "low", reducedMotion: true, highContrast: true, flash: 0 }],
       ].filter(([profile]) => responseProfile ? profile === responseProfile : profile !== "low-only");
       for (const [profile, settings] of responseProfiles) {
+        const particleBoundaries = [];
+        const readParticleBoundary = async (label) => {
+          const raw = await page.evaluate(() => {
+            const context = document.getElementById("game").getContext("2d");
+            const transform = context.getTransform();
+            const style = (value) => typeof value === "string" ? { kind: "string", value }
+              : { kind: String(value), value: null, limitation: "Native gradient/pattern internals are not readable" };
+            return { presentation: window.__PANTHEON_TEST.presentationDiagnostics(),
+              nativeContext: { attributes: context.getContextAttributes(),
+                transform: [transform.a, transform.b, transform.c, transform.d, transform.e, transform.f],
+                globalAlpha: context.globalAlpha, globalCompositeOperation: context.globalCompositeOperation,
+                filter: context.filter, shadowBlur: context.shadowBlur, shadowColor: context.shadowColor,
+                shadowOffsetX: context.shadowOffsetX, shadowOffsetY: context.shadowOffsetY,
+                imageSmoothingEnabled: context.imageSmoothingEnabled, imageSmoothingQuality: context.imageSmoothingQuality,
+                fillStyle: style(context.fillStyle), strokeStyle: style(context.strokeStyle),
+                lineWidth: context.lineWidth, lineCap: context.lineCap, lineJoin: context.lineJoin,
+                miterLimit: context.miterLimit, lineDash: context.getLineDash(), lineDashOffset: context.lineDashOffset,
+                font: context.font, textAlign: context.textAlign, textBaseline: context.textBaseline, direction: context.direction,
+                limitation: "Current path and clip geometry are not readable; no draw interception used" } };
+          });
+          particleBoundaries.push({ label, raw });
+          fs.writeFileSync(path.join(phaseDirectory, `particles-${profile}-diagnostic.json`), `${JSON.stringify({
+            build: buildInfo, profile, responseSequence, certifying: false, boundaries: particleBoundaries,
+            limitation: "Read-only raw owner/input observation; strict native state/hash/PNG assertions remain unchanged",
+          }, null, 2)}\n`);
+          return raw;
+        };
         await page.evaluate((settings) => window.__PANTHEON_TEST.setOptions(settings), settings);
         const actualSettings = await page.evaluate(() => window.__A2_CAPTURE_ENV__.presentation().settings);
         assert.equal(actualSettings.lowGraphics, settings.gfx === "low");
@@ -913,7 +940,9 @@ withJourney({
         });
         assert.equal(phaseTwo.ok, true, JSON.stringify(phaseTwo));
         const snapshot = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-graft-intact", "reconstructed-reachable"));
+        await readParticleBoundary("original-before-capture");
         const original = await capture(`response-${profile}-graft-intact`, cleanPlayable, { profile, mechanic: "graft-anchor" });
+        await readParticleBoundary("original-after-capture");
         if (responseImmediateRestore || responseSequence === "rollback-only") {
           const readContext = () => page.evaluate(() => {
             const context = document.getElementById("game").getContext("2d");
@@ -1006,6 +1035,7 @@ withJourney({
         assert.equal(cleaned.observation.run.score, original.observation.run.score);
         let failedRestore = null;
         const rejectionOrigin = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-rejection-origin", "reconstructed-reachable"));
+        await readParticleBoundary("rejection-before-restore");
         if (responseSequence !== "damage-only") {
           failedRestore = await page.evaluate((snapshot) => {
           const invalid = structuredClone(snapshot);
@@ -1013,7 +1043,9 @@ withJourney({
           return window.__A2_CAPTURE_ENV__.restoreSnapshot(invalid);
         }, snapshot);
         const rejectionResult = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-rejection-result", "reconstructed-reachable"));
+        await readParticleBoundary("rejection-after-restore");
         const rolledBack = await capture(`response-${profile}-graft-rejected`, cleanPlayable, { profile, restorePhase: failedRestore.phase, rolledBack: failedRestore.rolledBack });
+        await readParticleBoundary("rejection-after-capture");
         const rejectionAfterCapture = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-rejection-after-capture", "reconstructed-reachable"));
         fs.writeFileSync(path.join(phaseDirectory, `rejection-${profile}-diagnostic.json`), `${JSON.stringify({
           build: buildInfo, profile, responseSequence, failedRestore, requestedSettings: settings, actualSettings,
@@ -1029,8 +1061,11 @@ withJourney({
         assert.equal(rolledBack.exactHash, cleaned.exactHash);
         assertPNGEqual(rolledBack.image, cleaned.image, "Rejected restore PNG bytes must match exactly");
         }
+        await readParticleBoundary("positive-before-restore");
         const restore = await page.evaluate((snapshot) => window.__A2_CAPTURE_ENV__.restoreSnapshot(snapshot), snapshot);
+        await readParticleBoundary("positive-after-restore-before-capture");
         const restored = await capture(`response-${profile}-graft-restored`, cleanPlayable, { profile });
+        await readParticleBoundary("positive-after-capture");
         const restoredSnapshot = await page.evaluate(() => window.__A2_CAPTURE_ENV__.captureSnapshot("in4-graft-restored", "reconstructed-reachable"));
         const contextAttributes = await page.evaluate(() => ({ userAgent: navigator.userAgent,
           context: document.getElementById("game").getContext("2d").getContextAttributes() }));
