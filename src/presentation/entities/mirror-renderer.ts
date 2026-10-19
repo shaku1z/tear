@@ -5,6 +5,7 @@ import type {
   ReflectionRenderSnapshot,
 } from "../../gameplay/entities/mirror";
 import { isCanvasSurface } from "./canvas-surface";
+import { createMirrorLockFeedback } from "../mirror-lock-feedback";
 
 export interface MirrorRendererPolicy {
   readonly world: Readonly<{ groundY: number }>;
@@ -217,15 +218,6 @@ export function createMirrorRenderer({
       drawReflectionHp(surface, reflection);
     },
 
-    saberLockSparks(x: number, y: number, color: string): void {
-      effects.burst(
-        x + (cosmeticRandom() * 2 - 1) * 7,
-        y + (cosmeticRandom() * 2 - 1) * 7,
-        cosmeticRandom() * 2 - 1,
-        (cosmeticRandom() * 2 - 1) - 0.3,
-        3,
-        cosmeticRandom() < 0.5 ? "#ffffff" : color,
-      );
-    },
+    saberLockSparks: createMirrorLockFeedback(effects, cosmeticRandom),
   };
 }

@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { validateLiveCodecPayload } from "../../src/tearbench/live-codec-validation";
+import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 describe("UI presentation checkpoint preflight", () => {
+  it("accepts v2 entropy and rejects malformed entropy before hydration", () => {
+    const particlesPresentation = { version: 2, list: [], view: null, replacementCursor: 0,
+      policy: { effects: { highBudget: 0, lowBudget: 0, cullMargin: 0 }, lowGraphics: false, reducedMotion: false }, entropy: createCosmeticEmissionRandom().snapshot() };
+    expect(validateLiveCodecPayload("tear.ui.v1", { screen: "playing", focusId: "-1", particlesPresentation })).toEqual([]);
+    expect(validateLiveCodecPayload("tear.ui.v1", { screen: "playing", focusId: "-1", particlesPresentation: { ...particlesPresentation, entropy: { ...particlesPresentation.entropy, state: -1 } } }))
+      .toEqual(expect.arrayContaining([expect.objectContaining({ path: "$.particlesPresentation" })]));
+  });
   it.each([null, { version: 2 }, { version: 1, list: [] }])("rejects malformed optional particles %j", (particlesPresentation) => {
     expect(validateLiveCodecPayload("tear.ui.v1", { screen: "playing", focusId: "-1", particlesPresentation }))
       .toEqual(expect.arrayContaining([expect.objectContaining({ path: "$.particlesPresentation" })]));

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { createLiveStateCodec } from "../../src/tearbench/state-codecs";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
@@ -58,6 +59,16 @@ function populatedWorld(): TearCodecWorld {
 }
 
 describe("presentation-only UI checkpoints", () => {
+  it("retains v2 entropy exactly without widening semantic RNG or hiding existing UI extensions", () => {
+    const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld(), entropy = createCosmeticEmissionRandom();
+    const common = { screen: "playing", focusId: "-1", extension: 7 };
+    const particles = { version: 2, list: [], view: null, replacementCursor: 0, policy: { effects: { highBudget: 0, lowBudget: 0, cullMargin: 0 }, lowGraphics: false, reducedMotion: false } };
+    a.components.set("tear.ui.v1", { ...common, particlesPresentation: { ...particles, entropy: entropy.snapshot() } });
+    entropy.next(); b.components.set("tear.ui.v1", { ...common, particlesPresentation: { ...particles, entropy: entropy.snapshot() } });
+    expect(codec.capture(a)).not.toEqual(codec.capture(b)); expect(codec.hashProjection(a)).toEqual(common); expect(codec.hashProjection(b)).toEqual(common);
+    expect(a.components.get("tear.rng.v1")).toEqual(b.components.get("tear.rng.v1"));
+    b.components.set("tear.ui.v1", { ...common, extension: 8 }); expect(codec.hashProjection(a)).not.toEqual(codec.hashProjection(b));
+  });
   it("retains particles exactly while preserving HUD and every existing semantic extension", () => {
     const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld();
     const legacy = { screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 }, hudPresentation: { version: 1, clockSeconds: 3, lagHp: 1, multiplier: 1, multiplierPop: 0 } };

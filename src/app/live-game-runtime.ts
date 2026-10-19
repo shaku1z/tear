@@ -567,7 +567,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
     reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
     runtimeState: stateForgeRuntime.capture, restoreRuntimeState: stateForgeRuntime.restore, hudPresentation: hudFeedback,
-    particlesPresentation: createLiveParticlePresentationState(FX, () => ({ effects: CONFIG.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion })),
+    particlesPresentation: createLiveParticlePresentationState(FX, () => ({ effects: CONFIG.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }), dependencies.cosmeticEmissionRandom),
     captureCinema: () => CINEMA.captureState(),
     validateCinema: stateForgeRuntime.validate,
   });

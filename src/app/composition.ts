@@ -35,6 +35,8 @@ import verdantControlPackage from "../presentation/assets/verdant-calibration/co
 import verdantLivingPackage from "../presentation/assets/verdant-calibration/living-stage-package.json";
 import { createCinematics } from "../presentation/cinematics";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
+import { createCosmeticEmissionRandom } from "../domain/cosmetic-emission-random";
+import { createLiveAttractFeedback } from "./live-attract-feedback";
 import { createParticleSystem } from "../presentation/particles";
 import { createUi } from "../presentation/ui";
 import { createLegacyReplayCompatibility } from "../replay/legacy-compat";
@@ -100,11 +102,12 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const worldConfig = worldConfiguration.value;
   const audioContextHandoff = createBrowserAudioContextHandoff();
   const SFX = createLegacySynthFacade({ audioContextHandoff });
+  const cosmeticEmissionRandom = createCosmeticEmissionRandom();
   const FX = createParticleSystem({
     effects: worldConfig.effects,
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,
-    random: cosmeticRandom,
+    random: cosmeticEmissionRandom.next,
   });
   // Test-build opt-in until final image-native acceptance. IN1 stays available
   // as a same-build control; only the selected package is fetched/decoded.
@@ -158,13 +161,13 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const presentation = createLiveWorldSimulationPresentationAdapter({
     clock: CLOCK, effects: FX, ui: UI,
     configuration: { accessibility: A11Y, config: worldConfig, graphics: GFX, theme: THEME },
-    geometry: { clamp, len, lerp }, cosmeticRandom,
+    geometry: { clamp, len, lerp }, cosmeticRandom: cosmeticEmissionRandom.next,
   });
   const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createTearWorldSimulationFactories({
     clock: CLOCK, config: worldConfig, graphics: GFX, effects: FX, sound: SFX, input: Input,
     random: { enemyAi: GAME_RANDOM_STREAMS.stream("enemy-ai"), boss: GAME_RANDOM_STREAMS.stream("boss") },
     presentation, geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
-    cosmeticRandom, getWeapon,
+    cosmeticRandom: cosmeticEmissionRandom.next, getWeapon,
     ...(clipper === undefined ? {} : { clipper }),
   });
   const {
@@ -173,7 +176,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
-  const Attract = createAttract({ Backdrop, Blade, FX, Player, STAGES, clamp, policy: {
+  const menuFeedback = createLiveAttractFeedback({ CONFIG: worldConfig, GFX, Input, presentation: presentation.player,
+    aabbOverlap, clamp, len, random: cosmeticRandom, reducedMotion: () => A11Y.reducedMotion });
+  const Attract = createAttract({ Backdrop, Blade, FX: menuFeedback.FX, Player: menuFeedback.Player, STAGES, clamp, policy: {
     view: worldConfig.view, world: worldConfig.world, blade: worldConfig.blade,
     colors: worldConfig.colors, overscan: OVERSCAN, lowGraphics: () => GFX.low, random: cosmeticRandom, theme: THEME,
   } });
@@ -246,7 +251,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     Ranged, ReflectionEnemy, Rimehound, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, PLAYGROUND_STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
     VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, WhiteHart, Wraith,
     aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,
-    clamp, cosmeticRandom, createRunSeed, drawBossTransformationWorld, len, lerp,
+    clamp, cosmeticRandom, cosmeticEmissionRandom, createRunSeed, drawBossTransformationWorld, len, lerp,
     newMods, nextTierDesc, rollAffixes, rollUpgrades, rollVariant, segCircle,
     segPointDist, stageAt, stagePlatforms, tierUp, weaponCapsuleIntersectsSegment,
   } satisfies GameRuntimeDependencies;

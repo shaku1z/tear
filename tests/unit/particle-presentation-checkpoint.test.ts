@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { parseParticlePresentationCheckpoint, validateParticlePresentationBinding } from "../../src/tearbench/particle-presentation-checkpoint";
+import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 function fixture(highBudget = 32, lowBudget = 2) {
   let draws = 0, low = false;
@@ -12,6 +13,14 @@ function fixture(highBudget = 32, lowBudget = 2) {
 }
 
 describe("particle presentation checkpoint", () => {
+  it("requires versioned entropy in v2 while keeping v1 strict and unchanged", () => {
+    const f = fixture(), legacy = f.capture(), entropy = createCosmeticEmissionRandom().snapshot();
+    const current = { ...legacy, version: 2, entropy };
+    expect(parseParticlePresentationCheckpoint(current)).toEqual(current);
+    expect(parseParticlePresentationCheckpoint(legacy)).toEqual(legacy);
+    for (const invalid of [{ ...legacy, entropy }, { ...current, entropy: undefined }, { ...current, entropy: { ...entropy, cursor: -1 } },
+      { ...current, version: 3 }, { ...current, entropy: { ...entropy, algorithm: "other" } }]) expect(() => parseParticlePresentationCheckpoint(invalid)).toThrow();
+  });
   it("detaches every actual particle variant, optional/null fields and source policy without entropy", () => {
     const f = fixture(), fx = f.fx;
     fx.spark(1, 2, 0, 1); fx.ring(1, 2); fx.ribbon(1, 2, 3, 4);

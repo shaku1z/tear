@@ -36,9 +36,9 @@ export interface LiveWorldSimulationPresentationAdapterOptions {
 /**
  * Builds the real Canvas renderer ports for one world.
  *
- * Configuration, graphics, theme, accessibility, geometry, and cosmetic random
- * remain shared application values; they are presentation or tuning inputs, not
- * per-world simulation state. Everything a running world mutates — the clock,
+ * Configuration, graphics, theme, accessibility and geometry are explicit
+ * presentation/tuning inputs. Cosmetic emission entropy is a captured world
+ * owner. Everything a running world mutates — the clock,
  * effect sink, sound sink, input source, and named RNG streams — arrives here
  * explicitly. Constructing this twice yields two fully independent factory
  * sets; the live application still constructs exactly one.

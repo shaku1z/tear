@@ -19,6 +19,8 @@ import { planRunStart } from "../gameplay/run/run-start-plan";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { stagePlatforms } from "../gameplay/stages";
 import { cosmeticRandom } from "../presentation/cosmetic-random";
+import { createCosmeticEmissionRandom } from "../domain/cosmetic-emission-random";
+import { createMirrorLockFeedback } from "../presentation/mirror-lock-feedback";
 import { createParticleSystem } from "../presentation/particles";
 import { createEnvironmentRuntime } from "../gameplay/environment/environment-runtime";
 import { BLOOM_WELL_VALIDATION } from "../gameplay/environment/bloom-well";
@@ -56,13 +58,13 @@ function idleInputPort(): unknown {
   return { right: off, left: off, up: off, down: off, dashPressed: off, jumpPressed: off, consumeThrow: off };
 }
 
-function noOpPresentationPorts(): TearWorldEntityPresentationPorts {
+function detachedPresentationPorts(effects: ReturnType<typeof createParticleSystem>, random: () => number): TearWorldEntityPresentationPorts {
   return Object.freeze({
     blade: { draw: () => undefined }, player: { draw: () => undefined }, projectile: { draw: () => undefined },
     enemy: Object.freeze({ port: { drawBossTransformationWorld: () => undefined }, install: () => undefined }),
     mirror: {
       drawMirror: () => undefined, drawHostFallback: () => undefined,
-      drawReflection: () => undefined, saberLockSparks: () => undefined,
+      drawReflection: () => undefined, saberLockSparks: createMirrorLockFeedback(effects, random),
     },
   });
 }
@@ -116,19 +118,20 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const { configuration, clock, random } = createTearWorldBootstrap(CONFIG);
   const config = configuration.value;
   const runSeed = productionRunSeed(options.seed);
+  const cosmeticEmissionRandom = createCosmeticEmissionRandom();
   const effects = createParticleSystem({
     effects: config.effects, lowGraphics: () => GFX.low,
-    reducedMotion: () => A11Y.reducedMotion, random: cosmeticRandom,
+    reducedMotion: () => A11Y.reducedMotion, random: cosmeticEmissionRandom.next,
   });
   random.streams.reset(runSeed);
   const factories = createTearWorldSimulationFactories({
     clock, config, graphics: GFX, effects, sound: unavailableOutwardPort() as FactoryOptions["sound"],
-    input: idleInputPort() as FactoryOptions["input"], presentation: noOpPresentationPorts(),
+    input: idleInputPort() as FactoryOptions["input"], presentation: detachedPresentationPorts(effects, cosmeticEmissionRandom.next),
     random: { enemyAi: random.streams.stream("enemy-ai"), boss: random.streams.stream("boss") },
-    geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist }, cosmeticRandom,
+    geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist }, cosmeticRandom: cosmeticEmissionRandom.next,
   });
   const dependencies = {
-    CLOCK: clock, CONFIG: config, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
+    CLOCK: clock, CONFIG: config, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects, cosmeticRandom, cosmeticEmissionRandom,
     Backdrop: { resetFx: () => undefined }, Mirror: factories.mirrorTypes.Mirror, BOSSFX: factories.enemyTypes.BOSSFX,
     Cinematics: CinematicTimeline, Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
     Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
@@ -187,7 +190,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   });
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
   return Object.freeze({
-    dependencies, world, configuration, clock, effects, random, factories,
+    dependencies, world, configuration, clock, effects, random, cosmeticEmissionRandom, factories,
     transient: world.context.transient, input, run, stage,
   });
 }

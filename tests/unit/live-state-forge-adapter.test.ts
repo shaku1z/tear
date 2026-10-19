@@ -36,8 +36,9 @@ function fixture() {
   let failure: Failure | undefined;
   let screen = "playing", focus = -1;
   const hud = createLiveHudFeedbackState();
-  const particles = createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: false, reducedMotion: false }));
+  const particles = createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: false, reducedMotion: false }), replay.cosmeticEmissionRandom);
   const runtimeParticles: ReturnType<typeof particles.capture>[] = [];
+  const stagedEntropy: ReturnType<typeof replay.cosmeticEmissionRandom.snapshot>[] = [];
   let runtime: Readonly<Record<string, unknown>> = { sentinel: 1, cinema: INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 };
   const observe = (phase: string) => {
     for (const actor of state.enemies()) observations.push({ phase, actor, id: identities.id(actor, "enemy") });
@@ -77,7 +78,9 @@ function fixture() {
     rng: replay.world.context.services.random.snapshot(), observationClass: "structured-state", producer: "unit",
     target: "headless", contentHash: "unit", visualHash: "not-captured" });
   const restore = (snapshot: ReturnType<typeof capture>) => restoreSnapshotIntoLiveWorld(snapshot, registry,
-    createLiveStateForgeRestoreFactory(registry), adapter);
+    createLiveStateForgeRestoreFactory(registry), { ...adapter, validate: (candidate) => {
+      stagedEntropy.push(replay.cosmeticEmissionRandom.snapshot()); return adapter.validate(candidate);
+    } });
   const facts = (damage: number) => {
     const actor = state.enemies()[0] as unknown as BossFacts;
     Object.assign(actor, { phaseMarker: 2, hp: actor.maxHp * 0.5, cinematicRequest: null, cinematicT: 0,
@@ -85,7 +88,7 @@ function fixture() {
     actor.applyGraftEffects({ incomingDamageMultiplier: damage, cadenceMultiplier: 1.15, activeTypes: ["bastion", "haste"] });
     expect(actor.startRootCage(800)).toBe(true);
   };
-  return { replay, state, adapter, capture, restore, facts, observations, hud, particles, runtimeParticles,
+  return { replay, state, adapter, capture, restore, facts, observations, hud, particles, runtimeParticles, stagedEntropy,
     failNext: (phase: Failure) => { failure = phase; } };
 }
 
@@ -99,11 +102,13 @@ describe("live State Forge adapter ownership boundary", () => {
     expect(host.restore(saved).ok).toBe(true);
     expect(host.particles.capture()).toEqual(particles); expect(fx.list).toBe(list); expect(fx.view).toBe(view);
     expect((saved.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation).toEqual(particles);
-    fx.update(1 / 120); const outgoing = host.capture(), outgoingParticles = host.particles.capture();
+    fx.update(1 / 120); fx.spark(801, 775, 1, 0); const outgoing = host.capture(), outgoingParticles = host.particles.capture();
     host.failNext("runtime");
     expect(host.restore(saved)).toMatchObject({ ok: false, phase: "commit", rolledBack: true });
     expect(host.capture().state).toEqual(outgoing.state); expect(host.particles.capture()).toEqual(outgoingParticles);
     expect(host.runtimeParticles.slice(-2)).toEqual([particles, outgoingParticles]);
+    if (outgoingParticles.version !== 2) throw new Error("current capture must retain entropy");
+    expect(host.stagedEntropy.at(-1)).toEqual(outgoingParticles.entropy);
   });
   it("restores JSON-portable staged HUD exactly and retains boss flash only on its actor codec", () => {
     const host = fixture();
@@ -119,13 +124,13 @@ describe("live State Forge adapter ownership boundary", () => {
     expect(host.capture().state).toEqual(snapshot.state);
   });
 
-  it.each(["malformed", "binding"] as const)("rejects %s particles before world setters and entropy changes", (kind) => {
+  it.each(["malformed", "binding", "entropy"] as const)("rejects %s particles before world setters and entropy changes", (kind) => {
     const host = fixture(); host.replay.effects.spark(1, 2, 1, 0);
     const before = host.capture(), invalid = structuredClone(before), rng = host.replay.random.streams.snapshot();
-    const payload = (invalid.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation as { replacementCursor: number; policy: { effects: { cullMargin: number } } };
-    if (kind === "malformed") payload.replacementCursor = -1; else payload.policy.effects.cullMargin += 1;
+    const payload = (invalid.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation as { replacementCursor: number; policy: { effects: { cullMargin: number } }; entropy: { cursor: number } };
+    if (kind === "malformed") payload.replacementCursor = -1; else if (kind === "entropy") payload.entropy.cursor = -1; else payload.policy.effects.cullMargin += 1;
     const run = host.state.run(), player = host.state.player(), actors = host.state.enemies();
-    expect(host.restore(invalid)).toMatchObject({ ok: false, phase: kind === "malformed" ? "decode" : "stage", rolledBack: false });
+    expect(host.restore(invalid)).toMatchObject({ ok: false, phase: kind === "binding" ? "stage" : "decode", rolledBack: false });
     expect(host.state.run()).toBe(run); expect(host.state.player()).toBe(player); expect(host.state.enemies()).toBe(actors);
     expect(host.observations).toEqual([]); expect(host.replay.random.streams.snapshot()).toEqual(rng);
     expect(host.capture().state).toEqual(before.state);

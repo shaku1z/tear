@@ -28,6 +28,7 @@ import type { createAttract } from "../presentation/attract";
 import type { BackdropController } from "../presentation/backdrop";
 import type { CinematicPresentationRuntime } from "../presentation/cinematics";
 import type { cosmeticRandom } from "../presentation/cosmetic-random";
+import type { CosmeticEmissionRandom } from "../domain/cosmetic-emission-random";
 import type { ParticleSystem } from "../presentation/particles";
 import type { createUi } from "../presentation/ui";
 import type { createLegacyReplayCompatibility } from "../replay/legacy-compat";
@@ -97,6 +98,7 @@ export interface GameRuntimeDependencies {
   readonly applyUpgrade: typeof Upgrades.applyUpgrade; readonly applyVariant: typeof Variants.applyVariant;
   readonly applyWeapon: typeof Weapons.applyWeapon; readonly clamp: typeof Geometry.clamp;
   readonly cosmeticRandom: typeof cosmeticRandom; readonly createRunSeed: typeof createRunSeed;
+  readonly cosmeticEmissionRandom: CosmeticEmissionRandom;
   readonly drawBossTransformationWorld: EnemyTypes["drawBossTransformationWorld"];
   readonly len: typeof Geometry.len; readonly lerp: typeof Geometry.lerp; readonly newMods: typeof Upgrades.newMods;
   readonly nextTierDesc: typeof Upgrades.nextTierDesc; readonly rollAffixes: typeof Affixes.rollAffixes;

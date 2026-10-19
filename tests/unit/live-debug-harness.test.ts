@@ -4,6 +4,7 @@ import { clearPreparedOrActiveDebugWave, installLiveDebugHarness, type DebugLife
 import { RunLifecycleController } from "../../src/gameplay/run/lifecycle";
 import { createParticleSystem, type ParticleSystem } from "../../src/presentation/particles";
 import { CONFIG } from "../../src/config/game-config";
+import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 const variantFields = {
   spark: { vx: 2, vy: -3 }, ring: { r: 6 }, ribbon: { x1: 5, y1: 6 },
@@ -20,11 +21,12 @@ function particleFixture(enabled = true, realOwner?: ParticleSystem, lowGraphics
   const player = { x: 800, y: 775, vy: -260, hw: 16, hh: 25, facing: 1, onGround: true, iframe: 0.9, dashTimer: 0, cinematicGraceT: 0 };
   const blade = { x: 880, y: 770, tipX: 978, tipY: 775, angle: 0.03, state: "held", model: "sword", trail: [], chainPoints: [], reversals: [] };
   const effects = { highBudget: 320, lowBudget: 110, cullMargin: 180 };
+  const entropy = createCosmeticEmissionRandom();
   let api: Record<string, unknown> | undefined;
   const context = { enabled, dependencies: { FX: fx, CONFIG: { effects,
     blade: { handOffsetX: 5, handOffsetY: -5 }, colors: { eye: "#fff", perfect: "#abc" } },
     GFX: { low: lowGraphics }, A11Y: { reducedMotion: false, highContrast: true, flashScale: 0.5 },
-    CLOCK: { sim: 1.25 }, THEME: { dark: false, ink: "#000", rim: "#fff" } },
+    CLOCK: { sim: 1.25 }, cosmeticEmissionRandom: entropy, THEME: { dark: false, ink: "#000", rim: "#fff" } },
     state: { player: () => player, blade: () => blade }, install: (value: object) => { api = value as Record<string, unknown>; },
   } as unknown as LiveDebugHarnessContext;
   installLiveDebugHarness(context);
@@ -33,7 +35,7 @@ function particleFixture(enabled = true, realOwner?: ParticleSystem, lowGraphics
     if (typeof observer !== "function") throw new Error("observer missing");
     return Reflect.apply(observer, api, []) as { particles: typeof fx; policy: { effects: object; settings: object; entropyOwner: string }; renderInputs: { player: typeof player; blade: typeof blade } };
   };
-  return { fx, player, blade, effects, read, api: () => api };
+  return { fx, player, blade, effects, entropy, read, api: () => api };
 }
 
 describe("read-only live particle diagnostics", () => {
@@ -70,7 +72,7 @@ describe("read-only live particle diagnostics", () => {
     fixture.fx.list[0] = { type, x: -3, y: 4, life: 0.2, max: 0.34, col: null, priority: "combat", ...fields };
     expect(fixture.read().particles).toEqual(fixture.fx);
     expect(fixture.read().policy).toEqual({ effects: { highBudget: 320, lowBudget: 110, cullMargin: 180 },
-      settings: { lowGraphics: true, reducedMotion: false, highContrast: true, flashScale: 0.5 }, entropyOwner: "Math.random; outside captured RunRandomStreams" });
+      settings: { lowGraphics: true, reducedMotion: false, highContrast: true, flashScale: 0.5 }, entropyOwner: "per-world cosmetic emission; particlesPresentation.v2", entropy: fixture.entropy.snapshot() });
   });
   it("preserves optional absence, order, view and cursor greater than list length without calling entropy", () => {
     const fixture = particleFixture();

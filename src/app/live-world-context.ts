@@ -12,6 +12,7 @@ import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-conf
 export interface LiveWorldContextDependencies {
   readonly CLOCK: { sim: number };
   readonly GAME_RANDOM: { reset(seed: number | string): void };
+  readonly cosmeticEmissionRandom: { resetRun(seed: number | string): void };
   readonly GAME_RANDOM_STREAMS: {
     stream(name: RunRandomStreamName): RandomSource;
     snapshot(): RunRandomStreamsSnapshot;
@@ -56,7 +57,7 @@ export function createLiveWorldServices(options: LiveWorldServicesOptions): Live
   const services: LiveWorldServices = {
     configuration: options.configuration,
     random: Object.freeze({
-      resetRun: (seed) => { d.GAME_RANDOM.reset(seed); },
+      resetRun: (seed) => { d.GAME_RANDOM.reset(seed); d.cosmeticEmissionRandom.resetRun(seed); },
       stream: (name) => d.GAME_RANDOM_STREAMS.stream(name),
       snapshot: () => d.GAME_RANDOM_STREAMS.snapshot(),
       restore: (snapshot) => { d.GAME_RANDOM_STREAMS.restore(snapshot); },

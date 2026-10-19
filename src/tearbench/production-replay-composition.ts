@@ -2,6 +2,7 @@ import { applyWeapon } from "../gameplay/weapons";
 import { A11Y, GFX } from "../config/game-config";
 import { createLiveParticlePresentationState } from "../app/live-particle-presentation-state";
 import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
+import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
 import { UPGRADES } from "../gameplay/upgrades";
 import { restoreUpgradeHooks } from "../gameplay/upgrade-hooks";
@@ -265,7 +266,7 @@ export function captureProductionReplayCheckpoint(
     captureIdentityState: simulation.combatEntityRuntime.captureIdentityState.bind(simulation.combatEntityRuntime),
     restoreIdentityState: simulation.combatEntityRuntime.restoreIdentityState.bind(simulation.combatEntityRuntime),
     runtimeState: runtime.capture,
-    particlesPresentation: createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion })),
+    particlesPresentation: createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }), replay.cosmeticEmissionRandom),
     restoreRuntimeState: runtime.restore,
     captureCinema: replay.world.context.cinema.captureState.bind(replay.world.context.cinema),
     validateCinema: runtime.validate,
@@ -328,6 +329,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   applyTearCodecConfiguration(candidateConfiguration, staged.configuration);
   createTearWorldConfiguration(replay.configuration.baseSnapshot()).restore(candidateConfiguration);
   validateParticlePresentationBinding(staged.particlesPresentation, candidateConfiguration.effects);
+  const particleRestore = prepareParticlePresentationRestore(staged.particlesPresentation, staged.run.runSeed, staged.tick);
   const preparedRuntime = prepareProductionChapter(replay, staged.runtime, candidateConfiguration);
   productionRuntimeState(replay, preparedRuntime).validate(staged.runtime, staged.run, staged.stageIndex, staged.enemies);
   // Exercise the same portable RNG restore before any destination stream changes.
@@ -367,8 +369,8 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   replay.world.context.environment.setStage(environmentStage, "restore");
   replay.world.context.environment.replace({ ...rebasedEnvironment, stageId: environmentStage });
   replay.stage.platforms = [...staged.platforms] as unknown[];
-  createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }))
-    .restore(staged.particlesPresentation);
+  createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }), replay.cosmeticEmissionRandom)
+    .restore(particleRestore);
   productionRuntimeState(replay, { ...preparedRuntime, director: replay.world.context.cinema })
     .restore({ ...staged.runtime, lifecycle: preparedRuntime.lifecycle, cinema: preparedRuntime.cinema, bossIntro: restoredBossIntro });
   if (staged.simulationSeconds !== undefined) replay.world.context.services.clock.set(staged.simulationSeconds);

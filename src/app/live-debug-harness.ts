@@ -162,7 +162,7 @@ function presentationDiagnostics(context: LiveDebugHarnessContext) {
     if (lastHand !== undefined) bladeInput.lastHand = lastHand === null ? null : diagnosticProjection(diagnosticObject(lastHand), ["x", "y"], rendererDiagnosticArrayQuota);
   }
   return cloneDiagnosticData({ format: "tear-presentation-input-diagnostic", version: 1, particles: { list: particles, view, _replacementCursor: cursor },
-    policy: { effects, settings: { lowGraphics: d.GFX.low, reducedMotion: d.A11Y.reducedMotion, highContrast: d.A11Y.highContrast, flashScale: d.A11Y.flashScale }, entropyOwner: "Math.random; outside captured RunRandomStreams" },
+    policy: { effects, settings: { lowGraphics: d.GFX.low, reducedMotion: d.A11Y.reducedMotion, highContrast: d.A11Y.highContrast, flashScale: d.A11Y.flashScale }, entropyOwner: "per-world cosmetic emission; particlesPresentation.v2", entropy: d.cosmeticEmissionRandom.snapshot() },
     renderInputs: { player: playerInput, blade: bladeInput, clockSeconds: d.CLOCK.sim,
       handOffset: diagnosticProjection(d.CONFIG.blade, ["handOffsetX", "handOffsetY"], rendererDiagnosticArrayQuota),
       theme: { dark: d.THEME.dark, ink: d.THEME.ink, rim: d.THEME.rim }, colors: { eye: d.CONFIG.colors.eye, perfect: d.CONFIG.colors.perfect } } }, Math.max(capacity, rendererDiagnosticArrayQuota));

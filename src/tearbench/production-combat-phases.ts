@@ -1,4 +1,5 @@
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
+import { GFX, THEME } from "../config/game-config";
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks, type LiveCombatEntity } from "../gameplay/combat/combat-entity-runtime";
 import { createLiveWeaponRuntime, type LiveWeaponEnemy } from "../gameplay/combat/live-weapon-runtime";
 import { bindLiveHammerMeteor } from "../gameplay/combat/live-hammer-meteor";
@@ -16,7 +17,6 @@ import { createBossArenaRuntimeBridge } from "../gameplay/training/arena-runtime
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import type { BladeWeaponEvent } from "../gameplay/entities/blade-contracts";
 import { STAGES, stageAt } from "../gameplay/stages";
-import { cosmeticRandom } from "../presentation/cosmetic-random";
 import type { ProductionReplayWorld } from "./production-world-factory";
 
 /**
@@ -55,6 +55,14 @@ export function createProductionCombatPhases(
 ) {
   const { world, effects, transient, input, stage } = replay;
   const config = replay.configuration.value;
+  // Match the live opening host's semantic color policy at emission time.
+  // Theme remains current presentation policy, not restored world state.
+  const openingColor = (color?: string): string => {
+    if (color === "perfect") return config.colors.perfect; if (color === "slam") return config.colors.slam;
+    if (color === "ink") return THEME.ink; if (color === "bladeTrail") return config.colors.bladeTrail;
+    if (color === "reform") return "#c9ccd6"; if (color === "charger") return config.colors.charger;
+    return color ?? config.colors.perfect;
+  };
   if (options.platforms !== undefined) stage.platforms = [...options.platforms];
   const platforms = () => stage.platforms as unknown as LiveOpeningPhaseHost["platforms"];
   const outward: string[] = [];
@@ -75,7 +83,7 @@ export function createProductionCombatPhases(
     platforms: () => stage.platforms as ArenaPlatform[],
     player: () => player(),
     enemies: () => world.state.enemies(),
-    lowGraphics: () => false,
+    lowGraphics: () => GFX.low,
   });
   const style = createLiveStyleAchievementRuntime({
     run: () => world.state.run() as never,
@@ -253,7 +261,7 @@ export function createProductionCombatPhases(
     get platforms() { return platforms(); }, state: transient.opening, width: config.view.w,
     get blocking() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
     get playerMode() { return world.context.cinema.playerMode; }, protection: transient.protection,
-    lowGraphics: false,
+    get lowGraphics() { return GFX.low; },
     get transformationBlocked() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
     overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
     stepCinematic: (dt: number) => {
@@ -299,19 +307,26 @@ export function createProductionCombatPhases(
         sludgeColor: config.colors.sludge });
     },
     syncVoidSupport: refuseSourceVoid, activateThrowSecondary: note("activateThrowSecondary"),
-    linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); },
+    linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); const active = blade() as { tipX: number; tipY: number }; effects.ring(active.tipX, active.tipY, 8, config.colors.bladeTrail); },
     distance: (ax: number, ay: number, bx: number, by: number) => len(ax - bx, ay - by),
     areaDamage: (x: number, y: number, radius: number, damage: number) => { dealArea(x, y, radius, damage); },
-    ring: (x: number, y: number, radius: number, color: string) => { effects.ring(x, y, radius, color); },
-    burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => { effects.burst(x, y, dx, dy, count, color); },
+    ring: (x: number, y: number, radius: number, color: string) => { effects.ring(x, y, radius, openingColor(color)); },
+    burst: (x: number, y: number, dx: number, dy: number, count: number, color?: string) => { effects.burst(x, y, dx, dy, count, openingColor(color)); },
     floater: addFloater,
     shake: note("shake"), sound: (name: string) => { outward.push(`sound:${name}`); },
-    ghost: note("ghost"), ember: note("ember"), smoke: note("smoke"), drip: note("drip"),
+    ghost: (x: number, y: number, hw: number, hh: number, color?: string) => { outward.push("ghost"); effects.ghost(x, y, hw, hh, color === "slam" ? config.colors.slam : undefined); },
+    ember: (x: number, y: number) => { outward.push("ember"); effects.ember(x, y); },
+    smoke: (x: number, y: number) => { outward.push("smoke"); effects.smoke(x, y); },
+    drip: (x: number, y: number) => { outward.push("drip"); effects.drip(x, y); },
     overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
       aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
     styleHit: () => { style.addStyle("hit"); },
     onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
-    fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
+    fireDashStart: () => {
+      outward.push("fireDashStart"); const active = player() as { x: number; y: number; dashX: number; dashY: number };
+      effects.burst(active.x, active.y, -active.dashX, -active.dashY, 6, config.colors.perfect);
+      if (!GFX.low) effects.ring(active.x, active.y, 7, config.colors.perfect);
+    }, fireDashContact: note("fireDashContact"),
     fireWeaponCatch: () => { outward.push("fireWeaponCatch"); emitWeaponFact("catch"); },
     fireThrowLaunch: (throwId: number) => { outward.push("fireThrowLaunch"); emitWeaponFact("throw-launch", throwId); },
     logThrowLaunch: note("logThrowLaunch"),
@@ -387,10 +402,10 @@ export function createProductionCombatPhases(
       clone.spawnT = 0.3; emitBossSupportSpawn(clone, source);
       world.state.setEnemies([...world.state.enemies(), clone as never]); outward.push("bossClone");
     },
-    removeBossClone: (clone: never) => { const value = clone as { x: number; y: number }; effects.ring(value.x, value.y, 12, config.colors.perfect); },
+    removeBossClone: (clone: never) => { const value = clone as { x: number; y: number; hw: number; hh: number }; effects.ghost(value.x, value.y, value.hw, value.hh); },
     dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
     updateEffects: (dt: number) => { effects.update(dt); },
-    random: cosmeticRandom,
+    random: replay.cosmeticEmissionRandom.next,
   } as unknown as LiveOpeningPhaseHost;
 
   const collisionState = {
@@ -402,8 +417,12 @@ export function createProductionCombatPhases(
     get floaters() { return world.state.floaters(); }, set floaters(value: unknown[]) { world.state.setFloaters(value as never[]); },
   } as unknown as LiveCollisionPhaseHost["state"];
   const collisionEffects = {
-    burst: note("fx:burst"), ring: note("fx:ring"), flash: note("fx:flash"), ribbon: note("fx:ribbon"),
-    explode: note("fx:explode"), floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
+    burst: (...args: Parameters<typeof effects.burst>) => { outward.push("fx:burst"); effects.burst(...args); },
+    ring: (...args: Parameters<typeof effects.ring>) => { outward.push("fx:ring"); effects.ring(...args); },
+    flash: (...args: Parameters<typeof effects.flash>) => { outward.push("fx:flash"); effects.flash(...args); },
+    ribbon: (...args: Parameters<typeof effects.ribbon>) => { outward.push("fx:ribbon"); effects.ribbon(...args); },
+    explode: (...args: Parameters<typeof effects.explode>) => { outward.push("fx:explode"); effects.explode(...args); },
+    floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
     buzz: note("fx:buzz"), sound: (name: string) => { outward.push(`hit:${name}`); },
     style: (kind: string) => { style.addStyle(kind); }, tutorial: note("fx:tutorial"),
   };
@@ -506,7 +525,7 @@ export function createProductionCombatPhases(
       outward.push("bossGhostMoment");
       options.gameplayEvents?.emit({ kind: "effect", effect: "bossKill", x: enemy.x, y: enemy.y });
     },
-    deathEffect: note("deathEffect"), deathSound: note("deathSound"),
+    deathEffect: (enemy: { x: number; y: number; color: string }, shards: number) => { outward.push("deathEffect"); effects.death(enemy.x, enemy.y, shards, enemy.color); }, deathSound: note("deathSound"),
     makeDeathEvent: (enemy: unknown, cause: string | undefined, cleanElimination: boolean) =>
       Object.freeze({ enemy, cause, cleanElimination }),
     fire: (hooks: unknown, event: unknown) => {
@@ -515,9 +534,12 @@ export function createProductionCombatPhases(
       }
     },
     applySever: (enemy: { applySever?: (tier: number) => void }, tier: number) => { enemy.applySever?.(tier); },
-    ring: note("killRing"),
+    ring: (...args: Parameters<typeof effects.ring>) => { outward.push("killRing"); effects.ring(...args); },
     restorePlatforms: (value: unknown[]) => { stage.platforms = [...value]; },
-    releaseCamera: note("releaseCamera"), happyTime: note("happyTime"), bossPresentation: note("bossPresentation"),
+    releaseCamera: note("releaseCamera"), happyTime: note("happyTime"),
+    bossPresentation: (enemy: { x: number; y: number; color: string }, accent: string) => {
+      outward.push("bossPresentation"); effects.explode(enemy.x, enemy.y, enemy.color, 2.2); effects.explode(enemy.x, enemy.y - 20, accent, 1.4);
+    },
     releaseStolenBlade: (enemy: unknown) => {
       const weapon = blade() as { hostile?: boolean; stolenBy?: unknown; state?: string };
       if (weapon.stolenBy === enemy) { weapon.hostile = false; weapon.stolenBy = null; weapon.state = "returning"; }

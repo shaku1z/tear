@@ -206,7 +206,7 @@ export function createLiveCombatActions<
       f.logWeaponEvent("stolenBlade", { enemyKind: enemy.kind });
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "stolenBlade", x: enemy.x, y: enemy.y });
     },
-    updateEffects: (seconds) => { d.FX.update(seconds); }, random: d.cosmeticRandom,
+    updateEffects: (seconds) => { d.FX.update(seconds); }, random: d.cosmeticEmissionRandom.next,
   };
   return { entities, opening, collision: createCollision(context), kill: createKill(context) };
 }

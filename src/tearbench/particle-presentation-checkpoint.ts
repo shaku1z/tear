@@ -1,4 +1,5 @@
 import type { ParticleSystem } from "../presentation/particles";
+import { legacyCosmeticEmissionSnapshot, parseCosmeticEmissionRandomSnapshot, type CosmeticEmissionRandomSnapshot } from "../domain/cosmetic-emission-random";
 
 type Particle = ParticleSystem["list"][number];
 export type ParticleEffectsPolicy = Readonly<{ highBudget: number; lowBudget: number; cullMargin: number }>;
@@ -7,13 +8,23 @@ export type ParticlePresentationPolicy = Readonly<{
   lowGraphics: boolean;
   reducedMotion: boolean;
 }>;
-export type ParticlePresentationCheckpoint = Readonly<{
-  version: 1;
+type ParticlePresentationData = Readonly<{
   list: readonly Readonly<Particle>[];
   view: Readonly<NonNullable<ParticleSystem["view"]>> | null;
   replacementCursor: number;
   policy: ParticlePresentationPolicy;
 }>;
+export type ParticlePresentationCheckpoint = ParticlePresentationData & (
+  Readonly<{ version: 1 }> | Readonly<{ version: 2; entropy: CosmeticEmissionRandomSnapshot }>
+);
+export type PreparedParticlePresentationRestore = Readonly<{
+  presentation: ParticlePresentationCheckpoint | undefined;
+  entropy: CosmeticEmissionRandomSnapshot;
+}>;
+
+export function prepareParticlePresentationRestore(presentation: ParticlePresentationCheckpoint | undefined, runSeed: number, tick: number): PreparedParticlePresentationRestore {
+  return Object.freeze({ presentation, entropy: presentation?.version === 2 ? presentation.entropy : legacyCosmeticEmissionSnapshot(runSeed, tick) });
+}
 
 const variants: Readonly<Record<string, readonly string[]>> = Object.freeze({
   spark: ["vx", "vy"], ring: ["r"], ribbon: ["x1", "y1"], edgeTrace: ["x1", "y1", "thickness"],
@@ -71,8 +82,10 @@ function particle(value: unknown): Readonly<Particle> {
 /** Exact presentation data only. Parsing never invokes emissions, accessors or entropy. */
 export function parseParticlePresentationCheckpoint(value: unknown): ParticlePresentationCheckpoint | undefined {
   if (value === undefined) return undefined;
-  const root = data(value, ["version", "list", "view", "replacementCursor", "policy"]);
-  if (root.version !== 1) throw new RangeError("unsupported particle presentation version");
+  const root = data(value, ["version", "list", "view", "replacementCursor", "policy", "entropy"]);
+  if (root.version !== 1 && root.version !== 2) throw new RangeError("unsupported particle presentation version");
+  if (root.version === 1 && Object.hasOwn(root, "entropy")) throw new RangeError("particle presentation v1 does not support entropy");
+  const entropy = root.version === 2 ? parseCosmeticEmissionRandomSnapshot(root.entropy) : undefined;
   const policy = data(root.policy, ["effects", "lowGraphics", "reducedMotion"]);
   const effects = data(policy.effects, ["highBudget", "lowBudget", "cullMargin"]);
   const highBudget = finite(effects.highBudget), lowBudget = finite(effects.lowBudget), cullMargin = finite(effects.cullMargin);
@@ -90,12 +103,13 @@ export function parseParticlePresentationCheckpoint(value: unknown): ParticlePre
   const view = root.view === null ? null : data(root.view, ["left", "top", "right", "bottom"]);
   const cursor = finite(root.replacementCursor);
   if (!Number.isSafeInteger(cursor) || cursor < 0) throw new RangeError("particle replacement cursor must be a nonnegative safe integer");
-  return Object.freeze({ version: 1, list: Object.freeze(list),
+  const parsed = { list: Object.freeze(list),
     view: view === null ? null : Object.freeze({ left: finite(view.left), top: finite(view.top), right: finite(view.right), bottom: finite(view.bottom) }),
     replacementCursor: cursor,
     policy: Object.freeze({ effects: Object.freeze({ highBudget, lowBudget, cullMargin }),
       lowGraphics: boolean(policy.lowGraphics), reducedMotion: boolean(policy.reducedMotion) }),
-  });
+  };
+  return entropy === undefined ? Object.freeze({ ...parsed, version: 1 }) : Object.freeze({ ...parsed, version: 2, entropy });
 }
 
 /** Source settings are provenance; only structural tuning is bound to the restored config. */

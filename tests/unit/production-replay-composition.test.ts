@@ -15,6 +15,7 @@ import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tear
 import type { ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
 import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
+import { legacyCosmeticEmissionSnapshot } from "../../src/domain/cosmetic-emission-random";
 
 const timing: CampaignChapterTiming = Object.freeze({
   loreReveal: 0.1, chapterIn: 0.2, loreExit: 0.3, biomeRevealBrief: 0.4,
@@ -54,7 +55,7 @@ function unchangedDestination(replay: ProductionReplayWorld) {
     replay.world.state.enemies(), replay.world.state.projectiles(), replay.world.state.floaters(),
     replay.world.state.slowZones(), replay.world.state.temporaryWalls(), replay.world.state.bossIntro(),
     replay.configuration.value, replay.configuration.value.presentation, replay.stage.platforms];
-  const values = () => ({ config: replay.configuration.snapshot(), rng: replay.world.context.services.random.snapshot(),
+  const values = () => ({ config: replay.configuration.snapshot(), rng: replay.world.context.services.random.snapshot(), cosmeticEntropy: replay.cosmeticEmissionRandom.snapshot(),
     lifecycle: replay.world.lifecycle.snapshot(), cinema: replay.world.context.cinema.captureState(),
     stage: replay.stage.index, platforms: replay.stage.platforms, environment: replay.world.context.environment.snapshot(),
     transient: Object.fromEntries(Object.entries(replay.world.context.transient).filter(([, value]) => typeof value !== "function")),
@@ -76,6 +77,21 @@ function withoutPresentation(snapshot: TearSnapshotV1): TearSnapshotV1 {
 }
 
 describe("production replay composition", () => {
+  it("derives legacy v1 entropy only from staged run/tick and never claims old exact protocol identity", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "legacy-emission-custody" }), source = composition.create(undefined);
+    source.replay.effects.spark(800, 775, 1, 0);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "legacy-emission");
+    const legacy = structuredClone(checkpoint.snapshot), payload = (legacy.state["tear.ui.v1"] as Record<string, unknown>).particlesPresentation as Record<string, unknown>;
+    payload.version = 1; delete payload.entropy;
+    const first = createProductionReplayWorld({ seed: "temporary-one" }), second = createProductionReplayWorld({ seed: "temporary-two" });
+    first.cosmeticEmissionRandom.next(); second.effects.explode(20, 30);
+    restoreProductionReplaySnapshot(first, legacy); restoreProductionReplaySnapshot(second, legacy);
+    expect(first.cosmeticEmissionRandom.snapshot()).toEqual(legacyCosmeticEmissionSnapshot(source.replay.world.state.run()?.runSeed ?? -1, legacy.tick));
+    expect(second.cosmeticEmissionRandom.snapshot()).toEqual(first.cosmeticEmissionRandom.snapshot());
+    expect(first.effects.list).toEqual(second.effects.list); expect(first.cosmeticEmissionRandom.snapshot().provenance).toBe("legacy-derived");
+    const current = createLiveParticlePresentationState(first.effects, () => ({ effects: first.configuration.value.effects, lowGraphics: false, reducedMotion: false }), first.cosmeticEmissionRandom).capture();
+    expect(current.version).toBe(2); expect(current).not.toEqual(payload);
+  });
   it("captures, stages and recaptures actual particles using candidate tuning without changing replay semantics", () => {
     const composition = createProductionGhostReplayComposition({ seed: "particle-presentation-portability" });
     const source = composition.create(undefined), fx = source.replay.effects;
@@ -87,7 +103,7 @@ describe("production replay composition", () => {
     target.configuration.value.effects.highBudget = 9; target.configuration.value.effects.cullMargin = 7;
     const list = target.effects.list;
     restoreProductionReplaySnapshot(target, checkpoint.snapshot);
-    expect(createLiveParticlePresentationState(target.effects, () => ({ effects: target.configuration.value.effects, lowGraphics: false, reducedMotion: false })).capture()).toEqual(saved);
+    expect(createLiveParticlePresentationState(target.effects, () => ({ effects: target.configuration.value.effects, lowGraphics: false, reducedMotion: false }), target.cosmeticEmissionRandom).capture()).toEqual(saved);
     expect(target.effects.list).toBe(list);
     const restored = composition.create(checkpoint.snapshot);
     const recaptured = captureProductionReplayCheckpoint(restored.replay, restored.combat, restored.waveReward, "particles-roundtrip");

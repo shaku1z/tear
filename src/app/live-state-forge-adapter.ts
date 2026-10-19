@@ -35,6 +35,7 @@ import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import type { UiHudPresentationCheckpoint } from "../tearbench/ui-presentation-checkpoint";
 import { parseParticlePresentationCheckpoint, validateParticlePresentationBinding } from "../tearbench/particle-presentation-checkpoint";
 import type { LiveParticlePresentationState } from "./live-particle-presentation-state";
+import type { PreparedParticlePresentationRestore } from "../tearbench/particle-presentation-checkpoint";
 
 interface Platform {
   readonly x: number;
@@ -58,7 +59,7 @@ type Candidate = TearStagedWorld<
   RunRandomStreamsSnapshot,
   CombatEntityIdentityState,
   LegacyGhostRuntimeState
->;
+> & { readonly particleRestore?: PreparedParticlePresentationRestore };
 type StateForgeWorldServices = Pick<
   TearWorldServices<RunRandomStreamsSnapshot, RunRandomStreamName, RandomSource, GameRuntimeDependencies["CONFIG"]>,
   "configuration" | "random" | "clock"
@@ -284,7 +285,9 @@ function stageWorld(
     LegacyGhostRuntimeState
   >(createWorldConstructionPort(options.dependencies, options.entities), world, context);
   restoreUpgradeHooks({ mods: candidate.run.mods, config: options.worldServices.configuration.value });
-  return candidate;
+  return Object.freeze({ ...candidate, ...(options.particlesPresentation === undefined ? {} : {
+    particleRestore: options.particlesPresentation.prepare(candidate.particlesPresentation, candidate.run.runSeed, candidate.tick),
+  }) });
 }
 
 export function createLiveStateForgeAdapter(
@@ -379,7 +382,7 @@ export function createLiveStateForgeAdapter(
       // cinema snapshot destructively clears its current binding; no later
       // commit action may throw and make the prior active binding unavailable
       // to the transactional rollback candidate.
-      options.particlesPresentation?.restore(candidate.particlesPresentation);
+      if (candidate.particleRestore !== undefined) options.particlesPresentation?.restore(candidate.particleRestore);
       options.hudPresentation?.restore(candidate.hudPresentation);
       options.restoreRuntimeState(candidate.runtime);
     },
