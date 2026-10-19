@@ -61,7 +61,8 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   };
   const tutorial = createLiveTutorialRuntime({
     config: d.CONFIG, viewportWidth: context.width, groundY: () => d.CONFIG.world.groundY,
-    skipPressed: () => d.Input.pressed.has("KeyN"), movingLeft: () => d.Input.left(), movingRight: () => d.Input.right(),
+    skipPressed: () => d.Input.pressed.has("KeyN"),
+    movingLeft: () => player().aiInput?.left() === true, movingRight: () => player().aiInput?.right() === true,
     player, bladeState: () => state.blade()?.state ?? "held", bladeTipVY: () => state.blade()?.tipVY ?? 0, enemies: () => state.enemies(),
     playSound: (cue) => { if (cue === "rankup") d.SFX.rankup(); else d.SFX.ui(); },
     spawn: (kind, hpScale) => {

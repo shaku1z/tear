@@ -64,6 +64,14 @@ and canonical receipts with `TEAR_TUTORIAL_CONTINUATION_TRACE`; the focused
 continuation test consumes that path only when explicitly provided. Constructed
 snapshot round trips alone prove reconstructed-byte continuation, not live parity.
 
+Live and detached tutorial movement evidence both read the actor's authoritative
+input, which physical controls and Class A commands share. The controller still
+counts actual displacement as before. Historical courses whose counters consulted
+unrecorded physical host input are not retroactively verified. `KeyN` skip still
+belongs to that host input and has no recorded semantic action: detached replay
+does not synthesize a skip, and continuation across such an unrecorded boundary
+is unsupported.
+
 The live tutorial now uses the Cutting Room curriculum rather than the old
 shared playground layout. This is deliberately a baseline-only teaching run:
 

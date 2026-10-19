@@ -34,7 +34,14 @@ describe("production tutorial reconstructed-byte continuation", () => {
     const trace = JSON.parse(readFileSync(path, "utf8")) as ProductionC27ATrace;
     expect(trace.originInput).toBeDefined();
     expect(trace.hashes.length).toBeGreaterThan(0);
-    expect(firstProductionC27AHashDivergence(trace, replayProductionC27ATrace(trace))).toBeNull();
+    const replay = replayProductionC27ATrace(trace);
+    const divergence = firstProductionC27AHashDivergence(trace, replay);
+    if (divergence !== null) {
+      expect(replay.hashes.find((entry) => entry.tick === divergence.tick)?.state,
+        `first divergent canonical fields at tick ${String(divergence.tick)}`)
+        .toEqual(trace.hashes.find((entry) => entry.tick === divergence.tick)?.state);
+    }
+    expect(divergence).toBeNull();
   });
   it("continues lesson delay into the next real arena without reinstalling the retained arena, and excludes display state", () => {
     const source = composition().create(undefined);
