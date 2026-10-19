@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CONFIG } from "../../src/config/game-config";
-import { TUTORIAL_LESSON_IDS, type TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
+import { TutorialController, TUTORIAL_LESSON_IDS, type TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
 import { createTutorialArena } from "../../src/gameplay/training/tutorial-arenas";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { stableVerificationHash } from "../../src/replay/hash";
@@ -31,6 +31,43 @@ function capture(source: Source) { return captureProductionReplayCheckpoint(sour
 function restore(source: Source) { return composition().create(JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1); }
 
 describe("production tutorial reconstructed-byte continuation", () => {
+  it("continues a real Mender attempt from portable provenance, defeats it through collision and returns without course credit", () => {
+    const controller = new TutorialController(CONFIG);
+    expect(controller.openPractice(CONFIG.view.w, 1)).toBe(true);
+    expect(controller.selectEnemy({ id: "mender", title: "MENDER", knowledge: "confirmed-defeated", canPractice: true })).toBe(true);
+    const source = composition().create(undefined);
+    source.replay.tutorial.restoreSession(controller.captureSession());
+    source.simulation.advanceOne([]);
+    source.simulation.advanceOne([]);
+    const enemy = source.replay.world.state.enemies()[0], player = source.replay.world.state.player();
+    if (!enemy || !player) throw new Error("real practice opponent missing");
+    expect(enemy).toMatchObject({ kind: "support", supportType: "mender", dead: false });
+    expect(enemy.tutDummy).not.toBe(true);
+    const restored = restore(source);
+    expect(restored.replay.tutorial.captureSession()).toEqual(source.replay.tutorial.captureSession());
+    // The destination has no profile/catalog. Captured selection remains playable.
+    for (let tick = 0; tick < 20; tick++) expect(restored.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+    expect(restored.replay.tutorial.session().progress).toEqual([0, 1]);
+    const blade = source.replay.world.state.blade() as unknown as InstanceType<ReturnType<typeof createBlade>>;
+    const initialHp = enemy.hp;
+    for (let hit = 0; hit < 30 && !enemy.dead; hit++) {
+      Object.assign(enemy, { hitCd: 0, spawnT: 0, x: player.x + 80, y: player.y - 10 });
+      Object.assign(blade, { state: "held", angle: 0, x: enemy.x - 70, y: enemy.y, tipX: enemy.x + 70,
+        tipY: enemy.y, tipVX: 0, tipVY: -2200, tipSpeed: 2200, vx: 0, vy: -2200 });
+      blade.swingId++; runLiveCollisionPhase(source.combat.collision, 1 / 120);
+    }
+    expect(enemy.hp).toBeLessThan(initialHp); expect(enemy.dead).toBe(true);
+    source.simulation.advanceOne([]);
+    expect(source.replay.tutorial.captureSession()).toMatchObject({ version: 5, enemyPractice: { id: "mender", defeated: true } });
+    const completed = restore(source);
+    for (let tick = 0; tick < 150; tick++) expect(completed.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+    expect(completed.replay.tutorial.session()).toMatchObject({ phase: "free-practice", practiceOnly: true });
+    expect(completed.replay.tutorialOutward.some((intent) => intent.startsWith("complete-course:"))).toBe(false);
+    expect(completed.replay.tutorial.restart()).toBe(true);
+    completed.simulation.advanceOne([]);
+    completed.simulation.advanceOne([]);
+    expect(completed.replay.world.state.enemies()[0]).toMatchObject({ kind: "support", supportType: "mender" });
+  });
   it.each(WEAPON_IDS)("advances the %s annex through actual baseline weapon effects and continues its v4 bytes", (weaponId) => {
     const owner = createProductionGhostReplayComposition({ seed: `annex-${weaponId}`, mode: "tutorial", weaponId, difficulty: "normal" });
     const source = owner.create(undefined), tutorial = source.replay.tutorial;

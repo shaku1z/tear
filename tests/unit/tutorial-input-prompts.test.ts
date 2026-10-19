@@ -8,6 +8,10 @@ const pad = {
 };
 
 describe("tutorial input prompts", () => {
+  it("projects real opponent controls onto the active device", () => {
+    expect(tutorialInputPrompt("MENDER ENCOUNTER", "Defeat it", ["MOUSE", "SHIFT", "RMB"], "gamepad", pad).keys).toEqual(["RS — SWING", "R2", "R1"]);
+    expect(tutorialInputPrompt("MENDER ENCOUNTER", "Defeat it", ["MOUSE", "SHIFT", "RMB"], "touch", pad).keys).toEqual(["DRAG — SWING", "DASH", "THROW"]);
+  });
   it("preserves semantic keyboard and mouse prompts", () => {
     expect(tutorialInputPrompt("CUT", "Current curriculum", ["MOUSE"], "mouse", pad)).toEqual({
       description: "Current curriculum", keys: ["MOUSE"],

@@ -2,6 +2,8 @@ import type { TutorialArenaId } from "./tutorial-arenas";
 import { productionGhostPath, type TutorialGhostFrame } from "./tutorial-production-ghost";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { createWeaponAnnex, recordWeaponAnnexEffect, TUTORIAL_WEAPON_ANNEXES, validateWeaponAnnex, weaponAnnexLesson, weaponAnnexTargets, type TutorialWeaponAnnexState } from "./tutorial-weapon-annexes";
+import { isPracticeEnemy, practiceEnemyLesson, updatePracticeEnemy, validatePracticeEnemy, type PracticeEnemyEntry, type PracticeEnemyState } from "./practice-enemy-catalog";
+import type { EnemyKind } from "../run/content-director";
 
 export type TutorialMark =
   | "airHit" | "dash" | "deflect" | "jump" | "launch" | "moveL" | "moveR"
@@ -24,6 +26,9 @@ export interface TutorialSessionView {
   readonly annexSelector?: boolean;
   readonly annex?: Readonly<TutorialWeaponAnnexState>;
   readonly annexes?: readonly Readonly<{ id: string; title: string; current: boolean }>[];
+  readonly catalogSelector?: boolean;
+  readonly enemyPractice?: Readonly<PracticeEnemyState>;
+  readonly enemyCatalog?: readonly PracticeEnemyEntry[];
   readonly phase: TutorialSessionPhase; readonly lessonId: TutorialLessonId; readonly courseCompleted: boolean;
   readonly helpVisible: boolean; readonly instruction: string; readonly progress: readonly [number, number];
   readonly lessons: readonly Readonly<{ id: TutorialLessonId; title: string; reached: boolean; completed: boolean; current: boolean; canPractice: boolean }>[];
@@ -35,7 +40,7 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("Invalid tutorial session");
   const data = value as Record<string, unknown>;
   const ids = (entry: unknown): entry is TutorialLessonId[] => Array.isArray(entry) && new Set(entry as unknown[]).size === entry.length && (entry as unknown[]).every((id) => TUTORIAL_LESSON_IDS.some((valid) => valid === id));
-  if ((data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4) || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
+  if ((data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4 && data.version !== 5) || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
     typeof data.phase !== "string" || !TUTORIAL_LESSON_IDS.includes(data.lessonId as TutorialLessonId) || !ids(data.reached) || !ids(data.completed) ||
     typeof data.active !== "boolean" || typeof data.completionAwarded !== "boolean" || typeof data.previousGrounded !== "boolean" || typeof data.dashLatched !== "boolean" ||
     typeof data.previousBladeState !== "string" || (data.pendingArena !== null && !TUTORIAL_LESSONS.some((lesson) => lesson.arena === data.pendingArena))) throw new TypeError("Invalid tutorial session fields");
@@ -49,7 +54,7 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   const marks = ["airHit", "dash", "deflect", "jump", "launch", "moveL", "moveR", "evade", "parry", "punish", "recall", "slam", "strike", "superslam", "throwHit", "updraft"];
   if (typeof data.counters !== "object" || data.counters === null || Array.isArray(data.counters) || Object.entries(data.counters).some(([key, number]) => !marks.includes(key) || typeof number !== "number" || !Number.isFinite(number) || number < 0)) throw new TypeError("Invalid tutorial counters");
   const reached = data.reached;
-  if (data.version === 3 || data.version === 4) {
+  if (data.version === 3 || data.version === 4 || data.version === 5) {
     const origin = data.practiceOrigin;
     if (typeof origin !== "object" || origin === null || Array.isArray(origin) ||
       (origin as Record<string, unknown>).kind !== "durable-profile-completion" ||
@@ -67,11 +72,19 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
       (data.active && annex.progress === 2 && data.completionDelay === 0) ||
       (data.completionDelay !== 0 && annex.progress !== 2)) throw new RangeError("Inconsistent tutorial weapon annex");
   } else if (data.annex !== undefined) throw new RangeError("Historical tutorial cannot contain a weapon annex");
+  if (data.version === 5) {
+    const enemy = validatePracticeEnemy(data.enemyPractice);
+    if (data.lessonId !== "move" || (data.completed as unknown[]).length !== 0 || reached.length !== 13 || Object.keys(data.counters).length !== 0 ||
+      data.fieldEncounter !== "charger" || data.endingTime !== 0 || Number(data.completionDelay) > 1.1 ||
+      (data.pendingArena !== null && (data.pendingArena !== "field-floor" || enemy.spawned)) ||
+      (data.phase === "free-practice" && (!enemy.defeated || data.completionDelay !== 0)) ||
+      (data.active && enemy.defeated && data.completionDelay === 0) || (data.completionDelay !== 0 && !enemy.defeated)) throw new RangeError("Inconsistent practice enemy session");
+  } else if (data.enemyPractice !== undefined) throw new RangeError("Historical tutorial cannot contain an enemy practice session");
   if (data.active !== (data.phase === "course" || data.phase === "lesson-practice") ||
-    (data.active && (!data.reached.includes(data.lessonId as TutorialLessonId) || (!data.courseSessionId && data.version !== 3 && data.version !== 4))) ||
+    (data.active && (!data.reached.includes(data.lessonId as TutorialLessonId) || (!data.courseSessionId && data.version !== 3 && data.version !== 4 && data.version !== 5))) ||
     data.completed.some((id) => !reached.includes(id)) ||
-    ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded && data.version !== 3 && data.version !== 4)) throw new RangeError("Inconsistent tutorial session");
-  if (data.version === 2 || data.version === 3 || data.version === 4) {
+    ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded && data.version !== 3 && data.version !== 4 && data.version !== 5)) throw new RangeError("Inconsistent tutorial session");
+  if (data.version === 2 || data.version === 3 || data.version === 4 || data.version === 5) {
     if (data.curriculumVersion !== 2 || (data.fieldEncounter !== "charger" && data.fieldEncounter !== "breath" && data.fieldEncounter !== "mixed") ||
       typeof data.interWaveRemaining !== "number" || !Number.isFinite(data.interWaveRemaining) || data.interWaveRemaining < 0 || data.interWaveRemaining > FIELD_BREATH_SECONDS ||
       (data.fieldEncounter !== "charger" && data.lessonId !== "field-test") ||
@@ -142,7 +155,7 @@ export type TutorialIntent =
   | Readonly<{ type: "install-arena"; arena: TutorialArenaId }>
   | Readonly<{ type: "reset-training-space" }>
   | Readonly<{ type: "recover-blade" }>
-  | Readonly<{ type: "spawn"; kind: "charger" | "ranged"; hpScale: number; role: "dummy" | "shooter" | "coach"; x?: number }>
+  | Readonly<{ type: "spawn"; kind: EnemyKind; hpScale: number; role: "dummy" | "shooter" | "coach" | "opponent"; x?: number }>
   | Readonly<{ type: "stabilize-dummy"; enemyId: string; minimumStun: number; healBelow: number }>
   | Readonly<{ type: "reset-dummy"; enemyId: string; x: number }>
   | Readonly<{ type: "begin-practice" }>
@@ -286,6 +299,8 @@ export class TutorialController {
   private practiceOrigin: TutorialPracticeOrigin | undefined;
   private annex: TutorialWeaponAnnexState | undefined;
   private annexSelector = false;
+  private enemyPractice: PracticeEnemyState | undefined;
+  private catalogSelector = false;
 
   session(): TutorialSessionView {
     const lessonId = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move", lesson = this.step();
@@ -294,17 +309,26 @@ export class TutorialController {
       ...(this.practiceOrigin === undefined ? {} : { annexSelector: this.annexSelector,
         annexes: TUTORIAL_WEAPON_ANNEXES.map(({ id, title }) => ({ id, title, current: this.annex?.id === id })) }),
       ...(this.annex === undefined ? {} : { annex: { ...this.annex } }),
+      ...(this.catalogSelector ? { catalogSelector: true } : {}), ...(this.enemyPractice === undefined ? {} : { enemyPractice: { ...this.enemyPractice } }),
       instruction: lesson.instruction?.(this.counters) ?? lesson.description, progress: lesson.progress(this.counters),
       lessons: TUTORIAL_LESSON_IDS.map((id, index) => ({ id, title: TUTORIAL_LESSONS[index]?.title ?? id,
-        reached: this.reached.has(id), completed: this.completed.has(id), current: this.annex === undefined && id === lessonId,
+        reached: this.reached.has(id), completed: this.completed.has(id), current: this.annex === undefined && this.enemyPractice === undefined && id === lessonId,
         canPractice: id !== "ready" && this.reached.has(id) })) };
   }
-  restart(): boolean { return this.annex === undefined ? this.selectLesson(this.session().lessonId) : this.selectAnnex(this.annex.id); }
-  showAnnexes(): void { if (this.practiceOrigin !== undefined) this.annexSelector = !this.annexSelector; }
+  restart(): boolean { return this.enemyPractice ? this.selectEnemy({ ...this.enemyPractice, title: this.enemyPractice.id, canPractice: true }) : this.annex === undefined ? this.selectLesson(this.session().lessonId) : this.selectAnnex(this.annex.id); }
+  showAnnexes(): void { if (this.practiceOrigin !== undefined) { this.annexSelector = !this.annexSelector; this.catalogSelector = false; } }
+  showCatalog(): void { if (this.practiceOrigin !== undefined) { this.catalogSelector = !this.catalogSelector; this.annexSelector = false; } }
+  selectEnemy(entry: PracticeEnemyEntry): boolean {
+    if (!this.practiceOrigin || !entry.canPractice || entry.knowledge === "unknown" || !isPracticeEnemy(entry.id)) return false;
+    const enemy = validatePracticeEnemy({ id: entry.id, weaponId: "sword", knowledge: entry.knowledge, spawned: false, defeated: false });
+    this.annex = undefined; this.enemyPractice = undefined; this.enterLesson(0); this.enemyPractice = enemy;
+    this.counters = {}; this.completed.clear(); this.active = true; this.phase = "lesson-practice";
+    this.catalogSelector = true; this.annexSelector = false; this.pendingArena = "field-floor"; return true;
+  }
   selectAnnex(id: string): boolean {
     const annex = createWeaponAnnex(id);
     if (!annex || this.practiceOrigin === undefined) return false;
-    this.annex = undefined; this.enterLesson(0); this.annex = annex; this.counters = {}; this.completed.clear();
+    this.annex = undefined; this.enemyPractice = undefined; this.catalogSelector = false; this.enterLesson(0); this.annex = annex; this.counters = {}; this.completed.clear();
     this.active = true; this.phase = "lesson-practice"; this.annexSelector = true;
     this.pendingArena = weaponAnnexLesson(annex).arena ?? "runway"; return true;
   }
@@ -314,13 +338,13 @@ export class TutorialController {
   selectLesson(id: string): boolean {
     const index = TUTORIAL_LESSON_IDS.findIndex((entry) => entry === id);
     if (index < 0 || id === "ready" || !this.reached.has(id as TutorialLessonId)) return false;
-    this.annex = undefined; this.annexSelector = false;
+    this.annex = undefined; this.annexSelector = false; this.enemyPractice = undefined; this.catalogSelector = false;
     this.active = true; this.phase = this.completionAwarded || this.practiceOrigin !== undefined ? "lesson-practice" : "course";
     this.enterLesson(index); return true;
   }
   showHelp(): void { this.helpVisible = !this.helpVisible; }
   demonstrate(): boolean {
-    if (!this.active || this.step().final || this.annex !== undefined) return false;
+    if (!this.active || this.step().final || this.annex !== undefined || this.enemyPractice !== undefined) return false;
     this.helpVisible = true; this.ghostTime = 0; this.coachDemoTime = 6; this.coachIdle = 0; return true;
   }
   captureSession() {
@@ -336,19 +360,21 @@ export class TutorialController {
       fieldEncounter: this.fieldEncounter, interWaveRemaining: this.interWaveRemaining };
     if (this.practiceOrigin === undefined) return current;
     const practice = { ...current, version: 3 as const, practiceOrigin: { ...this.practiceOrigin } };
+    if (this.enemyPractice !== undefined) return { ...practice, version: 5 as const, enemyPractice: { ...this.enemyPractice } };
     return this.annex === undefined ? practice : { ...practice, version: 4 as const, annex: { ...this.annex } };
   }
   capturePresentation() { return { version: 1 as const, ghostTime: this.ghostTime, anchorX: this.anchorX,
     evidencePulse: this.evidencePulse, coachIdle: this.coachIdle, coachDemoTime: this.coachDemoTime, helpVisible: this.helpVisible,
-    ...(this.annexSelector ? { annexSelector: true } : {}) }; }
+    ...(this.annexSelector ? { annexSelector: true } : {}), ...(this.catalogSelector ? { catalogSelector: true } : {}) }; }
   restoreSession(value: unknown): void {
     const data = parseTutorialSessionCheckpoint(value);
     if (data === undefined) { this.start(0, ""); this.stop(); this.reached.clear(); this.completed.clear(); this.pendingArena = null; return; }
     this.curriculumVersion = data.version === 1 ? 1 : data.curriculumVersion;
     this.fieldEncounter = data.version === 1 ? "charger" : data.fieldEncounter;
     this.interWaveRemaining = data.version === 1 ? 0 : data.interWaveRemaining;
-    this.practiceOrigin = data.version === 3 || data.version === 4 ? data.practiceOrigin : undefined;
+    this.practiceOrigin = data.version === 3 || data.version === 4 || data.version === 5 ? data.practiceOrigin : undefined;
     this.annex = data.version === 4 ? validateWeaponAnnex(data.annex) : undefined;
+    this.enemyPractice = data.version === 5 ? validatePracticeEnemy(data.enemyPractice) : undefined;
     this.courseSessionId = data.courseSessionId; this.phase = data.phase; this.active = data.active;
     this.lessonIndex = TUTORIAL_LESSON_IDS.indexOf(data.lessonId); this.reached = new Set(data.reached); this.completed = new Set(data.completed);
     this.completionAwarded = data.completionAwarded; this.counters = { ...data.counters }; this.pendingArena = data.pendingArena;
@@ -362,6 +388,7 @@ export class TutorialController {
     this.ghostTime = value?.ghostTime ?? 0; this.anchorX = value?.anchorX ?? 0; this.evidencePulse = value?.evidencePulse ?? false;
     this.coachIdle = value?.coachIdle ?? 0; this.coachDemoTime = value?.coachDemoTime ?? 0; this.helpVisible = value?.helpVisible ?? false;
     this.annexSelector = value?.annexSelector === true;
+    this.catalogSelector = value?.catalogSelector === true;
   }
 
   constructor(config: typeof GameConfiguration) {
@@ -370,7 +397,7 @@ export class TutorialController {
 
   start(viewportWidth: number, courseSessionId = "tutorial"): void {
     this.practiceOrigin = undefined;
-    this.annex = undefined; this.annexSelector = false;
+    this.annex = undefined; this.annexSelector = false; this.enemyPractice = undefined; this.catalogSelector = false;
     this.curriculumVersion = 2; this.fieldEncounter = "charger"; this.interWaveRemaining = 0;
     this.courseSessionId = courseSessionId; this.phase = "course"; this.reached = new Set(["move"]); this.completed.clear(); this.completionAwarded = false; this.helpVisible = false;
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
@@ -395,7 +422,7 @@ export class TutorialController {
   stop(): void { this.active = false; this.phase = "inactive"; }
   consumePendingArena(): TutorialArenaId | null { const arena = this.pendingArena; this.pendingArena = null; return arena; }
   mark(mark: TutorialMark): void {
-    if (!this.active || this.annex !== undefined) return;
+    if (!this.active || this.annex !== undefined || this.enemyPractice !== undefined) return;
     if (this.curriculumVersion === 2 && this.lessonIndex === 12) {
       if (this.fieldEncounter === "breath" || this.pendingArena !== null) return;
       if (this.fieldEncounter === "charger" && ["launch", "airHit", "deflect", "parry"].includes(mark)) return;
@@ -410,6 +437,7 @@ export class TutorialController {
     if ((this.step().entryMarks ?? []).includes(mark)) this.evidencePulse = true;
   }
   step(): TutorialLesson {
+    if (this.enemyPractice !== undefined) return practiceEnemyLesson(this.enemyPractice);
     if (this.annex !== undefined) return weaponAnnexLesson(this.annex);
     const lesson = TUTORIAL_LESSONS[this.lessonIndex] ?? TUTORIAL_LESSONS.at(-1);
     if (!lesson) throw new Error("Tutorial has no lessons");
@@ -456,6 +484,16 @@ export class TutorialController {
       intents.push({ type: "reset-training-space" }, { type: "install-arena", arena: this.pendingArena });
       this.pendingArena = null;
       // Installation replaces actors. Never read the outgoing encounter as new evidence.
+      return intents;
+    }
+    if (this.enemyPractice !== undefined) {
+      if (this.completionDelay > 0) {
+        this.completionDelay = Math.max(0, this.completionDelay - dt);
+        if (this.completionDelay === 0) { this.active = false; this.phase = "free-practice"; return [{ type: "release-pointer" }, { type: "begin-practice" }]; }
+      } else {
+        intents.push(...updatePracticeEnemy(this.enemyPractice, snapshot));
+        if (this.enemyPractice.defeated) { this.completionDelay = 1.1; intents.push({ type: "sound", cue: "rankup" }); }
+      }
       return intents;
     }
     if (this.annex !== undefined) {
@@ -590,7 +628,7 @@ export class TutorialController {
   ghostSnapshot(groundY: number): TutorialGhostSnapshot {
     const lesson = this.step(), mixed = this.curriculumVersion === 2 && this.lessonIndex === 12 && this.fieldEncounter === "mixed";
     const hidden: TutorialGhostSnapshot = { visible: false, demonstrating: false, lesson: lesson.title, time: 0, actor: { x: 0, y: 0, facing: 1, dashAfterimages: [] }, target: { visible: false, x: 0, y: 0, hit: false }, blade: { x: 0, y: 0, angle: 0.25, swinging: false, thrown: false, hit: false }, shot: { visible: false, x: 0, y: 0, deflected: false } };
-    if (this.annex !== undefined) return hidden;
+    if (this.annex !== undefined || this.enemyPractice !== undefined) return hidden;
     this.ghostTraces ??= productionGhostTraces(this.configuration);
     const script = this.ghostTraces[mixed ? count(this.counters, "airHit") < 1 ? "JUGGLE" : "PARRY" : lesson.title];
     if (lesson.final || !script || this.coachDemoTime <= 0 || (this.lessonIndex === 12 && this.fieldEncounter === "breath")) return hidden;

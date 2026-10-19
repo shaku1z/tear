@@ -70,7 +70,7 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
       for (const key of snapshot.keys) keyX = drawKeyCap(keyX, y + 108, key);
       canvas.restore();
     }
-    for (let index = 0; index < (snapshot.annex ? 0 : snapshot.lessonCount); index++) {
+    for (let index = 0; index < (snapshot.annex || snapshot.enemyPractice ? 0 : snapshot.lessonCount); index++) {
       const dotX = x + 18 + index * 14;
       canvas.beginPath(); canvas.arc(dotX, y + height - 14, 3, 0, Math.PI * 2);
       if (index < snapshot.lessonIndex) { canvas.fillStyle = ui.t.color.accent; canvas.fill(); }
@@ -78,7 +78,7 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
       else { canvas.strokeStyle = "rgba(0,0,0,0.3)"; canvas.lineWidth = 1.5; canvas.stroke(); }
     }
     canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.42)"; canvas.textAlign = "right";
-    canvas.fillText(snapshot.annex ? "WEAPON ANNEX · BASELINE · NO REWARDS" : `BLOCK ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`, x + width - 16, y + height - 10);
+    canvas.fillText(snapshot.enemyPractice ? "ENEMY PRACTICE · BASELINE · NO REWARDS" : snapshot.annex ? "WEAPON ANNEX · BASELINE · NO REWARDS" : `BLOCK ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`, x + width - 16, y + height - 10);
     if (snapshot.completedBeat > 0) {
       const scale = 1 + (1 - Math.abs(snapshot.completedBeat - 0.9) / 0.9) * 0.4;
       canvas.font = ui.font(Math.round(40 * scale), true); canvas.fillStyle = ui.t.color.accent; canvas.textAlign = "right";

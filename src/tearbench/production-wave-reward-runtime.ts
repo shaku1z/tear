@@ -1,3 +1,4 @@
+import type { EnemyKind } from "../gameplay/run/content-director";
 import { createTearSpawnFactPublisher, createTearWaveFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { dispatchWaveClearIntents, dispatchWavePlanIntents } from "../gameplay/run/wave-intent-dispatcher";
@@ -51,7 +52,7 @@ export interface ProductionWaveRewardRuntime {
   readonly focus: () => number;
   readonly restoreUi: (screen: string, focus: number) => void;
   readonly startNaturalOpening: () => void;
-  readonly spawnTutorial: (kind: "charger" | "ranged", hpScale: number) => ReturnType<ProductionReplayWorld["world"]["entities"]["createEnemy"]>;
+  readonly spawnTutorial: (kind: EnemyKind, hpScale: number) => ReturnType<ProductionReplayWorld["world"]["entities"]["createEnemy"]>;
   readonly outward: readonly string[];
 }
 
@@ -293,7 +294,7 @@ export function createProductionWaveRewardRuntime(
       screen = next; focus = nextFocus;
     },
     startNaturalOpening,
-    spawnTutorial: (kind: "charger" | "ranged", hpScale: number) => {
+    spawnTutorial: (kind: EnemyKind, hpScale: number) => {
       content.spawn({ type: kind, hpScale });
       const enemy = world.state.enemies().at(-1); if (enemy === undefined) throw new Error("tutorial content spawn did not install its actor");
       return enemy;

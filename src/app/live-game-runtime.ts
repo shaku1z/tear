@@ -467,6 +467,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     afterSimulationStep: (tick: number) => { if (__TEAR_TEST_BUILD__ && canonicalTickStartedAt !== null) {
       DIAG.record("canonicalTick", performance.now() - canonicalTickStartedAt); canonicalTickStartedAt = null;
     }
+      void dependencies.practiceEncounterPersistence?.observe({ run: liveRun(), actors: hostState.enemies(), tick, playing: state === "playing", waveActive: RUN_LIFECYCLE.isWaveActive, blockingCinema: CINEMA.active && CINEMA.blocksCombat, ghostPractice: ghostPracticeSession.active() !== null, width: W, height: H })?.then((status) => { if (status !== "committed") addFloater(livePlayer().x, livePlayer().y - 70, "ENCOUNTER SAVE NOT CONFIRMED", true, "#e0a326"); });
       if (ghostV3?.active === true && tick % ghostV3.keyframeIntervalTicks === 0) {
         const random = worldContext.services.random.snapshot();
         ghostV3.record("presentation", tick, {

@@ -11,6 +11,8 @@ import { tutorialArenaDefinition, type TutorialArenaId } from "./tutorial-arenas
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import type { createPlayer } from "../entities/player";
 import type { createBlade } from "../entities/blade";
+import type { EnemyKind } from "../run/content-director";
+import { practiceEnemyIdentity, type PracticeEnemyEntry } from "./practice-enemy-catalog";
 
 type TrainingPlayer = Pick<InstanceType<ReturnType<typeof createPlayer>>, "x" | "y" | "vx" | "vy" | "onGround" | "hp" | "maxHp" | "hh" | "maxDashCharges">;
 type TrainingBlade = Pick<InstanceType<ReturnType<typeof createBlade>>, "state" | "x" | "y" | "vx" | "vy" | "flyTime" | "throwOrigin" | "pierced" | "trail" | "curLength" | "threadcutRoute" | "_repeatHits" | "reversals" | "chainPoints" | "chainPrevious" | "slingCollided" | "resetRiftlock">;
@@ -49,6 +51,7 @@ export function recoverTutorialBlade(config: typeof GameConfiguration, actor: Pi
 
 export interface LiveTutorialEnemy {
   readonly kind: string;
+  readonly supportType?: string;
   dead?: boolean;
   tutDummy?: boolean;
   hp: number;
@@ -84,9 +87,10 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
   readonly bladeState: () => string;
   readonly bladeTipVY?: () => number;
   readonly weaponId?: () => string;
+  readonly enemyCatalog?: () => readonly PracticeEnemyEntry[];
   readonly enemies: () => TEnemy[];
   readonly playSound: (cue: "rankup" | "ui") => void;
-  readonly spawn: (kind: "charger" | "ranged", hpScale: number) => TEnemy;
+  readonly spawn: (kind: EnemyKind, hpScale: number) => TEnemy;
   readonly installArena: (arena: TutorialArenaId) => void;
   /** Clear task-local enemies/projectiles and return the player/blade to a safe start. */
   readonly resetTrainingSpace: () => void;
@@ -122,12 +126,14 @@ export interface LiveTutorialRuntime {
   restart(): boolean;
   selectLesson(id: string): boolean;
   selectAnnex(id: string): boolean;
+  selectEnemy(id: string): boolean;
+  showCatalog(): void;
   showAnnexes(): void;
   weaponEffect(weaponId: string, effect: string): void;
   showHelp(): void;
   demonstrate(): boolean;
   captureSession(): ReturnType<TutorialController["captureSession"]> | undefined;
-  validateSession(value: unknown, candidateWeaponId?: string): void;
+  validateSession(value: unknown, candidateWeaponId?: string, candidateEnemies?: readonly LiveTutorialEnemy[]): void;
   restoreSession(value: unknown): void;
   capturePresentation(): ReturnType<TutorialController["capturePresentation"]>;
   restorePresentation(value: ReturnType<TutorialController["capturePresentation"]> | undefined): void;
@@ -169,21 +175,30 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
   };
   return {
     openPractice: (tutorialDone) => controller.openPractice(port.viewportWidth, tutorialDone),
-    session: () => controller.session(),
+    session: () => { const session = controller.session(); return session.practiceOnly ? { ...session, enemyCatalog: port.enemyCatalog?.() ?? [] } : session; },
     restart: () => { const changed = controller.restart(); if (changed) installPendingArena(); return changed; },
     selectLesson: (id) => { const changed = controller.selectLesson(id); if (changed) installPendingArena(); return changed; },
     selectAnnex: (id) => { const changed = controller.selectAnnex(id); if (changed) installPendingArena(); return changed; },
+    selectEnemy: (id) => { const entry = port.enemyCatalog?.().find((enemy) => enemy.id === id); const changed = entry !== undefined && controller.selectEnemy(entry); if (changed) installPendingArena(); return changed; },
+    showCatalog: () => { controller.showCatalog(); },
     showAnnexes: () => { controller.showAnnexes(); }, weaponEffect: (weaponId, effect) => { controller.weaponEffect(weaponId, effect); },
     showHelp: () => { controller.showHelp(); }, demonstrate: () => controller.demonstrate(),
     captureSession: () => controller.session().phase === "inactive" ? undefined : controller.captureSession(),
-    validateSession: (value, candidateWeaponId) => {
+    validateSession: (value, candidateWeaponId, candidateEnemies) => {
       const data = parseTutorialSessionCheckpoint(value);
       const weaponId = candidateWeaponId ?? port.weaponId?.();
       if (data?.version === 4 && weaponId !== undefined && data.annex.weaponId !== weaponId) throw new RangeError("Tutorial annex weapon does not match its world");
+      if (data?.version === 5 && weaponId !== undefined && weaponId !== "sword") throw new RangeError("Practice enemy requires its baseline Sword world");
+      if (data?.version === 5 && candidateEnemies !== undefined) {
+        const living = candidateEnemies.filter((enemy) => !enemy.dead);
+        const expected = data.enemyPractice.spawned && !data.enemyPractice.defeated ? 1 : 0;
+        if (living.length !== expected || living.some((enemy) => enemy.tutDummy === true || practiceEnemyIdentity(enemy) !== data.enemyPractice.id)) throw new RangeError("Practice enemy actors do not match the retained attempt");
+      }
     },
     restoreSession: (value) => {
       const data = parseTutorialSessionCheckpoint(value);
       if (data?.version === 4 && port.weaponId !== undefined && data.annex.weaponId !== port.weaponId()) throw new RangeError("Tutorial annex weapon does not match its world");
+      if (data?.version === 5 && port.weaponId !== undefined && port.weaponId() !== "sword") throw new RangeError("Practice enemy requires its baseline Sword world");
       controller.restoreSession(data);
     },
     capturePresentation: () => controller.capturePresentation(), restorePresentation: (value) => { controller.restorePresentation(value); },
@@ -206,7 +221,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
         dt, skipPressed: port.skipPressed(), movingLeft: port.movingLeft(), movingRight: port.movingRight(),
         player: port.player(), bladeState: port.bladeState(), bladeTipVY: port.bladeTipVY?.() ?? 0, viewportWidth: port.viewportWidth,
         enemies: enemies.map((enemy, index) => ({
-          id: String(index), kind: enemy.kind, dead: enemy.dead === true, tutorialDummy: enemy.tutDummy === true,
+          id: String(index), kind: practiceEnemyIdentity(enemy) ?? enemy.kind, dead: enemy.dead === true, tutorialDummy: enemy.tutDummy === true,
           hp: enemy.hp, maxHp: enemy.maxHp, x: enemy.x, y: enemy.y,
           ...(enemy.atk === undefined ? {} : { attack: enemy.atk }),
         })),

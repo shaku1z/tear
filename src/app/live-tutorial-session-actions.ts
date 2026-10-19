@@ -33,22 +33,27 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
     if (ports.screen() !== "paused" || (ports.mode() !== "tutorial" && !(ports.mode() === "playground" && tutorial.session().phase === "free-practice"))) return;
     if (command === "help") { tutorial.showHelp(); return; }
     if (command === "annexes") { tutorial.showAnnexes(); return; }
+    if (command === "catalog") { tutorial.showCatalog(); return; }
     const annexId = command === "select-annex" ? lessonId : command === "restart" ? tutorial.session().annex?.id : undefined;
+    const enemyId = command === "select-enemy" ? lessonId : command === "restart" ? tutorial.session().enemyPractice?.id : undefined;
     if (command === "select-annex" && (!tutorial.session().practiceOnly || !weaponAnnex(annexId ?? ""))) return;
-    if (ports.mode() === "playground" || annexId !== undefined || tutorial.session().annex !== undefined) {
+    if (command === "select-enemy" && (!tutorial.session().practiceOnly || !tutorial.session().enemyCatalog?.some((entry) => entry.id === enemyId && entry.canPractice))) return;
+    if (ports.mode() === "playground" || annexId !== undefined || enemyId !== undefined || tutorial.session().annex !== undefined || tutorial.session().enemyPractice !== undefined) {
       const target = command === "restart" ? tutorial.session().lessonId : lessonId;
-      if (annexId === undefined && ((command !== "select" && command !== "restart") || !tutorial.session().lessons.some((lesson) => lesson.id === target && lesson.canPractice))) return;
+      if (annexId === undefined && enemyId === undefined && ((command !== "select" && command !== "restart") || !tutorial.session().lessons.some((lesson) => lesson.id === target && lesson.canPractice))) return;
       const saved = tutorial.captureSession(), display = tutorial.capturePresentation();
       ports.selectPracticeWeapon(annexId ?? "sword"); ports.startLessonRun();
       // A weapon change starts a new explicit practice attempt, retaining only
       // its genuine eligibility fact rather than restoring an old weapon world.
-      if (saved?.version === 4 || annexId !== undefined) {
-        if (saved?.version !== 3 && saved?.version !== 4) return;
+      if (saved?.version === 4 || saved?.version === 5 || annexId !== undefined || enemyId !== undefined) {
+        if (saved?.version !== 3 && saved?.version !== 4 && saved?.version !== 5) return;
+        if (saved.version === 5 && command === "restart") tutorial.restoreSession(saved);
+        else
         tutorial.openPractice(saved.practiceOrigin.tutorialDone);
       } else tutorial.restoreSession(saved);
       tutorial.restorePresentation(display);
     }
-    const changed = annexId !== undefined ? tutorial.selectAnnex(annexId) : command === "demo" ? tutorial.demonstrate() : command === "restart" ? tutorial.restart() : tutorial.selectLesson(lessonId ?? "");
+    const changed = enemyId !== undefined ? command === "restart" ? tutorial.restart() : tutorial.selectEnemy(enemyId) : annexId !== undefined ? tutorial.selectAnnex(annexId) : command === "demo" ? tutorial.demonstrate() : command === "restart" ? tutorial.restart() : tutorial.selectLesson(lessonId ?? "");
     if (changed) { ports.resetFocus(); ports.resume(); }
   };
   return Object.freeze({ dispatch });

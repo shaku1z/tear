@@ -95,7 +95,7 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
       }
     },
     recordSpawn: publishSpawn,
-    install: (enemy) => { options.enemies().push(enemy); },
+    install: (enemy) => { options.enemies().push(enemy); d.practiceEncounterPersistence?.trackSpawn(enemy, options.run()); },
     startClipper: () => { d.Clipper?.start(); },
     bossIntroDuration: d.CONFIG.bossTheater.introDur,
     wipeRemainingSeconds: options.wipeRemainingSeconds,

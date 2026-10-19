@@ -106,6 +106,15 @@ describe("legacy screen renderer registry", () => {
       .toEqual(["SWORD", "HAMMER", "GREATSWORD", "CHAINBLADE", "RIFTLOCK"]);
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     controls.length = 0;
+      controller.showCatalog();
+      renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: { ...controller.session(), enemyCatalog: [
+        { id: "charger", title: "CHARGER", knowledge: "confirmed-defeated", canPractice: true },
+        { id: "mender", title: "MENDER", knowledge: "unknown", canPractice: false },
+      ] } });
+      expect(controls.find((control) => control.label === "CHARGER")).toMatchObject({ enabled: true, sub: "CONFIRMED DEFEATED", action: { command: "select-enemy", lessonId: "charger" } });
+      expect(controls.find((control) => control.label === "MENDER")).toMatchObject({ enabled: false, sub: "HISTORY NOT RECORDED" });
+      expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
+      controls.length = 0;
     renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Tutorial", difficultyLabel: "Normal", practiceAvailable: true });
     expect(controls.find((control) => control.label === "PRACTICE LAB")?.action).toEqual({ type: "tutorial.action", command: "open-practice" });

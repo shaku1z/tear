@@ -13,6 +13,7 @@ import type { TutorialGhostSnapshot } from "../gameplay/training/tutorial-contro
 import { AUTHORED_BOSS_ROSTER } from "../gameplay/run/content-director";
 import type { LiveWaveSpawnSpec } from "../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../gameplay/run/session";
+import { practiceEnemyCatalog } from "../gameplay/training/practice-enemy-catalog";
 
 interface TrainingLifecycle { terminate(reason: string): void }
 interface TrainingStage { platforms: ArenaPlatform[]; readonly current: { readonly accent: string } }
@@ -60,6 +61,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     return value;
   };
   const tutorial = createLiveTutorialRuntime({
+    enemyCatalog: () => d.practiceEncounterPersistence?.catalog() ?? practiceEnemyCatalog((key) => d.PROFILE.stat(key)),
     config: d.CONFIG, viewportWidth: context.width, groundY: () => d.CONFIG.world.groundY,
     skipPressed: () => d.Input.pressed.has("KeyN"),
     movingLeft: () => player().aiInput?.left() === true, movingRight: () => player().aiInput?.right() === true,

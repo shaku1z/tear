@@ -10,6 +10,7 @@ describe("live tutorial runtime", () => {
     const runtime = createLiveTutorialRuntime({ config: CONFIG, viewportWidth: 1600, groundY: () => 800,
       skipPressed: () => false, movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 320, facing: 1 }), bladeState: () => "held", weaponId: () => selectedWeapon, enemies: () => [],
+      enemyCatalog: () => [{ id: "charger", title: "CHARGER", knowledge: "confirmed-defeated", canPractice: true }, { id: "ranged", title: "RANGED", knowledge: "unknown", canPractice: false }],
       spawn: () => { throw new Error("unexpected fixture spawn"); }, playSound: vi.fn(), installArena, resetTrainingSpace: vi.fn(),
       beginPractice, completeCourse, addProfileStat, checkAchievements, terminateRun: vi.fn(), navigate: vi.fn(), releasePointer: vi.fn(), drawGhost: vi.fn() });
     runtime.openPractice(1);
@@ -40,6 +41,16 @@ describe("live tutorial runtime", () => {
     actions.dispatch("restart"); expect(runtime.session().progress).toEqual([0, 2]);
     actions.dispatch("select", "launch"); expect(selectedWeapon).toBe("sword");
     expect(runtime.captureSession()).toMatchObject({ version: 3, lessonId: "launch", completionAwarded: false });
+    const baseline = runtime.captureSession();
+    actions.dispatch("select-enemy", "ranged"); expect(runtime.captureSession()).toEqual(baseline);
+    actions.dispatch("select-enemy", "charger");
+    const attempt = runtime.captureSession();
+    expect(attempt).toMatchObject({ version: 5, courseSessionId: "", completionAwarded: false, enemyPractice: { id: "charger", spawned: false, defeated: false } });
+    expect(() => { runtime.validateSession(attempt, "hammer", []); }).toThrow(/baseline Sword/);
+    expect(() => { runtime.validateSession(attempt, "sword", [{ kind: "ranged", hp: 1, maxHp: 1, stun: 0, x: 0, y: 0, hh: 20, contactDmg: 1 }]); }).toThrow(/actors/);
+    expect(runtime.captureSession()).toEqual(attempt);
+    actions.dispatch("restart"); expect(runtime.captureSession()).toEqual(attempt);
+    expect(runtime.demonstrate()).toBe(false);
     expect(completeCourse).not.toHaveBeenCalled(); expect(addProfileStat).not.toHaveBeenCalled();
   });
   it("owns tutorial state, spawning, stabilization and ghost presentation", () => {

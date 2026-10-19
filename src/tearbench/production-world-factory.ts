@@ -1,3 +1,4 @@
+import type { EnemyKind } from "../gameplay/run/content-director";
 import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../app/live-authoritative-input-adapter";
 import { createLiveWorldState, type LiveWorldSessionPort } from "../app/live-world-composition";
@@ -195,7 +196,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   });
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
   const tutorialOutward: string[] = [];
-  let tutorialSpawn: ((kind: "charger" | "ranged", hpScale: number) => ReturnType<typeof entities.createEnemy>) | undefined;
+  let tutorialSpawn: ((kind: EnemyKind, hpScale: number) => ReturnType<typeof entities.createEnemy>) | undefined;
   const requirePlayer = () => { const value = world.state.player(); if (value === undefined) throw new Error("tutorial requires its world player"); return value; };
   const tutorial = createLiveTutorialRuntime({
     weaponId: () => world.state.run()?.weaponId ?? "sword",

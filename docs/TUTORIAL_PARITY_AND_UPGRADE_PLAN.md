@@ -881,6 +881,29 @@ Never leave a half-installed stage.
 
 ## Practice Lab after first completion
 
+The normal-enemy catalog now offers published normal opponents from the Lab.
+An existing positive exact `kill_<identity>` record is labeled **CONFIRMED
+DEFEATED**. Missing historical records are **HISTORY NOT RECORDED**, not a claim
+that the player never met that opponent. Aggregate historical `kill_support`
+does not establish Priest, Mender, Herald or Anchor knowledge.
+
+Future **ENCOUNTERED** entries require a naturally installed opponent to be
+visible after its spawn delay in a committed, nonblocking ordinary gameplay
+tick, followed by an acknowledged monotonic profile save. Spawn alone, menus,
+cinema, restore/replay and training do not discover opponents. A failed or
+unavailable acknowledgement is shown as **SAVE NOT CONFIRMED**; a later new
+exposure may retry without a per-tick save loop.
+
+Selecting a known entry starts one real opponent with Sword, Normal and no run
+upgrades. Pause can reset it instantly; defeating it returns to the Lab without
+course credit, coins, achievements or discovery. Version 5 captures the exact
+selected canonical opponent, known-selection provenance, spawn/defeat state and
+normal tutorial timing. A restored selected attempt does not consult destination
+profile history, invent old course history or unlock anything. Versions 1–4 keep
+their existing meanings and shapes. Boss-phase practice remains a separate
+future feature. The short normal-UI journey uses a declared completed-profile
+and legacy-kill fixture; it does not claim a real cross-device persistence run.
+
 The delivered baseline entry is available from the normal menu and setup after
 a positive saved `tutorialDone` count is loaded, including after reboot. Opening
 it reads that existing completion fact and starts normal-difficulty sword

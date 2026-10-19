@@ -1,4 +1,5 @@
 import type { LegacySynthFacade } from "../audio/legacy-synth";
+import type { PracticeEncounterPersistence } from "./live-practice-encounter-persistence";
 import type { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type * as Geometry from "../domain/geometry";
@@ -55,6 +56,7 @@ type ReplayCompatibility = ReturnType<typeof createLegacyReplayCompatibility>;
 /** Inferred composition contract shared by the strict runtime host and platform composition root. */
 export interface GameRuntimeDependencies {
   readonly tutorialCompletionPersistence?: TutorialCompletionPersistence;
+  readonly practiceEncounterPersistence?: PracticeEncounterPersistence;
   readonly A11Y: typeof A11Y; readonly ACH: ReturnType<typeof createAchievements>;
   readonly achievementToastPersistence: AchievementToastPersistence;
   readonly biomeProgressPersistence: BiomeProgressPersistence;
