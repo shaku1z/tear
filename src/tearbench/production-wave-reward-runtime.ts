@@ -43,6 +43,7 @@ export interface ProductionWaveRewardRuntime {
   readonly update: (seconds: number) => void;
   readonly routeAction: (action: GameAction) => boolean;
   readonly screen: () => string;
+  readonly restoreScreen: (screen: string) => void;
   readonly startNaturalOpening: () => void;
   readonly outward: readonly string[];
 }
@@ -272,6 +273,7 @@ export function createProductionWaveRewardRuntime(
     update: (seconds: number) => { waves.update(seconds); },
     routeAction: (action: GameAction) => routeLiveTearBenchAction(routing, action),
     screen: () => screen,
+    restoreScreen: (next: string) => { screen = next; },
     startNaturalOpening,
     get outward() { return Object.freeze([...outward]); },
   });

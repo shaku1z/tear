@@ -1,4 +1,8 @@
 import { applyWeapon } from "../gameplay/weapons";
+import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
+import { UPGRADES } from "../gameplay/upgrades";
+import { restoreUpgradeHooks } from "../gameplay/upgrade-hooks";
+import { hydrateRewardCodecPayload, hydrateRewardUpgrade } from "./reward-codec-hydrator";
 import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from "../gameplay/campaign/chapter-cinematic-binding";
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
 import { createLiveStateForgeAdapter } from "../app/live-state-forge-adapter";
@@ -206,8 +210,7 @@ export function captureProductionReplayCheckpoint(
     environment: () => replay.world.context.environment,
     restoreEnvironment: (snapshot) => { replay.world.context.environment.replace(snapshot); },
     screen: waveReward.screen,
-    // C30 captures only an active non-draft screen; fresh source composition
-    // therefore restores the canonical `playing` screen without a UI route.
+    // The fresh host restores the captured screen after installing its reward owner.
     setScreen: () => undefined,
     focus: () => -1,
     setFocus: () => undefined,
@@ -255,12 +258,19 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
     const issue = decodedResult.ok ? "decoded world was not produced" : decodedResult.issues[0]?.message ?? "snapshot is invalid";
     throw new TypeError(`production replay snapshot is invalid: ${issue}`);
   }
-  const staged = hydrateTearCodecWorld(
-    { ...replay.world.entities, hydrateReward: () => null },
-    decoded,
-    { requireIdentity: (id: string) => id },
-  );
+  // Entity constructors may consume destination RNG even when hydration fails.
+  const randomBeforeStaging = replay.world.context.services.random.snapshot();
+  const staged = (() => {
+    try {
+      return hydrateTearCodecWorld(
+        { ...replay.world.entities, hydrateReward: (payload) => hydrateRewardCodecPayload(UPGRADES, payload) },
+        decoded,
+        { requireIdentity: (id: string) => id },
+      );
+    } finally { replay.world.context.services.random.restore(randomBeforeStaging); }
+  })();
   if (staged.tick !== snapshot.tick) throw new TypeError("recorded snapshot tick does not match its run component");
+  restoreUpgradeHooks({ mods: staged.run.mods, config: replay.configuration.value });
   const restoredBossIntro = resolveStateForgeBossIntro(staged.runtime, staged.enemies);
   const destinationWorldId = replay.world.context.environment.worldId;
   const rebasedEnvironment = rebaseEnvironmentSnapshot(staged.environment, destinationWorldId);
@@ -271,6 +281,17 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   if (rebasedEnvironment.stageId !== "unknown" && expectedStage !== undefined && rebasedEnvironment.stageId !== expectedStage) {
     throw new RangeError("production replay environment stage does not match the restored world stage");
   }
+  const candidateConfiguration = replay.configuration.snapshot();
+  applyWeapon(candidateConfiguration, staged.weaponId);
+  applyTearCodecConfiguration(candidateConfiguration, staged.configuration);
+  createTearWorldConfiguration(replay.configuration.snapshot()).restore(candidateConfiguration);
+  if (!["playing", "paused", "draft", "reserve", "tierup"].includes(staged.screen)) {
+    throw new RangeError(`production replay UI screen is invalid: ${staged.screen}`);
+  }
+  if (["draft", "reserve", "tierup"].includes(staged.screen) && staged.reward?.phase !== staged.screen) {
+    throw new RangeError("production replay reward screen requires a matching selection");
+  }
+  staged.run.reservedUpgrade = hydrateRewardUpgrade(UPGRADES, staged.run.reservedUpgrade);
   replay.world.state.setRun(staged.run);
   replay.world.state.setPlayer(staged.player);
   replay.world.state.setBlade(staged.blade);
@@ -368,6 +389,8 @@ export function createProductionGhostReplayComposition(
       });
       if (staged === undefined) waveReward.startNaturalOpening();
       if (staged !== undefined) {
+        waveReward.reward.restore(staged.reward);
+        waveReward.restoreScreen(staged.screen);
         core.combatEntityRuntime.restoreIdentityState(staged.identityState as never);
         for (const binding of staged.identityBindings) core.combatEntityRuntime.bindId(binding.entity, binding.id);
       }

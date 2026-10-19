@@ -1,3 +1,6 @@
+import { hydrateRewardCodecPayload } from "../tearbench/reward-codec-hydrator";
+import { restoreUpgradeHooks, upgradeHookIdentity } from "../gameplay/upgrade-hooks";
+import type { UpgradeEventHandler } from "../gameplay/upgrades";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type {
   GameBlade,
@@ -24,7 +27,6 @@ import type { EnvironmentRuntimeState, EnvironmentSnapshot } from "../gameplay/e
 import type { TearLiveRestoreContext, TearLiveWorldAdapter } from "../tearbench/live-state-snapshot";
 import {
   applyTearCodecConfiguration,
-  decodeTearCodecValue,
   hydrateTearCodecWorld,
   type TearStagedWorld,
   type TearWorldConstructionPort,
@@ -103,10 +105,6 @@ export interface LiveStateForgeAdapterOptions {
 // becoming codec nulls during a restore/rollback before another frame runs.
 const skippedKeys = new Set(["cfg", "weapon", "aiInput", "aimOverride", "lmbOverride", "presentation"]);
 
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function encode(
   value: unknown,
   identities: ReadonlyMap<object, string>,
@@ -114,7 +112,12 @@ function encode(
 ): TearCodecValue {
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  if (typeof value === "undefined" || typeof value === "function" || typeof value === "symbol") return null;
+  if (typeof value === "function") {
+    const id = upgradeHookIdentity(value as UpgradeEventHandler);
+    if (id === undefined) throw new TypeError("Snapshot contains an unregistered executable callback");
+    return Object.freeze({ $upgradeHook: id });
+  }
+  if (typeof value === "undefined" || typeof value === "symbol") return null;
   if (typeof value === "bigint") return value.toString();
   if (typeof value !== "object") throw new TypeError(`unsupported live snapshot value: ${typeof value}`);
   const identity = identities.get(value);
@@ -145,44 +148,6 @@ function encode(
   }
   stack.delete(value);
   return Object.freeze(encoded);
-}
-
-function hydrateUpgrade(
-  dependencies: GameRuntimeDependencies,
-  value: unknown,
-): UpgradeDefinition | null {
-  if (value === null) return null;
-  if (!record(value) || typeof value.id !== "string") throw new TypeError("reward choice requires a production upgrade id");
-  const upgrade = dependencies.UPGRADES.find((entry) => entry.id === value.id);
-  if (upgrade === undefined) throw new TypeError(`reward choice references unknown production upgrade ${value.id}`);
-  return upgrade;
-}
-
-function hydrateReward(
-  dependencies: GameRuntimeDependencies,
-  payload: TearCodecValue,
-): RewardSelectionSnapshot<UpgradeDefinition> | null {
-  if (!record(payload) || !("selection" in payload)) throw new TypeError("reward codec requires selection");
-  if (payload.selection === null) return null;
-  const decoded = decodeTearCodecValue(payload.selection, new Map());
-  if (!record(decoded) || !Array.isArray(decoded.choices) || !Array.isArray(decoded.reserveChoices)) {
-    throw new TypeError("reward selection payload is malformed");
-  }
-  const reservedChoice = hydrateUpgrade(dependencies, decoded.reservedChoice);
-  return Object.freeze({
-    ...decoded,
-    choices: Object.freeze(decoded.choices.map((choice) => {
-      const upgrade = hydrateUpgrade(dependencies, choice);
-      if (upgrade === null) throw new TypeError("reward choices cannot contain null");
-      return upgrade;
-    })),
-    reserveChoices: Object.freeze(decoded.reserveChoices.map((choice) => {
-      const upgrade = hydrateUpgrade(dependencies, choice);
-      if (upgrade === null) throw new TypeError("reserve choices cannot contain null");
-      return upgrade;
-    })),
-    reservedChoice,
-  }) as RewardSelectionSnapshot<UpgradeDefinition>;
 }
 
 function factoryId(enemy: GameEnemy): string {
@@ -269,7 +234,7 @@ function createWorldConstructionPort(
 > {
   return Object.freeze({
     ...entities,
-    hydrateReward: (payload: TearCodecValue) => hydrateReward(dependencies, payload),
+    hydrateReward: (payload: TearCodecValue) => hydrateRewardCodecPayload(dependencies.UPGRADES, payload),
   });
 }
 
@@ -278,7 +243,7 @@ function stageWorld(
   world: TearCodecWorld,
   context: TearLiveRestoreContext,
 ): Candidate {
-  return hydrateTearCodecWorld<
+  const candidate = hydrateTearCodecWorld<
     GameRun,
     GamePlayer,
     GameBlade,
@@ -293,6 +258,8 @@ function stageWorld(
     CombatEntityIdentityState,
     LegacyGhostRuntimeState
   >(createWorldConstructionPort(options.dependencies, options.entities), world, context);
+  restoreUpgradeHooks({ mods: candidate.run.mods, config: options.worldServices.configuration.value });
+  return candidate;
 }
 
 export function createLiveStateForgeAdapter(
