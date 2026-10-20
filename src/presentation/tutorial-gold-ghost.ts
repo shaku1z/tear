@@ -58,6 +58,6 @@ export function drawTutorialGoldGhost(context: CanvasRenderingContext2D, gold: T
   context.globalAlpha = .8;
   label.draw(context, `${gold.mode === "comparison" ? "GOLD / SHORTEST VALID THIS SESSION" : gold.mode === "diagnostic" ? "CONTACT / TIMING GUIDE" : "GOLD DEMONSTRATION"} · ${String(gold.rate)}× · ${((gold.toTick - gold.fromTick) / 120).toFixed(1)}s RECORDED`, body.x, body.y - 52, palette.accent);
   if (gold.glyphs.length) label.draw(context, gold.glyphs.join("  ·  "), body.x, body.y - 77, palette.ink);
-  if (gold.mode === "diagnostic") label.draw(context, gold.diagnosis, body.x, body.y + 72, palette.ink);
+  if (gold.mode === "diagnostic") label.draw(context, gold.diagnosis, body.x, Math.max(190, body.y - 104), palette.ink);
   context.restore();
 }

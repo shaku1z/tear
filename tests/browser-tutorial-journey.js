@@ -111,7 +111,12 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     // Class A owns rendering too; async menu transitions can settle after the prior frame.
     await page.evaluate(() => { window.__TUTORIAL_COACH_TEXT__.length = 0; });
     await appFrame();
-    await page.waitForFunction((expected) => window.__TUTORIAL_COACH_TEXT__.some((entry) => entry.text === expected), label);
+    await page.waitForFunction((expected) => {
+      if (window.__TUTORIAL_COACH_TEXT__.some((entry) => entry.text === expected)) return true;
+      if (window.__PANTHEON_TEST.state().game === "playing") throw new Error(`UI control ${expected} requested during gameplay`);
+      window.__tutorialJourneyEnvironment.advanceApplicationFrame(1 / 120);
+      return false;
+    }, label);
     const point = await page.evaluate((expected) => window.__TUTORIAL_COACH_TEXT__.findLast((entry) => entry.text === expected), label);
     await page.evaluate(() => { window.__TUTORIAL_COACH_TEXT__.length = 0; });
     await page.mouse.click(point.x, point.y); await appFrame();
