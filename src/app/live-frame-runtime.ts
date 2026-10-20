@@ -34,7 +34,7 @@ export function advanceFramePrelude(input: FramePreludeInput): void {
   state.zoom = input.lerp(state.zoom, state.worldZoom, input.clamp(9 * dt, 0, 1));
   if (state.flash > 0) state.flash = Math.max(0, state.flash - dt * 3.2);
   if (state.bannerTime > 0) state.bannerTime -= dt;
-  if (state.stageBannerSeconds > 0) state.stageBannerSeconds -= dt;
+  if (state.stageBannerSeconds > 0) state.stageBannerSeconds = Math.max(0, state.stageBannerSeconds - dt);
   if (state.rankPopTime > 0) state.rankPopTime -= dt * 1.2;
 }
 

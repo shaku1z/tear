@@ -6,6 +6,20 @@ import { advanceFixedSimulation, advanceFramePrelude, commitBossIntroSnapshot, e
   type MutableFramePreludeState } from "../../src/app/live-frame-runtime";
 
 describe("live frame runtime", () => {
+  it.each([
+    { seconds: 0.005, dt: 1 / 60, expected: 0 },
+    { seconds: 0, dt: 0.25, expected: 0 },
+    { seconds: 1, dt: 0.25, expected: 0.75 },
+    { seconds: 0.5, dt: 0, expected: 0.5 },
+  ])("keeps the stage banner countdown nonnegative ($seconds seconds, $dt frame)", ({ seconds, dt, expected }) => {
+    const state: MutableFramePreludeState = { slowMotion: 0, timeScale: 1, worldZoom: 1, worldZoomTarget: 1,
+      zoom: 1, flash: 0, bannerTime: 0, stageBannerSeconds: seconds, rankPopTime: 0,
+      bossIntro: null, bossBeat: null };
+    advanceFramePrelude({ dt, state, parrySlowScale: 0.2, cinemaActive: false, playgroundSlow: false,
+      introScale: 0.4, lerp: (a, b, t) => a + (b - a) * t, clamp: (v, min, max) => Math.max(min, Math.min(max, v)) });
+    expect(state.stageBannerSeconds).toBe(expected);
+  });
+
   it("advances theater, zoom and UI timers in their canonical order", () => {
     const boss = { hp: 10, maxHp: 10, introT: 2 };
     const state: MutableFramePreludeState = { slowMotion: 0.5, timeScale: 1, worldZoom: 1, worldZoomTarget: 2,
