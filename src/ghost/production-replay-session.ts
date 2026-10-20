@@ -1,12 +1,15 @@
-import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
+import { createProductionGhostReplayComposition, type ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
 import { issueGhostRecordedOpeningPermit, readGhostReplayRunContext } from "./replay-admission";
 import { readGhostApplicationClockSchedule } from "./application-frame-events";
-import { createPracticeFromHere, GhostProductionReplayWorld, type GhostPracticeChild, type GhostPracticeMode, type GhostSeekResult } from "./replay-world";
+import { createPracticeFromHere, GhostProductionReplayWorld, type GhostPracticeChild, type GhostPracticeMode, type GhostSeekResult, type GhostReplayRenderView } from "./replay-world";
 
+export interface GhostVerifiedReplayRenderView extends GhostReplayRenderView {
+  readonly sourceId: string; readonly sourceRootHash: string; readonly sourceCapsuleRootIntegrity: string; readonly semanticHash: string;
+}
 export interface GhostVerifiedProductionReplaySession {
   readonly sourceId: string;
   /** Immutable Vault manifest identity observed when this session was opened. */
@@ -14,6 +17,7 @@ export interface GhostVerifiedProductionReplaySession {
   readonly sourceRootHash: string;
   readonly verifiedReceiptTicks: readonly number[];
   seek(tick: number): GhostSeekResult;
+  renderFrame?(tick: number): GhostVerifiedReplayRenderView;
   forkPractice(tick: number, mode: GhostPracticeMode): GhostPracticeChild;
 }
 
@@ -24,6 +28,7 @@ export interface GhostVerifiedProductionReplaySession {
  */
 export function createGhostProductionReplaySession(
   capsule: GhostReadCapsule,
+  presentation: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> = {},
 ): GhostVerifiedProductionReplaySession {
   const maxTick = capsule.maxTick;
   if (!Number.isSafeInteger(maxTick) || maxTick < 0) throw new RangeError("production replay source range is invalid");
@@ -42,6 +47,7 @@ export function createGhostProductionReplaySession(
   const context = readGhostReplayRunContext(capsule.manifest.provenance);
   const applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);
   const composition = createProductionGhostReplayComposition({
+    ...presentation,
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
     inputSnapshots: inputs,
     requireRecordedApplicationFrames: true,
@@ -59,6 +65,13 @@ export function createGhostProductionReplaySession(
     sourceRootHash: mapped.ghost.rootHash,
     verifiedReceiptTicks: Object.freeze([...verifiedReceiptTicks].sort((left, right) => left - right)),
     seek,
+    ...(presentation.renderView === undefined ? {} : { renderFrame(tick: number): GhostVerifiedReplayRenderView {
+      if (!Number.isSafeInteger(tick) || tick < 0 || tick > maxTick) throw new RangeError("render tick is outside the recorded source range");
+      const world = new GhostProductionReplayWorld(mapped.ghost, composition), result = world.seek(tick);
+      if (result.correction !== undefined) throw new TypeError("corrected replay states cannot become media frames");
+      return Object.freeze({ ...world.renderView(), sourceId: mapped.ghost.id, sourceRootHash: mapped.ghost.rootHash,
+        sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity, semanticHash: result.semanticHash });
+    } }),
     forkPractice(tick: number, mode: GhostPracticeMode): GhostPracticeChild {
       const snapshot = checkpointAt(tick);
       if (snapshot === undefined || !verifiedReceiptTicks.has(tick)) {

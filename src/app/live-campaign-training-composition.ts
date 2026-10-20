@@ -30,6 +30,7 @@ type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVict
 type Cinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
 
 export interface LiveCampaignTrainingOptions {
+  readonly persistentEffects?: () => boolean;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
@@ -93,7 +94,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     achievementsEnabled: () => requireStyle().tracks(),
     checkAchievements: () => { requireStyle().check(); },
     resetStageAchievements: () => { requireStyle().achievements.stageReset(); },
-    rememberBiome(name) { d.biomeProgressPersistence.remember(name); requireStyle().check(); },
+    rememberBiome(name) { if (options.persistentEffects?.() !== false) d.biomeProgressPersistence.remember(name); requireStyle().check(); },
     cinematicPreference: options.applySettingsCinematicPreference,
     addFlash: (amount): FinaleMaximumFeelReceipt => {
       const before = options.getFlash(); options.setFlash(Math.max(before, amount));
@@ -178,6 +179,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
   });
 
   style = createLiveStyleHost({
+    ...(options.persistentEffects === undefined ? {} : { persistentEffects: options.persistentEffects }),
     dependencies: d, entities: options.entities, state: options.state, tutorial: training.tutorial,
     captureGhost: (trick, x, y, importance) => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: trick, x, y });

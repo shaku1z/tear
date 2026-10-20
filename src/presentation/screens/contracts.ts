@@ -213,10 +213,12 @@ export interface ReplayScreenView {
     readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
     readonly dimensions?: Readonly<Record<string, number>>; readonly unavailable: readonly string[];
   }>;
-  /** C37 local-only immutable Studio decision list; no media renderer is wired. */
+  readonly worldVisible?: boolean; readonly coachReturnAvailable?: boolean;
+  readonly studioMedia?: Readonly<{ available: boolean; status: string; markIn: number | undefined; thumbnail: string | undefined; duration: number | undefined }>;
+  /** C37 immutable decision list; media work stays in the app adapter. */
   readonly studioCutList?: Readonly<{
     readonly available: boolean; readonly sourceGhostId?: string; readonly sourceRootHash?: string;
-    readonly fromTick?: number; readonly toTick?: number; readonly edlHash?: string; readonly unavailable?: string;
+    readonly fromTick?: number; readonly toTick?: number; readonly edlHash?: string; readonly unavailable?: string; readonly clipCount?: number;
   }>;
 }
 export interface SettingRowView {

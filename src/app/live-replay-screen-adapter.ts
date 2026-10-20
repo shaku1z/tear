@@ -1,3 +1,5 @@
+import { createBrowserGhostReplayPresentation, createBrowserGhostStudioMedia } from "./browser-ghost-studio-media";
+import { stableVerificationHash } from "../replay/hash";
 import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-history";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
@@ -37,20 +39,26 @@ export interface ReplayScreenAdapter {
   readonly openCoach: () => void; readonly selectCoachBaseline: (id: string) => void;
   readonly practiceCoachFinding: (findingId: string) => void;
   readonly viewCoachMoment: (id: string) => void;
-  readonly controlCoach: (command: "close" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section", delta: number) => void;
+  readonly controlCoach: (command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section", delta: number) => void;
   readonly toggleRunDna: () => void;
   readonly toggleStudio: () => void; readonly createStudioCutList: () => void;
+  readonly markStudioIn: () => void; readonly clearStudioCuts: () => void; readonly exportStudio: () => void; readonly cancelStudio: () => void; readonly downloadStudio: () => void;
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
 }
 
-type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "viewCoachMoment" | "controlCoach" | "toggleRunDna" | "toggleStudio" | "createStudioCutList">;
+type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "viewCoachMoment" | "controlCoach" | "toggleRunDna" | "toggleStudio" | "createStudioCutList" | "markStudioIn" | "clearStudioCuts" | "exportStudio" | "cancelStudio" | "downloadStudio">;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
 /** Route-triggered replay facade; heavyweight world playback loads only when a replay is opened. */
 export function createLiveReplayScreenAdapter(services: ReplayScreenServices): ReplayScreenAdapter {
   const d = services.dependencies;
   let runtime: LegacyReplayScreenAdapter | undefined;
-  const theater = createGhostTheaterScreenAdapter({ render: services.renderers.replay, width: () => services.width,
+  const studioMedia = createBrowserGhostStudioMedia(services.document, async (id, hash) => {
+    const source = await readBrowserGhostCapsule(services.browserIndexedDb, id);
+    return source !== undefined && stableVerificationHash(source.manifest) === hash;
+  });
+  const theater = createGhostTheaterScreenAdapter({ presentation: createBrowserGhostReplayPresentation(services.document, d.UI), studioMedia,
+    drawWorld: (frame) => { frame.draw(services.canvas, { x: 0, y: 56, w: services.width, h: services.height - 172 }); }, render: (view) => { services.renderers.replay(view); if (view.studioMedia?.thumbnail !== undefined) studioMedia.drawThumbnail?.(services.canvas, { x: services.width / 2 + 260, y: 220, w: 160, h: 90 }); }, width: () => services.width,
     deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice,
     coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });
   const comparison = createGhostComparisonScreenAdapter({ render: services.renderers.replay });
@@ -160,6 +168,11 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     toggleRunDna: () => { if (active === "theater") theater.toggleRunDna(); },
     toggleStudio: () => { if (active === "theater") theater.toggleStudio(); },
     createStudioCutList: () => { if (active === "theater") theater.createStudioCutList(); },
+    markStudioIn: () => { if (active === "theater") theater.markStudioIn(); },
+    clearStudioCuts: () => { if (active === "theater") theater.clearStudioCuts(); },
+    exportStudio: () => { if (active === "theater") theater.exportStudio(); },
+    cancelStudio: () => { if (active === "theater") theater.cancelStudio(); },
+    downloadStudio: () => { if (active === "theater") theater.downloadStudio(); },
     toggleInfo: () => { if (active === "theater") theater.toggleInfo(); else if (active !== "comparison") invoke((value) => { value.toggleInfo(); }); },
     setSpeed: (speed) => { if (active === "theater") theater.setSpeed(speed); else if (active !== "comparison") invoke((value) => { value.setSpeed(speed); }); },
     status: () => theater.status() ?? comparison.status() ?? runtime?.status() ?? (pending === undefined ? null : {

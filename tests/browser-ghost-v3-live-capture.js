@@ -1,3 +1,7 @@
+const { mkdir, writeFile, readFile } = require("node:fs/promises");
+const { join } = require("node:path");
+const { tmpdir } = require("node:os");
+const { createHash } = require("node:crypto");
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
@@ -131,32 +135,37 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const reloadedCapsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
   assert.equal(reloadedCapsule.tracks.results.length > 0, true);
   await page.evaluate(() => {
-    const texts = [];
+    const texts = [], positions = [];
+    const imageDraw = CanvasRenderingContext2D.prototype.drawImage;
+    CanvasRenderingContext2D.prototype.drawImage = function captureStudioThumbnail(image, ...rest) {
+      if (image instanceof HTMLImageElement && image.src.startsWith("data:image/png")) window.__TEAR_C37_THUMBNAIL__ = image.src;
+      return imageDraw.call(this, image, ...rest);
+    };
     const original = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function captureTheaterText(text, ...rest) {
-      texts.push(String(text));
+      texts.push(String(text)); if (String(text) === "PROFILE") positions.length = 0; positions.push({ text: String(text), x: rest[0], y: rest[1] });
       return original.call(this, text, ...rest);
     };
-    window.__TEAR_C29_THEATER_TEXT__ = texts;
+    window.__TEAR_C29_THEATER_TEXT__ = texts; window.__TEAR_C29_POSITIONS__ = positions;
   });
   await page.mouse.click(260, 266); // PROFILE through the ordinary menu action
   await waitScreen("profile");
   await page.mouse.click(875, 271); // VAULT tab
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("Ghost V3 - COACHING"), undefined, { timeout: 10000 });
-  for (const y of [362, 458, 554, 650, 746]) {
-    await page.mouse.click(1149, y); // select five visible healthy capsules
-    await page.waitForTimeout(80);
+  const clickText = async (text) => {
+    const point = await page.evaluate((label) => window.__TEAR_C29_POSITIONS__?.findLast((entry) => entry.text === label), text);
+    assert.ok(point && Number.isFinite(point.x) && Number.isFinite(point.y), `Missing rendered ${text}`);
+    await page.mouse.click(point.x, point.y);
+  };
+  let selectedCount = 0;
+  for (let attempt = 0; attempt < 32 && selectedCount < 9; attempt++) {
+    await page.waitForTimeout(100);
+    const point = await page.evaluate(() => window.__TEAR_C29_POSITIONS__?.findLast((entry) => entry.text === "SELECT" && entry.y > 310 && entry.y < 810));
+    if (!point) { await page.mouse.move(800, 650); await page.mouse.wheel(0, 240); await page.waitForTimeout(140); continue; }
+    await page.mouse.click(point.x, point.y); selectedCount++;
   }
-  await page.waitForTimeout(120);
-  await page.mouse.move(800, 600);
-  await page.mouse.wheel(0, 480);
-  await page.waitForTimeout(120);
-  for (const y of [446, 542, 638, 734]) {
-    await page.mouse.click(1149, y); // select the remaining four sources
-    await page.waitForTimeout(80);
-  }
-  await page.waitForTimeout(120);
-  await page.mouse.click(1280, 446); // the visible COMPARE 9 control
+  assert.equal(selectedCount, 9, "all nine rendered source selections must be reached within bounded scrolling");
+  await page.waitForTimeout(140); await clickText("COMPARE 9");
   await waitScreen("replay");
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("SEMANTIC COMPARISON"), undefined, { timeout: 10000 });
   await page.mouse.click(428, 854); // next semantic event through the rendered replay transport
@@ -167,7 +176,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.ok(comparisonTexts.filter((text) => text.includes("RUN ")).length >= 9, "comparison did not render all nine durable sources");
   await page.keyboard.press("Escape");
   await waitScreen("profile");
-  await page.mouse.click(1023, 362); // The healthy capsule's semantic THEATER control
+  await page.waitForTimeout(180); await clickText("â—† THEATER"); // actual rendered healthy source control
   await waitScreen("replay");
   const theaterTextCount = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__?.length ?? 0);
   await page.waitForTimeout(250);
@@ -177,27 +186,44 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");
   const studioSourceBefore = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
-  await page.mouse.click(800, 509); // visible Theater-only Studio Cut List control
-  await page.waitForTimeout(250);
-  const studioBefore = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(studioBefore.includes("MEDIA EXPORT UNAVAILABLE"), "Studio did not disclose that production media export is unavailable");
-  await page.mouse.click(800, 280); // CREATE LOCAL EDL through the normal canvas semantic action
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("EDL ")), undefined, { timeout: 10000 });
-  const studioTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(studioTexts.some((text) => String(text).startsWith("SOURCE ")), "Studio did not show source identity");
-  assert.ok(studioTexts.some((text) => String(text).startsWith("ROOT ")), "Studio did not show source root");
-  assert.ok(studioTexts.some((text) => String(text).startsWith("VERIFIED RANGE TICK ")), "Studio did not show its verified tick range");
+  const outputDirectory = process.env.TEAR_STUDIO_ARTIFACT_DIR ?? join(tmpdir(), `tear-studio-${String(Date.now())}`);
+  await mkdir(outputDirectory, { recursive: true });
+  const sceneRegion = { x: 40, y: 146, width: 1520, height: 560 };
+  const firstScene = await page.screenshot({ path: join(outputDirectory, "theater-tick120.png"), clip: sceneRegion });
+  await clickText("REPLAY EDITOR"); await page.waitForTimeout(120); await clickText("MARK IN");
+  await page.mouse.click(428, 854); // next actual verified checkpoint240
+  await page.waitForTimeout(180); await clickText("APPEND RANGE");
+  await clickText("CLOSE EDITOR"); await page.waitForTimeout(120);
+  const secondScene = await page.screenshot({ path: join(outputDirectory, "theater-tick240.png"), clip: sceneRegion });
+  assert.notEqual(createHash("sha256").update(firstScene).digest("hex"), createHash("sha256").update(secondScene).digest("hex"), "world-only scene must change independently of tick labels");
+  await clickText("REPLAY EDITOR"); await page.waitForTimeout(120); await clickText("ENCODE WEBM");
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("WebM decoded locally. Click DOWNLOAD WEBM to request a browser save."), undefined, { timeout: 90000 });
+  await page.waitForFunction(() => window.__TEAR_C37_THUMBNAIL__?.startsWith("data:image/png"), undefined, { timeout: 5000 });
+  const downloadPending = page.waitForEvent("download"); await clickText("DOWNLOAD WEBM"); const download = await downloadPending;
+  assert.ok(download.suggestedFilename().endsWith(".webm")); const downloadPath = join(outputDirectory, download.suggestedFilename()); await download.saveAs(downloadPath);
+  const mediaBytes = await readFile(downloadPath); assert.ok(mediaBytes.length > 100); assert.equal(mediaBytes.subarray(0, 4).toString("hex"), "1a45dfa3", "actual WebM EBML signature");
+  const decoded = await page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (value) => value.charCodeAt(0)), url = URL.createObjectURL(new Blob([bytes], { type: "video/webm" }));
+    const video = document.createElement("video"); video.muted = true; video.preload = "auto";
+    const event = (name) => new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error(`decode ${name} timeout`)), 10000); video.addEventListener(name, () => { clearTimeout(timer); resolve(); }, { once: true }); });
+    try { const ready = event("loadedmetadata"); video.src = url; await ready; if (!Number.isFinite(video.duration)) { const sought = event("seeked"); video.currentTime = 100000; await sought; }
+      return { width: video.videoWidth, height: video.videoHeight, duration: Number.isFinite(video.duration) ? video.duration : video.currentTime, thumbnail: window.__TEAR_C37_THUMBNAIL__ };
+    } finally { video.removeAttribute("src"); video.load(); URL.revokeObjectURL(url); }
+  }, mediaBytes.toString("base64"));
+  assert.equal(decoded.width, 640); assert.equal(decoded.height, 360); assert.ok(Math.abs(decoded.duration - 1) < .35, `decoded duration ${String(decoded.duration)}`);
+  assert.ok(decoded.thumbnail.startsWith("data:image/png;base64,")); await writeFile(join(outputDirectory, "studio-thumbnail.png"), Buffer.from(decoded.thumbnail.split(",")[1], "base64"));
   const studioSourceAfter = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
-  assert.equal(studioSourceAfter, studioSourceBefore, "visible Studio Cut List changed its durable source capsule");
+  assert.equal(studioSourceAfter, studioSourceBefore, "actual local WebM export changed durable source custody");
+  console.log(JSON.stringify({ studio: { directory: outputDirectory, bytes: mediaBytes.length, width: decoded.width, height: decoded.height, duration: decoded.duration, clock: "simulation-time-120hz", camera: "reconstructed-player-follow", fixture: "engineered canonical240tick source" } }));
   await page.mouse.click(1020, 854); // rendered C37 RUN DNA control; it projects only declared capsule metrics
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA · VERIFIED METRICS"), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA Ã‚Â· VERIFIED METRICS"), undefined, { timeout: 10000 });
   const dnaTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(dnaTexts.some((text) => String(text).includes("FORMULA run-dna-v1 · EVIDENCE verified capsule")),
+  assert.ok(dnaTexts.some((text) => String(text).includes("FORMULA run-dna-v1 Ã‚Â· EVIDENCE verified capsule")),
     "Run DNA did not visibly identify its formula and verified capsule custody");
-  assert.ok(dnaTexts.some((text) => String(text).includes("UNAVAILABLE · no declared run-dna-metrics-v1 result")),
+  assert.ok(dnaTexts.some((text) => String(text).includes("UNAVAILABLE Ã‚Â· no declared run-dna-metrics-v1 result")),
     "Run DNA inferred metrics instead of exposing the actual capsule declaration gap");
   await page.mouse.click(892, 854); // rendered C37 COACH control; it has no implicit baseline
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH · YOUR SELECTED RUNS"), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH Ã‚Â· YOUR SELECTED RUNS"), undefined, { timeout: 10000 });
   await page.waitForTimeout(180);
   await page.mouse.click(750, 189); // explicit first compatible local recording, no peer auto-selection
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/2 usable recordings")), undefined, { timeout: 30000 });
@@ -209,7 +235,8 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.ok(coachTexts.some((text) => String(text).includes("Count distribution:")), "Coach did not disclose count distribution");
   assert.ok(coachTexts.some((text) => String(text).includes("OPEN RUN MOMENT") && String(text).includes("TICK 140")), "Coach omitted the actual identified native throw");
   await page.mouse.click(555, 493); // VIEW MOMENT through normal source-owned seek
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("Current verified replay: TICK 140")), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("Reconstructed source scene Â· TICK 140")), undefined, { timeout: 10000 });
+  await clickText("RETURN TO COACH"); await page.waitForTimeout(120);
   await page.mouse.click(1040, 493); // PRACTICE BEFORE the cited event, strictly preceding checkpoint120
   await waitScreen("playing");
   const launchedPractice = await page.evaluate(() => window.__TEAR_GHOST_V3__.activePractice());

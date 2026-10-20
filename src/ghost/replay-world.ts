@@ -27,6 +27,16 @@ export interface GhostSeekCorrection {
   readonly afterHash: string;
 }
 
+/** Draw-only capability over one isolated, settled production seek. No runtime/world mutators escape. */
+export interface GhostReplayRenderView {
+  readonly tick: number;
+  readonly viewport: Readonly<{ width: number; height: number }>;
+  readonly clockSeconds: number;
+  readonly camera: Readonly<{ policy: "player-follow"; x: number; y: number; scale: number; reconstructed: true }>;
+  readonly screen: string;
+  readonly clockBlocked: boolean;
+  draw(canvas: CanvasRenderingContext2D, rectangle: Readonly<{ x: number; y: number; w: number; h: number }>): void;
+}
 export interface GhostSeekResult {
   readonly tick: number;
   readonly semanticHash: string;
@@ -42,6 +52,7 @@ export interface GhostSeekResult {
  */
 export interface GhostProductionReplaySession<State> {
   readonly simulation: TearSimulationRuntime<State>;
+  renderView?(): GhostReplayRenderView;
   semanticProjection(): unknown;
   /** Optional State Forge semantic hash, only when its codec projection is available. */
   snapshotSemanticHash?(): string;
@@ -174,6 +185,10 @@ export class GhostProductionReplayWorld<State> {
 
   /** Exposes the active production runtime for identity-level evidence only. */
   simulation(): TearSimulationRuntime<State> | null { return this.#session?.simulation ?? null; }
+  renderView(): GhostReplayRenderView {
+    if (this.#session?.renderView === undefined) throw new Error("production replay presentation is unavailable");
+    return this.#session.renderView();
+  }
   semanticHash(): string {
     if (this.#session === null) throw new Error("production replay world has not been sought");
     return stableVerificationHash(this.#session.semanticProjection());

@@ -327,11 +327,11 @@ type DrawableEnemy = GameEnemy & {
   drawRear?: (canvas: CanvasRenderingContext2D) => void;
 };
 
-function isDrawableEnemy(enemy: GameEnemy): enemy is DrawableEnemy {
+export function isDrawableEnemy(enemy: GameEnemy): enemy is DrawableEnemy {
   return "draw" in enemy && typeof enemy.draw === "function";
 }
 
-function projectPresentationEnemy(enemy: DrawableEnemy): PresentationEnemy {
+export function projectPresentationEnemy(enemy: DrawableEnemy): PresentationEnemy {
   return {
     x: enemy.x, y: enemy.y, hw: enemy.hw, hh: enemy.hh, radius: enemy.radius, color: enemy.color,
     spawnT: enemy.spawnT, flash: enemy.flash, dead: enemy.dead, buffs: enemy.buffs, kind: enemy.kind,
@@ -376,7 +376,7 @@ function zoneColorOf(value: object): string | undefined {
   return "zoneColor" in value && typeof value.zoneColor === "string" ? value.zoneColor : undefined;
 }
 
-function projectSceneBoss(enemy: GameEnemy): SceneBoss {
+export function projectSceneBoss(enemy: GameEnemy): SceneBoss {
   const zoneColor = zoneColorOf(enemy);
   return { bossId: enemy.bossId, color: enemy.color,
     ...(enemy.isBoss === undefined ? {} : { isBoss: enemy.isBoss }),

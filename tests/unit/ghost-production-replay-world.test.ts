@@ -1,3 +1,5 @@
+import { createBrowserGhostReplayPresentation } from "../../src/app/browser-ghost-studio-media";
+import { createProductionGhostReplayComposition, projectProductionReplayCanonicalState } from "../../src/tearbench/production-replay-composition";
 import { describe, expect, it } from "vitest";
 
 import { GhostProductionReplayWorld, createGhostV3, type GhostReplayTrident } from "../../src/ghost";
@@ -72,4 +74,39 @@ describe("Ghost production replay world", () => {
     expect(replay.simulation()).toBe(created[1]);
     expect(created).toHaveLength(2);
   });
+  it("draws real reconstructed actors at two seeks without changing canonical state or either RNG", () => {
+    const calls: string[] = [];
+    function canvas() {
+      const surface = { width: 1600, height: 900, getContext: () => context };
+      const context = new Proxy({ canvas: surface }, { has: () => true, get(target, key) {
+        if (key === "canvas") return target.canvas;
+        if (key === "createLinearGradient" || key === "createRadialGradient") return () => ({ addColorStop() { return; } });
+        if (key === "measureText") return () => ({ width: 10 });
+        return (...args: unknown[]) => { calls.push(`${String(key)}:${args.map(String).join(",")}`); };
+      } }) as unknown as CanvasRenderingContext2D;
+      return surface;
+    }
+    const document = { createElement: canvas } as unknown as Document;
+    const presentation = createBrowserGhostReplayPresentation(document, { font: () => "12px sans-serif", tag() { return; }, t: { type: { caption: 12 } } });
+    const ghost = createGhostV3({ id: "draw-source", rulesetVersion: "test", sourceClassification: "native-v3", trident,
+      actions: [{ kind: "command", id: 1, tick: 1, command: { type: "move", x: 1000, y: 0 } }], snapshots: [], events: [] });
+    const headless = new GhostProductionReplayWorld(ghost, createProductionGhostReplayComposition({ seed: "draw-seed" }));
+    let owner: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]> | undefined;
+    const composition = createProductionGhostReplayComposition({ seed: "draw-seed", ...presentation });
+    const replay = new GhostProductionReplayWorld(ghost, { create(snapshot) { owner = composition.create(snapshot); return owner; } });
+    const frames: string[] = [];
+    for (const tick of [120, 240]) {
+      const result = replay.seek(tick); expect(result.semanticHash).toBe(headless.seek(tick).semanticHash);
+      const current = owner; if (current === undefined) throw new Error("test replay owner missing");
+      const before = JSON.stringify({ state: projectProductionReplayCanonicalState(current.replay, tick, current.simulation.input), random: current.replay.random.service.snapshot(), cosmetic: current.replay.cosmeticEmissionRandom.snapshot() });
+      const frame = replay.renderView(), target = canvas().getContext(); calls.length = 0;
+      frame.draw(target, { x: 0, y: 0, w: 640, h: 360 }); frame.draw(target, { x: 0, y: 0, w: 640, h: 360 });
+      expect(calls.some((call) => call.startsWith("fillRect:"))).toBe(true); expect(calls.some((call) => call.startsWith("lineTo:"))).toBe(true);
+      expect(frame.tick).toBe(tick); expect(frame.camera.policy).toBe("player-follow"); expect("world" in frame).toBe(false);
+      expect(JSON.stringify({ state: projectProductionReplayCanonicalState(current.replay, tick, current.simulation.input), random: current.replay.random.service.snapshot(), cosmetic: current.replay.cosmeticEmissionRandom.snapshot() })).toBe(before);
+      frames.push(JSON.stringify(calls));
+    }
+    expect(frames[0]).not.toBe(frames[1]);
+  });
+
 });

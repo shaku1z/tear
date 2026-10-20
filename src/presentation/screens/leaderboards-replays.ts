@@ -166,7 +166,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: 220 + safe.l, y: controlY, w: 64, h: 44, label: "|◀", action: { type: "replay.jumpChapter", direction: -1 } });
     context.enqueue({ x: 292 + safe.l, y: controlY, w: 96, h: 44, label: view.paused ? "▶" : "❚❚", action: { type: "replay.togglePause" } });
     context.enqueue({ x: 396 + safe.l, y: controlY, w: 64, h: 44, label: "▶|", action: { type: "replay.jumpChapter", direction: 1 } });
-    context.enqueue({ x: 468 + safe.l, y: controlY, w: 76, h: 44, label: `${String(view.speed)}×`, action: { type: "replay.speed", value: view.speed >= 4 ? 0.5 : view.speed * 2 } });
+    context.enqueue({ x: 468 + safe.l, y: controlY, w: 76, h: 44, label: `${String(view.speed)}×`, action: { type: "replay.speed", value: view.speed >= 4 ? 0.25 : view.speed * 2 } });
     context.enqueue({ x: 552 + safe.l, y: controlY, w: 84, h: 44, label: "↺", action: { type: "replay.restart" } });
     if (view.theater) context.enqueue({ x: 644 + safe.l, y: controlY, w: 180, h: 44, label: "PRACTICE",
       enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
@@ -184,47 +184,38 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
 
   function theaterState(view: ReplayScreenView): void {
     const { canvas, safeInsets: safe } = context;
-    const panelWidth = Math.min(620, width - 80 - safe.l - safe.r), panelHeight = 240;
-    const x = width / 2 - panelWidth / 2, y = height / 2 - panelHeight / 2 - 20;
-    ui.panel(canvas, x, y, panelWidth, panelHeight);
-    ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
-    ui.title(canvas, "VERIFIED REPLAY STATE", width / 2, y + 56, ui.t.type.h2);
-    ui.tag(canvas, `${view.elapsed}  /  ${view.duration}`, width / 2, y + 86, REPLAY_CYAN, "center", ui.t.type.label);
-    ui.wrappedText(canvas, "This Ghost replays the durable capsule through the shared production simulation. At a verified checkpoint, PRACTICE starts an unranked child without changing the source capsule or your profile.",
-      x + 42, y + 122, panelWidth - 84, 22, ui.t.type.body, "left", ui.t.alpha.soft);
-    context.enqueue({ x: width / 2 - 110, y: y + panelHeight - 58, w: 220, h: 34, label: "REPLAY EDITOR",
+    ui.text(canvas, "RECONSTRUCTED WORLD · PLAYER FOLLOW", 30 + safe.l, 78 + safe.t, ui.t.type.micro, "left", ui.t.alpha.soft);
+    context.enqueue({ x: 30 + safe.l, y: 92 + safe.t, w: 190, h: 34, label: "REPLAY EDITOR",
       action: { type: REPLAY_EDITOR_ACTIONS.toggle } });
-    ui.text(canvas, "USE TRANSPORT TO SEEK  ·  ESC TO RETURN", width / 2, y + panelHeight - 24,
-      ui.t.type.micro, "center", ui.t.alpha.muted);
+    if (view.coachReturnAvailable) context.enqueue({ x: 228 + safe.l, y: 92 + safe.t, w: 190, h: 34, label: "RETURN TO COACH",
+      action: { type: "replay.coach.control", command: "scene", delta: 0 } });
   }
 
   function studioCutListState(view: ReplayScreenView): void {
-    const cut = view.studioCutList;
+    const cut = view.studioCutList, media = view.studioMedia;
     if (cut === undefined) return;
     const { canvas, safeInsets: safe } = context;
-    const panelWidth = Math.min(820, width - 80 - safe.l - safe.r), panelHeight = 270;
-    const x = width / 2 - panelWidth / 2, y = 78 + safe.t;
+    const panelWidth = Math.min(920, width - 64 - safe.l - safe.r), panelHeight = 288;
+    const x = width / 2 - panelWidth / 2, y = 148 + safe.t;
     ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
-    ui.title(canvas, "REPLAY EDITOR · LOCAL EDL ONLY", width / 2, y + 40, ui.t.type.lead);
-    ui.tag(canvas, "MEDIA EXPORT UNAVAILABLE", width / 2, y + 64, ui.t.color.danger, "center", ui.t.type.label);
-    if (!cut.available) {
-      ui.wrappedText(canvas, `UNAVAILABLE · ${cut.unavailable ?? "current Theater source is not eligible"}`,
-        x + 28, y + 104, panelWidth - 56, 20, ui.t.type.body, "left", ui.t.alpha.muted);
-      return;
-    }
-    if (cut.edlHash === undefined) {
-      ui.wrappedText(canvas, "Create one immutable local decision list from this exact verified checkpoint window. It records only supported EDL fields and never changes the source capsule.",
-        x + 28, y + 102, panelWidth - 56, 20, ui.t.type.body, "left", ui.t.alpha.soft);
-      context.enqueue({ x: width / 2 - 150, y: y + 184, w: 300, h: 38, label: "CREATE LOCAL EDL",
-        action: { type: REPLAY_EDITOR_ACTIONS.createCutList } });
-      return;
-    }
-    ui.text(canvas, `SOURCE ${cut.sourceGhostId ?? "UNAVAILABLE"}`, x + 28, y + 100, ui.t.type.caption, "left", ui.t.alpha.soft);
-    ui.text(canvas, `ROOT ${cut.sourceRootHash ?? "UNAVAILABLE"}`, x + 28, y + 124, ui.t.type.caption, "left", ui.t.alpha.soft);
-    ui.text(canvas, `VERIFIED RANGE TICK ${String(cut.fromTick)}–${String(cut.toTick)}`, x + 28, y + 148, ui.t.type.caption, "left", ui.t.alpha.soft);
-    ui.text(canvas, `EDL ${cut.edlHash}`, x + 28, y + 172, ui.t.type.caption, "left", ui.t.alpha.soft);
-    ui.wrappedText(canvas, "Immutable local decision list created. No production media renderer is connected, so export remains unavailable.",
-      x + 28, y + 214, panelWidth - 56, 18, ui.t.type.micro, "left", ui.t.alpha.muted);
+    ui.title(canvas, "REPLAY EDITOR · LOCAL WEBM", width / 2, y + 36, ui.t.type.lead);
+    ui.text(canvas, "Reconstructed player-follow · simulation time · 30 fps · 640×360 · GIF unavailable", width / 2, y + 62, ui.t.type.micro, "center", ui.t.alpha.muted);
+    ui.text(canvas, `IN ${media?.markIn === undefined ? "previous checkpoint" : String(media.markIn)} · OUT ${view.score ?? ""} · CLIPS ${String(cut.clipCount ?? 0)} · speed ${String(view.speed)}×`, x + 24, y + 91, ui.t.type.caption, "left", ui.t.alpha.soft);
+    ui.text(canvas, `SOURCE ${cut.sourceGhostId ?? "current verified capsule"} · ${media?.status ?? "unavailable"}`, x + 24, y + 116, ui.t.type.micro, "left", ui.t.alpha.soft);
+    ui.text(canvas, `EDL ${cut.edlHash ?? "mark IN, seek an OUT checkpoint, then append"}`, x + 24, y + 139, ui.t.type.micro, "left", ui.t.alpha.muted);
+    const busy = media?.status === "rendering", gap = 8, w = (panelWidth - 64) / 3;
+    context.enqueue({ x: x + 24, y: y + 160, w, h: 34, label: "MARK IN", enabled: view.practiceAvailable && !busy,
+      action: { type: "replay.editor.media", command: "markIn" } });
+    context.enqueue({ x: x + 24 + w + gap, y: y + 160, w, h: 34, label: "APPEND RANGE", enabled: view.practiceAvailable && !busy,
+      action: { type: REPLAY_EDITOR_ACTIONS.createCutList } });
+    context.enqueue({ x: x + 24 + (w + gap) * 2, y: y + 160, w, h: 34, label: "CLEAR CUTS", enabled: !busy,
+      action: { type: "replay.editor.media", command: "clear" } });
+    context.enqueue({ x: x + 24, y: y + 202, w, h: 34, label: busy ? "CANCEL ENCODING" : "ENCODE WEBM", enabled: busy || (media?.available === true && cut.edlHash !== undefined),
+      action: { type: "replay.editor.media", command: busy ? "cancel" : "export" } });
+    context.enqueue({ x: x + 24 + w + gap, y: y + 202, w, h: 34, label: "DOWNLOAD WEBM", enabled: media?.status === "ready" || media?.status === "download-requested",
+      action: { type: "replay.editor.media", command: "download" } });
+    context.enqueue({ x: x + 24 + (w + gap) * 2, y: y + 202, w, h: 34, label: "CLOSE EDITOR", action: { type: REPLAY_EDITOR_ACTIONS.toggle } });
+    ui.text(canvas, media?.available ? "Up to 60s / 1800 frames / 64 MiB. Gameplay-only ranges; cinema/intro source-time unavailable." : "This browser has no supported local WebM encoder.", width / 2, y + 264, ui.t.type.micro, "center", ui.t.alpha.muted);
   }
 
   function comparisonState(view: ReplayScreenView): void {

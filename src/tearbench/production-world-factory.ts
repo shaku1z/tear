@@ -40,7 +40,14 @@ import { trainingPlatforms } from "../gameplay/training/playground-controller";
 
 type FactoryOptions = TearWorldSimulationFactoryOptions;
 
+export interface ProductionReplayPresentationContext {
+  readonly clock: ReturnType<typeof createTearWorldBootstrap>["clock"];
+  readonly config: typeof CONFIG;
+  readonly effects: ReturnType<typeof createParticleSystem>;
+  readonly cosmeticRandom: () => number;
+}
 export interface ProductionReplayWorldOptions {
+  readonly presentation?: (context: ProductionReplayPresentationContext) => TearWorldEntityPresentationPorts;
   readonly gameplayEvents?: TearGameplayEventPort;
   readonly worldId?: string;
   readonly seed: string;
@@ -140,7 +147,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   random.streams.reset(runSeed);
   const factories = createTearWorldSimulationFactories({
     clock, config, graphics: GFX, effects, sound: unavailableOutwardPort() as FactoryOptions["sound"],
-    input: idleInputPort() as FactoryOptions["input"], presentation: detachedPresentationPorts(effects, cosmeticEmissionRandom.next),
+    input: idleInputPort() as FactoryOptions["input"], presentation: options.presentation?.({ clock, config, effects, cosmeticRandom: cosmeticEmissionRandom.next }) ?? detachedPresentationPorts(effects, cosmeticEmissionRandom.next),
     random: { enemyAi: random.streams.stream("enemy-ai"), boss: random.streams.stream("boss") },
     geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist }, cosmeticRandom: cosmeticEmissionRandom.next,
   });

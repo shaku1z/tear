@@ -1,3 +1,5 @@
+import type { GhostReplayRenderView } from "../ghost/replay-world";
+import type { ProductionReplayWorldOptions } from "./production-world-factory";
 import { applyWeapon } from "../gameplay/weapons";
 import { A11Y, GFX } from "../config/game-config";
 import { launchCampaignChapter } from "../app/live-campaign-sequences";
@@ -59,6 +61,8 @@ const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveR
 export type ProductionApplicationFrameConfirm = NonNullable<Parameters<InstanceType<typeof CinematicTimeline.Director>["update"]>[1]>;
 
 export interface ProductionGhostReplayCompositionOptions {
+  readonly presentation?: ProductionReplayWorldOptions["presentation"];
+  readonly renderView?: (world: ProductionReplayWorld, tick: number, screen: string) => GhostReplayRenderView;
   readonly seed: string;
   readonly mode?: string;
   readonly weaponId?: string;
@@ -464,7 +468,7 @@ export function createProductionGhostReplayComposition(
     create(snapshot: TearSnapshotV1 | undefined) {
       let waveReward: ProductionWaveRewardRuntime | null = null;
       let clockPlayback: ReturnType<typeof createGhostApplicationClockPlayback> | undefined;
-      const replay = createProductionReplayWorld({ ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }), seed: snapshot?.seed ?? options.seed,
+      const replay = createProductionReplayWorld({ ...(options.presentation === undefined ? {} : { presentation: options.presentation }), ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }), seed: snapshot?.seed ?? options.seed,
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
         ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }),
@@ -563,7 +567,9 @@ export function createProductionGhostReplayComposition(
           waveReward.restoreScreen("playing"); openingStatus = "completed";
         } catch (error) { openingStatus = "failed"; throw error; }
       };
+      const renderView = options.renderView;
       const session = Object.freeze({
+        ...(renderView === undefined ? {} : { renderView: () => renderView(replay, core.simulationRuntime.scheduler.tick, waveReward.screen()) }),
         replay,
         bootstrap,
         combat: core,

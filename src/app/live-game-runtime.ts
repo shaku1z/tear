@@ -106,7 +106,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   GAMEPLAY_EVENTS.subscribe((event) => {
     observePlayerWatchEvent(event);
     ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ghostV3Session.nextEventSequence()));
-    if (tracksAchievements(hostState.run())) executeEnvironmentTelemetryIntents([...verdantTelemetryIntents(event),
+    if (ghostPracticeSession.active() === null && tracksAchievements(hostState.run())) executeEnvironmentTelemetryIntents([...verdantTelemetryIntents(event),
       ...paleTelemetryIntents(event)], dependencies.profileStatsPersistence);
   });
   function liveRun(): GameRun {
@@ -200,7 +200,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const audioDispatchReceipts: AudioDispatchReceipt[] = []; if (__TEAR_TEST_BUILD__) SFX.observeDispatchReceipts((receipt) => { audioDispatchReceipts.push(receipt); }); const outcomeChronology = __TEAR_TEST_BUILD__ ? createOutcomeChronologyJournal() : null;
   let tutorialPracticeStart = false; const trainingHandoff = createLiveTrainingHandoff({ run: () => hostState.run(), phase: () => TUT.session().phase, pause: () => { setState("paused"); }, releasePointer: () => { browserDocument.exitPointerLock(); }, defer: (commit) => { browserWindow.queueMicrotask(commit); }, startPractice: () => { tutorialPracticeStart = true; try { startRunImmediate("playground", "normal"); } finally { tutorialPracticeStart = false; } } }); const campaignTraining = createLiveCampaignTrainingComposition({
-    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
+    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, persistentEffects: () => ghostPracticeSession.active() === null,
     cinema: worldContext.cinema, controllers: runControllers,
     width: W, height: H, canvas, context: ctx,
     run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(),

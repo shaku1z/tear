@@ -206,3 +206,30 @@ Fresh execution is required before claiming this browser acceptance. Its test-on
 inspector mode is `verify(id, "opening-continuation")`; unknown modes refuse.
 This bounded source/input proof does not verify the entire causal event track,
 native output, or a natural full Campaign/finale.
+
+
+### Reconstructed world and local media implementation (2026-10-19)
+
+Verified V3 seeks expose only settled render metadata and narrow draw capability,
+bound to capsule/source roots, tick and semantic hash. Optional per-world native
+presentation uses the same actor/platform/world renderers; headless defaults stay
+unchanged. Cosmetics, player-follow camera and letterboxing are reconstructed,
+not historical pixels. Draw does not step simulation or consume gameplay RNG.
+Coach View Moment exposes the scene and a return-to-Coach action.
+
+Studio now supports ordered appended verified ranges, existing clip speeds and
+native browser WebM from a dedicated replay canvas, bounded to 1800 frames/60s
+and 64 MiB. It validates source/EDL bindings, local decode, dimensions and duration;
+the first accepted rendered frame supplies the PNG thumbnail. Download is a
+separate explicit action. Source identity is rechecked before export publication
+and download. Cancel/source replacement aborts work and stops tracks/encoders.
+Source-time cinema/intro intervals, historical cameras and GIF remain unavailable;
+no browser-frame time is inferred from 120Hz ticks. The existing engineered
+240-tick browser journey is authored to save two world-only PNGs and decode its
+actual one-second120→240 WebM; fresh parent execution remains required.
+
+Practice outward disposition now blocks profile/daily/achievement/biome writes
+while retaining original mode and style/combat mathematics. An integrated existing
+host/runtime control failed with eight outward calls before the repair and passes
+with zero practice writes and ordinary calls restored after practice ends. This
+is a bounded local implementation, not full Campaign or population acceptance.

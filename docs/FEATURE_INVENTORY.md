@@ -1368,14 +1368,19 @@ The inventory is reviewed at every phase gate. New features added during the red
 
 ### C37 verified Theater Studio Cut List
 
-The normal verified C29 Theater exposes a separate `STUDIO CUT LIST` surface
-only for a complete schema-v2 V3 capsule at the current verified receipt
-checkpoint. It creates one immutable in-memory `ghost-studio-edl` from the
-exact Theater source identity, durable root, and previous-to-current verified
-tick window, then visibly names source, root, range, and EDL hash. It has no
-Vault write, source mutation, State Forge, fork, trace, cloud, or mutable-edit
-tool. The surface is explicitly `LOCAL EDL ONLY` and `MEDIA EXPORT
-UNAVAILABLE`: no production media renderer is connected.
+The verified V3 Theater now draws the reconstructed production world through
+per-world presentation ports and the shared actor/platform/world renderers.
+Coach View Moment minimizes its panel onto that scene, with a return control.
+Studio marks verified IN/OUT checkpoints and appends immutable ranges in chosen
+order at the transport speed. Local native WebM encoding uses a dedicated canvas,
+reconstructed player-follow, deterministic aspect fit, and explicit simulation
+time. Output is bounded to 1800 frames/60 seconds and 64 MiB, with local decode,
+dimensions/duration checks, accepted-frame PNG thumbnail and separate download.
+Cancellation/source replacement discards stale work. GIF, historical camera/pixel
+fidelity and source-time cinema/intro intervals remain unavailable. Browser
+acceptance of actual encoded output is pending parent execution. Practice keeps
+its source mode and combat/style math while suppressing outward profile, daily,
+achievement and biome writes through its active practice disposition.
 
 ### C38 local publication review
 

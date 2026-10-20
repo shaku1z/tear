@@ -6,6 +6,7 @@ import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-styl
 import { isTutorialMark } from "../gameplay/training/tutorial-controller";
 
 export interface LiveStyleHostServices {
+  readonly persistentEffects?: () => boolean;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: Pick<LiveWorldEntityConstructionPort, "createProjectile">;
   readonly state: LiveGameHostState;
@@ -25,9 +26,11 @@ function required<T>(value: T | null | undefined, label: string): T {
 export function createLiveStyleHost(services: LiveStyleHostServices) {
   const { dependencies: d, state } = services;
   const player = () => required(state.player(), "player");
-  const achievementCheck = d.styleAchievementPersistence.checkAndSave;
+  const persistent = () => services.persistentEffects?.() !== false;
+  const achievementCheck = () => { if (persistent()) d.styleAchievementPersistence.checkAndSave(); };
+  const profileMax = (stat: string, value: number) => { if (persistent()) d.profileStatsPersistence.max(stat, value); };
   return createLiveStyleAchievementRuntime({
-    run: () => state.run(), player, enemies: () => state.enemies(),
+    persistentEffects: persistent, run: () => state.run(), player, enemies: () => state.enemies(),
     moving: () => d.Input.left() || d.Input.right(), tuning: () => d.CONFIG.trick,
     colors: () => d.CONFIG.colors, ghostRecording: () => d.GHOST.recording(),
     styleIntents: {
@@ -36,11 +39,11 @@ export function createLiveStyleHost(services: LiveStyleHostServices) {
       playerTrick: (trick, at) => { player().lastTrickKind = trick; player().lastTrickT = at; },
       rankUp: services.rankUp, musicRankChanged: services.musicRankChanged,
       haptic: (pattern) => { d.Input.buzz(typeof pattern === "number" ? pattern : [...pattern]); },
-      profileAdd: d.profileStatsPersistence.add,
-      dailyBump: (stat, amount) => { d.DAILY.bump(stat, amount); },
-      profileMax: d.profileStatsPersistence.max, achievementCheck,
+      profileAdd: (stat, amount) => { if (persistent()) d.profileStatsPersistence.add(stat, amount); },
+      dailyBump: (stat, amount) => { if (persistent()) d.DAILY.bump(stat, amount); },
+      profileMax, achievementCheck,
     },
-    profileMax: d.profileStatsPersistence.max, achievementCheck,
+    profileMax, achievementCheck,
     metaLevel: (id) => d.META.level(id), projectileSpeed: () => d.CONFIG.proj.speed,
     createProjectile: services.entities.createProjectile,
     addProjectile: services.addProjectile,

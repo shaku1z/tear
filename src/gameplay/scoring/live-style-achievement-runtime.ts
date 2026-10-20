@@ -34,6 +34,7 @@ export interface LiveAchievementTracker {
 }
 
 export interface LiveStyleAchievementOptions<TProjectile extends SplitProjectile> {
+  readonly persistentEffects?: () => boolean;
   readonly run: () => LiveStyleRun | null;
   readonly player: () => LiveStylePlayer;
   readonly enemies: () => readonly AchievementEnemy[];
@@ -71,11 +72,12 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
     if (current === null) throw new Error("style runtime requires an active run");
     return current;
   };
+  const tracks = () => options.persistentEffects?.() !== false && tracksAchievements(options.run());
   const dispatch = (intents: Parameters<typeof executeAchievementIntents>[0]): void => {
-    executeAchievementIntents(intents, options.profileMax, options.achievementCheck);
+    if (options.persistentEffects?.() !== false) executeAchievementIntents(intents, options.profileMax, options.achievementCheck);
   };
   const achievements: LiveAchievementTracker = {
-    on: () => tracksAchievements(options.run()),
+    on: tracks,
     stageReset: () => { resetStageRestrictions(options.run()); },
     swung: () => { markStageRestriction(options.run(), "swung"); },
     thrown: () => { markStageRestriction(options.run(), "thrown"); },
@@ -103,8 +105,8 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
         achievementTracking: tracksAchievements(current) });
       applyStyleSnapshot(current, result.state); executeStyleIntents(result.intents, options.styleIntents);
     },
-    tracks: () => tracksAchievements(options.run()),
-    check: options.achievementCheck,
+    tracks,
+    check: () => { if (options.persistentEffects?.() !== false) options.achievementCheck(); },
     loseStyle: () => { const current = run(); applyStyleSnapshot(current, loseStyle(snapshotStyle(current), options.tuning())); },
     recompute: () => { const current = run(), next = rankForCombo(current.combo, options.tuning().tiers);
       current.mult = next.mult; current.rank = next.rank; },

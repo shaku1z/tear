@@ -139,6 +139,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.runDna.toggle": () => { ports.replay.toggleRunDna(); },
     "replay.editor.toggle": () => { ports.replay.toggleStudio(); },
     "replay.editor.createCutList": () => { ports.replay.createStudioCutList(); },
+    "replay.editor.media": (action) => { const actions = { markIn: ports.replay.markStudioIn, clear: ports.replay.clearStudioCuts, export: ports.replay.exportStudio, cancel: ports.replay.cancelStudio, download: ports.replay.downloadStudio }; actions[action.command](); },
     "replay.studio.toggle": () => { ports.replay.toggleStudio(); },
     "replay.studio.createCutList": () => { ports.replay.createStudioCutList(); },
     "replay.toggleInfo": () => { ports.replay.toggleInfo(); }, "replay.speed": (action) => { ports.replay.setSpeed(action.value); },
