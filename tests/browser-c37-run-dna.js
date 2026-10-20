@@ -19,6 +19,12 @@ withJourney({ name: "C37 recorded Run DNA", port: 8155, deferBoot: true, ordinar
     window.__DNA_POSITIONS__ = positions; window.__DNA_TEXTS__ = texts;
   });
   const query = { bossdebug: "1", watchagent: "1" };
+  const ordinaryBoot = async () => {
+    await boot(query); await page.waitForFunction(() => window.__TEAR_GHOST_V3__);
+    // Keep the engineering inspector active while leaving the normal canvas
+    // unobstructed. This changes only the disposable DOM panel's presentation.
+    await page.addStyleTag({ content: "#tear-watch-agent { visibility: hidden !important; }" });
+  };
   const clickText = async (label) => {
     await page.waitForFunction((text) => window.__DNA_POSITIONS__?.some((entry) => entry.text === text), label, { timeout: 10000 });
     const point = await page.evaluate((text) => window.__DNA_POSITIONS__.findLast((entry) => entry.text === text), label);
@@ -33,9 +39,9 @@ withJourney({ name: "C37 recorded Run DNA", port: 8155, deferBoot: true, ordinar
     await page.waitForFunction(() => window.__DNA_POSITIONS__.some((entry) => entry.text === "RUN DNA · RECORDED METRICS"));
   };
   const metrics = ["attacks", "combatTicks", "misses", "movingTicks", "damageTaken", "maxHp", "distinctManeuvers", "availableManeuvers"];
-  const evidence = { buildInfo, fixture: "engineering:300 native ticks, no movement, throw140/recall150; no injected outcome or metrics" };
+  const evidence = { buildInfo, engineeringOverlayHidden: true, fixture: "engineering:300 native ticks, no movement, throw140/recall150; no injected outcome or metrics" };
   try {
-    await boot(query); await page.waitForFunction(() => window.__TEAR_GHOST_V3__);
+    await ordinaryBoot();
     await page.evaluate(() => {
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
       environment.reset({ format: "tear-contract", kind: "scenario", schemaVersion: 1, id: "c37-native-dna", version: 1,
@@ -58,7 +64,7 @@ withJourney({ name: "C37 recorded Run DNA", port: 8155, deferBoot: true, ordinar
     assert.ok(source.tracks.events.some((entry) => entry.value?.type === "blade.caught"), "Actual source catch required");
     assert.ok(declaration.metrics.attacks > 0 && declaration.metrics.combatTicks > 0);
     for (const key of metrics) assert.ok(Number.isFinite(declaration.metrics[key]), `Missing native ${key}`);
-    await boot(query); await page.waitForFunction(() => window.__TEAR_GHOST_V3__);
+    await ordinaryBoot();
     await openDna();
     const checkPanel = async () => {
       const labels = await page.evaluate(() => window.__DNA_POSITIONS__.map((entry) => entry.text));
@@ -80,7 +86,7 @@ withJourney({ name: "C37 recorded Run DNA", port: 8155, deferBoot: true, ordinar
     evidence.compactPositions = await page.evaluate(() => window.__DNA_POSITIONS__);
     if (directory) await page.screenshot({ path: join(directory, "compact.png") });
     await page.setViewportSize({ width: 1600, height: 900 });
-    await boot(query); await page.waitForFunction(() => window.__TEAR_GHOST_V3__); await openDna();
+    await ordinaryBoot(); await openDna();
     evidence.reopened = await checkPanel();
     if (directory) await page.screenshot({ path: join(directory, "reopened.png") });
     evidence.status = "passed";
