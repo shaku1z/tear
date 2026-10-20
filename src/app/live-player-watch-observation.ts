@@ -125,7 +125,9 @@ export async function createPlayerWatchObservation(backend: GhostVaultBackend, a
       if (decision.artifactId !== activation.artifactId || decision.artifactHash !== activation.artifactHash || decision.activationHash !== activation.activationHash) { invalid = true; throw new RangeError("Run Monitor decision provenance changed"); }
       journal.append({ tick: state.tick, receipt: { observationHash: decision.stateHash, source: decision.source,
         artifactId: decision.artifactId, artifactHash: decision.artifactHash, activationHash: decision.activationHash,
-        ...(decision.reason === undefined ? {} : { reason: decision.reason }) }, actions: decision.actions,
+        ...(decision.reason === undefined ? {} : { reason: decision.reason }),
+        ...(decision.support === undefined ? {} : { support: decision.support }),
+        ...(decision.decisionMilliseconds === undefined ? {} : { decisionMilliseconds: decision.decisionMilliseconds }) }, actions: decision.actions,
         // Journal schema requires descriptive labels; these do not represent a learned confidence estimate.
         trace: { tick: state.tick, profile: "survival", objective: "survive", maneuver: "track", confidence: 0, recovery: false,
           observationClass: "structured-state", critic: ["Canonical artifact decisions; descriptive trace only, confidence unmeasured."] } });

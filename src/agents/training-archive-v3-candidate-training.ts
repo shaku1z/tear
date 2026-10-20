@@ -6,7 +6,7 @@ import type { TearAcademyCandidateCustodyStore } from "./academy-candidate-custo
 import type { TearAcademyCandidateCurationStore } from "./academy-candidate-curation";
 import type { TearAcademyCorpusStore } from "./academy-corpus";
 import type { TearAcademyTrainingDatasetLoader, TearAcademyTrainingDatasetRequestV1 } from "./academy-training-dataset";
-import { TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1, TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1 } from "./c34-c32-runtime-compatibility";
+import { readTearReturnVariant } from "./c34-source-feature-state";
 import { createTearC34V3C32PolicyCandidate } from "./c34-v3-c32-policy-adapter";
 import { createTearOfflineRlPlan, extractTearOfflineRlTrajectories, validateTearOfflineRlPlanRequest, type TearOfflineRlPlanRequestV1 } from "./offline-rl-training";
 import { advanceTearOfflineRlV3Checkpoint, completeTearOfflineRlV3Checkpoint, createTearOfflineRlV3Checkpoint, createTearOfflineRlV3Plan, validateTearOfflineRlV3Request } from "./offline-rl-v3-training";
@@ -42,6 +42,7 @@ export function validateTrainingArchiveV3CandidateTrainingRequest(request: Train
   const actions = validateTearOfflineRlV3Request(request.offline);
   if (actions.length !== request.offline.actionVocabulary.length) throw new TypeError("governed V3 action vocabulary repeats");
   validateTearOnlineRlV3Request(request.online);
+  if (request.offline.variant !== undefined && request.reward.reward.schemaVersion !== 2) throw new TypeError("return.v2 requires the explicit native reward version2");
 }
 
 /**
@@ -51,7 +52,9 @@ export function validateTrainingArchiveV3CandidateTrainingRequest(request: Train
  */
 export async function trainTrainingArchiveV3Candidate(
   services: Readonly<{ custody: TearAcademyCandidateCustodyStore; curation: TearAcademyCandidateCurationStore;
-    corpus: TearAcademyCorpusStore; loader: TearAcademyTrainingDatasetLoader }>,
+    corpus: TearAcademyCorpusStore; loader: TearAcademyTrainingDatasetLoader;
+    /** Diagnostic bytes only, before unchanged candidate qualification. Callback failure aborts without adoption. */
+    onComputedDiagnostic?: (serialized: string) => void }>,
   requestInput: TrainingArchiveV3CandidateTrainingRequest,
 ) {
   validateTrainingArchiveV3CandidateTrainingRequest(requestInput);
@@ -110,12 +113,16 @@ export async function trainTrainingArchiveV3Candidate(
   const evaluation = evaluateTearOnlineRlV3InSource(online, offline, training, reward, checkpoint, request.minimumRewardGain);
   // Awaited reads can observe a revocation that occurred during dataset loading.
   // This is an output boundary, not a substitute for guarded durable admission.
+  services.onComputedDiagnostic?.(JSON.stringify({ format: "tear-return-training-computed-diagnostic", schemaVersion: 2,
+    request, manifestHash: manifest.manifestHash, manifestRootHash: manifest.rootHash, datasetHash: dataset.datasetHash,
+    custodyRecordHashes: manifest.entries.map(entry => entry.custodyRecordHash), sourceBuilds, reward, trajectories, offline,
+    offlineCheckpoint, training, online, checkpoint, evaluation, candidateAdmission: "not-attempted" }));
   await requireCustody();
   const candidate = createTearC34V3C32PolicyCandidate(offline, training, online, checkpoint, evaluation, {
     ...request.artifact,
     build: primaryBuild,
-    encoder: { id: TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id, schemaVersion: 1,
-      observationClass: "structured-state", normalizationHash: TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 },
+    encoder: { id: offline.sourceStateAdapter.id, schemaVersion: readTearReturnVariant(offline.sourceStateAdapter) === undefined ? 1 : 2,
+      observationClass: "structured-state", normalizationHash: offline.sourceStateAdapter.adapterHash },
     actionSchema: "tear-game-action-command-envelope.v1", recurrentState: { kind: "none", schemaVersion: 1 },
     trainingManifest: { id: manifest.id, version: manifest.version, rootHash: manifest.rootHash },
     rewardVersion: reward.reward.rewardHash,

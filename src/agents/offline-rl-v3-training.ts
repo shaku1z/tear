@@ -9,6 +9,7 @@ import {
   encodeTearC34C32SourceState,
   parseTearC34C32RuntimeModel,
   tearC34C32SemanticActionHash,
+  tearC34C32VocabularyHash,
   type TearC34C32RuntimeModelV1,
 } from "./c34-c32-runtime-compatibility";
 import {
@@ -17,6 +18,7 @@ import {
   type TearOfflineRlTrainingConfigV1,
   type TearOfflineRlTrajectoryReceiptV1,
 } from "./offline-rl-training";
+import { readTearReturnVariant, tearReturnAdapter, TEAR_RETURN_PLAYING_MASK, type TearReturnVariant } from "./c34-source-feature-state";
 
 const HASH = /^[a-f0-9]{16}$/u;
 const CHECKPOINT_KEY = "offline-rl-v3-checkpoint:v1:";
@@ -29,7 +31,7 @@ export interface TearOfflineRlV3PlanV1 {
   readonly id: string;
   readonly version: number;
   readonly receipt: Readonly<{ receiptHash: string; planHash: string; rewardHash: string }>;
-  readonly sourceStateAdapter: Readonly<{ id: typeof TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id; adapterHash: string }>;
+  readonly sourceStateAdapter: Readonly<{ id: string; adapterHash: string }>;
   readonly actionVocabulary: readonly GameAction[];
   readonly actionVocabularyHash: string;
   readonly config: TearOfflineRlTrainingConfigV1;
@@ -84,24 +86,30 @@ function ordered(values: readonly TearOfflineRlQValueV1[]): readonly TearOffline
 }
 
 /** Checks authoring values without requiring a fabricated trajectory receipt. */
-export function validateTearOfflineRlV3Request(input: Readonly<{ id: string; version: number; actionVocabulary: readonly unknown[]; config: TearOfflineRlTrainingConfigV1 }>): readonly GameAction[] {
+export function validateTearOfflineRlV3Request(input: Readonly<{ id: string; version: number; actionVocabulary: readonly unknown[]; config: TearOfflineRlTrainingConfigV1; variant?: TearReturnVariant }>): readonly GameAction[] {
   if (!record(input) || !text(input.id) || !positive(input.version, Number.MAX_SAFE_INTEGER)
     || !validConfig(input.config) || !Array.isArray(input.actionVocabulary)) throw new TypeError("invalid offline RL V3 request");
   const actions = canonicalizeTearC34C32ActionVocabulary(input.actionVocabulary);
   if (actions.length < 1 || actions.length > 16) throw new RangeError("offline RL V3 requires one to sixteen canonical actions");
+  if (input.variant !== undefined) {
+    tearReturnAdapter(input.variant);
+    if (actions.length > 15 || actions.some(action => !TEAR_RETURN_PLAYING_MASK.includes(action.type as never))) throw new RangeError("return.v2 permits at most15 playing-return commands plus the explicit empty decision");
+  }
   return actions;
 }
 
 function freezePlan(draft: Omit<TearOfflineRlV3PlanV1, "planHash" | "actionVocabularyHash">): TearOfflineRlV3PlanV1 {
   const rawAdapter: unknown = draft.sourceStateAdapter;
+  const variant = record(rawAdapter) && typeof rawAdapter.id === "string" && typeof rawAdapter.adapterHash === "string"
+    ? readTearReturnVariant(rawAdapter as { id: string; adapterHash: string }) : undefined;
   if (!text(draft.id) || !positive(draft.version, Number.MAX_SAFE_INTEGER) || !record(draft.receipt)
     || !hash(draft.receipt.receiptHash) || !hash(draft.receipt.planHash) || !hash(draft.receipt.rewardHash)
-    || !record(rawAdapter) || rawAdapter.id !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id
-    || rawAdapter.adapterHash !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 || !validConfig(draft.config)) {
+    || !record(rawAdapter) || variant === undefined && (rawAdapter.id !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id
+    || rawAdapter.adapterHash !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1) || !validConfig(draft.config)) {
     throw new TypeError("invalid offline RL V3 plan");
   }
-  const actionVocabulary = validateTearOfflineRlV3Request(draft);
-  const actionVocabularyHash = stableVerificationHash(actionVocabulary);
+  const actionVocabulary = validateTearOfflineRlV3Request({ ...draft, ...(variant === undefined ? {} : { variant }) });
+  const actionVocabularyHash = tearC34C32VocabularyHash(actionVocabulary, variant);
   const value = Object.freeze({ format: "tear-offline-rl-v3-plan" as const, schemaVersion: 1 as const, id: draft.id, version: draft.version,
     receipt: freeze(draft.receipt), sourceStateAdapter: freeze(draft.sourceStateAdapter), actionVocabulary, actionVocabularyHash, config: freeze(draft.config) });
   return Object.freeze({ ...value, planHash: stableVerificationHash(value) });
@@ -109,11 +117,11 @@ function freezePlan(draft: Omit<TearOfflineRlV3PlanV1, "planHash" | "actionVocab
 
 /** Freezes receipt lineage, the exact common source adapter, vocabulary, and Q limits before any V3 update. */
 export function createTearOfflineRlV3Plan(receiptInput: TearOfflineRlTrajectoryReceiptV1,
-  input: Readonly<{ id: string; version: number; actionVocabulary: readonly unknown[]; config: TearOfflineRlTrainingConfigV1 }>): TearOfflineRlV3PlanV1 {
+  input: Readonly<{ id: string; version: number; actionVocabulary: readonly unknown[]; config: TearOfflineRlTrainingConfigV1; variant?: TearReturnVariant }>): TearOfflineRlV3PlanV1 {
   const receipt = parseTearOfflineRlTrajectoryReceipt(receiptInput);
   return freezePlan({ format: "tear-offline-rl-v3-plan", schemaVersion: 1, id: input.id, version: input.version,
     receipt: { receiptHash: receipt.receiptHash, planHash: receipt.plan.planHash, rewardHash: receipt.plan.rewardHash },
-    sourceStateAdapter: { id: TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id, adapterHash: TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 },
+    sourceStateAdapter: input.variant === undefined ? { id: TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id, adapterHash: TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 } : tearReturnAdapter(input.variant),
     actionVocabulary: input.actionVocabulary as readonly GameAction[], config: input.config });
 }
 
@@ -128,16 +136,15 @@ export function parseTearOfflineRlV3Plan(value: unknown): TearOfflineRlV3PlanV1 
 
 function samples(plan: TearOfflineRlV3PlanV1, receipt: TearOfflineRlTrajectoryReceiptV1) {
   if (plan.receipt.receiptHash !== receipt.receiptHash || plan.receipt.planHash !== receipt.plan.planHash || plan.receipt.rewardHash !== receipt.plan.rewardHash) throw new RangeError("offline RL V3 receipt lineage changed");
-  const vocabulary = new Set(plan.actionVocabulary.map((action) => tearC34C32SemanticActionHash([action])));
+  const variant = readTearReturnVariant(plan.sourceStateAdapter);
+  const vocabulary = new Set([...plan.actionVocabulary.map((action) => tearC34C32SemanticActionHash([action])), ...(variant === undefined ? [] : [tearC34C32SemanticActionHash([])])]);
   const output = receipt.trajectories.flatMap((transition) => {
-    if (transition.actions.length === 0) return [];
-    if (transition.actions.length !== 1) throw new RangeError("offline RL V3 requires one semantic action per decision transition");
-    const action = transition.actions[0]?.command;
-    if (action === undefined) throw new Error("validated V3 action disappeared");
-    const semanticActionHash = tearC34C32SemanticActionHash([action]);
+    if (transition.actions.length === 0 && variant === undefined) return [];
+    if (transition.actions.length > 1) throw new RangeError("offline RL V3 requires one semantic action per decision transition");
+    const semanticActionHash = tearC34C32SemanticActionHash(transition.actions.map(entry => entry.command));
     if (!vocabulary.has(semanticActionHash)) throw new RangeError("offline RL V3 transition action is outside its frozen vocabulary");
-    return [Object.freeze({ transition, stateHash: encodeTearC34C32SourceState(transition.from).stateHash,
-      nextStateHash: encodeTearC34C32SourceState(transition.to).stateHash, semanticActionHash,
+    return [Object.freeze({ transition, stateHash: encodeTearC34C32SourceState(transition.from, variant).stateHash,
+      nextStateHash: encodeTearC34C32SourceState(transition.to, variant).stateHash, semanticActionHash,
       actionHash: stableVerificationHash(transition.actions) })];
   }).sort((left, right) => left.transition.sequenceHash.localeCompare(right.transition.sequenceHash) || left.transition.from.tick - right.transition.from.tick);
   if (output.length < 1) throw new RangeError("offline RL V3 receipt has no executable canonical actions");
@@ -161,7 +168,9 @@ export function parseTearOfflineRlV3Checkpoint(value: unknown): TearOfflineRlV3C
 
 export function createTearOfflineRlV3Checkpoint(planInput: TearOfflineRlV3PlanV1, receiptInput: TearOfflineRlTrajectoryReceiptV1): TearOfflineRlV3CheckpointV1 {
   const plan = parseTearOfflineRlV3Plan(planInput), rows = samples(plan, parseTearOfflineRlTrajectoryReceipt(receiptInput));
-  const qValues = rows.map((row) => Object.freeze({ stateHash: row.stateHash, semanticActionHash: row.semanticActionHash, actionHash: row.actionHash, value: 0 }));
+  const entries = rows.map((row) => Object.freeze({ stateHash: row.stateHash, semanticActionHash: row.semanticActionHash, actionHash: row.actionHash, value: 0 }));
+  const qValues = readTearReturnVariant(plan.sourceStateAdapter) === undefined ? entries
+    : [...new Map(entries.map(entry => [qKey(entry.stateHash, entry.semanticActionHash), entry])).values()];
   if (qValues.length > plan.config.maxStateActionEntries) throw new RangeError("offline RL V3 state/action budget exceeded");
   return checkpoint({ format: "tear-offline-rl-v3-checkpoint", schemaVersion: 1, planHash: plan.planHash, epoch: 0, updates: 0,
     consecutiveDivergentEpochs: 0, status: "running", qValues, metrics: { lastMeanAbsoluteTdError: 0, maximumAbsoluteQ: 0 } });
@@ -207,7 +216,7 @@ export function completeTearOfflineRlV3Checkpoint(planInput: TearOfflineRlV3Plan
   if (checkpointInputParsed.status === "running") throw new RangeError("offline RL V3 checkpoint is incomplete");
   const disposition = checkpointInputParsed.status, metrics = Object.freeze({ lastMeanAbsoluteTdError: checkpointInputParsed.metrics.lastMeanAbsoluteTdError,
     maximumAbsoluteQ: checkpointInputParsed.metrics.maximumAbsoluteQ, stateActionEntries: checkpointInputParsed.qValues.length });
-  const model = disposition === "complete" ? createTearC34C32RuntimeModel(checkpointInputParsed.qValues) : undefined;
+  const model = disposition === "complete" ? createTearC34C32RuntimeModel(checkpointInputParsed.qValues, readTearReturnVariant(plan.sourceStateAdapter)) : undefined;
   const draft = { format: "tear-offline-rl-v3-training" as const, schemaVersion: 1 as const,
     plan: Object.freeze({ planHash: plan.planHash, receiptHash: plan.receipt.receiptHash, adapterHash: plan.sourceStateAdapter.adapterHash, actionVocabularyHash: plan.actionVocabularyHash }),
     disposition, checkpoint: Object.freeze({ checkpointHash: checkpointInputParsed.checkpointHash, epoch: checkpointInputParsed.epoch, updates: checkpointInputParsed.updates }), metrics,
@@ -217,11 +226,13 @@ export function completeTearOfflineRlV3Checkpoint(planInput: TearOfflineRlV3Plan
 
 export function parseTearOfflineRlV3TrainingResult(value: unknown): TearOfflineRlV3TrainingResultV1 {
   if (!record(value) || value.format !== "tear-offline-rl-v3-training" || value.schemaVersion !== 1 || !record(value.plan) || !hash(value.plan.planHash)
-    || !hash(value.plan.receiptHash) || value.plan.adapterHash !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 || !hash(value.plan.actionVocabularyHash)
+    || !hash(value.plan.receiptHash) || typeof value.plan.adapterHash !== "string" || ![TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1, tearReturnAdapter("return-exact.v2").adapterHash,
+      tearReturnAdapter("return-features.v2").adapterHash].includes(value.plan.adapterHash) || !hash(value.plan.actionVocabularyHash)
     || !["complete", "stopped-divergence"].includes(String(value.disposition)) || !record(value.checkpoint) || !hash(value.checkpoint.checkpointHash)
     || !Number.isSafeInteger(value.checkpoint.epoch) || !Number.isSafeInteger(value.checkpoint.updates) || !record(value.metrics) || !hash(value.trainingHash)) throw new TypeError("invalid offline RL V3 result");
   const typed = value as unknown as Omit<TearOfflineRlV3TrainingResultV1, "trainingHash"> & { trainingHash: string };
   const model = typed.model === undefined ? undefined : parseTearC34C32RuntimeModel(typed.model);
+  if (model !== undefined && model.sourceStateAdapter.adapterHash !== typed.plan.adapterHash) throw new TypeError("training result/model adapter mismatch");
   if (typed.disposition === "complete" && model === undefined) throw new TypeError("completed offline RL V3 result requires a compatible model");
   if (typed.disposition === "stopped-divergence" && model !== undefined) throw new TypeError("stopped offline RL V3 result cannot expose a model");
   const draft = { ...typed, ...(model === undefined ? {} : { model }) }; delete (draft as { trainingHash?: string }).trainingHash;

@@ -3,6 +3,7 @@ import type { GhostVaultStore } from "../ghost";
 import type { GhostVaultWrite } from "../ghost";
 import { trainingOperationsV3CommitParts, verifyTrainingOperationsV3Commit, type TrainingOperationsV3Continuation, type TrainingOperationsV3Guard } from "./training-operations-v3-commit";
 import { stableVerificationHash } from "../replay/hash";
+import { readTearReturnVariant } from "./c34-source-feature-state";
 import { commitTrainingOperationsJobWrites, trainingOperationsJobBudgetAuthority } from "./training-operations-budget";
 import { trainingOperationsTrainingComputeUnits } from "./training-operations-compute-budget";
 import { assertTrainingOperationsV3DerivedReceiptPayload } from "./training-archive-v3-derived-evidence-contract";
@@ -74,6 +75,7 @@ export function parseTrainingOperationsV3TrainingReceipt(value: unknown): Traini
     || artifact.levelTarget !== data.request.artifact.levelTarget || !same(artifact.signature, data.request.artifact.signature)
     || artifact.lineage.trainingRunId !== training.trainingHash || artifact.lineage.parentArtifactId !== data.request.parentArtifactId
     || offline.id !== data.request.offline.id || offline.version !== data.request.offline.version || !same(offline.config, data.request.offline.config)
+    || readTearReturnVariant(offline.sourceStateAdapter) !== data.request.offline.variant
     || !same(offline.actionVocabulary, canonicalizeTearC34C32ActionVocabulary(data.request.offline.actionVocabulary))
     || online.id !== data.request.online.id || !same(online.config, data.request.online.config) || !same(online.scenarios, data.request.online.scenarios)
     || reward.id !== data.request.reward.id || reward.version !== data.request.reward.version || reward.seed !== data.request.reward.seed

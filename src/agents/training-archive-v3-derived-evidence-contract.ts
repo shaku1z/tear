@@ -11,13 +11,13 @@ const offlineConfig = fields("epochs learningRate gamma maxStateActionEntries ma
 const onlineConfig = fields("learningRate gamma maxTicks maxUpdates maxAbsoluteQ");
 const component = fields("id source weight maximumSourceValue perTransitionCap");
 const limits = fields("maxTransitions maxEventsPerTransition maxRewardViolations");
-const rewardDefinition = { ...fields("totalMinimum totalMaximum"), components: [component] as Shape };
+const rewardDefinition = { ...fields("totalMinimum totalMaximum schemaVersion"), components: [component] as Shape };
 const scenario: Shape = { ...fields("format kind schemaVersion id version description stateClass executionClass seed maxTicks"),
   subject: fields("kind id"), backends: list, start: fields("mode difficulty weapon stage wave boss bossPhase"), assertions: list, tags: list };
 const request: Shape = { ...fields("manifestHash manifestRootHash actor at minimumRewardGain parentArtifactId"),
   dataset: fields("manifestId trainerId version"), artifact: { ...fields("id createdAt levelTarget"), signature },
   reward: { ...fields("id version seed"), reward: rewardDefinition, limits },
-  offline: { ...fields("id version"), actionVocabulary: actions, config: offlineConfig },
+  offline: { ...fields("id version variant"), actionVocabulary: actions, config: offlineConfig },
   online: { ...fields("id"), scenarios: [scenario], config: onlineConfig } };
 const qValue = fields("stateHash semanticActionHash actionHash value");
 const adapter = fields("id adapterHash");
@@ -47,7 +47,8 @@ const evidence: Shape = { request, ...fields("lineageHash"),
   // Admission requires complete training; raw resumable world checkpoints have no place here.
   checkpoint: { ...fields("format schemaVersion planHash cursor ticks updates status checkpointHash"), qValues: [qValue] },
   evaluation: { ...fields("format schemaVersion planHash baselineTrainingHash challengerCheckpointHash promotional resultHash"),
-    traces: [fields("side scenarioHash reward terminalHash")], metrics: fields("baselineReward challengerReward passed") },
+    traces: [{ ...fields("side scenarioHash reward terminalHash"), returnEvidence: { ...fields("entryDecisions defaultDecisions scriptedFallbackDecisions terminated truncated"),
+      nativeReturns: { ...fields("thrown catches matchedCatches"), matches: [fields("weaponId throwId thrownAt caughtAt")] } } }], metrics: fields("baselineReward challengerReward passed") },
   candidate: { artifact, receipt: fields("format schemaVersion artifactId artifactHash payloadHash protocolHash receiptHash") } };
 
 function check(value: unknown, shape: Shape, path: string): void {

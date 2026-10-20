@@ -11,7 +11,7 @@ const TRAJECTORY_KEY = "offline-rl-trajectory:v1:";
 const CHECKPOINT_KEY = "offline-rl-checkpoint:v1:";
 const TRAINING_KEY = "offline-rl-training:v1:";
 
-export type TearOfflineRlRewardSourceV1 = "run.completed" | "run.defeated" | "wave.cleared" | "enemy.defeated" | "score.delta";
+export type TearOfflineRlRewardSourceV1 = "run.completed" | "run.defeated" | "wave.cleared" | "enemy.defeated" | "score.delta" | "weapon.catch";
 
 /**
  * A frozen C34 reward component. It may read only named source-world facts;
@@ -28,7 +28,7 @@ export interface TearOfflineRlRewardComponentV1 {
 
 export interface TearOfflineRlRewardDefinitionV1 {
   readonly format: "tear-offline-rl-reward-definition";
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 1 | 2;
   readonly components: readonly TearOfflineRlRewardComponentV1[];
   readonly totalMinimum: number;
   readonly totalMaximum: number;
@@ -62,7 +62,7 @@ export interface TearOfflineRlPlanRequestV1 {
   readonly id: string;
   readonly version: number;
   readonly seed: number;
-  readonly reward: Omit<TearOfflineRlRewardDefinitionV1, "format" | "schemaVersion" | "rewardHash">;
+  readonly reward: Omit<TearOfflineRlRewardDefinitionV1, "format" | "schemaVersion" | "rewardHash"> & { readonly schemaVersion?: 1 | 2 };
   readonly limits: TearOfflineRlLimitsV1;
 }
 
@@ -125,12 +125,12 @@ function sortedUnique(values: readonly string[]): readonly string[] {
 function cloneState(value: CanonicalGameplayState): CanonicalGameplayState { return Object.freeze(structuredClone(value)); }
 
 /** Reject unknown/unshaped facts before a reward source can observe them. */
-function validNativeEvent(value: unknown): value is TearGameplayEvent {
+function validNativeEvent(value: unknown, version: 1 | 2 = 1): value is TearGameplayEvent {
   if (!record(value)) return false;
   const tick = value.tick;
   if (typeof tick !== "number" || !Number.isSafeInteger(tick) || tick < 0 || !text(value.kind)) return false;
   switch (value.kind) {
-    case "run": return ["started", "paused", "resumed", "completed", "defeated", "abandoned"].includes(String(value.transition))
+    case "run": return (version === 1 || typeof value.transition === "string") && ["started", "paused", "resumed", "completed", "defeated", "abandoned"].includes(String(value.transition))
       && text(value.runId) && text(value.mode) && text(value.difficulty) && text(value.weaponId)
       && Number.isSafeInteger(value.wave) && Number.isFinite(value.score) && Number.isFinite(value.runTimeSeconds);
     case "stage": return Number.isSafeInteger(value.stage);
@@ -139,11 +139,25 @@ function validNativeEvent(value: unknown): value is TearGameplayEvent {
     case "death": return text(value.actorId) && text(value.cause);
     case "loadout": return text(value.choiceId) && Number.isSafeInteger(value.tier) && Number.isSafeInteger(value.wave);
     case "effect": return text(value.effect) && Number.isFinite(value.x) && Number.isFinite(value.y);
+    case "weapon": return version === 2 && typeof value.event === "string" && ["throw-launch", "throw-resolved", "catch"].includes(value.event)
+      && text(value.weaponId) && typeof value.throwId === "number" && Number.isSafeInteger(value.throwId) && value.throwId >= 0
+      && Number.isFinite(value.x) && Number.isFinite(value.y) && (value.damage === undefined || Number.isFinite(value.damage));
+    case "projectile": return version === 2 && typeof value.event === "string" && ["spawned", "deflected", "owner-changed", "hit", "expired"].includes(value.event)
+      && text(value.projectileId) && [value.x, value.y, value.vx, value.vy].every(Number.isFinite)
+      && (value.owner === "enemy" || value.owner === "player") && (value.sourceEnemyId === undefined || text(value.sourceEnemyId))
+      && (value.targetEnemyId === undefined || text(value.targetEnemyId)) && (value.perfect === undefined || typeof value.perfect === "boolean");
+    case "world": return version === 2 && value.event === "void-rescue" && [value.x, value.y, value.hp].every(Number.isFinite)
+      && (value.lane === null || value.lane === "lower" || value.lane === "upper");
+    case "environment": return version === 2 && typeof value.event === "string" && ["field-started", "field-resolved", "combat-object-link-created", "combat-object-damaged", "combat-object-destroyed", "object-cleaned"].includes(value.event)
+      && text(value.objectId) && typeof value.category === "string" && ["field", "combat-object", "route"].includes(value.category) && text(value.objectKind)
+      && (value.integrity === undefined || Number.isFinite(value.integrity)) && (value.reason === undefined || typeof value.reason === "string");
     default: return false;
   }
 }
 
-function freezeReward(value: Omit<TearOfflineRlRewardDefinitionV1, "format" | "schemaVersion" | "rewardHash">): TearOfflineRlRewardDefinitionV1 {
+function freezeReward(value: TearOfflineRlPlanRequestV1["reward"]): TearOfflineRlRewardDefinitionV1 {
+  const schemaVersion = value.schemaVersion ?? 1;
+  if (![1, 2].includes(schemaVersion)) throw new TypeError("unknown reward definition version");
   if (value.components.length < 1 || value.components.length > 16
     || !finite(value.totalMinimum, -10_000, 0) || !finite(value.totalMaximum, 0, 10_000) || value.totalMinimum > value.totalMaximum) {
     throw new TypeError("invalid offline RL reward definition");
@@ -151,7 +165,7 @@ function freezeReward(value: Omit<TearOfflineRlRewardDefinitionV1, "format" | "s
   const ids = new Set<string>();
   const components = value.components.map((component) => {
     if (!text(component.id) || component.id.length > 64 || ids.has(component.id)
-      || !["run.completed", "run.defeated", "wave.cleared", "enemy.defeated", "score.delta"].includes(component.source)
+      || !["run.completed", "run.defeated", "wave.cleared", "enemy.defeated", "score.delta", ...(schemaVersion === 2 ? ["weapon.catch"] : [])].includes(component.source)
       || !finite(component.weight, -1_000, 1_000) || !finite(component.maximumSourceValue, 0, 1_000_000)
       || !finite(component.perTransitionCap, 0.000_001, 10_000)) {
       throw new TypeError("invalid offline RL reward component");
@@ -159,7 +173,7 @@ function freezeReward(value: Omit<TearOfflineRlRewardDefinitionV1, "format" | "s
     ids.add(component.id);
     return Object.freeze({ ...component });
   });
-  const draft = { format: "tear-offline-rl-reward-definition" as const, schemaVersion: 1 as const,
+  const draft = { format: "tear-offline-rl-reward-definition" as const, schemaVersion,
     components: Object.freeze(components), totalMinimum: value.totalMinimum, totalMaximum: value.totalMaximum };
   return Object.freeze({ ...draft, rewardHash: stableVerificationHash(draft) });
 }
@@ -241,7 +255,7 @@ export function parseTearOfflineRlPlan(value: unknown): TearOfflineRlPlanV1 {
   return plan;
 }
 
-function assertTrackAlignment(sequence: TearAcademyTrainingSequenceV1): void {
+function assertTrackAlignment(sequence: TearAcademyTrainingSequenceV1, rewardVersion: 1 | 2): void {
   const { tracks } = sequence;
   if (tracks.observations.length < 2 || !Number.isSafeInteger(tracks.terminal.tick)
     || tracks.terminal.tick < 1 || !hash(tracks.terminal.semanticHash)) {
@@ -265,7 +279,7 @@ function assertTrackAlignment(sequence: TearAcademyTrainingSequenceV1): void {
   }
   let eventTick = observations[0]?.tick ?? 0;
   for (const event of tracks.nativeEvents) {
-    if (!validNativeEvent(event) || event.tick < eventTick || event.tick < (observations[0]?.tick ?? 0) || event.tick > tracks.terminal.tick) {
+    if (!validNativeEvent(event, rewardVersion) || event.tick < eventTick || event.tick < (observations[0]?.tick ?? 0) || event.tick > tracks.terminal.tick) {
       throw new RangeError("offline RL native event trace is not monotonic and bounded");
     }
     eventTick = event.tick;
@@ -279,12 +293,14 @@ function sourceValue(source: TearOfflineRlRewardSourceV1, from: CanonicalGamepla
     case "wave.cleared": return events.filter((event) => event.kind === "wave" && (event.event === "clear" || event.event === "cleared")).length;
     case "enemy.defeated": return events.filter((event) => event.kind === "death").length;
     case "score.delta": return (to.run?.score ?? 0) - (from.run?.score ?? 0);
+    case "weapon.catch": return events.filter(event => event.kind === "weapon" && event.event === "catch").length;
   }
 }
 
 export function evaluateTearOfflineRlRewardTransition(planInput: TearOfflineRlPlanV1, from: CanonicalGameplayState, to: CanonicalGameplayState,
   events: readonly TearGameplayEvent[]): TearOfflineRlRewardEvaluationV1 {
   const plan = parseTearOfflineRlPlan(planInput);
+  if (plan.reward.schemaVersion === 2 && events.some(event => !validNativeEvent(event, 2))) throw new TypeError("invalid native return reward fact");
   if (events.length > plan.limits.maxEventsPerTransition) throw new RangeError("offline RL transition exceeds event budget");
   const components = plan.reward.components.map((definition) => {
     const observed = sourceValue(definition.source, from, to, events);
@@ -300,6 +316,26 @@ export function evaluateTearOfflineRlRewardTransition(planInput: TearOfflineRlPl
     throw new RangeError("offline RL total reward bound exceeded");
   }
   return Object.freeze({ components: Object.freeze(components), total: rawTotal });
+}
+
+/** Native launch/catch identity only; accepted recall requires its separate input/state witness. */
+export function measureTearNativeReturns(events: readonly TearGameplayEvent[]) {
+  const launches = new Map<string, number>(), seen = new Set<string>();
+  const matches: Readonly<{ weaponId: string; throwId: number; thrownAt: number; caughtAt: number }>[] = [];
+  let thrown = 0, catches = 0;
+  for (const event of events) {
+    if (event.kind !== "weapon") continue;
+    if (!validNativeEvent(event, 2)) throw new TypeError("invalid native return witness");
+    const key = `${event.weaponId}:${String(event.throwId)}`;
+    if (event.event === "throw-launch") { thrown++; if (!launches.has(key)) launches.set(key, event.tick); }
+    if (event.event === "catch") {
+      catches++; const thrownAt = launches.get(key);
+      if (event.throwId > 0 && thrownAt !== undefined && thrownAt < event.tick && !seen.has(key)) {
+        seen.add(key); matches.push(Object.freeze({ weaponId: event.weaponId, throwId: event.throwId, thrownAt, caughtAt: event.tick }));
+      }
+    }
+  }
+  return Object.freeze({ thrown, catches, matchedCatches: matches.length, matches: Object.freeze(matches) });
 }
 
 /**
@@ -323,7 +359,7 @@ export function extractTearOfflineRlTrajectories(dataset: TearAcademyTrainingDat
     if (sequence.candidateHash !== selected.candidateHash || scenarioHash(sequence) !== selected.scenarioHash) {
       throw new RangeError("offline RL selection no longer matches its governed source");
     }
-    assertTrackAlignment(sequence);
+    assertTrackAlignment(sequence, plan.reward.schemaVersion);
     const observations = sequence.tracks.observations;
     for (let index = 0; index < observations.length - 1; index += 1) {
       const from = observations[index], to = observations[index + 1];

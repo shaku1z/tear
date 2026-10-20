@@ -4,10 +4,11 @@ import { stableVerificationHash } from "../replay/hash";
 import { assertTrainingOperationsV3CasePayload } from "./training-archive-v3-derived-evidence-contract";
 import { createProductionHeadlessEnvironment, type TearScenarioV1 } from "../tearbench";
 import { validateProductionHeadlessScenario } from "../tearbench/production-headless-environment";
-import { createTearC32CanonicalSourceObservation, parseTearC34V3C32PolicyCandidate, TearC34V3C32PolicyRuntime } from "./c34-v3-c32-policy-adapter";
+import { createTearC32CanonicalSourceObservation, parseTearC34V3C32PolicyCandidate, TearC34V3C32PolicyRuntime, type TearC34V3C32Decision } from "./c34-v3-c32-policy-adapter";
 import { parseTearFoundryJob, requireTearFoundryEvaluationProtocol, type TearFoundryJobV1 } from "./foundry-job-state";
-import { evaluateTearOfflineRlRewardTransition, parseTearOfflineRlPlan, type TearOfflineRlPlanV1 } from "./offline-rl-training";
+import { evaluateTearOfflineRlRewardTransition, measureTearNativeReturns, parseTearOfflineRlPlan, type TearOfflineRlPlanV1 } from "./offline-rl-training";
 import { parseTearPolicyArtifact, type TearPolicyArtifactV1 } from "./policy-artifact-registry";
+import { readTearReturnVariant } from "./c34-source-feature-state";
 
 type Side = "champion" | "challenger";
 export interface TrainingOperationsV3ChampionEvaluationPlanV1 {
@@ -57,7 +58,8 @@ export function createTrainingOperationsV3ChampionEvaluationPlan(
 function executeCase(side: Side, artifact: TearPolicyArtifactV1, scenario: TearScenarioV1,
   reward: TearOfflineRlPlanV1, thresholds: ReturnType<typeof requireTearFoundryEvaluationProtocol>["thresholds"], ordinal: number) {
   const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true });
-  const decisions: Readonly<{ tick: number; stateHash: string; actions: readonly GameAction[]; actionHash: string }>[] = [];
+  const decisions: Readonly<{ tick: number; stateHash: string; actions: readonly GameAction[]; actionHash: string; returnDecision?: TearC34V3C32Decision }>[] = [];
+  const variant = readTearReturnVariant(parseTearC34V3C32PolicyCandidate(artifact).sourceStateAdapter);
   try {
     let state = environment.reset(scenario), totalReward = 0, eventCursor = 0, terminated = false, truncated = false;
     const build = environment.sourceBuild();
@@ -65,9 +67,10 @@ function executeCase(side: Side, artifact: TearPolicyArtifactV1, scenario: TearS
     while (!terminated && !truncated && state.tick < Math.min(scenario.maxTicks, thresholds.maxTicksPerCase)) {
       const source = createTearC32CanonicalSourceObservation(state, environment.policyObservation().availableActions);
       const decision = runtime.decide(source);
-      if (decision.source !== "artifact") throw new RangeError("Foundry champion evaluation refused fallback actions");
+      if (decision.source !== "artifact" && !(variant !== undefined && decision.source === "model-default")) throw new RangeError("Foundry champion evaluation refused fallback actions");
       const actions = Object.freeze(structuredClone(decision.actions));
-      decisions.push(Object.freeze({ tick: state.tick, stateHash: source.stateHash, actions, actionHash: stableVerificationHash(actions) }));
+      decisions.push(Object.freeze({ tick: state.tick, stateHash: source.stateHash, actions, actionHash: stableVerificationHash(actions),
+        ...(variant === undefined ? {} : { returnDecision: decision }) }));
       const transition = environment.step(actions), events = environment.sourceTracks().nativeEvents.slice(eventCursor);
       eventCursor += events.length;
       totalReward += evaluateTearOfflineRlRewardTransition(reward, state, transition.observation, events).total;
@@ -84,7 +87,12 @@ function executeCase(side: Side, artifact: TearPolicyArtifactV1, scenario: TearS
         truncated: truncated || !terminated && state.tick >= Math.min(scenario.maxTicks, thresholds.maxTicksPerCase),
         completed: events.some((event) => event.kind === "run" && event.transition === "completed"),
         defeated: events.some((event) => event.kind === "run" && event.transition === "defeated") }),
-      eventHash: stableVerificationHash(events) });
+      eventHash: stableVerificationHash(events),
+      ...(variant === undefined ? {} : { returnEvidence: Object.freeze({
+        entryDecisions: decisions.filter(decision => decision.returnDecision?.support?.entryPresent === true).length,
+        entryZeroDecisions: decisions.filter(decision => decision.returnDecision?.support?.entryPresent === true && decision.returnDecision.support.value === 0).length,
+        defaultDecisions: decisions.filter(decision => decision.returnDecision?.source === "model-default").length,
+        scriptedFallbackDecisions: 0 as const, nativeReturns: measureTearNativeReturns(events) }) }) });
   } finally { environment.dispose(); }
 }
 

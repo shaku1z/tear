@@ -2,6 +2,7 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearOfflineRlQValueV1, TearOfflineRlTrainingResultV1 } from "./offline-rl-training";
+import { encodeTearReturnSourceState, readTearReturnVariant, tearReturnAdapter, TEAR_RETURN_PLAYING_MASK, type TearReturnVariant } from "./c34-source-feature-state";
 
 const HASH = /^[a-f0-9]{16}$/u;
 
@@ -21,7 +22,7 @@ export const TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1 = Object.freeze({
 export const TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 = stableVerificationHash(TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1);
 
 export interface TearC34C32SourceStateEncodingV1 {
-  readonly adapterId: typeof TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id;
+  readonly adapterId: string;
   readonly adapterHash: string;
   readonly stateHash: string;
 }
@@ -29,7 +30,7 @@ export interface TearC34C32SourceStateEncodingV1 {
 export interface TearC34C32RuntimeModelV1 {
   readonly format: "tear-c34-c32-tabular-q-model";
   readonly schemaVersion: 1;
-  readonly sourceStateAdapter: Readonly<{ id: typeof TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id; adapterHash: string }>;
+  readonly sourceStateAdapter: Readonly<{ id: string; adapterHash: string }>;
   readonly entries: readonly TearOfflineRlQValueV1[];
   readonly modelHash: string;
 }
@@ -38,6 +39,9 @@ export interface TearC34C32ActionSelectionV1 {
   readonly actions: readonly GameAction[];
   readonly semanticActionHash: string;
   readonly source: "q" | "fallback";
+  readonly entryPresent?: boolean;
+  readonly value?: number;
+  readonly stateKey?: string;
 }
 
 function record(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === "object" && !Array.isArray(value); }
@@ -45,7 +49,10 @@ function hash(value: unknown): value is string { return typeof value === "string
 function finite(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
 
 /** Pure C30/C34/C32 projection. It is byte-for-byte the existing C34 canonical state key. */
-export function encodeTearC34C32SourceState(state: CanonicalGameplayState): TearC34C32SourceStateEncodingV1 {
+export function encodeTearC34C32SourceState(state: CanonicalGameplayState, variant?: TearReturnVariant,
+  available?: readonly GameAction["type"][]): TearC34C32SourceStateEncodingV1 {
+  if (variant !== undefined) return Object.freeze({ adapterHash: tearReturnAdapter(variant).adapterHash,
+    adapterId: tearReturnAdapter(variant).id, stateHash: encodeTearReturnSourceState(state, variant, available).stateHash });
   return Object.freeze({ adapterId: TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id,
     adapterHash: TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1, stateHash: stableVerificationHash(state) });
 }
@@ -57,6 +64,10 @@ export const encodeC32RuntimeSourceStateForC34 = encodeTearC34C32SourceState;
 
 export function tearC34C32SemanticActionHash(actions: readonly GameAction[]): string {
   return stableVerificationHash(actions);
+}
+
+export function tearC34C32VocabularyHash(actions: readonly GameAction[], variant?: TearReturnVariant): string {
+  return stableVerificationHash(variant === undefined ? actions : { decisions: [[], ...actions.map(action => [action])] });
 }
 
 /**
@@ -97,19 +108,22 @@ function orderedEntries(entries: readonly TearOfflineRlQValueV1[]): readonly Tea
 function modelHash(draft: Omit<TearC34C32RuntimeModelV1, "modelHash">): string { return stableVerificationHash(draft); }
 
 /** Creates a new explicit V3-compatible model envelope. It never accepts legacy C34 result bytes. */
-export function createTearC34C32RuntimeModel(entries: readonly TearOfflineRlQValueV1[]): TearC34C32RuntimeModelV1 {
+export function createTearC34C32RuntimeModel(entries: readonly TearOfflineRlQValueV1[], variant?: TearReturnVariant): TearC34C32RuntimeModelV1 {
   const draft = Object.freeze({ format: "tear-c34-c32-tabular-q-model" as const, schemaVersion: 1 as const,
-    sourceStateAdapter: Object.freeze({ id: TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id, adapterHash: TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 }),
+    sourceStateAdapter: variant === undefined ? Object.freeze({ id: TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id, adapterHash: TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 }) : tearReturnAdapter(variant),
     entries: orderedEntries(entries) });
   return Object.freeze({ ...draft, modelHash: modelHash(draft) });
 }
 
 export function parseTearC34C32RuntimeModel(value: unknown): TearC34C32RuntimeModelV1 {
   if (!record(value) || value.format !== "tear-c34-c32-tabular-q-model" || value.schemaVersion !== 1 || !record(value.sourceStateAdapter)
-    || value.sourceStateAdapter.id !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id || value.sourceStateAdapter.adapterHash !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1
+    || typeof value.sourceStateAdapter.id !== "string" || typeof value.sourceStateAdapter.adapterHash !== "string"
     || !Array.isArray(value.entries) || !hash(value.modelHash)) throw new TypeError("invalid C34/C32 runtime model");
+  const adapter = value.sourceStateAdapter as { id: string; adapterHash: string };
+  const variant = readTearReturnVariant(adapter);
+  if (variant === undefined && (adapter.id !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id || adapter.adapterHash !== TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1)) throw new TypeError("unknown C34/C32 model adapter");
   const draft = Object.freeze({ format: "tear-c34-c32-tabular-q-model" as const, schemaVersion: 1 as const,
-    sourceStateAdapter: Object.freeze({ id: TEAR_C34_C32_SOURCE_STATE_ADAPTER_V1.id, adapterHash: TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1 }),
+    sourceStateAdapter: Object.freeze({ ...adapter }),
     entries: orderedEntries(value.entries as TearOfflineRlQValueV1[]) });
   if (value.modelHash !== modelHash(draft)) throw new TypeError("C34/C32 runtime model integrity mismatch");
   return Object.freeze({ ...draft, modelHash: value.modelHash });
@@ -124,15 +138,21 @@ export function requireTearC34C32AdapterEligibleTrainingResult(result: TearOffli
 /** Pure selection: no registry, activation, promotion, host input, or fallback policy is reachable here. */
 export function selectTearC34C32RuntimeAction(modelInput: TearC34C32RuntimeModelV1, state: CanonicalGameplayState,
   actions: readonly unknown[], available: readonly GameAction["type"][]): TearC34C32ActionSelectionV1 | undefined {
-  const model = parseTearC34C32RuntimeModel(modelInput), encoding = encodeTearC34C32SourceState(state), legal = maskTearC34C32Actions(actions, available);
-  let best: Readonly<{ action: GameAction; semanticActionHash: string; value: number }> | undefined;
-  for (const action of legal) {
-    const semanticActionHash = tearC34C32SemanticActionHash([action]);
-    const value = model.entries.find((entry) => entry.stateHash === encoding.stateHash && entry.semanticActionHash === semanticActionHash)?.value ?? 0;
+  const model = parseTearC34C32RuntimeModel(modelInput), variant = readTearReturnVariant(model.sourceStateAdapter);
+  const encoding = encodeTearC34C32SourceState(state, variant, available), legal = maskTearC34C32Actions(actions, available);
+  if (variant !== undefined && (!available.some(type => TEAR_RETURN_PLAYING_MASK.includes(type as never))
+    || actions.length > 15 || actions.some(action => !TEAR_RETURN_PLAYING_MASK.includes((action as GameAction).type as never)))) return undefined;
+  const batches: readonly (readonly GameAction[])[] = [...legal.map(action => Object.freeze([action])), ...(variant === undefined ? [] : [Object.freeze([])])];
+  let best: Readonly<{ actions: readonly GameAction[]; semanticActionHash: string; value: number; present: boolean }> | undefined;
+  for (const batch of batches) {
+    const semanticActionHash = tearC34C32SemanticActionHash(batch);
+    const entry = model.entries.find((entry) => entry.stateHash === encoding.stateHash && entry.semanticActionHash === semanticActionHash);
+    const value = entry?.value ?? 0;
     if (best === undefined || value > best.value || value === best.value && semanticActionHash.localeCompare(best.semanticActionHash) < 0) {
-      best = Object.freeze({ action, semanticActionHash, value });
+      best = Object.freeze({ actions: batch, semanticActionHash, value, present: entry !== undefined });
     }
   }
-  return best === undefined ? undefined : Object.freeze({ actions: Object.freeze([best.action]), semanticActionHash: best.semanticActionHash,
-    source: best.value === 0 ? "fallback" : "q" });
+  return best === undefined ? undefined : Object.freeze({ actions: best.actions, semanticActionHash: best.semanticActionHash,
+    source: variant === undefined ? best.value === 0 ? "fallback" : "q" : best.present ? "q" : "fallback",
+    ...(variant === undefined ? {} : { entryPresent: best.present, value: best.value, stateKey: encoding.stateHash }) });
 }

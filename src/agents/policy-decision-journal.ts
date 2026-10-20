@@ -2,7 +2,7 @@ import type { GhostVaultBackend } from "../ghost";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearAgentIntentTrace } from "./contracts";
-import type { TearPolicyDecisionReceipt } from "./policy-runtime";
+import { DEFAULT_TEAR_POLICY_RUNTIME_LIMITS, type TearPolicyDecisionReceipt } from "./policy-runtime";
 
 const JOURNAL_PREFIX = "policy-decision-journal:v1:";
 const QUARANTINE_PREFIX = "policy-decision-journal-quarantine:v1:";
@@ -66,6 +66,7 @@ function journalKey(id: string): string { return `${JOURNAL_PREFIX}${id}`; }
 
 function freezeReceipt(value: TearPolicyDecisionReceipt): TearPolicyDecisionReceipt {
   if (!hash(value.observationHash) || (value.artifactId !== undefined && !text(value.artifactId))
+    || !["artifact", "model-default", "scripted-fallback", "refused"].includes(value.source)
     || (value.artifactHash !== undefined && !hash(value.artifactHash))
     || (value.reason !== undefined && !["no-active-artifact", "invalid-model", "missing-decision", "invalid-action", "decision-budget-exceeded", "invalid-active-artifact", "canonical-source-unavailable", "no-legal-action"].includes(value.reason))
     || (value.activationHash !== undefined && !hash(value.activationHash))
@@ -73,7 +74,14 @@ function freezeReceipt(value: TearPolicyDecisionReceipt): TearPolicyDecisionRece
     || (value.source === "refused" && (value.reason !== "invalid-active-artifact" && value.reason !== "canonical-source-unavailable"))) {
     throw new TypeError("invalid policy decision receipt");
   }
-  return Object.freeze({ ...value });
+  if (value.support !== undefined && (!record(value.support) || typeof value.support.entryPresent !== "boolean" || !Number.isFinite(value.support.value)
+    || !hash(value.support.stateKey) || !hash(value.support.semanticActionHash)
+    || value.source !== (value.support.entryPresent ? "artifact" : "model-default")
+    || value.decisionMilliseconds === undefined)) throw new TypeError("invalid return policy support receipt");
+  if (value.source === "model-default" && (value.support === undefined || value.artifactId === undefined || value.artifactHash === undefined || value.reason !== undefined)
+    || value.decisionMilliseconds !== undefined && (!Number.isFinite(value.decisionMilliseconds) || value.decisionMilliseconds < 0
+      || value.source !== "scripted-fallback" && value.decisionMilliseconds > DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxDecisionMilliseconds)) throw new TypeError("invalid return policy budget receipt");
+  return Object.freeze({ ...value, ...(value.support === undefined ? {} : { support: Object.freeze({ ...value.support }) }) });
 }
 
 function freezeTrace(value: TearAgentIntentTrace): TearAgentIntentTrace {

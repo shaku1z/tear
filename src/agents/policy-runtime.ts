@@ -63,10 +63,13 @@ export interface TearPolicyDecisionReceipt {
   readonly artifactId?: string;
   readonly artifactHash?: string;
   readonly observationHash: string;
-  readonly source: "artifact" | "scripted-fallback" | "refused";
+  readonly source: "artifact" | "model-default" | "scripted-fallback" | "refused";
   readonly reason?: "no-active-artifact" | "invalid-model" | "missing-decision" | "invalid-action" | "decision-budget-exceeded" | "invalid-active-artifact" | "canonical-source-unavailable" | "no-legal-action";
   /** V3 activation lineage is retained when canonical execution is selected. */
   readonly activationHash?: string;
+  /** Explicit return.v2 lookup support; absent on historical receipts. */
+  readonly support?: Readonly<{ entryPresent: boolean; value: number; stateKey: string; semanticActionHash: string }>;
+  readonly decisionMilliseconds?: number;
 }
 
 export interface TearActivePolicyDecision extends TearAgentDecision {

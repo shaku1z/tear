@@ -2,19 +2,22 @@ import type { GhostVaultBackend } from "../ghost";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import { TearC34V3C32CandidateRegistry, TearC34V3C32PolicyRuntime, TEAR_C34_V3_C32_POLICY_RUNTIME_COMPATIBILITY } from "./c34-v3-c32-policy-adapter";
+import { TearC34V3C32CandidateRegistry, TearC34V3C32PolicyRuntime, TEAR_C34_CANONICAL_POLICY_RUNTIME_COMPATIBILITY, type TearC34V3C32Decision } from "./c34-v3-c32-policy-adapter";
 import { TearPolicyArtifactRegistry, type TearPolicyActivationV1, type TearPolicyArtifactV1 } from "./policy-artifact-registry";
 
-export interface TearC32CanonicalActiveDecisionV1 { readonly actions: readonly GameAction[]; readonly source: "artifact" | "scripted-fallback" | "refused"; readonly reason?: "no-active-artifact" | "invalid-active-artifact" | "no-legal-action"; readonly stateHash: string; readonly artifactId?: string; readonly artifactHash?: string; readonly activationHash?: string; }
+export interface TearC32CanonicalActiveDecisionV1 { readonly actions: readonly GameAction[]; readonly source: "artifact" | "model-default" | "scripted-fallback" | "refused"; readonly reason?: "no-active-artifact" | "invalid-active-artifact" | "no-legal-action" | "decision-budget-exceeded"; readonly stateHash: string; readonly artifactId?: string; readonly artifactHash?: string; readonly activationHash?: string;
+  readonly support?: NonNullable<TearC34V3C32Decision["support"]>; readonly decisionMilliseconds?: number }
 
 /** Dedicated C32 route for the V3 canonical envelope. It accepts the exact production canonical state, never a reconstructed Agent observation. */
 export class TearC32CanonicalActivePolicyRuntime {
   readonly #backend: GhostVaultBackend; readonly #fallback: (state: CanonicalGameplayState, available: readonly GameAction["type"][]) => readonly GameAction[]; #artifact: TearPolicyArtifactV1 | undefined; #activation: TearPolicyActivationV1 | undefined; #refused = false;
   readonly #strictActiveCandidate: boolean;
-  constructor(backend: GhostVaultBackend, fallback: (state: CanonicalGameplayState, available: readonly GameAction["type"][]) => readonly GameAction[] = () => [], strictActiveCandidate = false) { this.#backend = backend; this.#fallback = fallback; this.#strictActiveCandidate = strictActiveCandidate; }
+  #runtime: TearC34V3C32PolicyRuntime | undefined;
+  readonly #options: Readonly<{ now?: () => number }>;
+  constructor(backend: GhostVaultBackend, fallback: (state: CanonicalGameplayState, available: readonly GameAction["type"][]) => readonly GameAction[] = () => [], strictActiveCandidate = false, options: Readonly<{ now?: () => number }> = {}) { this.#backend = backend; this.#fallback = fallback; this.#strictActiveCandidate = strictActiveCandidate; this.#options = options; }
   async reset(): Promise<void> {
-    this.#artifact = undefined; this.#activation = undefined; this.#refused = false;
-    const registry = new TearPolicyArtifactRegistry(this.#backend, TEAR_C34_V3_C32_POLICY_RUNTIME_COMPATIBILITY);
+    this.#artifact = undefined; this.#activation = undefined; this.#refused = false; this.#runtime = undefined;
+    const registry = new TearPolicyArtifactRegistry(this.#backend, TEAR_C34_CANONICAL_POLICY_RUNTIME_COMPATIBILITY);
     const active = await registry.active();
     if (active === undefined) { this.#refused = this.#strictActiveCandidate; return; }
     this.#activation = active;
@@ -24,6 +27,8 @@ export class TearC32CanonicalActivePolicyRuntime {
     // inference or scripted fallback.  It is quarantined by the registry and
     // remains explicitly refused by this C32-only runtime.
     this.#refused = this.#artifact === undefined || this.#artifact.artifactHash !== active.artifactHash;
+    if (!this.#refused) this.#runtime = new TearC34V3C32PolicyRuntime(this.#artifact,
+      source => this.#fallback(source.state, source.availableActions), this.#options);
   }
   decide(state: CanonicalGameplayState, available: readonly GameAction["type"][]): TearC32CanonicalActiveDecisionV1 {
     const stateHash = stableVerificationHash(state), artifact = this.#artifact;
@@ -40,9 +45,13 @@ export class TearC32CanonicalActivePolicyRuntime {
     });
     if (artifact === undefined) return fallback("no-active-artifact");
     try {
-      const decision = new TearC34V3C32PolicyRuntime(artifact, () => this.#fallback(state, available)).decide({ format: "tear-c32-canonical-source-observation", schemaVersion: 1, state, availableActions: available, stateHash });
+      if (this.#runtime === undefined) throw new TypeError("active candidate runtime was not initialized");
+      const decision = this.#runtime.decide({ format: "tear-c32-canonical-source-observation", schemaVersion: 1, state, availableActions: available, stateHash });
+      if (decision.source === "diagnostic-model") throw new TypeError("diagnostic model cannot act as an active artifact");
       return Object.freeze({ actions: decision.actions, source: decision.source,
-        ...(decision.reason === undefined ? {} : { reason: "no-legal-action" as const }), stateHash,
+        ...(decision.reason === undefined ? {} : { reason: decision.reason === "decision-budget-exceeded" ? "decision-budget-exceeded" as const : "no-legal-action" as const }), stateHash,
+        ...(decision.support === undefined ? {} : { support: decision.support }),
+        ...(decision.decisionMilliseconds === undefined ? {} : { decisionMilliseconds: decision.decisionMilliseconds }),
         artifactId: artifact.id, artifactHash: artifact.artifactHash,
         ...(this.#activation === undefined ? {} : { activationHash: this.#activation.activationHash }),
       });

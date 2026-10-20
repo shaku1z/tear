@@ -1116,6 +1116,35 @@ describe("C31 held Academy candidate curation", () => {
     expect((await input.backend.keys("analysis")).some((key) => key.startsWith("policy-"))).toBe(false);
   });
 
+  it("captures detached computed diagnostics before unchanged candidate refusal and rechecks custody after the observer", async () => {
+    const { input, services, request } = await v3CandidateFixture();
+    let captured = "";
+    await expect(trainTrainingArchiveV3Candidate({ ...services, onComputedDiagnostic: (serialized) => {
+      captured = serialized;
+      const detached = JSON.parse(serialized) as { evaluation: { metrics: { passed: boolean } } };
+      detached.evaluation.metrics.passed = true;
+    } }, { ...request, minimumRewardGain: 1 })).rejects.toThrow(/passed/);
+    expect(JSON.parse(captured)).toMatchObject({ format: "tear-return-training-computed-diagnostic", candidateAdmission: "not-attempted", evaluation: { metrics: { passed: false } } });
+    await expect(trainTrainingArchiveV3Candidate({ ...services, onComputedDiagnostic: () => {
+      void input.backend.remove("analysis", `academy-candidate-curation:v1:${input.assessment.candidateHash}`);
+    } }, request)).rejects.toThrow(/curation/);
+    expect((await input.backend.keys("analysis")).some(key => key.startsWith("policy-"))).toBe(false);
+  });
+
+  it("threads the explicit return variant through governed stages and refuses resealed retained variant drift", async () => {
+    const context = await v3CandidateFixture();
+    const result = await trainTrainingArchiveV3Candidate(context.services, { ...context.request,
+      offline: { ...context.request.offline, variant: "return-features.v2" },
+      reward: { ...context.request.reward, reward: { ...context.request.reward.reward, schemaVersion: 2 } } });
+    expect(result.candidate.artifact.encoder).toMatchObject({ id: result.offline.sourceStateAdapter.id, schemaVersion: 2, normalizationHash: result.offline.sourceStateAdapter.adapterHash });
+    const retained = await foundryV3Fixture(), receipt = await retained.executor.start(retained.job, retained.request);
+    const { receiptHash: oldHash, ...draft } = structuredClone(receipt); void oldHash;
+    Object.assign(draft.evidence.request.offline, { variant: "return-exact.v2" });
+    Object.assign(draft.evidence.lineage, { requestHash: stableVerificationHash(draft.evidence.request) });
+    Object.assign(draft.evidence, { lineageHash: stableVerificationHash(draft.evidence.lineage) });
+    expect(() => parseTrainingOperationsV3TrainingReceipt({ ...draft, receiptHash: stableVerificationHash(draft) })).toThrow(/lineage/);
+  });
+
   it("records an authorized human curation decision without creating a sample, manifest, or trainer input", async () => {
     const input = await prepare();
     const curation = new TearAcademyCandidateCurationStore(input.backend, input.custody, input.quality);

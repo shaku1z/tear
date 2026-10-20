@@ -444,13 +444,15 @@ export function createLiveWatchAgentHost(
         ...(canonical.artifactId === undefined ? {} : { artifactId: canonical.artifactId }),
         ...(canonical.artifactHash === undefined ? {} : { artifactHash: canonical.artifactHash }),
         ...(canonical.activationHash === undefined ? {} : { activationHash: canonical.activationHash }),
+        ...(canonical.support === undefined ? {} : { support: canonical.support }),
+        ...(canonical.decisionMilliseconds === undefined ? {} : { decisionMilliseconds: canonical.decisionMilliseconds }),
       });
-      if (canonical?.source === "refused") {
+      if (canonical?.source === "refused" || canonical?.source === "model-default") {
         if (canonicalReceipt !== undefined) {
           state.policyReceipt = canonicalReceipt;
           if (state.decisionJournal !== undefined) state.decisionJournal.append({ tick: observation.tick, receipt: canonicalReceipt, actions: [], trace: hierarchy.trace });
         }
-        fail(`canonical-policy-refused:${canonical.reason ?? "invalid-active-artifact"}`);
+        fail(`canonical-policy-refused:${canonical.source === "model-default" ? "model-default" : canonical.reason ?? "invalid-active-artifact"}`);
         break;
       }
       const decision = canonical?.source === "artifact"
