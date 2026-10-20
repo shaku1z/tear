@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { tutorialGoldSourceFingerprint, assertTutorialGoldFresh } from "../../scripts/tutorial-gold-compatibility.mjs";
 import { generateTutorialGold, verifyTutorialGoldReference, type TutorialGoldProof } from "../../src/tearbench/tutorial-gold-generation";
-import { loadTutorialGoldCorpus, sampleTutorialGold, type TutorialGoldCorpus } from "../../src/gameplay/training/tutorial-gold-reference";
+import { loadTutorialGoldCorpus, packTutorialGoldCorpus, sampleTutorialGold, type TutorialGoldCorpus } from "../../src/gameplay/training/tutorial-gold-reference";
 import { describe, expect, it } from "vitest";
 import { createProductionReplayRun, createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { stableVerificationHash } from "../../src/replay/hash";
@@ -71,17 +71,24 @@ describe("verified tutorial gold corpus", () => {
     expect([fresh.rank, fresh.lastTrick]).toEqual(["", ""]);
     const sourceHash = tutorialGoldSourceFingerprint().sourceHash;
     const shippingPath = "src/gameplay/training/tutorial-gold-reference-data.json", proofPath = "tests/fixtures/tutorial-gold-reference-proof.json";
-    let corpus: TutorialGoldCorpus, proof: TutorialGoldProof;
+    let rawCorpus: unknown, expectedCorpus: TutorialGoldCorpus | undefined, proof: TutorialGoldProof;
     if (process.env.TEAR_TUTORIAL_GOLD_WRITE === "1") {
-      const generated = generateTutorialGold(sourceHash); corpus = generated.corpus; proof = generated.proof;
+      const generated = generateTutorialGold(sourceHash); expectedCorpus = generated.corpus; rawCorpus = packTutorialGoldCorpus(generated.corpus); proof = generated.proof;
     } else {
-      corpus = JSON.parse(readFileSync(shippingPath, "utf8")) as TutorialGoldCorpus;
+      rawCorpus = JSON.parse(readFileSync(shippingPath, "utf8")) as unknown;
       proof = JSON.parse(readFileSync(proofPath, "utf8")) as TutorialGoldProof;
     }
     const loadStarted = performance.now();
-    expect(loadTutorialGoldCorpus(corpus, sourceHash).status).toBe("ready");
+    const loaded = loadTutorialGoldCorpus(rawCorpus, sourceHash);
+    expect(loaded.status).toBe("ready");
+    if (loaded.status !== "ready") throw new Error("Gold shipping decode refused");
+    const corpus = loaded.corpus;
     const loadMilliseconds = performance.now() - loadStarted;
-    expect(loadTutorialGoldCorpus(corpus, "0".repeat(64))).toEqual({ status: "unavailable", reason: "incompatible" });
+    if (expectedCorpus !== undefined) expect(corpus).toEqual(expectedCorpus);
+    const roundTrip = loadTutorialGoldCorpus(packTutorialGoldCorpus(corpus), sourceHash);
+    if (roundTrip.status !== "ready") throw new Error("Packed gold round trip refused");
+    expect(roundTrip.corpus).toEqual(corpus);
+    expect(loadTutorialGoldCorpus(rawCorpus, "0".repeat(64))).toEqual({ status: "unavailable", reason: "incompatible" });
     expect(corpus.references).toHaveLength(14);
     expect(corpus.compatibility.configurationHash).toBe(stableVerificationHash(createProductionReplayWorld({ seed: "gold-baseline", mode: "tutorial", weaponId: "sword", difficulty: "normal" }).configuration.value));
     for (const reference of corpus.references) {
@@ -98,9 +105,9 @@ describe("verified tutorial gold corpus", () => {
     const field = corpus.references.find((reference) => reference.lessonId === "field-test" && reference.curriculumVersion === 2);
     expect(new Set(field?.frames.map((frame) => frame.encounter))).toEqual(new Set(["charger", "breath", "mixed"]));
     if (process.env.TEAR_TUTORIAL_GOLD_WRITE === "1") {
-      writeFileSync(shippingPath, JSON.stringify(corpus) + "\n"); writeFileSync(proofPath, JSON.stringify(proof) + "\n");
+      writeFileSync(shippingPath, JSON.stringify(rawCorpus) + "\n"); writeFileSync(proofPath, JSON.stringify(proof) + "\n");
     }
     expect(assertTutorialGoldFresh()).toBe(sourceHash);
-    process.stdout.write(`Gold corpus ${String(Buffer.byteLength(JSON.stringify(corpus)))} bytes; proof ${String(Buffer.byteLength(JSON.stringify(proof)))} bytes; detached hash/validation/freeze load ${String(loadMilliseconds)}ms; all 14 replayed\n`);
+    process.stdout.write(`Gold packed ${String(Buffer.byteLength(JSON.stringify(rawCorpus)))} bytes, decoded ${String(Buffer.byteLength(JSON.stringify(corpus)))} bytes; proof ${String(Buffer.byteLength(JSON.stringify(proof)))} bytes; detached hash/validation/freeze load ${String(loadMilliseconds)}ms; all 14 replayed\n`);
   }, 120000);
 });

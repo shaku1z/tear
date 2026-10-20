@@ -44,6 +44,62 @@ function freeze<T>(value: T): T {
   if (value !== null && typeof value === "object") { for (const child of Object.values(value)) freeze(child); Object.freeze(value); }
   return value;
 }
+const POSE_ENCODING = "pose-tuples.v1";
+const BODY_FIELDS = ["x", "y", "vx", "vy", "facing", "grounded", "dashing"] as const;
+const BLADE_FIELDS = ["x", "y", "tipX", "tipY", "tipVX", "tipVY", "tipSpeed", "angle", "state", "swingId", "throwId"] as const;
+const ACTOR_FIELDS = ["id", "kind", "x", "y", "vx", "vy", "hp", "dead", "state"] as const;
+const SHOT_FIELDS = ["id", "x", "y", "vx", "vy", "radius", "deflected", "dead", "family"] as const;
+function poseTuple<T extends object>(value: T, keys: readonly (keyof T)[]): readonly unknown[] {
+  return keys.map((key) => value[key]);
+}
+/** Lossless shipping layout only. Decoded public data and its existing checksums do not change. */
+export function packTutorialGoldCorpus(corpus: TutorialGoldCorpus) {
+  return { ...corpus, encoding: POSE_ENCODING, references: corpus.references.map((reference) => ({ ...reference,
+    frames: reference.frames.map((frame) => [frame.tick, frame.stage,
+      poseTuple(frame.body, BODY_FIELDS), poseTuple(frame.blade, BLADE_FIELDS),
+      frame.actors.map((actor) => poseTuple(actor, ACTOR_FIELDS)), frame.projectiles.map((shot) => poseTuple(shot, SHOT_FIELDS)), frame.encounter]),
+  })) };
+}
+function tupleList(value: unknown, maximum: number): readonly unknown[] {
+  if (!Array.isArray(value) || value.length > maximum) throw new Error("Invalid gold tuple list");
+  return value as readonly unknown[];
+}
+function readPose<T extends object>(value: unknown, keys: readonly (keyof T & string)[], types: string): T {
+  const tuple = tupleList(value, keys.length);
+  if (tuple.length !== keys.length) throw new Error("Invalid gold pose width");
+  const pose: Record<string, unknown> = {};
+  keys.forEach((key, index) => {
+    const item = tuple[index], type = types[index];
+    if (type === "n" ? typeof item !== "number" || !Number.isFinite(item)
+      : type === "s" ? typeof item !== "string" : type !== "b" || typeof item !== "boolean") throw new Error("Invalid gold pose value");
+    pose[key] = item;
+  });
+  return pose as T;
+}
+function readFrame(value: unknown): TutorialGoldFrame {
+  const tuple = tupleList(value, 7);
+  if (tuple.length !== 7) throw new Error("Invalid gold frame width");
+  const tick = tuple[0], stage = tuple[1], encounter = tuple[6];
+  if (typeof tick !== "number" || !Number.isSafeInteger(tick) || tick < 0
+    || typeof stage !== "number" || !Number.isSafeInteger(stage) || stage < 0
+    || (encounter !== "charger" && encounter !== "breath" && encounter !== "mixed")) throw new Error("Invalid gold frame header");
+  return { tick, stage, encounter,
+    body: readPose<TutorialGoldBody>(tuple[2], BODY_FIELDS, "nnnnnbb"),
+    blade: readPose<TutorialGoldBlade>(tuple[3], BLADE_FIELDS, "nnnnnnnnsnn"),
+    actors: tupleList(tuple[4], 64).map((actor) => readPose<TutorialGoldActor>(actor, ACTOR_FIELDS, "ssnnnnnbs")),
+    projectiles: tupleList(tuple[5], 512).map((shot) => readPose<TutorialGoldShot>(shot, SHOT_FIELDS, "snnnnnbbs")),
+  };
+}
+function decodedCorpus(value: object): TutorialGoldCorpus {
+  const encoding: unknown = Reflect.get(value, "encoding");
+  if (encoding === undefined) return value as TutorialGoldCorpus;
+  if (encoding !== POSE_ENCODING) throw new Error("Unknown gold pose encoding");
+  const packed = value as ReturnType<typeof packTutorialGoldCorpus>;
+  const { encoding: marker, ...content } = packed; void marker;
+  return { ...content, references: content.references.map((reference) => ({ ...reference,
+    frames: tupleList(reference.frames, TUTORIAL_GOLD_MAX_TICKS + 1).map(readFrame),
+  })) };
+}
 /** Shipping data is detached, finite JSON; physics execution remains in the production generator/verifier. */
 export function loadTutorialGoldCorpus(value: unknown, expectedSourceHash: string):
   Readonly<{ status: "ready"; corpus: TutorialGoldCorpus }> | Readonly<{ status: "unavailable"; reason: "incompatible" | "invalid" }> {
@@ -53,8 +109,8 @@ export function loadTutorialGoldCorpus(value: unknown, expectedSourceHash: strin
     if (header?.format !== "tear-tutorial-gold.v1" || header.schemaVersion !== 1 || !Array.isArray(header.references)
       || header.references.length !== 14 || compatibility?.simulationHz !== 120 || compatibility.curriculumVersion !== 2
       || compatibility.weaponId !== "sword" || compatibility.difficulty !== "normal") throw new Error("Invalid gold corpus");
-    const corpus = value as TutorialGoldCorpus;
-    if (!/^[a-f0-9]{64}$/.test(expectedSourceHash) || corpus.compatibility.sourceHash !== expectedSourceHash) return { status: "unavailable", reason: "incompatible" };
+    if (!/^[a-f0-9]{64}$/.test(expectedSourceHash) || compatibility.sourceHash !== expectedSourceHash) return { status: "unavailable", reason: "incompatible" };
+    const corpus = decodedCorpus(value as object);
     const ids = new Set<string>();
     for (const reference of corpus.references) {
       const encounterVersion: unknown = Reflect.get(reference, "encounterVersion");

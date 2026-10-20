@@ -101,8 +101,8 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   const clickLabel = async (label) => {
     await page.waitForFunction((expected) => window.__TUTORIAL_COACH_TEXT__.some((entry) => entry.text === expected), label);
     const point = await page.evaluate((expected) => window.__TUTORIAL_COACH_TEXT__.findLast((entry) => entry.text === expected), label);
-    await page.mouse.click(point.x, point.y); await appFrame();
     await page.evaluate(() => { window.__TUTORIAL_COACH_TEXT__.length = 0; });
+    await page.mouse.click(point.x, point.y); await appFrame();
   };
   const pause = async () => { await page.keyboard.press("p"); await appFrame(); await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused"); };
   const pump = (ticks) => page.evaluate((count) => { for (let tick = 0; tick < count; tick++) window.__tutorialJourneyEnvironment.step([]); }, ticks);
