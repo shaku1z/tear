@@ -172,7 +172,7 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   assert.equal((await coach()).canCompare, true, "only a genuinely valid Lab attempt enables comparison");
   assert.deepEqual(await effects(), beforeAttempt, "valid Lab practice must not award profile/currency effects");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
-  await clickLabel("SETTINGS"); await clickLabel("ACCESSIBILITY");
+  await clickLabel("SETTINGS"); await clickLabel("ACCESS");
   await page.waitForFunction(() => window.__TUTORIAL_COACH_TEXT__.some((entry) => entry.text === "Reduced camera motion"));
   const reducedRow = await page.evaluate(() => window.__TUTORIAL_COACH_TEXT__.findLast((entry) => entry.text === "Reduced camera motion"));
   await page.mouse.click(1173, reducedRow.y - 3); await appFrame();
