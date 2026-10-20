@@ -162,9 +162,23 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   let selectedCount = 0;
   for (let attempt = 0; attempt < 32 && selectedCount < 9; attempt++) {
     await page.waitForTimeout(100);
-    const point = await page.evaluate(() => window.__TEAR_C29_POSITIONS__?.findLast((entry) => entry.text === "SELECT" && entry.y > 310 && entry.y < 810));
-    if (!point) { await page.mouse.move(800, 650); await page.mouse.wheel(0, 240); await page.waitForTimeout(140); continue; }
-    await page.mouse.click(point.x, point.y); selectedCount++;
+    const point = await page.evaluate(() => window.__TEAR_C29_POSITIONS__?.find((entry) => entry.text === "SELECT" && entry.y > 310 && entry.y < 810));
+    if (!point) {
+      await page.mouse.move(800, 650); await page.mouse.wheel(0, 96);
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      continue;
+    }
+    await page.mouse.click(point.x, point.y);
+    const expectedCount = selectedCount + 1;
+    await page.waitForFunction((count) => window.__TEAR_C29_POSITIONS__?.some((entry) => entry.text === (count === 1
+      ? "Comparison source selected. Choose at least one more healthy Ghost capsule."
+      : `${String(count)} comparison sources selected. Press COMPARE to open them.`)), expectedCount, { timeout: 5000 });
+    selectedCount = expectedCount;
+  }
+  if (selectedCount !== 9 && process.env.TEAR_STUDIO_ARTIFACT_DIR) {
+    await mkdir(process.env.TEAR_STUDIO_ARTIFACT_DIR, { recursive: true });
+    await page.screenshot({ path: join(process.env.TEAR_STUDIO_ARTIFACT_DIR, "vault-navigation-failure.png") });
+    await writeFile(join(process.env.TEAR_STUDIO_ARTIFACT_DIR, "vault-navigation-failure.json"), JSON.stringify(await page.evaluate(() => ({ positions: window.__TEAR_C29_POSITIONS__, screen: window.__PANTHEON_TEST.state() })), null, 2));
   }
   assert.equal(selectedCount, 9, "all nine rendered source selections must be reached within bounded scrolling");
   await page.waitForTimeout(140); await clickText("COMPARE 9");
