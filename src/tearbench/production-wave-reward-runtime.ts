@@ -1,3 +1,4 @@
+import { WEAPONS } from "../gameplay/weapons";
 import type { EnemyKind } from "../gameplay/run/content-director";
 import { createTearSpawnFactPublisher, createTearWaveFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
@@ -194,7 +195,12 @@ export function createProductionWaveRewardRuntime(
       beginCampaignChapter: options.beginCampaignChapter ?? (() => undefined),
       recordWave: publishWave,
       snapshotReplay: note("snapshotReplay"),
-      prepareWave: (wave, boss, deferred) => { world.lifecycle.prepareWave(wave, boss, deferred); },
+      prepareWave: (wave, boss, deferred) => {
+        const weapon = WEAPONS.find(candidate => candidate.id === run().weaponId);
+        const blade = world.state.blade();
+        if (blade) weapon?.onReset?.({ blade });
+        world.lifecycle.prepareWave(wave, boss, deferred);
+      },
       activateWave: () => { world.lifecycle.activateWave(); },
       showWaveBanner: note("showWaveBanner"),
       playWaveSound: note("playWaveSound"),

@@ -1,3 +1,5 @@
+import { WEAPONS } from "../../src/gameplay/weapons";
+import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
 import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { GhostTimeline, validateGhostEventPayload } from "../../src/ghost/truth-kernel";
 import type { TearCausalEventV1 } from "../../src/tearbench/contracts";
@@ -9,6 +11,51 @@ import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events
 import { ghostReferenceBoundary, type GhostReferenceBoundary } from "../../src/ghost/live-ghost-reference-data";
 
 describe("production wave and reward runtime", () => {
+  it("uses the native Riftlock reset before preparing the next legal wave", () => {
+    const replay = createProductionReplayWorld({ seed: "native-wave-rift-reset", mode: "endless", weaponId: "riftlock" });
+    const runtime = createProductionWaveRewardRuntime(replay); runtime.startNaturalOpening();
+    const blade = replay.world.state.blade(), player = replay.world.state.player(), run = replay.world.state.run();
+    if (!blade || !player || !run) throw new Error("Riftlock fixture missing actors");
+    expect(blade.claimRiftBayonet()).toBe(true);
+    expect(blade._fireRazorRound(player)).toBe(true);
+    const spent = riftResetState(blade), attackId = blade.attackId;
+    expect(spent.chambers).toBeLessThan(replay.configuration.value.weapons.riftlock.chambers);
+    expect(spent.bayonet).toBe(blade.swingId);
+    const nativeBlade = new replay.factories.Blade(); nativeBlade.weapon = blade.weapon;
+    const weapon = WEAPONS.find(candidate => candidate.id === run.weaponId);
+    if (!weapon?.onReset) throw new Error("Canonical Riftlock hook missing");
+    run.spawnQueue = []; replay.world.state.setEnemies([]); runtime.update(1);
+    expect(runtime.screen()).toBe("draft"); expect(riftResetState(blade)).toEqual(spent);
+    const choice = runtime.reward.snapshot()?.choices[0]; if (!choice) throw new Error("legal draft missing");
+    runtime.reward.selectDraft(0);
+    weapon.onReset({ blade: nativeBlade });
+    expect(replay.world.lifecycle.snapshot()).toMatchObject({ phase: "wave-active", wave: 2 });
+    expect(riftResetState(blade)).toEqual(riftResetState(nativeBlade));
+    expect(blade.attackId).toBe(attackId);
+  });
+
+  it("keeps spent Riftlock state on reward-owner construction and midwave snapshot hydration", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "midwave-rift-reset", mode: "endless", weaponId: "riftlock" });
+    const source = composition.create(undefined); source.simulation.advanceOne([]);
+    const blade = source.replay.world.state.blade(), player = source.replay.world.state.player();
+    if (!blade || !player) throw new Error("Riftlock fixture missing actors");
+    expect(blade.claimRiftBayonet()).toBe(true); expect(blade._fireRazorRound(player)).toBe(true);
+    const spent = riftResetState(blade);
+    createProductionWaveRewardRuntime(source.replay);
+    expect(riftResetState(blade)).toEqual(spent);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "spent-midwave");
+    const restored = composition.create(JSON.parse(JSON.stringify(checkpoint.snapshot)) as typeof checkpoint.snapshot);
+    const recoveredBlade = restored.replay.world.state.blade(); if (!recoveredBlade) throw new Error("restored blade missing");
+    expect(riftResetState(recoveredBlade)).toEqual(spent);
+    expect(captureProductionReplayCheckpoint(restored.replay, restored.combat, restored.waveReward, "spent-midwave").snapshot.state["tear.blade.v1"]).toEqual(checkpoint.snapshot.state["tear.blade.v1"]);
+    source.simulation.advanceOne([]); restored.simulation.advanceOne([]);
+    expect(riftResetState(recoveredBlade)).toEqual(riftResetState(blade));
+    expect(recoveredBlade.riftChambers).toBe(spent.chambers);
+    expect(recoveredBlade.riftBayonetSwingId).toBe(spent.bayonet);
+    expect(recoveredBlade.riftFireCooldown).toBeGreaterThan(0);
+    expect(recoveredBlade.riftFireCooldown).toBeLessThan(spent.fireCooldown);
+  });
+
   it("records two real reward selections with strict loadout payloads and separate feedback facts", () => {
     // Constructed wave clears isolate the actual reward/emission owners, not combat quality.
     const replay = createProductionReplayWorld({ seed: "two-native-reward-selections", mode: "endless" });
@@ -73,3 +120,9 @@ describe("production wave and reward runtime", () => {
     expect(replay.world.lifecycle.snapshot()).toMatchObject({ phase: "wave-active", wave: 2, reward: null });
   });
 });
+
+function riftResetState(blade: Readonly<{ riftChambers: number; riftChamberCooldown: number; riftFireCooldown: number; riftBayonetSwingId: number;
+  riftTriggerHeld: boolean; riftRecoilUntil: number; riftRecoilHits: ReadonlySet<unknown>; backblastActive: boolean; weaponEvents: readonly unknown[] }>) {
+  return { chambers: blade.riftChambers, chamberCooldown: blade.riftChamberCooldown, fireCooldown: blade.riftFireCooldown, bayonet: blade.riftBayonetSwingId,
+    trigger: blade.riftTriggerHeld, recoilUntil: blade.riftRecoilUntil, recoilHits: [...blade.riftRecoilHits], backblast: blade.backblastActive, events: [...blade.weaponEvents] };
+}
