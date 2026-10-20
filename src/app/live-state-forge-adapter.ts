@@ -225,6 +225,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     entity(projectile, identities.get(projectile) ?? "", { factoryId: "projectile" }))));
   components.set("tear.platform.v1", encode(options.platforms(), identities));
   components.set("tear.hazard.v1", Object.freeze({
+    ...(environment.allocator === undefined ? {} : { allocator: encode(environment.allocator, identities) }),
     ...(environment.worldId === undefined ? {} : { worldId: environment.worldId }),
     stageId: environment.stageId,
     slowZones: encode(options.slowZones(), identities),

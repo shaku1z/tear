@@ -103,6 +103,8 @@ export interface EnvironmentRouteState {
 }
 
 export interface EnvironmentSnapshot {
+  /** Absent in historical snapshots: exact future allocation is then unavailable. */
+  readonly allocator?: Readonly<{ version: 1; nextSequence: number }>;
   readonly worldId?: string;
   readonly stageId: string;
   readonly fields: readonly EnvironmentFieldState[];

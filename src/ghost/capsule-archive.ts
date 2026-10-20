@@ -1,3 +1,6 @@
+import { readGhostBossMemory } from "./boss-memory-origin";
+import { verifyBossMemory } from "./boss-memory";
+import { GhostCapsuleReader } from "./capsule-reader";
 import { canonicalStringify, stableVerificationHash } from "../replay/hash";
 import { GHOST_CHUNK_CODECS } from "./capsule-codec";
 import { validateGhostCapsuleEntries } from "./capsule-reader";
@@ -77,6 +80,10 @@ export async function prepareGhostCapsuleArchive(input: Uint8Array, policy: Part
     totalEntries += decoded.value.length;
     if (!Number.isSafeInteger(totalEntries) || totalEntries > Math.min(limits.maxEntriesTotal, remainingEntries ?? limits.maxEntriesTotal)) throw new RangeError("Ghost archive exceeds total entry limit");
     encoded[entry.id] = text;
+  }
+  if (readGhostBossMemory(manifest.provenance)) {
+    const capsule = await new GhostCapsuleReader({ getManifest: () => Promise.resolve(manifest), readChunk: async index => (await GHOST_CHUNK_CODECS.decodeMeasured(index.encoding, encoded[index.id] ?? "", limits.maxCompressedChunkBytes, index.uncompressedBytes)).value }).read(manifest.id);
+    const verification = verifyBossMemory(capsule); if (verification.status !== "verified") throw new TypeError(`Boss Memory import refuses: ${verification.mappingIssues.join("; ")}`);
   }
   const binding: GhostArchiveBinding = Object.freeze({ protocol: "ghost-normal-archive-v1", sha256, byteLength: bytes.byteLength,
     manifestDigest: await ghostArchiveSha256(new TextEncoder().encode(canonicalStringify(manifest))), capsuleId: manifest.id,

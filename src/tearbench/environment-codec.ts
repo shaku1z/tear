@@ -78,7 +78,7 @@ export function rebaseEnvironmentSnapshot(value: unknown, destinationWorldId: st
   };
   const list = (key: "fields" | "combatObjects" | "routes"): readonly unknown[] =>
     (Array.isArray(value[key]) ? value[key] : []).map(rewrite);
-  return Object.freeze({ worldId: destinationWorldId, stageId: typeof value.stageId === "string" ? value.stageId : "unknown",
+  return Object.freeze({ ...(value.allocator === undefined ? {} : { allocator: structuredClone(value.allocator) }), worldId: destinationWorldId, stageId: typeof value.stageId === "string" ? value.stageId : "unknown",
     fields: list("fields"), combatObjects: list("combatObjects"), routes: list("routes") }) as EnvironmentSnapshot;
 }
 
@@ -146,6 +146,7 @@ export function validateEnvironmentCodecPayload(
 ): readonly EnvironmentCodecIssue[] {
   if (!record(payload)) return Object.freeze([issue("$", "hazard codec payload must be an object")]);
   const issues: EnvironmentCodecIssue[] = [];
+  if (payload.allocator !== undefined && (!record(payload.allocator) || Object.keys(payload.allocator).sort().join() !== "nextSequence,version" || payload.allocator.version !== 1 || !Number.isSafeInteger(payload.allocator.nextSequence) || Number(payload.allocator.nextSequence) < 1)) issues.push(issue("$.allocator", "Invalid environment allocator continuation"));
   for (const key of ["slowZones", "walls", "fields", "combatObjects", "routes"] as const) {
     if (!Array.isArray(payload[key])) issues.push(issue(`$.${key}`, `${key} must be an array`));
   }

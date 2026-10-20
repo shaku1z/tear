@@ -1,4 +1,5 @@
 import { sourceVoidHistoryReferences } from "./source-void-history-references";
+import { isAuthoredArenaSlotReference } from "./arena-slot-references";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
@@ -78,7 +79,8 @@ export const TEAR_REFERENCE_KEYS = Object.freeze([
 ] as const);
 const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
 
-function isCanonicalReferenceTarget(source: string, target: string): boolean {
+function isCanonicalReferenceTarget(source: string, target: string, world: TearCodecWorld): boolean {
+  if (isAuthoredArenaSlotReference(world, source, target)) return true;
   if (target === "player" || target === "blade") return true;
   // Environment fields can be owned by their canonical stage rather than a
   // transient actor. Keep this narrow: only hazard owner edges receive stage
@@ -171,7 +173,7 @@ export function createDataOnlyCodec(id: TearCodecId): TearStateCodec {
       const issues: TearCodecIssue[] = [...(history?.issues ?? [])];
       for (const [source, target] of world.references) {
         if (history?.local.has(source)) continue;
-        if (source.startsWith(`${id}:`) && !world.entityIds.has(target) && !isCanonicalReferenceTarget(source, target)) {
+        if (source.startsWith(`${id}:`) && !world.entityIds.has(target) && !isCanonicalReferenceTarget(source, target, world)) {
           issues.push({ codecId: id, path: `references.${source}`, message: `reference target ${target} does not exist` });
         }
       }
@@ -318,7 +320,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
   }
   for (const [source, target] of references) {
     if (history.local.has(source)) continue;
-    if (isCanonicalReferenceTarget(source, target) || identities.has(target) || world.entityIds.has(target)) continue;
+    if (isCanonicalReferenceTarget(source, target, world) || identities.has(target) || world.entityIds.has(target)) continue;
     const separator = source.indexOf(":");
     const codecId = source.slice(0, separator) as TearCodecId;
     issues.push({ codecId, path: source.slice(separator + 1), message: `reference target ${target} does not exist` });

@@ -180,6 +180,7 @@ export class GhostProductionReplayWorld<State> {
   #session: GhostProductionReplaySession<State> | null = null;
   #tick = 0;
   #seeking = false;
+  #originSnapshot: TearSnapshotV1 | undefined;
 
   constructor(ghost: GhostEnvelopeV3, composition: GhostProductionReplayComposition<State>) {
     this.#ghost = ghost;
@@ -203,6 +204,19 @@ export class GhostProductionReplayWorld<State> {
     try { return this.#seek(targetTick); } finally { this.#seeking = false; }
   }
 
+  /** Opt-in continuous playback. Backward targets rebuild using ordinary seek. */
+  advanceTo(targetTick: number): GhostSeekResult {
+    if (this.#seeking) { this.#session?.invalidateRecordedOpening?.(); throw new Error("production replay seek is reentrant"); }
+    if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
+    this.#seeking = true;
+    try {
+      return this.#session === null || targetTick < this.#tick ? this.#seek(targetTick) : this.#advance(targetTick);
+    } catch (error) {
+      // A failed observer/step must not leave a partially advanced reusable world.
+      this.#session = null; this.#originSnapshot = undefined; this.#tick = 0; throw error;
+    } finally { this.#seeking = false; }
+  }
+
   #seek(targetTick: number): GhostSeekResult {
     if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
     const snapshot = [...this.#ghost.snapshots]
@@ -214,8 +228,15 @@ export class GhostProductionReplayWorld<State> {
       throw new TypeError(`production replay composition started at tick ${String(session.simulation.scheduler.tick)}, expected ${String(startingTick)}`);
     }
     this.#session = session;
+    this.#originSnapshot = snapshot;
     this.#tick = startingTick;
-    if (targetTick > startingTick) session.completeRecordedOpening?.();
+    return this.#advance(targetTick);
+  }
+
+  #advance(targetTick: number): GhostSeekResult {
+    const session = this.#session; if (session === null) throw new Error("production replay world has no active session");
+    const snapshot = this.#originSnapshot;
+    if (targetTick > this.#tick && this.#tick === (snapshot?.tick ?? 0)) session.completeRecordedOpening?.();
     for (let tick = this.#tick + 1; tick <= targetTick; tick += 1) {
       const actions = this.#ghost.actions.filter((action) => action.tick === tick);
       session.beforeReplayAdvance?.(tick);

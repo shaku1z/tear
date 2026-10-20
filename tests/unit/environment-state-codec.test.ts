@@ -165,6 +165,15 @@ describe("Verdant C3 environment codec contract", () => {
     expect(ENVIRONMENT_OBJECT_KIND_REGISTRY.has("not-production")).toBe(false);
   });
 
+  it("retains allocation after deleted objects and refuses historical unknown allocation", () => {
+    const runtime=createEnvironmentRuntime({stageId:"grounds",worldId:"allocator"}),{id:_id,...field}=hazard.fields[0];void _id;
+    const first=runtime.addField(field);runtime.removeField(first);const second=runtime.addField(field);runtime.removeField(second);
+    const snapshot=runtime.snapshot(),restored=createEnvironmentRuntime({stageId:"grounds",worldId:"allocator"});restored.replace(snapshot);
+    expect(restored.addField(field)).toBe("allocator:field:3");
+    const {allocator:_allocator,...legacy}=snapshot;void _allocator;restored.replace(legacy);expect(()=>restored.addField(field)).toThrow(/Historical.*allocator/);
+    const before=restored.snapshot();expect(()=>{restored.replace({...snapshot,allocator:{version:1,nextSequence:-1}});}).toThrow(/allocator/);expect(restored.snapshot()).toEqual(before);
+  });
+
   it("rejects wrong-category and ordinary-proc capabilities at every direct admission boundary", () => {
     const runtime = createEnvironmentRuntime({ stageId: "grounds", worldId: "admission" });
     const field = hazard.fields[0];

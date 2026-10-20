@@ -1,3 +1,4 @@
+import { readGhostBossMemory } from "./boss-memory-origin";
 import { stableVerificationHash } from "../replay/hash";
 import { readGhostFinaleCompanion } from "./finale-companion";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
@@ -39,7 +40,7 @@ export function readGhostForkOrigin(provenance: unknown): GhostForkOriginV1 | un
       .some((value) => typeof value !== "string" || value.length === 0 || value.length > 256)) throw new TypeError("Unsupported or malformed fork origin.");
   return Object.freeze(structuredClone(raw)) as unknown as GhostForkOriginV1;
 }
-export function ghostRecordingFirstTick(capsule: GhostReadCapsule): number { return readGhostFinaleCompanion(capsule.manifest.provenance)?.origin.tick ?? readGhostForkOrigin(capsule.manifest.provenance)?.checkpoint.tick ?? 0; }
+export function ghostRecordingFirstTick(capsule: GhostReadCapsule): number { return readGhostBossMemory(capsule.manifest.provenance)?.origin.tick ?? readGhostFinaleCompanion(capsule.manifest.provenance)?.origin.tick ?? readGhostForkOrigin(capsule.manifest.provenance)?.checkpoint.tick ?? 0; }
 declare const brand: unique symbol;
 export interface GhostForkPermit { readonly [brand]: true }
 const permits = new WeakMap<GhostForkPermit, Readonly<{ root: string; originHash: string }>>();

@@ -1,3 +1,4 @@
+import { readGhostBossMemory } from "./boss-memory-origin";
 import { ghostRecordingFirstTick } from "./fork-origin";
 import { readGhostFinaleCompanion } from "./finale-companion";
 import { stableVerificationHash } from "../replay/hash";
@@ -131,7 +132,7 @@ export function createGhostApplicationClockPlayback(schedule: GhostApplicationCl
 
 /** Admit the full immutable clock stream before any detached world consumes it. */
 export function readGhostApplicationClockSchedule(capsule: GhostReadCapsule, runId: string, declared: boolean): GhostApplicationClockSchedule | undefined {
-  const finale = readGhostFinaleCompanion(capsule.manifest.provenance);
+  const finale = readGhostFinaleCompanion(capsule.manifest.provenance) ?? readGhostBossMemory(capsule.manifest.provenance);
   const events = capsule.tracks.events.flatMap((entry) => {
     const event = parseGhostApplicationClockEvent(entry.value);
     if (event !== undefined && event.tick !== entry.tick) throw new TypeError("application clock entry tick mismatch");

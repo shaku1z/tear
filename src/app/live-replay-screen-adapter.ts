@@ -1,3 +1,4 @@
+import { createBrowserBossMemory } from "./browser-boss-memory";
 import { replayTransportScrub } from "./replay-transport-controller";
 import { reopenGhostFinaleCompanion } from "../ghost/browser-finale-companion";
 import { createGhostFinaleScreenAdapter } from "./ghost-finale-screen-adapter";
@@ -65,7 +66,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     const source = await readBrowserGhostCapsule(services.browserIndexedDb, id);
     return source !== undefined && stableVerificationHash(source.manifest) === hash;
   });
-  const theater = createGhostTheaterScreenAdapter({ presentation: createBrowserGhostReplayPresentation(services.document, d.UI), studioMedia,
+  const theater = createGhostTheaterScreenAdapter({ bossMemory: createBrowserBossMemory(services.browserIndexedDb,services.document), presentation: createBrowserGhostReplayPresentation(services.document, d.UI), studioMedia,
     drawWorld: (frame) => { frame.draw(services.canvas, { x: 0, y: 56, w: services.width, h: services.height - 172 }); }, render: (view) => { services.renderers.replay(view); if (view.studioMedia?.thumbnail !== undefined) studioMedia.drawThumbnail?.(services.canvas, { x: services.width / 2 + 260, y: 220, w: 160, h: 90 }); }, width: () => services.width,
     deltaSeconds: services.deltaSeconds, nativeTransport: () => ({ controls: d.Input, scrub: replayTransportScrub(services.width, services.height, d.SAFE), consumeKey: (key) => { d.Input.pressed.delete(key); } }), launchPractice: services.launchGhostPractice,
     coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });

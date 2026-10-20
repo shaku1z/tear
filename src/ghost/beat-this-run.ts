@@ -57,7 +57,7 @@ export function decodeBeatThisRunCode(text: string): BeatThisRunCode {
   return readBeatThisRunCode(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(raw, c => c.charCodeAt(0)))) as unknown);
 }
 function authority(capsule: GhostReadCapsule) {
-  if (capsule.manifest.status !== "complete" || capsule.manifest.provenance?.forkOrigin !== undefined || capsule.manifest.provenance?.seedRace !== undefined
+  if (capsule.manifest.status !== "complete" || capsule.manifest.provenance?.bossMemory !== undefined || capsule.manifest.provenance?.forkOrigin !== undefined || capsule.manifest.provenance?.seedRace !== undefined
     || capsule.manifest.provenance?.finaleCompanion !== undefined) throw new TypeError("Beat requires a complete ordinary whole-run source");
   const context = readGhostReplayRunContext(capsule.manifest.provenance), mapped = mapGhostCapsuleToReplayEnvelope(capsule);
   if (!context || mapped.issues.length || verifyGhostCapsuleProductionReplay(capsule).status !== "verified") throw new TypeError("Native replay verification unavailable");

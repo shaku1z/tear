@@ -1,3 +1,5 @@
+import { readGhostBossMemory } from "../ghost/boss-memory-origin";
+import type { createBrowserBossMemory } from "./browser-boss-memory";
 import { handleReplayTransport, type ReplayNativeTransport } from "./replay-transport-controller";
 import { recordedGhostChallengeChoices, type RecordedGhostChallenge, type RecordedGhostChallengeResult } from "../ghost/recorded-challenge";
 import type { GhostForkPermit } from "../ghost/fork-origin";
@@ -25,6 +27,7 @@ export interface GhostTheaterScreenServices {
   readonly presentation?: Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView">;
   readonly drawWorld?: (view: GhostVerifiedReplayRenderView) => void;
   readonly studioMedia?: GhostStudioBrowserMediaPort;
+  readonly bossMemory?: ReturnType<typeof createBrowserBossMemory>;
   readonly width: () => number;
   readonly deltaSeconds: () => number;
   readonly nativeTransport?: () => ReplayNativeTransport;
@@ -53,6 +56,7 @@ interface GhostTheaterContext {
   challengeOpen: boolean;
   challengeResult: RecordedGhostChallengeResult | undefined;
   challengeChoices: readonly RecordedGhostChallenge[];
+  readonly choiceCache: Map<number, readonly RecordedGhostChallenge[]>;
   firstTick: number;
   lastTick: number;
   coachOpen: boolean;
@@ -82,8 +86,10 @@ function isSpeed(value: number): value is (typeof SPEEDS)[number] {
  */
 export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServices) {
   let context: GhostTheaterContext | undefined;
+  let memoryOwner: AbortController | undefined;
   const history = createGhostCoachHistoryController(services.coachHistory);
   const invalidateStudio = (): void => {
+    memoryOwner?.abort(); memoryOwner = undefined; services.bossMemory?.close();
     context?.studioAbort?.abort(); services.studioMedia?.dispose();
     if (context !== undefined) { context.studioAbort = undefined; context.studioArtifact = undefined; context.studioStatus = "idle"; }
   };
@@ -108,19 +114,22 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
 
   const challengeChoices = () => {
     if (!context?.checkpoints.includes(context.result.tick)) return [];
+    const cached = context.choiceCache.get(context.result.tick); if (cached) return cached;
     const snapshot = mapGhostCapsuleToReplayEnvelope(context.capsule).ghost.snapshots.find((entry) => entry.tick === context?.result.tick);
-    return snapshot === undefined ? [] : recordedGhostChallengeChoices(context.capsule, snapshot);
+    const choices = snapshot === undefined ? [] : recordedGhostChallengeChoices(context.capsule, snapshot);
+    context.choiceCache.set(context.result.tick, choices); return choices;
   };
   const view = (): ReplayScreenView | undefined => {
     if (context === undefined) return undefined;
     const currentContext = context;
     const state = currentContext.transport.state();
     const current = currentContext.result.tick;
+    const memory = readGhostBossMemory(currentContext.capsule.manifest.provenance);
     return Object.freeze({
       id: "replay",
       ...(currentContext.finaleAvailable ? { finaleNavigation: "FINALE CONTINUATION" as const } : {}),
-      title: "GHOST 3 THEATER",
-      detail: `VERIFIED SOURCE SIMULATION · ${currentContext.capsule.manifest.recordingProfile.toUpperCase()}${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED / NONCOMPETITIVE"}`,
+      title: memory?.title ?? "GHOST 3 THEATER",
+      detail: memory ? "DERIVED ENCOUNTER · UNRANKED · SOURCE MEMBERSHIP UNPROVEN · NO TRAINING" : `VERIFIED SOURCE SIMULATION · ${currentContext.capsule.manifest.recordingProfile.toUpperCase()}${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED / NONCOMPETITIVE"}`,
       paused: !state.playing,
       speed: state.speed,
       elapsed: `TICK ${String(current)}`,
@@ -139,8 +148,10 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         { label: "STATE HASH", value: currentContext.result.semanticHash },
       ]),
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
+      bossMemory: { available: services.bossMemory !== undefined && currentContext.checkpoints.includes(current) && challengeChoices().some(c=>c.rule==="boss-defeat") && currentContext.capsule.manifest.provenance?.bossMemory === undefined,
+        ...(readGhostBossMemory(currentContext.capsule.manifest.provenance) ? { title: memory?.title ?? "", notes: readGhostBossMemory(currentContext.capsule.manifest.provenance)?.notes ?? "", result: readGhostBossMemory(currentContext.capsule.manifest.provenance)?.endpoint.kind ?? "" } : {}) },
       theater: true, worldVisible: currentContext.frame !== undefined, coachReturnAvailable: currentContext.coachScene,
-      practiceAvailable: currentContext.challengeResult === undefined && currentContext.checkpoints.includes(current),
+      practiceAvailable: currentContext.challengeResult === undefined && (currentContext.capsule.manifest.provenance?.bossMemory !== undefined || currentContext.checkpoints.includes(current)),
       ...(currentContext.challengeOpen ? { challenge: { choices: currentContext.challengeResult === undefined ? currentContext.challengeChoices.map((choice) => ({ id: choice.rule + ":" + choice.target, label: choice.label })) : [],
         tick: current, ...(currentContext.challengeResult === undefined ? {} : { result: currentContext.challengeResult.status, elapsedTicks: currentContext.challengeResult.elapsedTicks }) } } : {}),
       ...(currentContext.coachOpen ? { coach: history.snapshot() } : {}),
@@ -199,7 +210,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           result,
           infoVisible: false,
           fractionalTicks: 0,
-          firstTick, lastTick: session.lastTick ?? capsule.maxTick, challengeOpen: evidence !== undefined, challengeResult: evidence?.result, challengeChoices: [], coachOpen: false,
+          firstTick, lastTick: session.lastTick ?? capsule.maxTick, challengeOpen: evidence !== undefined, challengeResult: evidence?.result, challengeChoices: [], choiceCache: new Map(), coachOpen: false,
           runDnaOpen: false,
           studioOpen: false,
           studioCutList: undefined, frame: session.renderFrame?.(firstTick), coachScene: false, studioMark: undefined, studioAbort: undefined, studioArtifact: undefined, studioStatus: "idle",
@@ -246,7 +257,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     restart(): void { seek(context?.firstTick ?? 0); },
     practice(): void {
       if (context === undefined) return;
-      const tick = context.result.tick;
+      const tick = readGhostBossMemory(context.capsule.manifest.provenance)?.origin.tick ?? context.result.tick;
       if (!context.checkpoints.includes(tick)) {
         context.message = "Practice requires a verified recorded checkpoint.";
         return;
@@ -269,6 +280,18 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       context.transport.pause(); history.close();
     },
     startChallenge(id: string): void {
+      if(id==="boss-memory-watch"){if(context){seek(context.firstTick);context.transport.play();}return;}
+      if(id==="boss-memory-download"){if(context)void services.bossMemory?.download(context.capsule.manifest.id).then(()=>{if(context)context.message="Memory download requested; browser save not confirmed.";}).catch((error: unknown)=>{if(context)context.message=String(error);});return;}
+      if(id==="boss-memory-save"){
+        const captured=context;if(!captured||!services.bossMemory||!challengeChoices().some(c=>c.rule==="boss-defeat"))return;
+        captured.transport.pause();invalidateStudio();const owner=new AbortController();memoryOwner=owner;
+        services.bossMemory.edit((title,notes)=>{if(context!==captured||owner.signal.aborted)return;captured.message="Preparing recording-free encounter…";
+          void services.bossMemory?.save(captured.capsule,captured.result.tick,title,notes,owner.signal).then(saved=>{if(context!==captured||owner.signal.aborted)return;
+            this.open(saved,captured.from);context.message="Saved encounter. Source references do not prove original membership; notes are player-authored. Necessary accumulated entry state remains.";
+          }).catch((error: unknown)=>{if(context===captured&&!owner.signal.aborted)captured.message=`Boss Memory unavailable: ${String(error)}`;});
+        });return;
+      }
+
       const captured = context, choice = challengeChoices().find((entry) => entry.rule + ":" + entry.target === id);
       if (captured === undefined || choice === undefined) return;
       try {

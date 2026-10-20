@@ -11,10 +11,11 @@ const CUSTODY_PREFIX = "ghost-publication-custody:v1:";
 
 /** Source declarations may restrict eligibility; a caller cannot erase them. */
 export function ghostPublicationSourceEligibility(manifest: TearGhostManifest, input: GhostRunEligibilityInput): GhostRunEligibilityInput {
+  const memory = manifest.provenance?.bossMemory !== undefined;
   const beat = readBeatRunBinding(manifest.provenance?.beatThisRun);
   const race = readSeedRaceRun(manifest.provenance?.seedRace);
   const assistance = readGhostRunAssistance(manifest.provenance?.ghostAssistance), actor = manifest.provenance?.actor;
-  return Object.freeze({ ...input, coached: input.coached || assistance !== undefined || race !== undefined || beat !== undefined, ghostAssisted: input.ghostAssisted || assistance !== undefined || race !== undefined || beat !== undefined,
+  return Object.freeze({ ...input, coached: input.coached || assistance !== undefined || race !== undefined || beat !== undefined || memory, ghostAssisted: input.ghostAssisted || assistance !== undefined || race !== undefined || beat !== undefined || memory,
     bot: input.bot || actor === "bot" || actor === "tearbot" });
 }
 

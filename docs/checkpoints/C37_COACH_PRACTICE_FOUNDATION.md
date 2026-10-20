@@ -449,3 +449,33 @@ keeps prior attempts. Focused source-owned native recorder/Reader/service contro
 are local engineering evidence; the constructed victory terminal-fact control is
 not a naturally completed course. Parent-owned fresh-build normal UI acceptance,
 full-run/device coverage and full R16 closure remain pending.
+
+
+## Boss Memory: derived encounter portability
+
+Theater exposes SAVE BOSS MEMORY at a verified living-boss checkpoint, with a
+bounded title and player-authored notes. The saved encounter opens immediately;
+WATCH ENCOUNTER stays within its entry/result interval, DOWNLOAD MEMORY uses the
+normal archive format, and normal Vault import needs no parent. PRACTICE starts
+an independent, release-all, unranked/nonpersistent child at the encounter entry.
+Native player defeat and matching boss defeat are supported encounter results.
+
+Memory snapshots remove legacy Ghost recording history and receive new derived
+hashes; no original raw chunks, prefix trajectory or parent capsule travel.
+Necessary accumulated build/gameplay state remains. Source root/checkpoint hashes
+are references, not independently proven membership or publisher authentication.
+Import continuously reproduces the single supplied entry through the native
+endpoint; later keyframes only compare. Missing/altered tracks or endpoints refuse.
+An original matching frame-close witness may follow that playable endpoint as
+nonplayable housekeeping. Canonical archive limits apply; long-run CPU/capacity
+qualification remains open under R07/R12 rather than imposing an invented duration.
+Derived encounters have no training consent and cannot supply ordinary bests,
+Chase, Beat or competitive publication authority. Ordinary fork admission remains
+parent-required. Historical environment snapshots lacking allocator continuation
+cannot claim exact future allocation; freshly recorded snapshots retain that data.
+
+Source-owned constructed native continuation/privacy/import controls are engineering
+evidence. The retained historical Rootbound source establishes the canopy-slot
+reference defect and recording-prefix privacy case; its missing allocator state
+is not retroactively invented. Parent-owned fresh normal source/save/download/
+parentless-import/watch/practice browser acceptance remains pending.

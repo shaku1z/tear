@@ -18,7 +18,7 @@ import { ghostReferenceArena, ghostReferenceBoundary, type GhostLiveReference, t
 /** Existing production replay, one forward pass. No reconstructed actors escape. */
 export async function prepareGhostLiveReference(capsule: GhostReadCapsule, yieldToHost: () => Promise<void>, cancelled: () => boolean = () => false): Promise<GhostLiveReference> {
   const context = readGhostReplayRunContext(capsule.manifest.provenance);
-  if (capsule.manifest.status !== "complete" || context === undefined || capsule.manifest.provenance?.forkOrigin !== undefined
+  if (capsule.manifest.status !== "complete" || capsule.manifest.provenance?.bossMemory !== undefined || context === undefined || capsule.manifest.provenance?.forkOrigin !== undefined
     || capsule.manifest.provenance?.finaleCompanion !== undefined || capsule.manifest.provenance?.ghostAssistance !== undefined
     || !["endless", "campaign", "bossonly", "gauntlet"].includes(context.run.mode)) throw new TypeError("Chase requires a complete, unassisted compatible run from its original opening.");
   const current = injectedBuildIdentity("production-headless", stableVerificationHash(ENTITY_KIND_REGISTRY.ids));

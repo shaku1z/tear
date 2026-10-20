@@ -312,6 +312,7 @@ export function hydrateTearCodecWorld<
       cinema: decodeTearCodecValue(component(world, "tear.cinematic.v1"), identities),
     }),
     environment: Object.freeze({
+      ...(record(hazards) && hazards.allocator !== undefined ? { allocator: decodeTearCodecValue(hazards.allocator, identities) as NonNullable<EnvironmentSnapshot["allocator"]> } : {}),
       ...(record(hazards) && typeof hazards.worldId === "string" ? { worldId: hazards.worldId } : {}),
       stageId: record(hazards) && typeof hazards.stageId === "string" ? hazards.stageId : "unknown",
       fields: record(hazards) && Array.isArray(hazards.fields)

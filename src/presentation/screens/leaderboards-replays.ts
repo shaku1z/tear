@@ -141,7 +141,11 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
       canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.lead, true); canvas.fillText("COMPARE", 40 + safe.l, 36 + safe.t);
       canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
     }
-    canvas.fillText(view.title + "   ·   " + view.detail, 200 + safe.l, 36 + safe.t);
+    const header = view.title + "   ·   " + view.detail;
+    const headerWidth = Math.max(0, width - safe.l - safe.r - 280 - canvas.measureText(view.score ?? "").width);
+    const disclosure = "   ·   " + view.detail;
+    const memoryHeader = ellipsize(canvas, view.title, Math.max(0, headerWidth - canvas.measureText(disclosure).width)) + disclosure;
+    canvas.fillText(view.bossMemory?.title === undefined ? header : ellipsize(canvas, memoryHeader, headerWidth), 200 + safe.l, 36 + safe.t);
     canvas.textAlign = "right"; canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.label, true);
     canvas.fillText(view.score ?? "", width - 36 - safe.r, 36 + safe.t); canvas.restore();
 
@@ -171,6 +175,12 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: 552 + safe.l, y: controlY, w: 84, h: 44, label: "↺", action: { type: "replay.restart" } });
     if (view.theater) context.enqueue({ x: 644 + safe.l, y: controlY, w: 180, h: 44, label: "PRACTICE",
       enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
+    if(view.bossMemory?.title!==undefined){
+      context.enqueue({x:30+safe.l,y:136+safe.t,w:200,h:32,label:"WATCH ENCOUNTER",action:{type:"replay.challenge.start",id:"boss-memory-watch"}});
+      context.enqueue({x:240+safe.l,y:136+safe.t,w:200,h:32,label:"DOWNLOAD MEMORY",action:{type:"replay.challenge.start",id:"boss-memory-download"}});
+      const notes=view.bossMemory.notes??"";
+      ui.text(canvas,`RESULT: ${view.bossMemory.result??"unavailable"} · NOTES (PLAYER-AUTHORED): ${notes.slice(0,100)}${notes.length>100?"… [FULL NOTES IN DOWNLOAD MEMORY]":""}`,30+safe.l,190+safe.t,ui.t.type.micro,"left",ui.t.alpha.soft);
+    }else if(view.bossMemory?.available)context.enqueue({x:30+safe.l,y:136+safe.t,w:220,h:32,label:"SAVE BOSS MEMORY",action:{type:"replay.challenge.start",id:"boss-memory-save"}});
     if (view.theater) context.enqueue({ x: width / 2 - 110, y: 76, w: 220, h: 32, label: "LOCAL CHALLENGE", action: { type: "replay.challenge.open" } });
     if (view.finaleNavigation) context.enqueue({ x: width - 280 - safe.r, y: 76, w: 240, h: 32, label: view.finaleNavigation, action: { type: "replay.finale" } });
     if (view.theater) context.enqueue({ x: 832 + safe.l, y: controlY, w: 120, h: 44, label: "COACH",

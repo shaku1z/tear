@@ -30,6 +30,14 @@ metrics expose missing authority honestly. Normal browser acceptance is pending;
 local provider contract evidence is not deployed-service or authenticated public
 publishing evidence. Existing private publication consent remains unchanged.
 
+Boss Memory now saves a named, annotated derived encounter from a verified
+living-boss checkpoint through native boss or player defeat. Recording history
+is removed; normal segment-only download/import, bounded Watch and independent
+entry Practice reuse existing owners. Source membership is explicitly unproven
+without original bytes; necessary entry gameplay state remains. Focused native
+construction controls are engineering evidence; fresh normal browser acceptance
+is pending. See the current C37 checkpoint for provenance and legacy limits.
+
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
 ## Current integrated content authority
