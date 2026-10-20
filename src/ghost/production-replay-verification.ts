@@ -1,3 +1,4 @@
+import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
 import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
 import type { GhostReadCapsule } from "./capsule-reader";
@@ -114,7 +115,7 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
     }
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
     const composition = createProductionGhostReplayComposition({ seed: anchor.seed, openingPermit: permit,
-      requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }) });
+      raceDecisions: readSeedRaceDecisions(capsule, context?.run.id ?? ""), requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }) });
     const replay = new GhostProductionReplayWorld(derived, { create(snapshot) {
       const session = composition.create(snapshot);
       return Object.freeze({ ...session, afterReplayAdvance() {
@@ -171,9 +172,11 @@ export function verifyGhostCapsuleProductionReplay(
   if (refusals.length > 0) return Object.freeze({ status: "unavailable", comparisons: refusals, mappingIssues });
   const inputs = new Map(receipts.map((receipt) => [receipt.tick, receipt.input]));
   let applicationClock: GhostApplicationClockSchedule | undefined;
+  let raceDecisions: ReturnType<typeof readSeedRaceDecisions>;
   try {
     const context = readGhostReplayRunContext(capsule.manifest.provenance);
     applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);
+    raceDecisions = readSeedRaceDecisions(capsule, context?.run.id ?? "");
   } catch (error) { return Object.freeze({ status: "unavailable", comparisons: Object.freeze([]),
     mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]) }); }
   let openingPermit;
@@ -182,7 +185,7 @@ export function verifyGhostCapsuleProductionReplay(
     mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]) }); }
   const composition = createProductionGhostReplayComposition({ seed: mapped.ghost.snapshots[0]?.seed ?? "unknown", inputSnapshots: inputs,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
-    requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }),
+    raceDecisions, requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }),
     ...(openingPermit === undefined ? {} : { openingPermit }) });
   const replayGhost = forkOrigin === undefined ? mapped.ghost : createGhostV3({ ...mapped.ghost,
     snapshots: mapped.ghost.snapshots.filter((snapshot) => snapshot.tick === forkOrigin.checkpoint.tick) });

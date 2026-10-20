@@ -161,6 +161,10 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     if (view.practiceAvailable) context.enqueue({ x: width / 2 - startWidth / 2 - 270, y: 726, w: 250, h: 62,
       label: "PRACTICE LAB", sub: "BASELINE SWORD · NO REWARDS", ghost: true,
       action: { type: "tutorial.action", command: "open-practice" } });
+    if (view.modes.some(choice => choice.selected && ["endless", "campaign", "gauntlet", "bossonly"].includes(choice.id))) {
+      context.enqueue({ x: width / 2 + startWidth / 2 + 20, y: 726, w: 310, h: 62, label: "CREATE SEED-LOCKED RACE", sub: "SHARED SEED / OFFERS · UNRANKED", action: { type: "setup.start", race: true } });
+      ui.text(canvas, "Race: shared setup, build and offers · your inputs, picks, rerolls, reserve and tier-ups · no progression rewards", width / 2, 822, ui.t.type.micro, "center", ui.t.alpha.muted);
+    }
     backControl(context);
   }
 

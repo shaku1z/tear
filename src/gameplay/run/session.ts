@@ -1,5 +1,6 @@
 import type { DifficultyId } from "./difficulty-catalog";
 import type { GhostRunAssistance } from "./ghost-assistance";
+import type { SeedRaceRun } from "./seed-locked-draft";
 
 export type RunMode = "campaign" | "endless" | "gauntlet" | "playground" | "tutorial" | "bossonly" | "sandbox";
 export type RunDifficulty = DifficultyId;
@@ -44,6 +45,7 @@ export interface RunWaveLogEntry {
 }
 
 export interface RunSession<TMods> {
+  seedRace?: SeedRaceRun;
   ghostAssistance?: GhostRunAssistance;
   mode: RunMode;
   diff: RunDifficulty;

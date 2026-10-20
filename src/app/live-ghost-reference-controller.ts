@@ -1,3 +1,4 @@
+import { readSeedRaceRun } from "../ghost/seed-race-contract";
 import type { GhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { GhostLiveReference, GhostReferenceFrame, GhostChaseView } from "../ghost/live-ghost-reference-data";
 
@@ -6,25 +7,27 @@ export interface GhostChaseLiveState { readonly runId: number; readonly mode: st
   readonly arena: string; readonly blocked: boolean; readonly assistance?: GhostRunAssistance; }
 interface ChasePorts { prepare(id: string, signal: AbortSignal): Promise<GhostLiveReference>; current(source: GhostRunAssistance): Promise<boolean>;
   prepareStart?(reference: GhostLiveReference): void;
-  start(reference: GhostLiveReference): void; }
+  start(reference: GhostLiveReference, race?: boolean): void; }
 /** Reference state never supplies a live action, actor, random value or clock. */
 export function createLiveGhostReferenceController(ports: ChasePorts) {
   let reference: GhostLiveReference | undefined, selected: GhostReferenceFrame | undefined, owner: AbortController | undefined, generation = 0;
   let starting = false, setupPermission = false, pending: GhostRunAssistance | undefined, boundRun: number | undefined, visible = true, message = "", lastWave = "", checking = false;
+  let racing = false;
   let timeDelta: number | undefined, split: string | undefined;
   let byWave = new Map<string, readonly GhostReferenceFrame[]>(), cursor = 0, elapsedCursor = 0, elapsed: GhostReferenceFrame | undefined;
   const setupLaunchPending = () => setupPermission;
   const cancelPreparation = () => { if (owner) { owner.abort(); owner = undefined; generation++; } };
   const stop = (reason = "") => { cancelPreparation(); generation++; setupPermission = false; reference = selected = undefined; elapsed = undefined; byWave.clear(); pending = undefined; boundRun = undefined; message = reason; lastWave = ""; timeDelta = undefined; split = undefined; checking = false; };
   return Object.freeze({
-    async choose(id: string, expectedManifestHash?: string): Promise<void> {
+    async choose(id: string, expectedManifestHash?: string, race = false): Promise<void> {
       stop(); const ticket = generation, signal = new AbortController(); owner = signal; message = "Preparing verified reference…";
       try {
         const value = await ports.prepare(id, signal.signal);
         if (value.assistance.sourceId !== id || expectedManifestHash !== undefined && value.assistance.sourceManifestHash !== expectedManifestHash) throw new Error("Selected reference identity changed.");
+        if (race && readSeedRaceRun(value.seedRace)?.role !== "reference") throw new Error("A new declared Seed-Locked reference is required.");
         if (signal.signal.aborted || ticket !== generation || !await ports.current(value.assistance)) { if (ticket === generation) message = "Reference custody changed."; return; }
         if (ticket !== generation) return;
-        owner = undefined; reference = value; visible = true; message = "Independent seed and choices · assisted / noncompetitive"; pending = value.assistance;
+        owner = undefined; reference = value; racing = race; visible = true; message = racing ? "Seed-Locked Race · Shared offers · personal reserve / tier-ups · unranked" : "Independent seed and choices · assisted / noncompetitive"; pending = value.assistance;
         const groups = new Map<string, GhostReferenceFrame[]>(); cursor = elapsedCursor = 0;
         for (const frame of value.frames) { const key = `${String(frame.stage)}:${String(frame.wave)}`; const group = groups.get(key); if (group) group.push(frame); else groups.set(key, [frame]); }
         byWave = groups;
@@ -33,7 +36,7 @@ export function createLiveGhostReferenceController(ports: ChasePorts) {
           ports.prepareStart?.(value);
           if (ticket !== generation || reference !== value) return;
           if (ports.prepareStart !== undefined && setupLaunchPending()) throw new Error("Chase setup launch was not admitted.");
-          ports.start(value);
+          ports.start(value, race);
         } finally { starting = setupPermission = false; pending = undefined; }
       } catch (error) { if (ticket === generation) stop(error instanceof Error ? error.message : "Reference unavailable."); }
     },
@@ -66,7 +69,7 @@ export function createLiveGhostReferenceController(ports: ChasePorts) {
       selected = (candidates[cursor]?.waveTime ?? Infinity) <= live.waveTime ? candidates[cursor] : undefined;
       if (!selected || selected.blocked || live.blocked || selected.arena !== live.arena || live.waveTime > (candidates.at(-1)?.waveTime ?? -1)) {
         selected = undefined; message = "Different encounter / reference coverage — projection unavailable. Shared splits retained.";
-      } else message = "Independent seed and choices · assisted / noncompetitive";
+      } else message = racing ? "Seed-Locked Race · Shared offers · personal reserve / tier-ups · unranked" : "Independent seed and choices · assisted / noncompetitive";
     },
     snapshot(live?: GhostChaseLiveState): GhostChaseView {
       return Object.freeze({ active: reference !== undefined, visible, message, ...(reference ? { source: reference.assistance.sourceId, actor: reference.assistance.actor } : {}),

@@ -1,3 +1,4 @@
+import { createLiveSeedRace } from "./live-seed-race-composition";
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import { BestScoreRepository } from "../gameplay/scoring/best-scores";
 import { createLiveEconomyRuntime } from "../gameplay/scoring/live-economy-runtime";
@@ -12,6 +13,7 @@ import { SettingsController } from "./settings-controller";
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
 export interface LiveSessionServicesOptions {
+  readonly seedRace?: Omit<Parameters<typeof createLiveSeedRace>[0], "dependencies" | "run" | "player" | "blade" | "resetRewards">;
   readonly dependencies: GameRuntimeDependencies;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
@@ -45,6 +47,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     addProfileStat: d.profileStatsPersistence.add,
   });
   const reward = createRewardRuntime({
+    ...(options.seedRace === undefined ? {} : { beforeDecision: (decision: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[0], before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1]) => seedRace.recordDecision(decision, before) }),
     run: options.run,
     roll: (request) => d.rollUpgrades(request.count, options.run().mods, {
       random: d.GAME_RANDOM_STREAMS.stream("draft"), forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,
@@ -69,9 +72,11 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
       requestPointer: options.requestPointerLock,
     },
   });
+  const unavailable = (): never => { throw new Error("Seed-Locked Race start ports unavailable"); };
+  const seedRace = createLiveSeedRace({ ...(options.seedRace ?? { baseline: unavailable, capture: unavailable, setup: unavailable, recording: { runId: unavailable, active: () => false, nextSequence: unavailable, tick: unavailable, record: unavailable } }), dependencies: d, run: options.run, player: options.player, blade: options.blade, resetRewards: reward.reset });
   const bestScores = new BestScoreRepository(d.CG.store);
   return Object.freeze({
     settingsController, settings: settingsController.settings, applySettings: settingsController.api.apply,
-    controllers, economy, reward, bestScores,
+    controllers, economy, reward, bestScores, seedRace,
   });
 }

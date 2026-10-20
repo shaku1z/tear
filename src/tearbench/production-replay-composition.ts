@@ -1,3 +1,5 @@
+import { validateSeedRaceState } from "../ghost/seed-race-contract";
+import { createSeedRaceDecisionPlayback, type SeedRaceDecision } from "../ghost/seed-race-decisions";
 import { FinaleController } from "../gameplay/campaign/finale-controller";
 import type { ProductionCombatPhaseOptions } from "./production-combat-phases";
 import type { GhostForkOriginV1 } from "../ghost/fork-origin";
@@ -83,6 +85,7 @@ export interface ProductionGhostReplayCompositionOptions {
   /** Optional portable terminal endpoint; device/persistence behavior stays outside this composition. */
   readonly endRun?: () => void;
   readonly openingPermit?: GhostRecordedOpeningPermit;
+  readonly raceDecisions?: readonly SeedRaceDecision[];
   readonly applicationClock?: GhostApplicationClockSchedule;
   readonly requireRecordedApplicationFrames?: boolean;
 }
@@ -349,6 +352,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
     const issue = decodedResult.ok ? "decoded world was not produced" : decodedResult.issues[0]?.message ?? "snapshot is invalid";
     throw new TypeError(`production replay snapshot is invalid: ${issue}`);
   }
+  validateSeedRaceState(snapshot.state);
   // Entity constructors may consume destination RNG even when hydration fails.
   const randomBeforeStaging = replay.world.context.services.random.snapshot();
   const staged = (() => {
@@ -395,7 +399,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   const admittedOpening = opening !== undefined && snapshot.tick === 0 && staged.run.runTime === 0 && noPendingReward
     && preparedRuntime.lifecycle.reward === null && preparedRuntime.lifecycle.outcome === null
     && restoredBossIntro === null
-    && (openingCampaign || ((staged.run.mode === "endless" || (staged.run.mode === "bossonly"
+    && (openingCampaign || ((staged.run.mode === "endless" || staged.run.mode === "gauntlet" && staged.run.seedRace !== undefined || (staged.run.mode === "bossonly"
       && opening.kind === "explicit" && preparedRuntime.lifecycle.bossWave)) && preparedRuntime.chapter === null
       && preparedRuntime.lifecycle.phase === "wave-active" && preparedRuntime.lifecycle.wave === staged.run.wave
       && !preparedRuntime.lifecycle.activationDeferred && !preparedRuntime.cinema.active));
@@ -427,6 +431,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   if (selectingReward) {
     const selection = staged.reward, choices = selection.phase === "reserve" ? selection.reserveChoices : selection.choices;
     if (choices.length === 0 || new Set(choices.map((choice) => choice.id)).size !== choices.length
+      || stableVerificationHash(selection.seedLocked ?? null) !== stableVerificationHash(staged.run.seedRace?.shared.draft ?? null)
       || selection.phase !== "tierup" && selection.wave !== staged.run.wave
       || selection.rerolls !== staged.run.mods.draftRerolls || selection.specialBlock !== staged.run.specialBlock
       || selection.specialsOffered !== staged.run.specialsOffered
@@ -566,6 +571,7 @@ export function createProductionGhostReplayComposition(
         const input = opening?.input ?? options.inputSnapshots?.get(snapshot.tick);
         if (input !== undefined) core.simulationRuntime.input.restore(input);
       }
+      const replayDecisions = createSeedRaceDecisionPlayback(options.raceDecisions ?? [], snapshot?.tick ?? 0, waveReward.reward);
       let openingStatus: "pending" | "publishing" | "completed" | "failed" = "pending";
       const completeRecordedOpening = () => {
         if (openingStatus === "completed") return;
@@ -595,6 +601,7 @@ export function createProductionGhostReplayComposition(
         waveReward,
         routeAction: waveReward.routeAction,
         beforeReplayAdvance: (tick: number) => {
+          replayDecisions(tick);
           if (clockPlayback !== undefined) clockPlayback.beforeTick(tick);
           else if (options.requireRecordedApplicationFrames === true && replay.world.state.bossIntro() !== null) throw new TypeError("historical active intro has unknown application-clock provenance");
         },

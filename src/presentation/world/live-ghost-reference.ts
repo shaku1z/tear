@@ -18,7 +18,7 @@ export function drawLiveGhostSplits(canvas: CanvasRenderingContext2D, view: Ghos
   try {
     const w = Math.min(620, width - 32), x = (width - w) / 2;
     canvas.globalAlpha = .9; canvas.fillStyle = ui.t.color.cinema; canvas.fillRect(x, 112, w, 92); canvas.globalAlpha = 1; canvas.fillStyle = ui.t.color.cinemaInk; canvas.textAlign = "center"; canvas.font = ui.font(ui.t.type.micro);
-    canvas.fillText(`CHASE · ${!view.active ? "REFERENCE OFF" : view.visible ? "VISIBLE" : "HIDDEN"} · ${view.actor ?? "unknown"} attribution · NONCOMPETITIVE`, width / 2, 130);
+    canvas.fillText(`${view.raceRole ? `SEED-LOCKED RACE ${view.raceRole.toUpperCase()}` : "CHASE"} · ${!view.active ? "REFERENCE OFF" : view.visible ? "VISIBLE" : "HIDDEN"} · ${view.actor ?? "unknown"} attribution · NONCOMPETITIVE`, width / 2, 130);
     canvas.fillText(`TIME ${signed(view.time, "s")}  SCORE ${signed(view.score)}  HP ${signed(view.hp)}  WAVE ${signed(view.wave)}`, width / 2, 150);
     canvas.fillText(`HP live ${view.ownHp ?? "unavailable"} / reference ${view.referenceHp ?? "unavailable"} · ${view.split ?? "No shared completed split yet"}`, width / 2, 170);
     canvas.fillText(view.message, width / 2, 190, w - 20);

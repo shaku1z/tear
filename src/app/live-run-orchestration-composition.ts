@@ -67,6 +67,7 @@ export interface LiveRunOrchestrationOptions {
   readonly finishWorldReset: () => void;
   readonly resetAuthoritativeClocks: () => void;
   readonly resetCombatIdentity: () => void;
+  readonly race?: Readonly<{ active(): boolean; apply(): boolean; finalize(): void; discovery(ordinary: readonly string[]): readonly string[] }>;
   readonly createRunSeed?: () => number;
   readonly withOpeningCapture?: (boundary: LiveOpeningCaptureBoundary, record: () => void) => void;
   readonly openingExposed?: (runId: string) => void;
@@ -127,6 +128,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
 
   createLiveRunStartHost({
     ...(options.runInstalled === undefined ? {} : { runInstalled: options.runInstalled }),
+    ...(options.race === undefined ? {} : { race: options.race }),
     dependencies: d, state: options.state, width: options.width, services: options.worldServices,
     prepareWorld: options.prepareWorld, applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {

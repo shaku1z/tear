@@ -78,6 +78,7 @@ interface RunStartHostContext {
   readonly environment: EnvironmentRuntimeState;
   readonly resetAuthoritativeClocks: () => void;
   readonly resetCombatIdentity: () => void;
+  readonly race?: Readonly<{ active(): boolean; apply(): boolean; finalize(): void; discovery(ordinary: readonly string[]): readonly string[] }>;
   readonly createRunSeed?: () => number;
   readonly loadStage: (index: number) => void;
   readonly stage: StagePort;
@@ -173,7 +174,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       const biomeTracker = PROFILE.data.stats._biomes;
       const discoveredBiomes = Object.keys((biomeTracker ?? {}) as Record<string, unknown>);
       return { weaponId, mods: newMods(), scaling: startingPlan.scaling,
-        achievementSnapshot: Object.keys(PROFILE.data.ach), variantDiscovery: [...resolveDiscoveredVariantIds(mode, discoveredBiomes)] };
+        achievementSnapshot: Object.keys(PROFILE.data.ach), variantDiscovery: [...(context.race?.discovery(resolveDiscoveredVariantIds(mode, discoveredBiomes)) ?? resolveDiscoveredVariantIds(mode, discoveredBiomes))] };
     },
     resetAuthoritativeClocks: context.resetAuthoritativeClocks,
     finishWorldReset: () => {
@@ -251,7 +252,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       };
     },
     updateProgressionTracking: (mode) => {
-      if (context.baselinePractice?.() === true) return;
+      if (context.baselinePractice?.() === true || context.race?.active()) return;
       if (context.achievementTracking() && META.level("reach") > 0 && META.level("throwarm") > 0
         && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
       if (tracksModeProgress(mode)) { PROFILE.markMode(mode); context.achievementCheck(); }
@@ -261,9 +262,10 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       // Ghost 2-only observation feature.  Start it before the optional visual
       // recorder so the very first live tick (and its V3 sidecar) sees the
       // current held movement state.
+      context.race?.finalize();
       Input.startSemanticRecording();
       Input.syncSemanticMovement();
-      if (context.achievementTracking()) {
+      if (context.achievementTracking() || context.race?.active()) {
         const record = () => { GHOST.startRec({ runId, seed: String(seed), weaponId: migrateWeaponSelection(requireRun(state).weaponId), weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION }); };
         if (context.withOpeningCapture === undefined) record();
         else context.withOpeningCapture({ phase: "opening-initialized-before-run-start", runId, seed }, record);
@@ -300,7 +302,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     applyMetaProgression: () => {
       const run = requireRun(state);
       if (!tutorialUsesBaselineLoadout(run.mode) && context.baselinePractice?.() !== true) {
-        META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
+        if (context.race?.apply() !== true) META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
       }
       context.resetRewards();
     },

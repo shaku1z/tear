@@ -9,6 +9,15 @@ Focused production replay/state/RNG and lifecycle/fairness controls pass. Normal
 browser acceptance is pending; seed-locked racing and full-Campaign qualification
 are not implied.
 
+Seed-Locked Race now has a source implementation through explicit Setup creation
+and Career **RACE THIS REFERENCE**. It shares setup/build/seed and common
+wave/reroll offers while preserving personal legal picks, rerolls, carried reserve
+and tier-ups. Race-only decision capture/playback and live/detached restore have
+focused controls; both roles are unranked and exclude ordinary progression and
+publication. Fresh normal-browser acceptance remains pending. Race-derived local
+challenge/practice forks are explicitly unsupported; this is not full R16 closure.
+See the [current C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#seed-locked-race-local-source-implementation-browser-acceptance-pending).
+
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
 ## Current integrated content authority

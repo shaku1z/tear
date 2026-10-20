@@ -180,6 +180,8 @@ export function validateLiveCodecPayload(
     }
     if (typeof payload.weaponId !== "string") issues.push(issue(codecId, "$.weaponId", "blade requires weaponId"));
   } else if (codecId === "tear.run.v1") {
+    try { readSeedRaceRun(payload.seedRace); }
+    catch (error) { issues.push(issue(codecId, "$.seedRace", error instanceof Error ? error.message : "invalid seed race")); }
     for (const key of ["mode", "difficulty"] as const) {
       if (typeof payload[key] !== "string") issues.push(issue(codecId, `$.${key}`, `${key} must be a string`));
     }
@@ -263,3 +265,4 @@ export function validateLiveCodecPayload(
   }
   return Object.freeze(issues);
 }
+import { readSeedRaceRun } from "../ghost/seed-race-contract";

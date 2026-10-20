@@ -61,7 +61,7 @@ export class LiveRecordingController<TReplay extends RecordedReplay> {
     }
 
     // Validate the captured run, not current visibility or a later replacement.
-    if (readGhostRunAssistance(run.ghostAssistance) !== undefined) return replay;
+    if (run.seedRace !== undefined || readGhostRunAssistance(run.ghostAssistance) !== undefined) return replay;
     const board = `lb_${run.mode}_${run.diff}`;
     void this.#port.submitScore(run.mode, run.diff, {
       score: run.score,

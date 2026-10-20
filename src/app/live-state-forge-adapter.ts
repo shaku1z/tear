@@ -1,3 +1,5 @@
+import { seedRaceLegality } from "../gameplay/run/seed-locked-draft";
+import { readSeedRaceRun, validateSeedRaceState } from "../ghost/seed-race-contract";
 import { hydrateRewardCodecPayload } from "../tearbench/reward-codec-hydrator";
 import { restoreUpgradeHooks, upgradeHookIdentity } from "../gameplay/upgrade-hooks";
 import type { UpgradeEventHandler } from "../gameplay/upgrades";
@@ -198,6 +200,8 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   }));
   components.set("tear.run.v1", Object.freeze({
     ...(encode(run, identities) as Readonly<Record<string, TearCodecValue>>),
+    // The canonical declaration contains a weapon ID, unlike excluded executable actor weapon ports.
+    ...(run.seedRace === undefined ? {} : { seedRace: readSeedRaceRun(run.seedRace) as unknown as TearCodecValue }),
     mode: run.mode, difficulty: run.diff, stage: options.stageIndex(), wave: run.wave,
     tick: options.tick(), score: run.score,
   }));
@@ -229,7 +233,9 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
     ...(options.tutorialPresentation ? { tutorialPresentation: options.tutorialPresentation.capture() } : {}),
     ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}),
     ...(options.particlesPresentation ? { particlesPresentation: encode(options.particlesPresentation.capture(), identities) } : {}) }));
-  components.set("tear.reward.v1", Object.freeze({ selection: captureLiveRewardSelection(options.reward(), identities) }));
+  const selection = options.reward();
+  components.set("tear.reward.v1", Object.freeze({ selection: captureLiveRewardSelection(selection, identities),
+    ...(run.seedRace === undefined ? {} : { raceLegality: seedRaceLegality(run.mods.owned, selection?.choices ?? [], selection?.reservedChoice ?? null) }) }));
   components.set("tear.configuration.v1", Object.freeze({
     rulesetVersion: "live", values: Object.freeze({
       ...(encode(options.worldServices.configuration.value, identities) as Readonly<Record<string, TearCodecValue>>),
@@ -277,6 +283,7 @@ function stageWorld(
     applyTearCodecConfiguration(configuration, world.components.get("tear.configuration.v1") ?? null, new Map());
     validateParticlePresentationBinding(particles, configuration.effects);
   }
+  validateSeedRaceState(Object.fromEntries(world.components));
   const candidate = hydrateTearCodecWorld<
     GameRun,
     GamePlayer,

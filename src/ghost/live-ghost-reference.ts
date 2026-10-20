@@ -1,3 +1,5 @@
+import { readSeedRaceDecisions } from "./seed-race-decisions";
+import { readSeedRaceRun, seedRaceInitialBuildHash } from "./seed-race-contract";
 import { stableVerificationHash } from "../replay/hash";
 import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
 import { injectedBuildIdentity } from "../tearbench/live-runtime-snapshots";
@@ -30,6 +32,9 @@ export async function prepareGhostLiveReference(capsule: GhostReadCapsule, yield
   if (verified.status !== "verified") throw new TypeError("Reference authoritative playback could not be verified.");
   const mapped = mapGhostCapsuleToReplayEnvelope(capsule), anchor = mapped.ghost.snapshots.find((s) => s.tick === 0);
   if (mapped.issues.length || anchor === undefined) throw new TypeError("Reference opening is unavailable.");
+  const seedRace = readSeedRaceRun(capsule.manifest.provenance?.seedRace);
+  const anchorRace = readSeedRaceRun((anchor.state["tear.run.v1"] as Record<string, unknown>).seedRace);
+  if (stableVerificationHash(seedRace ?? null) !== stableVerificationHash(anchorRace ?? null) || seedRace && (seedRace.role !== "reference" || seedRace.shared.initialBuildHash !== seedRaceInitialBuildHash(anchor.state) || stableVerificationHash(seedRace.shared.build) !== stableVerificationHash(context.build))) throw new TypeError("Race source declaration differs from its original opening");
   const terminalTick = mapped.ghost.events.find((event) => event.source === "engine" && ["run.completed", "run.defeated", "run.abandoned"].includes(event.type))?.tick ?? Infinity;
   const last = Math.min(terminalTick, verified.comparisons.reduce((end, comparison) => comparison.equal ? Math.max(end, comparison.tick) : end, 0));
   if (last < 1 || last > 1_000_000) throw new RangeError("Reference has no bounded verified continuation.");
@@ -46,7 +51,7 @@ export async function prepareGhostLiveReference(capsule: GhostReadCapsule, yield
     const boundary = ghostReferenceBoundary(event, { stage: active.replay.stage.index, time: run.runTime });
     if (boundary) boundaries.push(boundary);
   } });
-  const composition = createProductionGhostReplayComposition({ seed: anchor.seed, requireRecordedApplicationFrames: true, gameplayEvents,
+  const composition = createProductionGhostReplayComposition({ seed: anchor.seed, raceDecisions: readSeedRaceDecisions(capsule, context.run.id), requireRecordedApplicationFrames: true, gameplayEvents,
     inputSnapshots: new Map([[0, input]]),
     ...(clock === undefined ? {} : { applicationClock: clock }), ...(openingPermit === undefined ? {} : { openingPermit }) });
   const session = composition.create(anchor), frames: GhostReferenceFrame[] = [], splits: GhostLiveReference["splits"][number][] = [];
@@ -80,7 +85,7 @@ export async function prepareGhostLiveReference(capsule: GhostReadCapsule, yield
     if (tick % 32 === 0) await yieldToHost();
   }
   const actor = capsule.manifest.provenance?.actor;
-  return Object.freeze({ version: 1, mode: context.run.mode, difficulty: context.run.difficulty, weapon: context.run.weaponId, seed: context.run.seed, build: context.build,
+  return Object.freeze({ ...(seedRace === undefined ? {} : { seedRace }), version: 1, mode: context.run.mode, difficulty: context.run.difficulty, weapon: context.run.weaponId, seed: context.run.seed, build: context.build,
     assistance: Object.freeze({ format: "tear-ghost-chase", version: 1, sourceId: capsule.manifest.id, sourceManifestHash: stableVerificationHash(capsule.manifest), sourceRoot: capsule.manifest.rootIntegrity,
       actor: actor === "human" ? "human" : actor === "bot" || actor === "tearbot" ? "bot" : "unknown", coachEnabled: true, ghostVisible: true, competitiveEligible: false }),
     frames: Object.freeze(frames), splits: Object.freeze(splits) });

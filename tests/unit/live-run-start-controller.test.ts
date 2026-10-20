@@ -1,4 +1,7 @@
 /// <reference types="vite/client" />
+import { createLiveSeedRace } from "../../src/app/live-seed-race-composition";
+import { createMetaProgression } from "../../src/gameplay/progression/meta";
+import { seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
 import { describe, expect, it, vi } from "vitest";
 import { LiveRunStartController } from "../../src/gameplay/run/live-run-start-controller";
 import { createLiveRunStartHost } from "../../src/app/live-run-start-host";
@@ -9,7 +12,7 @@ import { validateTearContract } from "../../src/tearbench/validation";
 import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
 import { REMOTE } from "../../src/config/game-config";
 import { applyWeapon } from "../../src/gameplay/weapons";
-import { newMods } from "../../src/gameplay/upgrades";
+import { newMods, UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 import { GhostCapsuleReader, GhostLocalVault, GhostStreamingRecorder, createLiveGhostBootstrapEvent, createMemoryGhostVaultBackend, ghostLiveBootstrapEventId } from "../../src/ghost";
 import { assessGhostReplayBootstrap, createGhostReplayRunContext, issueGhostRecordedOpeningPermit, readGhostRecordedOpeningPermit, readGhostReplayRunContext, type GhostRecordedOpeningPermit } from "../../src/ghost/replay-admission";
 import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
@@ -140,7 +143,7 @@ function actualOpeningHost(previousScreen = "setup", failStarted = false, inject
     openingExposed: (runId: string) => { pending = false; order.push("completion"); openingCapture.exposed(runId); },
   } as unknown as Parameters<typeof createLiveRunStartHost>[0];
   const controller = createLiveRunStartHost(context);
-  return { controller, source, native, order, events, markMode, achievementCheck, captured: () => captured, boundary: () => boundary, pending: () => pending,
+  return { controller, context, dependencies, source, native, order, events, markMode, achievementCheck, captured: () => captured, boundary: () => boundary, pending: () => pending,
     prepareStart: () => { if (application?.screen !== "profile") throw new Error("Chase launch left Profile"); application.transition("setup"); screen = "setup"; source.waveReward.restoreScreen(screen); } };
 }
 
@@ -658,3 +661,54 @@ describe("LiveRunStartController", () => {
     ]);
   });
 });
+
+
+describe("native Seed-Locked start transaction", () => {
+  it("applies shared projected META and one headstart before the recording, without rewriting private ranks", () => {
+    vi.stubGlobal("__TEAR_BUILD_REVISION__", "race-unit");
+    try {
+      const start = (privateRanks: Record<string, number>, reference?: GhostLiveReference) => {
+        const f = actualOpeningHost(), replay = f.source.replay;
+        const meta = createMetaProgression({ store: { get: () => null, set: vi.fn() }, config: replay.configuration.value,
+          cloud: { loggedIn: () => false, push: () => Promise.resolve() }, random: replay.random.streams.stream("draft"), upgrades: UPGRADES, applyUpgrade: () => { throw new Error("Race must not apply private random headstart"); } });
+        meta.META.data.buy = { ...privateRanks };
+        Object.assign(f.dependencies, meta, { createRunSeed: () => 117, UPGRADES, applyUpgrade });
+        const race = createLiveSeedRace({ dependencies: f.dependencies as unknown as Parameters<typeof createLiveSeedRace>[0]["dependencies"],
+          run: () => requireRaceValue(replay.world.state.run()), player: () => requireRaceValue(replay.world.state.player()), blade: () => requireRaceValue(replay.world.state.blade()),
+          baseline: () => replay.configuration.baseSnapshot(), capture: () => new Map(Object.entries(captureProductionReplayCheckpoint(replay, f.source.combat, f.source.waveReward, "race-pre-record").snapshot.state)),
+          resetRewards: f.source.waveReward.reward.reset, recording: { runId: () => undefined, active: () => false, nextSequence: () => 1, tick: () => 0, record: () => undefined },
+          setup: () => ({ mode: "endless", difficulty: "normal", weapon: "chainblade", boss: "shuffle" }) });
+        const pendingStageEligibility: boolean[] = [];
+        const controller = createLiveRunStartHost({ ...f.context, race, createRunSeed: () => race.seed() ?? 999, achievementTracking: () => false,
+          loadStage: () => {
+            // Native stage entry occurs before finalize installs the declaration.
+            // The live telemetry subscriber must use this scoped owner as well.
+            expect(replay.world.state.run()?.seedRace).toBeUndefined();
+            pendingStageEligibility.push(race.active());
+          } });
+        const invoke = () => { controller.start("endless", "normal"); };
+        if (reference) race.challenge(reference, invoke); else race.reference(invoke);
+        const run = requireRaceValue(replay.world.state.run()), captured = f.captured();
+        expect(pendingStageEligibility).toEqual([true]);
+        expect(race.active()).toBe(true);
+        if (!run.seedRace || !captured) throw new Error("declared recording missing");
+        expect(captured.snapshot.state["tear.run.v1"]).toMatchObject({ seedRace: run.seedRace });
+        expect(seedRaceInitialBuildHash(captured.snapshot.state)).toBe(run.seedRace.shared.initialBuildHash);
+        expect(run.mods.owned[requireRaceValue(run.seedRace.shared.headstartId)]).toBe(1);
+        expect(meta.META.data.buy).toEqual(privateRanks);
+        expect(f.markMode).not.toHaveBeenCalled(); expect(f.achievementCheck).not.toHaveBeenCalled();
+        expect(f.order.indexOf("recording")).toBeLessThan(f.order.indexOf("started"));
+        return { run, captured, race };
+      };
+      const source = start({ tough: 2, sharp: 1, headstart: 1, reserve: 1, reroll: 3, expanded: 1 });
+      const reference = { seedRace: source.run.seedRace, assistance: { format: "tear-ghost-chase", version: 1, sourceId: "source", sourceRoot: "1".repeat(16), sourceManifestHash: "2".repeat(16),
+        actor: "unknown", coachEnabled: true, ghostVisible: true, competitiveEligible: false } } as GhostLiveReference;
+      const target = start({ tough: 0, sharp: 0, headstart: 0, reserve: 0, reroll: 0, expanded: 0 }, reference);
+      expect(target.run.seedRace?.shared).toEqual(source.run.seedRace?.shared);
+      expect(target.run.seedRace).toMatchObject({ role: "challenger", source: { id: "source" } });
+      expect(target.run.mods.owned).toEqual(source.run.mods.owned);
+    } finally { vi.unstubAllGlobals(); }
+  });
+});
+
+function requireRaceValue<T>(value: T | null | undefined): T { if (value == null) throw new Error("Race fixture value unavailable"); return value; }

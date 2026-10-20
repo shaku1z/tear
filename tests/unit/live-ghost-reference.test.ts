@@ -1,3 +1,4 @@
+import { createLiveGhostChase } from "../../src/app/live-ghost-chase-composition";
 import { describe, expect, it, vi } from "vitest";
 import { createLiveGhostReferenceController, type GhostChaseLiveState } from "../../src/app/live-ghost-reference-controller";
 import type { GhostLiveReference, GhostReferenceFrame } from "../../src/ghost/live-ghost-reference-data";
@@ -17,6 +18,12 @@ const state = (reference: GhostLiveReference): GhostChaseLiveState => ({ runId: 
   score: 40, hp: 80, maxHp: 120, arena: "arena", blocked: false, assistance: reference.assistance });
 
 describe("live Chase reference ownership", () => {
+  it("keeps the normal reference catalog readable before any run exists", () => {
+    const player = vi.fn((): never => { throw new Error("No live actor in menu"); });
+    const chase = createLiveGhostChase({ factory: undefined, ui: { font: () => "", t: { type: { micro: 12 }, color: { cinema: "", cinemaInk: "", accent: "" } } }, run: () => null,
+      player, stage: () => 0, platforms: () => [], blocked: () => true, prepareStart: () => undefined, start: () => undefined });
+    expect(chase.snapshot()).toMatchObject({ active: false, message: "" }); expect(player).not.toHaveBeenCalled();
+  });
   it("shows native-unit comparisons, keeps splits through hiding/divergence and clears on replaced run", async () => {
     const reference = fixture();
     const controller = createLiveGhostReferenceController({ prepare: () => Promise.resolve(reference), current: () => Promise.resolve(true), start: () => { controller.installed(71); } });

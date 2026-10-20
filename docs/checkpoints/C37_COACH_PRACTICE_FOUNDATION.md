@@ -386,3 +386,37 @@ Evidence: `C:/tmp/tear-chase-acceptance-20261020-09/journey.json`.
 Earlier failing packets remain preserved. This acceptance does not establish
 seed locking, learned quality, device qualification, full-Campaign coverage,
 the remaining C37 products, or the unattended training cycle.
+
+
+## Seed-Locked Race: local source implementation (browser acceptance pending)
+
+Normal Setup exposes **CREATE SEED-LOCKED RACE** before the native recorder/start.
+A complete verified declared reference exposes **RACE THIS REFERENCE** in Career.
+Both roles use one declared setup, master seed, projected mechanical META build,
+actual seeded headstart, configuration/content identity and coordinate-local
+`seed-locked-common-offers.v1` schedule. Common three/four-card IDs and order at
+(wave, reroll ordinal) ignore private picks. Rerolls preserve their run budget and
+exclude the previous common row; private rerolls do not move later base offers.
+The two-special-per-ten-wave guarantee uses common base history only.
+
+**Shared offers** remain intact. **Your reserved card** is separate personal
+history, consumes the same one-upgrade selection, and can be kept/replaced/discarded.
+Tier-up choices and legal masks are personal. Unique/max-stack checks run at
+selection; if every common/carried card is illegal, explicit no-upgrade Continue
+finishes the draft. Neither role awards ordinary bests, progression currency,
+achievements, encounter unlocks or automatic publication. No profile rollback is
+used. Existing ordinary absent-declaration behavior and recording bytes are retained.
+
+Race snapshots retain declaration, common coordinates, reservation, decision
+frontier and current source-derived legality. Race-only causal reward decisions
+are recorded before mutation and consumed once before the next replay tick;
+pre-choice snapshots remain pre-choice. Live/detached restore and rollback,
+production forward reward-decision continuation, headstart/start ordering and
+persistence-owner controls have focused unit evidence. Fresh normal browser
+creation/two-draft challenge/download/Theater acceptance is still pending.
+
+Race-derived local practice/challenge forks are explicitly unavailable: that
+older fork protocol resets event ownership and cannot retain the Race decision
+frontier. Use a fresh **RACE THIS REFERENCE** start. This compatibility limit,
+browser acceptance, broader R16/R07 integration and full-Campaign qualification
+remain open; source-only tests do not establish those outcomes.

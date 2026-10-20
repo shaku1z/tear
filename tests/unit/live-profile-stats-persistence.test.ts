@@ -24,6 +24,15 @@ function encounterBacking() {
 }
 
 describe("live profile stats persistence adapter", () => {
+  it.each(["reference", "challenger"])("does not persist natural encounter exposure for Race %s", (role) => {
+    const fixture = encounterBacking();
+    Object.assign(fixture.run, { seedRace: { role } });
+    fixture.authority.trackSpawn(fixture.actor, fixture.run);
+    const before = [...fixture.values], writes = fixture.writes();
+    expect(fixture.authority.observe(fixture.context)).toBeUndefined();
+    expect(fixture.profile.stat("encounterEnemy:charger")).toBe(0);
+    expect([...fixture.values]).toEqual(before); expect(fixture.writes()).toBe(writes);
+  });
   it("keeps exact boss phases independent and failed acknowledgements locked without tick retries", async () => {
     const fixture = encounterBacking(), { authority, profile, run, context } = fixture;
     profile.maxStat("killColossus", 1);

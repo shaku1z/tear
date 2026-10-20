@@ -1,3 +1,4 @@
+import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { ghostRecordingFirstTick, requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
 import { createProductionGhostReplayComposition, type ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
 import type { GhostReadCapsule } from "./capsule-reader";
@@ -68,7 +69,7 @@ export function createGhostProductionReplaySession(
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
     inputSnapshots: inputs,
-    requireRecordedApplicationFrames: true,
+    raceDecisions: readSeedRaceDecisions(capsule, context?.run.id ?? ""), requireRecordedApplicationFrames: true,
     ...(applicationClock === undefined ? {} : { applicationClock }),
     ...(openingPermit === undefined ? {} : { openingPermit }),
   });
@@ -91,6 +92,7 @@ export function createGhostProductionReplaySession(
         sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity, semanticHash: result.semanticHash });
     } }),
     forkPractice(tick: number, mode: GhostPracticeMode): GhostPracticeChild {
+      if (capsule.manifest.provenance?.seedRace !== undefined) throw new TypeError("Seed-Locked Race requires a fresh Race This Reference start; local challenge forks are unsupported");
       if (forkOrigin !== undefined) throw new TypeError("Nested recorded practice forks are not supported.");
       const snapshot = checkpointAt(tick);
       if (snapshot === undefined || !verifiedReceiptTicks.has(tick)) {

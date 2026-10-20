@@ -1,3 +1,4 @@
+import { readSeedRaceRun } from "./seed-race-contract";
 import { stableVerificationHash } from "../replay/hash";
 import { readGhostReplayRunContext } from "./replay-admission";
 import { projectGhostRunDnaTheater } from "./run-dna-theater";
@@ -13,6 +14,7 @@ export interface CareerNotes { readonly revision: number; readonly tags: readonl
 export interface CareerWitness { readonly format: "tearghost-career-witness"; readonly version: 1; readonly kind: "coverage" | "style" | "terminal" | "boss"; readonly sessionId: string; readonly runId: string; readonly tick: number; readonly data: Readonly<Record<string, unknown>>; }
 export interface CareerEntry {
   readonly assisted?: boolean;
+  readonly seedRaceRole?: "reference" | "challenger";
   readonly kind: "capsule" | "legacy-visual"; readonly version: typeof CAREER_VERSION; readonly id: string; readonly root: string; readonly manifestHash: string;
   readonly date: string; readonly epoch: number | null; readonly mode: string | null; readonly difficulty: string | null; readonly weapon: string | null;
   readonly wave: number | null; readonly result: string | null; readonly score: number | null; readonly seconds: number | null;
@@ -38,7 +40,8 @@ const number = (value: unknown): number | null => typeof value === "number" && N
 export function provisionalCareerEntry(manifest: TearGhostManifest): CareerEntry {
   let context; try { context = readGhostReplayRunContext(manifest.provenance); } catch { /* Preserve the metadata row. */ }
   const actor = manifest.provenance?.actor;
-  return Object.freeze({ kind: "capsule", version: CAREER_VERSION, assisted: manifest.provenance?.ghostAssistance !== undefined, id: manifest.id, root: manifest.rootIntegrity, manifestHash: stableVerificationHash(manifest), date: manifest.completedAt ?? manifest.createdAt,
+  let race; try { race = readSeedRaceRun(manifest.provenance?.seedRace); } catch { /* Invalid declarations remain unavailable, never ordinary bests. */ }
+  return Object.freeze({ kind: "capsule", version: CAREER_VERSION, ...(race === undefined ? {} : { seedRaceRole: race.role }), assisted: manifest.provenance?.ghostAssistance !== undefined || manifest.provenance?.seedRace !== undefined, id: manifest.id, root: manifest.rootIntegrity, manifestHash: stableVerificationHash(manifest), date: manifest.completedAt ?? manifest.createdAt,
     epoch: Number.isFinite(Date.parse(manifest.completedAt ?? manifest.createdAt)) ? Date.parse(manifest.completedAt ?? manifest.createdAt) : null,
     mode: context?.run.mode ?? null, difficulty: context?.run.difficulty ?? null, weapon: context?.run.weaponId ?? null,
     wave: null, result: null, score: null, seconds: null, categories: null, composition: null, loadout: null, catalogHash: "unknown",

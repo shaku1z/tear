@@ -121,11 +121,12 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       const onboarding = campaignDraftGuidance(state.run().mode, snapshot.wave,
         d.PROFILE.stat("stageClears"), d.PROFILE.stat("campaignClears"));
       renderers.draft({ id: "draft", wave: snapshot.wave, rerolls: snapshot.rerolls,
-        cards: snapshot.choices.map(draftCard), ...(onboarding === undefined ? {} : { onboarding }) });
+        ...(snapshot.seedLocked === undefined ? {} : { race: { ordinal: snapshot.rerollOrdinal ?? 0, ...(snapshot.reservedChoice === null ? {} : { carried: { ...draftCard(snapshot.reservedChoice), enabled: reward.legal(snapshot.reservedChoice) } }), pass: ![...snapshot.choices, ...(snapshot.reservedChoice ? [snapshot.reservedChoice] : [])].some(reward.legal) } }),
+        cards: snapshot.choices.map(choice => ({ ...draftCard(choice), ...(snapshot.seedLocked === undefined ? {} : { enabled: reward.legal(choice) }) })), ...(onboarding === undefined ? {} : { onboarding }) });
     },
     renderReserve(): void {
       const snapshot = reward.snapshot();
-      if (snapshot) renderers.reserve({ id: "reserve", cards: snapshot.reserveChoices.map(draftCard) });
+      if (snapshot) renderers.reserve({ ...(snapshot.seedLocked === undefined ? {} : { race: true, keepCarried: snapshot.reservedChoice !== null }), id: "reserve", cards: snapshot.reserveChoices.map(draftCard) });
     },
     renderTierUp(): void {
       const snapshot = reward.snapshot();
@@ -144,7 +145,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       if (tutorial !== undefined) { renderers.paused({ id: "paused", abilities: [], progress: [], tutorial }); return; }
       const playerWatch = services.playerWatch();
       renderers.paused({ ...(services.ghostChase?.().active ? { ghostChase: services.ghostChase() } : {}), ...buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
-        "   ·   " + String(run.score) + " pts   ·   " + services.formatTime(run.runTime) + (run.ghostAssistance ? " ASSISTED / NONCOMPETITIVE" : ""),
+        "   ·   " + String(run.score) + " pts   ·   " + services.formatTime(run.runTime) + (run.seedRace ? " SEED-LOCKED RACE / UNRANKED" : run.ghostAssistance ? " ASSISTED / NONCOMPETITIVE" : ""),
         abilities: abilityCards(), progress: progressRows() }),
       ...(playerWatch.status === "running" || playerWatch.status === "paused"
         ? { playerWatch: { status: playerWatch.status, decisions: playerWatch.decisions } as const }

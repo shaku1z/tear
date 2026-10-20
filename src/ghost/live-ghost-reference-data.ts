@@ -1,3 +1,4 @@
+import type { SeedRaceRun } from "../gameplay/run/seed-locked-draft";
 import { stableVerificationHash } from "../replay/hash";
 import type { GhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { GhostReplayBuildFingerprint } from "./replay-admission";
@@ -18,12 +19,13 @@ export interface GhostReferenceFrame {
   readonly blade: Readonly<{ x: number; y: number; tipX: number; tipY: number; state: string }>;
 }
 export interface GhostLiveReference {
+  readonly seedRace?: SeedRaceRun;
   readonly version: 1; readonly assistance: GhostRunAssistance; readonly build: GhostReplayBuildFingerprint;
   readonly mode: string; readonly difficulty: string; readonly weapon: string; readonly seed: string;
   readonly frames: readonly GhostReferenceFrame[];
   readonly splits: readonly GhostReferenceBoundary[];
 }
-export interface GhostChaseView { readonly active: boolean; readonly visible: boolean; readonly message: string; readonly source?: string; readonly actor?: string;
+export interface GhostChaseView { readonly raceRole?: "reference" | "challenger"; readonly active: boolean; readonly visible: boolean; readonly message: string; readonly source?: string; readonly actor?: string;
   readonly pose?: GhostReferenceFrame; readonly score?: number; readonly hp?: number; readonly ownHp?: string; readonly referenceHp?: string; readonly wave?: number; readonly time?: number; readonly split?: string; }
 export function ghostReferenceArena(platforms: readonly unknown[]): string {
   return stableVerificationHash(platforms.map((value) => {

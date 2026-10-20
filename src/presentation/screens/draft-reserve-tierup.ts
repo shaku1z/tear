@@ -6,6 +6,7 @@ const clamp = (v: number, min: number, max: number): number => Math.max(min, Mat
 const ez = (t: number): number => { t = t < 0 ? 0 : t > 1 ? 1 : t; return 1 - (1 - t) * (1 - t); };   // ease-out
 
 interface ChoiceCardOptions {
+  readonly enabled?: boolean;
   readonly accent: string;
   readonly tag: string;
   readonly tagColor?: string | undefined;
@@ -77,12 +78,12 @@ export function createDraftRenderers(context: ScreenRenderContext) {
     ui.wrappedText(ctx, o.desc, cx, descY, cw - 52, M.descLH, M.descSize, "center");
     if (o.foot) ui.tag(ctx, o.foot, cx, y0 + M.footY, t.color.muted, "center", t.type.caption);
     const touch = context.touch;
-    const selLabel = touch
+    const selLabel = o.enabled === false ? "UNAVAILABLE FOR YOUR BUILD" : touch
       ? (i === context.focus ? "TAP AGAIN TO CONFIRM  ✓" : "TAP TO READ")
       : (a > 0.5 ? "▸  SELECT" : (M.badge ? "press  [ " + String(i + 1) + " ]" : ""));
     ui.tag(ctx, selLabel, cx, y0 + M.selY, (a > 0.5 || (touch && i === context.focus)) ? ac : t.color.muted, "center", t.type.micro);
     ctx.restore();
-    context.enqueue({ x, y: y0, w: cw, h: ch, label: "", hiddenBox: true, confirm: true, action: o.action });
+    context.enqueue({ x, y: y0, w: cw, h: ch, label: "", hiddenBox: true, confirm: true, ...(o.enabled === undefined ? {} : { enabled: o.enabled }), action: o.action });
   }
 
   function cardFoot(card: DraftCardView): string | null {
@@ -94,12 +95,12 @@ export function createDraftRenderers(context: ScreenRenderContext) {
     ui.dim(canvas, width, height, 0.84);
     ui.title(canvas, `WAVE ${String(view.wave)} CLEARED`, width / 2, 122, ui.t.type.display);
     ui.accentStrip(canvas, width / 2 - 80, 140, 160, ui.t.color.accent, 3);
-    ui.text(canvas, `CHOOSE AN UPGRADE  ·  press 1 / 2 / 3${view.cards.length > 3 ? " / 4" : ""}`, width / 2, 176, ui.t.type.caption, "center", ui.t.alpha.muted);
+    ui.text(canvas, view.race ? `SHARED OFFERS · REROLL ${String(view.race.ordinal)} · CHOOSE ONE LEGAL UPGRADE` : `CHOOSE AN UPGRADE  ·  press 1 / 2 / 3${view.cards.length > 3 ? " / 4" : ""}`, width / 2, 176, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.onboarding) ui.wrappedText(canvas, view.onboarding, width / 2, 208,
       Math.min(960, width - 64), 20, ui.t.type.body, "center", ui.t.alpha.soft);
     view.cards.forEach((card, i) => {
       choiceCard(i, view.cards.length, {
-        accent: card.accent ?? ui.t.color.accent,
+        ...(card.enabled === undefined ? {} : { enabled: card.enabled }), accent: card.accent ?? ui.t.color.accent,
         tag: [card.badge, card.category].filter(Boolean).join("  ·  "),
         tagColor: card.badgeColor,
         name: card.label, desc: card.description ?? "", foot: cardFoot(card),
@@ -108,6 +109,8 @@ export function createDraftRenderers(context: ScreenRenderContext) {
       });
     });
     context.enqueue({ x: width / 2 - 150, y: 680, w: 300, h: ui.t.metric.btnH, label: `⟳  REROLL · ${String(view.rerolls)}  [R]`, enabled: view.rerolls > 0, action: { type: "draft.reroll" } });
+    if (view.race?.carried) context.enqueue({ x: width / 2 - 250, y: 748, w: 500, h: 50, label: `YOUR RESERVED CARD: ${view.race.carried.label}`, sub: "PERSONAL CARRIED CARD · CONSUMES THIS ONE UPGRADE", enabled: view.race.carried.enabled !== false, action: { type: "draft.choose", index: view.cards.length } });
+    if (view.race?.pass) context.enqueue({ x: width / 2 + 180, y: 680, w: 330, h: ui.t.metric.btnH, label: "NO LEGAL CARDS — CONTINUE", action: { type: "draft.choose", index: -1 } });
   }
 
   function reserve(view: ReserveScreenView): void {
@@ -115,17 +118,18 @@ export function createDraftRenderers(context: ScreenRenderContext) {
     ui.dim(canvas, width, height, 0.88);
     ui.title(canvas, "RESERVE A CARD", width / 2, 122, ui.t.type.display);
     ui.accentStrip(canvas, width / 2 - 80, 140, 160, ui.t.color.accent, 3);
-    ui.text(canvas, "THIS CARD REPLACES ONE OFFER IN YOUR NEXT NORMAL DRAFT", width / 2, 176, ui.t.type.caption, "center", ui.t.alpha.muted);
+    ui.text(canvas, view.race ? "PERSONAL CARRIED CARD · SHARED OFFERS STAY UNCHANGED · TIER-UPS ARE PERSONAL" : "THIS CARD REPLACES ONE OFFER IN YOUR NEXT NORMAL DRAFT", width / 2, 176, ui.t.type.caption, "center", ui.t.alpha.muted);
     view.cards.forEach((card, i) => {
       choiceCard(i, view.cards.length, {
-        accent: card.accent ?? ui.t.color.accent,
+        ...(card.enabled === undefined ? {} : { enabled: card.enabled }), accent: card.accent ?? ui.t.color.accent,
         tag: ["RESERVE", card.badge, card.category].filter(Boolean).join(" · "),
         tagColor: card.badgeColor,
         name: card.label, desc: card.description ?? "", normalRow: true,
         action: { type: "reserve.choose", index: i },
       });
     });
-    context.enqueue({ x: width / 2 - 110, y: 680, w: 220, h: ui.t.metric.btnH, label: "SKIP RESERVE", action: { type: "reserve.choose", index: -1 } });
+    context.enqueue({ x: width / 2 - 110, y: 680, w: 220, h: ui.t.metric.btnH, label: view.race ? "DISCARD RESERVE" : "SKIP RESERVE", action: { type: "reserve.choose", index: -1 } });
+    if (view.keepCarried) context.enqueue({ x: width / 2 + 140, y: 680, w: 260, h: ui.t.metric.btnH, label: "KEEP CARRIED CARD", action: { type: "reserve.choose", index: -2 } });
   }
 
   function tierup(view: TierUpScreenView): void {
@@ -141,7 +145,7 @@ export function createDraftRenderers(context: ScreenRenderContext) {
     view.cards.forEach((card, i) => {
       const next = card.nextTier ?? (card.tier ?? 1) + 1;
       choiceCard(i, view.cards.length, {
-        accent: card.accent ?? ui.t.color.accent,
+        ...(card.enabled === undefined ? {} : { enabled: card.enabled }), accent: card.accent ?? ui.t.color.accent,
         tag: `EVOLVE → TIER ${String(next)}  ·  ${card.category ?? ""}`,
         tagColor: card.accent,
         name: card.label, desc: card.description ?? "", pips: { next },

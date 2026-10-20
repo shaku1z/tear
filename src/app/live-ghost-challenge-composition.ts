@@ -40,6 +40,7 @@ export function createLiveGhostChallengeComposition(ports: LiveGhostChallengeCom
     },
     async prepare(child, signal) {
       const definition = readRecordedGhostChallenge(child.challenge), parent = await readBrowserGhostCapsule(ports.factory, child.sourceGhostId);
+      if (parent?.manifest.provenance?.seedRace !== undefined) throw new TypeError("Seed-Locked Race requires a fresh Race This Reference start; local challenge forks are unsupported");
       if (parent === undefined) throw new TypeError("Selected parent recording is unavailable.");
       const parentSession = createGhostProductionReplaySession(parent), checked = parentSession.forkPractice(child.forkTick, "race-practice");
       const context = readGhostReplayRunContext(parent.manifest.provenance), receipt = parent.tracks.results.map((entry) => readGhostAuthoritativeReceipt(entry.value)).find((value) => value?.tick === child.forkTick);

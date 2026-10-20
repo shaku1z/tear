@@ -1,3 +1,4 @@
+import { readSeedRaceRun } from "./seed-race-contract";
 import { stableVerificationHash } from "../replay/hash";
 import { parseGhostCapsuleManifest, prepareGhostCapsuleSourceGuards, type GhostLocalVault, type GhostVaultBackend, type GhostVaultGuard, type TearGhostManifest } from "./capsule-vault";
 import { ghostSha256, type GhostPrivacyClass, type GhostRunEligibilityInput, type GhostVisibility } from "./cloud-publication";
@@ -9,8 +10,9 @@ const CUSTODY_PREFIX = "ghost-publication-custody:v1:";
 
 /** Source declarations may restrict eligibility; a caller cannot erase them. */
 export function ghostPublicationSourceEligibility(manifest: TearGhostManifest, input: GhostRunEligibilityInput): GhostRunEligibilityInput {
+  const race = readSeedRaceRun(manifest.provenance?.seedRace);
   const assistance = readGhostRunAssistance(manifest.provenance?.ghostAssistance), actor = manifest.provenance?.actor;
-  return Object.freeze({ ...input, coached: input.coached || assistance !== undefined, ghostAssisted: input.ghostAssisted || assistance !== undefined,
+  return Object.freeze({ ...input, coached: input.coached || assistance !== undefined || race !== undefined, ghostAssisted: input.ghostAssisted || assistance !== undefined || race !== undefined,
     bot: input.bot || actor === "bot" || actor === "tearbot" });
 }
 

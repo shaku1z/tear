@@ -49,6 +49,7 @@ export function challengeGoal(definition: RecordedGhostChallenge, events: readon
 
 /** Definitions are derived from the selected immutable source, not caller counters. */
 export function recordedGhostChallengeChoices(parent: GhostReadCapsule, snapshot: TearSnapshotV1): readonly RecordedGhostChallenge[] {
+  if (parent.manifest.provenance?.seedRace !== undefined) return Object.freeze([]);
   const mapped = mapGhostCapsuleToReplayEnvelope(parent), tick = snapshot.tick, run = record(snapshot.state["tear.run.v1"]);
   if (mapped.issues.length > 0 || !["playing", "paused"].includes(String(record(snapshot.state["tear.ui.v1"]).screen))) return [];
   const make = (rule: RecordedGhostChallenge["rule"], target: string, label: string, limitTicks = 20000): RecordedGhostChallenge => Object.freeze({
@@ -67,6 +68,7 @@ export function recordedGhostChallengeChoices(parent: GhostReadCapsule, snapshot
 
 /** Rebuild from the origin ONLY; later archive keyframes cannot manufacture a goal. */
 export function verifyRecordedGhostChallenge(capsule: GhostReadCapsule, parent: GhostReadCapsule, permit: GhostForkPermit): RecordedGhostChallengeResult {
+  if (parent.manifest.provenance?.seedRace !== undefined) throw new TypeError("Seed-Locked Race requires a fresh Race This Reference start; local challenge forks are unsupported");
   const origin = requireGhostForkPermit(capsule, permit);
   if (origin === undefined) throw new TypeError("Challenge requires a recorded fork origin.");
   const definition = readRecordedGhostChallenge(capsule.manifest.provenance?.challenge);

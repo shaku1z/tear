@@ -1,3 +1,5 @@
+import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
+import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { describe, expect, it, vi } from "vitest";
 import { createLiveStateForgeAdapter } from "../../src/app/live-state-forge-adapter";
 import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
@@ -7,7 +9,7 @@ import { createDefaultStateCodecRegistry } from "../../src/tearbench/state-codec
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import type { RootboundGraftEffects } from "../../src/gameplay/environment/graft-anchor";
 import { STAGES, PLAYGROUND_STAGES } from "../../src/gameplay/stages";
-import { UPGRADES } from "../../src/gameplay/upgrades";
+import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createLiveHudFeedbackState } from "../../src/app/live-hud-feedback-state";
 import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
@@ -93,7 +95,7 @@ function fixture(includeTutorial = false) {
     actor.applyGraftEffects({ incomingDamageMultiplier: damage, cadenceMultiplier: 1.15, activeTypes: ["bastion", "haste"] });
     expect(actor.startRootCage(800)).toBe(true);
   };
-  return { tutorial, replay, state, adapter, capture, restore, facts, observations, hud, particles, runtimeParticles, stagedEntropy,
+  return { host, tutorial, replay, state, adapter, capture, restore, facts, observations, hud, particles, runtimeParticles, stagedEntropy,
     failNext: (phase: Failure) => { failure = phase; } };
 }
 
@@ -118,8 +120,12 @@ describe("live State Forge adapter ownership boundary", () => {
     const historical = structuredClone(saved);
     delete (historical.state["tear.ui.v1"] as Record<string, unknown>).tutorialPresentation;
     delete (historical.state["tear.world.v1"] as { runtime: Record<string, unknown> }).runtime.tutorialSession;
-    expect(host.restore(historical).ok).toBe(true);
-    expect(tutorial.session()).toMatchObject({ phase: "inactive", helpVisible: false });
+    const historicalBefore = host.capture(), tutorialBefore = tutorial.captureSession();
+    const historicalResult = host.restore(historical);
+    expect(historicalResult).toMatchObject({ ok: false, phase: "stage", rolledBack: false });
+    if (historicalResult.ok) throw new Error("Historical missing tutorial behavior must be refused");
+    expect(historicalResult.issues[0]?.message).toContain("historical missing behavior is unsupported");
+    expect(host.capture().state).toEqual(historicalBefore.state); expect(tutorial.captureSession()).toEqual(tutorialBefore);
   });
 
   it("captures and restores actual particles after three fixed steps and rolls back after installed FX on late failure", () => {
@@ -261,3 +267,37 @@ describe("live State Forge adapter ownership boundary", () => {
     expect(host.replay.world.context.services.clock.seconds()).toBe(0.3987654321);
   });
 });
+
+
+describe("live Race state ownership", () => {
+  it("restores the declaration, owned build, next common offer and RNG, with exact late-failure rollback", () => {
+    const f = fixture(), run = requireRaceValue(f.state.run());
+    Object.assign(run.mods, { expandedDraft: true, reservePick: true, draftRerolls: 2 });
+    const initial = f.capture();
+    run.seedRace = declareSeedRace({ format: "tear-seed-race", version: 1, mode: "endless", difficulty: run.diff,
+      weapon: run.weaponId, boss: "shuffle", seed: run.runSeed, metaRanks: { expanded: 1, reserve: 1, reroll: 2 },
+      variantDiscovery: run.variantDiscovery ?? [], headstartId: null, initialBuildHash: seedRaceInitialBuildHash(initial.state), baselineHash: "1".repeat(16), build: initial.provenance.build,
+      draft: { policy: "seed-locked-common-offers.v1", seed: run.runSeed, catalogHash: seedRaceCatalogHash() } });
+    f.state.setEnemies([]); // The ownership fixture installs Rootbound in A0 only for reference tests; it is not a combat encounter.
+    f.host.waveReward.reward.reset(); f.host.simulation.advanceOne([]);
+    const saved = f.capture(), rng = f.replay.world.context.services.random.snapshot();
+    f.host.waveReward.reward.openDraft(); const offers = f.host.waveReward.reward.snapshot()?.choices.map(c => c.id);
+    const upgrade = UPGRADES.find(choice => choice.id === "riposte"); if (!upgrade) throw new Error("upgrade missing");
+    applyUpgrade(upgrade, { config: f.replay.configuration.value, player: requireRaceValue(f.state.player()), blade: requireRaceValue(f.state.blade()), mods: requireRaceValue(f.state.run()).mods });
+    const restoredRace = f.restore(saved); expect(restoredRace.ok, JSON.stringify(restoredRace)).toBe(true);
+    expect(f.state.run()?.seedRace).toEqual(run.seedRace);
+    expect(f.replay.world.context.services.random.snapshot()).toEqual(rng);
+    f.host.waveReward.reward.openDraft(); expect(f.host.waveReward.reward.snapshot()?.choices.map(c => c.id)).toEqual(offers);
+    const outgoing = f.capture(); f.failNext("runtime");
+    expect(f.restore(saved)).toMatchObject({ ok: false, rolledBack: true });
+    expect(f.capture().state).toEqual(outgoing.state);
+    const malformed = structuredClone(saved);
+    const declaration = (malformed.state["tear.run.v1"] as { seedRace: { shared: { metaRanks: Record<string, number> } } }).seedRace;
+    declaration.shared.metaRanks.tough = 100;
+    f.observations.length = 0;
+    expect(f.restore(malformed).ok).toBe(false); expect(f.observations).toEqual([]);
+    expect(f.capture().state).toEqual(outgoing.state);
+  });
+});
+
+function requireRaceValue<T>(value: T | null | undefined): T { if (value == null) throw new Error("Race fixture value unavailable"); return value; }

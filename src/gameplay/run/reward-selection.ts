@@ -1,4 +1,5 @@
 import type { RunMode } from "./session";
+import { rollSeedLockedDraft, type SeedLockedDraft } from "./seed-locked-draft";
 
 export interface RewardChoice {
   readonly id: string;
@@ -9,6 +10,7 @@ export interface RewardChoice {
 export type RewardSelectionPhase = "idle" | "draft" | "reserve" | "tierup" | "complete";
 
 export interface RewardSelectionOptions<TChoice extends RewardChoice> {
+  readonly seedLocked?: SeedLockedDraft;
   readonly mode: RunMode;
   readonly expandedDraft?: boolean;
   readonly reservePick?: boolean;
@@ -19,6 +21,10 @@ export interface RewardSelectionOptions<TChoice extends RewardChoice> {
 }
 
 export interface RewardSelectionSnapshot<TChoice extends RewardChoice> {
+  readonly decisionSequence?: number;
+  readonly selectedDraftIndex?: number;
+  readonly seedLocked?: SeedLockedDraft;
+  readonly rerollOrdinal?: number;
   readonly phase: RewardSelectionPhase;
   readonly mode: RunMode;
   readonly wave: number;
@@ -55,7 +61,7 @@ export type RewardSelectionIntent<TChoice extends RewardChoice> =
 export type RewardSelectionEvent<TChoice extends RewardChoice> =
   | Readonly<{ type: "open-draft"; wave: number; roll: DraftRoller<TChoice> }>
   | Readonly<{ type: "reroll"; roll: DraftRoller<TChoice> }>
-  | Readonly<{ type: "select-draft"; index: number }>
+  | Readonly<{ type: "select-draft"; index: number; legal?: (choice: TChoice) => boolean }>
   | Readonly<{ type: "select-reserve"; index: number }>
   | Readonly<{ type: "open-tier-up"; choices: readonly TChoice[] }>
   | Readonly<{ type: "select-tier-up"; index: number }>;
@@ -116,6 +122,11 @@ function completionIntents<TChoice extends RewardChoice>(mode: RunMode): readonl
 function rollDraft<TChoice extends RewardChoice>(
   snapshot: RewardSelectionSnapshot<TChoice>, wave: number, roller: DraftRoller<TChoice>, excludeIds: readonly string[],
 ): Pick<RewardSelectionSnapshot<TChoice>, "wave" | "choices" | "reservedChoice" | "specialBlock" | "specialsOffered"> {
+  if (snapshot.seedLocked !== undefined) {
+    const result = rollSeedLockedDraft(snapshot.seedLocked, wave, snapshot.rerollOrdinal ?? 0, snapshot.expandedDraft ? 4 : 3);
+    return { wave, choices: result.choices as unknown as readonly TChoice[], reservedChoice: snapshot.reservedChoice,
+      specialBlock: result.specialBlock, specialsOffered: result.specialsOffered };
+  }
   const block = Math.floor((wave - 1) / 10);
   const specialBlock = snapshot.specialBlock === block ? snapshot.specialBlock : block;
   const offeredBefore = snapshot.specialBlock === block ? snapshot.specialsOffered : 0;
@@ -145,6 +156,7 @@ export function initialRewardSelectionSnapshot<TChoice extends RewardChoice>(
   options: RewardSelectionOptions<TChoice>,
 ): RewardSelectionSnapshot<TChoice> {
   return immutableSnapshot({
+    ...(options.seedLocked === undefined ? {} : { seedLocked: options.seedLocked, rerollOrdinal: 0 }),
     phase: "idle", mode: options.mode, wave: 0, choices: [], reserveChoices: [],
     reservedChoice: options.reservedChoice ?? null,
     expandedDraft: options.expandedDraft === true, reservePick: options.reservePick === true,
@@ -160,23 +172,32 @@ export function transitionRewardSelection<TChoice extends RewardChoice>(
   if (event.type === "open-draft") {
     const wave = positiveWave(event.wave);
     return transition(snapshot, {
-      phase: "draft", reserveChoices: [], ...rollDraft(snapshot, wave, event.roll, []),
+      phase: "draft", reserveChoices: [], ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: 0 }),
+      ...rollDraft(snapshot.seedLocked === undefined ? snapshot : immutableSnapshot({ ...snapshot, rerollOrdinal: 0 }), wave, event.roll, []),
     }, [{ type: "set-screen", screen: "draft" }]);
   }
   if (event.type === "reroll") {
     if (snapshot.phase !== "draft" || snapshot.rerolls === 0) return noChange(snapshot);
     const adjusted = immutableSnapshot({
       ...snapshot,
+      ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: (snapshot.rerollOrdinal ?? 0) + 1 }),
       specialsOffered: Math.max(0, snapshot.specialsOffered - specialCount(snapshot.choices)),
     });
     return transition(snapshot, {
       rerolls: snapshot.rerolls - 1,
+      ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: adjusted.rerollOrdinal ?? 0 }),
       ...rollDraft(adjusted, positiveWave(snapshot.wave), event.roll, snapshot.choices.map((choice) => choice.id)),
     }, [{ type: "reset-ui", enter: true, focus: true, scroll: false }]);
   }
   if (event.type === "select-draft") {
     if (snapshot.phase !== "draft") return noChange(snapshot);
-    const choice = snapshot.choices[event.index];
+    const race = snapshot.seedLocked !== undefined;
+    const choice = race && event.index === snapshot.choices.length ? snapshot.reservedChoice ?? undefined : snapshot.choices[event.index];
+    if (race) {
+      if (event.legal === undefined) throw new TypeError("Race selection requires current owned-upgrade legality");
+      if (choice !== undefined && !event.legal(choice)) return noChange(snapshot);
+      if (choice === undefined && (event.index !== -1 || [...snapshot.choices, ...(snapshot.reservedChoice === null ? [] : [snapshot.reservedChoice])].some(event.legal))) return noChange(snapshot);
+    }
     const intents: RewardSelectionIntent<TChoice>[] = [];
     if (choice) intents.push(
       { type: "apply-upgrade", choice },
@@ -184,18 +205,19 @@ export function transitionRewardSelection<TChoice extends RewardChoice>(
       { type: "ghost-event", event: "pickup" },
     );
     intents.push({ type: "consume-input" });
+    const reservedChoice = race && event.index === snapshot.choices.length ? null : snapshot.reservedChoice;
     const reserveChoices = choice && snapshot.reservePick && !isTraining(snapshot.mode)
       ? snapshot.choices.filter((_, index) => index !== event.index) : [];
-    if (reserveChoices.length > 0) return transition(snapshot, { phase: "reserve", reserveChoices }, [
+    if (reserveChoices.length > 0) return transition(snapshot, { phase: "reserve", reserveChoices, ...(race ? { reservedChoice, selectedDraftIndex: event.index } : {}) }, [
       ...intents, { type: "set-screen", screen: "reserve" },
       { type: "reset-ui", enter: false, focus: true, scroll: false },
     ]);
-    return transition(snapshot, { phase: "complete", reserveChoices: [] }, [...intents, ...completionIntents<TChoice>(snapshot.mode)]);
+    return transition(snapshot, { phase: "complete", reserveChoices: [], ...(race ? { reservedChoice } : {}) }, [...intents, ...completionIntents<TChoice>(snapshot.mode)]);
   }
   if (event.type === "select-reserve") {
     if (snapshot.phase !== "reserve") return noChange(snapshot);
     return transition(snapshot, {
-      phase: "complete", reservedChoice: event.index >= 0 ? snapshot.reserveChoices[event.index] ?? null : null,
+      phase: "complete", reservedChoice: snapshot.seedLocked !== undefined && event.index === -2 ? snapshot.reservedChoice : event.index >= 0 ? snapshot.reserveChoices[event.index] ?? null : null,
       reserveChoices: [],
     }, [{ type: "consume-input" }, ...completionIntents<TChoice>(snapshot.mode)]);
   }
@@ -249,7 +271,7 @@ export class RewardSelectionController<TChoice extends RewardChoice> {
   }
   openDraft(wave: number, roll: DraftRoller<TChoice>): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "open-draft", wave, roll }); }
   reroll(roll: DraftRoller<TChoice>): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "reroll", roll }); }
-  selectDraft(index: number): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "select-draft", index }); }
+  selectDraft(index: number, legal?: (choice: TChoice) => boolean): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "select-draft", index, ...(legal === undefined ? {} : { legal }) }); }
   selectReserve(index: number): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "select-reserve", index }); }
   openTierUp(choices: readonly TChoice[]): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "open-tier-up", choices }); }
   selectTierUp(index: number): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "select-tier-up", index }); }

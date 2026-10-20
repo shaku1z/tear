@@ -1,3 +1,4 @@
+import { readSeedRaceRun } from "./seed-race-contract";
 import { assertGhostForkAnchor, readGhostForkOrigin } from "./fork-origin";
 import { ghostRootIntegrity, type TearGhostManifest } from "./capsule-vault";
 import type { GhostReadCapsule } from "./capsule-reader";
@@ -286,7 +287,7 @@ export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): Ghos
     || lifecycle?.sessionId !== context.run.id || lifecycle.outcome !== null
     || (world?.simulationSeconds !== undefined && world.simulationSeconds !== 0)
     || typeof ui?.screen !== "string" || (opening !== undefined && opening.previousScreen !== ui.screen)
-    || (!["endless", "campaign"].includes(context.run.mode) && !freshBossOpening)) throw new TypeError("opening run/UI/session facts do not match capsule context");
+    || (!["endless", "campaign"].includes(context.run.mode) && !freshBossOpening && !(context.run.mode === "gauntlet" && readSeedRaceRun(capsule.manifest.provenance?.seedRace)?.shared.mode === "gauntlet"))) throw new TypeError("opening run/UI/session facts do not match capsule context");
   openingPredecessor(ui.screen);
   const starts = capsule.tracks.events.flatMap((entry) => { const event = causalEvent(entry.value); return event?.type === "run.started" ? [{ entry, event }] : []; });
   const bootstrapId = ghostLiveBootstrapEventId(capsule.manifest.id);

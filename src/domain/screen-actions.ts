@@ -19,7 +19,7 @@ export type ScreenAction =
   | { readonly type: "setup.selectDifficulty"; readonly id: string }
   | { readonly type: "setup.selectWeapon"; readonly id: string }
   | { readonly type: "setup.selectBoss"; readonly id: string }
-  | { readonly type: "setup.start" }
+  | { readonly type: "setup.start"; readonly race?: true }
   | { readonly type: "codex.selectTab"; readonly id: string }
   | { readonly type: "codex.selectFilter"; readonly id: string }
   | { readonly type: "codex.cycleSort" }

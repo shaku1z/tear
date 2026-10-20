@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import { createLiveScreenActionBindings, type ScreenActionBindingPorts } from "../../src/app/live-screen-action-bindings";
 
 describe("live screen action bindings", () => {
+  it("starts a declared Race only through its explicit setup action", () => {
+    const startSelectedRun = vi.fn(), startSelectedRace = vi.fn();
+    const dispatch = createLiveScreenActionBindings({ startSelectedRun, startSelectedRace } as unknown as ScreenActionBindingPorts);
+    dispatch({ type: "setup.start" }); expect(startSelectedRun).toHaveBeenCalledExactlyOnceWith(); expect(startSelectedRace).not.toHaveBeenCalled();
+    dispatch({ type: "setup.start", race: true }); expect(startSelectedRace).toHaveBeenCalledExactlyOnceWith(); expect(startSelectedRun).toHaveBeenCalledOnce();
+  });
   it("routes only explicit cloud catalog and selected recovery actions through eager ports", () => {
     const loadOwnGhostCapsules = vi.fn(), recoverOwnGhostCapsule = vi.fn(), closeOwnGhostCatalog = vi.fn(), resetScroll = vi.fn();
     const dispatch = createLiveScreenActionBindings({ loadOwnGhostCapsules, recoverOwnGhostCapsule, closeOwnGhostCatalog, resetScroll } as unknown as ScreenActionBindingPorts);

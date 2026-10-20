@@ -11,7 +11,7 @@ export interface ScreenActionBindingPorts {
   readonly ghostFiles: Pick<GhostVaultLibraryPort, "pickArchive" | "restoreArchive" | "cancelArchive" | "downloadArchive">;
   readonly setScreen: (screen: LegacyAppScreen) => void; readonly resetScroll: () => void;
   readonly setSetupSelection: (kind: "mode" | "difficulty" | "weapon" | "boss", id: string) => void;
-  readonly startSelectedRun: () => void; readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  readonly startSelectedRace?: () => void; readonly startSelectedRun: () => void; readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
   readonly currentRun: () => Readonly<{ mode: RunMode; diff: RunDifficulty }>;
   readonly resumeFinale: () => void; readonly claimFinale: () => void;
   readonly chooseDraft: (index: number) => void; readonly rerollDraft: () => void;
@@ -54,7 +54,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "setup.selectDifficulty": (action) => { ports.setSetupSelection("difficulty", action.id); },
     "setup.selectWeapon": (action) => { ports.setSetupSelection("weapon", action.id); },
     "setup.selectBoss": (action) => { ports.setSetupSelection("boss", action.id); },
-    "setup.start": () => { ports.startSelectedRun(); }, "draft.choose": (action) => { ports.chooseDraft(action.index); },
+    "setup.start": (action) => { if (action.race) ports.startSelectedRace?.(); else ports.startSelectedRun(); }, "draft.choose": (action) => { ports.chooseDraft(action.index); },
     "draft.reroll": () => { ports.rerollDraft(); }, "reserve.choose": (action) => { ports.chooseReserve(action.index); },
     "tierup.choose": (action) => { ports.chooseTier(action.index); }, "rename.submit": () => { ports.settings.submitRename(); },
     "rename.cancel": () => { ports.settings.cancelRename(); }, "run.resume": () => { ports.setScreen("playing"); ports.requestPointer(); },

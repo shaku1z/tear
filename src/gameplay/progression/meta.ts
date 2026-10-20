@@ -1,4 +1,5 @@
 import { currencyEarned, currencyLedger, mergeCurrencyLedgers, type AcknowledgedStorage, type CompletionStatus } from "../../domain/reward-receipts";
+export const META_RANK_LIMITS = Object.freeze({ tough: 8, sharp: 8, swift: 6, recovery: 6, headstart: 1, greed: 5, reach: 5, throwarm: 6, thickskin: 6, warding: 2, aircharge: 1, lifeline: 4, phoenix: 1, momentum: 5, aerialbracing: 5, slinggrip: 5, recallwindow: 4, hazardboots: 5, secondbreath: 4, reserve: 1, reroll: 3, expanded: 1 } as const);
 export interface MetaStorePort {
   readonly acknowledged?: AcknowledgedStorage;
   get(key: string): string | null;
@@ -220,53 +221,53 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
   };
 
   shop = [
-    { id: "tough", name: "Toughness", desc: "+12 starting max HP per level.", baseCost: 325, maxLevel: 8, cat: "vit", glyph: "❤",
+    { id: "tough", name: "Toughness", desc: "+12 starting max HP per level.", baseCost: 325, maxLevel: META_RANK_LIMITS.tough, cat: "vit", glyph: "❤",
       now: (level) => `+${String(12 * level)} HP`, apply: (level, { player }) => { player.maxHp += 12 * level; player.hp = player.maxHp; } },
-    { id: "sharp", name: "Sharpness", desc: "+6% damage per level.", baseCost: 375, maxLevel: 8, cat: "blade", glyph: "⚔",
+    { id: "sharp", name: "Sharpness", desc: "+6% damage per level.", baseCost: 375, maxLevel: META_RANK_LIMITS.sharp, cat: "blade", glyph: "⚔",
       now: (level) => `+${String(Math.round((1.06 ** level - 1) * 100))}% dmg`, apply: (level) => { config.blade.damageScale *= 1.06 ** level; config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.05 ** level); } },
-    { id: "swift", name: "Swiftness", desc: "+4% move speed per level.", baseCost: 350, maxLevel: 6, cat: "tempo", glyph: "≫",
+    { id: "swift", name: "Swiftness", desc: "+4% move speed per level.", baseCost: 350, maxLevel: META_RANK_LIMITS.swift, cat: "tempo", glyph: "≫",
       now: (level) => `+${String(Math.round((1.04 ** level - 1) * 100))}% speed`, apply: (level) => { config.player.moveSpeed *= 1.04 ** level; } },
-    { id: "recovery", name: "Conditioning", desc: "-6% dash cooldown per level.", baseCost: 375, maxLevel: 6, cat: "tempo", glyph: "↯",
+    { id: "recovery", name: "Conditioning", desc: "-6% dash cooldown per level.", baseCost: 375, maxLevel: META_RANK_LIMITS.recovery, cat: "tempo", glyph: "↯",
       now: (level) => `−${String(Math.round((1 - 0.94 ** level) * 100))}% dash cd`, apply: (level) => { config.dash.cooldown *= 0.94 ** level; } },
-    { id: "headstart", name: "Head Start", desc: "Begin each run with a random upgrade.", baseCost: 3000, maxLevel: 1, cat: "fortune", glyph: "✦",
+    { id: "headstart", name: "Head Start", desc: "Begin each run with a random upgrade.", baseCost: 3000, maxLevel: META_RANK_LIMITS.headstart, cat: "fortune", glyph: "✦",
       now: () => "1 free upgrade", apply: (_level, context) => {
         const pool = dependencies.upgrades.filter((upgrade) => !upgrade.unique);
         const upgrade = pool[Math.floor(random.next() * pool.length)];
         if (upgrade) dependencies.applyUpgrade(upgrade, { ...context, config });
       } },
-    { id: "greed", name: "Coin Magnet", desc: "+8% score-derived coins per level.", baseCost: 650, maxLevel: 5, cat: "fortune", glyph: "◆",
+    { id: "greed", name: "Coin Magnet", desc: "+8% score-derived coins per level.", baseCost: 650, maxLevel: META_RANK_LIMITS.greed, cat: "fortune", glyph: "◆",
       now: (level) => `+${String(8 * level)}% score coins`, apply: () => { return; } },
-    { id: "reach", name: "Long Arm", desc: "+ blade reach & length per level.", baseCost: 425, maxLevel: 5, cat: "blade", glyph: "↔",
+    { id: "reach", name: "Long Arm", desc: "+ blade reach & length per level.", baseCost: 425, maxLevel: META_RANK_LIMITS.reach, cat: "blade", glyph: "↔",
       now: (level) => `+${String(12 * level)} reach`, apply: (level) => { config.blade.aimRadius += 12 * level; config.blade.length += 6 * level; config.blade.maxReach += 12 * level; } },
-    { id: "throwarm", name: "Throwing Arm", desc: "+8% thrown-blade damage per level.", baseCost: 400, maxLevel: 6, cat: "blade", glyph: "➹",
+    { id: "throwarm", name: "Throwing Arm", desc: "+8% thrown-blade damage per level.", baseCost: 400, maxLevel: META_RANK_LIMITS.throwarm, cat: "blade", glyph: "➹",
       now: (level) => `+${String(Math.round((1.08 ** level - 1) * 100))}% throw dmg`, apply: (level) => { config.blade.throw.damage *= 1.08 ** level; config.blade.throw.damageFromSpeed *= 1.08 ** level; } },
-    { id: "thickskin", name: "Thick Skin", desc: "Take -4% damage per level.", baseCost: 475, maxLevel: 6, cat: "vit", glyph: "▣",
+    { id: "thickskin", name: "Thick Skin", desc: "Take -4% damage per level.", baseCost: 475, maxLevel: META_RANK_LIMITS.thickskin, cat: "vit", glyph: "▣",
       now: (level) => `−${String(Math.round((1 - 0.96 ** level) * 100))}% dmg taken`, apply: (level) => { config.player.dmgTakenMult *= 0.96 ** level; } },
-    { id: "warding", name: "Warding", desc: "Begin each run with a one-hit shield per level.", baseCost: 1100, maxLevel: 2, cat: "fortune", glyph: "⬡",
+    { id: "warding", name: "Warding", desc: "Begin each run with a one-hit shield per level.", baseCost: 1100, maxLevel: META_RANK_LIMITS.warding, cat: "fortune", glyph: "⬡",
       now: (level) => `${String(level)} shield${level > 1 ? "s" : ""}`, apply: (level, { player }) => { player.maxShield = Math.max(player.maxShield, level); player.shield = player.maxShield; } },
-    { id: "aircharge", name: "Aether Step", desc: "Start with an extra mid-air dash charge.", baseCost: 3500, maxLevel: 1, cat: "tempo", glyph: "⇈",
+    { id: "aircharge", name: "Aether Step", desc: "Start with an extra mid-air dash charge.", baseCost: 3500, maxLevel: META_RANK_LIMITS.aircharge, cat: "tempo", glyph: "⇈",
       now: () => "+1 air dash", apply: (level, { player }) => { player.maxDashCharges += level; player.dashCharges = player.maxDashCharges; } },
-    { id: "lifeline", name: "Lifeline", desc: "Recover +5 HP on each wave clear per level.", baseCost: 550, maxLevel: 4, cat: "vit", glyph: "✚",
+    { id: "lifeline", name: "Lifeline", desc: "Recover +5 HP on each wave clear per level.", baseCost: 550, maxLevel: META_RANK_LIMITS.lifeline, cat: "vit", glyph: "✚",
       now: (level) => `+${String(5 * level)} HP / wave`, apply: (level, { mods }) => { mods.waveHeal += 5 * level; } },
-    { id: "phoenix", name: "Second Wind", desc: "Once per run, revive with 35% HP when you would fall.", baseCost: 6000, maxLevel: 1, cat: "vit", glyph: "❁",
+    { id: "phoenix", name: "Second Wind", desc: "Once per run, revive with 35% HP when you would fall.", baseCost: 6000, maxLevel: META_RANK_LIMITS.phoenix, cat: "vit", glyph: "❁",
       now: () => "1 revive", apply: (level, { player }) => { player.shopRevives += level; } },
-    { id: "momentum", name: "Momentum Transfer", desc: "Retain 6% more horizontal momentum after a dash per level.", baseCost: 450, maxLevel: 5, cat: "tempo", glyph: "↠",
+    { id: "momentum", name: "Momentum Transfer", desc: "Retain 6% more horizontal momentum after a dash per level.", baseCost: 450, maxLevel: META_RANK_LIMITS.momentum, cat: "tempo", glyph: "↠",
       now: (level) => `+${String(Math.round((1.06 ** level - 1) * 100))}% dash carry`, apply: (level, { player }) => { player.dashMomentumMult *= 1.06 ** level; } },
-    { id: "aerialbracing", name: "Aerial Bracing", desc: "Take 3% less damage while airborne per level.", baseCost: 500, maxLevel: 5, cat: "vit", glyph: "△",
+    { id: "aerialbracing", name: "Aerial Bracing", desc: "Take 3% less damage while airborne per level.", baseCost: 500, maxLevel: META_RANK_LIMITS.aerialbracing, cat: "vit", glyph: "△",
       now: (level) => `−${String(Math.round((1 - 0.97 ** level) * 100))}% air damage`, apply: (level, { player }) => { player.airborneDmgMult *= 0.97 ** level; } },
-    { id: "slinggrip", name: "Sling Grip", desc: "Thrown-blade release recovery is 4% shorter per level.", baseCost: 500, maxLevel: 5, cat: "blade", glyph: "➶",
+    { id: "slinggrip", name: "Sling Grip", desc: "Thrown-blade release recovery is 4% shorter per level.", baseCost: 500, maxLevel: META_RANK_LIMITS.slinggrip, cat: "blade", glyph: "➶",
       now: (level) => `−${String(Math.round((1 - 0.96 ** level) * 100))}% release recovery`, apply: (level, { blade }) => { blade.throwCooldownMult *= 0.96 ** level; } },
-    { id: "recallwindow", name: "Recall Window", desc: "Recall a distant blade 0.10s earlier per level.", baseCost: 550, maxLevel: 4, cat: "blade", glyph: "↶",
+    { id: "recallwindow", name: "Recall Window", desc: "Recall a distant blade 0.10s earlier per level.", baseCost: 550, maxLevel: META_RANK_LIMITS.recallwindow, cat: "blade", glyph: "↶",
       now: (level) => `${(0.1 * level).toFixed(2)}s early recall`, apply: (level, { blade }) => { blade.recallWindow += 0.1 * level; } },
-    { id: "hazardboots", name: "Hazard Boots", desc: "Take 6% less floor and environmental hazard damage per level.", baseCost: 450, maxLevel: 5, cat: "vit", glyph: "▱",
+    { id: "hazardboots", name: "Hazard Boots", desc: "Take 6% less floor and environmental hazard damage per level.", baseCost: 450, maxLevel: META_RANK_LIMITS.hazardboots, cat: "vit", glyph: "▱",
       now: (level) => `−${String(Math.round((1 - 0.94 ** level) * 100))}% hazard damage`, apply: (level, { player }) => { player.hazardDmgMult *= 0.94 ** level; } },
-    { id: "secondbreath", name: "Second Breath", desc: "Once per stage below 30% HP, regenerate 1.25% max HP/s for 4s per level.", baseCost: 750, maxLevel: 4, cat: "vit", glyph: "♨",
+    { id: "secondbreath", name: "Second Breath", desc: "Once per stage below 30% HP, regenerate 1.25% max HP/s for 4s per level.", baseCost: 750, maxLevel: META_RANK_LIMITS.secondbreath, cat: "vit", glyph: "♨",
       now: (level) => `${String(5 * level)}% HP over ${String(4 * level)}s`, apply: (level, { player }) => { player.secondBreathDuration = 4 * level; } },
-    { id: "reserve", name: "Reserve Pick", desc: "Reserve one unchosen card for your next normal draft.", baseCost: 6500, maxLevel: 1, cat: "fortune", glyph: "▣",
+    { id: "reserve", name: "Reserve Pick", desc: "Reserve one unchosen card for your next normal draft.", baseCost: 6500, maxLevel: META_RANK_LIMITS.reserve, cat: "fortune", glyph: "▣",
       now: () => "1 reserved draft card", apply: (level, { mods }) => { mods.reservePick = level > 0; } },
-    { id: "reroll", name: "Reroll", desc: "Gain one normal-draft reroll charge per level, shared across the run.", costs: [3000, 5500, 9000], maxLevel: 3, cat: "fortune", glyph: "⟳",
+    { id: "reroll", name: "Reroll", desc: "Gain one normal-draft reroll charge per level, shared across the run.", costs: [3000, 5500, 9000], maxLevel: META_RANK_LIMITS.reroll, cat: "fortune", glyph: "⟳",
       now: (level) => `${String(level)} reroll${level === 1 ? "" : "s"} / run`, apply: (level, { mods }) => { mods.draftRerolls += level; } },
-    { id: "expanded", name: "Expanded Draft", desc: "Normal drafts offer four cards instead of three.", baseCost: 10000, maxLevel: 1, cat: "fortune", glyph: "▥",
+    { id: "expanded", name: "Expanded Draft", desc: "Normal drafts offer four cards instead of three.", baseCost: 10000, maxLevel: META_RANK_LIMITS.expanded, cat: "fortune", glyph: "▥",
       now: () => "4-card normal drafts", apply: (level, { mods }) => { mods.expandedDraft = level > 0; } },
   ];
 

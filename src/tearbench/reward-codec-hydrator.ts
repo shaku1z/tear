@@ -3,6 +3,7 @@ import type { UpgradeDefinition } from "../gameplay/upgrades";
 import { MODE_IDS } from "../gameplay/run/mode-catalog";
 import { decodeTearCodecValue } from "./detached-world-hydrator";
 import type { TearCodecValue } from "./state-codecs";
+import { readSeedLockedDraft, rollSeedLockedDraft } from "../gameplay/run/seed-locked-draft";
 
 function record(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -41,6 +42,21 @@ export function hydrateRewardCodecPayload(
     if (upgrade === null) throw new TypeError("reward choices cannot contain null");
     return upgrade;
   }));
+  const seedLocked = readSeedLockedDraft(decoded.seedLocked);
+  if (seedLocked !== undefined) {
+    if (!Number.isSafeInteger(decoded.decisionSequence) || Number(decoded.decisionSequence) < 0) throw new TypeError("Invalid race decision frontier");
+    if (!Number.isSafeInteger(decoded.rerollOrdinal) || Number(decoded.rerollOrdinal) < 0 || Number(decoded.rerollOrdinal) > 64) throw new TypeError("Invalid shared draft reroll ordinal");
+    if (decoded.phase === "draft" || decoded.phase === "reserve") {
+      const expected = rollSeedLockedDraft(seedLocked, Number(decoded.wave), Number(decoded.rerollOrdinal), decoded.expandedDraft ? 4 : 3);
+      if (decoded.choices.length !== expected.choices.length || choices(decoded.choices).some((choice, index) => choice.id !== expected.choices[index]?.id)
+        || decoded.specialBlock !== expected.specialBlock || decoded.specialsOffered !== expected.specialsOffered) throw new TypeError("Shared offers differ from their declared coordinate");
+      if (decoded.phase === "reserve") {
+        if (!Number.isSafeInteger(decoded.selectedDraftIndex) || Number(decoded.selectedDraftIndex) < 0 || Number(decoded.selectedDraftIndex) > expected.choices.length) throw new TypeError("Invalid reserved common slot");
+        const expectedReserve = expected.choices.filter((_, index) => index !== decoded.selectedDraftIndex).map(choice => choice.id);
+        if (choices(decoded.reserveChoices).map(choice => choice.id).join() !== expectedReserve.join()) throw new TypeError("Reserve cards differ from the common coordinate");
+      }
+    }
+  } else if (decoded.rerollOrdinal !== undefined || decoded.decisionSequence !== undefined) throw new TypeError("A reroll coordinate requires a shared draft declaration");
   return Object.freeze({ ...decoded, choices: choices(decoded.choices), reserveChoices: choices(decoded.reserveChoices),
     reservedChoice: hydrateRewardUpgrade(catalog, decoded.reservedChoice) }) as RewardSelectionSnapshot<UpgradeDefinition>;
 }

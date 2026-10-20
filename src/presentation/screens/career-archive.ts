@@ -28,6 +28,7 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
       line(`Page ${String(view.page + 1)} / ${String(view.pages)} · ${view.message || "Select a run for recorded facts and local controls."}`, height - 20, true); return;
     }
     const { entry: e, notes, detail } = view.selected;
+    const raceEligible = e.seedRaceRole === "reference" && e.verified === "receipts" && e.result !== null;
     const chaseEligible = !e.assisted && e.verified === "receipts" && detail?.startsWith("Recorded category best") === true;
     const quantity = (value: number, digits = 2) => String(Number(value.toFixed(digits)));
     const composition = Object.entries(e.composition ?? {}), dominant = composition.filter(([, n]) => n === Math.max(...composition.map(([, count]) => count))).map(([category]) => category).join(", ");
@@ -40,13 +41,13 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
       `Style ${e.style ? `combo ${quantity(e.style.combo)} · x${quantity(e.style.multiplier)} · ${e.style.rank || "unranked"}` : "unavailable"} · near miss ${e.nearMiss === null ? "unavailable" : e.nearMiss.map((b) => `${b.boss}: ${quantity(b.hp)}/${quantity(b.maxHp)} HP, phase 3`).join(", ") || "none under final-phase <=10% rule"}`,
       `Run DNA: ${Object.entries(e.dna).map(([k, v]) => `${k} ${quantity(v, 4)}`).join(" · ") || "unavailable"}`,
       `Tags: ${notes.tags.join(", ") || "none"} · retention ${notes.retention} · recorded actor ${e.actor} · sharing ${e.sharing} · game ${e.gameVersion ?? "unknown"}`,
-      e.assisted ? "ASSISTED / NONCOMPETITIVE · original Chase source attribution is retained in this recording." : chaseEligible ? "CHASE: independent seed and choices · assisted / noncompetitive · no ordinary leaderboard submission." : "To Chase, choose an unassisted recorded best from Personal best timeline or Best per weapon.",
+      e.seedRaceRole ? `SEED-LOCKED RACE ${e.seedRaceRole.toUpperCase()} · shared setup/offers · personal inputs, reserve and tier-ups · unranked / no progression rewards` : e.assisted ? "ASSISTED / NONCOMPETITIVE · original Chase source attribution is retained in this recording." : chaseEligible ? "CHASE: independent seed and choices · assisted / noncompetitive · no ordinary leaderboard submission." : "To Chase, choose an unassisted recorded best from Personal best timeline or Best per weapon.",
       e.unavailable.join(" · ") || "Native witness coverage available; observations do not measure human skill."];
     const spacing = Math.max(14, Math.min(30, (height - 220) / facts.length)); facts.forEach((fact, i) => { line(fact, 108 + i * spacing, i === facts.length - 1, ui.t.type.body); });
     const y = height - 100;
     if (view.confirming) { line("Delete local recording, unreferenced chunks, history and tags? Protected holds may refuse. Remote copies remain.", y - 14); button("DELETE LOCAL", "confirm-delete", left, y, 180); button("KEEP", "cancel-delete", left + 192, y); }
     else {
-      [["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"], ["PUBLISH", "publish"], ["CHASE BEST", "chase"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 6, y, (available - 40) / 6, e.present && (e.kind === "capsule" || command === "watch") && (command !== "chase" || chaseEligible)); });
+      [["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"], ["PUBLISH", "publish"], ["CHASE BEST", "chase"], ["RACE THIS REFERENCE", "race"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 7, y, (available - 48) / 7, e.present && (e.kind === "capsule" || command === "watch") && (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible)); });
       [["TAGS", "tags"], [notes.retention === "pinned" ? "UNPIN" : "PIN", "pin"], ["RETENTION", "retention"], ["DELETE LOCAL", "delete"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 4, y + 38, (available - 24) / 4, e.kind === "capsule" || command === "pin" || command === "delete"); });
     }
     line(view.message || "Local annotations are separate from immutable recordings. Other tools retain their own admission and consent gates.", height - 14, true);
