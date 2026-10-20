@@ -56,13 +56,19 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   await page.addScriptTag({ type: "module", content: `${driverSource}\nglobalThis.__TEAR_TUTORIAL_COURSE_DRIVER__ = driveTutorialCourse; globalThis.__TEAR_TUTORIAL_LESSON_DRIVER__ = driveTutorialLesson;` });
   const result = await page.evaluate(({ scenarioValue, captureContinuation }) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-    environment.reset(scenarioValue);
+    // Preserve the real preflight-issued course, including its durable receipt.
+    // Reset establishes Class A control; restore adopts the untouched live origin.
+    const origin = environment.captureSnapshot("tutorial-issued-live-origin", "recorded-canonical");
+    const actualScenario = { ...scenarioValue, seed: origin.seed };
+    environment.reset(actualScenario);
+    const restored = environment.restoreSnapshot(origin);
+    if (!restored.ok) throw new Error(`Issued tutorial origin restore refused: ${JSON.stringify(restored)}`);
     window.__tutorialJourneyEnvironment = environment;
     window.__tutorialJourneyCommandId = 0;
     return window.__TEAR_TUTORIAL_COURSE_DRIVER__({ environment,
       nextCommandId: () => ++window.__tutorialJourneyCommandId,
       tutorial: () => window.__PANTHEON_TEST.tutorial(), state: () => window.__PANTHEON_TEST.state(),
-    }, { scenarioValue, captureContinuation });
+    }, { scenarioValue: actualScenario, captureContinuation });
   }, { scenarioValue: scenario, captureContinuation: Boolean(process.env.TEAR_TUTORIAL_CONTINUATION_TRACE) });
 
   const last = result.trace.at(-1);
