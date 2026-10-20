@@ -206,6 +206,7 @@ export interface ReplayScreenView {
   readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
   /** Explicit selected-recording observations; no skill or accuracy inference. */
+  readonly challenge?: Readonly<{ tick: number; choices: readonly Readonly<{ id: string; label: string }>[]; result?: string; elapsedTicks?: number }>;
   readonly coach?: GhostCoachHistoryView;
   /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
   readonly runDna?: Readonly<{

@@ -1,4 +1,4 @@
-import { createLiveTrainingHandoff } from "./live-training-handoff"; import { liveTutorialCoachFrame } from "./live-tutorial-coach-frame"; import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { createLiveGhostChallengeComposition } from "./live-ghost-challenge-composition"; import { createLiveTrainingHandoff } from "./live-training-handoff"; import { liveTutorialCoachFrame } from "./live-tutorial-coach-frame"; import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./live-ghost-frame-recording"; import { createBrowserLiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
@@ -53,7 +53,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const currentSignedInActor = (): string | undefined => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined, humanCalibration = createLiveHumanCalibrationCaptureComposition(browserIndexedDb, browserWindow, currentSignedInActor);
   const ghostV3Options = createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search) ?? {}, ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb); bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
   const ownerRecovery = createBrowserLiveGhostOwnerRecoveryController(browserIndexedDb, ghostPublication, currentSignedInActor, () => { ghostVault.refresh(); }, (input, init) => browserWindow.fetch(input, init)); Cloud.onChange(() => { ownerRecovery.accountChanged(); });
-  const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb, { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); await humanCalibration.capture?.finalized(manifest, vault); } }); const ghostV3 = ghostV3Session.recorder();
+  const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb, { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); if (manifest.provenance?.forkOrigin === undefined) await humanCalibration.capture?.finalized(manifest, vault); } }); const ghostV3 = ghostV3Session.recorder();
   const ghostFrames = createLiveGhostFrameRecording({ session: ghostV3Session, tick: () => simulationRuntime.scheduler.tick, introActive: () => hostState.bossIntro() !== null });
   const openingCapture = createLiveGhostOpeningCapture({ screen: () => state, tick: () => simulationRuntime.scheduler.tick,
     replayRunId: () => ghostV3Session.replayContext()?.run.id, nextSequence: ghostV3Session.nextEventSequence,
@@ -102,9 +102,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       ghostFrames.finish(meta);
     },
   });
-  let observePlayerWatchEvent: RunMonitorController["observeRunEvent"] = () => undefined;
+  let observeChallengeEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let stopChallengeRun: () => boolean = () => false; let observePlayerWatchEvent: RunMonitorController["observeRunEvent"] = () => undefined;
   GAMEPLAY_EVENTS.subscribe((event) => {
-    observePlayerWatchEvent(event);
+    observePlayerWatchEvent(event); observeChallengeEvent(event);
     ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ghostV3Session.nextEventSequence()));
     if (ghostPracticeSession.active() === null && tracksAchievements(hostState.run())) executeEnvironmentTelemetryIntents([...verdantTelemetryIntents(event),
       ...paleTelemetryIntents(event)], dependencies.profileStatsPersistence);
@@ -167,6 +167,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     });
   };
   const abandonLiveRun = (reason: string, metadata: Readonly<Record<string, unknown>> = {}): void => {
+    if (stopChallengeRun()) return;
     const lifecycle = RUN_LIFECYCLE.snapshot();
     if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
     cleanupBossEncounterActors(hostState.enemies(), "exit"); environment.clear("abandon"); RUN_LIFECYCLE.terminate("quit");
@@ -468,6 +469,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     afterSimulationStep: (tick: number) => { if (__TEAR_TEST_BUILD__ && canonicalTickStartedAt !== null) {
       DIAG.record("canonicalTick", performance.now() - canonicalTickStartedAt); canonicalTickStartedAt = null;
     }
+      challenge.afterStep(tick);
       void dependencies.practiceEncounterPersistence?.observe({ run: liveRun(), actors: hostState.enemies(), tick, playing: state === "playing", waveActive: RUN_LIFECYCLE.isWaveActive, blockingCinema: CINEMA.active && CINEMA.blocksCombat, ghostPractice: ghostPracticeSession.active() !== null, width: W, height: H })?.then((status) => { if (status !== "committed") addFloater(livePlayer().x, livePlayer().y - 70, "ENCOUNTER SAVE NOT CONFIRMED", true, "#e0a326"); });
       if (ghostV3?.active === true && tick % ghostV3.keyframeIntervalTicks === 0) {
         const random = worldContext.services.random.snapshot();
@@ -566,15 +568,13 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     captureCinema: () => CINEMA.captureState(),
     validateCinema: stateForgeRuntime.validate,
   });
-  const ghostSnapshotRegistry = createDefaultStateCodecRegistry(); const launchGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) => launchGhostPracticeChild(child, { registry: ghostSnapshotRegistry, stateForge: liveStateForge, hasLiveWorld: () => hostState.run() !== null, practice: ghostPracticeSession, clearRestoredRecording: () => { GHOST.restoreRuntimeState({ recording: null }); Input.stopSemanticRecording(); }, setPlaying: () => { setState("playing", { practiceLaunch: true }); }, requestPointer: requestLock });
+  const ghostSnapshotRegistry = createDefaultStateCodecRegistry(); const restoreGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) => launchGhostPracticeChild(child, { registry: ghostSnapshotRegistry, stateForge: liveStateForge, hasLiveWorld: () => hostState.run() !== null, practice: ghostPracticeSession, clearRestoredRecording: () => { GHOST.restoreRuntimeState({ recording: null }); Input.stopSemanticRecording(); }, setPlaying: () => { setState("playing", { practiceLaunch: true }); }, requestPointer: requestLock }); const launchGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]): ReturnType<typeof launchGhostPracticeChild> => challenge.request(child);
   const captureGhostStateSnapshot = (tick: number): TearSnapshotV1 | undefined => {
     const recorder = ghostV3;
     if (recorder?.active !== true) return;
     const replayContext = ghostV3Session.replayContext();
     if (replayContext === undefined) {
-      // A keyframe without the immutable bootstrap fingerprint could look
-      // replayable while actually describing a different world.  Preserve the
-      // live run and record explicit degradation instead of manufacturing one.
+      // Missing bootstrap identity is explicit degradation, never a replayable keyframe.
       recorder.record("events", tick, {
         type: "ghost.snapshot-degraded",
         reason: "immutable Ghost V3 replay bootstrap context is unavailable",
@@ -595,8 +595,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       recorder.record("events", tick, { type: "ghost.snapshot-degraded", reason: error instanceof Error ? error.message : String(error) }); return undefined;
     }
   };
-  // full-screen rect INCLUDING the fullscreen overscan bleed â€” use for any fill that
-  // must reach the true screen edges (backdrops, dims, vignettes), never for layout.
+  const challenge = createLiveGhostChallengeComposition({ factory: browserIndexedDb, recording: ghostV3Session, frames: ghostFrames, stateForge: liveStateForge, registry: ghostSnapshotRegistry, launch: restoreGhostPractice, rng: () => worldContext.services.random.snapshot(), input: () => simulationRuntime.input.snapshot(), releaseInput: (tick) => { simulationRuntime.input.restore({ ...simulationRuntime.input.snapshot(), tick, moveX: 0, moveY: 0, primaryHeld: false }); }, startInput: () => { Input.startSemanticRecording(); setState("playing", { practiceLaunch: true }); requestLock(); }, stopInput: () => { Input.stopSemanticRecording(); },
+    stateHash: () => stableVerificationHash(projectCanonicalGameplayState(simulationRuntime.scheduler.tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession())), tick: () => simulationRuntime.scheduler.tick, pause: () => { if (state === "playing") setState("paused"); }, abandon: abandonLiveRun, notice: (message) => { addFloater(livePlayer().x, livePlayer().y - 70, message, true, "#13c4d6"); }, captureReceipt: captureGhostAuthoritativeReceipt }); observeChallengeEvent = challenge.observe; stopChallengeRun = challenge.stop; ghostPracticeSession.beforeClear?.(challenge.reset);
   const screenRect = () => presentationHost.screenRectangle();
   const biomeMode = () => ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(liveRun().mode);
   const shopFeedback = createLiveShopFeedbackState();

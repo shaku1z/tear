@@ -1,3 +1,5 @@
+import { recordedGhostChallengeChoices, type RecordedGhostChallenge, type RecordedGhostChallengeResult } from "../ghost/recorded-challenge";
+import type { GhostForkPermit } from "../ghost/fork-origin";
 import type { ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
 import type { GhostStudioBrowserMediaPort, GhostStudioWebmArtifact } from "./browser-ghost-studio-media";
 import type { GhostVerifiedReplayRenderView } from "../ghost/production-replay-session";
@@ -46,6 +48,11 @@ interface GhostTheaterContext {
   infoVisible: boolean;
   fractionalTicks: number;
   message?: string;
+  challengeOpen: boolean;
+  challengeResult: RecordedGhostChallengeResult | undefined;
+  challengeChoices: readonly RecordedGhostChallenge[];
+  firstTick: number;
+  lastTick: number;
   coachOpen: boolean;
   runDnaOpen: boolean;
   studioOpen: boolean;
@@ -80,7 +87,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
 
   const seek = (targetTick: number): boolean => {
     if (context === undefined) return false;
-    const bounded = Math.max(0, Math.min(context.capsule.maxTick, Math.floor(targetTick)));
+    const bounded = Math.max(context.firstTick, Math.min(context.lastTick, Math.floor(targetTick)));
     try {
       const result = context.session.seek(bounded);
       const frame = context.session.renderFrame?.(bounded);
@@ -96,6 +103,11 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     }
   };
 
+  const challengeChoices = () => {
+    if (!context?.checkpoints.includes(context.result.tick)) return [];
+    const snapshot = mapGhostCapsuleToReplayEnvelope(context.capsule).ghost.snapshots.find((entry) => entry.tick === context?.result.tick);
+    return snapshot === undefined ? [] : recordedGhostChallengeChoices(context.capsule, snapshot);
+  };
   const view = (): ReplayScreenView | undefined => {
     if (context === undefined) return undefined;
     const currentContext = context;
@@ -108,11 +120,11 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       paused: !state.playing,
       speed: state.speed,
       elapsed: `TICK ${String(current)}`,
-      duration: `TICK ${String(currentContext.capsule.maxTick)}`,
-      progress: currentContext.capsule.maxTick === 0 ? 1 : current / currentContext.capsule.maxTick,
+      duration: `TICK ${String(currentContext.lastTick)}`,
+      progress: currentContext.lastTick === 0 ? 1 : (current - currentContext.firstTick) / Math.max(1, currentContext.lastTick - currentContext.firstTick),
       score: `TICK ${String(current)}`,
       chapters: currentContext.checkpoints.map((tick) => Object.freeze({
-        fraction: currentContext.capsule.maxTick === 0 ? 0 : tick / currentContext.capsule.maxTick,
+        fraction: currentContext.lastTick === 0 ? 0 : (tick - currentContext.firstTick) / Math.max(1, currentContext.lastTick - currentContext.firstTick),
         boss: false,
       })),
       infoVisible: currentContext.infoVisible,
@@ -125,6 +137,8 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
       theater: true, worldVisible: currentContext.frame !== undefined, coachReturnAvailable: currentContext.coachScene,
       practiceAvailable: currentContext.checkpoints.includes(current),
+      ...(currentContext.challengeOpen ? { challenge: { choices: currentContext.challengeResult === undefined ? currentContext.challengeChoices.map((choice) => ({ id: choice.rule + ":" + choice.target, label: choice.label })) : [],
+        tick: current, ...(currentContext.challengeResult === undefined ? {} : { result: currentContext.challengeResult.status, elapsedTicks: currentContext.challengeResult.elapsedTicks }) } } : {}),
       ...(currentContext.coachOpen ? { coach: history.snapshot() } : {}),
       ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
       ...(currentContext.studioOpen ? { studioCutList: currentContext.studioCutList === undefined
@@ -145,13 +159,13 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     const wholeTicks = Math.floor(context.fractionalTicks);
     context.fractionalTicks -= wholeTicks;
     if (wholeTicks <= 0) return;
-    const target = Math.min(context.capsule.maxTick, state.tick + wholeTicks);
+    const target = Math.min(context.lastTick, state.tick + wholeTicks);
     seek(target);
-    if (target === context.capsule.maxTick) context.transport.pause();
+    if (target === context.lastTick) context.transport.pause();
   };
 
   return Object.freeze({
-    open(capsule: GhostReadCapsule, from: LegacyAppScreen): GhostTheaterOpenResult {
+    open(capsule: GhostReadCapsule, from: LegacyAppScreen, evidence?: Readonly<{ permit: GhostForkPermit; result: RecordedGhostChallengeResult }>): GhostTheaterOpenResult {
       invalidateStudio();
       history.close();
       let mapped: ReturnType<typeof mapGhostCapsuleToReplayEnvelope>;
@@ -166,9 +180,10 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         return refuseGhostTheater("codec-preflight", capsule.manifest.rootIntegrity, codecFailure.tick);
       }
       try {
-        const session = createGhostProductionReplaySession(capsule, services.presentation);
+        const session = createGhostProductionReplaySession(capsule, services.presentation, evidence?.permit);
         const transport = new GhostTheaterTransport(mapped.ghost.events, services.width());
-        const result = session.seek(0);
+        const firstTick = session.firstTick ?? 0;
+        const result = session.seek(firstTick); transport.seek(firstTick);
         context = {
           capsule,
           session,
@@ -178,12 +193,12 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           result,
           infoVisible: false,
           fractionalTicks: 0,
-          coachOpen: false,
+          firstTick, lastTick: session.lastTick ?? capsule.maxTick, challengeOpen: evidence !== undefined, challengeResult: evidence?.result, challengeChoices: [], coachOpen: false,
           runDnaOpen: false,
           studioOpen: false,
-          studioCutList: undefined, frame: session.renderFrame?.(0), coachScene: false, studioMark: undefined, studioAbort: undefined, studioArtifact: undefined, studioStatus: "idle",
+          studioCutList: undefined, frame: session.renderFrame?.(firstTick), coachScene: false, studioMark: undefined, studioAbort: undefined, studioArtifact: undefined, studioStatus: "idle",
         };
-        return Object.freeze({ kind: "opened", root: capsule.manifest.rootIntegrity, tick: 0 });
+        return Object.freeze({ kind: "opened", root: capsule.manifest.rootIntegrity, tick: firstTick });
       } catch {
         context = undefined;
         return refuseGhostTheater("source-verification", capsule.manifest.rootIntegrity);
@@ -206,7 +221,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       if (context.transport.state().playing) context.transport.pause(); else context.transport.play();
     },
     seekBy(seconds: number): void { seek((context?.transport.state().tick ?? 0) + Math.round(seconds * TICKS_PER_SECOND)); },
-    seekToFraction(fraction: number): void { seek(Math.round((context?.capsule.maxTick ?? 0) * Math.max(0, Math.min(1, fraction)))); },
+    seekToFraction(fraction: number): void { seek(Math.round((context?.firstTick ?? 0) + ((context?.lastTick ?? 0) - (context?.firstTick ?? 0)) * Math.max(0, Math.min(1, fraction)))); },
     jumpCheckpoint(direction: number): void {
       if (context === undefined) return;
       const current = context.transport.state().tick;
@@ -214,7 +229,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       const next = ordered.find((tick) => direction < 0 ? tick < current : tick > current) ?? current;
       seek(next);
     },
-    restart(): void { seek(0); },
+    restart(): void { seek(context?.firstTick ?? 0); },
     practice(): void {
       if (context === undefined) return;
       const tick = context.result.tick;
@@ -233,10 +248,28 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         context.message = `Practice unavailable: ${error instanceof Error ? error.message : String(error)}`;
       }
     },
+    openChallenges(): void {
+      if (context === undefined) return;
+      context.challengeOpen = !context.challengeOpen; context.coachOpen = context.runDnaOpen = context.studioOpen = false;
+      if (context.challengeOpen) context.challengeChoices = challengeChoices();
+      context.transport.pause(); history.close();
+    },
+    startChallenge(id: string): void {
+      const captured = context, choice = challengeChoices().find((entry) => entry.rule + ":" + entry.target === id);
+      if (captured === undefined || choice === undefined) return;
+      try {
+        const child = captured.session.forkPractice(captured.result.tick, "race-practice");
+        const launched = services.launchPractice({ ...child, challenge: choice });
+        captured.message = launched.ok ? "Local challenge launched · no rewards or rankings." : launched.message;
+        if (!launched.ok && launched.completion !== undefined) void launched.completion.then((result) => {
+          if (context === captured) captured.message = result.ok ? "Local challenge launched · MAIN MENU → QUIT to stop." : result.message;
+        });
+      } catch (error) { captured.message = `Challenge unavailable: ${error instanceof Error ? error.message : String(error)}`; }
+    },
     openCoach(): void {
       if (context === undefined) return;
       delete context.message;
-      context.coachOpen = !context.coachOpen;
+      context.coachOpen = !context.coachOpen; context.challengeOpen = false;
       context.runDnaOpen = context.studioOpen = false;
       context.transport.pause();
       if (context.coachOpen) void history.open(ghostCoachCandidate(context.capsule.manifest)); else history.close();
@@ -318,7 +351,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       if (context === undefined) return null;
       const state: GhostTheaterState = context.transport.state();
       return Object.freeze({ paused: !state.playing, speed: state.speed, infoVisible: context.infoVisible,
-        progress: context.capsule.maxTick === 0 ? 1 : state.tick / context.capsule.maxTick, from: context.from });
+        progress: context.lastTick === 0 ? 1 : (state.tick - context.firstTick) / Math.max(1, context.lastTick - context.firstTick), from: context.from });
     },
   });
 }

@@ -1,3 +1,4 @@
+import type { RecordedGhostChallenge } from "./recorded-challenge";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSimulationRuntime } from "../gameplay/runtime/tear-simulation-runtime";
@@ -246,6 +247,7 @@ export type GhostPracticeMode =
   | "race-practice" | "coach-assisted";
 
 export interface GhostPracticeChild {
+  readonly challenge?: RecordedGhostChallenge;
   readonly id: string;
   readonly sourceGhostId: string;
   readonly sourceRootHash: string;

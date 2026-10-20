@@ -1,3 +1,4 @@
+import type { GhostForkOriginV1 } from "../ghost/fork-origin";
 import type { GhostReplayRenderView } from "../ghost/replay-world";
 import type { ProductionReplayWorldOptions } from "./production-world-factory";
 import { applyWeapon } from "../gameplay/weapons";
@@ -69,6 +70,7 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly difficulty?: RunDifficulty;
   /** Optional immutable identity supplied by the build/composition boundary. */
   readonly buildIdentity?: Omit<TearBuildIdentityV1, "configHash">;
+  readonly forkOrigin?: GhostForkOriginV1;
   readonly inputSnapshots?: ReadonlyMap<number, AuthoritativeInputSnapshot>;
   /** Optional portable fact sink for a host that compares source replay output. */
   readonly gameplayEvents?: TearGameplayEventPort;
@@ -488,6 +490,8 @@ export function createProductionGhostReplayComposition(
         }),
         rng: replay.world.context.services.random.snapshot(),
       } satisfies ProductionReplayBootstrap);
+      if (options.forkOrigin !== undefined && (snapshot === undefined || snapshot.tick < options.forkOrigin.checkpoint.tick
+        || (snapshot.tick === options.forkOrigin.checkpoint.tick && snapshot.hashes.exact !== options.forkOrigin.childAnchor.exactHash))) throw new TypeError("Replay snapshot is outside admitted fork origin.");
       const openingPermit = snapshot?.tick === 0 ? options.openingPermit : undefined;
       const opening = openingPermit === undefined || snapshot === undefined ? undefined : readGhostRecordedOpeningPermit(openingPermit, snapshot);
       if (opening !== undefined && options.inputSnapshots?.get(0) !== undefined

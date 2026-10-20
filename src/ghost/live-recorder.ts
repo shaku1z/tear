@@ -1,3 +1,4 @@
+import { readGhostForkOrigin } from "./fork-origin";
 import {
   createBrowserGhostEncoderWorker,
   GhostLocalVault,
@@ -9,7 +10,7 @@ import {
   type GhostVaultGuard,
 } from "./capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
-import { createLiveGhostBootstrapEvent } from "./live-causal-events";
+import { createLiveGhostBootstrapEvent, createLiveGhostForkBootstrapEvent } from "./live-causal-events";
 import { ghostRecordingProfile, type GhostRecordingProfileId } from "./recording-profiles";
 
 export interface GhostLiveRecorderStart {
@@ -108,6 +109,7 @@ export class GhostLiveRecorder {
 
   start(input: GhostLiveRecorderStart): void {
     if (this.active) throw new Error("Ghost V3 recorder session is already active");
+    const origin = readGhostForkOrigin(input.provenance);
     const session: LiveGhostCaptureSession = {
       id: input.sessionId,
       sequence: ++this.#nextSequence,
@@ -116,12 +118,12 @@ export class GhostLiveRecorder {
       opening: null,
       flushing: null,
       pending: [],
-      lastRecordedTick: 0,
+      lastRecordedTick: origin?.checkpoint.tick ?? 0,
       failure: null,
     };
     this.#activeSession = session;
     this.#failure = null;
-    this.#enqueue(session, "events", 0, createLiveGhostBootstrapEvent(input.sessionId, input.provenance));
+    this.#enqueue(session, "events", session.lastRecordedTick, origin === undefined ? createLiveGhostBootstrapEvent(input.sessionId, input.provenance) : createLiveGhostForkBootstrapEvent(input.sessionId, input.provenance));
     session.opening = this.#open(session);
   }
 

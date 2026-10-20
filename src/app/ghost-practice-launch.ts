@@ -17,7 +17,7 @@ export interface GhostPracticeLaunchPort {
 
 export type GhostPracticeLaunchResult =
   | Readonly<{ ok: true; child: GhostPracticeChild; semanticHash: string }>
-  | Readonly<{ ok: false; message: string }>;
+  | Readonly<{ ok: false; message: string; completion?: Promise<GhostPracticeLaunchResult> }>;
 
 function validPracticeChild(child: GhostPracticeChild): boolean {
   const raw = child as unknown as Readonly<Record<string, unknown>>;

@@ -252,3 +252,11 @@ world frames120/240 and unchanged source custody passed in that same journey.
 Retained local evidence: `.codex/tmp/tear-resumption-20261018/studio-56a49044`
 under the owner's home, with adjacent build/browser logs. This is an engineered
 240-tick source; full-run, device and historical-pixel acceptance remain open.
+
+Recorded local challenge children now have a separately versioned fork origin.
+Theater opens such children at their admitted absolute checkpoint tick F and
+refuses seeks before F. Parent root/checkpoint/input/configuration/RNG custody is
+required again on reopen; ordinary tick-zero and v1 replay meanings are unchanged.
+Only explicit challenge launch enables a local child recording. Its native result
+is reexecuted from the origin before a guarded local result is retained; it never
+uses score/publication finish. See C37 for the supported rules and evidence limits.

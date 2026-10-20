@@ -60,6 +60,8 @@ export type ScreenAction =
   | { readonly type: "replay.jumpChapter"; readonly direction: -1 | 1 }
   | { readonly type: "replay.restart" }
   | { readonly type: "replay.practice" }
+  | { readonly type: "replay.challenge.open" }
+  | { readonly type: "replay.challenge.start"; readonly id: string }
   | { readonly type: "replay.coach.open" }
   | { readonly type: "replay.coach.viewMoment"; readonly id: string }
   | { readonly type: "replay.coach.control"; readonly command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section"; readonly delta: number }

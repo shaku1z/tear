@@ -1,3 +1,4 @@
+import { readGhostForkOrigin } from "./fork-origin";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { createGameplayCausalEvent } from "../tearbench/gameplay-causal-events";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
@@ -24,4 +25,13 @@ export function createLiveGhostBootstrapEvent(
     type: "system.checkpoint", tick: 0, phase: "pre-simulation", sequence: 0, source: "engine",
     payload: Object.freeze({ boundary: "v3-sidecar-opened", provenance: structuredClone(provenance) }),
   });
+}
+
+/** A new recording epoch at an actual committed checkpoint, never a run.started. */
+export function createLiveGhostForkBootstrapEvent(sessionId: string, provenance: Readonly<Record<string, unknown>>): TearCausalEventV1 {
+  const origin = readGhostForkOrigin(provenance);
+  if (origin === undefined) throw new TypeError("Missing fork origin.");
+  return Object.freeze({ format: "tear-contract", kind: "event", schemaVersion: 1, id: ghostLiveBootstrapEventId(sessionId),
+    type: "system.checkpoint", tick: origin.checkpoint.tick, phase: "pre-simulation", sequence: 0, source: "engine",
+    payload: Object.freeze({ boundary: "v3-fork-sidecar-opened", provenance: structuredClone(provenance) }) });
 }

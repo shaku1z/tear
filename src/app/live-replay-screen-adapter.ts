@@ -1,3 +1,4 @@
+import { reopenRecordedGhostChallenge } from "../ghost/browser-recorded-challenge";
 import { createBrowserGhostReplayPresentation, createBrowserGhostStudioMedia } from "./browser-ghost-studio-media";
 import { stableVerificationHash } from "../replay/hash";
 import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-history";
@@ -36,6 +37,7 @@ export interface ReplayScreenAdapter {
   readonly togglePause: () => void; readonly seekBy: (delta: number) => void; readonly seekToFraction: (fraction: number) => void;
   readonly jumpChapter: (direction: number) => void; readonly restart: () => void; readonly toggleInfo: () => void;
   readonly practice: () => void;
+  readonly openChallenges: () => void; readonly startChallenge: (id: string) => void;
   readonly openCoach: () => void; readonly selectCoachBaseline: (id: string) => void;
   readonly practiceCoachFinding: (findingId: string) => void;
   readonly viewCoachMoment: (id: string) => void;
@@ -46,7 +48,7 @@ export interface ReplayScreenAdapter {
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
 }
 
-type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "viewCoachMoment" | "controlCoach" | "toggleRunDna" | "toggleStudio" | "createStudioCutList" | "markStudioIn" | "clearStudioCuts" | "exportStudio" | "cancelStudio" | "downloadStudio">;
+type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "openChallenges" | "startChallenge" | "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "viewCoachMoment" | "controlCoach" | "toggleRunDna" | "toggleStudio" | "createStudioCutList" | "markStudioIn" | "clearStudioCuts" | "exportStudio" | "cancelStudio" | "downloadStudio">;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
 /** Route-triggered replay facade; heavyweight world playback loads only when a replay is opened. */
@@ -124,7 +126,10 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   async function enterGhostCapsule(id: string, from: LegacyAppScreen = "profile"): Promise<GhostTheaterOpenResult> {
     const capsule = await readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined);
     if (capsule === undefined) return refuseGhostTheater("capsule-unavailable");
-    const opened = theater.open(capsule, from);
+    let evidence: Awaited<ReturnType<typeof reopenRecordedGhostChallenge>>;
+    try { evidence = await reopenRecordedGhostChallenge(services.browserIndexedDb, capsule); }
+    catch { return refuseGhostTheater("source-verification", capsule.manifest.rootIntegrity); }
+    const opened = theater.open(capsule, from, evidence);
     if (opened.kind === "refused") return opened;
     if (active === "legacy" && runtime !== undefined) runtime.exit();
     if (active === "comparison") comparison.exit();
@@ -160,6 +165,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     jumpChapter: (direction) => { if (active === "theater") theater.jumpCheckpoint(direction); else if (active === "comparison") comparison.stepOccurrence(direction < 0 ? -1 : 1); else invoke((value) => { value.jumpChapter(direction); }); },
     restart: () => { if (active === "theater") theater.restart(); else if (active === "comparison") comparison.restart(); else invoke((value) => { value.restart(); }); },
     practice: () => { if (active === "theater") theater.practice(); },
+    openChallenges: () => { if (active === "theater") theater.openChallenges(); },
+    startChallenge: (id) => { if (active === "theater") theater.startChallenge(id); },
     openCoach: () => { if (active === "theater") theater.openCoach(); },
     selectCoachBaseline: (id) => { if (active === "theater") theater.selectCoachBaseline(id); },
     practiceCoachFinding: (findingId) => { if (active === "theater") theater.practiceCoachFinding(findingId); },

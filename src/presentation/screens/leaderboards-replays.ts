@@ -161,6 +161,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.textAlign = "right"; canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(12, true);
     canvas.fillText(`${view.elapsed} / ${view.duration}`, barX + barWidth, barY - 10); canvas.restore();
 
+    if (view.challenge) { challengeState(view); return; }
     if (view.coach) { coachState(view); return; }
     const controlY = height - 66 - safe.b;
     context.enqueue({ x: 220 + safe.l, y: controlY, w: 64, h: 44, label: "|◀", action: { type: "replay.jumpChapter", direction: -1 } });
@@ -170,6 +171,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: 552 + safe.l, y: controlY, w: 84, h: 44, label: "↺", action: { type: "replay.restart" } });
     if (view.theater) context.enqueue({ x: 644 + safe.l, y: controlY, w: 180, h: 44, label: "PRACTICE",
       enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
+    if (view.theater) context.enqueue({ x: width / 2 - 110, y: 76, w: 220, h: 32, label: "LOCAL CHALLENGE", action: { type: "replay.challenge.open" } });
     if (view.theater) context.enqueue({ x: 832 + safe.l, y: controlY, w: 120, h: 44, label: "COACH",
       action: { type: "replay.coach.open" } });
     if (view.theater) context.enqueue({ x: 960 + safe.l, y: controlY, w: 120, h: 44, label: "RUN DNA",
@@ -238,6 +240,23 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     });
     ui.wrappedText(canvas, "Each row is reconstructed from its own verified source capsule. This compares semantic simulation state only; pixels, PCM, haptics, and device output are not compared here.",
       x + 34, y + panelHeight - 50, panelWidth - 68, 16, ui.t.type.micro, "left", ui.t.alpha.muted);
+  }
+
+  function challengeState(view: ReplayScreenView): void {
+    const challenge = view.challenge;
+    if (challenge === undefined) return;
+    const { canvas } = context, w = Math.min(820, width - 48), x = width / 2 - w / 2;
+    const compact = height < 600, top = compact ? 40 : 100, choicesY = compact ? 174 : 263;
+    ui.panel(canvas, x, top, w, Math.min(510, height - top - 16));
+    ui.title(canvas, "LOCAL RECORDED CHALLENGE", width / 2, top + 32, ui.t.type.label);
+    ui.text(canvas, `CHECKPOINT ${String(challenge.tick)} · UNRANKED · NO SAVED PROGRESSION`, width / 2, top + 56, ui.t.type.micro, "center");
+    ui.wrappedText(canvas, compact && view.notice ? view.notice.slice(0, 140) : "Same captured world, build and RNG. Pause → MAIN MENU → QUIT stops without success. Daily/community, learned and TearBot challenges are unavailable.", x + 24, top + 80, w - 48, 17, ui.t.type.micro);
+    if (challenge.result !== undefined) ui.text(canvas, `RECORDED RESULT · ${challenge.result.toUpperCase()} · ${String(challenge.elapsedTicks)} TICKS`, width / 2, choicesY + 15, ui.t.type.label, "center");
+    else if (challenge.choices.length === 0) ui.text(canvas, "Choose a verified playable checkpoint with a supported native goal.", width / 2, choicesY + 15, ui.t.type.micro, "center");
+    challenge.choices.slice(0, 3).forEach((choice, index) => { context.enqueue({ x: x + 24, y: choicesY + index * 38, w: w - 48, h: 32, label: choice.label,
+      action: { type: "replay.challenge.start", id: choice.id } }); });
+    if (view.notice && !compact) ui.wrappedText(canvas, view.notice, x + 24, 460, w - 48, 18, ui.t.type.micro);
+    context.enqueue({ x: width / 2 - 110, y: Math.min(height - 44, 540), w: 220, h: 32, label: "RETURN TO THEATER", action: { type: "replay.challenge.open" } });
   }
 
   function coachState(view: ReplayScreenView): void {

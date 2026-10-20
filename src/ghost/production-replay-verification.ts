@@ -1,3 +1,4 @@
+import { requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
 import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
@@ -151,8 +152,11 @@ export interface GhostProductionReplayVerification {
  * trust, mutate custody, or substitute a visual/presentation result.
  */
 export function verifyGhostCapsuleProductionReplay(
-  capsule: GhostReadCapsule,
+  capsule: GhostReadCapsule, forkPermit?: GhostForkPermit,
 ): GhostProductionReplayVerification {
+  let forkOrigin;
+  try { forkOrigin = requireGhostForkPermit(capsule, forkPermit); }
+  catch (error) { return { status: "unavailable", comparisons: [], mappingIssues: [error instanceof Error ? error.message : "Fork parent unavailable."] }; }
   const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
   const receipts = capsule.tracks.results.flatMap((entry) => {
     const receipt = readGhostAuthoritativeReceipt(entry.value);
@@ -177,6 +181,7 @@ export function verifyGhostCapsuleProductionReplay(
   catch (error) { return Object.freeze({ status: "mismatch", comparisons: Object.freeze([]),
     mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]) }); }
   const composition = createProductionGhostReplayComposition({ seed: mapped.ghost.snapshots[0]?.seed ?? "unknown", inputSnapshots: inputs,
+    ...(forkOrigin === undefined ? {} : { forkOrigin }),
     requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }),
     ...(openingPermit === undefined ? {} : { openingPermit }) });
   const comparisons: GhostProductionReceiptComparison[] = [];

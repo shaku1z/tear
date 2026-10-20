@@ -13,6 +13,20 @@ import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
 import { createLiveGhostFrameRecording } from "../../src/app/live-ghost-frame-recording";
 import type { LiveGhostRecordingSessionState } from "../../src/app/live-ghost-recording-session-state";
+import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
+import { createGhostReplayRunContext, ghostReplayContextFingerprint } from "../../src/ghost/replay-admission";
+import { ghostLiveBootstrapEventId } from "../../src/ghost/live-causal-events";
+import { issueGhostForkPermit, readGhostForkOrigin, type GhostForkOriginV1 } from "../../src/ghost/fork-origin";
+import { challengeGoal, recordedGhostChallengeChoices, verifyRecordedGhostChallenge } from "../../src/ghost/recorded-challenge";
+import { createLiveGhostChallengeController } from "../../src/app/live-ghost-challenge-controller";
+import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
+import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
+import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-events";
+import { stableVerificationHash } from "../../src/replay/hash";
+import type { ReplayActionEnvelope } from "../../src/replay/envelope";
+import { reopenRecordedGhostChallenge } from "../../src/ghost/browser-recorded-challenge";
+import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
+vi.mock("../../src/ghost/indexeddb-vault-backend", () => ({ createIndexedDbGhostVaultBackend: vi.fn() }));
 
 const trident: GhostReplayTrident = {
   command: { kind: "command", status: "verified", available: true, resumable: true, seekable: false, reason: "fixture" },
@@ -126,5 +140,112 @@ describe("Ghost application-frame evidence", () => {
     frames.installed("boss-2", 1.4, 0); frames.end(0);
     expect(recorder.record.mock.calls).toHaveLength(1);
     expect(recorder.record.mock.calls[0]?.[2]).toMatchObject({ payload: { format: "tearghost-intro-install", actorId: "boss-2" } });
+  });
+});
+
+describe("Recorded local challenge continuation", () => {
+  it("records a real nonzero fork, reexecutes its catch goal, seals abandoned attempts and preserves parent custody", async () => {
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend()), reader = new GhostCapsuleReader(vault);
+    vi.mocked(createIndexedDbGhostVaultBackend).mockResolvedValue(vault.backend());
+    const recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-10-19T00:00:01Z", maxStagingEntries: 4096 });
+    const bus = new TearGameplayEventBus(); let nativeTick = 0, sequence = 0;
+    bus.setTickSource(() => nativeTick);
+    bus.subscribe((event) => { if (recorder.active) recorder.record("events", event.tick, createGameplayCausalEvent(event, ++sequence, `native-${String(sequence)}`, "engine")); });
+    const source = createProductionGhostReplayComposition({ seed: "challenge-source", mode: "endless", gameplayEvents: bus }).create(undefined);
+    const first = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "parent-origin");
+    const context = createGhostReplayRunContext({ runId: "challenge-source-run", seed: first.snapshot.seed, mode: "endless", difficulty: "normal", weaponId: "sword", ticksPerSecond: 120,
+      initialState: "seeded-run-start", applicationFrames: GHOST_APPLICATION_FRAMES_V1, build: first.snapshot.provenance.build, rng: first.snapshot.rng });
+    const capture = (session: typeof source, id: string) => {
+      const value = captureProductionReplayCheckpoint(session.replay, session.combat, session.waveReward, `${id}-${String(session.simulation.scheduler.tick)}`, context.build);
+      const snapshot = { ...value.snapshot, provenance: { ...value.snapshot.provenance, sourceId: ghostLiveBootstrapEventId(id) } };
+      recorder.record("keyframes", snapshot.tick, snapshot); recorder.record("rng", snapshot.tick, snapshot.state["tear.rng.v1"]);
+      const receipt = createGhostAuthoritativeReceipt(snapshot.tick, value.semanticHash, value.input, { version: 1, cursor: { version: 1, ordinal: 0, sequence: 0 }, keyframe: { id: snapshot.id, exactHash: snapshot.hashes.exact } });
+      recorder.record("results", snapshot.tick, receipt); return { snapshot, receipt };
+    };
+    const actionsAt = (tick: number, early = false): ReplayActionEnvelope[] => tick === (early ? 121 : 140)
+      ? [{ kind: "command", tick, id: 1, command: { type: "weapon", intent: "throw", phase: "pressed" } }]
+      : tick === (early ? 131 : 150) ? [{ kind: "command", tick, id: 2, command: { type: "weapon", intent: "recall", phase: "pressed" } }] : [];
+    recorder.start({ sessionId: "challenge-parent", createdAt: "2026-10-19T00:00:00Z", provenance: { replayContext: context } }); capture(source, "challenge-parent");
+    let checkpoint: ReturnType<typeof capture> | undefined;
+    for (let tick = 1; tick <= 300; tick++) {
+      nativeTick = tick; const actions = actionsAt(tick); actions.forEach((action) => { recorder.record("commands", tick, action); }); source.simulation.advanceOne(actions);
+      if (tick === 120) checkpoint = capture(source, "challenge-parent");
+    }
+    capture(source, "challenge-parent"); await recorder.finish();
+    const parent = await reader.read("challenge-parent"), original = await vault.exportCapsule(parent.manifest.id), parentSession = createGhostProductionReplaySession(parent);
+    const definition = recordedGhostChallengeChoices(parent, checkpoint?.snapshot ?? first.snapshot).find((choice) => choice.rule === "blade-return");
+    if (definition === undefined || checkpoint === undefined) throw new Error(`Actual source catch/checkpoint missing: ${JSON.stringify({ screen: source.waveReward.screen(), blade: source.replay.world.state.blade()?.state, events: parent.tracks.events.map((entry) => entry.value).filter((value) => typeof value === "object" && value !== null && "type" in value && String(value.type).startsWith("blade.")) })}`);
+    expect(definition.forkTick).toBe(120); expect(parentSession.seek(120).tick).toBe(120);
+    const child = { ...parentSession.forkPractice(120, "race-practice"), challenge: definition };
+    for (const stop of [false, true]) {
+      sequence = 0; const id = stop ? "challenge-stopped" : "challenge-caught";
+      const session = createProductionGhostReplayComposition({ seed: context.run.seed, gameplayEvents: bus }).create(child.snapshot);
+      session.simulation.input.beginTick(120, []);
+      const anchor = captureProductionReplayCheckpoint(session.replay, session.combat, session.waveReward, `${id}-origin`, context.build);
+      const origin: GhostForkOriginV1 = { format: "tearghost-fork-origin", schemaVersion: 1,
+        parent: { capsuleId: parent.manifest.id, rootIntegrity: parent.manifest.rootIntegrity, replayRootHash: parentSession.sourceRootHash, contextHash: ghostReplayContextFingerprint(context) },
+        checkpoint: { id: checkpoint.snapshot.id, tick: 120, exactHash: checkpoint.snapshot.hashes.exact, semanticHash: checkpoint.snapshot.hashes.semantic, receiptHash: stableVerificationHash(checkpoint.receipt) },
+        childAnchor: { id: `${id}-120`, exactHash: anchor.snapshot.hashes.exact, semanticHash: anchor.snapshot.hashes.semantic, inputHash: stableVerificationHash(createGhostAuthoritativeReceipt(120, anchor.semanticHash, anchor.input).input), configurationHash: stableVerificationHash(anchor.snapshot.state["tear.configuration.v1"]), rngHash: stableVerificationHash(anchor.snapshot.state["tear.rng.v1"]) },
+        inputPolicy: "release-all", framePolicy: "fresh-child-frame-from-committed-frontier", sourceFrameReceiptHash: stableVerificationHash(checkpoint.receipt.applicationFrames), challengeHash: stableVerificationHash(definition) };
+      recorder.start({ sessionId: id, createdAt: "2026-10-19T00:00:00Z", provenance: { replayContext: context, forkOrigin: origin, challenge: definition } });
+      capture(session, id); let finalTick = 120;
+      const observed: ReturnType<typeof createGameplayCausalEvent>[] = [];
+      const unsubscribe = bus.subscribe((event) => { observed.push(createGameplayCausalEvent(event, observed.length + 1, `goal-${String(observed.length)}`, "engine")); });
+      if (stop) {
+        let paused = false, endpoint: ReturnType<typeof capture> | undefined, finished: Promise<unknown> | undefined;
+        const owner = createLiveGhostChallengeController({ prepare: () => Promise.resolve({ ok: true, child, semanticHash: anchor.semanticHash }),
+          pause: () => { paused = true; }, notice: () => undefined,
+          captureEndpoint(tick) { endpoint = capture(session, id); finalTick = tick; },
+          finish(reason, tick) {
+            const result = recorder.finish({ format: "tearghost-challenge-end", reason, authoritativeTick: tick, originTick: 120 }).then(async () => {
+              const sealed = await reader.read(id); return verifyRecordedGhostChallenge(sealed, parent, issueGhostForkPermit(sealed, parent));
+            }); finished = result; return result;
+          } });
+        const launching = owner.launch(child); if (!launching.ok) await launching.completion;
+        session.simulation.advance(25, () => [], { shouldStep: () => !paused, beforeStep(tick) { nativeTick = tick; }, afterStep(tick) { owner.afterStep(tick); owner.stop(); } });
+        expect(session.simulation.scheduler.tick).toBe(123); expect(endpoint?.snapshot.tick).toBe(121); expect(endpoint?.receipt.input.tick).toBe(121);
+        expect(finished).toBeDefined(); await finished;
+      } else {
+        for (let tick = 121; tick <= 120 + definition.limitTicks; tick++) {
+          nativeTick = tick; const actions = actionsAt(tick, true); actions.forEach((action) => { recorder.record("commands", tick, action); }); session.simulation.advanceOne(actions); finalTick = tick;
+          if (challengeGoal(definition, observed) !== undefined) break;
+        }
+        capture(session, id); await recorder.finish({ format: "tearghost-challenge-end", reason: "goal", authoritativeTick: finalTick, originTick: 120 });
+      }
+      unsubscribe();
+      const capsule = await reader.read(id), permit = issueGhostForkPermit(capsule, parent), result = verifyRecordedGhostChallenge(capsule, parent, permit);
+      expect(result.status).toBe(stop ? "abandoned" : "succeeded"); expect(result.finalTick).toBeGreaterThan(120);
+      expect(result.proof.completed).toBe(!stop);
+      const reopened = createGhostProductionReplaySession(capsule, {}, permit);
+      expect(reopened.firstTick).toBe(120); expect(reopened.lastTick).toBe(finalTick); expect(reopened.seek(finalTick).tick).toBe(finalTick); expect(() => reopened.seek(119)).toThrow(/range/); expect(() => reopened.seek(finalTick + 1)).toThrow(/range/);
+      expect(() => createGhostProductionReplaySession(capsule)).toThrow(/admission/);
+      expect(() => issueGhostForkPermit(capsule, { ...parent, manifest: { ...parent.manifest, rootIntegrity: "changed" } })).toThrow(/changed/);
+      expect(() => readGhostForkOrigin({ forkOrigin: { ...origin, schemaVersion: 99 } })).toThrow(/Unsupported/);
+      expect(verifyRecordedGhostChallenge(await reader.read(id), parent, permit)).toEqual(result);
+      const fakeDefeat = { ...capsule, tracks: { ...capsule.tracks, results: capsule.tracks.results.map((entry) => {
+        if (typeof entry.value !== "object" || entry.value === null || !("format" in entry.value) || entry.value.format !== "tearghost-challenge-end") return entry;
+        return { ...entry, value: { ...entry.value, reason: "defeated" } };
+      }) } };
+      expect(() => verifyRecordedGhostChallenge(fakeDefeat, parent, permit)).toThrow(/endpoint disagrees/);
+      const persisted = await reopenRecordedGhostChallenge({} as IDBFactory, capsule, true);
+      expect(persisted?.result).toEqual(result);
+      const resultBytes = await vault.backend().get("analysis", `recorded-challenge:${id}`);
+      expect(resultBytes).toBe(JSON.stringify(result));
+      expect((await reopenRecordedGhostChallenge({} as IDBFactory, capsule, true))?.result).toEqual(result);
+      expect(await vault.backend().get("analysis", `recorded-challenge:${id}`)).toBe(resultBytes);
+    }
+    expect(await vault.exportCapsule(parent.manifest.id)).toBe(original);
+  }, 30000);
+
+  it("invalidates preparation before replacement and never clears a newer owner on late rejection", async () => {
+    let signal: AbortSignal | undefined, reject: ((error: Error) => void) | undefined;
+    const prepare = vi.fn((_child, owner: AbortSignal) => { signal = owner; return new Promise<never>((_resolve, fail) => { reject = fail; }); });
+    const controller = createLiveGhostChallengeController({ prepare, finish: vi.fn(), pause: vi.fn(), notice: vi.fn() });
+    const child = { challenge: {} } as unknown as Parameters<typeof controller.launch>[0];
+    const first = controller.launch(child); controller.reset(); expect(signal?.aborted).toBe(true);
+    const oldReject = reject; controller.launch(child); oldReject?.(new Error("old source unavailable"));
+    if (!first.ok) await first.completion;
+    expect(controller.active()).toBe(true); const refused = controller.launch(child); expect(refused.ok).toBe(false); if (!refused.ok) expect(refused.message).toContain("already active");
+    controller.reset(); reject?.(new Error("cancelled"));
   });
 });

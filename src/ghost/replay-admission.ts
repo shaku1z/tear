@@ -1,3 +1,4 @@
+import { assertGhostForkAnchor, readGhostForkOrigin } from "./fork-origin";
 import { ghostRootIntegrity, type TearGhostManifest } from "./capsule-vault";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { ghostLiveBootstrapEventId } from "./live-causal-events";
@@ -253,6 +254,7 @@ const openingPermits = new WeakMap<GhostRecordedOpeningPermit, Readonly<{ snapsh
 
 /** Requires complete, reader-verified capsule linkage before allowing the exceptional opening UI. */
 export function issueGhostRecordedOpeningPermit(capsule: GhostReadCapsule): GhostRecordedOpeningPermit | undefined {
+  if (readGhostForkOrigin(capsule.manifest.provenance) !== undefined) return undefined;
   const mapping = mapGhostCapsuleToReplayEnvelope(capsule);
   if (mapping.issues.length > 0) throw new TypeError(`capsule replay mapping is invalid: ${mapping.issues.map((issue) => `${issue.track}@${String(issue.tick)}: ${issue.reason}`).join("; ")}`);
   const anchors = capsule.tracks.keyframes.flatMap((entry) => {
@@ -416,6 +418,10 @@ function staticBuildMatches(left: GhostReplayBuildFingerprint, right: GhostRepla
  * never replay truth or authenticity.
  */
 export function assessGhostReplayBootstrap(capsule: GhostReadCapsule, context: GhostReplayRunContextV1): string | undefined {
+  try {
+    const origin = readGhostForkOrigin(capsule.manifest.provenance);
+    if (origin !== undefined) { assertGhostForkAnchor(capsule, origin); return undefined; }
+  } catch (error) { return error instanceof Error ? error.message : "Invalid fork declaration."; }
   const expectedId = ghostLiveBootstrapEventId(capsule.manifest.id);
   const bootstrapEntries = capsule.tracks.events.filter((entry) => {
     const raw = record(entry.value);

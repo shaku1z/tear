@@ -1,3 +1,4 @@
+import { ghostRecordingFirstTick } from "./fork-origin";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostReadCapsule } from "./capsule-reader";
 
@@ -137,6 +138,8 @@ export function readGhostApplicationClockSchedule(capsule: GhostReadCapsule, run
     if (events.length !== 0 || capsule.tracks.results.some((entry) => record(entry.value) && entry.value.applicationFrames !== undefined)) throw new TypeError("application frames lack immutable bootstrap declaration");
     return undefined;
   }
+  const firstTick = ghostRecordingFirstTick(capsule);
+  if (events.some((event) => event.tick < firstTick) || capsule.tracks.results.some((entry) => entry.tick < firstTick)) throw new TypeError("Application clock precedes recording origin.");
   const clockSequences = new Set(events.map((event) => event.sequence)), seenSequences = new Set<number>();
   for (const entry of capsule.tracks.events) {
     const value = entry.value;

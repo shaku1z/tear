@@ -1394,7 +1394,10 @@ preceding checkpoint. Missing or unclassified facts remain unavailable. The
 normal `56a49044` browser journey selected three recordings, displayed the
 shared `(0, 240]` interval, sought an identified throw at tick140, returned to
 Coach, and launched unranked practice at checkpoint120 without changing its
-source. Skill ratings, population claims and recorded challenge completion
+source. Skill ratings and population claims remain unavailable. Explicit local
+Theater challenges now record an unranked child at its real checkpoint tick,
+reexecute native catch/wave/boss conditions and retain a guarded local result;
+normal browser/profile-equality acceptance remains pending. Broader challenges
 remain separate work.
 
 ### C38 local publication review

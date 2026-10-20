@@ -150,3 +150,38 @@ Retained local `studio-56a49044` evidence includes the WebM, decoded PNGs,
 owner's `.codex/tmp/tear-resumption-20261018`. This engineering fixture does
 not prove population skill, human authorship, full persisted-profile equality,
 recorded challenge outcomes or the complete C37 product surface.
+
+## Local recorded challenges
+
+Theater now offers an explicit LOCAL CHALLENGE at a verified playable checkpoint.
+Available rules are a native throw-and-catch return race when the source actually
+contains one, clearing the captured current wave, and defeating a captured living
+boss. A contact/throw-resolved event cannot satisfy return. Broader Daily Echo,
+learned, Nemesis and TearBot authorities remain unavailable.
+
+The child retains the actual absolute fork tick, released held input, captured
+world/configuration/RNG and immutable parent roots. Its independent versioned
+fork origin and fresh application-frame epoch do not reinterpret ordinary v1
+tick-zero replay context. Parent absence/drift, unknown origins and pre-origin
+seeks refuse. Play remains unranked with no saved progression or publication;
+local recording is the explicit exception to ordinary practice's no-recording
+policy. It uses the local recorder drain/seal path, never score submission or
+publishing finish. Preparing work is cancelled before replacement can adopt or
+resume a stale world.
+
+Actual native goals stop the attempt at a committed step; Pause → MAIN MENU → QUIT or
+replacement abandons it. A sealed attempt is reread and reexecuted from its
+origin, without adopting later keyframes as proof of a goal. Only a reproduced
+goal can succeed, and defeat needs a reexecuted native terminal event. The
+separate retained result uses guarded parent/child manifest identities and is
+rederived on reopen. Completing a bounded challenge does not claim game victory.
+Endpoint snapshots are captured at the committed step before pause; drain/seal
+waits for the real application frame to close. Theater ends at the last verified
+authoritative receipt, retaining clock-tail evidence without simulating skipped ticks.
+
+Focused production controls exercise a tick-120 fork, actual native catch,
+abandoned recording, seal/reopen, exact result retry, foreign parent and
+pre-origin refusal, false defeat refusal, source byte preservation and cancelled
+preparation ownership. Normal live UI/profile-equality browser acceptance is
+pending the parent's fresh build; no human, learned-quality or population claim
+follows from these engineered controls.
