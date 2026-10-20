@@ -1279,5 +1279,18 @@ READY shows an unfinished summary and revisitable exercises. Redo uses the origi
 objective predicates, preserves genuinely completed work, and reaches normal completion
 only after every remaining exercise is earned. In already-unlocked Lab drills, the same
 explicit advance exits the attempt without changing durable eligibility or prior credit.
-Normal full-course acceptance remains required. Browser acceptance of these new controls
-is pending the parent’s final fresh build and normal journey.
+The fresh clean `2455393e` test-standalone build and expanded normal browser journey
+passed: the original course completed in 12,892 fixed ticks, followed by genuine Lab
+comparison, a separately issued course with thirteen rendered skips, restored unearned
+summary, native blade failures observed through 2/4/6 and the rendered checkpoint assist.
+Saved progress and currency stayed unchanged across skipping and assistance. Production
+controls also prove genuine skipped-lesson redo and single completion, post-success
+failure suppression, interruption handling and inactive annex assistance. Parent inspected
+the unfinished-summary and Assist captures. This is scripted desktop evidence; physical
+device usability, mastery and Version 1 retirement remain open.
+
+Browser acceptance exposed and repaired comparison mode surviving after its personal best
+was cleared on a new course or lesson. Clearing now selects preview and preserves playback
+rate; strict reference validation remains intact. The final HUD says **training summary**
+for both earned and unearned outcomes. All fourteen gold references replay against current
+source; the original precache limit remains unchanged (training chunk 1,554.76 kB).
