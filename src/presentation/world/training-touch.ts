@@ -2,6 +2,7 @@ import type {
   LegacyWorldRenderContext, PlaygroundHelpSnapshot, TouchControlsSnapshot, TutorialCardSnapshot,
 } from "./contracts";
 import { clamp, wrapLeft } from "./primitives";
+import { bossHudTop } from "./hud";
 
 export interface TutorialCardLayout {
   readonly x: number; readonly y: number; readonly width: number; readonly height: number;
@@ -14,6 +15,7 @@ export interface TutorialCardLayout {
 export function tutorialCardLayout(
   viewportWidth: number,
   safe: Readonly<{ top: number; right: number; left: number }>,
+  minimumTop = 0,
 ): TutorialCardLayout {
   const height = 138;
   const right = 28 + safe.right;
@@ -22,10 +24,10 @@ export function tutorialCardLayout(
   const availableBesideMeter = viewportWidth - right - (meterRight + gap);
   if (availableBesideMeter >= 460) {
     const width = Math.min(700, availableBesideMeter);
-    return { x: viewportWidth - right - width, y: 24 + safe.top, width, height };
+    return { x: viewportWidth - right - width, y: Math.max(24 + safe.top, minimumTop), width, height };
   }
   const width = Math.min(700, Math.max(320, viewportWidth - 56 - safe.left - safe.right));
-  return { x: (viewportWidth - width) / 2, y: 138 + safe.top, width, height };
+  return { x: (viewportWidth - width) / 2, y: Math.max(138 + safe.top, minimumTop), width, height };
 }
 
 export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) {
@@ -45,7 +47,8 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
 
   function tutorialCard(snapshot: TutorialCardSnapshot): void {
     const type = ui.t.type;
-    const { width, x, y, height } = tutorialCardLayout(context.width, context.safe);
+    const minimumTop = snapshot.bossPractice ? bossHudTop(context, true, 2) + 2 * ui.t.metric.bossHudH : 0;
+    const { width, x, y, height } = tutorialCardLayout(context.width, context.safe, minimumTop);
     canvas.save();
     canvas.globalAlpha = 0.88; canvas.fillStyle = ui.t.color.paper; canvas.fillRect(x, y, width, height);
     canvas.globalAlpha = 0.45; canvas.strokeStyle = "#000"; canvas.lineWidth = 1.5; canvas.strokeRect(x, y, width, height);

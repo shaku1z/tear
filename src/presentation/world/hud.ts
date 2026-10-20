@@ -1,6 +1,15 @@
 import type { HudSnapshot, LegacyWorldRenderContext } from "./contracts";
 import { clamp } from "./primitives";
 
+/** Shared lower lane for boss UI and adjacent teaching cards. */
+export function bossHudTop(context: LegacyWorldRenderContext, protectTextContrast: boolean | undefined, multiplier: number): number {
+  const scale = context.cssPerLogicalPixel ?? 1;
+  const compact = protectTextContrast === true && Number.isFinite(scale) && scale > 0 && scale < 0.75;
+  const micro = compact ? Math.max(context.ui.t.type.micro, context.ui.t.type.micro / scale) : context.ui.t.type.micro;
+  return (compact ? 205 + micro * 1.5 : protectTextContrast && multiplier > 1 ? 143 + micro * 1.5 : 138)
+    + (compact ? context.safe.top : 0);
+}
+
 export function createHudRenderer(context: LegacyWorldRenderContext) {
   const canvas = context.canvas;
   const ui = context.ui;
@@ -105,9 +114,7 @@ export function createHudRenderer(context: LegacyWorldRenderContext) {
     if (snapshot.boss) {
       const boss = snapshot.boss;
       // Leave half a text line below the combo meter before the epithet's ascent.
-      const bossTop = compact ? 205 + micro * 1.5
-        : snapshot.protectTextContrast && run.multiplier > 1 ? 143 + micro * 1.5 : 138;
-      const width = 620, bossX = (context.width - width) / 2, bossY = bossTop + top;
+      const width = 620, bossX = (context.width - width) / 2, bossY = bossHudTop(context, snapshot.protectTextContrast, run.multiplier);
       const fraction = clamp(boss.hpFraction * (boss.introSweep ?? 1));
       ui.bossHud(canvas, { x: bossX, y: bossY, w: width, h: ui.t.metric.bossHudH, frac: fraction,
         fill: boss.color, phaseFlash: boss.phaseFlash, time: context.timeSeconds, lowGraphics: context.lowGraphics,

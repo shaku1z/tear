@@ -22,6 +22,7 @@ import {
   type EnemyVisualSnapshot,
 } from "../../src/presentation/world/entity-layer";
 import { tutorialCardLayout } from "../../src/presentation/world/training-touch";
+import { bossHudTop } from "../../src/presentation/world/hud";
 
 interface CanvasCall { readonly name: string; readonly arguments: readonly unknown[] }
 
@@ -253,6 +254,20 @@ describe("legacy world presentation renderers", () => {
     expect(narrow.y).toBeGreaterThan(119);
     expect(narrow.x).toBeGreaterThanOrEqual(0);
     expect(narrow.x + narrow.width).toBeLessThanOrEqual(1024);
+  });
+
+  it("keeps the rendered boss-practice card below the boss HUD at narrow and protected scales", () => {
+    for (const [width, scale, top] of [[1600, 1, 0], [1024, 1, 20], [1600, 0.5, 12], [1024, 0.25, 44]] as const) {
+      const calls: CanvasCall[] = [], ui = new TestUi(), base = renderContext(calls, ui);
+      const context = { ...base, width, cssPerLogicalPixel: scale, safe: { ...base.safe, top } };
+      createLegacyWorldRenderers(context).tutorialCard({ bossPractice: true, lessonIndex: 0, lessonCount: 1,
+        title: "ROOTBOUND · PHASE 2", description: "Read the boss recovery.", keys: [], final: false, completedBeat: 0 });
+      const card = calls.find(call => call.name === "fillRect" && call.arguments[3] === 138);
+      expect(card).toBeDefined();
+      expect(Number(card?.arguments[1])).toBeGreaterThanOrEqual(bossHudTop(context, true, 2) + ui.t.metric.bossHudH);
+      expect(Number(card?.arguments[0])).toBeGreaterThanOrEqual(0);
+      expect(Number(card?.arguments[0]) + Number(card?.arguments[2])).toBeLessThanOrEqual(width);
+    }
   });
 
   it("renders Source/finale depth and every banner/reticle state through snapshots", () => {
