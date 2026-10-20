@@ -297,10 +297,18 @@ operational boundary it proves.
   A bounded developer probe killed the supervisor after committed tick 32 but
   before ACK; a new worker began at 33 and ran 88 steps to the original 120-tick
   truncation, matching the uninterrupted terminal hash and complete action trace.
-  That proof is truncation, not natural defeat. A baseline-only check of the
-  existing 720-tick One-Hit scenario with held primary/partial aim naturally
-  defeated at tick 222; its final clean-source crash/recovery acceptance remains
-  separate. Run the named `R12 checkpoint v2 real supervisor kill` test in
+  That developer proof is truncation. Final clean-source acceptance at
+  `58ceb9ceaed29d1ba7242b681210a311a5d15563` separately passed on 2026-10-20:
+  the existing 720-tick One-Hit scenario with held primary/partial aim naturally
+  defeated at tick 222. After killing supervisor 53464 and worker 55420 at
+  committed tick 32, worker 39808 began at 33 and executed only 190 suffix steps.
+  Its complete terminal state/action trace and native `run.defeated` event were
+  identical to the uninterrupted run, with semantic hash `d144232e478164fb`.
+  Original request/admission/deadline were unchanged; stale publication refused
+  without mutation. Source binding was clean and exact. Retained artifacts:
+  `C:/Users/realm/AppData/Local/Temp/tear-r12-checkpoint-native-FF1Buz/`;
+  log `C:/tmp/tear-r12-checkpoint-20261020/parent-natural-clean-58ceb9ce.log`.
+  Reproduce with the named `R12 checkpoint v2 real supervisor kill` test in
   `tests/production-headless-worker-dispatcher.test.mjs` with
   `TEAR_R12_NATURAL_TERMINAL=1` and without `TEAR_R12_NATIVE_BASELINE_ONLY` for that
   acceptance. The default named test retains the bounded 120-tick control.
