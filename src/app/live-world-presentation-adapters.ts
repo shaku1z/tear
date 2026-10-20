@@ -253,7 +253,7 @@ export function createLiveWorldPresentationAdapters(
       shieldColor: d.CONFIG.colors.armoredShield, trickDecay: d.CONFIG.trick.decay,
       formatTime: services.formatTime, trickColor: services.trickColor, ease: services.ease });
     world.hud({ ...result.snapshot, protectTextContrast: d.Backdrop.needsHudTextContrast(stage.current) });
-    services.chase?.hud(canvas, width);
+    if (state.screen() === "playing") services.chase?.hud(canvas, width);
     if (run.mode === "tutorial") drawTutorialCard();
     else if (run.mode === "playground") drawPlaygroundHelp();
   };

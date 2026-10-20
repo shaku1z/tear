@@ -12,17 +12,17 @@ describe("live world capture layers", () => {
     const feedback = createLiveHudFeedbackState();
     feedback.set({ lagHp: 0.9, multiplier: 2, multiplierPop: 0.5 });
     const boss = { isBoss: true, hp: 100, maxHp: 100, _phaseFlashT: 0.5 };
-    const worldHud = vi.fn();
+    const worldHud = vi.fn(), chaseHud = vi.fn(); let screen = "playing";
     const state = {
       run: () => ({ mode: "endless", wave: 2, score: 0, runTime: 1, mult: 2, comboTimer: 1, spawnQueue: [], mods: { owned: {} } }),
       player: () => ({ hp: 79, maxHp: 100, dashCd: 0, shield: 0, maxShield: 0 }),
       enemies: () => [boss], bossIntro: () => null, hud: feedback.snapshot, advanceHud: feedback.advance,
-      hudClockSeconds: feedback.clockSeconds, lastUiDelta: () => 1 / 60,
+      screen: () => screen, hudClockSeconds: feedback.clockSeconds, lastUiDelta: () => 1 / 60,
     } as unknown as WorldPresentationState;
     const services = {
       dependencies: { CONFIG, A11Y: { flashScale: 1 }, UPGRADES: [], UI: { t: { color: { accent: "#abc" } } },
         Backdrop: { needsHudTextContrast: () => true } },
-      world: { hud: worldHud }, stage: { current: { accent: "#abc" } }, formatTime: String,
+      chase: { hud: chaseHud }, world: { hud: worldHud }, stage: { current: { accent: "#abc" } }, formatTime: String,
       trickColor: () => "#fff", ease: (value: number) => value,
     } as unknown as WorldPresentationServices;
     const adapter = createLiveWorldPresentationAdapters(state, services);
@@ -38,6 +38,10 @@ describe("live world capture layers", () => {
     expect(boss._phaseFlashT).toBe(0.5);
     adapter.drawHud();
     expect(worldHud.mock.calls[2]?.[0]).toMatchObject({ boss: { phaseFlash: 0.5 } });
+    expect(chaseHud).toHaveBeenCalledTimes(3);
+    for (const menu of ["draft", "reserve", "tierup", "paused"]) { screen = menu; adapter.drawHud(); }
+    expect(chaseHud).toHaveBeenCalledTimes(3);
+    screen = "playing"; adapter.drawHud(); expect(chaseHud).toHaveBeenCalledTimes(4);
     adapter.completeHudFrame(1 / 60);
     expect(boss._phaseFlashT).toBe(0.5 - 1 / 60);
   });

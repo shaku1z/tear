@@ -1,3 +1,4 @@
+import { preflightGhostRecordedCanonicalSnapshot } from "../../src/ghost/capsule-replay-envelope";
 import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
 import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { describe, expect, it, vi } from "vitest";
@@ -100,6 +101,25 @@ function fixture(includeTutorial = false) {
 }
 
 describe("live State Forge adapter ownership boundary", () => {
+  it.each([0, 1, 3])("captures a real partial projectile trail with %i samples before JSON hashing", (samples) => {
+    const host = fixture(), projectile = new host.replay.factories.Projectile(100, 200, 30, -40);
+    for (let i = 0; i < samples; i++) projectile.pushTrail(100 + i, 200 - i);
+    host.state.setProjectiles([projectile]);
+    const ring = projectile.hist, head = projectile.histHead, count = projectile.histCount;
+    const points = Array.from({ length: count }, (_, index) => ({ ...projectile.trailPoint(index) }));
+    const snapshot = host.capture(), portable = JSON.parse(JSON.stringify(snapshot)) as typeof snapshot;
+    expect(preflightGhostRecordedCanonicalSnapshot(snapshot)).toMatchObject({ ok: true, exactHash: snapshot.hashes.exact });
+    expect(preflightGhostRecordedCanonicalSnapshot(portable)).toMatchObject({ ok: true, exactHash: snapshot.hashes.exact, semanticHash: snapshot.hashes.semantic });
+    expect(projectile.hist).toBe(ring); expect(projectile.histHead).toBe(head); expect(projectile.histCount).toBe(count);
+    expect(Array.from({ length: count }, (_, index) => ({ ...projectile.trailPoint(index) }))).toEqual(points);
+    const saved = portable.state["tear.projectile.v1"] as { hist: unknown[]; histHead: number; histCount: number }[];
+    expect(saved[0]).toMatchObject({ histHead: head, histCount: count });
+    expect(saved[0]?.hist).toHaveLength(7);
+    expect(saved[0]?.hist.slice(samples)).toEqual(Array<null>(7 - samples).fill(null));
+    expect(host.restore(portable).ok).toBe(true);
+    expect(host.capture().hashes).toEqual(snapshot.hashes);
+  });
+
   it("restores tutorial behavior/help exactly, refuses malformed sessions before mutation and rolls back a late failure", () => {
     const host = fixture(true), tutorial = host.tutorial;
     if (!tutorial) throw new Error("tutorial fixture missing");

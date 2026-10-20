@@ -147,7 +147,9 @@ function encode(
     return encoded;
   }
   if (Array.isArray(value)) {
-    const encoded = Object.freeze(value.map((entry) => encode(entry, identities, stack)));
+    // Densify constructor-owned ring buffers before hashing. JSON turns holes
+    // into null; the captured codec must already have that same explicit shape.
+    const encoded = Object.freeze(Array.from(value, (entry) => encode(entry, identities, stack)));
     stack.delete(value);
     return encoded;
   }

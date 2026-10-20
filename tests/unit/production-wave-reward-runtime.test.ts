@@ -1,3 +1,6 @@
+import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
+import { GhostTimeline, validateGhostEventPayload } from "../../src/ghost/truth-kernel";
+import type { TearCausalEventV1 } from "../../src/tearbench/contracts";
 import { describe, expect, it } from "vitest";
 
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
@@ -6,6 +9,27 @@ import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events
 import { ghostReferenceBoundary, type GhostReferenceBoundary } from "../../src/ghost/live-ghost-reference-data";
 
 describe("production wave and reward runtime", () => {
+  it("records two real reward selections with strict loadout payloads and separate feedback facts", () => {
+    // Constructed wave clears isolate the actual reward/emission owners, not combat quality.
+    const replay = createProductionReplayWorld({ seed: "two-native-reward-selections", mode: "endless" });
+    const bus = new TearGameplayEventBus(), events: TearCausalEventV1[] = [];
+    bus.subscribe(event => events.push(createLiveGhostCausalEvent(event, events.length + 1)));
+    const runtime = createProductionWaveRewardRuntime(replay, { gameplayEvents: bus });
+    runtime.startNaturalOpening();
+    const selected: string[] = [];
+    for (let wave = 1; wave <= 2; wave++) {
+      const run = replay.world.state.run(); if (!run) throw new Error("run missing");
+      run.spawnQueue = []; replay.world.state.setEnemies([]); runtime.update(1);
+      const choice = runtime.reward.snapshot()?.choices[0]; if (!choice) throw new Error("draft missing");
+      selected.push(choice.id); runtime.reward.selectDraft(0);
+      expect(run.mods.owned[choice.id]).toBeGreaterThan(0);
+    }
+    expect(events.flatMap(event => validateGhostEventPayload(event))).toEqual([]);
+    expect(() => new GhostTimeline(events)).not.toThrow();
+    expect(events.filter(event => event.type === "draft.selected").map(event => event.payload.choiceId)).toEqual(selected);
+    expect(events.filter(event => event.type === "system.checkpoint" && event.payload.effect === "pickup")).toHaveLength(2);
+  });
+
   it("binds Chase boundaries to the stage actually loaded at emission, including native boss starts", () => {
     // Engineering transition setup; the real planner owns stage loading and native facts.
     const replay = createProductionReplayWorld({ seed: "chase-stage-boundary", mode: "gauntlet" }), bus = new TearGameplayEventBus();

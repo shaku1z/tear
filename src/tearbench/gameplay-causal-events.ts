@@ -15,7 +15,7 @@ const NATIVE_EFFECT_EVENTS = Object.freeze({ stolenBlade: "blade.stolen", revive
   parry: "combat.perfect-parry", "perfect-parry": "combat.perfect-parry", deflect: "combat.deflect",
   "blade-throw": "blade.thrown", "blade-recall": "blade.recalled", "blade-catch": "blade.caught",
   "dash-start": "player.dash-started", superslam: "blade.power-slam", slam: "blade.slam",
-  updraft: "blade.launch", pickup: "draft.selected", tierup: "tier.selected" }) satisfies Readonly<Record<string, TearEventId>>;
+  updraft: "blade.launch", pickup: "system.checkpoint", tierup: "system.checkpoint" }) satisfies Readonly<Record<string, TearEventId>>;
 const NATIVE_CAUSAL_EVENTS: ReadonlySet<TearEventId> = new Set([
   "run.started", "run.paused", "run.resumed", "run.completed", "run.defeated", "run.abandoned", "stage.entered", "stage.exited",
   "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "blade.thrown", "blade.caught",
@@ -169,7 +169,9 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
       const type = (NATIVE_EFFECT_EVENTS as Readonly<Record<string, TearEventId>>)[event.effect];
       if (type === undefined) throw new RangeError(`unrecognized native gameplay effect: ${event.effect}`);
       return { type, phase: "post-simulation-commit",
-        payload: Object.freeze({ effect: event.effect, x: event.x, y: event.y }) };
+        // Feedback contains no loadout identity. Only native loadout facts attest selections.
+        payload: Object.freeze({ ...(event.effect === "pickup" || event.effect === "tierup" ? { observation: "native-reward-feedback" } : {}),
+          effect: event.effect, x: event.x, y: event.y }) };
     }
   }
 }

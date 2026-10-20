@@ -1,3 +1,4 @@
+import { drawLiveGhostSplits } from "../../src/presentation/world/live-ghost-reference";
 import { createLiveGhostChase } from "../../src/app/live-ghost-chase-composition";
 import { describe, expect, it, vi } from "vitest";
 import { createLiveGhostReferenceController, type GhostChaseLiveState } from "../../src/app/live-ghost-reference-controller";
@@ -18,6 +19,16 @@ const state = (reference: GhostLiveReference): GhostChaseLiveState => ({ runId: 
   score: 40, hp: 80, maxHp: 120, arena: "arena", blocked: false, assistance: reference.assistance });
 
 describe("live Chase reference ownership", () => {
+  it("shows a compact new-reference status without absent competitor comparisons", () => {
+    const text: string[] = [], rectangles: unknown[][] = [];
+    const canvas = new Proxy({}, { get: (_, key) => key === "fillText" ? (value: string) => { text.push(value); }
+      : key === "fillRect" ? (...args: unknown[]) => { rectangles.push(args); } : () => undefined, set: () => true }) as CanvasRenderingContext2D;
+    drawLiveGhostSplits(canvas, { raceRole: "reference", active: false, visible: false, message: "" }, 1600,
+      { font: () => "12px monospace", t: { type: { micro: 12 }, color: { cinema: "#000", cinemaInk: "#fff", accent: "#abc" } } });
+    expect(text).toEqual(["SEED-LOCKED RACE REFERENCE \u00b7 NEW REFERENCE RUN \u00b7 NONCOMPETITIVE", "Shared seed and offers \u00b7 no competitor selected"]);
+    expect(rectangles[0]?.[3]).toBe(44);
+    expect(text.join(" ")).not.toMatch(/unavailable|REFERENCE OFF|unknown attribution/u);
+  });
   it("keeps the normal reference catalog readable before any run exists", () => {
     const player = vi.fn((): never => { throw new Error("No live actor in menu"); });
     const chase = createLiveGhostChase({ factory: undefined, ui: { font: () => "", t: { type: { micro: 12 }, color: { cinema: "", cinemaInk: "", accent: "" } } }, run: () => null,
