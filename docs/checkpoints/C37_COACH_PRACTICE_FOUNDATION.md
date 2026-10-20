@@ -325,4 +325,21 @@ Focused evidence: `ghost-career-archive.test.ts` covers native witness projectio
 old/visual-only availability, all-history pagination, durable notes/holds, actual
 final-CAS source replacement, protected deletion refusal and late-result
 cancellation; directly affected outcome/style and renderer controls preserve the
-existing owners. Normal-build browser acceptance is pending integration.
+existing owners.
+
+Normal-storage browser acceptance passed at clean source `1ee4ab92` with
+`tests/browser-c37-career-archive.js`: six actual canonical recordings and one
+ordinary-frame Ghost2 recording, three history pages, all ten view routes,
+combined filters, saved tags/pin across reload, canonical Theater and legacy
+playback return, foreign-hold deletion refusal, explicit local deletion and a real
+67,211-byte archive download/delete/restore. Restored manifest and original encoded
+chunks matched exactly; unrelated sources and profile progression were unchanged.
+Import correctly received imported retention without restoring deleted local tags.
+Desktop and 800×450 captures were inspected; the engineering DOM inspector was
+hidden for unobstructed canvas captures. This is not physical-device qualification.
+The accepted build identity is
+`8ea255e2023b976ee3c85ce813ff7d43a17a74060059c9d5db4c51bd64b128cd`,
+artifact hash `7f6f4424353a834c6626d4790f7f0f3eca6d30e226c5444d6b95e6df593e6f56`.
+Evidence: `C:/Users/realm/.codex/tmp/tear-resumption-20261018/career-1ee4ab92/journey.json`.
+Earlier fixture/refresh failures remain retained beside this accepted packet.
+Broader C37 tools and the unattended training cycle remain open.

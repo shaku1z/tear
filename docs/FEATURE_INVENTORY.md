@@ -1623,5 +1623,8 @@ deletion. Publication status comes from matching retained declarations and final
 acknowledgements, never residence or upload intent. Missing historical facts, remote
 stubs and unavailable quota dimensions remain explicit. See the
 [C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#durable-career-archive-native-career-v1).
-Focused causal unit controls exist; fresh normal-build browser acceptance remains
-pending integration.
+Normal-storage browser acceptance passed at `1ee4ab92`: seven retained sources,
+three pages, ten view routes, persistent tags/pins, canonical/legacy playback,
+protected refusal and a real exact-byte archive download/delete/restore. Desktop
+and compact captures were inspected; physical-device and broader C37 acceptance
+remain separate.
