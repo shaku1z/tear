@@ -143,7 +143,10 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     };
     const original = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function captureTheaterText(text, ...rest) {
-      texts.push(String(text)); if (["PROFILE", "\u25c6 THEATER", "\u25b6 REPLAY", "COMPARE"].includes(String(text))) positions.length = 0; positions.push({ text: String(text), x: rest[0], y: rest[1] });
+      const label = String(text);
+      texts.push(label);
+      if (label === "PROFILE" || rest[1] < 80 && ["\u25c6 THEATER", "\u25b6 REPLAY", "COMPARE"].includes(label)) positions.length = 0;
+      positions.push({ text: label, x: rest[0], y: rest[1] });
       return original.call(this, text, ...rest);
     };
     window.__TEAR_C29_THEATER_TEXT__ = texts; window.__TEAR_C29_POSITIONS__ = positions;
