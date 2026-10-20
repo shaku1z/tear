@@ -110,7 +110,7 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
     assert.ok(evidence.native.some((entry) => entry.value.kind === "coverage")); assert.ok(evidence.native.some((entry) => entry.value.kind === "terminal"));
     await ordinaryBoot(); const progressBefore = await saved(); evidence.progressBefore = progressBefore;
     await openCareer(); const facts = await indexed(sourceId); evidence.facts = facts;
-    assert.equal(facts.verified, "receipts"); assert.equal(facts.resumed, false); assert.ok(facts.abilities.includes("throw")); assert.ok(facts.abilities.includes("catch")); assert.deepEqual(facts.categories, ["unupgraded"]);
+    assert.equal(facts.verified, "receipts"); assert.equal(facts.resumed, false); assert.ok(facts.abilities.includes("throw")); assert.ok(facts.abilities.includes("catch")); assert.deepEqual(facts.categories, ["unupgraded"]); assert.deepEqual(facts.bosses, []);
     await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("Page 1 / 3")));
     evidence.pages = [];
     for (let number = 1; number <= 3; number++) { evidence.pages.push(await labels()); if (number < 3) { await click("NEXT"); await page.waitForFunction((n) => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith(`Page ${n} / 3`)), number + 1); } }
@@ -119,7 +119,7 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
     evidence.views = [];
     for (let i = 0; i < views.length; i++) { await click(views[i]); await page.waitForFunction((label) => window.__CAREER_POSITIONS__.some((entry) => entry.text === label), views[(i + 1) % views.length]); evidence.views.push(await labels()); }
     for (const id of [...evidence.sources, ...legacy.map((entry) => entry.id)]) { await search(id); assert.ok((await labels()).some((text) => text.startsWith("1 matches /")), `Retained source missing from whole history: ${id}`); }
-    await search(sourceId, { mode: facts.mode, difficulty: facts.difficulty, weapon: facts.weapon, result: facts.result, archetype: "unupgraded", ability: "throw", wave: `${facts.wave}..${facts.wave}`, damage: "0..0", verified: "receipts", actor: facts.actor, shared: "unknown", resumed: "false", version: facts.gameVersion, date: `${facts.date.slice(0, 10)}..${facts.date.slice(0, 10)}` });
+    await search(sourceId, { mode: facts.mode, difficulty: facts.difficulty, weapon: facts.weapon, result: facts.result, archetype: "unupgraded", ability: "throw", wave: `${facts.wave}..${facts.wave}`, damage: `${facts.damage}..${facts.damage}`, verified: "receipts", actor: facts.actor, shared: "unknown", resumed: "false", version: facts.gameVersion, date: `${facts.date.slice(0, 10)}..${facts.date.slice(0, 10)}` });
     assert.ok((await labels()).some((text) => text.startsWith("1 matches /"))); evidence.phases.push("whole retained history, three pages and combined native filters");
     await select(sourceId); assert.ok((await labels()).some((text) => text.startsWith("Accepted uses:") && text.includes("throw") && text.includes("catch")));
     await click("TAGS"); await page.getByRole("dialog").locator('[name="tags"]').fill("career-browser, return-catch"); await page.getByRole("dialog").getByRole("button", { name: "APPLY", exact: true }).click();

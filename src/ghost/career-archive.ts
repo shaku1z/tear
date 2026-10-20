@@ -101,7 +101,7 @@ export function projectCareerEntry(capsule: GhostReadCapsule, verified: boolean)
   const damage = dna.nativePolicy !== undefined ? dna.sourceMetrics.damageTaken ?? null : null;
   const bossClears: CareerEntry["bossClears"][number][] = [];
   if (whole && context && capsule.manifest.provenance?.forkOrigin === undefined) for (const spawn of events.filter((event) => event.type === "enemy.spawned")) {
-    const p = careerObject(spawn.payload); if (typeof p.bossId !== "string" || typeof spawn.actorId !== "string") continue;
+    const p = careerObject(spawn.payload); if (typeof p.bossId !== "string" || !p.bossId || typeof spawn.actorId !== "string") continue;
     const death = events.find((event) => event.type === "enemy.defeated" && event.actorId === spawn.actorId && event.tick > spawn.tick);
     const changes = events.some((event) => ["draft.selected", "tier.selected"].includes(String(event.type)) && event.tick >= spawn.tick && event.tick <= (death?.tick ?? -1));
     const witness = records.find((record) => record.kind === "boss" && record.tick === spawn.tick && record.data.actorId === spawn.actorId);
@@ -114,7 +114,7 @@ export function projectCareerEntry(capsule: GhostReadCapsule, verified: boolean)
     catalogHash: typeof sourceCatalogHash === "string" ? sourceCatalogHash : "unknown", resumed: whole ? false : base.resumed,
     categories: completeLoadout && !unknownUpgrade ? Object.keys(composition).length ? Object.keys(composition).sort() : ["unupgraded"] : null,
     abilities: whole || nativeUses !== null ? [...new Set([...named.map((record) => String(record.data.technique)), ...(nativeUses ?? [])])].sort() : null,
-    bosses: [...new Set(events.filter((event) => event.type === "enemy.spawned").flatMap((event) => typeof careerObject(event.payload).bossId === "string" ? [String(careerObject(event.payload).bossId)] : []))],
+    bosses: [...new Set(events.filter((event) => event.type === "enemy.spawned").flatMap((event) => typeof careerObject(event.payload).bossId === "string" && careerObject(event.payload).bossId ? [String(careerObject(event.payload).bossId)] : []))],
     verified: verified ? "receipts" : "integrity", damage, dna: dna.nativePolicy ? dna.dimensions ?? {} : {}, style, nearMiss, bossClears,
     witnesses: records.map((record) => `${record.kind}@${String(record.tick)}:${stableVerificationHash(record)}`), unavailable, enriched: true });
 }
