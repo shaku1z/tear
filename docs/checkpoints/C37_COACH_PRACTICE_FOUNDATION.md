@@ -182,6 +182,27 @@ authoritative receipt, retaining clock-tail evidence without simulating skipped 
 Focused production controls exercise a tick-120 fork, actual native catch,
 abandoned recording, seal/reopen, exact result retry, foreign parent and
 pre-origin refusal, false defeat refusal, source byte preservation and cancelled
-preparation ownership. Normal live UI/profile-equality browser acceptance is
-pending the parent's fresh build; no human, learned-quality or population claim
-follows from these engineered controls.
+preparation ownership. No human, learned-quality or population claim follows
+from these engineered controls.
+
+The normal-storage browser journey passed on clean `efd06a02043d23fedf617033c1cd4676286e3d27`
+(build `50c66b96af94adf39b73c005b99416dab4887a6bed7e6ff52a6b971d817a44fe`).
+Its engineered 300-tick parent contained a real catch at159. From checkpoint120,
+ordinary RMB throw/recall and live frames completed Return Race at128 (8ticks
+within the source's39). Pause → MAIN MENU → QUIT independently sealed a second
+attempt as abandoned at121. Both results reopened through normal Vault/Theater
+after reload; the original parent bytes remained exact. Meta/profile/envelope
+bytes remained exact around each attempt. Across reloads, every progression,
+extension, schema and writer field remained exact; ordinary profile loading
+advanced only envelope revision/time. The fixture used existing inspector opt-in
+with real isolated local storage, without `test=1`; it is engineering evidence.
+The inspected `challenge-efd06a02` packet under `.codex/tmp/tear-resumption-20261018`
+contains `journey.json`, succeeded/abandoned screenshots and retained build/browser
+logs. No page errors occurred. This does not close broader C37 challenge families.
+
+The journey exposed and repaired pause-screen daily initialization during
+practice and quit-time score/coin writes. Practice progress reads now avoid saved
+progression services. Child playback rebuilds every endpoint from the admitted
+origin; later archived quit-confirmation keyframes retain their original bytes
+and clock bindings without becoming restore authority. Nested recorded forks
+are explicitly refused. Guidance stays inside the rendered challenge panel.
