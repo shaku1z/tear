@@ -22,6 +22,16 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
   let evidence = await page.evaluate(async ({ scenarioValue, companionMode: companion }) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     environment.reset(scenarioValue);
+    const checkRecording = (boundary) => {
+      if (!companion) return;
+      const inspector = window.__TEAR_GHOST_V3__, failure = inspector.failure();
+      if (failure !== null) {
+        const manifest = inspector.manifest();
+        throw new Error(`finale prefix recording failed: ${JSON.stringify({ boundary, tick: environment.observe().tick,
+          failure, active: inspector.active(), manifest: manifest === null ? null : { id: manifest.id, status: manifest.status, chunks: manifest.chunks.length } })}`);
+      }
+    };
+    checkRecording("reset");
     const started = environment.forgeCampaignFinalWave();
     if (!started.ok) throw new Error(`campaign frontier restore failed in ${started.phase}`);
 
@@ -46,6 +56,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
       trace.push({ kind: "fixed", tick: transition.observation.tick, hash: transition.info.canonicalStateHash });
     }
     if (sourceSpawn === null) throw new Error("production wave 60 did not spawn Source");
+    checkRecording("Source spawn");
 
     // Boss introductions are advanced by the real application frame prelude,
     // not by exact fixed ticks. Wait until the production actor reaches its
@@ -55,8 +66,13 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
       if (typeof boss?.introT === "number" && boss.introT <= 0) break;
       const advanced = environment.advanceApplicationFrame(1 / 60);
       trace.push({ kind: "application", frame, ...advanced });
+      // Class-A frames are synchronous. Return to the browser after each intro
+      // frame so worker/IndexedDB writes settle as they do during normal RAF.
+      if (companion) await new Promise((resolve) => requestAnimationFrame(resolve));
+      checkRecording(`Source introduction frame ${String(frame)}`);
     }
     const combatReady = snapshot("campaign-source-combat-ready", "reconstructed-reachable");
+    checkRecording("Source combat ready");
     const readyBosses = bossState(combatReady);
     if (!Array.isArray(readyBosses) || readyBosses.length !== 1 || readyBosses[0]?.introT > 0) {
       throw new Error("Source did not leave its production introduction");
@@ -113,6 +129,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
       })}`);
     }
     const preFinale = snapshot("campaign-source-post-defeat", "recorded-canonical");
+    checkRecording("Source defeat");
 
     // Death animation/removal and wave clearing remain fixed-step production
     // work. The authored finale itself advances through application frames.
@@ -124,6 +141,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
       if (worldState(state).runtime?.lifecycle?.phase === "finale") break;
     }
     const finaleStart = snapshot("campaign-source-finale-start", "recorded-canonical");
+    checkRecording("finale launch");
     if (worldState(finaleStart).runtime?.lifecycle?.phase !== "finale") {
       throw new Error("production wave clear did not begin the Adventure finale");
     }
