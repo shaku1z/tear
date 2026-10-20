@@ -176,7 +176,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.ok(comparisonTexts.filter((text) => text.includes("RUN ")).length >= 9, "comparison did not render all nine durable sources");
   await page.keyboard.press("Escape");
   await waitScreen("profile");
-  await page.waitForTimeout(180); await clickText("â—† THEATER"); // actual rendered healthy source control
+  await page.waitForTimeout(180); await clickText("\u25c6 THEATER"); // actual rendered healthy source control
   await waitScreen("replay");
   const theaterTextCount = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__?.length ?? 0);
   await page.waitForTimeout(250);
@@ -216,14 +216,14 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.equal(studioSourceAfter, studioSourceBefore, "actual local WebM export changed durable source custody");
   console.log(JSON.stringify({ studio: { directory: outputDirectory, bytes: mediaBytes.length, width: decoded.width, height: decoded.height, duration: decoded.duration, clock: "simulation-time-120hz", camera: "reconstructed-player-follow", fixture: "engineered canonical240tick source" } }));
   await page.mouse.click(1020, 854); // rendered C37 RUN DNA control; it projects only declared capsule metrics
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA Ã‚Â· VERIFIED METRICS"), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA \u00b7 VERIFIED METRICS"), undefined, { timeout: 10000 });
   const dnaTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(dnaTexts.some((text) => String(text).includes("FORMULA run-dna-v1 Ã‚Â· EVIDENCE verified capsule")),
+  assert.ok(dnaTexts.some((text) => String(text).includes("FORMULA run-dna-v1 \u00b7 EVIDENCE verified capsule")),
     "Run DNA did not visibly identify its formula and verified capsule custody");
-  assert.ok(dnaTexts.some((text) => String(text).includes("UNAVAILABLE Ã‚Â· no declared run-dna-metrics-v1 result")),
+  assert.ok(dnaTexts.some((text) => String(text).includes("UNAVAILABLE \u00b7 no declared run-dna-metrics-v1 result")),
     "Run DNA inferred metrics instead of exposing the actual capsule declaration gap");
   await page.mouse.click(892, 854); // rendered C37 COACH control; it has no implicit baseline
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH Ã‚Â· YOUR SELECTED RUNS"), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH \u00b7 YOUR SELECTED RUNS"), undefined, { timeout: 10000 });
   await page.waitForTimeout(180);
   await page.mouse.click(750, 189); // explicit first compatible local recording, no peer auto-selection
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/2 usable recordings")), undefined, { timeout: 30000 });
@@ -235,7 +235,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.ok(coachTexts.some((text) => String(text).includes("Count distribution:")), "Coach did not disclose count distribution");
   assert.ok(coachTexts.some((text) => String(text).includes("OPEN RUN MOMENT") && String(text).includes("TICK 140")), "Coach omitted the actual identified native throw");
   await page.mouse.click(555, 493); // VIEW MOMENT through normal source-owned seek
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("Reconstructed source scene Â· TICK 140")), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("Reconstructed source scene \u00b7 TICK 140")), undefined, { timeout: 10000 });
   await clickText("RETURN TO COACH"); await page.waitForTimeout(120);
   await page.mouse.click(1040, 493); // PRACTICE BEFORE the cited event, strictly preceding checkpoint120
   await waitScreen("playing");
