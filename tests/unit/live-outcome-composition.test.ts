@@ -109,7 +109,7 @@ describe("live outcome composition pending-finale persistence", () => {
 
     const context = captured.context as unknown as {
       readonly saveBest: (run: { mode: string; diff: string; wave: number; score: number; runTime: number }) => boolean;
-      readonly awardCoins: (score: number) => number; readonly achievementTracking: () => boolean;
+      readonly awardCoins: (score: number) => number; readonly achievementTracking: () => boolean; readonly finishRecording: (won: boolean) => void;
       readonly recordDefeatProgress: (run: object, earned: number) => void;
       readonly executeVictoryIntents: (intents: readonly object[]) => void;
       readonly persistPendingFinale: (record: object) => void; readonly saveProfile: () => void;
@@ -117,6 +117,7 @@ describe("live outcome composition pending-finale persistence", () => {
     };
     expect(context.saveBest({ mode: "endless", diff: "normal", wave: 2, score: 100, runTime: 20 })).toBe(false);
     expect(context.awardCoins(100)).toBe(0);
+    context.finishRecording(false); context.finishRecording(true); expect(finishRecording).not.toHaveBeenCalled();
     expect(context.achievementTracking()).toBe(false);
     context.recordDefeatProgress({}, 0); context.executeVictoryIntents([{}]); context.persistPendingFinale({});
     context.saveProfile(); context.clearPendingFinale(); context.pushCloud();

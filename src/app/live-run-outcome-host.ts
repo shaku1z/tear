@@ -38,6 +38,7 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly achievementTracking: () => boolean;
   readonly economyTelemetry: (earned: number) => Readonly<Record<string, unknown>>;
   readonly recordDefeatProgress: (run: OutcomeRunState, earned: number) => void;
+  readonly finishRecording: (won: boolean) => void;
   readonly executeVictoryIntents: (intents: readonly VictoryProgressionIntent[]) => void;
   readonly persistPendingFinale: (record: PendingFinaleRecord) => void;
   readonly saveProfile: () => void;
@@ -106,6 +107,7 @@ export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
     achievementTracking: context.achievementTracking,
     economyTelemetry: context.economyTelemetry,
     recordDefeatProgress: context.recordDefeatProgress,
+    finishRecording: context.finishRecording,
     executeVictoryIntents: context.executeVictoryIntents,
     persistPendingFinale: context.persistPendingFinale,
     saveProfile: context.saveProfile,

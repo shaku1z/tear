@@ -655,6 +655,7 @@ export function createDetachedRunOutcomeController(
       return captured?.economyTelemetry ?? Object.freeze({});
     },
     recordDefeatProgress: () => undefined,
+    finishRecording: (won) => { outward.push(`finishRecording:${String(won)}`); },
     executeVictoryIntents: (intents) => {
       if (captured !== undefined) requireCapturedOutcomeMatch("victory intents", intents, captured.victoryIntents);
       used.intents = true; outward.push(...intents.map((intent) => `victory:${intent.type}`));

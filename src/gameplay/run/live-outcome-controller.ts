@@ -30,6 +30,7 @@ export interface LiveOutcomeControllerPort {
   achievementTracking(): boolean;
   economyTelemetry(earned: number): Readonly<Record<string, unknown>>;
   recordDefeatProgress(run: OutcomeRunState, earned: number): void;
+  finishRecording(won: boolean): void;
   executeVictoryIntents(intents: readonly VictoryProgressionIntent[]): void;
   persistPendingFinale(record: ReturnType<typeof buildPendingFinale>): void;
   saveProfile(): void;
@@ -66,6 +67,7 @@ export class LiveRunOutcomeController {
       this.#port.recordDefeatProgress(run, prepared.earned);
       this.#record({ type: "outcome.defeat-progression-dispatched", run, earned: prepared.earned });
     }
+    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) this.#port.finishRecording(false);
     const result = buildRunResult(run, { best: this.#best(run), prepared, victory: false });
     this.#port.present("defeat", result);
     this.#record({ type: "outcome.presentation-dispatched", outcome: "defeat", result });
@@ -101,6 +103,10 @@ export class LiveRunOutcomeController {
     this.#record({ type: "outcome.victory-intents-dispatched", intents });
     this.#port.storePreparedVictory(prepared);
     this.#record({ type: "outcome.prepared-stored", prepared });
+    // Unranked native recordings still close at the scored boundary; progression
+    // intentionally has no recording intent for these categories. The cache
+    // above prevents another finish when Campaign subsequently exits FinalCut.
+    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) this.#port.finishRecording(true);
     if (campaign && persistFinale) {
       const record = buildPendingFinale(run, this.#best(run), prepared);
       this.#port.persistPendingFinale(record);

@@ -111,6 +111,12 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
         time: Math.round(run.runTime), peak: run.wavePeak, died: true, ...options.economyTelemetry(earned) });
       options.finishRecording(false);
     },
+    finishRecording(won) {
+      // Fork-practice/challenge recordings belong to their independent owner.
+      if (options.practiceSession?.active() != null) return;
+      const run = active();
+      if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) options.finishRecording(won);
+    },
     executeVictoryIntents: (intents) => { if (!practicing()) options.executeVictory(intents); },
     persistPendingFinale: (record) => { if (!practicing()) d.pendingFinalePersistence.persist(record); },
     saveProfile: () => { if (!practicing()) d.pendingFinalePersistence.saveProfile(); },

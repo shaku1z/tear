@@ -1,7 +1,7 @@
 export interface CareerTextPort { edit(title: string, fields: Readonly<Record<string, string>>, submit: (fields: Readonly<Record<string, string>>) => void): void; close(): void; }
 
 /** Explicit, accessible local text editing. Nothing is submitted to a server. */
-export function createCareerTextPort(document: Document): CareerTextPort {
+export function createCareerTextPort(document: Document, hintText = "Blank = any; unknown = unavailable. Numeric ranges: min..max. Dates: YYYY-MM-DD..YYYY-MM-DD. Values use recorded IDs. Tags: comma-separated."): CareerTextPort {
   let remove: (() => void) | undefined;
   return { close() { remove?.(); remove = undefined; }, edit(title, fields, submit) {
     remove?.(); const focus = document.activeElement, layer = document.createElement("dialog"), form = document.createElement("form");
@@ -15,7 +15,7 @@ export function createCareerTextPort(document: Document): CareerTextPort {
       label.textContent = ({ ability: "Accepted ability / technique ID", archetype: "Build category", actor: "Recorded human / bot attribution", shared: "Sharing: public / unlisted / private / queued / unknown", verified: "Verification: receipts / integrity / unavailable", version: "Game version", pinned: "Pinned: true / false" } as Readonly<Record<string, string>>)[key] ?? key; input.type = "text"; input.name = key; input.value = value; input.maxLength = key === "code" ? 32768 : key === "tags" ? 1024 : 256;
       input.style.width = "100%"; input.style.boxSizing = "border-box"; input.style.padding = "8px"; input.autocomplete = "off"; label.append(input); form.append(label); inputs.set(key, input);
     }
-    const hint = document.createElement("p"); hint.style.gridColumn = "1/-1"; hint.textContent = "Blank = any; unknown = unavailable. Numeric ranges: min..max. Dates: YYYY-MM-DD..YYYY-MM-DD. Values use recorded IDs. Tags: comma-separated."; form.append(hint);
+    const hint = document.createElement("p"); hint.style.gridColumn = "1/-1"; hint.textContent = hintText; form.append(hint);
     const save = document.createElement("button"), cancel = document.createElement("button"); save.type = "submit"; save.textContent = "APPLY"; cancel.type = "button"; cancel.textContent = "CANCEL"; form.append(save, cancel);
     const close = () => { layer.close(); layer.remove(); if (focus instanceof HTMLElement && focus.isConnected) focus.focus(); if (remove === close) remove = undefined; };
     remove = close; cancel.onclick = close;

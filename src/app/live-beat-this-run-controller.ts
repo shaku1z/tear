@@ -22,7 +22,7 @@ export function createLiveBeatThisRunController(options: Readonly<{
   run(): GameRun | null; screen(): string; nativeStart: Readonly<{ session(): Pick<LiveWorldSessionState, "setSelectedWeapon" | "setSelectedMode" | "setSelectedDifficulty" | "setSelectedBoss" | "setRunSeed">; prepare(): void; start(mode: RunMode, difficulty: RunDifficulty): void; refuse(): void }>;
   capture(): ReadonlyMap<string, unknown>; tick(): number; recording: LiveGhostRecordingSessionState;
 }>) {
-  const service = createBrowserBeatThisRun(options.factory, options.publication), text = createCareerTextPort(options.document);
+  const service = createBrowserBeatThisRun(options.factory, options.publication), text = createCareerTextPort(options.document, "Choose a listed rule or paste a shared code. Copy the prepared code to share; use START and Apply to begin.");
   let generation = 0, owner: AbortController | undefined, message = "", pending: BeatThisRunCode | undefined;
   let code: BeatThisRunCode | undefined, installed: GameRun | undefined;
   const cancel = () => { message = ""; generation++; owner?.abort(); owner = undefined; text.close(); };

@@ -41,6 +41,7 @@ export function createProductionRunOutcomeRuntime(
     achievementTracking: () => false,
     economyTelemetry: () => Object.freeze({}),
     recordDefeatProgress: () => undefined,
+    finishRecording: (won) => { outward.push(`finishRecording:${String(won)}`); },
     executeVictoryIntents: () => undefined,
     persistPendingFinale: () => { outward.push("persistFinale"); },
     saveProfile: () => { outward.push("saveProfile"); },
