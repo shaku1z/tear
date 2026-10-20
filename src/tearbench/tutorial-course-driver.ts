@@ -14,7 +14,7 @@ export interface TutorialDriverPort {
   readonly environment: {
     observe(): TutorialDriverObservation;
     step(actions: readonly CommandEnvelope<GameAction>[]): { observation: TutorialDriverObservation; info: { canonicalStateHash: string } };
-    canonicalState(): CanonicalGameplayState;
+    canonicalState(): CanonicalGameplayState | null;
     metrics(): Readonly<Record<string, number>>;
     captureSnapshot(id: string, stateClass: "recorded-canonical"): TearSnapshotV1;
     engineEventProjection(): ProductionC27ATrace["engineEventProjection"]["events"];
@@ -35,6 +35,7 @@ type MutableContinuation = Omit<ProductionC27ATrace, "hashes" | "segments" | "en
 export function driveTutorialCourse(port: TutorialDriverPort, options: { scenarioValue: TearScenarioV1; captureContinuation: boolean; legacyFieldTest?: boolean; stopAfterLesson?: number }) {
   const { scenarioValue, captureContinuation, legacyFieldTest = false } = options;
   const environment = port.environment;
+    const requireCanonicalState = () => { const state = environment.canonicalState(); if (state === null) throw new Error("Tutorial continuation requires an executed canonical tick"); return state; };
     let commandId = 0;
     const trace: TutorialCourseRecord[] = [];
     const tutorial = () => port.tutorial();
@@ -51,7 +52,7 @@ export function driveTutorialCourse(port: TutorialDriverPort, options: { scenari
         if (transition.observation.tick !== before + 1) throw new Error("Field Test trace requires one authoritative tick per step");
         continuationTrace.segments.push({ kind: "fixed", fromTick: before, toTick: transition.observation.tick, actions });
         continuationTrace.hashes.push({ tick: transition.observation.tick,
-          canonical: transition.info.canonicalStateHash, state: { ...environment.canonicalState() } });
+          canonical: transition.info.canonicalStateHash, state: { ...requireCanonicalState() } });
         if (tutorial().lessonIndex === 13) {
           const originTick = continuationTrace.origin.tick;
           continuationTrace.engineEventProjection.events = environment.engineEventProjection()
@@ -65,7 +66,7 @@ export function driveTutorialCourse(port: TutorialDriverPort, options: { scenari
     const idle = (ticks: number) => {
       for (let index = 0; index < ticks; index += 1) step();
     };
-    const fieldEncounter = () => { const state = environment.canonicalState().tutorial; return state && "fieldEncounter" in state ? state.fieldEncounter : undefined; };
+    const fieldEncounter = () => { const state = environment.canonicalState()?.tutorial; return state && "fieldEncounter" in state ? state.fieldEncounter : undefined; };
     const record = (label: string) => {
       const observation = environment.observe();
       const snapshot = tutorial();
@@ -313,7 +314,7 @@ export function driveTutorialCourse(port: TutorialDriverPort, options: { scenari
     }
     if (captureContinuation) {
       const origin = environment.captureSnapshot("tutorial-field-test-origin", "recorded-canonical");
-      continuationTrace = { scenario: scenarioValue, origin, originInput: environment.canonicalState().input,
+      continuationTrace = { scenario: scenarioValue, origin, originInput: requireCanonicalState().input,
         schedule: {}, hashes: [], segments: [], engineEventProjection: {
           format: "tear-semantic-engine-events", schemaVersion: 1,
           boundary: { kind: "post-origin-snapshot", originTick: origin.tick }, events: [],
