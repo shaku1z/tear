@@ -86,7 +86,7 @@ export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) 
     }
     if (snapshot.final) {
       canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.5)"; canvas.textAlign = "right";
-      canvas.fillText("course complete · practice arena loading…", x + width - 16, y + 24);
+      canvas.fillText("training summary · practice arena loading…", x + width - 16, y + 24);
     }
     canvas.restore(); canvas.textAlign = "left";
   }
