@@ -148,6 +148,7 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
     assertSourceBytes(await vault(), originals.find((entry) => entry.id === heldId)); evidence.protectedRefusal = await labels();
     await select(deletedId); await click("DELETE LOCAL"); await click("DELETE LOCAL");
     await waitForBrowserValue(page, async (id) => !(await window.__CAREER_VAULT__()).manifests.some(([key]) => key === id), deletedId);
+    await page.waitForFunction(() => !window.__CAREER_POSITIONS__.some((entry) => entry.text === "BACK TO RESULTS") && window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("Page ")));
     await select(sourceId);
     const [download] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), click("DOWNLOAD")]); const archivePath = join(directory, "career-export.tearghost.json"); await download.saveAs(archivePath);
     const archiveBytes = await readFile(archivePath), archive = JSON.parse(archiveBytes); assert.deepEqual(archive.manifest, source.manifest); evidence.archive = { path: archivePath, bytes: archiveBytes.length, sha256: hash(archiveBytes) };
