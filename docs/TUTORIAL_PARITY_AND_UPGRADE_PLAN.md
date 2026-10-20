@@ -724,13 +724,25 @@ Personal paths retain at most 128 observed poses with event markers under a
 document reload clears personal comparison. State Forge retains a bounded
 completed comparison and verified gold identity/cursor, never shipping gold;
 restoring aborts partial capture and requires reset before recording anew. Coaching never grants
-objective or reward evidence. The existing normal browser journey adds rendered
-coach controls and a genuine lesson-driver Lab attempt; parent fresh-build UI
-acceptance remains separate from the corpus proof. Physical usability and
-Version 1 retirement are unclaimed.
+objective or reward evidence. The fresh `068c0514` test-standalone build and
+existing normal browser journey passed the complete course in 12,543 fixed
+ticks, finite preview and movement dismissal, explicit help, half-speed display,
+earned Lab unlock, a genuine MOVE attempt, the real reduced-motion setting and
+comparison resume. Saved progress/currency and objective counters remain unchanged
+by playback and practice. Parent inspected the diagnostic and reduced-motion
+comparison captures. This scripted browser result is separate from the corpus
+proof; physical usability and Version 1 retirement are unclaimed.
 
-The current hand-authored ghost is renderer-neutral and deterministic, but it is
-kinematic and visually shallow. It demonstrates a rough pose, not the timing,
+Completion constructs free practice after the terminal canonical step and its
+receipt return. Exact outgoing-run and phase guards reject stale callbacks.
+Normal menu Lab entry still constructs its baseline synchronously. This repairs
+the observed completion/reset race without changing authoritative tick rules.
+The original 2 MiB per-asset precache limit is retained: lossless pose tuples keep
+the training chunk at 1,546.27 kB, and the fresh build precaches all 45 entries.
+Browser offline installation and device performance remain separate evidence.
+
+The previous hand-authored ghost was renderer-neutral and deterministic, but was
+kinematic and visually shallow. It demonstrated a rough pose, not the timing,
 momentum, contact, or recovery a player needs.
 
 ### Three ghost modes
