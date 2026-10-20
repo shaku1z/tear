@@ -11,6 +11,8 @@ export interface TutorialDriverObservation {
   readonly entities: readonly Readonly<{ kind: string; x: number; y: number; state: string }>[];
 }
 export interface TutorialDriverPort {
+  /** A continuing caller may retain one command sequence across course and Lab entries. */
+  nextCommandId?(): number;
   readonly environment: {
     observe(): TutorialDriverObservation;
     step(actions: readonly CommandEnvelope<GameAction>[]): { observation: TutorialDriverObservation; info: { canonicalStateHash: string } };
@@ -40,7 +42,7 @@ export function driveTutorialCourse(port: TutorialDriverPort, options: { scenari
     const trace: TutorialCourseRecord[] = [];
     const tutorial = () => port.tutorial();
     const command = (value: GameAction): CommandEnvelope<GameAction> => ({
-      kind: "command", tick: environment.observe().tick + 1, id: ++commandId, command: value,
+      kind: "command", tick: environment.observe().tick + 1, id: port.nextCommandId?.() ?? ++commandId, command: value,
     });
     let continuationTrace: MutableContinuation | undefined;
     let capturing = false;

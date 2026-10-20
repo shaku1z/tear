@@ -57,7 +57,9 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     environment.reset(scenarioValue);
     window.__tutorialJourneyEnvironment = environment;
+    window.__tutorialJourneyCommandId = 0;
     return window.__TEAR_TUTORIAL_COURSE_DRIVER__({ environment,
+      nextCommandId: () => ++window.__tutorialJourneyCommandId,
       tutorial: () => window.__PANTHEON_TEST.tutorial(), state: () => window.__PANTHEON_TEST.state(),
     }, { scenarioValue, captureContinuation });
   }, { scenarioValue: scenario, captureContinuation: Boolean(process.env.TEAR_TUTORIAL_CONTINUATION_TRACE) });
@@ -131,8 +133,8 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   assert.deepEqual(await effects(), savedBeforeDemo, "watching gold must not change saved effects");
   await pause(); await clickLabel("SHOW DEMO");
   await page.evaluate(() => { const env = window.__tutorialJourneyEnvironment, tick = env.observe().tick + 1;
-    env.step([{ kind: "command", id: 1, tick, command: { type: "move", x: 1000, y: 0 } }]);
-    env.step([{ kind: "command", id: 2, tick: tick + 1, command: { type: "move", x: 0, y: 0 } }]); });
+    env.step([{ kind: "command", id: ++window.__tutorialJourneyCommandId, tick, command: { type: "move", x: 1000, y: 0 } }]);
+    env.step([{ kind: "command", id: ++window.__tutorialJourneyCommandId, tick: tick + 1, command: { type: "move", x: 0, y: 0 } }]); });
   assert.equal((await coach()).visible, false, "meaningful real player movement must dismiss preview");
   await pause(); await clickLabel("LESSON HELP"); await clickLabel("PLAYBACK 1×");
   await clickLabel("DIAGNOSTIC DEMO");
@@ -148,6 +150,7 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().active && window.__PANTHEON_TEST.tutorial().lessonIndex === 0);
   const beforeAttempt = await effects();
   await page.evaluate((scenarioValue) => window.__TEAR_TUTORIAL_LESSON_DRIVER__({ environment: window.__tutorialJourneyEnvironment,
+    nextCommandId: () => ++window.__tutorialJourneyCommandId,
     tutorial: () => window.__PANTHEON_TEST.tutorial(), state: () => window.__PANTHEON_TEST.state() }, 0, scenarioValue), scenario);
   assert.equal((await coach()).canCompare, true, "only a genuinely valid Lab attempt enables comparison");
   assert.deepEqual(await effects(), beforeAttempt, "valid Lab practice must not award profile/currency effects");
