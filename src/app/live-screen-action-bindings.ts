@@ -108,7 +108,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.restoreGhostArchive": (action) => { ports.ghostFiles.restoreArchive(action.id, action.revision); },
     "profile.cancelGhostRestore": (action) => { ports.ghostFiles.cancelArchive(action.id, action.revision); },
     "profile.cancelGhostArchiveSelection": () => { ports.ghostFiles.cancelArchive(); },
-    "profile.downloadGhostArchive": (action) => { ports.ghostFiles.downloadArchive(action.id); },
+    "profile.downloadGhostArchive": (action) => { if (action.paired === true) ports.ghostFiles.downloadArchive(action.id, true); else ports.ghostFiles.downloadArchive(action.id); },
     "profile.loadOwnGhostCapsules": () => { ports.resetScroll(); ports.loadOwnGhostCapsules(); },
     "profile.recoverOwnGhostCapsule": (action) => { ports.recoverOwnGhostCapsule(action.id); },
     "profile.closeOwnGhostCatalog": () => { ports.resetScroll(); ports.closeOwnGhostCatalog(); },

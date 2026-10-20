@@ -19,6 +19,7 @@ describe("live screen action bindings", () => {
     dispatch({ type: "profile.cancelGhostRestore", id: "intent", revision: 4 }); expect(ghostFiles.cancelArchive).toHaveBeenCalledExactlyOnceWith("intent", 4);
     dispatch({ type: "profile.cancelGhostArchiveSelection" }); expect(ghostFiles.cancelArchive).toHaveBeenLastCalledWith();
     dispatch({ type: "profile.downloadGhostArchive", id: "capsule" }); expect(ghostFiles.downloadArchive).toHaveBeenCalledExactlyOnceWith("capsule");
+    dispatch({ type: "profile.downloadGhostArchive", id: "capsule", paired: true }); expect(ghostFiles.downloadArchive).toHaveBeenLastCalledWith("capsule", true);
   });
   it("routes Academy retry to the composed inspection refresh without granting a custody action", () => {
     const refreshAcademy = vi.fn();

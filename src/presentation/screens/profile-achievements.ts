@@ -43,16 +43,17 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       context.enqueue({ x: left, y: 312, w: 180, h: 36, label: "SELECT ARCHIVE", enabled: archive.canPick, action: { type: "profile.pickGhostArchive" } });
       if (archive.jobId !== undefined && archive.revision !== undefined) {
         if (archive.canReselect) context.enqueue({ x: left + 192, y: 312, w: 180, h: 36, label: "RESELECT FILE", action: { type: "profile.reselectGhostArchive", id: archive.jobId } });
-        if (archive.canRestore) context.enqueue({ x: left + 384, y: 312, w: 180, h: 36, label: "RESTORE", action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision } });
+        if (archive.canRestore) context.enqueue({ x: left + 384, y: 312, w: 180, h: 36, label: archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE", action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision } });
         if (archive.canCancel) context.enqueue({ x: left + 576, y: 312, w: 150, h: 36, label: "CANCEL", action: { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision } });
       }
       if (archive.canCancelSelection) context.enqueue({ x: left + 768, y: 312, w: 180, h: 36, label: "CANCEL FILE", action: { type: "profile.cancelGhostArchiveSelection" } });
       ui.text(canvas, ellipsize(canvas, `${archive.status.toUpperCase()} / ${archive.detail}`, 1120), left, 372, ui.t.type.caption, "left", ui.t.alpha.soft);
+      if (archive.pairedCapsuleIds) ui.text(canvas, ellipsize(canvas, `SCORED RUN: ${archive.pairedCapsuleIds[0] ?? ""} + FINALE: ${archive.pairedCapsuleIds[1] ?? ""}`, 1120), left, 420, ui.t.type.micro);
       if (archive.sha256) ui.text(canvas, ellipsize(canvas, `SCHEMA ${String(archive.schemaVersion)} / ${String(archive.byteLength)} BYTES / ROOT ${archive.rootIntegrity ?? ""} / SHA256 ${archive.sha256}`, 1120), left, 396, ui.t.type.micro, "left", ui.t.alpha.muted);
-      ui.divider(canvas, left, 418, 1120, 0.12);
+      ui.divider(canvas, left, archive.pairedCapsuleIds ? 436 : 418, 1120, 0.12);
     }
     if ((view.tab === "replays" || view.tab === "vault") && view.replays) {
-      const top = view.tab === "vault" && view.archive ? 442 : 322, bottom = context.height - 110, rowHeight = 96, listX = context.width / 2 - 560, listWidth = 1120;
+      const top = view.tab === "vault" && view.archive ? (view.archive.pairedCapsuleIds ? 454 : 442) : 322, bottom = context.height - 110, rowHeight = view.tab === "vault" && view.replays.some((r) => r.canDownloadLinkedPair) ? 128 : 96, listX = context.width / 2 - 560, listWidth = 1120;
       if (view.replays.length === 0 && view.emptyMessage) {
         ui.text(canvas, view.emptyMessage, context.width / 2, top + 140, ui.t.type.body, "center", ui.t.alpha.muted);
         if (view.tab === "replays") {
@@ -91,6 +92,8 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
           enqueueRow({ x: actionsX + 124, y: y + 62, w: 120, h: 28, label: "SUPPORT", enabled: replay.available,
             action: { type: "profile.openGhostSupport", id: replay.id } });
         }
+        if (view.tab === "vault" && replay.canDownloadLinkedPair) enqueueRow({ x: actionsX, y: y + 96, w: 252, h: 28,
+          label: "DOWNLOAD LINKED PAIR", action: { type: "profile.downloadGhostArchive", id: replay.id, paired: true } });
         if (replay.local) {
           enqueueRow({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,
             action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned } });

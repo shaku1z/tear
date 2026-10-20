@@ -260,3 +260,29 @@ required again on reopen; ordinary tick-zero and v1 replay meanings are unchange
 Only explicit challenge launch enables a local child recording. Its native result
 is reexecuted from the origin before a guarded local result is retained; it never
 uses score/publication finish. See C37 for the supported rules and evidence limits.
+
+### Linked scored-run/finale portable files
+
+Normal Profile > Vault keeps the single-capsule DOWNLOAD and adds an explicit
+DOWNLOAD LINKED PAIR for an available scored-run/finale relationship. The new
+`tearghost-linked-archive` version 1 envelope holds exactly two existing archive
+JSON strings, parent then companion. Their encoded chunk strings, manifest roots,
+input/receipt/event bytes and fidelity declarations are retained. Existing single
+archives, forensic exports and version-1 restore jobs keep their contracts.
+
+Selection validates both bounded members and the existing exact finale-parent
+linkage before preview names the scored run and finale. RESTORE BOTH is explicit.
+One version-2 restore job adopts both members with one epoch-fenced transaction,
+including shared chunk deduplication and its completion result. Exact existing
+members are accepted independently; conflicting/missing existing custody is not
+healed. Cancellation, exact-file reselection, non-evicting quota and uncertain
+commit resolution cover the joint custody. Existing local protection owners are
+guarded and preserved; no source-local holds, consent, training, publication or
+Career authority travels in the file. No new dependency retention owner is added.
+
+Focused controls cover this file/transaction/UI boundary. The optional external
+source control validates retained original captures without rewriting them; it
+is separate from portable generated fixtures. Archive import does not certify
+independent scored-prefix or finale playback. Fresh normal download > fresh
+profile > RESTORE BOTH > linked Theater acceptance remains a separate browser
+gate, including any source snapshot reconstruction limitations.

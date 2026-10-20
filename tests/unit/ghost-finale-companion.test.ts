@@ -124,7 +124,7 @@ describe("source-linked finale continuation", () => {
       finaleActive: () => source.replay.world.lifecycle.snapshot().phase === "finale", completed: () => source.waveReward.screen() === "win", captureReceipt: capture, witness: state });
     bus.subscribe((event) => { if (recorder.active) recorder.record("events", event.tick, createGameplayCausalEvent(event, ++sequence, `native-${String(sequence)}`, "engine")); if (event.kind === "run" && event.transition === "completed") finishRequested = true; });
     const ghost = new LegacyGhostEngine({ store: { get: () => null, set: () => undefined }, document: {} as Document,
-      now: () => 1, random: () => 0.5, defaults: { rulesetVersion: "finale-fixture", build: { version: "0.1.0", revision: "fixture", target: "standalone" }, ticksPerSecond: 120, tearScore: () => ({ enabled: false }) } });
+      now: () => 1, random: () => 0.5, defaults: { rulesetVersion: "finale-fixture", build: { version: "0.1.0", revision: "fixture", target: "standalone" }, ticksPerSecond: 120, tearScore: () => ({ enabled: false, reason: "not-recorded" }) } });
     // Exercise the real stop observer before FinaleRuntime launches its binding.
     // No Run DNA observer is present to defer this boundary until after the tick.
     ghost.setRecordingObserver({ started: () => undefined, stopped: (meta) => { frames.finish(meta); } }); ghost.startRec();

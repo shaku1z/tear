@@ -50,9 +50,9 @@ function parseEntries(chunk: unknown, kind: GhostChunkKind, fromTick: number, to
 
 /** Reads a capsule only through manifest indexes and verified Vault chunks. */
 export class GhostCapsuleReader {
-  readonly #vault: GhostLocalVault;
+  readonly #vault: Pick<GhostLocalVault, "getManifest" | "readChunk">;
 
-  constructor(vault: GhostLocalVault) { this.#vault = vault; }
+  constructor(vault: Pick<GhostLocalVault, "getManifest" | "readChunk">) { this.#vault = vault; }
 
   async read(id: string): Promise<GhostReadCapsule> {
     const manifest = await this.#vault.getManifest(id);

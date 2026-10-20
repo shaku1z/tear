@@ -6,6 +6,7 @@ import {
 } from "../ghost/browser-capsule-vault";
 import type { TearGhostManifest } from "../ghost/capsule-vault";
 import { createBrowserGhostColdRestore, type BrowserGhostColdRestorePort } from "../ghost/browser-cold-restore";
+import { readGhostFinaleCompanion } from "../ghost/finale-companion";
 import { NORMAL_GHOST_ARCHIVE_LIMITS } from "../ghost/capsule-archive";
 import type { GhostColdRestoreJob } from "../ghost/cold-restore-job";
 import { GhostColdRestoreError } from "../ghost/cold-restore";
@@ -26,6 +27,7 @@ export interface GhostVaultLibraryCapsule {
   readonly repairChildId?: string;
   /** Player-safe, runtime-only Theater eligibility; custody remains unchanged. */
   readonly theaterEligible: boolean;
+  readonly canDownloadLinkedPair?: boolean;
   readonly theaterRefusal?: GhostTheaterOpenResult;
 }
 
@@ -45,7 +47,7 @@ export interface GhostVaultLibraryPort {
   readonly pickArchive: (jobId?: string) => void;
   readonly restoreArchive: (id: string, revision: number) => void;
   readonly cancelArchive: (id?: string, revision?: number) => void;
-  readonly downloadArchive: (id: string) => void;
+  readonly downloadArchive: (id: string, paired?: boolean) => void;
   readonly dispose: () => void;
 }
 
@@ -64,6 +66,7 @@ function createArchiveActions(options: GhostVaultLibraryControllerOptions, refre
     view = Object.freeze({ status, detail, canPick: !disposed && Boolean(options.files && options.restore) && !["restoring", "validating", "picking"].includes(status),
       ...(job === undefined ? {} : { jobId: job.id, revision: job.revision, capsuleId: job.binding.capsuleId, byteLength: job.binding.byteLength,
         sha256: job.binding.sha256, rootIntegrity: job.binding.rootIntegrity, schemaVersion: job.binding.schemaVersion,
+        ...(job.binding.protocol === "ghost-linked-archive-v1" ? { pairedCapsuleIds: job.binding.members.map((m) => m.capsuleId) } : {}),
         canReselect: !["cancelled", "restoring", "validating", "picking"].includes(status), canRestore: ready, canCancel: !["cancelled", "complete"].includes(status) && job.state !== "cancelled" && job.state !== "complete" }),
       canCancelSelection: ["picking", "validating"].includes(status) });
   };
@@ -82,7 +85,7 @@ function createArchiveActions(options: GhostVaultLibraryControllerOptions, refre
       const result = resumeId === undefined ? await options.restore.select(options.newIntent?.() ?? crypto.randomUUID(), selectedBytes) : await options.restore.reselect(resumeId, selectedBytes);
       if (!current(token)) return;
       job = result.job; bytes = selectedBytes;
-      show("ready", `Archive validated. ${result.fidelity}. Choose ${job.state === "complete" ? "VALIDATE CUSTODY" : "RESTORE"} explicitly.`, true);
+      show("ready", `Archive validated. ${result.fidelity}. Choose ${job.state === "complete" ? "VALIDATE CUSTODY" : job.binding.protocol === "ghost-linked-archive-v1" ? "RESTORE BOTH" : "RESTORE"} explicitly.`, true);
     } catch (error) { if (current(token)) fail(error); }
   };
   return {
@@ -118,10 +121,10 @@ function createArchiveActions(options: GhostVaultLibraryControllerOptions, refre
         show(result.state === "cancelled" ? "cancelled" : "reselect-required", result.state === "cancelled" ? "Restore cancelled. Existing capsules remain unchanged." : "Completion recorded. Reselect exact bytes to validate current custody.");
       }, (error: unknown) => { if (current(token)) fail(error); });
     },
-    downloadArchive: (id: string): void => {
+    downloadArchive: (id: string, paired = false): void => {
       if (disposed || !options.restore || !options.files || ["restoring", "validating", "picking"].includes(view.status)) return;
       const token = ++generation; clear(); show("validating", "Validating original capsule chunks for local download…");
-      void options.restore.download(id).then((result) => { if (!current(token)) return;
+      void options.restore.download(id, paired).then((result) => { if (!current(token)) return;
         options.files?.download(result.bytes, `ghost-${result.binding.sha256.slice(0, 16)}.tearghost.json`);
         show("download-requested", `Download requested: ${String(result.binding.byteLength)} bytes; SHA256 ${result.binding.sha256}. Browser save is not confirmed.`);
       }).catch((error: unknown) => { if (current(token)) fail(error); });
@@ -197,8 +200,17 @@ export function createGhostVaultLibraryController(options: GhostVaultLibraryCont
     for (const manifest of catalog.manifests) {
       if (manifest.lineage?.relation === "repaired-from") repairedChildren.set(manifest.lineage.parentId, manifest.id);
     }
-    const capsules = catalog.manifests.map((manifest) => capsuleView(manifest, health.get(manifest.id) === true,
-      memberships.get(manifest.id) ?? [], repairedChildren.get(manifest.id), theaterRefusals.get(manifest.id), repairMetadata.get(manifest.id)))
+    const capsules = catalog.manifests.map((manifest) => {
+      let linked = false;
+      try {
+        const declaration = readGhostFinaleCompanion(manifest.provenance);
+        linked = declaration !== undefined ? catalog.manifests.some((m) => m.id === declaration.parentId && m.status === "complete")
+          : catalog.manifests.filter((m) => { try { return m.status === "complete" && readGhostFinaleCompanion(m.provenance)?.parentId === manifest.id; } catch { return false; } }).length === 1;
+      } catch { /* Malformed declarations never expose the paired action. */ }
+      return Object.freeze({ ...capsuleView(manifest, health.get(manifest.id) === true,
+        memberships.get(manifest.id) ?? [], repairedChildren.get(manifest.id), theaterRefusals.get(manifest.id), repairMetadata.get(manifest.id)),
+        canDownloadLinkedPair: linked && health.get(manifest.id) === true && manifest.status === "complete" });
+    })
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
     return frozenSnapshot("ready", capsules, catalog.maintenance.evictedCapsuleIds, message);
   };

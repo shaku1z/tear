@@ -1569,6 +1569,16 @@ publication, or transport path; unhealthy sources are unavailable. The screen
 explicitly names its excluded data and no-training/no-cloud/no-submission
 boundary. Focused unit and renderer evidence preserve this local UI boundary.
 
+### Linked scored-run/finale portable files
+
+Normal Vault adds a separate DOWNLOAD LINKED PAIR and named RESTORE BOTH preview.
+A strict versioned envelope carries the two existing archive strings; the normal
+single archive/forensic paths remain available. Parent linkage is validated before
+one joint import/job/result transaction. Shared chunks deduplicate, existing holds
+remain local and unchanged, and exact-file/cancellation/quota/uncertainty guards
+cover both recordings. This is file custody capability; browser paired download,
+fresh-profile restore and linked playback require their own attributed acceptance.
+
 ### C39 normal local capsule files
 
 Profile → Vault exposes local archive selection in empty and populated views,

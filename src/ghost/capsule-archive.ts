@@ -15,7 +15,7 @@ export interface GhostArchiveBinding { readonly protocol: "ghost-normal-archive-
   readonly manifestDigest: string; readonly capsuleId: string; readonly schemaVersion: number; readonly rootIntegrity: string; readonly limitsDigest: string }
 declare const archiveBrand: unique symbol;
 export interface PreparedGhostCapsuleArchive { readonly [archiveBrand]: true; readonly binding: GhostArchiveBinding; readonly manifest: TearGhostManifest; readonly limits: NormalGhostArchiveLimits }
-interface ArchiveData { readonly manifest: TearGhostManifest; readonly chunks: Readonly<Record<string, string>>; readonly limits: NormalGhostArchiveLimits; readonly binding: GhostArchiveBinding }
+interface ArchiveData { readonly manifest: TearGhostManifest; readonly chunks: Readonly<Record<string, string>>; readonly limits: NormalGhostArchiveLimits; readonly binding: GhostArchiveBinding; readonly totalEntries: number }
 const archives = new WeakMap<PreparedGhostCapsuleArchive, ArchiveData>();
 export function ghostArchiveData(archive: PreparedGhostCapsuleArchive): ArchiveData {
   const data = archives.get(archive); if (data === undefined) throw new TypeError("Ghost archive preparation is invalid"); return data;
@@ -57,8 +57,9 @@ function utf8Length(text: string, limit: number): number {
   }
   return bytes;
 }
-export async function prepareGhostCapsuleArchive(input: Uint8Array, policy: Partial<NormalGhostArchiveLimits> = {}): Promise<PreparedGhostCapsuleArchive> {
+export async function prepareGhostCapsuleArchive(input: Uint8Array, policy: Partial<NormalGhostArchiveLimits> = {}, remainingEntries?: number): Promise<PreparedGhostCapsuleArchive> {
   const limits = normalGhostArchiveLimits(policy);
+  if (remainingEntries !== undefined && (!Number.isSafeInteger(remainingEntries) || remainingEntries < 0 || remainingEntries > limits.maxEntriesTotal)) throw new RangeError("invalid aggregate entry budget");
   if (input.byteLength > limits.maxEncodedBytes) throw new RangeError("Ghost archive exceeds encoded byte limit");
   const bytes = Uint8Array.from(input), sha256 = await ghostArchiveSha256(bytes);
   const root = object(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown);
@@ -74,14 +75,14 @@ export async function prepareGhostCapsuleArchive(input: Uint8Array, policy: Part
     if (decoded.compressedBytes !== entry.compressedBytes || decoded.decodedBytes !== entry.uncompressedBytes) throw new TypeError("Ghost archive measured byte counts differ");
     validateGhostCapsuleEntries(decoded.value, entry.kind, entry.fromTick, entry.toTick, limits.maxEntriesPerChunk);
     totalEntries += decoded.value.length;
-    if (!Number.isSafeInteger(totalEntries) || totalEntries > limits.maxEntriesTotal) throw new RangeError("Ghost archive exceeds total entry limit");
+    if (!Number.isSafeInteger(totalEntries) || totalEntries > Math.min(limits.maxEntriesTotal, remainingEntries ?? limits.maxEntriesTotal)) throw new RangeError("Ghost archive exceeds total entry limit");
     encoded[entry.id] = text;
   }
   const binding: GhostArchiveBinding = Object.freeze({ protocol: "ghost-normal-archive-v1", sha256, byteLength: bytes.byteLength,
     manifestDigest: await ghostArchiveSha256(new TextEncoder().encode(canonicalStringify(manifest))), capsuleId: manifest.id,
     schemaVersion: manifest.schemaVersion, rootIntegrity: manifest.rootIntegrity, limitsDigest: await ghostArchiveSha256(new TextEncoder().encode(canonicalStringify(limits))) });
   const archive = Object.freeze({ binding, manifest, limits }) as PreparedGhostCapsuleArchive;
-  archives.set(archive, Object.freeze({ binding, manifest, limits, chunks: Object.freeze(encoded) })); return archive;
+  archives.set(archive, Object.freeze({ binding, manifest, limits, chunks: Object.freeze(encoded), totalEntries })); return archive;
 }
 
 /** Validates original encoded strings before normal download; no maintenance or repair. */

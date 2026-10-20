@@ -18,7 +18,7 @@ export function createBrowserGhostArchiveFiles(options: BrowserArchiveFileOption
     pick(selected, cancelled) {
       if (!options.activation()) throw new GhostArchiveFileError("activation-required", "Click or tap SELECT ARCHIVE again to open the file picker.");
       const input = options.document.createElement("input"); input.type = "file"; input.accept = ".tearghost,.json,application/json"; input.hidden = true;
-      input.setAttribute("aria-label", "Select a Ghost capsule archive");
+      input.setAttribute("aria-label", "Select a Ghost capsule or linked pair archive");
       let finished = false;
       const cleanup = (): void => { input.removeEventListener("change", change); input.removeEventListener("cancel", cancel); input.value = ""; input.remove(); };
       const change = (): void => { if (finished) return; finished = true; const file = input.files?.[0]; cleanup(); if (file === undefined) cancelled(); else selected(file); };

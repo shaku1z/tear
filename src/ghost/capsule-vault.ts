@@ -1,7 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
 import { decodeGhostChunkPayload } from "./capsule-codec";
 import { prepareForensicGhostImport, prepareGhostCapsuleImport, commitGhostCapsuleImport, ghostRootIntegrity, parseGhostCapsuleManifest, type GhostCapsuleImportPlan, type GhostImportBaseline } from "./capsule-import-plan";
-import { ghostArchiveData, type PreparedGhostCapsuleArchive } from "./capsule-archive";
+import { ghostPortableArchiveData, type PreparedGhostPortableArchive } from "./capsule-paired-archive";
 import { readGhostColdRestoreCompletion, type GhostColdRestoreCompletion } from "./cold-restore-job";
 import {
   createGhostCapsuleManifestV2,
@@ -67,8 +67,8 @@ export class GhostLocalVault {
 
   backend(): GhostVaultBackend { return this.#backend; }
 
-  async prepareCapsuleImport(archive: PreparedGhostCapsuleArchive, baseline?: GhostImportBaseline): Promise<GhostCapsuleImportPlan> {
-    return prepareGhostCapsuleImport(this.#backend, this.#importOwner, ghostArchiveData(archive), baseline);
+  async prepareCapsuleImport(archive: PreparedGhostPortableArchive, baseline?: GhostImportBaseline): Promise<GhostCapsuleImportPlan> {
+    return prepareGhostCapsuleImport(this.#backend, this.#importOwner, ghostPortableArchiveData(archive), baseline);
   }
 
   async commitCapsuleImport(plan: GhostCapsuleImportPlan, completion: GhostColdRestoreCompletion): Promise<"imported" | "existing-exact"> {

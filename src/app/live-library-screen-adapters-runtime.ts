@@ -216,6 +216,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       theaterUnavailable: !capsule.theaterEligible,
       repairable: capsule.repairable,
       canDownloadArchive: capsule.healthy && capsule.status === "complete",
+      canDownloadLinkedPair: capsule.canDownloadLinkedPair === true,
       timestamp: new Date(capsule.createdAt).toLocaleDateString(),
       comparisonSelected: comparisonSources.includes(capsule.id),
       comparisonSourceCount: comparisonSources.length,
@@ -234,7 +235,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     const stats = profileTab === "stats" ? buildProfileStats((key) => d.PROFILE.stat(key),
       services.ease(services.clamp(services.enterSeconds() / 0.5, 0, 1)),
       { danger: d.UI.t.color.danger, cyan: "#13c4d6", green: "#2f9e6b", gold: "#e0a326" }, services.formatTime) : [];
-    const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? 120 : 0;
+    const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? (ghostVault.archive.pairedCapsuleIds ? 132 : 120) : 0;
     const result = buildProfileSnapshot({ tab: profileTab, tabs: profileTabs, signedIn, replayListInset: archiveInset,
       firebase: d.Cloud.provider === d.FirebaseProvider, canSignIn, canRename: signedIn && d.Cloud.canRename(),
       hasCustomName: signedIn && d.Cloud.hasCustomName(), renameCooldownDays: signedIn ? d.Cloud.renameCooldownDays() : 0,

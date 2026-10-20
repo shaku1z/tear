@@ -189,5 +189,54 @@ async function main() {
   });
   report.status = "passed"; report.binding = binding; report.buildInfo = producerBuild;
 }
-main().catch((error) => { report.status = "failed"; report.error = { message: error.message, stack: error.stack }; process.exitCode = 1; })
+// Optional source fixture route: the input is an existing portable pair, never a
+// claim of a natural Campaign. Each phase still uses normal file UI in a fresh browser.
+async function pairedMain(input) {
+  if (!path.isAbsolute(input) || fs.statSync(input).size > 64 * 1024 * 1024) throw new Error("Linked pair input must be an explicit bounded absolute file");
+  const original = fs.readFileSync(input), envelope = JSON.parse(original.toString("utf8"));
+  assert.equal(envelope.format, "tearghost-linked-archive"); assert.equal(envelope.version, 1);
+  const members = [JSON.parse(envelope.parent), JSON.parse(envelope.companion)];
+  report.classification = "Existing captured source pair through normal file UI; no natural full-Campaign or independent scored-prefix claim";
+  const assertPair = async (name, journey) => {
+    const observation = await observe(name, journey.page, journey.buildInfo);
+    for (const member of members) {
+      assert.deepEqual(JSON.parse(value(observation.vault, "manifests", member.manifest.id)), member.manifest);
+      for (const [id, encoded] of Object.entries(member.chunks)) assert.equal(value(observation.vault, "chunks", id), encoded);
+    }
+    return observation;
+  };
+  await phase("pair-A-normal-source-download", async (journey) => {
+    const { page, buildInfo } = journey; producerBuild = buildInfo;
+    await openVault(journey); await chooseFile(page, input); await waitStatus(page, "READY");
+    assert.ok(await page.evaluate(() => window.__C39_FILE_TEXT__.recent.includes("RESTORE BOTH")));
+    await page.mouse.click(714, 330); await waitStatus(page, "COMPLETE");
+    await assertPair("pair-A-source-custody", journey);
+    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("DOWNLOAD LINKED PAIR"));
+    const [download] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), page.mouse.click(1094, 564)]);
+    await download.saveAs(archivePath); assert.equal(await download.failure(), null);
+    downloaded = JSON.parse(fs.readFileSync(archivePath, "utf8"));
+    assert.deepEqual(JSON.parse(downloaded.parent), members[0]); assert.deepEqual(JSON.parse(downloaded.companion), members[1]);
+    save("pair-downloaded-file", { byteLength: fs.statSync(archivePath).size, sha256: sha256(fs.readFileSync(archivePath)), members: members.map((m) => ({ id: m.manifest.id, root: m.manifest.rootIntegrity })) });
+    await page.screenshot({ path: path.join(directory, "pair-A-download.png") });
+  });
+  await phase("pair-B-fresh-normal-restore", async (journey) => {
+    const { page } = journey; await openVault(journey);
+    assert.equal(((await stores(page)).stores.manifests || []).length, 0);
+    await chooseFile(page, archivePath); await waitStatus(page, "READY");
+    const ready = await observe("pair-B-preview", page, journey.buildInfo);
+    assert.equal((ready.vault.stores.manifests || []).length, 0); assert.equal(jobs(ready.vault)[0].schemaVersion, 2);
+    assert.ok(ready.ui.text.recent.includes("RESTORE BOTH"));
+    await page.screenshot({ path: path.join(directory, "pair-B-preview.png") });
+    await page.mouse.click(714, 330); await waitStatus(page, "COMPLETE"); await assertPair("pair-B-complete", journey);
+    // Newer companion is first in the normal Vault catalog. The existing exact
+    // parent permit and runtime restoration remain authoritative on open.
+    await page.mouse.click(1024, 494); await journey.waitScreen("replay");
+    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("BACK TO SCORED RUN"));
+    await page.screenshot({ path: path.join(directory, "pair-B-linked-theater.png") });
+    await assertPair("pair-B-after-linked-theater", journey);
+  });
+  assert.deepEqual(fs.readFileSync(input), original); report.status = "passed"; report.buildInfo = producerBuild;
+}
+const linkedInput = process.env.TEAR_C39_LINKED_PAIR_FILE;
+(linkedInput ? pairedMain(path.resolve(linkedInput)) : main()).catch((error) => { report.status = "failed"; report.error = { message: error.message, stack: error.stack }; process.exitCode = 1; })
   .finally(() => { report.finishedAt = new Date().toISOString(); save("summary", report); console.log(JSON.stringify({ status: report.status, directory, phases: report.phases.map(({ id, status }) => ({ id, status })) })); });

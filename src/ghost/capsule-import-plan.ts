@@ -1,5 +1,5 @@
 import { canonicalStringify, stableVerificationHash } from "../replay/hash";
-import type { ghostArchiveData } from "./capsule-archive";
+import type { ghostPortableArchiveData } from "./capsule-paired-archive";
 import { ghostCapsuleProtectionKey, parseGhostCapsuleProtection } from "./capsule-protection";
 import type { readGhostColdRestoreCompletion } from "./cold-restore-job";
 import type { GhostVaultBackend, GhostVaultGuard, GhostVaultWrite, GhostVaultStore } from "./capsule-vault-backend";
@@ -28,40 +28,54 @@ export function ghostImportGuard(store: GhostVaultStore, key: string, expected: 
 export interface GhostImportBaseline { readonly kind: "imported" | "existing-exact"; readonly slots: readonly Readonly<{ store: GhostVaultStore; key: string; sha256: string | null }>[] }
 declare const planBrand: unique symbol;
 export interface GhostCapsuleImportPlan { readonly [planBrand]: true }
-interface PlanData { readonly backend: GhostVaultBackend; readonly owner: object; readonly archive: ReturnType<typeof ghostArchiveData>; readonly baseline: GhostImportBaseline; readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] }
+interface PlanData { readonly backend: GhostVaultBackend; readonly owner: object; readonly archive: ReturnType<typeof ghostPortableArchiveData>; readonly baseline: GhostImportBaseline; readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] }
 const plans = new WeakMap<GhostCapsuleImportPlan, PlanData>();
 function read(plan: GhostCapsuleImportPlan): PlanData { const data = plans.get(plan); if (data === undefined) throw new TypeError("invalid Ghost import plan"); return data; }
 export function ghostCapsuleImportBaseline(plan: GhostCapsuleImportPlan): GhostImportBaseline { return read(plan).baseline; }
 export function ghostCapsuleImportGuards(plan: GhostCapsuleImportPlan): readonly GhostVaultGuard[] { return read(plan).guards; }
 
-export async function prepareGhostCapsuleImport(backend: GhostVaultBackend, owner: object, data: ReturnType<typeof ghostArchiveData>, expected?: GhostImportBaseline): Promise<GhostCapsuleImportPlan> {
-  const manifest = data.manifest, raw = await backend.get("manifests", manifest.id);
-  const indexKey = `manifest:${manifest.id}`, protectionKey = ghostCapsuleProtectionKey(manifest.id);
-  const index = await backend.get("indexes", indexKey), protection = await backend.get("analysis", protectionKey);
-  const indexValue = JSON.stringify({ status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length });
-  if (raw === undefined && index !== undefined) throw new TypeError("orphan Ghost manifest index conflicts with import");
-  if (raw !== undefined && (canonicalStringify(parseGhostCapsuleManifest(JSON.parse(raw) as unknown)) !== canonicalStringify(manifest)
-    || index === undefined || canonicalStringify(JSON.parse(index) as unknown) !== canonicalStringify(JSON.parse(indexValue) as unknown))) throw new TypeError("existing Ghost custody differs from complete archive");
-  if (protection !== undefined && parseGhostCapsuleProtection(protection, manifest.id).rootIntegrity !== manifest.rootIntegrity) throw new TypeError("Ghost import protection root differs");
-  const guards: GhostVaultGuard[] = [ghostImportGuard("manifests", manifest.id, raw), ghostImportGuard("indexes", indexKey, index), ghostImportGuard("analysis", protectionKey, protection)];
-  const writes: GhostVaultWrite[] = [];
-  for (const entry of manifest.chunks) {
-    const stored = await backend.get("chunks", entry.id), text = data.chunks[entry.id];
-    if (typeof text !== "string") throw new TypeError("prepared Ghost archive chunk is absent");
-    guards.push(ghostImportGuard("chunks", entry.id, stored));
-    if ((raw !== undefined && stored === undefined) || (stored !== undefined && stored !== text)) throw new TypeError("stored Ghost chunk is missing or differs from archive");
-    if (stored === undefined) writes.push({ store: "chunks", key: entry.id, value: text });
+export async function prepareGhostCapsuleImport(backend: GhostVaultBackend, owner: object, data: ReturnType<typeof ghostPortableArchiveData>, expected?: GhostImportBaseline): Promise<GhostCapsuleImportPlan> {
+  const guards: GhostVaultGuard[] = [], writes: GhostVaultWrite[] = [];
+  let allExisting = true;
+  for (const member of data.members) {
+    const manifest = member.manifest, raw = await backend.get("manifests", manifest.id);
+    const indexKey = `manifest:${manifest.id}`, protectionKey = ghostCapsuleProtectionKey(manifest.id);
+    const index = await backend.get("indexes", indexKey), protection = await backend.get("analysis", protectionKey);
+    const indexValue = JSON.stringify({ status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length });
+    if (raw === undefined && index !== undefined) throw new TypeError("orphan Ghost manifest index conflicts with import");
+    if (raw !== undefined && (canonicalStringify(parseGhostCapsuleManifest(JSON.parse(raw) as unknown)) !== canonicalStringify(manifest)
+      || index === undefined || canonicalStringify(JSON.parse(index) as unknown) !== canonicalStringify(JSON.parse(indexValue) as unknown))) throw new TypeError("existing Ghost custody differs from complete archive");
+    if (protection !== undefined && parseGhostCapsuleProtection(protection, manifest.id).rootIntegrity !== manifest.rootIntegrity) throw new TypeError("Ghost import protection root differs");
+    guards.push(ghostImportGuard("manifests", manifest.id, raw), ghostImportGuard("indexes", indexKey, index), ghostImportGuard("analysis", protectionKey, protection));
+    if (raw === undefined) allExisting = false;
+    for (const entry of manifest.chunks) {
+      const stored = await backend.get("chunks", entry.id), text = member.chunks[entry.id];
+      if (typeof text !== "string") throw new TypeError("prepared Ghost archive chunk is absent");
+      guards.push(ghostImportGuard("chunks", entry.id, stored));
+      if ((raw !== undefined && stored === undefined) || (stored !== undefined && stored !== text)) throw new TypeError("stored Ghost chunk is missing or differs from archive");
+      if (stored === undefined) writes.push({ store: "chunks", key: entry.id, value: text });
+    }
+    if (raw === undefined) writes.push({ store: "manifests", key: manifest.id, value: JSON.stringify(manifest) }, { store: "indexes", key: indexKey, value: indexValue });
   }
-  const slots = await Promise.all(guards.map(async (guard) => Object.freeze({ store: guard.store, key: guard.key,
+  const unique = <T extends GhostVaultGuard | GhostVaultWrite>(rows: readonly T[]): T[] => {
+    const result = new Map<string, T>();
+    for (const row of rows) {
+      const key = `${row.store}:${row.key}`, old = result.get(key);
+      if (old !== undefined && canonicalStringify(old) !== canonicalStringify(row)) throw new TypeError("shared Ghost import slots differ");
+      result.set(key, row);
+    }
+    return [...result.values()];
+  };
+  const unionGuards = unique(guards), unionWrites = unique(writes);
+  const slots = await Promise.all(unionGuards.map(async (guard) => Object.freeze({ store: guard.store, key: guard.key,
     sha256: guard.expected === undefined ? null : await ghostArchiveSha256(new TextEncoder().encode(guard.expected)) })));
-  const baseline: GhostImportBaseline = Object.freeze({ kind: raw === undefined ? "imported" : "existing-exact", slots: Object.freeze(slots) });
+  const baseline: GhostImportBaseline = Object.freeze({ kind: allExisting ? "existing-exact" : "imported", slots: Object.freeze(slots) });
   if (expected !== undefined && canonicalStringify(expected) !== canonicalStringify(baseline)) throw new TypeError("cold restore destination changed from its initial baseline");
-  if (raw === undefined) writes.push({ store: "manifests", key: manifest.id, value: JSON.stringify(manifest) }, { store: "indexes", key: indexKey, value: indexValue });
   // A guard-only fence makes the baseline one coherent observation, not a set
   // of individually observed slots that never existed together.
-  await backend.commitIfMatches(guards, []);
+  await backend.commitIfMatches(unionGuards, []);
   const plan = Object.freeze({}) as GhostCapsuleImportPlan;
-  plans.set(plan, Object.freeze({ backend, owner, archive: data, baseline, guards: Object.freeze(guards.map((guard) => Object.freeze(guard))), writes: Object.freeze(writes.map((write) => Object.freeze(write))) })); return plan;
+  plans.set(plan, Object.freeze({ backend, owner, archive: data, baseline, guards: Object.freeze(unionGuards.map((guard) => Object.freeze(guard))), writes: Object.freeze(unionWrites.map((write) => Object.freeze(write))) })); return plan;
 }
 
 async function admitQuota(data: PlanData): Promise<void> {
@@ -76,7 +90,7 @@ async function admitQuota(data: PlanData): Promise<void> {
       sizes.set(chunk.id, chunk.compressedBytes);
     }
   }
-  for (const chunk of data.archive.manifest.chunks) {
+  for (const member of data.archive.members) for (const chunk of member.manifest.chunks) {
     if (sizes.has(chunk.id) && sizes.get(chunk.id) !== chunk.compressedBytes) throw new TypeError("shared Ghost chunk size differs");
     sizes.set(chunk.id, chunk.compressedBytes);
   }

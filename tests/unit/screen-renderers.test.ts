@@ -510,6 +510,18 @@ describe("legacy screen renderer registry", () => {
       if (populated) expect(controls.find((control) => control.action.type === "profile.downloadGhostArchive")).toMatchObject({ y: 504, w: 116 });
     }
   });
+  it("offers a separate linked-pair download and named RESTORE BOTH while keeping the single download", () => {
+    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    renderer.profile({ id: "profile", tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],
+      replays: [{ id: "parent", title: "Scored run", detail: "Complete", available: true, canDownloadArchive: true, canDownloadLinkedPair: true }],
+      archive: { status: "ready", detail: "Validated pair", canPick: true, jobId: "pair", revision: 0, canRestore: true, pairedCapsuleIds: ["parent", "finale"] } });
+    const downloads = controls.filter((control) => control.action.type === "profile.downloadGhostArchive");
+    expect(downloads).toHaveLength(2);
+    expect(downloads.find((c) => c.label === "DOWNLOAD")).toMatchObject({ action: { id: "parent" } });
+    expect(downloads.find((c) => c.label === "DOWNLOAD LINKED PAIR")).toMatchObject({ action: { id: "parent", paired: true } });
+    expect(controls.find((c) => c.action.type === "profile.restoreGhostArchive")).toMatchObject({ label: "RESTORE BOTH", action: { id: "pair", revision: 0 } });
+    for (const control of downloads) expect(control.y + control.h).toBeLessThanOrEqual(790);
+  });
   it("C39 review: clips scrolled row hit/focus rectangles while fixed archive controls remain reachable", () => {
     for (const tab of ["vault", "replays"]) {
       const controls: ScreenControl[] = [], context = createRenderContext(controls), renderer = createLegacyScreenRenderers({ ...context, scroll: 96 });

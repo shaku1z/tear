@@ -1,5 +1,6 @@
+import { prepareGhostPortableArchive, type PreparedGhostPortableArchive } from "./capsule-paired-archive";
 import { canonicalStringify } from "../replay/hash";
-import { prepareGhostCapsuleArchive, ghostArchiveSha256, type PreparedGhostCapsuleArchive, type NormalGhostArchiveLimits } from "./capsule-archive";
+import { ghostArchiveSha256, type NormalGhostArchiveLimits } from "./capsule-archive";
 import { ghostCapsuleImportBaseline, ghostCapsuleImportGuards, type GhostImportBaseline } from "./capsule-import-plan";
 import { ghostColdRestoreJobKey, ghostColdRestoreResultKey, parseGhostColdRestoreJob, parseGhostColdRestoreResult,
   ghostColdRestoreRevision, prepareGhostColdRestoreCompletion, readGhostColdRestoreCompletion, type GhostColdRestoreJob, type GhostColdRestoreResult } from "./cold-restore-job";
@@ -35,13 +36,13 @@ export class GhostColdRestore {
       throw new GhostColdRestoreError(code, "cold restore metadata transaction was not confirmed; inspect metadata and explicitly reselect", error);
     }
   }
-  async #plan(archive: PreparedGhostCapsuleArchive, baseline?: GhostImportBaseline) {
+  async #plan(archive: PreparedGhostPortableArchive, baseline?: GhostImportBaseline) {
     try { return await this.#vault.prepareCapsuleImport(archive, baseline); }
     catch (error) { throw new GhostColdRestoreError("conflict", "cold restore destination differs from its exact initial custody", error); }
   }
   async select(id: string, bytes: Uint8Array, limits: Partial<NormalGhostArchiveLimits> = {}): Promise<GhostColdRestoreJob> {
     const key = ghostColdRestoreJobKey(id), archive = await this.#archive(bytes, limits), plan = await this.#plan(archive), now = this.#now();
-    const job = parseGhostColdRestoreJob(JSON.stringify({ format: "ghost-cold-restore-job", schemaVersion: 1, id, revision: 0, state: "ready", lease: null,
+    const job = parseGhostColdRestoreJob(JSON.stringify({ format: "ghost-cold-restore-job", schemaVersion: archive.binding.protocol === "ghost-linked-archive-v1" ? 2 : 1, id, revision: 0, state: "ready", lease: null,
       createdAt: now, updatedAt: now, binding: archive.binding, limits: archive.limits, baseline: ghostCapsuleImportBaseline(plan), resultHash: null, failure: null }));
     await this.#metadata([...ghostCapsuleImportGuards(plan), { store: "analysis", key }, { store: "analysis", key: ghostColdRestoreResultKey(id) }],
       [{ store: "analysis", key, value: JSON.stringify(job) }]); return job;
@@ -93,14 +94,14 @@ export class GhostColdRestore {
       throw new GhostColdRestoreError(code, "cold restore did not commit; exact input may be explicitly retried", error);
     }
   }
-  async #archive(bytes: Uint8Array, limits: Partial<NormalGhostArchiveLimits>): Promise<PreparedGhostCapsuleArchive> {
-    try { return await prepareGhostCapsuleArchive(bytes, limits); }
+  async #archive(bytes: Uint8Array, limits: Partial<NormalGhostArchiveLimits>): Promise<PreparedGhostPortableArchive> {
+    try { return await prepareGhostPortableArchive(bytes, limits); }
     catch (error) {
       const code = error instanceof RangeError ? "limits" : error instanceof ReferenceError || (error instanceof Error && error.name === "NotSupportedError") ? "unavailable" : "invalid-archive";
       throw new GhostColdRestoreError(code, "normal archive validation failed", error);
     }
   }
-  async #resolve(archive: PreparedGhostCapsuleArchive, expected: GhostColdRestoreJob): Promise<GhostColdRestoreResult> {
+  async #resolve(archive: PreparedGhostPortableArchive, expected: GhostColdRestoreJob): Promise<GhostColdRestoreResult> {
     const backend = this.#vault.backend(), key = ghostColdRestoreJobKey(expected.id), resultKey = ghostColdRestoreResultKey(expected.id);
     try {
       const raw = await backend.get("analysis", key), resultRaw = await backend.get("analysis", resultKey);
