@@ -1,3 +1,4 @@
+import { runDnaObserver } from "../runtime/run-dna-observer";
 // ------- player: run, jump, dash -------
 import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 import type { VoidLane, VoidPlatform } from "../voidgen-contracts";
@@ -256,6 +257,8 @@ class Player {
       this.dashTimer = D.duration;
       this.iframe = Math.max(this.iframe, D.iframe);   // dash i-frames, into the shared timer (never shortens a longer active window)
       this.dashCharges--;
+      runDnaObserver(this)?.maneuver("dash");
+      if (!this.onGround && this.maxDashCharges > 1 && this.dashCharges < this.maxDashCharges - 1) runDnaObserver(this)?.maneuver("air-dash");
       this.dashCd = this.dashCharges > 0 ? 0.16 : D.cooldown;   // quick chain between charges; full cd when spent
     }
 
@@ -314,6 +317,7 @@ class Player {
         this.onGround = false;
         this.coyote = 0;
         this.jumpBuf = 0;
+        runDnaObserver(this)?.maneuver("jump");
       }
 
       // gravity
@@ -388,6 +392,7 @@ class Player {
     const hpBefore = this.hp;
     this.hp = this.oneHit ? 0 : Math.max(0, this.hp - dmg);
     const actualLost = Math.max(0, hpBefore - this.hp);
+    runDnaObserver(this)?.damage(actualLost, this.maxHp);
     if (!this.oneHit && this.hp > 0 && this.hp < this.maxHp * 0.30 &&
         this.secondBreathDuration > 0 && !this.secondBreathUsed) {
       this.secondBreathUsed = true;

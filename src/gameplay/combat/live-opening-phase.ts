@@ -1,3 +1,4 @@
+import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
 import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { stepCombatPrelude, type CombatPreludeBlade, type CombatPreludePlayer, type CombatPreludeRun } from "./combat-step-prelude";
@@ -144,7 +145,7 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
 
 function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
   const { blade, run, config } = host;
-  stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
+  withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => { stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
     secondPass: Number(run.mods.secondPass) || 1, redirect: !!run.mods.redirect, stormBurst: Number(run.mods.stormBurst) || 0,
     collisionDamage: config.weapons.chainblade.collisionDamage, slingSpeed: config.weapons.chainblade.slingSpeed,
     throwSpeed: config.blade.throw.speed, damageMultiplier: host.runDamageMultiplier(), distance: host.distance,
@@ -157,7 +158,8 @@ function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: str
     onCatch: host.fireWeaponCatch,
     onStormBurst: () => { host.areaDamage(host.player.x, host.player.y, 155, 30); host.ring(host.player.x, host.player.y, 15, "perfect"); host.shake(true); host.sound("slam"); },
     worldImpact: host.weaponWorldImpact, lobExplode: host.lobExplode, emitThrowResolve: host.emitThrowResolve,
-    nearestEnemy: host.nearestEnemy });
+    nearestEnemy: host.nearestEnemy }); });
+  if (previousState !== "held" && blade.state === "held") runDnaObserver(blade)?.caught(blade.throwId);
 }
 
 function runLocomotion(host: LiveOpeningPhaseHost, dt: number): void {

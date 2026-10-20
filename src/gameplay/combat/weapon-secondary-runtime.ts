@@ -1,5 +1,6 @@
+import { runDnaObserver } from "../runtime/run-dna-observer";
 export interface SecondaryEnemy {
-  x: number; y: number; vx: number; vy: number; radius: number; weight: number; dead: boolean;
+  x: number; y: number; vx: number; vy: number; radius: number; hp: number; weight: number; dead: boolean;
   hit(damage: number, vx: number, vy: number): void;
 }
 export interface SecondaryBlade {
@@ -37,7 +38,9 @@ export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
       if (options.distance(other.x, other.y, dragged.x, dragged.y) > other.radius + dragged.radius) continue;
       blade.slingCollided?.add(other);
       const damage = options.collisionDamage * blade.channel("secondaryPower") * options.secondPass * options.damageMultiplier;
+      const beforeOther = other.hp, beforeDragged = dragged.hp;
       other.hit(damage, dragged.vx, dragged.vy); dragged.hit(damage * 0.35, -dragged.vx, -dragged.vy);
+      runDnaObserver(blade)?.derivativeDamage(Math.max(0, beforeOther - other.hp) + Math.max(0, beforeDragged - dragged.hp));
       options.burst(other, dragged.vx, dragged.vy); options.floater(other, `COLLISION ${String(Math.round(damage))}`);
       if (options.didDie(other)) options.onKill(other);
       if (options.redirect) {
@@ -65,7 +68,8 @@ export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
       if (collided) {
         const damage = options.collisionDamage * 0.75 * blade.channel("secondaryPower")
           * options.secondPass * options.damageMultiplier;
-        dragged.hit(damage, normalX * speed, normalY * speed);
+        const beforeHp = dragged.hp; dragged.hit(damage, normalX * speed, normalY * speed);
+        runDnaObserver(blade)?.derivativeDamage(Math.max(0, beforeHp - dragged.hp));
         const dot = dragged.vx * normalX + dragged.vy * normalY;
         dragged.vx = (dragged.vx - 1.6 * dot * normalX) * 0.58;
         dragged.vy = (dragged.vy - 1.6 * dot * normalY) * 0.58;
@@ -81,5 +85,5 @@ export function stepWeaponSecondary(options: WeaponSecondaryOptions): void {
   if (!blade.embeddedNew) return;
   blade.embeddedNew = false;
   const impact = options.worldImpact();
-  if (impact?.mechanic === "meteor" && blade.claimImpact()) { options.lobExplode(); options.emitThrowResolve(); }
+  if (impact?.mechanic === "meteor" && blade.claimImpact()) { runDnaObserver(blade)?.maneuver("meteor"); options.lobExplode(); options.emitThrowResolve(); }
 }

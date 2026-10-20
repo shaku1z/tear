@@ -351,13 +351,14 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     const panelWidth = Math.min(860, width - 80 - safe.l - safe.r), panelHeight = 330;
     const x = width / 2 - panelWidth / 2, y = 90 + safe.t;
     ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
-    ui.title(canvas, "RUN DNA · VERIFIED METRICS", width / 2, y + 38, ui.t.type.lead);
-    ui.text(canvas, `FORMULA ${dna.formulaVersion} · EVIDENCE ${dna.evidenceCustody}`, x + 24, y + 64, ui.t.type.micro, "left", ui.t.alpha.muted);
+    ui.title(canvas, "RUN DNA · RECORDED METRICS", width / 2, y + 38, ui.t.type.lead);
+    ui.text(canvas, `FORMULA ${dna.formulaVersion} · ${dna.nativePolicy ?? "LEGACY DECLARATION"}`, x + 24, y + 64, ui.t.type.micro, "left", ui.t.alpha.muted);
+    ui.text(canvas, dna.evidenceCustody, x + 24, y + 82, ui.t.type.micro, "left", ui.t.alpha.muted);
     Object.entries(dna.sourceMetrics).forEach(([name, value], index) => { ui.text(canvas,
-      `${name.toUpperCase()} · ${value === undefined ? "UNAVAILABLE" : String(value)}`, x + 24 + (index % 2) * 390, y + 94 + Math.floor(index / 2) * 22,
+      `${name.toUpperCase()} · ${value === undefined ? "UNAVAILABLE" : String(value)}`, x + 24 + (index % 2) * ((panelWidth - 48) / 2), y + 94 + Math.floor(index / 2) * 22,
       ui.t.type.caption, "left", value === undefined ? ui.t.alpha.muted : ui.t.alpha.soft); });
     if (dna.dimensions) Object.entries(dna.dimensions).forEach(([name, value], index) => { ui.text(canvas,
-      `${name.toUpperCase()} ${String(Math.round(value * 100))}%`, x + 24 + (index % 3) * 265, y + 198 + Math.floor(index / 3) * 24, ui.t.type.caption, "left", ui.t.alpha.soft); });
+      `${name.toUpperCase()} ${String(Math.round(value * 100))}%`, x + 24 + (index % 3) * ((panelWidth - 48) / 3), y + 198 + Math.floor(index / 3) * 24, ui.t.type.caption, "left", ui.t.alpha.soft); });
     if (!dna.available) dna.unavailable.slice(0, 3).forEach((entry, index) => { ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 250 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted); });
     else ui.text(canvas, "Derived only from the declared durable capsule metrics; no hidden events or profile data.", x + 24, y + 286, ui.t.type.micro, "left", ui.t.alpha.muted);
   }

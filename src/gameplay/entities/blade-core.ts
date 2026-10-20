@@ -1,3 +1,4 @@
+import { runDnaObserver } from "../runtime/run-dna-observer";
 import type {
   BladeDependencies, BladeEnemyPort, BladePlatformPort, BladePlayerPort, BladePoint, BladeThreadcutWaypoint,
   BladeWeaponEvent, BladeWeaponPort, BladeChannels, GameConfig,
@@ -351,7 +352,11 @@ abstract class BladeCore {
     if (this.tipSpeed >= threshold && !this.swingActive) {
       this.swingActive = true;
       this.swingId += 1;
-    } else if (this.tipSpeed < threshold * 0.45) this.swingActive = false;
+
+    } else if (this.tipSpeed < threshold * 0.45 && this.swingActive) {
+      this.swingActive = false;
+    }
+    runDnaObserver(this)?.heldSwing(this.swingId, this.swingActive);
   }
 
   claimAttack(): number { this.attackId += 1; return this.attackId; }

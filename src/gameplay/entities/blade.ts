@@ -1,3 +1,4 @@
+import { runDnaObserver } from "../runtime/run-dna-observer";
 // ------- the momentum blade -------
 import { createBladeCore } from "./blade-core";
 import { chainCollisionSegments, updateChainNodes } from "./blade-chain-runtime";
@@ -111,7 +112,7 @@ class Blade extends BladeCore {
       this.riftRecoilUntil = CLOCK.sim + CONFIG.weapons.riftlock.recoilCutWindow;
       this.riftRecoilHits.clear();
     }
-    const attackId = this.claimAttack();
+    const attackId = this.claimAttack(); runDnaObserver(this)?.start(`shot:${String(attackId)}`, "primary-discharge");
     this.weaponEvents.push(Object.freeze({
       type: "razorRound", x: this.tipX, y: this.tipY, vx: directionX * speed, vy: directionY * speed,
       damage: CONFIG.weapons.riftlock.razorDamage * (remote ? this.channel("throwPower") : 1),
@@ -217,7 +218,7 @@ class Blade extends BladeCore {
         this.backblastActive ? CONFIG.weapons.riftlock.backblastSpeed : 0);
       if ((target === hand || this.retraceDone) && homeD <= Math.max(26, returnSpeed * dt)) {
         // reattach to the hand -> back to a normal held blade
-        this.state = "held";
+        this.state = "held"; runDnaObserver(this)?.maneuver("catch");
         this.hostile = false; this.stolenBy = null;
         this.x = hand.x; this.y = hand.y;
         this.vx = 0; this.vy = 0;
@@ -411,7 +412,7 @@ class Blade extends BladeCore {
     this._updateStandardThrown(dt, player, [], false); // Chainblade never embeds in terrain.
   }
 
-  _launchLooseCannon(): void {
+  _launchLooseCannon(): void { runDnaObserver(this)?.maneuver("loose-cannon");
     this.looseCannonT = CONFIG.weapons.riftlock.looseCannonDuration * this.channel("controlDuration");
   }
 
@@ -470,7 +471,7 @@ class Blade extends BladeCore {
       e.vy = player.vy + e.vy * W.releaseMomentumCarry + tangentY * releaseSpeed;
       if (e.isBoss) { player.vx -= tangentX * releaseSpeed * 0.18; player.vy -= tangentY * releaseSpeed * 0.12; }
       else e.stun = Math.max(e.stun, W.releaseStun * (e.weight > 2 ? 0.55 : 1));
-      if ((e.isBoss || e.weight > 2) && e.applyBreak) e.applyBreak(W.heavyBreak);
+      if ((e.isBoss || e.weight > 2) && e.applyBreak) e.applyBreak(W.heavyBreak); runDnaObserver(this)?.maneuver("sling");
       this.weaponEvents.push(Object.freeze({ type: "slingRelease", sourceX: this.x, sourceY: this.y,
         x: e.x, y: e.y, vx: e.vx, vy: e.vy, attackId: this.attackId, throwId: this.throwId }));
       this.pierced = new Set(); this.secondaryActive = true; this.hookTarget = null; this.state = "returning";
@@ -497,7 +498,7 @@ class Blade extends BladeCore {
         damage: CONFIG.weapons.riftlock.razorDamage * this.channel("secondaryPower"),
         attackId, throwId: this.throwId, remote: true, secondary: true,
       }));
-      this.backblastActive = true;
+      this.backblastActive = true; runDnaObserver(this)?.maneuver("backblast");
     }
     return result;
   }
@@ -554,8 +555,8 @@ class Blade extends BladeCore {
     this.throwDmg = (T.damage + sp * T.damageFromSpeed) * this.channel("throwPower");
     this.throwBaseDmg = this.throwDmg;   // Overdrive ramp is capped relative to this
     this.pierced = new Set();
-    this.flyTime = 0;
-    this.throwId++;
+    this.flyTime = 0; runDnaObserver(this)?.interrupt(`swing:${String(this.swingId)}`);
+    this.throwId++; runDnaObserver(this)?.start(`throw:${String(this.throwId)}`, "throw");
     this.claimAttack();
     this.throwOrigin = { x: this.x, y: this.y };
     this.throwResolved = false;

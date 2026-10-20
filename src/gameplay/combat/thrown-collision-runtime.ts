@@ -1,3 +1,4 @@
+import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
 export interface ThrownPlayer {
   x: number; y: number; hp: number; maxHp: number; tempoT: number; tempoStk: number;
   rallySource?: object | null; claimRally(damage: number): number;
@@ -107,9 +108,11 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
   if (run.mods.berserk && player.hp < player.maxHp * 0.5) damage *= 1.25;
   if (player.tempoT > 0 && run.mods.tempo) damage *= 1 + run.mods.tempo * player.tempoStk;
   damage *= hooks.runDamageMultiplier() * enemy.damageTakenMult();
-  const first = enemy.firstPlayerDamageAt == null; const dealt = enemy.hit(damage, blade.vx, blade.vy); hooks.noteFirstDamage(enemy, first);
+  const first = enemy.firstPlayerDamageAt == null; const dealt = enemy.hit(damage, blade.vx, blade.vy);
+  runDnaObserver(blade)?.hit(`throw:${String(blade.throwId)}`, dealt);
+  if (dealt > 0 && (effect?.mechanic === "meteor" || effect?.mechanic === "hook" || effect?.mechanic === "capture")) runDnaObserver(blade)?.maneuver(effect.mechanic); hooks.noteFirstDamage(enemy, first);
   blade.recordHit(enemy); run.weaponStats.throwHits++; hooks.logHit(blade.throwId, damage, secondary, effect?.mechanic);
-  const presentedAttack = applyThrowEffect(blade, enemy, effect, run, t, hooks); hooks.emitResolve(enemy, damage);
+  const presentedAttack = applyThrowEffect(blade, enemy, effect, run, t, hooks); withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => { hooks.emitResolve(enemy, damage); });
   if (player.rallySource === enemy) {
     const healed = player.claimRally(damage);
     if (healed > 0) { hooks.floater(player.x, player.y - 44, `+${String(Math.round(healed))}`, false, "#e8a32e"); hooks.ribbon(enemy.x, enemy.y - 12, player.x, player.y - 10, "#e8a32e"); }
@@ -119,11 +122,11 @@ function resolveThrownEnemyHit(blade: ThrownBlade, player: ThrownPlayer, enemy: 
   hooks.floater(enemy.x, enemy.y - 26, Math.round(damage).toString(), true);
   hooks.setHitStop(t.hitStopSmall); hooks.shake(t.shakeSmall); hooks.style(effect?.mechanic === "threadcut" ? "threadcut" : effect?.mechanic === "wheelCut" || effect?.mechanic === "wheelReturn" ? "wheelCut" : "throwHit");
   if (hooks.achievementsEnabled()) hooks.recordThrowAchievement(enemy, blade.pierced.size, damage);
-  hooks.fireHit(enemy); if (secondary) hooks.fireReturnHit(enemy, damage);
+  withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => { hooks.fireHit(enemy); if (secondary) hooks.fireReturnHit(enemy, damage); });
   if (enemy.dead) { if (hooks.achievementsEnabled() && blade.pierced.size >= 2) hooks.recordPierceKill(); hooks.onKill(enemy); }
   if (effect?.stop) {
     if (!blade.claimImpact()) { blade.state = "returning"; return true; }
-    if (effect.mechanic === "meteor") { blade.forceEmbed(); hooks.lobExplode(enemy.x, enemy.y); }
+    if (effect.mechanic === "meteor") { blade.forceEmbed(); withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => { hooks.lobExplode(enemy.x, enemy.y); }); }
     else if (effect.mechanic === "hook") { blade.hookTarget = enemy; blade.slingCollided = new Set(); blade.state = "hooked"; blade.vx = 0; blade.vy = 0; blade.linkT = t.chainbladeHookDuration * blade.channel("controlDuration"); enemy.boundT = blade.linkT; }
     else if (effect.mechanic === "capture") {
       blade.hookTarget = enemy; blade.state = "captured"; blade.vx = 0; blade.vy = 0;

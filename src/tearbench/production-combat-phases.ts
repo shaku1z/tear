@@ -1,3 +1,4 @@
+import { bindRunDnaShot, runDnaObserver } from "../gameplay/runtime/run-dna-observer";
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
 import { GFX, THEME } from "../config/game-config";
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks, type LiveCombatEntity } from "../gameplay/combat/combat-entity-runtime";
@@ -297,6 +298,8 @@ export function createProductionCombatPhases(
         }
         const shot = world.entities.createProjectile(event.x, event.y, event.vx, event.vy) as never as Record<string, unknown>;
         shot.family = "weaponProjectile"; shot.playerOwned = true; shot.weaponId = "riftlock";
+        bindRunDnaShot(shot, blade(), event.attackId, event.secondary, event.throwId);
+        if (!event.secondary) runDnaObserver(blade())?.end(`shot:${String(event.attackId)}`);
         shot.attackId = event.attackId; shot.throwId = event.throwId; shot.remote = event.remote;
         shot.secondary = event.secondary; shot.kind = "razor"; shot.r = config.weapons.riftlock.razorRadius;
         shot.life = config.weapons.riftlock.razorLife; shot.dmg = event.damage;

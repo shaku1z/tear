@@ -1,4 +1,4 @@
-import { createLiveGhostChallengeComposition } from "./live-ghost-challenge-composition"; import { createLiveTrainingHandoff } from "./live-training-handoff"; import { liveTutorialCoachFrame } from "./live-tutorial-coach-frame"; import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { createLiveGhostRunDnaRecording } from "./live-ghost-run-dna-recording"; import { createLiveGhostChallengeComposition } from "./live-ghost-challenge-composition"; import { createLiveTrainingHandoff } from "./live-training-handoff"; import { liveTutorialCoachFrame } from "./live-tutorial-coach-frame"; import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./live-ghost-frame-recording"; import { createBrowserLiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
@@ -54,7 +54,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const ghostV3Options = createGhostV3BrowserTestOptions(TEST_MODE, browserWindow.location.search) ?? {}, ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb); bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
   const ownerRecovery = createBrowserLiveGhostOwnerRecoveryController(browserIndexedDb, ghostPublication, currentSignedInActor, () => { ghostVault.refresh(); }, (input, init) => browserWindow.fetch(input, init)); Cloud.onChange(() => { ownerRecovery.accountChanged(); });
   const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb, { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); if (manifest.provenance?.forkOrigin === undefined) await humanCalibration.capture?.finalized(manifest, vault); } }); const ghostV3 = ghostV3Session.recorder();
-  const ghostFrames = createLiveGhostFrameRecording({ session: ghostV3Session, tick: () => simulationRuntime.scheduler.tick, introActive: () => hostState.bossIntro() !== null });
+  const ghostDna = createLiveGhostRunDnaRecording({ session: ghostV3Session, player: livePlayer, blade: liveBlade, run: liveRun, tick: () => simulationRuntime.scheduler.tick, practice: () => ghostPracticeSession.active() !== null }); const ghostFrames = createLiveGhostFrameRecording({ session: ghostV3Session, tick: () => simulationRuntime.scheduler.tick, introActive: () => hostState.bossIntro() !== null, afterFrame: () => { ghostDna.frameEnded(); } });
   const openingCapture = createLiveGhostOpeningCapture({ screen: () => state, tick: () => simulationRuntime.scheduler.tick,
     replayRunId: () => ghostV3Session.replayContext()?.run.id, nextSequence: ghostV3Session.nextEventSequence,
     record: (event) => { ghostV3?.record("events", event.tick, event); }, failed: (error) => { console.warn("Ghost opening completion capture failed; live play continues", error); } });
@@ -83,7 +83,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       try {
         ghostV3.start({ sessionId: `ghost-v3-${context.runId}-${browserWindow.crypto.randomUUID()}`,
           createdAt: new Date().toISOString(), provenance });
-        ghostV3Session.setReplayContext(replayContext);
+        ghostV3Session.setReplayContext(replayContext); ghostDna.start(replayContext);
         if (replayContext !== undefined) {
           // The sealed bootstrap event is queued first by GhostLiveRecorder.
           // Capture its matching state/RNG anchor before any opening-content
@@ -99,7 +99,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     // Run lifecycle owns canonical recording; an open intro frame closes before finalization.
     stopped(meta) {
       openingCapture.discard();
-      ghostFrames.finish(meta);
+      ghostDna.finish(() => { ghostFrames.finish(meta); });
     },
   });
   let observeChallengeEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let stopChallengeRun: () => boolean = () => false; let observePlayerWatchEvent: RunMonitorController["observeRunEvent"] = () => undefined;
@@ -462,14 +462,14 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       }
       return Input.drainSemanticActions(tick);
     },
-    recordSealedActions: (_tick, actions) => { for (const action of actions) ghostV3?.record("commands", action.tick, action); if (__TEAR_TEST_BUILD__) canonicalTickStartedAt = performance.now(); },
+    recordSealedActions: (_tick, actions) => { ghostDna.beforeTick(_tick); for (const action of actions) ghostV3?.record("commands", action.tick, action); if (__TEAR_TEST_BUILD__) canonicalTickStartedAt = performance.now(); },
     ...(__TEAR_TEST_BUILD__ ? {
       beforeSimulationStep: (tick: number) => { const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__; hook?.before?.(tick); },
     } : {}),
     afterSimulationStep: (tick: number) => { if (__TEAR_TEST_BUILD__ && canonicalTickStartedAt !== null) {
       DIAG.record("canonicalTick", performance.now() - canonicalTickStartedAt); canonicalTickStartedAt = null;
     }
-      challenge.afterStep(tick);
+      ghostDna.afterTick(tick); challenge.afterStep(tick);
       void dependencies.practiceEncounterPersistence?.observe({ run: liveRun(), actors: hostState.enemies(), tick, playing: state === "playing", waveActive: RUN_LIFECYCLE.isWaveActive, blockingCinema: CINEMA.active && CINEMA.blocksCombat, ghostPractice: ghostPracticeSession.active() !== null, width: W, height: H })?.then((status) => { if (status !== "committed") addFloater(livePlayer().x, livePlayer().y - 70, "ENCOUNTER SAVE NOT CONFIRMED", true, "#e0a326"); });
       if (ghostV3?.active === true && tick % ghostV3.keyframeIntervalTicks === 0) {
         const random = worldContext.services.random.snapshot();

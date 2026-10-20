@@ -210,7 +210,7 @@ export interface ReplayScreenView {
   readonly coach?: GhostCoachHistoryView;
   /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
   readonly runDna?: Readonly<{
-    readonly available: boolean; readonly formulaVersion: string; readonly evidenceCustody: string;
+    readonly available: boolean; readonly formulaVersion: string; readonly evidenceCustody: string; readonly nativePolicy?: string;
     readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
     readonly dimensions?: Readonly<Record<string, number>>; readonly unavailable: readonly string[];
   }>;

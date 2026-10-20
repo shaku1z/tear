@@ -1,3 +1,4 @@
+import { runDnaObserver, runDnaShotHit, runDnaShotEnded, withRunDnaShot } from "../runtime/run-dna-observer";
 import { createProjectedSupportWorkspace, resolveProjectedSupportAuras } from "./support-aura-resolver";
 import { resolveWorldHazards, type WorldHazardTuning } from "./world-hazard-resolver";
 import { planBomberDeathExplosion, planBossZoneCollision, planProjectileCollisions,
@@ -347,8 +348,8 @@ export class CombatEntityRuntime {
     else if (intent.type === "set-player-hazard-cooldown") h.player().hazardT = intent.seconds;
     else if (intent.type === "set-player-slow") h.player().slowMult = intent.multiplier;
     else if (intent.type === "projectile-patch") this.#patch(projectile, intent.patch, objects);
-    else if (intent.type === "deflect-projectile") projectile?.deflect?.(intent.dx, intent.dy, intent.speed, false);
-    else if (intent.type === "counter-sweeper") projectile?.counterSweeper?.(intent.method, intent.dx, intent.dy, intent.speed);
+    else if (intent.type === "deflect-projectile") { projectile?.deflect?.(intent.dx, intent.dy, intent.speed, false); if (projectile?.deflected && this.#hooks.player().dashTimer > 0) runDnaObserver(this.#hooks.player())?.maneuver("phase-step"); }
+    else if (intent.type === "counter-sweeper") { const accepted = projectile?.counterSweeper?.(intent.method, intent.dx, intent.dy, intent.speed); if (accepted) runDnaObserver(this.#hooks.player())?.maneuver("phase-step"); }
     else if (intent.type === "shatter-sweeper") projectile?.shatterSweeper?.(intent.reason);
     else if (intent.type === "sweeper-countered-callback") projectile?.onCountered?.(projectile);
     else if (intent.type === "add-slow-zone") h.setSlowZones([...h.slowZones(), { ...intent.zone }]);
@@ -359,8 +360,11 @@ export class CombatEntityRuntime {
     else if (intent.type === "weapon-projectile-hit") {
       const enemy = objects.get(intent.enemyId);
       if (projectile && enemy && !enemy.dead && !enemy.dying) {
-        if (h.weaponProjectileHit) h.weaponProjectileHit(projectile, enemy, intent);
+        const beforeHp = enemy.hp;
+        if (h.weaponProjectileHit) withRunDnaShot(projectile, () => { h.weaponProjectileHit?.(projectile, enemy, intent); });
         else enemy.hit?.(intent.damage, intent.dx, intent.dy);
+        if (beforeHp !== undefined && enemy.hp !== undefined) runDnaShotHit(projectile, Math.max(0, beforeHp - enemy.hp));
+        if (projectile.dead) runDnaShotEnded(projectile);
       }
     }
     else if (intent.type === "damage-enemy-aoe") this.#damageArea(intent, objects);

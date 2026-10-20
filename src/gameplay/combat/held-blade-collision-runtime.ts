@@ -1,3 +1,4 @@
+import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
 import { planHeldStrike } from "./held-strike-planner";
 import type { HeldBladeCollisionInput, HeldBladeEnemy, PointDistance } from "./held-blade-collision-contracts";
 
@@ -102,11 +103,16 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     const firstDamage = enemy.firstPlayerDamageAt == null;
     const attackId = blade.claimAttack();
     const dealt = enemy.hit(strike.damage, blade.tipVX, blade.tipVY);
+    runDnaObserver(blade)?.heldHit(blade.swingId, dealt);
     hooks.noteFirstDamage(enemy, firstDamage); blade.recordHit(enemy); blade.recordHeldHit?.(enemy);
     blade.applyHeldResistance?.(enemy); run.weaponStats.heldHits++;
     const strikeType = strike.spike ? "spike" : strike.empoweredSlam ? "superslam"
       : strike.slam ? "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : "hit";
     const airborne = enemy.y < t.groundY - enemy.hh - 14;
+    if (dealt > 0) {
+      if (strikeType !== "hit") runDnaObserver(blade)?.maneuver(strikeType);
+      if (airborne) runDnaObserver(blade)?.maneuver("air-hit");
+    }
     hooks.observeTutorialContact?.(enemy, { kind: "contact", result: "accepted", grounded: player.onGround, strike: strikeType });
     hooks.logHit(strike.damage, quality, { strikeType, airborne }, weaponEffect?.mechanic);
     applyWeaponEffect(input, enemy, weaponEffect);
@@ -146,7 +152,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     fx.tutorial("strike");
     if (airborne) fx.tutorial("airHit");
     if (hooks.achievementsEnabled()) trackAchievements(input, enemy, strike.damage, airborne, strike.launch, strike.slam, strike.empoweredLaunch, strike.spike, strike.empoweredSlam);
-    hooks.fireHit(enemy, point.px, point.py); hooks.fireSwingHit(enemy, point.px, point.py, dealt, quality, weaponEffect?.mechanic);
+    withRunDnaAttack(blade, `swing:${String(blade.swingId)}`, () => { hooks.fireHit(enemy, point.px, point.py); hooks.fireSwingHit(enemy, point.px, point.py, dealt, quality, weaponEffect?.mechanic); });
     if (dealt > 0 && run.weaponId !== undefined) {
       hooks.weaponEffect?.(run.weaponId, strikeType);
       if (weaponEffect?.mechanic !== undefined && (weaponEffect.mechanic !== "break" || weaponEffect.broke)) hooks.weaponEffect?.(run.weaponId, weaponEffect.mechanic);
@@ -155,7 +161,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     if (strike.slam && run.mods.bleedDetonate) applyRupture(input, enemy);
     if (strike.empoweredSlam && run.mods.crater) {
       const radius = 130 + strike.descentFraction * 110;
-      hooks.dealArea(enemy.x, enemy.y, radius, baseDamage * (0.7 + strike.descentFraction));
+      withRunDnaAttack(blade, `swing:${String(blade.swingId)}`, () => { hooks.dealArea(enemy.x, enemy.y, radius, baseDamage * (0.7 + strike.descentFraction)); });
       fx.explode(enemy.x, enemy.y, t.colors.slam, 1 + strike.descentFraction * 0.8); fx.shake(t.juice.shakeBig); fx.zoom(t.juice.zoomBig);
     }
     if (run.mods.lifesteal > 0 && run.lifestealCd <= 0) { player.heal(run.mods.lifesteal); run.lifestealCd = t.lifestealCooldown; }
@@ -215,7 +221,8 @@ function emitHeldAttackPresentation(input: HeldBladeCollisionInput, enemy: HeldB
 function applyTempest(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy, baseDamage: number): void {
   for (const other of input.enemies) {
     if (other.dead || other === enemy || other.anchored || input.distance(other.x - enemy.x, other.y - enemy.y) >= 175) continue;
-    other.vy = -input.tuning.blade.launchPower / other.weight; other.hit(baseDamage * 0.5, 0, -1);
+    other.vy = -input.tuning.blade.launchPower / other.weight; const dealt = other.hit(baseDamage * 0.5, 0, -1);
+    runDnaObserver(input.blade)?.heldHit(input.blade.swingId, dealt);
     input.effects.burst(other.x, other.y, 0, -1, 4); if (didEnemyDie(other)) input.hooks.onKill(other);
   }
   input.effects.ring(enemy.x, enemy.y, 12);
@@ -224,7 +231,8 @@ function applyTempest(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy, bas
 function applyRupture(input: HeldBladeCollisionInput, enemy: HeldBladeEnemy): void {
   for (const other of input.enemies) {
     if (other.dead || other.bleedStacks <= 0 || input.distance(other.x - enemy.x, other.y - enemy.y) >= 150) continue;
-    const damage = other.detonateBleed(); input.effects.floater(other.x, other.y - 30, `RUPTURE ${String(Math.round(damage))}`, true, input.tuning.colors.charger);
+    const beforeHp = other.hp; const damage = other.detonateBleed();
+    runDnaObserver(input.blade)?.heldHit(input.blade.swingId, Math.max(0, beforeHp - other.hp)); input.effects.floater(other.x, other.y - 30, `RUPTURE ${String(Math.round(damage))}`, true, input.tuning.colors.charger);
     input.effects.ring(other.x, other.y, 9, input.tuning.colors.charger); if (didEnemyDie(other)) input.hooks.onKill(other, "skill");
   }
 }

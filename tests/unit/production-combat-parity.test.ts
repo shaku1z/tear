@@ -1,3 +1,4 @@
+import type { GameAction } from "../../src/input/game-action";
 import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { CONFIG } from "../../src/config/game-config";
@@ -9,8 +10,136 @@ import { captureProductionReplayCheckpoint, createProductionCombatSimulation,
   createProductionGhostReplayComposition, createProductionReplayWorld } from "../../src/tearbench";
 import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
 import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench";
+import { RunDnaObserver } from "../../src/gameplay/runtime/run-dna-observer";
+import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
+import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
+import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
+import { projectGhostRunDnaTheater } from "../../src/ghost/run-dna-theater";
 
 describe("production TearBench combat parity", () => {
+  it("attributes real held contact on the catch tick to the returning throw", () => {
+    const replay = createProductionReplayWorld({ seed: "dna-catch", mode: "endless", enemies: [{ id: "charger", x: 1400, y: CONFIG.world.groundY - 20 }] });
+    const player = replay.world.state.player(), blade = replay.world.state.blade(), run = replay.world.state.run(), enemy = replay.world.state.enemies()[0];
+    if (!player || !blade || !run || !enemy) throw new Error("missing production actors");
+    const observer = new RunDnaObserver("catch-run", "catch-session"); observer.bind(player, blade, run);
+    const core = createProductionCombatSimulation(replay, { snapshot: (tick) => ({ tick }) });
+    const floor = core.opening.platforms.find((platform) => Reflect.get(platform, "floor") === true);
+    if (!floor) throw new Error("missing authored production floor");
+    player.y = floor.y - player.hh; player.onGround = true;
+    const sequence = new EnvelopeSequencer();
+    let catchContact = false, catching = false, returningHit = false, catchHpLost = 0;
+    const nativeTrace: unknown[] = [];
+    const hit = enemy.hit.bind(enemy);
+    enemy.hit = (...args: Parameters<typeof hit>) => { const before = { hp: enemy.hp, hitCd: enemy.hitCd, state: blade.state, caught: blade.caughtNew }; const dealt = hit(...args); nativeTrace.push({ contact: before, after: { hp: enemy.hp, hitCd: enemy.hitCd }, dealt }); if (dealt > 0 && blade.state === "returning") returningHit = true; if (dealt > 0 && catching && blade.state === "held" && blade.throwId > 0) { catchContact = true; catchHpLost += Math.max(0, before.hp - enemy.hp); } return dealt; };
+    for (let tick = 1; tick <= 30; tick++) {
+      observer.beginTick(tick, player, run);
+      const handBefore = blade.handPos(player);
+      const before = { tick, state: blade.state, homeD: Math.hypot(blade.x - handBefore.x, blade.y - handBefore.y), retraceDone: Reflect.get(blade, "retraceDone"), origin: blade.throwOrigin, gate: Math.max(26, CONFIG.blade.throw.returnSpeed * blade.channel("returnSpeed") / 120), caught: blade.caughtNew, enemy: { hp: enemy.hp, hitCd: enemy.hitCd, dead: enemy.dead, spawn: enemy.spawnT }, segment: [blade.x, blade.y, blade.tipX, blade.tipY], speed: blade.tipSpeed };
+      catching = false;
+      if (blade.state === "returning" && !enemy.dead) {
+        const hand = blade.handPos(player);
+        if (Math.hypot(blade.x - hand.x, blade.y - hand.y) <= Math.max(26, CONFIG.blade.throw.returnSpeed * blade.channel("returnSpeed") / 120)) { catching = true; enemy.x = hand.x + Math.cos(blade.angle) * 45; enemy.y = hand.y + Math.sin(blade.angle) * 45; enemy.stun = 10; }
+      }
+      core.simulationRuntime.advanceOne(tick === 1 ? [sequence.command<GameAction>(tick, { type: "aim", turn: 0, magnitude: 1000 }), sequence.command<GameAction>(tick, { type: "weapon", intent: "throw", phase: "pressed" })]
+        : tick === 5 ? [sequence.command<GameAction>(tick, { type: "weapon", intent: "recall", phase: "pressed" })] : []);
+      observer.completeTick(tick, player);
+      if (before.state === "returning" || blade.state === "held") nativeTrace.push({ before, after: { state: blade.state, caught: blade.caughtNew, tipSpeed: blade.tipSpeed, segment: [blade.x, blade.y, blade.tipX, blade.tipY], enemyHp: enemy.hp, enemyHitCd: enemy.hitCd } });
+    }
+    const result = observer.capture(30); observer.dispose();
+    expect(catchContact, JSON.stringify(nativeTrace)).toBe(true);
+    expect(returningHit).toBe(false); expect(catchHpLost).toBeGreaterThan(0);
+    expect(result.capture.invalid).toEqual([]);
+    expect(result.capture.successful).toBe(1);
+  });
+  it("records native attack outcomes, movement, HP and upgrade capabilities without changing production continuation", async () => {
+    // Engineered combat placement, not a natural-run/pacing claim. Both worlds
+    // execute identical real commands and native collision/damage owners.
+    const runCase = (observed: boolean) => {
+      const replay = createProductionReplayWorld({ seed: "native-dna", mode: "endless", weaponId: "sword", enemies: [
+        { id: "charger", x: 1400, y: CONFIG.world.groundY - 20 },
+        { id: "charger", x: 1400, y: CONFIG.world.groundY - 20 },
+      ] });
+      const player = replay.world.state.player(), blade = replay.world.state.blade(), run = replay.world.state.run();
+      if (!player || !blade || !run) throw new Error("production world is missing its actors");
+      const observer = new RunDnaObserver("native-run", "native-capsule");
+      if (observed) observer.bind(player, blade, run);
+      const core = createProductionCombatSimulation(replay, { snapshot: (tick) => ({ tick }) });
+      const sequence = new EnvelopeSequencer();
+      const initialHp = player.maxHp;
+      let lost = 0, hits = 0;
+      const trace: unknown[] = [];
+      const actorState = (enemy: ReturnType<typeof replay.world.state.enemies>[number]) => ({ hp: enemy.hp, dead: enemy.dead, dying: enemy.dying, spawn: enemy.spawnT, hitCd: enemy.hitCd });
+      for (const enemy of replay.world.state.enemies()) {
+        const hit = enemy.hit.bind(enemy);
+        enemy.hit = (...args: Parameters<typeof hit>) => { const before = actorState(enemy); const dealt = hit(...args); if (observed) trace.push({ contact: { before, after: actorState(enemy), dealt } }); return dealt; };
+      }
+      for (let index = 1; index <= 420; index++) {
+        const tick = core.simulationRuntime.scheduler.tick + 1;
+        observer.beginTick(tick, player, run);
+        if (index === 60) {
+          player.iframe = 0; player.cinematicGraceT = 0; const before = player.hp;
+          player.takeDamage(20, player.x - 100); lost += before - player.hp; player.heal(8);
+          for (const id of ["vitality", "air_dash", "phase_step"]) {
+            const upgrade = UPGRADES.find((value) => value.id === id);
+            if (!upgrade) throw new Error("missing authored upgrade");
+            applyUpgrade(upgrade, { config: replay.configuration.value, player, blade, mods: run.mods });
+          }
+        }
+        // A later accepted throw crosses two genuine enemy hitboxes. The first
+        // throw is away from both enemies and completes without contact.
+        if (index === 260) for (const enemy of replay.world.state.enemies()) {
+          enemy.x = player.x + 90; enemy.y = player.y; enemy.stun = 10; enemy.hitCd = 0;
+        }
+        const actions = index === 1 || index === 260 ? [sequence.command<GameAction>(tick, { type: "aim", turn: index === 1 ? 500000 : 0, magnitude: 1000 }),
+          sequence.command<GameAction>(tick, { type: "weapon", intent: "throw", phase: "pressed" })] : index === 2 || index === 3 ? [sequence.command<GameAction>(tick, { type: "weapon", intent: "throw", phase: "pressed" })]
+          : index === 270 ? [sequence.command<GameAction>(tick, { type: "weapon", intent: "recall", phase: "pressed" })] : index === 20 ? [sequence.command<GameAction>(tick, { type: "move", x: 1000, y: 0 })]
+            : index === 40 ? [sequence.command<GameAction>(tick, { type: "move", x: 0, y: 0 })] : [];
+        const beforeState = blade.state;
+        core.simulationRuntime.advanceOne(actions);
+        if (observed && (beforeState !== blade.state || index === 270 || index === 420)) trace.push({ index, throwId: blade.throwId, beforeState, state: blade.state, caught: blade.caughtNew, distance: Math.hypot(blade.x - player.x, blade.y - player.y) });
+        observer.completeTick(tick, player);
+        hits = run.weaponStats.throwHits;
+        if (index === 100) {
+          // Real scheduler skips: no actions or combat commit during a paused tail.
+          core.simulationRuntime.advance(25, () => [], { shouldStep: () => false });
+          observer.frameEnded(core.simulationRuntime.scheduler.tick);
+        }
+      }
+      const capture = observer.capture(core.simulationRuntime.scheduler.tick);
+      observer.dispose();
+      return { capture, lost, hits, initialHp, trace, state: { player: [player.x, player.y, player.hp, player.maxHp], blade: [blade.x, blade.y, blade.state],
+        run: [run.weaponStats.throws, run.weaponStats.throwHits, run.score], rng: replay.world.context.services.random.snapshot() } };
+    };
+    const measured = runCase(true), ordinary = runCase(false);
+    expect(measured.state).toEqual(ordinary.state);
+    expect(measured.capture.metrics.attacks).toBeGreaterThanOrEqual(2);
+    expect(measured.capture.metrics.misses).toBeGreaterThanOrEqual(1);
+    expect(measured.hits).toBeGreaterThanOrEqual(2);
+    expect(measured.capture.capture.successful, JSON.stringify({ trace: measured.trace, capture: measured.capture })).toBeGreaterThanOrEqual(1);
+    expect(measured.capture.metrics.damageTaken).toBeGreaterThanOrEqual(measured.lost);
+    expect(measured.capture.metrics.maxHp).toBe(measured.initialHp + 30);
+    expect(measured.capture.metrics.movingTicks).toBeGreaterThan(0);
+    expect(measured.capture.capture.available).toEqual(expect.arrayContaining(["air-dash", "phase-step"]));
+    expect(measured.capture.capture.skippedTicks).toBeGreaterThan(0);
+    expect(measured.capture.capture.complete).toBe(true);
+    const context = createGhostReplayRunContext({ runId: "native-run", seed: "native-dna", mode: "endless", difficulty: "normal", weaponId: "sword", ticksPerSecond: 120,
+      build: { version: "test", revision: "test", target: "test-standalone", rulesetVersion: "test", configHash: "test", contentHash: "test" }, rng: { gameplay: { state: 1 } } });
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-10-20T00:00:00Z" });
+    recorder.start({ sessionId: "native-capsule", createdAt: "2026-10-20T00:00:00Z", provenance: { replayContext: context } });
+    for (const [tick, transition] of [[0, "started"], [measured.capture.capture.terminalTick, "abandoned"]] as const) recorder.record("events", tick,
+      createLiveGhostCausalEvent({ kind: "run", tick, transition, runId: "native-run", mode: "endless", difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: tick / 120 }, tick + 1));
+    recorder.record("results", measured.capture.capture.endTick, measured.capture);
+    expect(await recorder.finish({ abandoned: "engineered unit boundary" })).not.toBeNull();
+    const capsule = await new GhostCapsuleReader(vault).read("native-capsule");
+    const projection = projectGhostRunDnaTheater(capsule);
+    expect(projection.nativePolicy).toBe("native-combat-episodes-v1");
+    expect(projection.sourceMetrics).toEqual(measured.capture.metrics);
+    expect(projection.dimensions?.defense).toBeDefined();
+  });
   it("proves non-empty environment parity through supported detached production composition", () => {
     const create = (seed: string) => {
       const replay = createProductionReplayWorld({ seed });

@@ -5,7 +5,7 @@ import { stepWeaponSecondary, type SecondaryBlade, type SecondaryEnemy } from ".
 describe("weapon secondary runtime", () => {
   it("turns a hooked Chainblade target's platform impact into bounded player-owned collision damage", () => {
     const hit = vi.fn();
-    const target: SecondaryEnemy = { x: 100, y: 92, vx: 900, vy: 800, radius: 18, weight: 1, dead: false, hit };
+    const target: SecondaryEnemy = { x: 100, y: 92, vx: 900, vy: 800, radius: 18, weight: 1, dead: false, hp: 100, hit };
     const blade: SecondaryBlade = {
       state: "hooked", x: 0, y: 0, tipX: 0, tipY: 0, throwDmg: 30, throwId: 1,
       hookTarget: target, slingCollided: new Set<SecondaryEnemy>(), caughtNew: false, embeddedNew: false,

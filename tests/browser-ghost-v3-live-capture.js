@@ -252,12 +252,17 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.equal(studioSourceAfter, studioSourceBefore, "actual local WebM export changed durable source custody");
   console.log(JSON.stringify({ studio: { directory: outputDirectory, bytes: mediaBytes.length, width: decoded.width, height: decoded.height, duration: decoded.duration, decodedFrameHashes: frameHashes, clock: "simulation-time-120hz", camera: "reconstructed-player-follow", fixture: "engineered canonical240tick source" } }));
   await page.mouse.click(1020, 854); // rendered C37 RUN DNA control; it projects only declared capsule metrics
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA \u00b7 VERIFIED METRICS"), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA \u00b7 RECORDED METRICS"), undefined, { timeout: 10000 });
   const dnaTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(dnaTexts.some((text) => String(text).includes("FORMULA run-dna-v1 \u00b7 EVIDENCE verified capsule")),
-    "Run DNA did not visibly identify its formula and verified capsule custody");
-  assert.ok(dnaTexts.some((text) => String(text).includes("UNAVAILABLE \u00b7 no declared run-dna-metrics-v1 result")),
-    "Run DNA inferred metrics instead of exposing the actual capsule declaration gap");
+  assert.ok(dnaTexts.includes("FORMULA run-dna-v1 \u00b7 native-combat-episodes-v1"));
+  const dnaCustody = dnaTexts.findLast((text) => String(text).startsWith("verified capsule "));
+  assert.ok(dnaCustody, "Run DNA must identify its actual source custody");
+  const dnaCapsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), dnaCustody.slice("verified capsule ".length));
+  const dnaDeclarations = dnaCapsule.tracks.results.filter((entry) => entry.value?.kind === "run-dna-metrics-v1");
+  assert.equal(dnaDeclarations.length, 1, "Fresh native capture must declare its own metric basis");
+  const nativeDna = dnaDeclarations[0].value;
+  for (const [name, value] of Object.entries(nativeDna.metrics)) assert.ok(dnaTexts.includes(`${name.toUpperCase()} \u00b7 ${String(value)}`));
+  if (nativeDna.capture.censored > 0 || nativeDna.metrics.attacks === 0) assert.ok(dnaTexts.some((text) => String(text).startsWith("UNAVAILABLE \u00b7 precision:")));
   await page.mouse.click(892, 854); // rendered C37 COACH control; it has no implicit baseline
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH \u00b7 YOUR SELECTED RUNS"), undefined, { timeout: 10000 });
   await page.waitForTimeout(180);

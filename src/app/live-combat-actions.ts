@@ -1,3 +1,4 @@
+import { bindRunDnaShot, runDnaObserver } from "../gameplay/runtime/run-dna-observer";
 import { updateMirrorCombat } from "../gameplay/combat/mirror-combat-feedback";
 import { overrunMovementMultiplier } from "../gameplay/combat/overrun";
 import { applyCombatFeedback, type CombatFeedbackEvent } from "../gameplay/combat/combat-feedback-runtime";
@@ -107,6 +108,8 @@ export function createLiveCombatActions<
         }
         const shot = new d.Projectile(event.x, event.y, event.vx, event.vy);
         shot.setFamily("weaponProjectile"); shot.playerOwned = true; shot.weaponId = "riftlock";
+        bindRunDnaShot(shot, blade(), event.attackId, event.secondary, event.throwId);
+        if (!event.secondary) runDnaObserver(blade())?.end(`shot:${String(event.attackId)}`);
         shot.attackId = event.attackId; shot.throwId = event.throwId; shot.remote = event.remote;
         shot.secondary = event.secondary; shot.kind = "razor"; shot.r = d.CONFIG.weapons.riftlock.razorRadius;
         shot.life = d.CONFIG.weapons.riftlock.razorLife; shot.dmg = event.damage;

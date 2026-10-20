@@ -159,7 +159,7 @@ describe("environment weapon contact runtime", () => {
 
     const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
     const target = { x: 150, y: 0, vx: 0, vy: 0, radius: 16, weight: 1, stun: 0,
-      dead: false, dying: false, isBoss: false, hit: () => undefined };
+      dead: false, dying: false, isBoss: false, hp: 100, hit: () => undefined };
     blade.state = "hooked"; blade.hookTarget = target; blade.linkT = 2;
     blade.aimX = 0; blade.aimY = config.weapons.chainblade.maxRadius; input.tetherHeld = true;
     blade._updateHookThrown(0.1, player, []);

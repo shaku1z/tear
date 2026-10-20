@@ -14,7 +14,7 @@ Coach. The current UI uses the native v2 history described below, including
 strictly preceding checkpoint practice instead of arbitrary current-tick practice.
 No v1 serialized record or historical hash has been relabelled as v2 evidence.
 
-### Verified Run DNA Theater panel
+### Recorded Run DNA Theater panel
 
 The normal Theater now has a `RUN DNA` control with a read-only capsule
 projection. It calculates `run-dna-v1` only when the verified durable capsule
@@ -29,6 +29,36 @@ recommendation, clustering, challenge, export, persistence, or player-behavior
 claim. `tests/unit/ghost-run-dna-theater.test.ts` proves complete-only and
 ambiguous/absent refusal; the screen renderer contract retains the semantic
 toggle without renderer-owned side effects.
+
+Fresh ordinary whole-run recordings now passively measure the eight inputs
+through the actual shared combat owners. `native-combat-episodes-v1` is a new
+capture policy, not a reinterpretation of historical `run-dna-v1` formulas or
+receipts. Dangerous held swings, accepted throws and primary discharges start
+episodes; actual damaging enemy contacts make one episode successful even for
+multiple targets. Derived projectiles/AoE stay with their initiator. A completed
+zero-contact episode is a miss; interrupted episodes are censored and make
+precision unavailable. Zero accepted attacks also leaves precision unavailable.
+
+Combat/moving ticks count executed eligible steps and actual player displacement
+during locomotion, excluding relocation. Paused scheduler tails are recorded as
+skipped-through coverage, never combat ticks or invented commits. Damage is
+actual mitigated/clamped HP loss; healing does not subtract it. `maxHp` is the
+peak effective value. The gameplay-owned maneuver catalog includes baseline
+movement/strike/transport/parry families, weapon-specific mechanics, extra
+airborne dash charges and Phase Step when actually enabled. Its denominator is
+the union of legal capabilities; the numerator records accepted native uses.
+Numeric buffs do not manufacture capability IDs.
+
+The result binds its original recording session/run, committed endpoint,
+scheduled frontier, terminal fact and coverage. Native termination inside a
+multi-step application frame waits for that actual tick's observations and its
+existing frame-end witness before seal. Fork/practice origins, observation gaps,
+partial failed steps, unknown capture schemas and inconsistent identity/coverage
+cannot become whole-run metrics. Old capsules without evidence remain
+unavailable; existing no-capture legacy declarations retain their old semantics.
+These are transparent recorded facts under verified capsule custody, not a new
+metric re-execution, anti-cheat or skill/grade claim. Normal browser recording,
+Theater reopen and compact panel inspection remain parent acceptance work.
 
 Historical foundation evidence: `tests/unit/ghost-coach-practice.test.ts` covers
 v1 distinct-source rejection and same-build provenance. The updated normal

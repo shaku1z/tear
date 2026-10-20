@@ -1354,7 +1354,7 @@ distribution, `unassigned` placement, `not compared` human calibration, and
 uses a genuinely executed and retained C35 report to prove the projection and
 tamper refusal; renderer and semantic-route tests protect the normal surface.
 
-### C37 verified Run DNA Theater projection
+### C37 recorded Run DNA Theater projection
 
 The normal C29 Theater exposes a `RUN DNA` panel only as an immutable
 projection of its already-verified durable capsule. `run-dna-v1` is calculated
@@ -1363,6 +1363,22 @@ incomplete, or ambiguous metrics render as unavailable. The visible panel
 names the formula, custody label, source metrics, and dimensions. It neither
 writes storage nor draws from profile/career/challenge/export state, hidden
 events, or player-behavior inference.
+
+Fresh ordinary whole-run captures additionally produce a versioned
+`native-combat-episodes-v1` basis from actual accepted attack episodes/contact
+outcomes, eligible combat/moving steps, mitigated HP loss/peak HP and the union
+of executable maneuver capabilities. Real weapon/upgrade transitions supply
+usage; derivatives remain grouped with their initiating attack. Formula v1 and
+historical declarations are unchanged. Interrupted/zero-attack precision is
+unavailable, while valid other dimensions remain visible. Exact run/session,
+terminal and committed/skipped coverage are checked before projection; malformed
+fresh declarations never fall back to legacy acceptance. The normal panel says
+`RECORDED METRICS`, exposes capture policy/refusal reasons, and has panel-relative
+columns. Focused production controls cover actual multi-target damage, resolved
+miss/return, capability/HP upgrades, observer-inert state/RNG equality, durable
+seal/read, catch-tick contact, terminal-inside-frame and projection refusal.
+Normal browser acceptance is pending; no historical skill or native counter
+re-execution claim is made.
 
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.
 

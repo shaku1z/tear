@@ -11,6 +11,7 @@ export function createLiveGhostFrameRecording(options: Readonly<{
   session: LiveGhostRecordingSessionState;
   tick(): number;
   introActive(): boolean;
+  afterFrame?(): void;
 }>) {
   let cursor: GhostApplicationFrameCursor = Object.freeze({ version: 1, ordinal: 0, sequence: 0 });
   let open: GhostApplicationClockEvent | undefined;
@@ -59,6 +60,7 @@ export function createLiveGhostFrameRecording(options: Readonly<{
       if (cursor.open !== undefined) cursor = Object.freeze({ ...cursor, open: Object.freeze({ ...cursor.open, preludeApplied: true }) });
     },
     end(steps: number) {
+      options.afterFrame?.();
       const before = open?.payload;
       chosen = undefined;
       if (open === undefined || before?.format !== "tearghost-application-frame" || before.kind !== "begin") return;
