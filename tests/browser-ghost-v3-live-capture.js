@@ -263,17 +263,22 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await page.waitForTimeout(180);
   await page.mouse.click(750, 189); // explicit first compatible local recording, no peer auto-selection
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/2 usable recordings")), undefined, { timeout: 30000 });
-  await page.mouse.click(445, 125); // RUNS
-  await page.mouse.click(750, 247); // select another distinct run for a three-recording distribution
+  await clickText("RUNS");
+  await page.waitForFunction(() => window.__TEAR_C29_POSITIONS__?.some((entry) => entry.text.startsWith("+ ") && entry.y > 170 && entry.y < 370), undefined, { timeout: 5000 });
+  const nextCandidate = await page.evaluate(() => window.__TEAR_C29_POSITIONS__?.find((entry) => entry.text.startsWith("+ ") && entry.y > 170 && entry.y < 370));
+  assert.ok(nextCandidate, "Coach must render a distinct unselected recording");
+  await clickText(nextCandidate.text);
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/3 usable recordings")), undefined, { timeout: 30000 });
   const coachTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
   assert.ok(coachTexts.some((text) => String(text).includes("CHRONOLOGICAL HISTORY")), "Coach did not render per-measure run history");
   assert.ok(coachTexts.some((text) => String(text).includes("Count distribution:")), "Coach did not disclose count distribution");
   assert.ok(coachTexts.some((text) => String(text).includes("OPEN RUN MOMENT") && String(text).includes("TICK 140")), "Coach omitted the actual identified native throw");
-  await page.mouse.click(555, 493); // VIEW MOMENT through normal source-owned seek
+  await page.screenshot({ path: join(outputDirectory, "coach-history.png") });
+  await clickText("VIEW MOMENT"); // normal source-owned seek
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("Reconstructed source scene \u00b7 TICK 140")), undefined, { timeout: 10000 });
-  await clickText("RETURN TO COACH"); await page.waitForTimeout(120);
-  await page.mouse.click(1040, 493); // PRACTICE BEFORE the cited event, strictly preceding checkpoint120
+  await page.screenshot({ path: join(outputDirectory, "coach-moment.png") });
+  await clickText("RETURN TO COACH");
+  await clickText("PRACTICE BEFORE"); // strictly preceding checkpoint120
   await waitScreen("playing");
   const launchedPractice = await page.evaluate(() => window.__TEAR_GHOST_V3__.activePractice());
   assert.ok(Object.hasOwn(durableSourcesBeforeVisiblePractice, launchedPractice.sourceGhostId));
@@ -287,4 +292,6 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const sourceAfterVisiblePractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), launchedPractice.sourceGhostId));
   assert.equal(sourceAfterVisiblePractice, durableSourcesBeforeVisiblePractice[launchedPractice.sourceGhostId], "visible practice launch mutated durable source custody");
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
+  await writeFile(join(outputDirectory, "coach-history.json"), JSON.stringify({ sourceCount: 3, sharedWindow: "(0,240]", nativeMoment: 140,
+    practice: launchedPractice, sourceUnchanged: true, renderedTexts: coachTexts.slice(-180) }, null, 2));
 });
