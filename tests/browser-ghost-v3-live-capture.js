@@ -292,6 +292,6 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const sourceAfterVisiblePractice = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), launchedPractice.sourceGhostId));
   assert.equal(sourceAfterVisiblePractice, durableSourcesBeforeVisiblePractice[launchedPractice.sourceGhostId], "visible practice launch mutated durable source custody");
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
-  await writeFile(join(outputDirectory, "coach-history.json"), JSON.stringify({ sourceCount: 3, sharedWindow: "(0,240]", nativeMoment: 140,
+  await writeFile(join(outputDirectory, "coach-history.json"), JSON.stringify({ sourceCount: 3, nativeMoment: 140,
     practice: launchedPractice, sourceUnchanged: true, renderedTexts: coachTexts.slice(-180) }, null, 2));
 });
