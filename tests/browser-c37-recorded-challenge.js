@@ -42,11 +42,12 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     assert.ok(points[index], `Missing visible Vault row ${index}`);
     await page.mouse.click(points[index].x, points[index].y); await waitScreen("replay");
   };
-  const readProof = (id) => page.evaluate(async (attemptId) => {
+  const proofFromBrowser = async (attemptId) => {
     const database = await new Promise((resolve, reject) => { const request = indexedDB.open("tear-ghost-v3"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     try { return await new Promise((resolve, reject) => { const request = database.transaction("analysis", "readonly").objectStore("analysis").get(`recorded-challenge:${attemptId}`); request.onsuccess = () => resolve(request.result ?? null); request.onerror = () => reject(request.error); }); }
     finally { database.close(); }
-  }, id);
+  };
+  const readProof = (id) => page.evaluate(proofFromBrowser, id);
   try {
     await boot(query);
     await page.waitForFunction(() => window.__TEAR_GHOST_V3__);
@@ -83,10 +84,7 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     await page.waitForFunction(() => window.__PANTHEON_TEST.state().bladeTrace?.state !== "held", undefined, { polling: "raf", timeout: 2000 });
     await page.mouse.click(1200, 400, { button: "right" });
     const succeeded = await waitForBrowserValue(page, async () => (await window.__TEAR_GHOST_V3__.manifests()).find((entry) => entry.provenance?.forkOrigin && entry.status === "complete"), undefined, { timeout: 20000 });
-    const successProofBytes = await waitForBrowserValue(page, async (id) => {
-      const database = await new Promise((resolve, reject) => { const request = indexedDB.open("tear-ghost-v3"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
-      try { return await new Promise((resolve, reject) => { const request = database.transaction("analysis").objectStore("analysis").get(`recorded-challenge:${id}`); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); } finally { database.close(); }
-    }, succeeded.id, { timeout: 20000 });
+    const successProofBytes = await waitForBrowserValue(page, proofFromBrowser, succeeded.id, { timeout: 20000 });
     const result = JSON.parse(successProofBytes);
     assert.equal(result.status, "succeeded"); assert.equal(result.proof.completed, true);
     const attempt = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), succeeded.id);
@@ -112,7 +110,7 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     await page.keyboard.press("Escape"); await waitScreen("paused");
     await clickText("MAIN MENU"); await waitScreen("confirmquit"); await clickText("QUIT");
     const stopped = await waitForBrowserValue(page, async (id) => (await window.__TEAR_GHOST_V3__.manifests()).find((entry) => entry.provenance?.forkOrigin && entry.id !== id && entry.status === "complete"), succeeded.id, { timeout: 20000 });
-    const stoppedProof = await readProof(stopped.id);
+    const stoppedProof = await waitForBrowserValue(page, proofFromBrowser, stopped.id, { timeout: 20000 });
     assert.ok(stoppedProof, "Stopped attempt proof must persist");
     assert.equal(JSON.parse(stoppedProof).status, "abandoned"); assert.equal(JSON.parse(stoppedProof).proof.completed, false);
     evidence.attempts.push({ id: stopped.id, result: JSON.parse(stoppedProof) });

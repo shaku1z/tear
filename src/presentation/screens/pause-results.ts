@@ -1,5 +1,5 @@
 import type {
-  ContinueScreenView, GameoverScreenView, PausedScreenView, ResultLogView,
+  ConfirmQuitScreenView, ContinueScreenView, GameoverScreenView, PausedScreenView, ResultLogView,
   ScreenAction, ScreenRenderContext, WinScreenView,
 } from "./contracts";
 import { verticalMenu } from "./screen-primitives";
@@ -226,11 +226,11 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     runProgressPanel(view.progress, 1090, 210, 430);
   }
 
-  function confirmquit(): void {
+  function confirmquit(view: ConfirmQuitScreenView): void {
     const { canvas } = context;
     ui.dim(canvas, width, height, 0.85);
     ui.title(canvas, "QUIT RUN?", width / 2, 250, ui.t.type.display);
-    ui.text(canvas, "Your progress (cleared waves & score) is saved to High Scores.", width / 2, 300, ui.t.type.body, "center", ui.t.alpha.soft);
+    ui.text(canvas, view.practice ? "Local practice ends without saved progression or High Scores." : "Your progress (cleared waves & score) is saved to High Scores.", width / 2, 300, ui.t.type.body, "center", ui.t.alpha.soft);
     context.enqueue({ x: width / 2 - 230, y: 350, w: 200, h: 56, label: "QUIT", action: { type: "run.quit" } });
     context.enqueue({ x: width / 2 + 30, y: 350, w: 200, h: 56, label: "CANCEL", action: { type: "navigate", to: "paused" } });
   }

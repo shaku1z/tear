@@ -61,6 +61,7 @@ export interface RunScreenServices {
   readonly addFlash: (amount: number) => void;
   readonly requestPointer: () => void;
   readonly playerWatch: () => Readonly<{ readonly status: string; readonly decisions: number }>;
+  readonly persistentEffects?: () => boolean;
   readonly tutorialSession?: () => TutorialSessionView | undefined;
 }
 
@@ -93,6 +94,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
   const abilityCards = () => buildAbilityCards(d.UPGRADES.map(presentUpgrade), state.run().mods, services.categories(),
     services.fallbackCategory(), services.categoryOrder, services.specialColor);
   const progressRows = () => {
+    if (services.persistentEffects?.() === false) return [];
     const run = state.run();
     const dailies = d.DAILY.today().map((challenge) => {
       const done = d.DAILY.isDone(challenge), current = d.DAILY.progress(challenge);
@@ -147,7 +149,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
         ? { playerWatch: { status: playerWatch.status, decisions: playerWatch.decisions } as const }
         : {}) });
     },
-    renderConfirmQuit(): void { renderers.confirmquit({ id: "confirmquit" }); },
+    renderConfirmQuit(): void { renderers.confirmquit({ id: "confirmquit", practice: services.persistentEffects?.() === false }); },
     renderContinue(): void {
       const seconds = state.continueSeconds();
       renderers.continue({ id: "continue", seconds: seconds > 1e8 ? 0 : seconds, requesting: false });
@@ -173,7 +175,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     quitRun(): void {
       const run = state.run();
       const completed = run.waveLog.length;
-      if (completed > 0) {
+      if (completed > 0 && services.persistentEffects?.() !== false) {
         services.saveBest(run.mode, run.diff, completed, run.score, run.runTime);
         services.awardCoins(run.score);
       }

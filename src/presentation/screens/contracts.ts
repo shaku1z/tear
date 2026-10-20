@@ -251,7 +251,7 @@ export interface PausedScreenView {
   /** Present only for a locally running Player Watch; never a Foundry operation. */
   readonly playerWatch?: Readonly<{ readonly status: "running" | "paused"; readonly decisions: number }>;
 }
-export interface ConfirmQuitScreenView { readonly id: "confirmquit" }
+export interface ConfirmQuitScreenView { readonly id: "confirmquit"; readonly practice?: boolean }
 export interface ContinueScreenView { readonly id: "continue"; readonly seconds: number; readonly requesting: boolean }
 export interface ResultLogView { readonly wave: string; readonly time: string; readonly kills: number; readonly peak: string; readonly peakColor?: string; readonly died?: boolean }
 export interface GameoverScreenView {
