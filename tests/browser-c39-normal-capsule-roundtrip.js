@@ -230,6 +230,9 @@ async function pairedMain(input) {
     await page.mouse.click(714, 330); await waitStatus(page, "COMPLETE"); await assertPair("pair-B-complete", journey);
     // Newer companion is first in the normal Vault catalog. The existing exact
     // parent permit and runtime restoration remain authoritative on open.
+    // The durable restore completes before the asynchronous catalog refresh.
+    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("◆ THEATER"), undefined, { timeout: 10000 });
+    await settle(page);
     await page.mouse.click(1024, 494); await journey.waitScreen("replay");
     await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("BACK TO SCORED RUN"));
     await page.screenshot({ path: path.join(directory, "pair-B-linked-theater.png") });
