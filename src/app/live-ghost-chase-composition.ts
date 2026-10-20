@@ -5,7 +5,7 @@ import { drawLiveGhostReference, drawLiveGhostSplits, type GhostChaseUi } from "
 import type { GameRun, GamePlayer } from "./game-runtime-state";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 
-export function createLiveGhostChase(options: Readonly<{ factory: IDBFactory | undefined; ui: GhostChaseUi; run(): GameRun | null; player(): GamePlayer; stage(): number;
+export function createLiveGhostChase(options: Readonly<{ beat?: () => Readonly<{ active: boolean; message: string }>; factory: IDBFactory | undefined; ui: GhostChaseUi; run(): GameRun | null; player(): GamePlayer; stage(): number;
   platforms(): readonly Readonly<{ x: number; y: number; w: number; h: number }>[]; blocked(): boolean;
   prepareStart(reference: GhostLiveReference): void; start(reference: GhostLiveReference, race?: boolean): void; }>) {
   const controller = createLiveGhostReferenceController({ ...createBrowserLiveGhostReference(options.factory), prepareStart: options.prepareStart, start: options.start });
@@ -17,7 +17,7 @@ export function createLiveGhostChase(options: Readonly<{ factory: IDBFactory | u
       stage: options.stage(), wave: run.wave, score: run.score, hp: player.hp, maxHp: player.maxHp, arena: ghostReferenceArena(options.platforms()), blocked: options.blocked(),
       ...(run.ghostAssistance === undefined ? {} : { assistance: run.ghostAssistance }) };
   };
-  const view = () => { const run = options.run(), race = run?.seedRace, current = controller.snapshot(live()); if (race?.role === "reference" && current.message.length === 0) return Object.freeze({ active: false, visible: false, raceRole: race.role, message: "Shared seed and offers - no competitor selected" }); const value = { ...current, ...(race ? { raceRole: race.role } : {}) }; return !value.active && (run?.ghostAssistance || race) && value.message.length === 0 ? Object.freeze({ ...value, message: race ? "Seed-Locked Race · unranked · reference not active" : "Assisted / noncompetitive run · reference not active" }) : value; };
+  const view = () => { const beat = options.beat?.(); if (beat?.active) return Object.freeze({ active: false, visible: false, beat: true, message: beat.message || "BEAT THIS RUN · independent attempt · NONCOMPETITIVE / no progression" }); const run = options.run(), race = run?.seedRace, current = controller.snapshot(live()); if (race?.role === "reference" && current.message.length === 0) return Object.freeze({ active: false, visible: false, raceRole: race.role, message: "Shared seed and offers - no competitor selected" }); const value = { ...current, ...(race ? { raceRole: race.role } : {}) }; return !value.active && (run?.ghostAssistance || race) && value.message.length === 0 ? Object.freeze({ ...value, message: race ? "Seed-Locked Race · unranked · reference not active" : "Assisted / noncompetitive run · reference not active" }) : value; };
   return Object.freeze({
     choose: controller.choose, chooseRace: (id: string, expectedManifestHash?: string) => controller.choose(id, expectedManifestHash, true), takeSetupLaunch: controller.takeSetupLaunch, cancelPreparation: controller.cancelPreparation, configuration: controller.configuration,
     installed(run: GameRun): void { const assistance = controller.assistance(); if (assistance) run.ghostAssistance = assistance; controller.installed(run.runSeed); },

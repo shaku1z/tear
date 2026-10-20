@@ -1,3 +1,4 @@
+import { createLiveBeatThisRunController } from "./live-beat-this-run-controller";
 import { createLiveSeedRace } from "./live-seed-race-composition";
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import { BestScoreRepository } from "../gameplay/scoring/best-scores";
@@ -13,6 +14,7 @@ import { SettingsController } from "./settings-controller";
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
 export interface LiveSessionServicesOptions {
+  readonly beat?: Omit<Parameters<typeof createLiveBeatThisRunController>[0], "factory" | "publication" | "document" | "run">;
   readonly seedRace?: Omit<Parameters<typeof createLiveSeedRace>[0], "dependencies" | "run" | "player" | "blade" | "resetRewards">;
   readonly dependencies: GameRuntimeDependencies;
   readonly run: () => GameRun;
@@ -46,8 +48,12 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     shop: d.SHOP, shopId: (item) => item.id, achievementTracking: options.achievementTracking,
     addProfileStat: d.profileStatsPersistence.add,
   });
+  const unavailableBeat = (): never => { throw new Error("Beat This Run start unavailable"); };
+  const beat = createLiveBeatThisRunController({ factory: d.browserIndexedDb, publication: d.ghostPublication, document: d.browserDocument, run: options.run,
+    ...(options.beat ?? { screen: options.screen, capture: unavailableBeat, tick: unavailableBeat, recording: { recorder: () => null, replayContext: () => undefined, reset: unavailableBeat, nextEventSequence: unavailableBeat, setReplayContext: unavailableBeat },
+      nativeStart: { session: () => ({ setSelectedWeapon: unavailableBeat, setSelectedMode: unavailableBeat, setSelectedDifficulty: unavailableBeat, setSelectedBoss: unavailableBeat, setRunSeed: unavailableBeat }), prepare: unavailableBeat, start: unavailableBeat } }) });
   const reward = createRewardRuntime({
-    ...(options.seedRace === undefined ? {} : { beforeDecision: (decision: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[0], before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1]) => seedRace.recordDecision(decision, before) }),
+    ...(options.seedRace === undefined ? {} : { beforeDecision: (decision: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[0], before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1]) => options.run().beatThisRun ? beat.recordDecision(decision, before) : seedRace.recordDecision(decision, before) }),
     run: options.run,
     roll: (request) => d.rollUpgrades(request.count, options.run().mods, {
       random: d.GAME_RANDOM_STREAMS.stream("draft"), forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,
@@ -77,6 +83,6 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
   const bestScores = new BestScoreRepository(d.CG.store);
   return Object.freeze({
     settingsController, settings: settingsController.settings, applySettings: settingsController.api.apply,
-    controllers, economy, reward, bestScores, seedRace,
+    controllers, economy, reward, bestScores, seedRace, beat,
   });
 }

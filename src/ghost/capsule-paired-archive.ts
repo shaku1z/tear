@@ -30,7 +30,7 @@ export function ghostPortableArchiveData(archive: PreparedGhostPortableArchive) 
   if (!pairs.has(pair)) throw new TypeError("Ghost pair preparation is invalid");
   return { binding: pair.binding, limits: pair.limits, members: pair.members.map(ghostArchiveData) };
 }
-async function readPrepared(archive: PreparedGhostCapsuleArchive) {
+export async function readPreparedGhostCapsuleArchive(archive: PreparedGhostCapsuleArchive) {
   const data = ghostArchiveData(archive);
   return new GhostCapsuleReader({ getManifest: (id) => Promise.resolve(id === data.manifest.id ? data.manifest : undefined),
     readChunk: async (entry) => {
@@ -67,7 +67,7 @@ export async function prepareGhostPortableArchive(input: Uint8Array, policy: Par
     shared.set(key, text);
   }
   if (readGhostFinaleCompanion(parent.manifest.provenance) !== undefined) throw new TypeError("Pair parent cannot itself be a finale companion");
-  admitGhostFinaleCompanion(await readPrepared(companion), await readPrepared(parent));
+  admitGhostFinaleCompanion(await readPreparedGhostCapsuleArchive(companion), await readPreparedGhostCapsuleArchive(parent));
   const binding: GhostPairedArchiveBinding = Object.freeze({ ...parent.binding, protocol: "ghost-linked-archive-v1",
     sha256: await ghostArchiveSha256(bytes), byteLength: bytes.byteLength,
     manifestDigest: await ghostArchiveSha256(new TextEncoder().encode(canonicalStringify(members.map((m) => m.binding.manifestDigest)))),

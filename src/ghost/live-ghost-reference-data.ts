@@ -25,7 +25,8 @@ export interface GhostLiveReference {
   readonly frames: readonly GhostReferenceFrame[];
   readonly splits: readonly GhostReferenceBoundary[];
 }
-export interface GhostChaseView { readonly raceRole?: "reference" | "challenger"; readonly active: boolean; readonly visible: boolean; readonly message: string; readonly source?: string; readonly actor?: string;
+export interface GhostChaseView {
+  readonly beat?: boolean; readonly raceRole?: "reference" | "challenger"; readonly active: boolean; readonly visible: boolean; readonly message: string; readonly source?: string; readonly actor?: string;
   readonly pose?: GhostReferenceFrame; readonly score?: number; readonly hp?: number; readonly ownHp?: string; readonly referenceHp?: string; readonly wave?: number; readonly time?: number; readonly split?: string; }
 export function ghostReferenceArena(platforms: readonly unknown[]): string {
   return stableVerificationHash(platforms.map((value) => {

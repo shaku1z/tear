@@ -1,3 +1,4 @@
+import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { TearCodecId } from "./registries";
 import type { TearCodecIssue } from "./state-codecs";
@@ -187,6 +188,8 @@ export function validateLiveCodecPayload(
       // retain the actual string discriminant rather than accepting ["human"].
       if (assistance !== undefined && typeof assistance.actor !== "string") throw new TypeError("Invalid Chase disposition");
     } catch (error) { issues.push(issue(codecId, "$.ghostAssistance", error instanceof Error ? error.message : "invalid Chase disposition")); }
+    try { readBeatRunBinding(payload.beatThisRun); }
+    catch (error) { issues.push(issue(codecId, "$.beatThisRun", error instanceof Error ? error.message : "invalid Beat binding")); }
     try { readSeedRaceRun(payload.seedRace); }
     catch (error) { issues.push(issue(codecId, "$.seedRace", error instanceof Error ? error.message : "invalid seed race")); }
     for (const key of ["mode", "difficulty"] as const) {

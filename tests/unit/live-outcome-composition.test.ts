@@ -66,7 +66,7 @@ describe("live outcome composition pending-finale persistence", () => {
       GAMEPLAY_EVENTS: {}, pendingFinalePersistence: { persist, saveProfile, clear, pending },
       outcomeDefeatProgressPersistence: { record: recordDefeatProgress },
       DAILY: { bump: dailyBump }, Cloud: { push, logEvent },
-    } as never, achievementCheck, economyTelemetry: () => ({}), finishRecording } as never);
+    } as never, run: () => ({}), achievementCheck, economyTelemetry: () => ({}), finishRecording } as never);
 
     const context = captured.context as unknown as {
       readonly persistPendingFinale: (record: object) => void;

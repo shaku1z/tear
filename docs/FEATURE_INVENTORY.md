@@ -14,9 +14,21 @@ and Career **RACE THIS REFERENCE**. It shares setup/build/seed and common
 wave/reroll offers while preserving personal legal picks, rerolls, carried reserve
 and tier-ups. Race-only decision capture/playback and live/detached restore have
 focused controls; both roles are unranked and exclude ordinary progression and
-publication. Fresh normal-browser acceptance remains pending. Race-derived local
+publication. Race09 normal-browser acceptance on clean `8a3751fa` retained two
+native clears per role, distinct first upgrades and later common offers, 40 + 38
+verified receipts, normal download/reopen/reload and preserved source/profile.
+Reserve/reroll/expanded/headstart, full-run and device coverage remain separate.
+Race-derived local
 challenge/practice forks are explicitly unsupported; this is not full R16 closure.
 See the [current C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#seed-locked-race-local-source-implementation-browser-acceptance-pending).
+
+Beat This Run now has a local source implementation: Career creates or receives
+a strict code for an already-public, verified native source; a fresh independent
+unranked attempt retains its goal and private legal decisions. Native result
+review, explicit save, reload and retry preserve source/attempt custody. Supported
+metrics expose missing authority honestly. Normal browser acceptance is pending;
+local provider contract evidence is not deployed-service or authenticated public
+publishing evidence. Existing private publication consent remains unchanged.
 
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 

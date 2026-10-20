@@ -1,3 +1,4 @@
+import type { BeatRunBinding } from "./beat-run";
 import type { SeedRaceRun } from "./seed-locked-draft";
 import type { RunDifficulty, RunMode, RunWaveLogEntry } from "./session";
 import type { GhostRunAssistance } from "./ghost-assistance";
@@ -6,6 +7,7 @@ export type OutcomeWaveLogEntry = RunWaveLogEntry;
 
 export interface OutcomeRunState {
   readonly ghostAssistance?: GhostRunAssistance;
+  readonly beatThisRun?: BeatRunBinding;
   readonly seedRace?: SeedRaceRun;
   readonly mode: RunMode;
   readonly diff: RunDifficulty;
@@ -25,6 +27,7 @@ export function snapshotOutcomeRun(
 ): OutcomeRunState {
   return Object.freeze({
     ...(run.ghostAssistance === undefined ? {} : { ghostAssistance: run.ghostAssistance }),
+    ...(run.beatThisRun === undefined ? {} : { beatThisRun: run.beatThisRun }),
     ...(run.seedRace === undefined ? {} : { seedRace: run.seedRace }),
     mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, runTime: run.runTime,
     waveTime: run.waveTime, waveKills: run.waveKills, wavePeak: run.wavePeak,
@@ -36,6 +39,7 @@ export interface RecordingLoadoutEntry { readonly id: string; readonly tier: num
 
 export interface RecordingSummary {
   readonly ghostAssistance?: GhostRunAssistance;
+  readonly beatThisRun?: BeatRunBinding;
   readonly seedRace?: SeedRaceRun;
   readonly mode: RunMode;
   readonly diff: RunDifficulty;
@@ -66,6 +70,7 @@ export function buildRecordingSummary(
 ): RecordingSummary {
   return Object.freeze({
     ...(run.ghostAssistance === undefined ? {} : { ghostAssistance: run.ghostAssistance }),
+    ...(run.beatThisRun === undefined ? {} : { beatThisRun: run.beatThisRun }),
     ...(run.seedRace === undefined ? {} : { seedRace: run.seedRace }),
     mode: run.mode,
     diff: run.diff,

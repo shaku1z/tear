@@ -10,7 +10,7 @@ export interface PracticeExposureActor {
   readonly supportType?: string; readonly bossId?: string; readonly isMirrorBoss?: boolean; practicePhaseEntry?(): BossPracticeActorEntry;
 }
 export interface PracticeExposureContext {
-  readonly run: Readonly<{ mode: string; seedRace?: unknown }>;
+  readonly run: Readonly<{ mode: string; seedRace?: unknown; beatThisRun?: unknown }>;
   readonly actors: readonly PracticeExposureActor[];
   readonly tick: number; readonly playing: boolean; readonly waveActive: boolean; readonly blockingCinema: boolean;
   readonly ghostPractice: boolean; readonly width: number; readonly height: number;
@@ -40,9 +40,9 @@ export function createLivePracticeEncounterPersistence(
     inflight.set(key, operation); return operation;
   };
   return Object.freeze<PracticeEncounterPersistence>({
-    trackSpawn(actor, run) { if (run.seedRace === undefined && ordinary(run.mode) && (practiceEnemyIdentity(actor) !== undefined || practiceBossIdentity(actor) !== undefined) && !actor.tutDummy) natural.set(actor, run); },
+    trackSpawn(actor, run) { if (run.beatThisRun === undefined && run.seedRace === undefined && ordinary(run.mode) && (practiceEnemyIdentity(actor) !== undefined || practiceBossIdentity(actor) !== undefined) && !actor.tutDummy) natural.set(actor, run); },
     observe(context) {
-      if (context.run.seedRace !== undefined || !ordinary(context.run.mode) || !context.playing || !context.waveActive || context.blockingCinema || context.ghostPractice || context.tick <= 0) return undefined;
+      if (context.run.beatThisRun !== undefined || context.run.seedRace !== undefined || !ordinary(context.run.mode) || !context.playing || !context.waveActive || context.blockingCinema || context.ghostPractice || context.tick <= 0) return undefined;
       const writes = new Set<Promise<CompletionStatus>>();
       for (const actor of context.actors) {
         if (actor.isBoss) {

@@ -1,3 +1,4 @@
+import type { createLiveBeatThisRunController } from "./live-beat-this-run-controller";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyGamepad } from "../input/legacy-input-contracts";
@@ -15,6 +16,7 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
+  readonly beat?: Pick<ReturnType<typeof createLiveBeatThisRunController>, "action" | "snapshot" | "cancel">;
   readonly chase?: Readonly<{ choose(id: string, expectedManifestHash?: string): Promise<void>; chooseRace?(id: string, expectedManifestHash?: string): Promise<void>; cancelPreparation(): void; snapshot(): Readonly<{ active: boolean; message: string }> }>;
   readonly career?: CareerPort;
   readonly enterCareerSource?: (id: string, command: string, expectedManifestHash?: string) => unknown;

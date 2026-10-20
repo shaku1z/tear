@@ -420,3 +420,32 @@ older fork protocol resets event ownership and cannot retain the Race decision
 frontier. Use a fresh **RACE THIS REFERENCE** start. This compatibility limit,
 browser acceptance, broader R16/R07 integration and full-Campaign qualification
 remain open; source-only tests do not establish those outcomes.
+
+
+## Beat This Run: local source implementation, normal browser acceptance pending
+
+Career exposes **BEAT THIS RUN**, **RECEIVE BEAT CODE**, **BEAT RESULT**,
+**SAVE RESULT** and **RETRY BEAT**. A bounded `BTR1` code binds an already-public
+source's exact original bytes, full manifest, native result and initial
+setup/build/configuration. Explicit resolve checks the configured provider's
+public catalog and complete verdict tuple before transactional local import.
+Navigation and result reload do not publish or fetch. Existing V1 private consent
+is unchanged; normal authenticated public publishing and deployed R10 evidence
+remain separate.
+
+Attempts start through the ordinary run controller with independent inputs and
+private legal drafts, recorded before mutation for continuous playback. Their
+sticky category excludes ordinary progression, bests, leaderboards and automatic
+publication. Score, survival, completion time, damage, same-build,
+structural-subset-build, style and no-throw use their declared native authorities;
+victory-only metrics refuse incomplete source authority. Structural subset means
+owned IDs/counts/tiers, not inferred power. Parry-only lacks complete damage-origin
+proof; boss checkpoint attempts remain the existing Theater CHALLENGE route.
+Legitimate Quit remains abandoned even when a victory-only child metric is absent.
+
+Result review verifies the source and independent child, and explicit save uses
+joint manifest/chunk/result guards, including response-loss resolution. Retry
+keeps prior attempts. Focused source-owned native recorder/Reader/service controls
+are local engineering evidence; the constructed victory terminal-fact control is
+not a naturally completed course. Parent-owned fresh-build normal UI acceptance,
+full-run/device coverage and full R16 closure remain pending.

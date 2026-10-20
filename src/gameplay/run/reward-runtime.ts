@@ -21,6 +21,7 @@ export interface RewardTransitionRun<TChoice extends RewardChoice> {
 }
 
 export interface RewardRuntimeRun<TChoice extends RewardChoice> extends RewardTransitionRun<TChoice> {
+  readonly beatThisRun?: Readonly<{ codeHash: string }>;
   readonly seedRace?: SeedRaceRun;
   readonly mode: RunMode;
   readonly mods: RewardTransitionRun<TChoice>["mods"] & {
@@ -105,7 +106,7 @@ export function createRewardRuntime<TChoice extends RewardChoice>(
       specialBlock: run.specialBlock, specialsOffered: run.specialsOffered,
       reservedChoice: run.reservedUpgrade,
     });
-    if (run.seedRace !== undefined) controller.restore({ ...controller.snapshot(), decisionSequence });
+    if (run.seedRace !== undefined || run.beatThisRun !== undefined) controller.restore({ ...controller.snapshot(), decisionSequence });
     return controller;
   };
   const execute = (transition: ReturnType<RewardSelectionController<TChoice>["dispatch"]>): void => {
@@ -119,7 +120,7 @@ export function createRewardRuntime<TChoice extends RewardChoice>(
       : decision.kind === "reserve" ? { type: "select-reserve" as const, index: decision.index } : { type: "select-tier-up" as const, index: decision.index };
     const result = transitionRewardSelection(before, event);
     if (result.snapshot === before) return;
-    if (before.seedLocked !== undefined) {
+    if (before.seedLocked !== undefined || options.run().beatThisRun !== undefined) {
       const next = recordedSequence ?? options.beforeDecision?.(decision, before) ?? decisionSequence + 1;
       if (!Number.isSafeInteger(next) || next <= decisionSequence) throw new TypeError("Race decision frontier must advance");
       decisionSequence = next;

@@ -1,3 +1,4 @@
+import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import { readSeedRaceRun } from "./seed-race-contract";
 import { stableVerificationHash } from "../replay/hash";
 import { parseGhostCapsuleManifest, prepareGhostCapsuleSourceGuards, type GhostLocalVault, type GhostVaultBackend, type GhostVaultGuard, type TearGhostManifest } from "./capsule-vault";
@@ -10,9 +11,10 @@ const CUSTODY_PREFIX = "ghost-publication-custody:v1:";
 
 /** Source declarations may restrict eligibility; a caller cannot erase them. */
 export function ghostPublicationSourceEligibility(manifest: TearGhostManifest, input: GhostRunEligibilityInput): GhostRunEligibilityInput {
+  const beat = readBeatRunBinding(manifest.provenance?.beatThisRun);
   const race = readSeedRaceRun(manifest.provenance?.seedRace);
   const assistance = readGhostRunAssistance(manifest.provenance?.ghostAssistance), actor = manifest.provenance?.actor;
-  return Object.freeze({ ...input, coached: input.coached || assistance !== undefined || race !== undefined, ghostAssisted: input.ghostAssisted || assistance !== undefined || race !== undefined,
+  return Object.freeze({ ...input, coached: input.coached || assistance !== undefined || race !== undefined || beat !== undefined, ghostAssisted: input.ghostAssisted || assistance !== undefined || race !== undefined || beat !== undefined,
     bot: input.bot || actor === "bot" || actor === "tearbot" });
 }
 

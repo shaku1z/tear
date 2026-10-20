@@ -61,7 +61,7 @@ export interface LiveOutcomeCompositionOptions {
 export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOptions): void {
   const d = options.dependencies;
   const active = options.run;
-  const practicing = () => options.practiceSession?.active() != null || active().seedRace !== undefined;
+  const practicing = () => options.practiceSession?.active() != null || active().beatThisRun !== undefined || active().seedRace !== undefined;
   const publishTerminal = createTearTerminalRunFactPublisher(
     d.GAMEPLAY_EVENTS, () => options.lifecycle.snapshot().sessionId,
   );

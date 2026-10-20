@@ -1,3 +1,4 @@
+import type { BeatRunBinding } from "./beat-run";
 import type { DifficultyId } from "./difficulty-catalog";
 import type { GhostRunAssistance } from "./ghost-assistance";
 import type { SeedRaceRun } from "./seed-locked-draft";
@@ -45,6 +46,7 @@ export interface RunWaveLogEntry {
 }
 
 export interface RunSession<TMods> {
+  beatThisRun?: BeatRunBinding;
   seedRace?: SeedRaceRun;
   ghostAssistance?: GhostRunAssistance;
   mode: RunMode;

@@ -1,3 +1,4 @@
+import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import { seedRaceLegality } from "../gameplay/run/seed-locked-draft";
 import { readSeedRaceRun, validateSeedRaceState } from "../ghost/seed-race-contract";
 import { hydrateRewardCodecPayload } from "../tearbench/reward-codec-hydrator";
@@ -203,6 +204,7 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   components.set("tear.run.v1", Object.freeze({
     ...(encode(run, identities) as Readonly<Record<string, TearCodecValue>>),
     // The canonical declaration contains a weapon ID, unlike excluded executable actor weapon ports.
+    ...(run.beatThisRun === undefined ? {} : { beatThisRun: readBeatRunBinding(run.beatThisRun) as unknown as TearCodecValue }),
     ...(run.seedRace === undefined ? {} : { seedRace: readSeedRaceRun(run.seedRace) as unknown as TearCodecValue }),
     mode: run.mode, difficulty: run.diff, stage: options.stageIndex(), wave: run.wave,
     tick: options.tick(), score: run.score,

@@ -11,6 +11,7 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
     const button = (label: string, command: string, x: number, y: number, w = 154, enabled = true, id?: string) => { context.enqueue({ x, y, w, h: 32, label, size: ui.t.type.micro, enabled, action: { type: "career.control", command, ...(id ? { id } : {}) } }); };
     ui.title(canvas, "CAREER ARCHIVE", width / 2, 40, ui.t.type.h2);
     context.enqueue({ x: left, y: 12, w: 100, h: 30, label: "PROFILE", action: { type: "profile.selectTab", id: "bests" } });
+    button("RECEIVE BEAT CODE", "beat-receive", left + 120, 12, 210);
     if (!view.selected) {
       button("SEARCH / FILTERS", "search", left, 58, 190); button(labels[view.query.view] ?? view.query.view, "view", left + 200, 58, 240);
       button(`SORT: ${view.query.sort.toUpperCase()}`, "sort", left + 450, 58, 180); button("CLEAR", "clear", left + 640, 58, 110);
@@ -29,9 +30,11 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
     }
     const { entry: e, notes, detail } = view.selected;
     const raceEligible = e.seedRaceRole === "reference" && e.verified === "receipts" && e.result !== null;
-    const chaseEligible = !e.assisted && e.verified === "receipts" && detail?.startsWith("Recorded category best") === true;
+    const chaseEligible = !e.beatAttempt && !e.assisted && e.verified === "receipts" && detail?.startsWith("Recorded category best") === true;
     const quantity = (value: number, digits = 2) => String(Number(value.toFixed(digits)));
     const composition = Object.entries(e.composition ?? {}), dominant = composition.filter(([, n]) => n === Math.max(...composition.map(([, count]) => count))).map(([category]) => category).join(", ");
+    button(e.beatAttempt ? "BEAT RESULT" : "BEAT THIS RUN", e.beatAttempt ? "beat-review" : "beat", left + 205, 58, 180, e.present && e.kind === "capsule");
+    if (e.beatAttempt) { button("SAVE RESULT", "beat-save", left + 395, 58, 160); button("RETRY BEAT", "beat-retry", left + 565, 58, 160); }
     button("BACK TO RESULTS", "back", left, 58, 190);
     const facts = [detail ?? `${e.kind === "legacy-visual" ? "VISUAL-ONLY LEGACY · " : ""}${e.mode ?? "unknown mode"} / ${e.difficulty ?? "unknown difficulty"} / ${e.weapon ?? "unknown weapon"}`,
       `${e.date} · ${e.result ?? "outcome unavailable"} · wave ${String(e.wave ?? "unknown")} · score ${String(e.score ?? "unknown")}`,
@@ -41,7 +44,7 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
       `Style ${e.style ? `combo ${quantity(e.style.combo)} · x${quantity(e.style.multiplier)} · ${e.style.rank || "unranked"}` : "unavailable"} · near miss ${e.nearMiss === null ? "unavailable" : e.nearMiss.map((b) => `${b.boss}: ${quantity(b.hp)}/${quantity(b.maxHp)} HP, phase 3`).join(", ") || "none under final-phase <=10% rule"}`,
       `Run DNA: ${Object.entries(e.dna).map(([k, v]) => `${k} ${quantity(v, 4)}`).join(" · ") || "unavailable"}`,
       `Tags: ${notes.tags.join(", ") || "none"} · retention ${notes.retention} · recorded actor ${e.actor} · sharing ${e.sharing} · game ${e.gameVersion ?? "unknown"}`,
-      e.seedRaceRole ? `SEED-LOCKED RACE ${e.seedRaceRole.toUpperCase()} · shared setup/offers · personal inputs, reserve and tier-ups · unranked / no progression rewards` : e.assisted ? "ASSISTED / NONCOMPETITIVE · original Chase source attribution is retained in this recording." : chaseEligible ? "CHASE: independent seed and choices · assisted / noncompetitive · no ordinary leaderboard submission." : "To Chase, choose an unassisted recorded best from Personal best timeline or Best per weapon.",
+      e.beatAttempt ? "BEAT THIS RUN · declared native target · independent input/legal private choices · noncompetitive / no progression" : e.seedRaceRole ? `SEED-LOCKED RACE ${e.seedRaceRole.toUpperCase()} · shared setup/offers · personal inputs, reserve and tier-ups · unranked / no progression rewards` : e.assisted ? "ASSISTED / NONCOMPETITIVE · original Chase source attribution is retained in this recording." : chaseEligible ? "CHASE: independent seed and choices · assisted / noncompetitive · no ordinary leaderboard submission." : "To Chase, choose an unassisted recorded best from Personal best timeline or Best per weapon.",
       e.unavailable.join(" · ") || "Native witness coverage available; observations do not measure human skill."];
     const spacing = Math.max(14, Math.min(30, (height - 220) / facts.length)); facts.forEach((fact, i) => { line(fact, 108 + i * spacing, i === facts.length - 1, ui.t.type.body); });
     const y = height - 100;
