@@ -79,7 +79,78 @@ function withoutPresentation(snapshot: TearSnapshotV1): TearSnapshotV1 {
   return { ...snapshot, state: { ...snapshot.state, "tear.configuration.v1": { ...configuration, values } } };
 }
 
+function rewardDelayCheckpoint(completedSelection = false) {
+  const source = createProductionGhostReplayComposition({ seed: "reward-clear-delay", mode: "endless" }).create(undefined);
+  source.waveReward.reward.reset();
+  const run = source.replay.world.state.run();
+  if (run === null) throw new Error("reward delay requires a run");
+  if (completedSelection) {
+    run.spawnQueue = []; source.replay.world.state.setEnemies([]); source.waveReward.update(1);
+    source.waveReward.reward.selectDraft(0);
+    expect(source.waveReward.reward.snapshot()?.phase).toBe("complete");
+  }
+  run.spawnQueue = []; source.replay.world.state.setEnemies([]);
+  source.simulation.advanceOne([]);
+  expect(source.replay.world.lifecycle.phase).toBe("reward-pending");
+  expect(run.clearTimer).toBeGreaterThan(0);
+  expect(source.waveReward.screen()).toBe("playing");
+  return source;
+}
+
 describe("production replay composition", () => {
+  it.each([
+    { completed: false, paused: false }, { completed: false, paused: true },
+    { completed: true, paused: false }, { completed: true, paused: true },
+  ])("continues the source-owned reward delay with retained selection $completed and pause $paused", ({ completed, paused }) => {
+    // Construct the frontier through actual wave/selection owners, without a native-play claim.
+    const source = rewardDelayCheckpoint(completed);
+    if (paused) expect(source.waveReward.routeAction({ type: "pause" })).toBe(true);
+    const saved = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "reward-delay");
+    const restored = createProductionGhostReplayComposition({ seed: saved.snapshot.seed,
+      inputSnapshots: new Map([[saved.snapshot.tick, saved.input]]) }).create(saved.snapshot);
+    expect(restored.semanticProjection()).toEqual(source.semanticProjection());
+    expect(restored.waveReward.reward.snapshot()).toEqual(source.waveReward.reward.snapshot());
+    expect(restored.waveReward.screen()).toBe(paused ? "paused" : "playing");
+    if (paused) {
+      expect(source.waveReward.routeAction({ type: "pause" })).toBe(true);
+      expect(restored.waveReward.routeAction({ type: "pause" })).toBe(true);
+    }
+    let steps = 0;
+    while (source.waveReward.screen() === "playing" && steps < 120) {
+      expect(restored.simulation.advanceOne([]).state).toEqual(source.simulation.advanceOne([]).state);
+      steps++;
+    }
+    expect(steps).toBeGreaterThan(1);
+    expect(source.waveReward.screen()).toBe("draft");
+    expect(restored.waveReward.screen()).toBe("draft");
+    expect(restored.waveReward.reward.snapshot()).toEqual(source.waveReward.reward.snapshot());
+    expect(restored.replay.world.context.services.random.snapshot()).toEqual(source.replay.world.context.services.random.snapshot());
+  });
+
+  it.each(["zero", "negative", "nonfinite", "over-bound", "wrong-wave", "wrong-boss", "active-selection", "reward-screen", "active-lifecycle"] as const)(
+    "refuses incoherent reward-delay %s before destination replacement", (field) => {
+      const source = rewardDelayCheckpoint();
+      const saved = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "invalid-delay");
+      const invalid = structuredClone(saved.snapshot);
+      const run = invalid.state["tear.run.v1"] as Record<string, unknown>;
+      const runtime = (invalid.state["tear.world.v1"] as Record<string, unknown>).runtime as Record<string, unknown>;
+      const lifecycle = runtime.lifecycle as Record<string, unknown>;
+      if (field === "zero") run.clearTimer = 0;
+      else if (field === "negative") run.clearTimer = -1;
+      else if (field === "nonfinite") run.clearTimer = Infinity;
+      else if (field === "over-bound") run.clearTimer = source.replay.configuration.value.run.waveClearPause + 1;
+      else if (field === "wrong-wave") lifecycle.wave = Number(lifecycle.wave) + 1;
+      else if (field === "wrong-boss") lifecycle.bossWave = true;
+      else if (field === "active-selection") {
+        const selection = (invalid.state["tear.reward.v1"] as Record<string, unknown>).selection as Record<string, unknown>;
+        selection.phase = "draft";
+      } else if (field === "reward-screen") (invalid.state["tear.ui.v1"] as Record<string, unknown>).screen = "draft";
+      else { lifecycle.phase = "wave-active"; lifecycle.reward = null; (invalid.state["tear.ui.v1"] as Record<string, unknown>).screen = "draft"; }
+      const destination = createProductionReplayWorld({ seed: "unchanged-delay-target" }), unchanged = unchangedDestination(destination);
+      expect(() => restoreProductionReplaySnapshot(destination, invalid)).toThrow();
+      unchanged();
+    });
+
   it.each([0, 250])("retains held aim magnitude %s through an input keyframe and its next command-free tick", (magnitude) => {
     const options = { seed: "held-aim-frontier", mode: "endless" };
     const source = createProductionGhostReplayComposition(options).create(undefined);

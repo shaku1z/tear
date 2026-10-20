@@ -407,9 +407,20 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
     throw new RangeError("production replay reward screen requires a matching selection");
   }
   const selectingReward = staged.reward !== null && ["draft", "reserve", "tierup"].includes(staged.reward.phase);
+  // Native clear prepares the reward before its countdown opens a selection.
+  // The prior idle/complete selection is retained throughout this playing pause.
+  const rewardDelay = !selectingReward && preparedRuntime.lifecycle.phase === "reward-pending"
+    && ["playing", "paused"].includes(staged.screen)
+    && (staged.reward === null || ["idle", "complete"].includes(staged.reward.phase) && staged.reward.mode === staged.run.mode)
+    && preparedRuntime.lifecycle.wave === staged.run.wave
+    && preparedRuntime.lifecycle.bossWave === Boolean(staged.run.isBossWave)
+    && preparedRuntime.lifecycle.reward === (preparedRuntime.lifecycle.bossWave ? "boss" : "draft")
+    && staged.enemies.length === 0 && Array.isArray(staged.run.spawnQueue) && staged.run.spawnQueue.length === 0
+    && Number.isFinite(staged.run.clearTimer) && staged.run.clearTimer > 0
+    && staged.run.clearTimer <= candidateConfiguration.run.waveClearPause * (preparedRuntime.lifecycle.reward === "boss" ? 1.6 : 1);
   if (selectingReward && (staged.screen !== staged.reward.phase || preparedRuntime.lifecycle.phase !== "reward-pending"
     || staged.reward.mode !== staged.run.mode)
-    || preparedRuntime.lifecycle.phase === "reward-pending" && !selectingReward) {
+    || preparedRuntime.lifecycle.phase === "reward-pending" && !selectingReward && !rewardDelay) {
     throw new RangeError("production replay reward selection requires coherent UI and lifecycle");
   }
   const reservedUpgrade = hydrateRewardUpgrade(UPGRADES, staged.run.reservedUpgrade);
