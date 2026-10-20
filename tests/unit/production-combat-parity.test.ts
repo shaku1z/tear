@@ -1,3 +1,4 @@
+import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import type { GameAction } from "../../src/input/game-action";
 import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
@@ -20,6 +21,29 @@ import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { projectGhostRunDnaTheater } from "../../src/ghost/run-dna-theater";
 
 describe("production TearBench combat parity", () => {
+  it("aims a real perfect parry from the projectile rather than the blade origin", () => {
+    // Engineered settled collision boundary, composed from actual production actors.
+    const source = createProductionGhostReplayComposition({ seed: "projectile-origin-parry", mode: "endless" }).create(undefined);
+    const { replay, combat } = source, run = replay.world.state.run(), blade = replay.world.state.blade();
+    if (!run || !blade) throw new Error("production parry actors missing");
+    const bladeNear = replay.world.entities.createEnemy("charger", 750, 550, run);
+    const shotNear = replay.world.entities.createEnemy("ranged", 950, 650, run);
+    Object.assign(bladeNear, { spawnT: 0 }); Object.assign(shotNear, { spawnT: 0 });
+    replay.world.state.setEnemies([bladeNear, shotNear]);
+    const speed = replay.configuration.value.blade.perfectSpeed * 1.1;
+    Object.assign(blade, { state: "held", x: 800, y: 600, tipX: 900, tipY: 600, tipVX: speed, tipVY: 0, tipSpeed: speed });
+    const shot = replay.world.entities.createProjectile(890, 600, -100, 0);
+    replay.world.state.setProjectiles([shot]);
+    const dx = shotNear.x - shot.x, dy = shotNear.y - shot.y, expected = Math.hypot(dx, dy);
+    expect(combat.opening.nearestEnemy()).toBe(bladeNear);
+    runLiveCollisionPhase(combat.collision, 1 / 120);
+    expect(shot.deflected).toBe(true); expect(shot.perfect).toBe(true); expect(run.weaponStats.perfectParries).toBe(1);
+    const reflectedSpeed = Math.hypot(shot.vx, shot.vy);
+    expect(shot.vx / reflectedSpeed).toBeCloseTo(dx / expected, 12);
+    expect(shot.vy / reflectedSpeed).toBeCloseTo(dy / expected, 12);
+    expect(combat.opening.nearestEnemy()).toBe(bladeNear);
+  });
+
   it("applies native Riftlock recoil after movement and preserves restored chamber state", () => {
     const composition = createProductionGhostReplayComposition({ seed: "riftlock-native-shot-phase", mode: "endless", weaponId: "riftlock" });
     const source = composition.create(undefined), player = source.replay.world.state.player(), blade = source.replay.world.state.blade();

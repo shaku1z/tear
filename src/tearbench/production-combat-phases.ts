@@ -449,10 +449,7 @@ export function createProductionCombatPhases(
       x1: number, y1: number, x2: number, y2: number) =>
       replay.factories.enemyTypes.weaponCapsuleIntersectsSegment(cap, x1, y1, x2, y2),
     distance: (x: number, y: number) => len(x, y), clamp, lerp,
-    nearestEnemy: () => {
-      const position = blade() as { x: number; y: number };
-      return weaponRuntime.nearestEnemy(position.x, position.y);
-    },
+    nearestEnemy: (x: number, y: number) => weaponRuntime.nearestEnemy(x, y),
     areaDamage: (x: number, y: number, radius: number, damage: number) => dealArea(x, y, radius, damage), lobExplode,
     splitProjectile: (projectile: never) => { style.splitProjectile(projectile); },
     triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
