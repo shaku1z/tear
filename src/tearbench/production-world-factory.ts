@@ -200,10 +200,13 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const player = world.entities.createPlayer(config.view.w * 0.5, config.world.groundY - 60) as { oneHit: boolean };
   player.oneHit = difficultyPlan.oneHit;
   world.state.setPlayer(player as never);
-  const blade = world.entities.createBlade() as { weapon?: unknown; model?: unknown };
+  const blade = world.entities.createBlade() as InstanceType<typeof factories.Blade>;
   const weapon = applyWeapon(config, run.weaponId);
   blade.weapon = weapon; blade.model = weapon.model;
-  world.state.setBlade(blade as never);
+  // Fresh-run initialization precedes any retained snapshot hydration. Restored
+  // chambers, cooldowns and trigger state remain owned by that snapshot.
+  weapon.onReset?.({ blade });
+  world.state.setBlade(blade);
   world.state.setEnemies((options.enemies ?? []).map((spawn) =>
     world.entities.createEnemy(spawn.id, spawn.x, spawn.y, run as never)));
   const input = createLiveAuthoritativeInputAdapter({

@@ -20,6 +20,32 @@ import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { projectGhostRunDnaTheater } from "../../src/ghost/run-dna-theater";
 
 describe("production TearBench combat parity", () => {
+  it("applies native Riftlock recoil after movement and preserves restored chamber state", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "riftlock-native-shot-phase", mode: "endless", weaponId: "riftlock" });
+    const source = composition.create(undefined), player = source.replay.world.state.player(), blade = source.replay.world.state.blade();
+    if (!player || !blade) throw new Error("missing Riftlock actors");
+    const beforeX = player.x, sequence = new EnvelopeSequencer();
+    source.simulation.advanceOne([
+      sequence.command<GameAction>(1, { type: "move", x: 1000, y: 0 }),
+      sequence.command<GameAction>(1, { type: "aim", turn: 0, magnitude: 1000 }),
+      sequence.command<GameAction>(1, { type: "weapon", intent: "primary", phase: "pressed" }),
+    ]);
+    // A real shot recoils left, but cannot move the player backwards retroactively.
+    expect(player.x).toBeGreaterThan(beforeX);
+    expect(player.vx).toBeLessThan(0);
+    expect(blade.riftChambers).toBe(source.replay.configuration.value.weapons.riftlock.chambers - 1);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "riftlock-shot-restoration");
+    const restored = createProductionGhostReplayComposition({ seed: checkpoint.snapshot.seed,
+      inputSnapshots: new Map([[checkpoint.snapshot.tick, checkpoint.input]]) }).create(checkpoint.snapshot);
+    const restoredBlade = restored.replay.world.state.blade();
+    if (!restoredBlade) throw new Error("missing restored Riftlock");
+    const next = [sequence.command<GameAction>(2, { type: "weapon", intent: "primary", phase: "released" })];
+    source.simulation.advanceOne(next); restored.simulation.advanceOne(next);
+    expect(restoredBlade.riftChambers).toBe(blade.riftChambers);
+    expect(restoredBlade.riftFireCooldown).toBe(blade.riftFireCooldown);
+    expect(restoredBlade.riftChamberCooldown).toBe(blade.riftChamberCooldown);
+    expect(restored.semanticProjection()).toEqual(source.semanticProjection());
+  });
   it("attributes real held contact on the catch tick to the returning throw", () => {
     const replay = createProductionReplayWorld({ seed: "dna-catch", mode: "endless", enemies: [{ id: "charger", x: 1400, y: CONFIG.world.groundY - 20 }] });
     const player = replay.world.state.player(), blade = replay.world.state.blade(), run = replay.world.state.run(), enemy = replay.world.state.enemies()[0];
@@ -297,34 +323,6 @@ describe("production TearBench combat parity", () => {
     expect(ids).toEqual([...adds, clone].map((enemy) => core.combatEntityRuntime.id(enemy as object, "enemy")));
   });
 
-  it("explicitly refuses Source void descent instead of silently claiming detached parity", () => {
-    const replay = createProductionReplayWorld({ seed: "parity-source-void", enemies: [
-      { id: "source", x: CONFIG.view.w / 2, y: CONFIG.world.groundY - 120 },
-    ] });
-    const phases = createProductionCombatPhases(replay);
-    const source = replay.world.state.enemies()[0];
-    if (source === undefined) throw new Error("the current Source encounter is unavailable");
-    expect(() => phases.opening.startVoidDescent(source as never)).toThrow(/Source void.*unsupported/u);
-    (replay.run as { voidScroll?: unknown }).voidScroll = {};
-    expect(() => { phases.opening.updateVoidScroll(1 / 60); }).toThrow(/Source void.*unsupported/u);
-    expect(() => { phases.opening.syncVoidSupport(); }).toThrow(/Source void.*unsupported/u);
-  });
+  // Source descent, restored stream continuity and malformed bindings are covered by ghost-finale-companion.test.ts.
 
-  it("refuses hydrated Source void snapshots before an exact-keyframe seek", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "parity-source-void-boundary" });
-    const composed = composition.create(undefined);
-    const captured = captureProductionReplayCheckpoint(
-      composed.replay, composed.combat, composed.waveReward, "parity-source-void-boundary",
-    );
-    expect(() => composition.create(captured.snapshot)).not.toThrow();
-    const voidSnapshot = structuredClone(captured.snapshot) as unknown as {
-      state: Record<string, Record<string, unknown>>;
-    };
-    const run = voidSnapshot.state["tear.run.v1"];
-    if (run === undefined) throw new Error("production snapshot is missing its run component");
-    run.voidScroll = { active: true, frozen: false, speed: 1, speedCap: 1 };
-    expect(() => composition.create(voidSnapshot as never)).toThrow(
-      /Source void descent\/scroll is unsupported; use the live backend/u,
-    );
-  });
 });

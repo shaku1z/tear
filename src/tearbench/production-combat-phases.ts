@@ -124,8 +124,6 @@ export function createProductionCombatPhases(
   };
   let actorId: ((enemy: object & { id?: string }) => string) | null = null;
   let weaponRuntime: ReturnType<typeof createLiveWeaponRuntime<LiveWeaponEnemy>> | null = null;
-  let detachedRiftTriggerHeld = false;
-  let detachedRiftlockInitialized = false;
   const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
   const dealArea = (x: number, y: number, radius: number, damage: number, playerOwned = true): number =>
     weaponRuntime?.dealArea(x, y, radius, damage, { playerOwned }) ?? 0;
@@ -270,17 +268,7 @@ export function createProductionCombatPhases(
     overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
     stepCinematic: (dt: number) => { replay.practiceCinematic.runtime.step(dt);
     }, flushClosingInput: note("flushClosingInput"),
-    updateWeaponAbilities: (dt: number) => {
-      const activeBlade = blade() as { weapon?: { id?: string } | null; lmbOverride?: boolean;
-        _fireRazorRound?: (activePlayer: object) => boolean; resetRiftlock?: () => void };
-      if (activeBlade.weapon?.id === "riftlock" && !detachedRiftlockInitialized) {
-        activeBlade.resetRiftlock?.(); detachedRiftlockInitialized = true;
-      }
-      const held = activeBlade.lmbOverride === true;
-      if (activeBlade.weapon?.id === "riftlock" && held && !detachedRiftTriggerHeld) activeBlade._fireRazorRound?.(player());
-      detachedRiftTriggerHeld = held;
-      weaponRuntime.updateAbilities(dt);
-    },
+    updateWeaponAbilities: (dt: number) => { weaponRuntime.updateAbilities(dt); },
     flushWeaponActions: (events: readonly BladeWeaponEvent[]) => {
       for (const event of events) {
         if (event.type === "slingRelease") {
