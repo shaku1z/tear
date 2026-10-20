@@ -57,8 +57,25 @@ partial failed steps, unknown capture schemas and inconsistent identity/coverage
 cannot become whole-run metrics. Old capsules without evidence remain
 unavailable; existing no-capture legacy declarations retain their old semantics.
 These are transparent recorded facts under verified capsule custody, not a new
-metric re-execution, anti-cheat or skill/grade claim. Normal browser recording,
-Theater reopen and compact panel inspection remain parent acceptance work.
+metric re-execution, anti-cheat or skill/grade claim.
+
+Parent browser acceptance passed on clean `3af84eae5324ece2eb9d67f358d0c547b0e89190`
+(native implementation `30d5fdda6e5e7417dea0a2aabd8fe3652d77cd30`). Build identity
+`1c854fc32fdee2b740496eb74274df554e9675337aef635c7f89868aa2bc2156`,
+artifact `cfb1423aecd2f5d013432c022395278b88adfbce1c52f1cb257e3dc7b21fbf31`.
+`tests/browser-c37-run-dna.js` records 300 actual canonical ticks with throw 140,
+recall 150 and native catch; ordinary IndexedDB/local storage is used without
+`test=1`. Normal Profile → Vault → Theater → Run DNA and reload/reopen display
+the exact durable eight-value basis: attacks 3, combat ticks 300, misses 3,
+moving ticks 20, damage 0, peak HP 100, used/available maneuvers 3/15. All three
+episodes resolved; precision is truthfully 0%. Source capsule bytes remain
+unchanged. Desktop and 800×450 captures were inspected; the disposable inspector
+DOM panel alone was hidden for unobstructed captures. Evidence directory:
+`C:/Users/realm/.codex/tmp/tear-resumption-20261018/run-dna-3af84eae`.
+The first functional pass at `30d5fdda` is retained separately with its obstructed
+compact capture. Shared-source gold compatibility was refreshed and all 14
+references replayed in a fresh process. These bounded native/browser proofs do
+not close full-run, physical-device, accessibility or broader C37 requirements.
 
 Historical foundation evidence: `tests/unit/ghost-coach-practice.test.ts` covers
 v1 distinct-source rejection and same-build provenance. The updated normal

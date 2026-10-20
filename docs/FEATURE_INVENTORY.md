@@ -1377,8 +1377,12 @@ fresh declarations never fall back to legacy acceptance. The normal panel says
 columns. Focused production controls cover actual multi-target damage, resolved
 miss/return, capability/HP upgrades, observer-inert state/RNG equality, durable
 seal/read, catch-tick contact, terminal-inside-frame and projection refusal.
-Normal browser acceptance is pending; no historical skill or native counter
-re-execution claim is made.
+Normal browser acceptance passed on clean `3af84eae`: real 300-tick recording,
+ordinary storage, Profile/Vault/Theater navigation, all eight values compared
+with the durable native declaration, desktop/800×450 captures, and reload/reopen
+with exact source custody preserved. See the C37 checkpoint for source/build
+identity and evidence. No historical skill, native counter re-execution, full-run
+or physical-device qualification claim is made.
 
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.
 
