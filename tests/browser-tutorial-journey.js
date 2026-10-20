@@ -80,8 +80,11 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     fs.writeFileSync(target, `${JSON.stringify(result.continuationTrace, null, 2)}\n`);
   }
   assert.equal(result.active, false, `tutorial remained active: ${JSON.stringify(last)}`);
-  assert.equal(result.mode, "playground", `tutorial did not hand off to practice: ${JSON.stringify(last)}`);
-  assert.equal(result.screen, "paused", `completion did not open its technique summary: ${JSON.stringify(last)}`);
+  // The terminal canonical receipt belongs to the completed tutorial; its host handoff commits afterward.
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "playground" && window.__PANTHEON_TEST.state().game === "paused");
+  const handoff = await page.evaluate(() => window.__PANTHEON_TEST.state());
+  assert.equal(handoff.mode, "playground", `tutorial did not hand off to practice: ${JSON.stringify(last)}`);
+  assert.equal(handoff.game, "paused", `completion did not open its technique summary: ${JSON.stringify(last)}`);
   assert.ok(result.metrics.acceptedActions > 0, "journey must use player-valid actions");
   assert.ok(result.metrics.fixedTicks <= scenario.maxTicks, "tutorial journey must remain within its declared tick limit");
   const launchEntry = result.trace.find((entry) => entry.label === "after-3");

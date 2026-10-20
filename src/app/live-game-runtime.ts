@@ -1,4 +1,4 @@
-import { liveTutorialCoachFrame } from "./live-tutorial-coach-frame"; import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { createLiveTrainingHandoff } from "./live-training-handoff"; import { liveTutorialCoachFrame } from "./live-tutorial-coach-frame"; import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./live-ghost-frame-recording"; import { createBrowserLiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
@@ -199,7 +199,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening; const ghostPracticeSession = createLiveGhostPracticeSessionState();
   const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const audioDispatchReceipts: AudioDispatchReceipt[] = []; if (__TEAR_TEST_BUILD__) SFX.observeDispatchReceipts((receipt) => { audioDispatchReceipts.push(receipt); }); const outcomeChronology = __TEAR_TEST_BUILD__ ? createOutcomeChronologyJournal() : null;
-  let tutorialPracticeStart = false; const campaignTraining = createLiveCampaignTrainingComposition({
+  let tutorialPracticeStart = false; const trainingHandoff = createLiveTrainingHandoff({ run: () => hostState.run(), phase: () => TUT.session().phase, pause: () => { setState("paused"); }, releasePointer: () => { browserDocument.exitPointerLock(); }, defer: (commit) => { browserWindow.queueMicrotask(commit); }, startPractice: () => { tutorialPracticeStart = true; try { startRunImmediate("playground", "normal"); } finally { tutorialPracticeStart = false; } } }); const campaignTraining = createLiveCampaignTrainingComposition({
     dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
     cinema: worldContext.cinema, controllers: runControllers,
     width: W, height: H, canvas, context: ctx,
@@ -211,7 +211,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll,
     requestPointerLock: requestOwnedPointerLock, selectStage: loadStage, beginWipe: () => { Wipe.begin(); },
     resetRun: (difficulty) => { startRunWithPreflight("playground", difficulty); },
-    startPractice: () => { tutorialPracticeStart = true; try { startRunImmediate("playground", "normal"); } finally { tutorialPracticeStart = false; } setState("paused"); browserDocument.exitPointerLock(); }, resetTrainingCarry: () => { transient.resetOpening(); impact.hitStop = 0; },
+    startPractice: (origin) => { trainingHandoff.request(origin); }, resetTrainingCarry: () => { transient.resetOpening(); impact.hitStop = 0; },
     applySettingsCinematicPreference: () => settings.cinematics, shakeScale: () => settingsController.shakeScale,
     getShake: () => impact.shake, setShake: (value) => { impact.shake = value; },
     getZoom: () => feel.zoom, setZoom: (value) => { feel.zoom = value; },

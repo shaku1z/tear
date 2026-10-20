@@ -2,9 +2,63 @@ import { describe, expect, it, vi } from "vitest";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
+import { createLiveTrainingHandoff } from "../../src/app/live-training-handoff";
+import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
+import { createProductionCombatSimulation } from "../../src/tearbench/production-combat-simulation";
+import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
+import { projectProductionReplayCanonicalState } from "../../src/tearbench/production-replay-composition";
 import { createLiveTutorialSessionActions } from "../../src/app/live-tutorial-session-actions";
 
 describe("live tutorial runtime", () => {
+  it("keeps the real Lab completion receipt before the deferred next-run reset and resumes canonical ticks", () => {
+    const exercise = (deferred: boolean) => {
+      const tasks: (() => void)[] = [];
+      let request: () => void = () => { throw new Error("handoff not installed"); };
+      const replay = createProductionReplayWorld({ seed: "lab-handoff", mode: "tutorial", weaponId: "sword", difficulty: "normal", tutorialHandoff: () => { request(); } });
+      const core = createProductionCombatSimulation(replay, { snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input) });
+      const content = createProductionWaveRewardRuntime(replay);
+      replay.bindTutorialSpawn(content.spawnTutorial); content.startNaturalOpening();
+      replay.tutorial.openPractice(1); expect(replay.tutorial.selectLesson("move")).toBe(true);
+      const sourceRun = replay.world.state.run(); if (sourceRun === null) throw new Error("Source run missing");
+      let currentRun: { readonly mode: string } = sourceRun;
+      let paused = false;
+      const reset = vi.fn(() => { core.simulationRuntime.reset(); currentRun = { mode: "playground" }; });
+      const handoff = createLiveTrainingHandoff({ run: () => currentRun, phase: () => replay.tutorial.session().phase,
+        pause: () => { paused = true; }, releasePointer: vi.fn(), defer: (commit) => { tasks.push(commit); }, startPractice: reset });
+      request = deferred ? () => { handoff.request("completion"); } : () => { paused = true; reset(); };
+      for (let tick = 1; tick <= 1000 && replay.tutorial.active; tick++) {
+        core.simulationRuntime.advanceOne([{ kind: "command", id: tick, tick,
+          command: { type: "move", x: tick <= 160 ? -1000 : tick <= 320 ? 1000 : 0, y: 0 } }]);
+      }
+      expect(replay.tutorial.session().phase).toBe("free-practice");
+      expect(paused).toBe(true);
+      expect(replay.tutorial.n.moveL).toBeGreaterThanOrEqual(60);
+      expect(replay.tutorial.n.moveR).toBeGreaterThanOrEqual(60);
+      expect(replay.tutorialOutward.some((event) => event.startsWith("complete-course:"))).toBe(false);
+      return { core, tasks, reset, handoff };
+    };
+    // The former synchronous constructor resets the same canonical controller inside execute.
+    const old = exercise(false);
+    expect(old.core.simulationRuntime.scheduler.tick).toBe(0);
+    expect(old.core.simulationRuntime.lastResult?.tick).toBeGreaterThan(320);
+    expect(() => old.core.simulationRuntime.advanceOne([])).toThrow(/ticks must increase/);
+    const fixed = exercise(true);
+    const receipt = fixed.core.simulationRuntime.lastResult;
+    if (receipt === null) throw new Error("Terminal tutorial receipt missing");
+    expect(receipt.tick).toBe(fixed.core.simulationRuntime.scheduler.tick);
+    expect(receipt.stateHash).not.toBe("");
+    expect(fixed.reset).not.toHaveBeenCalled();
+    fixed.handoff.request("completion"); expect(fixed.tasks).toHaveLength(1);
+    const commit = fixed.tasks[0]; if (commit === undefined) throw new Error("Deferred handoff missing");
+    commit(); expect(fixed.reset).toHaveBeenCalledOnce();
+    expect(fixed.core.simulationRuntime.lastResult).toBeNull();
+    expect(fixed.core.simulationRuntime.scheduler.tick).toBe(0);
+    for (let tick = 1; tick <= 20; tick++) expect(fixed.core.simulationRuntime.advanceOne([]).tick).toBe(tick);
+    commit(); expect(fixed.reset).toHaveBeenCalledOnce();
+    // Normal menu entry constructs its baseline synchronously, before openPractice establishes a phase.
+    fixed.handoff.request(); expect(fixed.reset).toHaveBeenCalledTimes(2);
+    expect(fixed.tasks).toHaveLength(1);
+  });
   it("selects a durable-unlocked lesson after the real new-run reset without issuing completion or profile effects", () => {
     let selectedWeapon = "sword", selectedMode = "playground";
     const completeCourse = vi.fn(), addProfileStat = vi.fn(), checkAchievements = vi.fn(), installArena = vi.fn(), beginPractice = vi.fn();

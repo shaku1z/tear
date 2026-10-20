@@ -33,7 +33,7 @@ export interface LiveTrainingHostContext {
   readonly selectStage: (index: number) => void;
   readonly wipe: () => void;
   readonly resetRun: (difficulty: RunDifficulty) => void;
-  readonly startPractice: () => void;
+  readonly startPractice: (origin?: "completion") => void;
   readonly resetTrainingCarry?: () => void;
   readonly selectedWeapon: () => string;
   readonly selectWeapon: (id: string) => void;
@@ -83,7 +83,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       resetTutorialActors(d.CONFIG, context.width, player(), state.blade());
     },
     recoverBlade: () => { recoverTutorialBlade(d.CONFIG, player(), state.blade()); },
-    beginPractice: context.startPractice, finishBossPractice: () => { context.navigate("paused"); context.releasePointer(); },
+    beginPractice: () => { context.startPractice("completion"); }, finishBossPractice: () => { context.navigate("paused"); context.releasePointer(); },
     terminateRun: (reason) => { context.lifecycle.terminate(reason); },
     navigate: (screen) => { context.navigate(screen); }, releasePointer: context.releasePointer,
     addProfileStat: d.profileStatsPersistence.add,

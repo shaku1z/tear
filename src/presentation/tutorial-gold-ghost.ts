@@ -52,7 +52,7 @@ export function drawTutorialGoldGhost(context: CanvasRenderingContext2D, gold: T
       context.setLineDash([3, 7]); context.lineWidth = 3; context.strokeStyle = palette.ink; context.globalAlpha = .65;
       if (!gold.reducedMotion) { context.beginPath(); personal.forEach((pose, index) => { if (index === 0) context.moveTo(pose[1], pose[2]); else context.lineTo(pose[1], pose[2]); }); context.stroke(); }
       for (const pose of personal) if (pose[5] !== "pose") { context.beginPath(); context.rect(pose[1] - 4, pose[2] - 4, 8, 8); context.stroke(); }
-      context.setLineDash([]); label.draw(context, "YOUR VALID ATTEMPT · DASHED", first[1], first[2] + 44, palette.ink);
+      context.setLineDash([]); label.draw(context, gold.reducedMotion ? "YOUR VALID ATTEMPT · SQUARES" : "YOUR VALID ATTEMPT · DASHED", first[1], Math.max(190, first[2] - 104), palette.ink);
     }
   }
   context.globalAlpha = .8;

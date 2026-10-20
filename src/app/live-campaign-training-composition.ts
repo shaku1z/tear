@@ -55,7 +55,7 @@ export interface LiveCampaignTrainingOptions {
   readonly selectStage: (index: number) => void;
   readonly beginWipe: () => void;
   readonly resetRun: (difficulty: RunDifficulty) => void;
-  readonly startPractice: () => void;
+  readonly startPractice: (origin?: "completion") => void;
   readonly resetTrainingCarry?: () => void;
   readonly applySettingsCinematicPreference: () => CinematicPreference;
   readonly shakeScale: () => number;
