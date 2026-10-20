@@ -344,7 +344,7 @@ Evidence: `C:/Users/realm/.codex/tmp/tear-resumption-20261018/career-1ee4ab92/jo
 Earlier fixture/refresh failures remain retained beside this accepted packet.
 Broader C37 tools and the unattended training cycle remain open.
 
-## Chase Your Best: local implementation, normal-browser proof pending
+## Chase Your Best: local normal-browser acceptance
 
 Career's Personal Bests and Best by Weapon views can prepare a selected unassisted
 recorded best in one cancellable module worker. The existing production verifier
@@ -366,7 +366,23 @@ gates. Local residence is not evidence of human authorship.
 The focused controls cover actual production-reference preparation, unchanged
 source bytes, identical canonical state and RNG with the silhouette drawn/hidden,
 cancellation/source drift, native comparisons, and local-only assisted recording.
-The existing Career browser caller has an opt-in `TEAR_C37_CHASE=1` continuation for
-normal Chase, hide/show, coverage refusal, stop and retained disposition after
-reload. It has been authored but not run for this change. This is not seed locking,
-learned-quality evidence, device qualification, or full-Campaign completion proof.
+Normal-browser acceptance passed on clean source `c71499b1bec01a182cede31c5041221180ddb40b`.
+The engineering reference used native Easy/Endless/Riftlock input at seed 117,
+cleared wave one at tick 1432, and retained all thirteen verified original
+canonical/input receipts through tick 1440. Its ordinary Career download was
+477,076 bytes. The challenger used a fresh independent seed and physical mouse
+input, with no reference commands or live reset. Fifteen shots reached an actual
+recorded wave clear at tick 847; the HUD displayed a shared time split of -4.87s.
+Moving reference poses, hide/show with comparisons retained, stop, source-bound
+noncompetitive recording, ordinary reload, and unchanged original source bytes
+all passed. The parent inspected the three actual live/hidden/split captures;
+there were no page errors. Recorded source attribution remained unknown, and
+these automated engineering inputs do not establish human skill or device feel.
+
+The accepted build identity is
+`adca591763ed6224c8d85ce04a82536f0cc40422da2d751f4d0c0c190bd9d6cb`,
+artifact hash `5e489f767179526ba655857d736750958ad9748e1469bb93f5097fe7370ea6e4`.
+Evidence: `C:/tmp/tear-chase-acceptance-20261020-09/journey.json`.
+Earlier failing packets remain preserved. This acceptance does not establish
+seed locking, learned quality, device qualification, full-Campaign coverage,
+the remaining C37 products, or the unattended training cycle.
