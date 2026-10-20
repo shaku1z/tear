@@ -120,7 +120,7 @@ and download. Cancel/source replacement aborts work and stops tracks/encoders.
 Source-time cinema/intro intervals, historical cameras and GIF remain unavailable;
 no browser-frame time is inferred from 120Hz ticks. The existing engineered
 240-tick browser journey is authored to save two world-only PNGs and decode its
-actual one-second120→240 WebM; fresh parent execution remains required.
+actual one-second120→240 WebM; parent execution passed at `56a49044`.
 
 Practice outward disposition now blocks profile/daily/achievement/biome writes
 while retaining original mode and style/combat mathematics. An integrated existing
@@ -136,4 +136,17 @@ MediaRecorder wall time. A bounded WebM mux preserves native payload/key flags,
 speed cannot retime the clip. Queued frames/encoder close on cancellation and
 unsupported native configuration refuses. The existing browser journey waits
 for actual UI frames and decodes separated video times (0.1s/0.8s) to PNGs.
-Native browser acceptance of this replacement remains pending parent execution.
+The combined normal browser journey passed at clean `56a49044` (build identity
+`a80b60188df9c4d19cd6944d7c59b3d301a472ccfbd16fb20fcde76fbe462237`).
+It downloaded and decoded a92,317-byte640×360 WebM of exactly1s, sought two
+different native frames, and preserved source custody. Coach then used an
+explicit three-recording cohort: native identified throws displayed `n=3/3`,
+count distribution1/1/1 and a shared `(0, 240]` interval; the actual cited
+throw at140 opened its reconstructed scene and returned to Coach. Practice
+launched at strictly preceding checkpoint120 with release-all input and
+ranked/leaderboard eligibility false; source bytes remained unchanged.
+Retained local `studio-56a49044` evidence includes the WebM, decoded PNGs,
+`coach-history.png`, `coach-moment.png` and `coach-history.json` beneath the
+owner's `.codex/tmp/tear-resumption-20261018`. This engineering fixture does
+not prove population skill, human authorship, full persisted-profile equality,
+recorded challenge outcomes or the complete C37 product surface.

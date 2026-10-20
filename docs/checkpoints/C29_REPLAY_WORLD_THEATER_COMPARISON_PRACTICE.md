@@ -226,7 +226,7 @@ and download. Cancel/source replacement aborts work and stops tracks/encoders.
 Source-time cinema/intro intervals, historical cameras and GIF remain unavailable;
 no browser-frame time is inferred from 120Hz ticks. The existing engineered
 240-tick browser journey is authored to save two world-only PNGs and decode its
-actual one-second120→240 WebM; fresh parent execution remains required.
+actual one-second120→240 WebM; parent execution passed at `56a49044`.
 
 Practice outward disposition now blocks profile/daily/achievement/biome writes
 while retaining original mode and style/combat mathematics. An integrated existing
@@ -242,4 +242,13 @@ MediaRecorder wall time. A bounded WebM mux preserves native payload/key flags,
 speed cannot retime the clip. Queued frames/encoder close on cancellation and
 unsupported native configuration refuses. The existing browser journey waits
 for actual UI frames and decodes separated video times (0.1s/0.8s) to PNGs.
-Native browser acceptance of this replacement remains pending parent execution.
+Native browser acceptance passed on clean `56a490449bf7917b03c31bd4f6097b74d34108f9`:
+`test-standalone` build and `tests/browser-ghost-v3-live-capture.js` both exited0.
+Build identity `a80b60188df9c4d19cd6944d7c59b3d301a472ccfbd16fb20fcde76fbe462237`;
+artifact hash `d597f31309cef277abb9d22b2efb47709fdb53ea2b8c9a67f76a4579fdf48dfa`.
+The downloaded 92,317-byte WebM decoded at640×360 for exactly1s, and native
+video seeks at0.1/0.8s produced different PNGs. Nine-source comparison, actual
+world frames120/240 and unchanged source custody passed in that same journey.
+Retained local evidence: `.codex/tmp/tear-resumption-20261018/studio-56a49044`
+under the owner's home, with adjacent build/browser logs. This is an engineered
+240-tick source; full-run, device and historical-pixel acceptance remain open.

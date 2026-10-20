@@ -1377,10 +1377,25 @@ reconstructed player-follow, deterministic aspect fit, and explicit simulation
 time. Output is bounded to 1800 frames/60 seconds and 64 MiB, with local decode,
 dimensions/duration checks, accepted-frame PNG thumbnail and separate download.
 Cancellation/source replacement discards stale work. GIF, historical camera/pixel
-fidelity and source-time cinema/intro intervals remain unavailable. Browser
-acceptance of actual encoded output is pending parent execution. Practice keeps
+fidelity and source-time cinema/intro intervals remain unavailable. The exact
+`56a49044` standalone browser journey passed: a downloaded 92,317-byte VP8 WebM
+decoded at 640×360 for exactly one second, with different native frames after
+seeking to 0.1s and 0.8s; durable source bytes stayed unchanged. Practice keeps
 its source mode and combat/style math while suppressing outward profile, daily,
 achievement and biome writes through its active practice disposition.
+
+### C37 personal recorded-observation history
+
+Coach accepts an explicit selection of two to eight compatible local recordings.
+Its versioned native observations use a shared verified tick window, disclose
+usable sample counts and distributions, and show chronological per-run history.
+Identified moments link to verified Theater seeks and practice from a strictly
+preceding checkpoint. Missing or unclassified facts remain unavailable. The
+normal `56a49044` browser journey selected three recordings, displayed the
+shared `(0, 240]` interval, sought an identified throw at tick140, returned to
+Coach, and launched unranked practice at checkpoint120 without changing its
+source. Skill ratings, population claims and recorded challenge completion
+remain separate work.
 
 ### C38 local publication review
 
