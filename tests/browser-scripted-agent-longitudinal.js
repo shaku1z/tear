@@ -150,12 +150,12 @@ withJourney({ name: r18 ? "R18 controlled Normal depth cohort" : "C24 longitudin
         const policyDeadline = Math.min(Date.now() + 180_000, deadline - 120_000);
         let snapshot;
         while (Date.now() < policyDeadline) {
-          snapshot = await page.evaluate(() => {
+          snapshot = await page.evaluate(async () => {
             const api = window.__TEAR_WATCH_AGENT__;
             let state = api.snapshot();
             for (let step = 0; step < 200; step++) {
               if (state.status !== "running" || ["continue", "gameover", "win"].includes(state.screen) || (state.screen === "playing" && state.wave >= 9)) break;
-              state = api.run(1); // Inspect every actual application-frame result, never skip across the withdrawal boundary.
+              state = await api.runAsync(1); // Inspect every actual application-frame result, never skip across the withdrawal boundary.
             }
             return { status: state.status, screen: state.screen, wave: state.wave ?? null, hp: state.hp ?? null,
               fixedTicks: state.fixedTicks, decisions: state.decisions, debugTransitions: state.debugTransitions, selection: state.selection };
@@ -247,7 +247,7 @@ withJourney({ name: r18 ? "R18 controlled Normal depth cohort" : "C24 longitudin
 
   let snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
   for (let batch = 0; batch < 2_000 && snapshot.status === "running"; batch += 1) {
-    snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(2_000));
+    snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.runAsync(2_000));
   }
   const navigationCountAfter = await page.evaluate(() =>
     performance.getEntriesByType("navigation").length);

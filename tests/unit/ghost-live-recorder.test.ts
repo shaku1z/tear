@@ -15,6 +15,28 @@ import {
 } from "../../src/ghost";
 
 describe("Ghost V3 live recorder sidecar", () => {
+  it("binds pending drains to their original session and never adopts its late storage failure into a replacement", async () => {
+    const base = createMemoryGhostVaultBackend(); let release: (() => void) | undefined;
+    const vault = new GhostLocalVault({ ...base, async commitWhileJournalMatches(...args) {
+      if (args[0] === "original" && args[2].some((write) => write.store === "manifests" && write.value?.includes('"status":"complete"'))) {
+        await new Promise<void>((resolve) => { release = resolve; }); throw new Error("original terminal storage refused");
+      }
+      return base.commitWhileJournalMatches(...args);
+    } });
+    const recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-10-19T00:00:01Z" });
+    recorder.start({ sessionId: "original", createdAt: "2026-10-19T00:00:00Z", provenance: {} });
+    const finishing = recorder.finish(); await vi.waitFor(() => { expect(release).toBeTypeOf("function"); });
+    let oldFailure: unknown, newFailure: unknown, drained = false;
+    const oldDrain = recorder.drain().catch((error: unknown) => { oldFailure = error; });
+    recorder.start({ sessionId: "replacement", createdAt: "2026-10-19T00:00:01Z", provenance: {} });
+    recorder.record("commands", 1, { action: "retained-tail" });
+    const newDrain = recorder.drain().then(() => { drained = true; }).catch((error: unknown) => { newFailure = error; });
+    try { await vi.waitFor(() => { expect(drained).toBe(true); }); }
+    finally { release?.(); await finishing; await oldDrain; await newDrain; await recorder.finish(); }
+    expect(oldFailure).toBeInstanceOf(Error); expect(String(oldFailure)).toContain("original terminal storage refused"); expect(newFailure).toBeUndefined();
+    expect((await vault.getManifest("original"))?.status).toBe("recording"); expect(await base.get("journals", "original")).toEqual(expect.any(String));
+    expect((await vault.getManifest("replacement"))?.status).toBe("complete"); expect(recorder.failure).toBeNull();
+  });
   it("buffers live observations until durable storage opens, then finalizes an independent capsule", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     let release: (() => void) | undefined;

@@ -225,6 +225,8 @@ export interface LiveTearRuntimeEnvironmentContext {
     mode: TearScenarioV1["start"]["mode"],
     difficulty: TearScenarioV1["start"]["difficulty"],
   ) => void;
+  /** Settles accepted recorder staging and already-started finalization; never seals the run. */
+  readonly drainRecording: () => Promise<void>;
   readonly stopFrameLoop: () => void;
   readonly startFrameLoop: () => void;
   readonly setSemanticInputAuthority: (active: boolean) => void;

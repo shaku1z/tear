@@ -74,6 +74,7 @@ export class GhostLiveRecorder {
   #nextSequence = 0;
   #lastCompletedSequence = 0;
   #lastFailureSequence = 0;
+  readonly #finalizing = new Map<LiveGhostCaptureSession, Promise<TearGhostManifest | null>>();
 
   constructor(options: GhostLiveRecorderOptions) {
     const profile = ghostRecordingProfile(options.recordingProfile ?? "coaching");
@@ -142,13 +143,35 @@ export class GhostLiveRecorder {
     void this.#flush(session);
   }
 
-  async finish(result: Readonly<Record<string, unknown>> = {}): Promise<TearGhostManifest | null> {
+  /** Wait for this call's accepted work, without sealing a partial encoder chunk or starting/finalizing a session. */
+  async drain(): Promise<void> {
     const session = this.#activeSession;
-    if (session === null) return null;
-    // Relinquish live ownership synchronously. Ghost 2 can start a replacement
-    // run during the same call stack that stopped this one; the old capsule may
-    // finish its IndexedDB writes independently without stealing new-run input.
+    const finalizing = session === null ? [...this.#finalizing].filter(([owner]) => owner.sequence === this.#nextSequence) : [];
+    if (session === null && finalizing.length === 0 && this.#failure !== null) throw new Error(this.#failure);
+    if (session !== null) {
+      await session.opening;
+      await this.#flush(session);
+      if (session.failure !== null) throw new Error(`session ${session.id}: ${session.failure}`);
+    }
+    for (const [finishing, promise] of finalizing) {
+      await promise;
+      if (finishing.failure !== null) throw new Error(`session ${finishing.id}: ${finishing.failure}`);
+    }
+  }
+
+  finish(result: Readonly<Record<string, unknown>> = {}): Promise<TearGhostManifest | null> {
+    const session = this.#activeSession;
+    if (session === null) return Promise.resolve(null);
+    // Relinquish live ownership synchronously; a replacement may start while
+    // this original session's already-started finalization settles independently.
     this.#activeSession = null;
+    const finalizing = this.#finish(session, result);
+    this.#finalizing.set(session, finalizing);
+    void finalizing.then(() => { this.#finalizing.delete(session); }, () => { this.#finalizing.delete(session); });
+    return finalizing;
+  }
+
+  async #finish(session: LiveGhostCaptureSession, result: Readonly<Record<string, unknown>>): Promise<TearGhostManifest | null> {
     try {
       this.#enqueue(session, "results", session.lastRecordedTick, result);
       await session.opening;

@@ -94,7 +94,9 @@ export interface TearWatchAgentSnapshot {
 
 export interface TearWatchAgentApi {
   start(options?: TearWatchAgentOptions): TearWatchAgentSnapshot;
+  /** Synchronous bounded compatibility; sustained recorded advancement uses runAsync. */
   run(tickBudget?: number): TearWatchAgentSnapshot;
+  runAsync(tickBudget?: number): Promise<TearWatchAgentSnapshot>;
   pause(): TearWatchAgentSnapshot;
   resume(): TearWatchAgentSnapshot;
   stop(): TearWatchAgentSnapshot;
@@ -230,6 +232,9 @@ export function createLiveWatchAgentHost(
   postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
 ): TearWatchAgentApi {
   let decisionJournalRuns = 0;
+  let generation = 0;
+  let asyncOwner: Readonly<{ generation: number; cancelled: Promise<void>; cancel: () => void }> | undefined;
+  const invalidateAdvance = (): void => { generation++; asyncOwner?.cancel(); asyncOwner = undefined; };
   let state: MutableState = {
     status: "idle", decisions: 0, fixedTicks: 0, transitions: [], mechanics: new Set(),
     bladeStates: new Set(), bladeStateTransitions: [], tetherMinimum: Number.POSITIVE_INFINITY,
@@ -287,6 +292,7 @@ export function createLiveWatchAgentHost(
   };
   const start = (options: TearWatchAgentOptions = {}): TearWatchAgentSnapshot => {
     if (context.screen() !== "menu") throw new Error("Watch Agent must start from the real main menu");
+    invalidateAdvance();
     context.setSemanticInputAuthority(true);
     const resolved = { ...DEFAULTS, ...options };
     const director = resolved.journey === "longitudinal-earned-profile"
@@ -322,7 +328,7 @@ export function createLiveWatchAgentHost(
     transition();
     return immutableSnapshot(context, state);
   };
-  const run = (tickBudget = 2_000): TearWatchAgentSnapshot => {
+  const advance = (tickBudget = 2_000): TearWatchAgentSnapshot => {
     if (!Number.isSafeInteger(tickBudget) || tickBudget < 1 || tickBudget > 20_000) {
       throw new RangeError("Watch Agent tick budget must be an integer from 1 to 20000");
     }
@@ -498,18 +504,54 @@ export function createLiveWatchAgentHost(
     context.render();
     return immutableSnapshot(context, state);
   };
+  const run = (tickBudget = 2_000): TearWatchAgentSnapshot => {
+    if (asyncOwner !== undefined) throw new Error("Watch advancement is already in progress");
+    return advance(tickBudget);
+  };
+  const runAsync = async (tickBudget = 2_000): Promise<TearWatchAgentSnapshot> => {
+    if (!Number.isSafeInteger(tickBudget) || tickBudget < 1 || tickBudget > 20_000) throw new RangeError("Watch Agent tick budget must be an integer from 1 to 20000");
+    if (asyncOwner !== undefined) throw new Error("Watch advancement is already in progress");
+    if (state.status !== "running") return immutableSnapshot(context, state);
+    let cancel = (): void => undefined;
+    const cancelled = new Promise<void>((resolve) => { cancel = resolve; });
+    const owner = { generation, cancelled, cancel };
+    asyncOwner = owner;
+    const current = (): boolean => asyncOwner === owner && generation === owner.generation;
+    const running = (): boolean => state.status === "running";
+    const drain = (): Promise<void> => Promise.race([context.drainRecording(), owner.cancelled]);
+    try {
+      await drain();
+      for (let index = 0; index < tickBudget && current() && running(); index++) {
+        advance(1);
+        await drain();
+        // An idle/unavailable recorder can resolve in a microtask. Keep native
+        // Pause/Stop events serviceable independently of actual storage latency.
+        if ((index + 1) % 16 === 0 && current()) {
+          await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+          if (!current()) break;
+        }
+      }
+    } catch (error) {
+      if (current()) { fail(`recording-failed:${error instanceof Error ? error.message : String(error)}`); retainTerminalMonitor(); }
+    } finally { if (asyncOwner === owner) asyncOwner = undefined; }
+    return immutableSnapshot(context, state);
+  };
   return Object.freeze({
     start,
     run,
+    runAsync,
     pause() {
+      invalidateAdvance();
       if (state.status === "running") state.status = "paused";
       return immutableSnapshot(context, state);
     },
     resume() {
+      invalidateAdvance();
       if (state.status === "paused") state.status = "running";
       return immutableSnapshot(context, state);
     },
     stop() {
+      invalidateAdvance();
       if (state.status === "running" || state.status === "paused") state.status = "stopped";
       context.setSemanticInputAuthority(false);
       context.startFrameLoop();

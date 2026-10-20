@@ -662,7 +662,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { session.setSelectedBoss(bossId); },
       selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
       setRunSeed: (seed) => { session.setRunSeed(seed); }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
-      stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds, intervalSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
+      drainRecording: () => ghostV3?.drain() ?? Promise.resolve(), stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds, intervalSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
       setSemanticInputAuthority: inputAuthority.setSemanticInputAuthority, routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
       activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = interfaceInteraction.buttons().find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
       terminateRun: () => { abandonLiveRun("tearbench-terminated", { tearBenchTerminated: true }); setState("paused"); },
