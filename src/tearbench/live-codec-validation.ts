@@ -1,3 +1,4 @@
+import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { TearCodecId } from "./registries";
 import type { TearCodecIssue } from "./state-codecs";
 import { findVariant } from "../gameplay/variants";
@@ -180,6 +181,12 @@ export function validateLiveCodecPayload(
     }
     if (typeof payload.weaponId !== "string") issues.push(issue(codecId, "$.weaponId", "blade requires weaponId"));
   } else if (codecId === "tear.run.v1") {
+    try {
+      const assistance = readGhostRunAssistance(payload.ghostAssistance);
+      // The legacy reader's enum check coerces untyped actors; codec data must
+      // retain the actual string discriminant rather than accepting ["human"].
+      if (assistance !== undefined && typeof assistance.actor !== "string") throw new TypeError("Invalid Chase disposition");
+    } catch (error) { issues.push(issue(codecId, "$.ghostAssistance", error instanceof Error ? error.message : "invalid Chase disposition")); }
     try { readSeedRaceRun(payload.seedRace); }
     catch (error) { issues.push(issue(codecId, "$.seedRace", error instanceof Error ? error.message : "invalid seed race")); }
     for (const key of ["mode", "difficulty"] as const) {

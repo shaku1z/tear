@@ -106,6 +106,8 @@ function declaresIdentity(codecId: TearCodecId, key: string, ownerPath: string):
 }
 
 function declaresReference(codecId: TearCodecId, key: string, ownerPath: string): boolean {
+  // This one run-owned source is an external capsule binding, not an actor edge.
+  if (codecId === "tear.run.v1" && ownerPath === "$.ghostAssistance" && key === "sourceId") return false;
   // The Source stream retains its generated ingress record as historical
   // generator/cinematic metadata after that platform has been recycled.  Its
   // embedded platformId is an alias, not a live cross-codec ownership edge.
