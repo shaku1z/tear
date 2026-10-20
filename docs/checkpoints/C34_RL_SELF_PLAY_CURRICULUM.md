@@ -207,3 +207,59 @@ or establish RL/self-play or held-out quality. The engineering fitted models and
 source episodes remain explicitly separate from consented human evidence and
 from the native promotion/Watch fixtures. C33's strict completion metric still
 requires a genuinely completable source task; Endless truncation is no success.
+
+
+### Explicit native return-subskill adapters and measured limits
+
+The local resumption implementation adds opt-in `return-exact.v2` and
+`return-features.v2` adapters, then additive `return-exact.v3` and
+`return-features.v3` adapters. The exact variants encode the complete canonical
+state and declared action mask. The feature variants share the declared
+quantized player/blade/threat projection; they exclude seed, absolute tick,
+score and actor IDs. Their offline playing mask is a curriculum declaration,
+not a reconstructed historical observation mask. Runtime selection uses the
+actual available action types.
+
+These adapters admit a genuine empty batch plus at most fifteen canonical
+commands. Reward schema 2 can credit an actual native Sword catch. Empty
+transitions remain empty in the source trace. Entry-present zero values,
+missing defaults, supported decisions and scripted fallbacks retain separate
+receipts. V3 prefers a present entry over a missing entry only at equal Q;
+higher Q still wins, and remaining ties use semantic batch hashes. V1 and both
+return-V2 descriptor hashes, selection behavior and candidate identities remain
+unchanged. Distinct V3 adapter and candidate-protocol hashes bind the new rule;
+the unchanged model/payload/encoder containers retain schema versions 1/2/2.
+
+Constructors now prepare detached immutable models, normalized vocabulary and
+a private Q index once. Public unknown-input parsing remains strict, and each
+decision still validates its source state, legal mask and 8 ms budget. On the
+retained training/validation component measurement at `b50149e0`, median
+candidate decision time was 0.087 ms for the 2,100-entry exact model and
+0.073 ms for the 1,051-entry feature model. The unchanged public selection plus
+source-hash path measured 5.23 ms and 2.71 ms respectively. Forty-eight
+selection/support comparisons matched on twenty-four retained states; 576
+measured runtime calls produced no budget fallback. This measures that host and
+process, without claiming universal timing or learned-policy quality.
+
+The original governed return-V2 comparison at `e56c5ae9` completed 168 fixed
+cases and retained its primary held-out result of zero successes out of eight.
+After the explicit V3 rule at `3d9f0da4`, a separate experiment reused the six
+original governed sources without rewriting their capture build, consent,
+custody or bytes. Both final models were frozen before external validation.
+Its 24 training/validation cases completed with no unavailable cases or scripted
+fallbacks. The feature model succeeded in one of two training paths (recovery
+only), while the exact model succeeded in both. Each model scored zero out of
+four validation paths. All horizon endpoints remained censored at tick 300.
+The predeclared continuation criteria therefore failed, and all 32 planned
+fresh held-out cases remained unopened. Internal train-only qualification is
+not held-out quality evidence.
+
+Retained training decisions 139 and 140 also demonstrate an unresolved feature
+alias: different demonstrated actions share one quantized state. V3 neither
+adds time/seed/tick features nor changes bins or reward to hide this limit.
+Further changes require a concrete training/validation diagnosis. These results
+do not close C33 DAgger, C34 online/self-play/curriculum quality, C35 population
+calibration, C36 unattended operation or C40 release acceptance.
+
+Local evidence: `C:/tmp/tear-r14-runtime-selector-measurement-20261020/parent-verification.json`
+and `C:/tmp/tear-r14-return-v3-comparison-20261020/parent-train-validation-verification.json`.

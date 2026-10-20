@@ -1666,3 +1666,12 @@ three pages, ten view routes, persistent tags/pins, canonical/legacy playback,
 protected refusal and a real exact-byte archive download/delete/restore. Desktop
 and compact captures were inspected; physical-device and broader C37 acceptance
 remain separate.
+
+
+The explicit native return-subskill adapters now preserve real empty decisions,
+native catch rewards, support/default/fallback receipts and constructor-owned
+immutable selection. Additive return-V3 identities prefer observed support on
+equal Q without changing older model meanings. The actual 24-case V3
+training/validation experiment did not establish transfer: feature validation
+was 0/4 and its separate held-out stage was not opened. See
+[C34 return-subskill evidence](checkpoints/C34_RL_SELF_PLAY_CURRICULUM.md#explicit-native-return-subskill-adapters-and-measured-limits).
