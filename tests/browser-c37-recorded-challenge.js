@@ -4,7 +4,7 @@ const { join } = require("node:path");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 
 // One engineered immutable parent; both attempts use the ordinary live UI/RAF.
-withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true }, async ({ page, baseUrl, waitScreen, buildInfo }) => {
+withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true, ordinaryWatch: true }, async ({ page, boot, waitScreen, buildInfo }) => {
   const directory = process.env.TEAR_CHALLENGE_ARTIFACT_DIR;
   if (directory) await mkdir(directory, { recursive: true });
   await page.addInitScript(() => {
@@ -23,16 +23,8 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true 
     };
     window.__CHALLENGE_POSITIONS__ = positions; window.__CHALLENGE_TEXTS__ = texts;
   });
-  const query = { bossdebug: "1" }; // Real local storage, without disposable test=1 storage.
-  const boot = async (parameters) => {
-    await page.goto(`${baseUrl}/index.html?${new URLSearchParams(parameters)}`, { waitUntil: "domcontentloaded" });
-    // Catalog/diagnostics are test=1-only. Observe the actual ordinary canvas instead.
-    await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__ && window.__PANTHEON_TEST
-      && [...document.querySelectorAll("canvas")].some((canvas) => canvas.width > 0 && canvas.height > 0
-        && canvas.getBoundingClientRect().width > 0 && canvas.getContext("2d")?.getImageData(0, 0, 1, 1).data[3] > 0), undefined, { timeout: 15000 });
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await page.mouse.click(10, 10);
-  };
+  // Existing inspector opt-in; actual local storage, without disposable test=1.
+  const query = { bossdebug: "1", watchagent: "1" };
   const clickText = async (text, settle = true) => {
     await page.waitForFunction((label) => window.__CHALLENGE_POSITIONS__?.some((entry) => entry.text === label), text, { timeout: 10000 });
     const point = await page.evaluate((label) => window.__CHALLENGE_POSITIONS__.findLast((entry) => entry.text === label), text);
