@@ -146,6 +146,19 @@ export default defineConfig(({ mode, command }) => {
     },
     // Build outputs must not reload the preview or hold Windows staging folders open.
     server: { watch: { ignored: ["**/artifacts/**", "**/dist/**"] } },
+    // Both worker consumers use module workers. Keep the shipping gold data in
+    // an imported ES chunk so every worker asset fits the ordinary PWA cache.
+    worker: {
+      format: "es",
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [{ name: "worker-tutorial-gold", test: (id) => id.replaceAll("\\", "/")
+              .endsWith("/src/gameplay/training/tutorial-gold-reference-data.json") }],
+          },
+        },
+      },
+    },
     build: {
       outDir: testBuild ? `dist/test-${target}` : `dist/${target}`,
       emptyOutDir: true,
