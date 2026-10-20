@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { GameAction } from "../../src/input/game-action";
 import { createProductionHeadlessEnvironment, type ProductionHeadlessTerminalArtifact, type TearScenarioV1 } from "../../src/tearbench";
 import { createTearC34C32RuntimeModel, encodeTearC34C32SourceState, parseTearC34C32RuntimeModel, prepareTearReturnRuntimeSelector, selectTearC34C32RuntimeAction, tearC34C32SemanticActionHash } from "../../src/agents/c34-c32-runtime-compatibility";
 import { createTearOfflineRlPlan, evaluateTearOfflineRlRewardTransition, extractTearOfflineRlTrajectories } from "../../src/agents/offline-rl-training";
@@ -9,12 +10,83 @@ import { stableVerificationHash } from "../../src/replay/hash";
 import { createTearC32CanonicalSourceObservation, TearC34ReturnModelRuntime } from "../../src/agents/c34-v3-c32-policy-adapter";
 import { createProductionCombatSimulation, createProductionReplayWorld, projectProductionReplayCanonicalState } from "../../src/tearbench";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
+import { advanceTearOnlineRlV3Checkpoint, createTearOnlineRlV3Checkpoint, createTearOnlineRlV3Plan } from "../../src/agents/online-rl-v3-training";
 
 const scenario: TearScenarioV1 = { format: "tear-contract", kind: "scenario", schemaVersion: 1, id: "return-source-control", version: 1,
   description: "Native return source control, not governed training", stateClass: "recorded-canonical", executionClass: "engineering", seed: "r14-return-train-01",
   start: { mode: "endless", difficulty: "normal", weapon: "sword" }, maxTicks: 300, assertions: ["runtime.finite-state"], tags: ["r14"] };
 
 describe("return subskill source barriers", () => {
+  it("preserves V2 hash ties and uses supported equal-Q decisions only for explicitly bound V3 models", () => {
+    const environment = createProductionHeadlessEnvironment();
+    try {
+      const state = environment.reset(scenario), throwAction = { type: "weapon", intent: "throw", phase: "pressed" } as const;
+      const recall = { type: "weapon", intent: "recall", phase: "pressed" } as const, vocabulary = [throwAction, recall];
+      const emptyHash = tearC34C32SemanticActionHash([]), throwHash = tearC34C32SemanticActionHash([throwAction]);
+      // Retained train-01 initial feature key; no archive rewrite or test-seed observation.
+      expect(encodeTearReturnSourceState(state, "return-features.v2").stateHash).toBe("1c962cfc074b1af7");
+      for (const [v2, v3] of [["return-exact.v2", "return-exact.v3"], ["return-features.v2", "return-features.v3"]] as const) {
+        const stateHash = encodeTearReturnSourceState(state, v3).stateHash;
+        expect(stateHash).toBe(encodeTearReturnSourceState(state, v2).stateHash);
+        expect(tearReturnAdapter(v2).adapterHash).toBe(v2 === "return-exact.v2" ? "d586d9deccc17376" : "f4b3796d7ad0e436");
+        expect(tearReturnAdapter(v3)).not.toEqual(tearReturnAdapter(v2));
+        const row = (actions: readonly GameAction[], value: number) => ({ stateHash,
+          semanticActionHash: tearC34C32SemanticActionHash(actions), actionHash: stableVerificationHash(actions), value });
+        const old = createTearC34C32RuntimeModel([row([], 0)], v2);
+        expect(selectTearC34C32RuntimeAction(old, state, vocabulary, TEAR_RETURN_PLAYING_MASK)).toMatchObject({ actions: [throwAction], entryPresent: false, value: 0 });
+        const cases = [
+          { entries: [row([], 0)], expected: { actions: [], entryPresent: true, value: 0 } },
+          { entries: [row([], -1)], expected: { actions: [throwAction], entryPresent: false, value: 0 } },
+          { entries: [row([], 0), row([recall], 2)], expected: { actions: [recall], entryPresent: true, value: 2 } },
+          { entries: [row([], 0), row([throwAction], 0)], expected: { actions: [throwAction], entryPresent: true, value: 0 } },
+          { entries: [], expected: { actions: [throwAction], entryPresent: false, value: 0 } },
+        ];
+        for (const control of cases) {
+          const model = createTearC34C32RuntimeModel(control.entries, v3), source = createTearC32CanonicalSourceObservation(state, TEAR_RETURN_PLAYING_MASK);
+          const selected = selectTearC34C32RuntimeAction(model, state, vocabulary, TEAR_RETURN_PLAYING_MASK);
+          expect(selected).toMatchObject(control.expected);
+          expect(prepareTearReturnRuntimeSelector(model, vocabulary)(state, TEAR_RETURN_PLAYING_MASK)).toEqual(selected);
+          expect(new TearC34ReturnModelRuntime(model, vocabulary, () => [], { now: () => 0 }).decide(source)).toMatchObject({ actions: control.expected.actions,
+            source: control.expected.entryPresent ? "diagnostic-model" : "model-default", support: { entryPresent: control.expected.entryPresent, value: control.expected.value } });
+        }
+        const model = createTearC34C32RuntimeModel([row([], 0)], v3);
+        expect(() => parseTearC34C32RuntimeModel({ ...model, sourceStateAdapter: tearReturnAdapter(v2) })).toThrow(/integrity/);
+        expect(throwHash.localeCompare(emptyHash)).toBeLessThan(0);
+      }
+      const other = structuredClone(state);
+      Object.assign(other, { tick: state.tick + 1 });
+      expect(encodeTearReturnSourceState(other, "return-exact.v3").stateHash).not.toBe(encodeTearReturnSourceState(state, "return-exact.v3").stateHash);
+      expect(encodeTearReturnSourceState(other, "return-features.v3").stateHash).toBe(encodeTearReturnSourceState(state, "return-features.v3").stateHash);
+      expect(() => tearReturnAdapter("return-features.v4" as never)).toThrow(/unknown/);
+    } finally { environment.dispose(); }
+  });
+
+  it("uses the same V3 support tie in the existing online greedy owner without changing TD or reward", () => {
+    const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true });
+    try {
+      const short = { ...scenario, id: "return-zero-support-online-unit", maxTicks: 1 }, initial = environment.reset(short);
+      const step = environment.step([]), artifact = step.artifact as ProductionHeadlessTerminalArtifact;
+      const dataset = { format: "tear-academy-training-dataset", schemaVersion: 1,
+        manifest: { id: "online-support-unit", version: 1, manifestHash: "a".repeat(16), rootHash: "b".repeat(16) },
+        sequences: [{ candidateHash: "c".repeat(16), split: "training", lessonId: "blade-control", segmentKind: "demonstration", tags: [], sourceScenario: short,
+          tracks: { ...environment.sourceTracks(), observations: [initial, step.observation], actions: artifact.actions, terminal: artifact.terminal }, sequenceHash: "d".repeat(16) }],
+        observationCount: 2, actionCount: 0, datasetHash: "e".repeat(16) } as unknown as TearAcademyTrainingDatasetV1;
+      const reward = createTearOfflineRlPlan(dataset, { id: "support-unit", version: 2, seed: 7,
+        reward: { schemaVersion: 2, components: [{ id: "catch", source: "weapon.catch", weight: 1, maximumSourceValue: 1, perTransitionCap: 1 }], totalMinimum: 0, totalMaximum: 1 },
+        limits: { maxTransitions: 1, maxEventsPerTransition: 64, maxRewardViolations: 0 } });
+      const receipt = extractTearOfflineRlTrajectories(dataset, reward);
+      for (const variant of ["return-exact.v3", "return-features.v3"] as const) {
+        const offline = createTearOfflineRlV3Plan(receipt, { id: variant, version: 3, variant, actionVocabulary: [{ type: "weapon", intent: "throw", phase: "pressed" }],
+          config: { epochs: 1, learningRate: 0.5, gamma: 0.99, maxStateActionEntries: 10, maxAbsoluteQ: 100, maxMeanAbsoluteTdError: 100, maxConsecutiveDivergentEpochs: 2 } });
+        const trained = completeTearOfflineRlV3Checkpoint(offline, receipt, advanceTearOfflineRlV3Checkpoint(offline, receipt, createTearOfflineRlV3Checkpoint(offline, receipt), 1));
+        const online = createTearOnlineRlV3Plan(offline, trained, reward, { id: variant, scenarios: [short], config: { learningRate: 0.5, gamma: 0.99, maxTicks: 1, maxUpdates: 1, maxAbsoluteQ: 100 } });
+        const checkpoint = advanceTearOnlineRlV3Checkpoint(online, offline, trained, reward, createTearOnlineRlV3Checkpoint(online, trained));
+        expect(checkpoint).toMatchObject({ status: "complete", ticks: 1, updates: 1, qValues: [{ semanticActionHash: tearC34C32SemanticActionHash([]), value: 0 }] });
+        expect(checkpoint.qValues).toHaveLength(1);
+      }
+    } finally { environment.dispose(); }
+  });
+
   it("preserves indexed return decisions, hash ties and legal masks from detached immutable inputs", () => {
     const environment = createProductionHeadlessEnvironment();
     try {

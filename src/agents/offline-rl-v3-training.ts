@@ -18,7 +18,7 @@ import {
   type TearOfflineRlTrainingConfigV1,
   type TearOfflineRlTrajectoryReceiptV1,
 } from "./offline-rl-training";
-import { readTearReturnVariant, tearReturnAdapter, TEAR_RETURN_PLAYING_MASK, type TearReturnVariant } from "./c34-source-feature-state";
+import { readTearReturnVariant, tearReturnAdapter, TEAR_RETURN_ADAPTERS, TEAR_RETURN_PLAYING_MASK, type TearReturnVariant } from "./c34-source-feature-state";
 
 const HASH = /^[a-f0-9]{16}$/u;
 const CHECKPOINT_KEY = "offline-rl-v3-checkpoint:v1:";
@@ -226,8 +226,8 @@ export function completeTearOfflineRlV3Checkpoint(planInput: TearOfflineRlV3Plan
 
 export function parseTearOfflineRlV3TrainingResult(value: unknown): TearOfflineRlV3TrainingResultV1 {
   if (!record(value) || value.format !== "tear-offline-rl-v3-training" || value.schemaVersion !== 1 || !record(value.plan) || !hash(value.plan.planHash)
-    || !hash(value.plan.receiptHash) || typeof value.plan.adapterHash !== "string" || ![TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1, tearReturnAdapter("return-exact.v2").adapterHash,
-      tearReturnAdapter("return-features.v2").adapterHash].includes(value.plan.adapterHash) || !hash(value.plan.actionVocabularyHash)
+    || !hash(value.plan.receiptHash) || typeof value.plan.adapterHash !== "string" || ![TEAR_C34_C32_SOURCE_STATE_ADAPTER_HASH_V1,
+      ...Object.values(TEAR_RETURN_ADAPTERS).map(adapter => stableVerificationHash(adapter))].includes(value.plan.adapterHash) || !hash(value.plan.actionVocabularyHash)
     || !["complete", "stopped-divergence"].includes(String(value.disposition)) || !record(value.checkpoint) || !hash(value.checkpoint.checkpointHash)
     || !Number.isSafeInteger(value.checkpoint.epoch) || !Number.isSafeInteger(value.checkpoint.updates) || !record(value.metrics) || !hash(value.trainingHash)) throw new TypeError("invalid offline RL V3 result");
   const typed = value as unknown as Omit<TearOfflineRlV3TrainingResultV1, "trainingHash"> & { trainingHash: string };

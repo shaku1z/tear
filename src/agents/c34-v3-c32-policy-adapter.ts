@@ -17,7 +17,7 @@ import {
 import { createTearPolicyArtifact, parseTearPolicyArtifact, TearPolicyArtifactRegistry, type TearPolicyArtifactDraft, type TearPolicyArtifactV1, type TearPolicyRuntimeCompatibility } from "./policy-artifact-registry";
 import { parseTearOfflineRlV3Plan, parseTearOfflineRlV3TrainingResult, type TearOfflineRlV3PlanV1, type TearOfflineRlV3TrainingResultV1 } from "./offline-rl-v3-training";
 import { parseTearOnlineRlV3Checkpoint, parseTearOnlineRlV3EvaluationResult, parseTearOnlineRlV3Plan, type TearOnlineRlV3CheckpointV1, type TearOnlineRlV3EvaluationResultV1, type TearOnlineRlV3PlanV1 } from "./online-rl-v3-training";
-import { readTearReturnVariant, TEAR_RETURN_PLAYING_MASK } from "./c34-source-feature-state";
+import { readTearReturnVariant, tearReturnUsesSupportedTies, TEAR_RETURN_PLAYING_MASK } from "./c34-source-feature-state";
 import { DEFAULT_TEAR_POLICY_RUNTIME_LIMITS } from "./policy-runtime";
 
 const HASH = /^[a-f0-9]{16}$/u;
@@ -37,7 +37,8 @@ function policyIdentity(adapter: TearC34C32RuntimeModelV1["sourceStateAdapter"])
     return { format: TEAR_C34_V3_C32_POLICY_FORMAT_V1, schemaVersion: 1 as const, protocolHash: TEAR_C34_V3_C32_POLICY_PROTOCOL_HASH_V1 };
   }
   return { format: TEAR_C34_RETURN_POLICY_FORMAT_V2, schemaVersion: 2 as const,
-    protocolHash: stableVerificationHash({ id: "tear-c34-v3-return-candidate.v2", adapter, decisions: "empty-or-one", runtimeBudget: DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxDecisionMilliseconds }) };
+    protocolHash: stableVerificationHash({ id: tearReturnUsesSupportedTies(variant) ? "tear-c34-v3-return-candidate.v3" : "tear-c34-v3-return-candidate.v2",
+      adapter, decisions: "empty-or-one", runtimeBudget: DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxDecisionMilliseconds }) };
 }
 
 export interface TearC34V3C32PolicyPayloadV1 { readonly format: string; readonly schemaVersion: 1 | 2; readonly protocolHash: string; readonly sourceStateAdapter: Readonly<{ id: string; adapterHash: string }>; readonly lineage: Readonly<{ offlinePlanHash: string; offlineTrainingHash: string; onlinePlanHash: string; onlineCheckpointHash: string; onlineEvaluationHash: string; actionVocabularyHash: string }>; readonly actionVocabulary: readonly GameAction[]; readonly model: TearC34C32RuntimeModelV1; }

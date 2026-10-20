@@ -2,7 +2,7 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearOfflineRlQValueV1, TearOfflineRlTrainingResultV1 } from "./offline-rl-training";
-import { encodeTearReturnSourceState, readTearReturnVariant, tearReturnAdapter, TEAR_RETURN_PLAYING_MASK, type TearReturnVariant } from "./c34-source-feature-state";
+import { encodeTearReturnSourceState, readTearReturnVariant, tearReturnAdapter, tearReturnUsesSupportedTies, TEAR_RETURN_PLAYING_MASK, type TearReturnVariant } from "./c34-source-feature-state";
 
 const HASH = /^[a-f0-9]{16}$/u;
 
@@ -138,6 +138,14 @@ export function requireTearC34C32AdapterEligibleTrainingResult(result: TearOffli
 export type TearReturnRuntimeSelector = (state: CanonicalGameplayState,
   available: readonly GameAction["type"][]) => TearC34C32ActionSelectionV1 | undefined;
 
+type RankedBatch = Readonly<{ semanticActionHash: string; value: number; present: boolean }>;
+function preferredBatch(candidate: RankedBatch, best: RankedBatch | undefined, variant: TearReturnVariant | undefined): boolean {
+  if (best === undefined) return true;
+  if (candidate.value !== best.value) return candidate.value > best.value;
+  if (tearReturnUsesSupportedTies(variant) && candidate.present !== best.present) return candidate.present;
+  return candidate.semanticActionHash.localeCompare(best.semanticActionHash) < 0;
+}
+
 /** Detached constructor-owned preparation. Neither caller objects nor supplied hashes are cache keys. */
 export function prepareTearReturnRuntimeSelector(modelInput: unknown, actions: readonly unknown[]): TearReturnRuntimeSelector {
   const model = parseTearC34C32RuntimeModel(structuredClone(modelInput)), variant = readTearReturnVariant(model.sourceStateAdapter);
@@ -160,8 +168,9 @@ export function prepareTearReturnRuntimeSelector(modelInput: unknown, actions: r
     for (const batch of batches) {
       if (batch.actions.some(action => !available.includes(action.type))) continue;
       const entry = values?.get(batch.semanticActionHash), value = entry?.value ?? 0;
-      if (best === undefined || value > best.value || value === best.value && batch.semanticActionHash.localeCompare(best.semanticActionHash) < 0) {
-        best = Object.freeze({ ...batch, value, present: entry !== undefined });
+      const candidate = { ...batch, value, present: entry !== undefined };
+      if (preferredBatch(candidate, best, variant)) {
+        best = Object.freeze(candidate);
       }
     }
     return best === undefined ? undefined : Object.freeze({ actions: best.actions, semanticActionHash: best.semanticActionHash,
@@ -182,8 +191,9 @@ export function selectTearC34C32RuntimeAction(modelInput: TearC34C32RuntimeModel
     const semanticActionHash = tearC34C32SemanticActionHash(batch);
     const entry = model.entries.find((entry) => entry.stateHash === encoding.stateHash && entry.semanticActionHash === semanticActionHash);
     const value = entry?.value ?? 0;
-    if (best === undefined || value > best.value || value === best.value && semanticActionHash.localeCompare(best.semanticActionHash) < 0) {
-      best = Object.freeze({ actions: batch, semanticActionHash, value, present: entry !== undefined });
+    const candidate = { actions: batch, semanticActionHash, value, present: entry !== undefined };
+    if (preferredBatch(candidate, best, variant)) {
+      best = Object.freeze(candidate);
     }
   }
   return best === undefined ? undefined : Object.freeze({ actions: best.actions, semanticActionHash: best.semanticActionHash,

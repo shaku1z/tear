@@ -2,7 +2,7 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 
-export type TearReturnVariant = "return-exact.v2" | "return-features.v2";
+export type TearReturnVariant = "return-exact.v2" | "return-features.v2" | "return-exact.v3" | "return-features.v3";
 export const TEAR_RETURN_PLAYING_MASK = Object.freeze(["aim", "move", "weapon"] as const);
 const policy = Object.freeze({ schemaVersion: 2, stateSchema: "tear-canonical-gameplay-state.v1",
   units: "canonical-position-velocity-hp-times1000", decision: "empty-or-one-command.v2",
@@ -16,7 +16,14 @@ const policy = Object.freeze({ schemaVersion: 2, stateSchema: "tear-canonical-ga
 export const TEAR_RETURN_ADAPTERS = Object.freeze({
   "return-exact.v2": Object.freeze({ ...policy, id: "tear-return-exact-source.v2", key: "complete-canonical-state-and-declared-mask" }),
   "return-features.v2": Object.freeze({ ...policy, id: "tear-return-source-features.v2", key: "quantized-player-blade-nearest-living-threat-input-mode-wave-mask" }),
+  "return-exact.v3": Object.freeze({ ...policy, schemaVersion: 3, selection: "highest-q-then-present-support-then-semantic-batch-hash.v3",
+    id: "tear-return-exact-source.v3", key: "complete-canonical-state-and-declared-mask" }),
+  "return-features.v3": Object.freeze({ ...policy, schemaVersion: 3, selection: "highest-q-then-present-support-then-semantic-batch-hash.v3",
+    id: "tear-return-source-features.v3", key: "quantized-player-blade-nearest-living-threat-input-mode-wave-mask" }),
 });
+export function tearReturnUsesSupportedTies(variant: TearReturnVariant | undefined): boolean {
+  return variant === "return-exact.v3" || variant === "return-features.v3";
+}
 export function tearReturnAdapter(variant: TearReturnVariant): Readonly<{ id: string; adapterHash: string }> {
   if (!Object.hasOwn(TEAR_RETURN_ADAPTERS, variant)) throw new TypeError("unknown return variant");
   const adapter = TEAR_RETURN_ADAPTERS[variant];
@@ -46,7 +53,7 @@ export function encodeTearReturnSourceState(state: CanonicalGameplayState, varia
   }
   const mask = TEAR_RETURN_PLAYING_MASK.filter(type => available.includes(type));
   const canonicalHash = stableVerificationHash(state);
-  if (variant === "return-exact.v2") return Object.freeze({ canonicalHash, stateHash: stableVerificationHash({ state, mask }) });
+  if (variant === "return-exact.v2" || variant === "return-exact.v3") return Object.freeze({ canonicalHash, stateHash: stableVerificationHash({ state, mask }) });
   const candidates = state.enemies.filter(enemy => !enemy.dead && enemy.hp > 0).map(enemy => {
     const tuple = [enemy.kind, enemy.bossId, bin(enemy.x - player.x, 32000), bin(enemy.y - player.y, 32000),
       bin(enemy.vx, 64000), bin(enemy.vy, 64000), bin(enemy.hp, 20000), enemy.rimehound?.atk ?? enemy.whiteHart?.atk ?? ""];

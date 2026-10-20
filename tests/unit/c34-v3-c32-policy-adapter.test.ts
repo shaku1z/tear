@@ -34,6 +34,22 @@ function fixture(variant?: TearReturnVariant) {
 }
 
 describe("C34 V3 to C32 canonical policy candidate", () => {
+  it("binds additive V3 selection protocol identities without reinterpreting V2 candidates", () => {
+    // Constructed four-tick source-owner/lineage controls, not a governed experiment.
+    for (const [v2, v3] of [["return-exact.v2", "return-exact.v3"], ["return-features.v2", "return-features.v3"]] as const) {
+      const old = fixture(v2).candidate, current = fixture(v3).candidate;
+      const prior = parseTearC34V3C32PolicyCandidate(old.artifact), next = parseTearC34V3C32PolicyCandidate(current.artifact);
+      expect(prior.protocolHash).toBe(stableVerificationHash({ id: "tear-c34-v3-return-candidate.v2", adapter: tearReturnAdapter(v2), decisions: "empty-or-one", runtimeBudget: 8 }));
+      expect(next.protocolHash).toBe(stableVerificationHash({ id: "tear-c34-v3-return-candidate.v3", adapter: tearReturnAdapter(v3), decisions: "empty-or-one", runtimeBudget: 8 }));
+      expect(next.sourceStateAdapter).toEqual(tearReturnAdapter(v3));
+      expect(next.schemaVersion).toBe(2); // Same wire shape; adapter/protocol own changed selection semantics.
+      const repackage = (body: unknown) => createTearPolicyArtifact({ ...current.artifact, model: { format: current.artifact.model.format, payload: JSON.stringify(body) } });
+      expect(() => parseTearC34V3C32PolicyCandidate(repackage({ ...next, protocolHash: prior.protocolHash }))).toThrow(/mixed/);
+      expect(() => parseTearC34V3C32PolicyCandidate(repackage({ ...next, model: createTearC34C32RuntimeModel(next.model.entries, v2) }))).toThrow(/adapter mismatch/);
+      expect(() => parseTearC34V3C32PolicyCandidate(createTearPolicyArtifact({ ...current.artifact, encoder: old.artifact.encoder }))).toThrow(/encoder identity/);
+    }
+  });
+
   it("carries version2 defaults and native return evidence through the existing source champion/comparison owner", () => {
     // Constructed four-tick protocol fixture, not unseen-seed or learned quality evidence.
     const champion = fixture("return-exact.v2"), challenger = fixture("return-features.v2"), cases = [scenario];
