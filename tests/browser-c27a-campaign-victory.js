@@ -46,7 +46,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
     let sourceSpawn = null;
 
     for (let index = 0; index < 1_200; index += 1) {
-      if (companion && index % 8 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      if (companion) await new Promise((resolve) => requestAnimationFrame(resolve));
       const before = environment.observe();
       if (before.entities.some((actor) => actor.kind === "source")) {
         sourceSpawn = snapshot("campaign-source-production-spawn");
@@ -88,7 +88,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
     let defeated = false;
     let preFinaleHeldActions = [];
     for (let index = 0; index < 3_600 && !defeated; index += 1) {
-      if (companion && index % 8 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      if (companion) await new Promise((resolve) => requestAnimationFrame(resolve));
       const observation = environment.observe();
       const source = observation.entities.find((actor) => actor.kind === "source");
       if (source === undefined) { defeated = true; break; }
@@ -134,7 +134,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
     // Death animation/removal and wave clearing remain fixed-step production
     // work. The authored finale itself advances through application frames.
     for (let index = 0; index < 1_200 && environment.observe().availableActions.includes("move"); index += 1) {
-      if (companion && index % 8 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      if (companion) await new Promise((resolve) => requestAnimationFrame(resolve));
       const transition = environment.step([]);
       trace.push({ kind: "death-and-clear", tick: transition.observation.tick, hash: transition.info.canonicalStateHash });
       const state = snapshot(`campaign-source-clear-${String(index)}`);
