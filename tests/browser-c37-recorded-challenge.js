@@ -32,6 +32,13 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     if (settle) await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
   const savedProgress = () => page.evaluate(() => Object.fromEntries(["tear_meta", "tear_profile", "tear_profile_v2"].map((key) => [key, localStorage.getItem(key)])));
+  const progressionPayload = (saved) => {
+    const envelope = JSON.parse(saved.tear_profile_v2);
+    // Ordinary profile loading commits a fresh envelope revision/time. Keep all
+    // progression, extension, schema and writer fields in the reload comparison.
+    delete envelope.revision; delete envelope.updatedAtMs;
+    return { ...saved, tear_profile_v2: envelope };
+  };
   const evidence = { buildInfo, parentFixture: "300 canonical ticks; throw140/recall150; no movement; engineering source", attempts: [] };
   const openVault = async () => {
     await page.mouse.click(260, 266); await waitScreen("profile"); await clickText("VAULT");
@@ -105,6 +112,7 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     await clickText("LOCAL CHALLENGE");
     await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text.startsWith("CLEAR WAVE")));
     const wave = await page.evaluate(() => window.__CHALLENGE_POSITIONS__.find((entry) => entry.text.startsWith("CLEAR WAVE")));
+    evidence.progressBeforeStop = await savedProgress();
     await page.mouse.click(wave.x, wave.y);
     await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, { polling: "raf", timeout: 15000 });
     await page.keyboard.press("Escape"); await waitScreen("paused");
@@ -114,12 +122,13 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     assert.ok(stoppedProof, "Stopped attempt proof must persist");
     assert.equal(JSON.parse(stoppedProof).status, "abandoned"); assert.equal(JSON.parse(stoppedProof).proof.completed, false);
     evidence.attempts.push({ id: stopped.id, result: JSON.parse(stoppedProof) });
+    evidence.progressAfterStop = await savedProgress(); assert.deepEqual(evidence.progressAfterStop, evidence.progressBeforeStop);
     await boot(query); await page.waitForFunction(() => window.__TEAR_GHOST_V3__);
     await openVault(); await openRow(0);
     await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text.startsWith("RECORDED RESULT · ABANDONED")));
     if (directory) await page.screenshot({ path: join(directory, "abandoned-reopened.png") });
     assert.equal(JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), parentId)), original);
-    evidence.progressAfterReload = await savedProgress(); assert.deepEqual(evidence.progressAfterReload, evidence.progressBefore);
+    evidence.progressAfterReload = await savedProgress(); assert.deepEqual(progressionPayload(evidence.progressAfterReload), progressionPayload(evidence.progressBefore));
     evidence.status = "passed";
   } catch (error) {
     evidence.status = "failed"; evidence.error = String(error);
