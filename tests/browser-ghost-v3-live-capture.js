@@ -189,7 +189,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const studioSourceBefore = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
   const outputDirectory = process.env.TEAR_STUDIO_ARTIFACT_DIR ?? join(tmpdir(), `tear-studio-${String(Date.now())}`);
   await mkdir(outputDirectory, { recursive: true });
-  const sceneRegion = { x: 40, y: 146, width: 1520, height: 560 };
+  const sceneRegion = { x: 40, y: 146, width: 1520, height: 638 };
   const firstScene = await page.screenshot({ path: join(outputDirectory, "theater-tick120.png"), clip: sceneRegion });
   await clickText("REPLAY EDITOR"); await page.waitForTimeout(120); await clickText("MARK IN");
   await page.mouse.click(428, 854); // next actual verified checkpoint240

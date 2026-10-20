@@ -108,13 +108,23 @@ export interface GhostStudioBrowserMediaPort {
   dispose(): void;
 }
 const MAX_FRAMES = 1800, MAX_BYTES = 64 * 1024 * 1024, FPS = 30;
-function mediaWait(target: EventTarget, event: string, signal: AbortSignal, milliseconds = 10000): Promise<void> {
+function mediaWait(target: EventTarget, event: string, signal: AbortSignal, milliseconds = 10000, activate?: () => void): Promise<void> {
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
     const finish = (error?: unknown): void => { clearTimeout(timer); target.removeEventListener(event, done); signal.removeEventListener("abort", aborted); if (error === undefined) resolve(); else reject(error instanceof Error ? error : new Error("Media operation failed", { cause: error })); };
     const done = (): void => { finish(); }, aborted = (): void => { finish(signal.reason); };
     const timer = setTimeout(() => { finish(new Error(`WebM ${event} timed out`)); }, milliseconds);
     target.addEventListener(event, done, { once: true }); signal.addEventListener("abort", aborted, { once: true });
+    try { activate?.(); } catch (error) { finish(error); }
+  });
+}
+function mediaPaint(signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const finish = (error?: Error): void => { cancelAnimationFrame(frame); clearTimeout(timer); signal.removeEventListener("abort", abort); if (error === undefined) resolve(); else reject(error); };
+    const abort = (): void => { finish(new Error("Studio paint cancelled", { cause: signal.reason })); };
+    const timer = setTimeout(() => { finish(new Error("Studio paint timed out")); }, 5000);
+    const frame = requestAnimationFrame(() => { finish(); }); signal.addEventListener("abort", abort, { once: true });
   });
 }
 /** Browser-native local encoding of the dedicated reconstructed replay canvas, never the live game surface. */
@@ -177,10 +187,20 @@ export function createBrowserGhostStudioMedia(document: Document, current: (id: 
       const abort = (): void => { if (recorder.state !== "inactive") recorder.stop(); };
       signal.addEventListener("abort", abort, { once: true });
       try {
-        recorder.start(250); const started = performance.now();
+        // Native encoder startup is asynchronous. Its acknowledged start owns output time,
+        // not the preceding replay reconstruction or MediaRecorder.start() call.
+        await mediaWait(recorder, "start", signal, 10000, () => {
+          recorder.start(250);
+          // Canvas capture can require a first frame to acknowledge native startup.
+          // Prime only the accepted opening image; no subsequent source time is consumed.
+          track.requestFrame(); draw(0);
+        });
+        const started = performance.now();
         for (let index = 0; index < plan.length; index++) {
           signal.throwIfAborted(); if (encodingError !== undefined) throw encodingError;
-          if (index > 0) draw(index); track.requestFrame();
+          // Capture is requested before a fresh canvas update, then allowed to reach paint.
+          // This also redraws the first frame after the encoder has actually started.
+          track.requestFrame(); draw(index); await mediaPaint(signal);
           const delay = Math.max(0, started + (index + 1) * 1000 / FPS - performance.now());
           await new Promise<void>((resolve) => { setTimeout(resolve, delay); });
           if (performance.now() - started > 90000) throw new Error("Studio encoding exceeded its 90 second work budget");

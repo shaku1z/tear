@@ -120,4 +120,34 @@ describe("Theater local media ownership", () => {
       expect(stop).toHaveBeenCalledOnce(); media.dispose();
     } finally { vi.unstubAllGlobals(); }
   });
+  it("primes only the first accepted frame until native start then cancels an owned pending paint", async () => {
+    const stop = vi.fn(), request = vi.fn(), draw = vi.fn(), cancelPaint = vi.fn(), ticks: number[] = [];
+    const track = { stop, requestFrame: request }, stream = { getVideoTracks: () => [track], getTracks: () => [track] };
+    const canvas = { width: 0, height: 0, getContext: () => ({}), toDataURL: () => "data:image/png;base64,AA==", captureStream: () => stream };
+    const natives: EventTarget[] = [];
+    class DelayedRecorder extends EventTarget {
+      static isTypeSupported() { return true; }
+      state = "inactive";
+      constructor() { super(); natives.push(this); }
+      start() { this.state = "recording"; }
+      stop() { this.state = "inactive"; this.dispatchEvent(new Event("stop")); }
+    }
+    vi.stubGlobal("MediaRecorder", DelayedRecorder); vi.stubGlobal("requestAnimationFrame", vi.fn(() => 17)); vi.stubGlobal("cancelAnimationFrame", cancelPaint);
+    const abort = new AbortController(); let rendering: Promise<unknown> | undefined;
+    try {
+      const session = { sourceId: "hostile", sourceCapsuleRootIntegrity: "root-hostile", sourceRootHash: "semantic-root", renderFrame: (tick: number) => { ticks.push(tick); return { sourceRootHash: "semantic-root", sourceCapsuleRootIntegrity: "root-hostile", clockBlocked: false, screen: "playing", semanticHash: "state", draw }; } };
+      const edl = createStudioEdl({ id: "test", sourceGhostId: "hostile", sourceRootHash: "semantic-root", aspectRatio: "16:9", title: "", credits: "", clips: [{ id: "one", sourceFromTick: 0, sourceToTick: 12, outputOrder: 0, speed: 1, camera: "player-follow" }] });
+      const media = createBrowserGhostStudioMedia({ createElement: () => canvas } as unknown as Document, () => Promise.resolve(true));
+      rendering = media.render(hostileCapsule(), session as never, edl, abort.signal);
+      await vi.waitFor(() => { expect(natives[0]).toBeDefined(); });
+      expect(request).toHaveBeenCalledOnce(); expect(draw).toHaveBeenCalledTimes(2); expect(ticks).toEqual([0, 0]);
+      natives[0]?.dispatchEvent(new Event("start")); await vi.waitFor(() => { expect(request).toHaveBeenCalledTimes(2); });
+      expect(draw).toHaveBeenCalledTimes(3); expect(ticks).toEqual([0, 0, 0]); expect(request.mock.invocationCallOrder[1]).toBeLessThan(draw.mock.invocationCallOrder[2] ?? 0);
+    } finally {
+      abort.abort(new Error("test cancel")); if (rendering !== undefined) await expect(rendering).rejects.toThrow(/cancel/);
+      expect(stop).toHaveBeenCalledOnce(); vi.unstubAllGlobals();
+    }
+    expect(cancelPaint).toHaveBeenCalledWith(17);
+  });
+
 });

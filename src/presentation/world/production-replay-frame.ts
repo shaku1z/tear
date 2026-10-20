@@ -18,8 +18,12 @@ export function createProductionReplayFrame(input: Readonly<{
         canvas.fillStyle = "#090e15"; canvas.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
         const scale = Math.min(rectangle.w / width, rectangle.h / height);
         canvas.translate(rectangle.x + (rectangle.w - width * scale) / 2, rectangle.y + (rectangle.h - height * scale) / 2);
-        canvas.scale(scale, scale); canvas.translate((width / 2 - camera.x) * zoom, (height / 2 - camera.y) * zoom);
-        renderLegacyWorldFrame({ ...input.ports, canvas, screen: { x: 0, y: 0, w: width, h: height } });
+        canvas.scale(scale, scale);
+        // Keep the logical content inside its aspect-fit rectangle before moving the world camera.
+        canvas.beginPath(); canvas.rect(0, 0, width, height); canvas.clip();
+        const dx = (width / 2 - camera.x) * zoom, dy = (height / 2 - camera.y) * zoom;
+        canvas.translate(dx, dy);
+        renderLegacyWorldFrame({ ...input.ports, canvas, screen: { x: -dx, y: -dy, w: width, h: height } });
       } finally { canvas.restore(); }
     },
   });
