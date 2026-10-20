@@ -145,7 +145,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const interfaceFrame = createLiveInterfaceFrameState(state);
   function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
     const prior = state;
-    state = APP.transition(next, context);
+    state = APP.transition(next, context); Input.allowLock = state === "playing";
     if (prior === "playing" && state !== "playing") Input.discardSemanticInput();
     else if (prior !== "playing" && state === "playing") Input.discardSemanticInput();
     if (prior === "playing" && state === "paused") emitRunScreenTransition("paused");
@@ -242,7 +242,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost; const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
   const tutorialSessionActions = createLiveTutorialSessionActions({ training: trainingHost, tutorial: TUT, screen: () => state, mode: () => liveRun().mode,
     selectPracticeWeapon: (id) => { hostState.setSelectedWeapon(id); }, startLessonRun: () => { tutorialPracticeStart = TUT.session().practiceOnly === true; try { startRunImmediate("tutorial", "normal"); } finally { tutorialPracticeStart = false; } },
-    resetFocus: () => { interfaceInteraction.setFocus(0); }, resume: () => { setState("playing"); requestLock(); } });
+    resetFocus: () => { interfaceInteraction.setFocus(0); }, resume: () => { setState("playing"); requestOwnedPointerLock(); } });
   const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => TUT.session().bossPractice?.defeated ? undefined : sourceVoidRuntime.syncPlayer(...args); const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { if (!TUT.session().bossPractice?.defeated) sourceVoidRuntime.update(...args); };
   const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = cinematicRuntime;
   const dispatchPlaygroundAction = (...args: Parameters<typeof playgroundRuntime.dispatchAction>) => { playgroundRuntime.dispatchAction(...args); }; const stepPlayground = (...args: Parameters<typeof playgroundRuntime.step>) => { playgroundRuntime.step(...args); };
