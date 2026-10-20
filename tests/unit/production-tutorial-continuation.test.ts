@@ -160,11 +160,22 @@ describe("production tutorial reconstructed-byte continuation", () => {
     expect(tutorial.session().progress).toEqual([2, 2]);
     expect(tutorial.session().coach?.canCompare).toBe(true);
     const before = tutorial.captureSession();
+    expect(tutorial.coachAction("rate")).toBe(false);
     expect(tutorial.coachAction("compare")).toBe(true);
     expect(tutorial.captureSession()).toEqual(before);
     const restored = restore(source);
     expect(restored.replay.tutorial.capturePresentation()).toEqual(tutorial.capturePresentation());
     expect(restored.replay.tutorialOutward.some((event) => event.startsWith("complete-course:") || event === "achievement-check")).toBe(false);
+    // Both reference replacement and a fresh course must remain valid checkpoint origins
+    // after a genuinely earned comparison. Rate is a display preference, best is local.
+    expect(tutorial.selectLesson("jump")).toBe(true);
+    const selected = restore(source);
+    expect(selected.replay.tutorial.capturePresentation().goldCoach).toMatchObject({ mode: "preview", rate: .5 });
+    expect(selected.replay.tutorial.capturePresentation().goldCoach?.best).toBeUndefined();
+    restored.replay.tutorial.start("new-comparison-boundary");
+    const freshCourse = restore(restored);
+    expect(freshCourse.replay.tutorial.capturePresentation().goldCoach).toMatchObject({ mode: "preview", rate: .5 });
+    expect(freshCourse.replay.tutorial.capturePresentation().goldCoach?.best).toBeUndefined();
   });
   function bossAttempt(bossId: "source" | "aldric" | "colossus" | "rootbound", phase: 1 | 2 | 3) {
     const source = composition().create(undefined);

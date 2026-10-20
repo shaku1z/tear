@@ -88,7 +88,7 @@ export class TutorialGhostCoach {
     if (next?.contentHash === this.reference?.contentHash) { this.selection = selection; return; }
     this.clear(true); this.selection = selection; this.reference = next; if (next) { [this.from, this.to] = this.segment(); this.cursor = this.from; }
   }
-  clear(preserveFailures = false): void { this.selection = ""; this.reference = undefined; this.visible = false; this.current = undefined; this.best = undefined; this.previous = undefined; this.completed = false; this.commands = []; this.cursor = 0; this.from = 0; this.to = 0; this.diagnosis = "No recorded attempt yet. Cause unknown."; if (preserveFailures) this.failures.abort(); else this.failures.restore(); }
+  clear(preserveFailures = false): void { this.mode = "preview"; this.selection = ""; this.reference = undefined; this.visible = false; this.current = undefined; this.best = undefined; this.previous = undefined; this.completed = false; this.commands = []; this.cursor = 0; this.from = 0; this.to = 0; this.diagnosis = "No recorded attempt yet. Cause unknown."; if (preserveFailures) this.failures.abort(); else this.failures.restore(); }
   restart(): void { this.failures.abort(); this.current = undefined; this.previous = undefined; this.completed = false; this.visible = false; this.commands = []; }
   abortFailures(): void { this.failures.abort(); }
   observeFact(fact: TutorialAttemptFact): void { this.failures.fact(fact); }
