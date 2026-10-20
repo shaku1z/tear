@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createProductionHeadlessEnvironment, type ProductionHeadlessTerminalArtifact, type TearScenarioV1 } from "../../src/tearbench";
-import { createTearC34C32RuntimeModel, encodeTearC34C32SourceState, parseTearC34C32RuntimeModel, selectTearC34C32RuntimeAction, tearC34C32SemanticActionHash } from "../../src/agents/c34-c32-runtime-compatibility";
+import { createTearC34C32RuntimeModel, encodeTearC34C32SourceState, parseTearC34C32RuntimeModel, prepareTearReturnRuntimeSelector, selectTearC34C32RuntimeAction, tearC34C32SemanticActionHash } from "../../src/agents/c34-c32-runtime-compatibility";
 import { createTearOfflineRlPlan, evaluateTearOfflineRlRewardTransition, extractTearOfflineRlTrajectories } from "../../src/agents/offline-rl-training";
 import type { TearAcademyTrainingDatasetV1 } from "../../src/agents/academy-training-dataset";
 import { encodeTearReturnSourceState, tearReturnAdapter, TEAR_RETURN_PLAYING_MASK } from "../../src/agents/c34-source-feature-state";
@@ -15,6 +15,50 @@ const scenario: TearScenarioV1 = { format: "tear-contract", kind: "scenario", sc
   start: { mode: "endless", difficulty: "normal", weapon: "sword" }, maxTicks: 300, assertions: ["runtime.finite-state"], tags: ["r14"] };
 
 describe("return subskill source barriers", () => {
+  it("preserves indexed return decisions, hash ties and legal masks from detached immutable inputs", () => {
+    const environment = createProductionHeadlessEnvironment();
+    try {
+      const initial = environment.reset(scenario), states = [initial, environment.step([]).observation, environment.step([]).observation];
+      const action = { type: "weapon", intent: "throw", phase: "pressed" } as const;
+      const recall = { type: "weapon", intent: "recall", phase: "pressed" } as const;
+      const vocabulary = [action, recall];
+      for (const variant of ["return-exact.v2", "return-features.v2"] as const) {
+        const values = new Map<string, { stateHash: string; semanticActionHash: string; actionHash: string; value: number }>();
+        for (const state of states) for (const mask of [["weapon"], ["move", "weapon"]] as const) {
+          const stateHash = encodeTearC34C32SourceState(state, variant, mask).stateHash;
+          const semanticActionHash = tearC34C32SemanticActionHash([]);
+          values.set(`${stateHash}:${semanticActionHash}`, { stateHash, semanticActionHash, actionHash: semanticActionHash, value: 0 });
+        }
+        const model = createTearC34C32RuntimeModel([...values.values()], variant);
+        const select = prepareTearReturnRuntimeSelector(model, vocabulary);
+        // A supported empty zero still loses the existing hash tie to the missing throw zero.
+        expect(select(initial, ["weapon"])).toMatchObject({ actions: [action], entryPresent: false, value: 0 });
+        for (const state of states) for (const mask of [["weapon"], ["move", "weapon"], ["move"], ["draft-choice"]] as const) {
+          expect(select(state, mask)).toEqual(selectTearC34C32RuntimeAction(model, state, vocabulary, mask));
+        }
+        const stateHash = encodeTearC34C32SourceState(initial, variant, ["weapon"]).stateHash;
+        const negative = createTearC34C32RuntimeModel(vocabulary.map(command => ({ stateHash,
+          semanticActionHash: tearC34C32SemanticActionHash([command]), actionHash: tearC34C32SemanticActionHash([command]), value: -1 })), variant);
+        expect(prepareTearReturnRuntimeSelector(negative, vocabulary)(initial, ["weapon"]))
+          .toEqual(selectTearC34C32RuntimeAction(negative, initial, vocabulary, ["weapon"]));
+        const positive = createTearC34C32RuntimeModel([{ stateHash, semanticActionHash: tearC34C32SemanticActionHash([recall]),
+          actionHash: tearC34C32SemanticActionHash([recall]), value: 2 }], variant);
+        const mutable = structuredClone(positive), supplied = [{ ...recall }];
+        const runtime = new TearC34ReturnModelRuntime(mutable, supplied, () => [], { now: () => 0 });
+        const source = createTearC32CanonicalSourceObservation(initial, ["weapon"]);
+        const expected = runtime.decide(source);
+        const entry = mutable.entries[0], suppliedAction = supplied[0];
+        if (entry === undefined || suppliedAction === undefined) throw new Error("missing detached model entry/action");
+        Object.assign(entry, { value: -2 }); Object.assign(suppliedAction, { intent: "throw" });
+        expect(runtime.decide(source)).toEqual(expected);
+        expect(expected).toMatchObject({ source: "diagnostic-model", actions: [recall], support: { entryPresent: true, value: 2 } });
+        expect(() => selectTearC34C32RuntimeAction(mutable, initial, supplied, ["weapon"])).toThrow(/integrity/);
+        expect(() => prepareTearReturnRuntimeSelector(mutable, supplied)).toThrow(/integrity/);
+        expect(() => runtime.decide({ ...source, stateHash: "0".repeat(16) })).toThrow(/source observation/);
+      }
+    } finally { environment.dispose(); }
+  });
+
   it("distinguishes zero-valued support, missing/default and actual influence, and contains an overbudget decision", () => {
     const environment = createProductionHeadlessEnvironment();
     try {

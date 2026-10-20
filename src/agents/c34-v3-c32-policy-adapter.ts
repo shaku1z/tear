@@ -8,9 +8,11 @@ import {
   canonicalizeTearC34C32ActionVocabulary,
   createTearC34C32RuntimeModel,
   parseTearC34C32RuntimeModel,
+  prepareTearReturnRuntimeSelector,
   selectTearC34C32RuntimeAction,
   tearC34C32VocabularyHash,
   type TearC34C32RuntimeModelV1,
+  type TearReturnRuntimeSelector,
 } from "./c34-c32-runtime-compatibility";
 import { createTearPolicyArtifact, parseTearPolicyArtifact, TearPolicyArtifactRegistry, type TearPolicyArtifactDraft, type TearPolicyArtifactV1, type TearPolicyRuntimeCompatibility } from "./policy-artifact-registry";
 import { parseTearOfflineRlV3Plan, parseTearOfflineRlV3TrainingResult, type TearOfflineRlV3PlanV1, type TearOfflineRlV3TrainingResultV1 } from "./offline-rl-v3-training";
@@ -120,12 +122,18 @@ export function createTearC32CanonicalSourceObservation(state: CanonicalGameplay
 /** Incompatible candidate bytes throw at construction; fallback is reserved for no candidate or no legal candidate action. */
 export class TearC34V3C32PolicyRuntime {
   readonly #candidate: TearC34V3C32PolicyPayloadV1 | undefined;
+  readonly #selector: TearReturnRuntimeSelector | undefined;
   readonly #fallback: (source: TearC32CanonicalSourceObservationV1) => readonly GameAction[];
   readonly #now: () => number;
-  constructor(candidate: TearPolicyArtifactV1 | undefined, fallback: (source: TearC32CanonicalSourceObservationV1) => readonly GameAction[], options: Readonly<{ now?: () => number }> = {}) { this.#candidate = candidate === undefined ? undefined : parseTearC34V3C32PolicyCandidate(candidate); this.#fallback = fallback; this.#now = options.now ?? (() => performance.now()); }
+  constructor(candidate: TearPolicyArtifactV1 | undefined, fallback: (source: TearC32CanonicalSourceObservationV1) => readonly GameAction[], options: Readonly<{ now?: () => number }> = {}) {
+    this.#candidate = candidate === undefined ? undefined : parseTearC34V3C32PolicyCandidate(candidate);
+    this.#selector = this.#candidate !== undefined && readTearReturnVariant(this.#candidate.sourceStateAdapter) !== undefined
+      ? prepareTearReturnRuntimeSelector(this.#candidate.model, this.#candidate.actionVocabulary) : undefined;
+    this.#fallback = fallback; this.#now = options.now ?? (() => performance.now());
+  }
   decide(source: TearC32CanonicalSourceObservationV1): TearC34V3C32Decision {
-    if (this.#candidate !== undefined && readTearReturnVariant(this.#candidate.sourceStateAdapter) !== undefined) {
-      return boundedReturnDecision(this.#candidate.model, this.#candidate.actionVocabulary, source, this.#fallback, this.#now, "artifact");
+    if (this.#selector !== undefined) {
+      return boundedReturnDecision(this.#selector, source, this.#fallback, this.#now, "artifact");
     }
     if (source.stateHash !== stableVerificationHash(source.state)) throw new TypeError("invalid C32 canonical source observation");
     const selected = this.#candidate === undefined ? undefined : selectTearC34C32RuntimeAction(this.#candidate.model, source.state, this.#candidate.actionVocabulary, source.availableActions);
@@ -134,11 +142,11 @@ export class TearC34V3C32PolicyRuntime {
   }
 }
 
-function boundedReturnDecision(model: TearC34C32RuntimeModelV1, vocabulary: readonly GameAction[], source: TearC32CanonicalSourceObservationV1,
+function boundedReturnDecision(select: TearReturnRuntimeSelector, source: TearC32CanonicalSourceObservationV1,
   fallback: (source: TearC32CanonicalSourceObservationV1) => readonly GameAction[], now: () => number, modelSource: "artifact" | "diagnostic-model"): TearC34V3C32Decision {
   const start = now();
   if (source.stateHash !== stableVerificationHash(source.state)) throw new TypeError("invalid C32 canonical source observation");
-  const selected = selectTearC34C32RuntimeAction(model, source.state, vocabulary, source.availableActions), elapsed = now() - start;
+  const selected = select(source.state, source.availableActions), elapsed = now() - start;
   if (!Number.isFinite(elapsed) || elapsed < 0) throw new RangeError("return runtime clock regressed");
   if (selected === undefined || elapsed > DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxDecisionMilliseconds) return Object.freeze({
     actions: Object.freeze([...fallback(source)]), source: "scripted-fallback", decisionMilliseconds: elapsed,
@@ -150,18 +158,18 @@ function boundedReturnDecision(model: TearC34C32RuntimeModelV1, vocabulary: read
 
 /** Opt-in diagnostic owner for unadmitted offline/default return models; it confers no candidate authority. */
 export class TearC34ReturnModelRuntime {
-  readonly #model: TearC34C32RuntimeModelV1;
-  readonly #vocabulary: readonly GameAction[];
+  readonly #selector: TearReturnRuntimeSelector;
   readonly #fallback: (source: TearC32CanonicalSourceObservationV1) => readonly GameAction[];
   readonly #now: () => number;
   constructor(model: TearC34C32RuntimeModelV1, vocabulary: readonly GameAction[], fallback: (source: TearC32CanonicalSourceObservationV1) => readonly GameAction[], options: Readonly<{ now?: () => number }> = {}) {
-    this.#model = parseTearC34C32RuntimeModel(model);
-    if (readTearReturnVariant(this.#model.sourceStateAdapter) === undefined || this.#model.entries.length > DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxTableEntries) throw new TypeError("return diagnostic model is incompatible or oversized");
-    if (new TextEncoder().encode(JSON.stringify(this.#model)).byteLength > DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxPayloadBytes) throw new RangeError("return model payload exceeds its bound");
-    this.#vocabulary = canonicalizeTearC34C32ActionVocabulary(vocabulary); this.#fallback = fallback; this.#now = options.now ?? (() => performance.now());
-    if (this.#vocabulary.length < 1 || this.#vocabulary.length > 15 || this.#vocabulary.some(action => !TEAR_RETURN_PLAYING_MASK.includes(action.type as never))) throw new TypeError("return diagnostic vocabulary violates its mask contract");
+    const parsed = parseTearC34C32RuntimeModel(model);
+    if (readTearReturnVariant(parsed.sourceStateAdapter) === undefined || parsed.entries.length > DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxTableEntries) throw new TypeError("return diagnostic model is incompatible or oversized");
+    if (new TextEncoder().encode(JSON.stringify(parsed)).byteLength > DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxPayloadBytes) throw new RangeError("return model payload exceeds its bound");
+    const normalized = canonicalizeTearC34C32ActionVocabulary(vocabulary); this.#fallback = fallback; this.#now = options.now ?? (() => performance.now());
+    if (normalized.length < 1 || normalized.length > 15 || normalized.some(action => !TEAR_RETURN_PLAYING_MASK.includes(action.type as never))) throw new TypeError("return diagnostic vocabulary violates its mask contract");
+    this.#selector = prepareTearReturnRuntimeSelector(parsed, normalized);
   }
   decide(source: TearC32CanonicalSourceObservationV1): TearC34V3C32Decision {
-    return boundedReturnDecision(this.#model, this.#vocabulary, source, this.#fallback, this.#now, "diagnostic-model");
+    return boundedReturnDecision(this.#selector, source, this.#fallback, this.#now, "diagnostic-model");
   }
 }

@@ -135,6 +135,40 @@ export function requireTearC34C32AdapterEligibleTrainingResult(result: TearOffli
   throw new RangeError("legacy C34 training results do not declare the C34/C32 source-state adapter; train an explicit V3-compatible model");
 }
 
+export type TearReturnRuntimeSelector = (state: CanonicalGameplayState,
+  available: readonly GameAction["type"][]) => TearC34C32ActionSelectionV1 | undefined;
+
+/** Detached constructor-owned preparation. Neither caller objects nor supplied hashes are cache keys. */
+export function prepareTearReturnRuntimeSelector(modelInput: unknown, actions: readonly unknown[]): TearReturnRuntimeSelector {
+  const model = parseTearC34C32RuntimeModel(structuredClone(modelInput)), variant = readTearReturnVariant(model.sourceStateAdapter);
+  if (variant === undefined) throw new TypeError("prepared return selector requires a versioned return model");
+  const vocabulary = canonicalizeTearC34C32ActionVocabulary(actions);
+  const invalidVocabulary = actions.length > 15 || vocabulary.some(action => !TEAR_RETURN_PLAYING_MASK.includes(action.type as never));
+  const batches = [...vocabulary.map(action => Object.freeze([action])), Object.freeze([])].map(batch =>
+    Object.freeze({ actions: batch, semanticActionHash: tearC34C32SemanticActionHash(batch) }));
+  const states = new Map<string, Map<string, TearOfflineRlQValueV1>>();
+  for (const entry of model.entries) {
+    let values = states.get(entry.stateHash);
+    if (values === undefined) { values = new Map(); states.set(entry.stateHash, values); }
+    values.set(entry.semanticActionHash, entry);
+  }
+  return (state, available) => {
+    const encoding = encodeTearC34C32SourceState(state, variant, available);
+    if (invalidVocabulary || !available.some(type => TEAR_RETURN_PLAYING_MASK.includes(type as never))) return undefined;
+    const values = states.get(encoding.stateHash);
+    let best: Readonly<{ actions: readonly GameAction[]; semanticActionHash: string; value: number; present: boolean }> | undefined;
+    for (const batch of batches) {
+      if (batch.actions.some(action => !available.includes(action.type))) continue;
+      const entry = values?.get(batch.semanticActionHash), value = entry?.value ?? 0;
+      if (best === undefined || value > best.value || value === best.value && batch.semanticActionHash.localeCompare(best.semanticActionHash) < 0) {
+        best = Object.freeze({ ...batch, value, present: entry !== undefined });
+      }
+    }
+    return best === undefined ? undefined : Object.freeze({ actions: best.actions, semanticActionHash: best.semanticActionHash,
+      source: best.present ? "q" : "fallback", entryPresent: best.present, value: best.value, stateKey: encoding.stateHash });
+  };
+}
+
 /** Pure selection: no registry, activation, promotion, host input, or fallback policy is reachable here. */
 export function selectTearC34C32RuntimeAction(modelInput: TearC34C32RuntimeModelV1, state: CanonicalGameplayState,
   actions: readonly unknown[], available: readonly GameAction["type"][]): TearC34C32ActionSelectionV1 | undefined {
