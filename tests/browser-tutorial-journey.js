@@ -23,6 +23,7 @@ const scenario = {
 };
 
 withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, async ({ page, boot }) => {
+  try {
   await page.addInitScript(() => {
     // Observation-only sentinel: no profile, currency, achievement or course state is seeded.
     const sentinel = "tutorial-coach-backing-observer";
@@ -105,6 +106,8 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     const point = await page.evaluate((expected) => window.__TUTORIAL_COACH_TEXT__.findLast((entry) => entry.text === expected), label);
     await page.evaluate(() => { window.__TUTORIAL_COACH_TEXT__.length = 0; });
     await page.mouse.click(point.x, point.y); await appFrame();
+    await page.evaluate(({ label, point }) => { const session = window.__PANTHEON_TEST.tutorial().session;
+      (window.__TUTORIAL_COACH_CLICKS__ ??= []).push({ label, point, screen: window.__PANTHEON_TEST.state().game, coach: session.coach, helpVisible: session.helpVisible }); }, { label, point });
   };
   const pause = async () => { await page.keyboard.press("p"); await appFrame(); await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused"); };
   const pump = (ticks) => page.evaluate((count) => { for (let tick = 0; tick < count; tick++) window.__tutorialJourneyEnvironment.step([]); }, ticks);
@@ -169,4 +172,15 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "tutorial-gold-comparison-reduced-motion.png") });
   await page.evaluate(() => { delete window.__tutorialJourneyEnvironment; });
   console.log(`Tutorial journey passed in ${result.metrics.fixedTicks} fixed ticks`);
+  } catch (error) {
+    const directory = process.env.TEAR_TUTORIAL_GHOST_ARTIFACT_DIR;
+    if (directory) {
+      fs.mkdirSync(path.resolve(directory), { recursive: true });
+      const state = await page.evaluate(() => ({ game: window.__PANTHEON_TEST?.state(), tutorial: window.__PANTHEON_TEST?.tutorial(),
+        labels: window.__TUTORIAL_COACH_TEXT__?.slice(-50), clicks: window.__TUTORIAL_COACH_CLICKS__ })).catch(() => null);
+      fs.writeFileSync(path.join(path.resolve(directory), "failure.json"), JSON.stringify({ error: String(error), state }, null, 2));
+      await page.screenshot({ path: path.join(path.resolve(directory), "failure.png") }).catch(() => undefined);
+    }
+    throw error;
+  }
 });
