@@ -87,7 +87,14 @@ describe("Ghost production replay world", () => {
       return surface;
     }
     const document = { createElement: canvas } as unknown as Document;
-    const presentation = createBrowserGhostReplayPresentation(document, { font: () => "12px sans-serif", tag() { return; }, t: { type: { caption: 12 } } });
+    const noDraw = () => undefined;
+    const presentation = createBrowserGhostReplayPresentation(document, { font: () => "12px sans-serif", tag: noDraw,
+      text: noDraw, title: noDraw, bossHud: noDraw, bossIntro: noDraw,
+      chapterHeader: noDraw, chapterProgress: noDraw, loreFragment: noDraw, chapterPrompt: noDraw, biomeReveal: noDraw,
+      cinematicFrame: noDraw, finaleFracture: noDraw, finalReward: noDraw, cinematicPrompt: noDraw, bossDeclaration: noDraw, dialogueCard: noDraw,
+      t: { type: { display: 40, h2: 28, lead: 20, body: 16, label: 14, caption: 12, micro: 10 },
+        alpha: { soft: 0.5, faint: 0.2 }, color: { accent: "#f00", muted: "#888", paper: "#fff" },
+        metric: { bossHudH: 40 }, motion: { finalRewardIn: 0.4 } } });
     const ghost = createGhostV3({ id: "draw-source", rulesetVersion: "test", sourceClassification: "native-v3", trident,
       actions: [{ kind: "command", id: 1, tick: 1, command: { type: "move", x: 1000, y: 0 } }], snapshots: [], events: [] });
     const headless = new GhostProductionReplayWorld(ghost, createProductionGhostReplayComposition({ seed: "draw-seed" }));

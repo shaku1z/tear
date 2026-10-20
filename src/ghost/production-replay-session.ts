@@ -52,7 +52,14 @@ export function createGhostProductionReplaySession(
   });
   const verifiedReceiptTicks = new Set(verification.comparisons.filter((comparison) => comparison.equal).map((comparison) => comparison.tick));
   const inputs = new Map(receipts.map((receipt) => [receipt.tick, receipt.input]));
-  const maxTick = forkOrigin === undefined ? capsule.maxTick : receipts.reduce((last, receipt) => Math.max(last, receipt.tick), firstTick);
+  // A scored parent can retain the actual closing application-frame housekeeping
+  // after its finale-launch endpoint. Those extra ticks belong to its companion.
+  const finaleEndpoint = mapped.ghost.snapshots.find((snapshot) => {
+    const world = snapshot.state["tear.world.v1"] as { readonly runtime?: { readonly finaleBinding?: unknown } } | undefined;
+    return world?.runtime?.finaleBinding !== undefined && capsule.tracks.events.some((entry) => entry.tick === snapshot.tick
+      && typeof entry.value === "object" && entry.value !== null && "type" in entry.value && entry.value.type === "run.completed");
+  })?.tick;
+  const maxTick = finaleEndpoint ?? (forkOrigin === undefined ? capsule.maxTick : receipts.reduce((last, receipt) => Math.max(last, receipt.tick), firstTick));
   const openingPermit = issueGhostRecordedOpeningPermit(capsule);
   const context = readGhostReplayRunContext(capsule.manifest.provenance);
   const applicationClock = readGhostApplicationClockSchedule(capsule, context?.run.id ?? "", context?.simulation.applicationFrames !== undefined);

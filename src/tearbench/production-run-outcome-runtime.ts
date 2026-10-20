@@ -32,7 +32,7 @@ export function createProductionRunOutcomeRuntime(
     preparedVictory: () => (active()._victoryPrepared as PreparedVictory | null | undefined) ?? null,
     storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
     stopClipper: () => { outward.push("stopClipper"); },
-    terminate: (outcome) => { replay.world.lifecycle.terminate(outcome); },
+    terminate: (outcome) => { replay.world.context.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal"); replay.world.lifecycle.terminate(outcome); },
     publishTerminal,
     saveBest: () => false,
     best: (run) => ({ wave: run.wave, score: run.score, time: run.runTime }),

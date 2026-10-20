@@ -68,6 +68,9 @@ export interface LiveCampaignRuntimePort {
 }
 
 export interface LiveCampaignRuntimeApi {
+  readonly clearFinaleBinding: ReturnType<typeof createFinaleRuntime>["clearBinding"];
+  readonly captureFinaleBinding: ReturnType<typeof createFinaleRuntime>["captureBinding"];
+  readonly stageFinaleBinding: ReturnType<typeof createFinaleRuntime>["stageBinding"];
   readonly loreBusy: () => boolean;
   readonly beginChapter: (index: number, priorOutro?: ChapterPage | null) => void;
   readonly severFinaleAnchor: (assisted: boolean) => boolean;
@@ -115,6 +118,9 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
     });
   };
   const api: LiveCampaignRuntimeApi = {
+    clearFinaleBinding: finale.clearBinding,
+    captureFinaleBinding: finale.captureBinding,
+    stageFinaleBinding: finale.stageBinding,
     loreBusy: () => {
       const run = port.run();
       return run?.mode === "campaign" && run.chapterState !== "WAVE_LIVE";

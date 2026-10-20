@@ -882,6 +882,15 @@ frozen evidence record.
    original raw snapshot identity. Restored source tracks identify suffixes, and
    external frame inputs are not in terminal command artifacts. This is not durable
    checkpoint transport, full-trace attestation or natural full-Campaign/finale proof.
+   Fresh local Campaign capture also streams a separately source-linked V3 finale
+   companion after the unchanged scored/reward/Ghost 2/Run DNA boundary. Theater
+   reconstructs real FinaleController/Source/director behavior, recorded confirm
+   latch and zero-tick application frames from one exact parent-bound origin;
+   parent custody is required on each open and historical missing behavior is
+   unsupported. Direct owner/handoff controls pass; the optional existing
+   campaign-victory browser branch is constructed final-wave evidence pending
+   parent execution. Paired portable export, natural full-Campaign/ten-minute
+   acceptance and broader R07 closure remain open.
    Schema-two C30 checkpoints require explicit held aim magnitude and reject older
    or missing frontiers before replacement. Canonical input adds an optional nonfull
    magnitude while preserving full-scale hashes. Fresh Ghost receipts explicitly

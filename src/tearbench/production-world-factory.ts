@@ -1,3 +1,4 @@
+import { createProductionFinaleRuntime } from "./production-finale-runtime";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { deriveVoidSeed } from "../gameplay/run/live-run-start-controller";
 import { createLiveBossPhasePractice } from "../app/live-boss-phase-practice";
@@ -210,16 +211,17 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     aimRadius: () => config.blade.aimRadius,
   });
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
+  const finale = createProductionFinaleRuntime({ state, lifecycle: world.lifecycle, config, stage, cinema: world.context.cinema, zoom: (value) => { world.context.transient.feel.worldZoomTarget = value; world.context.transient.feel.worldZoom = value; } });
   const practiceCinematic = createLiveCinematicHost({ dependencies, state: state,
     sourceController: createLiveSourceVoidController({ CONFIG: config }, config.view.w, config.view.h), cinema: world.context.cinema,
-    story: { finale: null, lastCinemaPlayerMode: null, markFinaleLanded: () => undefined, syncFinale: () => undefined },
+    story: { get finale() { return finale.story.finale; }, lastCinemaPlayerMode: null, markFinaleLanded: () => { finale.story.finaleController.markLanded(); }, syncFinale: () => { finale.story.syncFinale(); } },
     stage: { get platforms() { return stage.platforms as never[]; }, set platforms(value) { stage.platforms = value; }, get current() { return stageAt(stage.index); } },
     width: config.view.w, policy: () => ({ play: true, brief: false }), clearBossBeat: () => { state.setBossBeat(null); },
     setWorldZoom: (value) => { world.context.transient.feel.worldZoomTarget = value; },
     spawnWisp: (x, y, lane) => { const actor = world.entities.createEnemy("void-wisp", x, y, state.run() as never); Reflect.set(actor, "voidLane", lane); state.setEnemies([...state.enemies(), actor]); },
     addFlash: (value) => { world.context.transient.feel.flash = Math.max(world.context.transient.feel.flash, value); },
     addShake: (value) => { world.context.transient.impact.shake = Math.max(world.context.transient.impact.shake, value); },
-    loseStyle: () => undefined, shieldAbsorb: () => undefined, addFloater: () => undefined, finaleBladeCut: () => undefined, playSound: () => undefined });
+    loseStyle: () => undefined, shieldAbsorb: () => undefined, addFloater: () => undefined, finaleBladeCut: finale.runtime.tryBladeCut, playSound: () => undefined });
   const tutorialOutward: string[] = [];
   let tutorialSpawn: ((kind: EnemyKind, hpScale: number) => ReturnType<typeof entities.createEnemy>) | undefined;
   const requirePlayer = () => { const value = world.state.player(); if (value === undefined) throw new Error("tutorial requires its world player"); return value; };
@@ -257,7 +259,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     cancelCinema: () => { if (world.context.cinema.active) world.context.cinema.cancel("practice-reset"); } });
   tutorial.bindBossPractice(bossPractice);
   return Object.freeze({
-    practiceCinematic, dependencies, world, configuration, clock, effects, random, cosmeticEmissionRandom, factories,
+    finale, practiceCinematic, dependencies, world, configuration, clock, effects, random, cosmeticEmissionRandom, factories,
     transient: world.context.transient, input, run, stage,
     tutorial, tutorialOutward,
     bindTutorialSpawn: (spawn: NonNullable<typeof tutorialSpawn>) => { tutorialSpawn = spawn; },

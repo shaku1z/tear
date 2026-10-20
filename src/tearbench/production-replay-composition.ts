@@ -1,3 +1,4 @@
+import { FinaleController } from "../gameplay/campaign/finale-controller";
 import type { ProductionCombatPhaseOptions } from "./production-combat-phases";
 import type { GhostForkOriginV1 } from "../ghost/fork-origin";
 import type { GhostReplayRenderView } from "../ghost/replay-world";
@@ -191,11 +192,12 @@ function prepareProductionChapter(replay: ProductionReplayWorld, runtime: Readon
   const chapter = stageProductionChapter(replay, runtime.chapterBinding);
   // Validate timing and executable identities without changing the destination's director/configuration.
   const director = new CinematicTimeline.Director(configuration);
-  const cinema = director.validateState(runtime.cinema, chapter?.binding ?? existingBinding);
+  const finale = replay.finale.runtime.stageBinding(runtime.finaleBinding, new FinaleController(configuration.finale));
+  const cinema = director.validateState(runtime.cinema, finale?.binding ?? chapter?.binding ?? existingBinding);
   if (chapter !== null && (!cinema.active || lifecycle.phase !== "wave-prepared" || !lifecycle.activationDeferred)) {
     throw new RangeError("active campaign chapter requires a deferred prepared-wave lifecycle");
   }
-  return { lifecycle, chapter, cinema, director };
+  return { lifecycle, chapter, cinema, director, finale };
 }
 
 /** Restores a prepared data-bound chapter without replaying start/enter callbacks. */
@@ -214,13 +216,15 @@ export function restoreProductionReplayChapterBinding(
 
 interface PreparedRuntimeOwners {
   readonly chapter: StagedCampaignChapterBinding | null;
+  readonly finale: ReturnType<ProductionReplayWorld["finale"]["runtime"]["stageBinding"]>;
   readonly lifecycle: RunLifecycleSnapshot;
-  readonly director: Pick<CinematicDirectorPort, "captureState" | "restoreState" | "validateState">;
+  readonly director: Pick<CinematicDirectorPort, "captureState" | "restoreState" | "validateState" | "captureRecordedInput" | "restoreRecordedInput" | "validateRecordedInput">;
 }
 
 function productionRuntimeState(replay: ProductionReplayWorld, prepared?: PreparedRuntimeOwners) {
   const transient = replay.world.context.transient;
   return createLiveStateForgeRuntimeBridge({
+    finale: { capture: replay.finale.runtime.captureBinding, clear: replay.finale.runtime.clearBinding, stage: (value) => prepared === undefined ? replay.finale.runtime.stageBinding(value) : prepared.finale },
     tutorial: replay.tutorial, practiceCinema: replay.practiceCinematic.runtime, practiceWorld: () => ({ run: replay.world.state.run() as never, actors: replay.world.state.enemies(), platforms: replay.stage.platforms as object[] }),
     captureBossIntro: () => replay.world.state.bossIntro(),
     restoreBossIntro: (intro) => { replay.world.state.setBossIntro(intro); },
@@ -453,14 +457,6 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   return staged;
 }
 
-const DETACHED_SOURCE_VOID_UNSUPPORTED =
-  "production detached Source void descent/scroll is unsupported; use the live backend";
-
-function assertDetachedSourceVoidSupported(run: unknown): void {
-  if (typeof run !== "object" || run === null) return;
-  if ((run as { voidScroll?: unknown }).voidScroll != null) throw new Error(DETACHED_SOURCE_VOID_UNSUPPORTED);
-}
-
 /**
  * Rebuilds a V3 keyframe through the same source-owned world and combat graph
  * used by the C29 replay path. It owns no Vault access and never mutates the
@@ -500,7 +496,7 @@ export function createProductionGhostReplayComposition(
       if (opening !== undefined && options.inputSnapshots?.get(0) !== undefined
         && stableVerificationHash(options.inputSnapshots.get(0)) !== stableVerificationHash(opening.input)) throw new TypeError("opening held input does not match its capsule receipt");
       const staged = snapshot === undefined ? undefined : restoreProductionReplaySnapshot(replay, snapshot, openingPermit);
-      if (staged !== undefined && replay.tutorial.captureSession()?.version !== 6) assertDetachedSourceVoidSupported(staged.run);
+
       let outcome: ProductionRunOutcomeRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
         ...(options.observeStyle === undefined ? {} : { observeStyle: options.observeStyle }),
@@ -511,6 +507,7 @@ export function createProductionGhostReplayComposition(
         snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input),
       });
       outcome = createProductionRunOutcomeRuntime(replay, options.gameplayEvents, options.observeTerminal);
+      replay.finale.bindOutcome(outcome.controller.prepareVictory.bind(outcome.controller), (campaign) => { outcome.controller.victory(campaign); waveReward?.restoreScreen("win"); });
       waveReward = createProductionWaveRewardRuntime(replay, {
         ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
         ...(options.recordWaveIntent === undefined ? {} : { recordIntent: options.recordWaveIntent }),
@@ -521,6 +518,7 @@ export function createProductionGhostReplayComposition(
           if (options.requireRecordedApplicationFrames === true) throw new TypeError("historical intro installation has unknown application-clock provenance");
           return 0;
         },
+        startAdventureFinale: replay.finale.runtime.start, winRun: () => { outcome.controller.victory(false); waveReward?.restoreScreen("win"); },
         chapterFlowActive: () => productionChapterBindings.has(replay),
         beginCampaignChapter: (index, priorOutro = null) => {
           const run = replay.world.state.run() as never as { _prologueShown?: boolean };

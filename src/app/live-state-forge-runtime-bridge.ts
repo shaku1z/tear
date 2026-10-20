@@ -1,4 +1,6 @@
 import { stableVerificationHash } from "../replay/hash";
+import { parseFinaleConfig } from "../gameplay/campaign/finale-binding";
+import type { FinaleConfig } from "../gameplay/campaign/finale-controller";
 import type { BossPracticeCandidate } from "../gameplay/training/practice-boss-catalog";
 import type { CinematicDirectorBinding, CinematicDirectorPort } from
   "../gameplay/runtime/cinematic-director";
@@ -17,6 +19,7 @@ interface StagedChapterBinding {
 }
 
 export interface LiveStateForgeRuntimeBridgeOptions {
+  readonly finale?: Readonly<{ capture(): unknown; clear(): void; stage(value: unknown, config?: FinaleConfig): { binding: CinematicDirectorBinding; install(): void } | undefined }>;
   readonly tutorial?: Readonly<{
     captureSession(): unknown;
     validateSession(value: unknown, candidateWeaponId?: string, candidateEnemies?: readonly GameEnemy[], candidate?: BossPracticeCandidate): void;
@@ -39,7 +42,7 @@ export interface LiveStateForgeRuntimeBridgeOptions {
   readonly restoreStageBanner: (name: string, seconds: number) => void;
   /** Clears canonical environment records before a committed restore applies. */
   readonly clearEnvironmentRestore?: () => void;
-  readonly cinema: Pick<CinematicDirectorPort, "captureState" | "restoreState" | "validateState">;
+  readonly cinema: Pick<CinematicDirectorPort, "captureState" | "restoreState" | "validateState"> & Partial<Pick<CinematicDirectorPort, "captureRecordedInput" | "restoreRecordedInput" | "validateRecordedInput">>;
 }
 
 export interface LiveStateForgeRuntimeBridge {
@@ -51,6 +54,7 @@ export interface LiveStateForgeRuntimeBridge {
     candidateStageIndex: number,
     candidateEnemies?: readonly GameEnemy[],
     candidatePlatforms?: readonly object[],
+    configuration?: unknown,
   ) => void;
 }
 
@@ -190,7 +194,10 @@ export function createLiveStateForgeRuntimeBridge(
     return Object.freeze({ ...options.captureTransient(), bossIntroVersion: 1, bossIntro: options.captureBossIntro(), lifecycle: options.captureLifecycle(),
       chapterBinding: options.captureChapterBinding(), stageBanner: options.captureStageBanner(), cinemaProtection: options.captureCinemaProtection(),
       ...(tutorialSession === undefined ? {} : { tutorialSession }),
-      ...(typeof tutorialSession === "object" && tutorialSession !== null && "version" in tutorialSession && tutorialSession.version === 6
+      ...(options.finale?.capture() == null ? {} : { finaleBinding: options.finale.capture() }),
+      ...(options.finale?.capture() != null || (options.practiceCinema?.captureBinding() as { kind?: string } | null)?.kind === "source-descent"
+        ? { cinemaInput: options.cinema.captureRecordedInput?.() } : {}),
+      ...((typeof tutorialSession === "object" && tutorialSession !== null && "version" in tutorialSession && tutorialSession.version === 6) || options.practiceCinema?.captureBinding() != null
         ? { bossCinematicBinding: options.practiceCinema?.captureBinding() ?? null } : {}) });
   };
   const restore = (snapshot: Readonly<Record<string, unknown>>): void => {
@@ -205,9 +212,12 @@ export function createLiveStateForgeRuntimeBridge(
     options.restoreBossIntro(intro);
     const world = options.practiceWorld?.();
     const practiceBinding = world ? canonicalPracticeBinding(snapshot.bossCinematicBinding, world.run, world.platforms) : snapshot.bossCinematicBinding;
-    const binding = options.installChapterBinding(snapshot.chapterBinding) ?? options.practiceCinema?.stageBinding(practiceBinding, world?.actors ?? []);
+    const finale = options.finale?.stage(snapshot.finaleBinding);
+    if (finale === undefined) options.finale?.clear(); else finale.install();
+    const binding = finale?.binding ?? options.installChapterBinding(snapshot.chapterBinding) ?? options.practiceCinema?.stageBinding(practiceBinding, world?.actors ?? []);
     options.practiceCinema?.restoreBinding(practiceBinding);
     options.cinema.restoreState(snapshot.cinema, binding);
+    if (snapshot.cinemaInput !== undefined) options.cinema.restoreRecordedInput?.(snapshot.cinemaInput);
     options.tutorial?.restoreSession(snapshot.tutorialSession);
   };
   const validate = (
@@ -216,6 +226,7 @@ export function createLiveStateForgeRuntimeBridge(
     candidateStageIndex: number,
     candidateEnemies: readonly GameEnemy[] = [],
     candidatePlatforms: readonly object[] = [],
+    configuration?: unknown,
   ): void => {
     resolveStateForgeBossIntro(snapshot, candidateEnemies);
     validateTransient(normalizeTransient(snapshot));
@@ -249,18 +260,30 @@ export function createLiveStateForgeRuntimeBridge(
       }
     }
     const practice = typeof tutorial === "object" && tutorial !== null && "version" in tutorial && tutorial.version === 6;
-    const canonicalBinding = practice ? canonicalPracticeBinding(snapshot.bossCinematicBinding, candidateRun, candidatePlatforms) : undefined;
+    const canonicalBinding = canonicalPracticeBinding(snapshot.bossCinematicBinding, candidateRun, candidatePlatforms);
     if (practice && cinema.active === true) {
       const selected = tutorial as unknown as { bossPractice: { bossId: string } };
       const descriptor = canonicalBinding as { owner?: GameEnemy } | null;
       if (descriptor?.owner?.bossId !== selected.bossPractice.bossId || descriptor.owner.isBoss !== true) throw new RangeError("Boss practice cinematic candidate owner mismatch");
     }
-    const practiceBinding = practice ? options.practiceCinema?.stageBinding(canonicalBinding, candidateEnemies) : undefined;
+    const practiceBinding = options.practiceCinema?.stageBinding(canonicalBinding, candidateEnemies);
+    const values: unknown = configuration !== null && typeof configuration === "object" ? Reflect.get(configuration, "values") : undefined;
+    const finaleConfig: unknown = values !== null && typeof values === "object" ? Reflect.get(values, "finale") : undefined;
+    const finale = options.finale?.stage(snapshot.finaleBinding, finaleConfig === undefined ? undefined : parseFinaleConfig(finaleConfig));
+    if (snapshot.finaleBinding != null && finale === undefined) throw new RangeError("Finale binding is unsupported");
+    const savedState: unknown = snapshot.finaleBinding !== null && typeof snapshot.finaleBinding === "object" ? Reflect.get(snapshot.finaleBinding, "state") : undefined;
+    if (finale !== undefined && (candidateRun.mode !== "campaign" || lifecycle.phase !== "finale" || cinema.scriptId !== "adventure-final-cut" || chapter !== null
+      || savedState === null || typeof savedState !== "object" || Reflect.get(savedState, "phase") !== cinema.beatId)) throw new RangeError("Incoherent finale lifecycle");
+    if (lifecycle.phase === "finale" && finale === undefined) throw new RangeError("Finale controller binding is missing");
     if (practice && cinema.active === true && !practiceBinding) throw new RangeError("Active boss practice cinema is missing its candidate binding");
-    if (cinema.active === true && chapter === null && !practiceBinding && lifecycle.sessionId !== options.captureLifecycle().sessionId) {
+    if (cinema.active === true && chapter === null && !practiceBinding && !finale && lifecycle.sessionId !== options.captureLifecycle().sessionId) {
       throw new RangeError("active cinematic belongs to a different run session");
     }
-    options.cinema.validateState(snapshot.cinema, chapter?.binding ?? practiceBinding);
+    options.cinema.validateState(snapshot.cinema, finale?.binding ?? chapter?.binding ?? practiceBinding);
+    if (finale !== undefined || (canonicalBinding as { kind?: string } | null)?.kind === "source-descent") {
+      if (options.cinema.validateRecordedInput === undefined || snapshot.cinemaInput === undefined) throw new RangeError("Source/finale input latch provenance is unavailable");
+      options.cinema.validateRecordedInput(snapshot.cinemaInput);
+    } else if (snapshot.cinemaInput !== undefined) throw new TypeError("Cinematic source input lacks its behavior binding");
   };
   return Object.freeze({ capture, restore, validate });
 }

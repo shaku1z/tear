@@ -85,6 +85,9 @@ export class FinaleController {
 
   constructor(private readonly config: FinaleConfig) {}
 
+  /** Fresh controller with the same world-owned tuning; no transition or outward effect. */
+  fork(): FinaleController { return new FinaleController(this.config); }
+
   anchors(x: number, y: number, viewport: Readonly<{ width: number; height: number }>): FinaleAnchor[] {
     const centerX = Math.max(270, Math.min(x, viewport.width - 270));
     const centerY = Math.max(280, Math.min(y, viewport.height - 310));

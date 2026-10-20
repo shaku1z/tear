@@ -63,6 +63,7 @@ interface GhostTheaterContext {
   studioAbort: AbortController | undefined;
   studioArtifact: GhostStudioWebmArtifact | undefined;
   studioStatus: "idle" | "rendering" | "ready" | "failed" | "cancelled" | "download-requested";
+  finaleAvailable?: boolean;
 }
 
 const TICKS_PER_SECOND = 120;
@@ -115,6 +116,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     const current = currentContext.result.tick;
     return Object.freeze({
       id: "replay",
+      ...(currentContext.finaleAvailable ? { finaleNavigation: "FINALE CONTINUATION" as const } : {}),
       title: "GHOST 3 THEATER",
       detail: `VERIFIED SOURCE SIMULATION · ${currentContext.capsule.manifest.recordingProfile.toUpperCase()}`,
       paused: !state.playing,
@@ -165,6 +167,8 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
   };
 
   return Object.freeze({
+    finaleLink(available: boolean) { if (context !== undefined) context.finaleAvailable = available; },
+    sourceId: () => context?.capsule.manifest.id,
     open(capsule: GhostReadCapsule, from: LegacyAppScreen, evidence?: Readonly<{ permit: GhostForkPermit; result: RecordedGhostChallengeResult }>): GhostTheaterOpenResult {
       invalidateStudio();
       history.close();

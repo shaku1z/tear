@@ -77,6 +77,7 @@ export type ScreenAction =
   | { readonly type: "replay.toggleInfo" }
   | { readonly type: "replay.speed"; readonly value: number }
   | { readonly type: "replay.exit" }
+  | { readonly type: "replay.finale" }
   | { readonly type: "settings.selectTab"; readonly id: string }
   | { readonly type: "settings.step"; readonly key: string; readonly delta: number }
   | { readonly type: "settings.toggle"; readonly key: string }

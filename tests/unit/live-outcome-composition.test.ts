@@ -12,6 +12,16 @@ vi.mock("../../src/gameplay/runtime/gameplay-event-publishers", () => ({
 import { createLiveOutcomeComposition } from "../../src/app/live-outcome-composition";
 
 describe("live outcome composition pending-finale persistence", () => {
+  it("keeps the same semantic input through scored Campaign closure and stops it at actual finale termination", () => {
+    const order: string[] = [], run = { mode: "campaign" };
+    createLiveOutcomeComposition({ dependencies: { GAMEPLAY_EVENTS: {}, pendingFinalePersistence: { pending: () => null },
+      GHOST: { stopRec: () => { order.push("ghost2-closed"); return null; } }, Input: { stopSemanticRecording: () => { order.push("input-stopped"); } } } as never,
+      run: () => run, cleanupBossActors: () => undefined, environment: { clear: () => undefined }, lifecycle: { terminate: () => undefined } } as never);
+    const context = captured.context as unknown as { stopRecording(summary: { won: boolean }): void; terminate(outcome: "victory"): void };
+    context.stopRecording({ won: true }); expect(order).toEqual(["ghost2-closed"]);
+    context.terminate("victory"); expect(order).toEqual(["ghost2-closed", "input-stopped"]);
+    run.mode = "endless"; context.stopRecording({ won: true }); expect(order.slice(-2)).toEqual(["ghost2-closed", "input-stopped"]);
+  });
   it.each([
     ["defeat", "defeat"],
     ["victory", "boss-terminal"],

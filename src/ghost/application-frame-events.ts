@@ -1,4 +1,6 @@
 import { ghostRecordingFirstTick } from "./fork-origin";
+import { readGhostFinaleCompanion } from "./finale-companion";
+import { stableVerificationHash } from "../replay/hash";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostReadCapsule } from "./capsule-reader";
 
@@ -129,6 +131,7 @@ export function createGhostApplicationClockPlayback(schedule: GhostApplicationCl
 
 /** Admit the full immutable clock stream before any detached world consumes it. */
 export function readGhostApplicationClockSchedule(capsule: GhostReadCapsule, runId: string, declared: boolean): GhostApplicationClockSchedule | undefined {
+  const finale = readGhostFinaleCompanion(capsule.manifest.provenance);
   const events = capsule.tracks.events.flatMap((entry) => {
     const event = parseGhostApplicationClockEvent(entry.value);
     if (event !== undefined && event.tick !== entry.tick) throw new TypeError("application clock entry tick mismatch");
@@ -139,7 +142,7 @@ export function readGhostApplicationClockSchedule(capsule: GhostReadCapsule, run
     return undefined;
   }
   const firstTick = ghostRecordingFirstTick(capsule);
-  if (events.some((event) => event.tick < firstTick) || capsule.tracks.results.some((entry) => entry.tick < firstTick)) throw new TypeError("Application clock precedes recording origin.");
+  if (events.some((event) => event.tick < firstTick && !finale?.origin.inherited.some((inherited) => stableVerificationHash(inherited) === stableVerificationHash(event))) || capsule.tracks.results.some((entry) => entry.tick < firstTick)) throw new TypeError("Application clock precedes recording origin.");
   const clockSequences = new Set(events.map((event) => event.sequence)), seenSequences = new Set<number>();
   for (const entry of capsule.tracks.events) {
     const value = entry.value;
@@ -147,12 +150,13 @@ export function readGhostApplicationClockSchedule(capsule: GhostReadCapsule, run
     if (seenSequences.has(value.sequence)) throw new TypeError("application-clock sequence collides with another engine event");
     seenSequences.add(value.sequence);
   }
-  let ordinal = 0, sequence = 0;
+  let ordinal = finale === undefined ? 0 : finale.origin.cursor.ordinal - (finale.origin.inherited.length > 0 ? 1 : 0), sequence = 0;
   let open: GhostApplicationClockEvent | undefined;
   const cursors = new Map<number, GhostApplicationFrameCursor>([[0, Object.freeze({ version: 1, ordinal: 0, sequence: 0 })]]);
+  if (finale !== undefined) cursors.set(finale.origin.cursor.sequence, finale.origin.cursor);
   for (const event of events) {
     const value = event.payload;
-    if (value.runId !== runId || value.sessionId !== capsule.manifest.id || event.sequence <= sequence) throw new TypeError("application clock run/session/causal sequence mismatch");
+    if (value.runId !== runId || value.sessionId !== (finale?.sourceSessionId ?? capsule.manifest.id) || event.sequence <= sequence) throw new TypeError("application clock run/session/causal sequence mismatch");
     sequence = event.sequence;
     if (value.format === "tearghost-application-frame") {
       if (value.kind === "begin") {

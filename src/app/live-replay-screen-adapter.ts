@@ -1,3 +1,6 @@
+import { reopenGhostFinaleCompanion } from "../ghost/browser-finale-companion";
+import { createGhostFinaleScreenAdapter } from "./ghost-finale-screen-adapter";
+import { readGhostFinaleCompanion } from "../ghost/finale-companion";
 import { reopenRecordedGhostChallenge } from "../ghost/browser-recorded-challenge";
 import { createBrowserGhostReplayPresentation, createBrowserGhostStudioMedia } from "./browser-ghost-studio-media";
 import { stableVerificationHash } from "../replay/hash";
@@ -5,7 +8,7 @@ import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-histor
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyAppScreen } from "./legacy-state-controller";
-import { readBrowserGhostCapsule } from "../ghost/browser-capsule-vault";
+import { readBrowserGhostCapsule, listBrowserGhostCapsuleManifests } from "../ghost/browser-capsule-vault";
 import { createGhostComparisonScreenAdapter } from "./ghost-comparison-screen-adapter";
 import { createGhostTheaterScreenAdapter } from "./ghost-theater-screen-adapter";
 import type { GhostPracticeChild } from "../ghost/replay-world";
@@ -31,6 +34,8 @@ export interface ReplayScreenServices {
   readonly launchGhostPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
 }
 export interface ReplayScreenAdapter {
+  readonly cancelPendingOpen: () => void;
+  readonly openFinale?: () => void;
   readonly enter: (data: unknown, from?: LegacyAppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
   readonly enterGhostCapsule: (id: string, from?: LegacyAppScreen) => Promise<GhostTheaterOpenResult>;
   readonly enterGhostComparison: (ids: readonly string[], from?: LegacyAppScreen) => Promise<boolean>;
@@ -48,7 +53,7 @@ export interface ReplayScreenAdapter {
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
 }
 
-type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "openChallenges" | "startChallenge" | "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "viewCoachMoment" | "controlCoach" | "toggleRunDna" | "toggleStudio" | "createStudioCutList" | "markStudioIn" | "clearStudioCuts" | "exportStudio" | "cancelStudio" | "downloadStudio">;
+type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "cancelPendingOpen" | "openFinale" | "openChallenges" | "startChallenge" | "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "viewCoachMoment" | "controlCoach" | "toggleRunDna" | "toggleStudio" | "createStudioCutList" | "markStudioIn" | "clearStudioCuts" | "exportStudio" | "cancelStudio" | "downloadStudio">;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
 /** Route-triggered replay facade; heavyweight world playback loads only when a replay is opened. */
@@ -64,7 +69,13 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice,
     coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });
   const comparison = createGhostComparisonScreenAdapter({ render: services.renderers.replay });
-  let active: "legacy" | "theater" | "comparison" | undefined;
+  const createFinaleAdapter = () => createGhostFinaleScreenAdapter({ presentation: createBrowserGhostReplayPresentation(services.document, d.UI),
+    drawWorld: (frame) => { frame.draw(services.canvas, { x: 0, y: 56, w: services.width, h: services.height - 172 }); }, render: services.renderers.replay,
+    width: () => services.width, deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice, coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });
+  let finale = createFinaleAdapter();
+  let active: "legacy" | "theater" | "comparison" | "finale" | undefined;
+  let finalLink: string | undefined;
+  let sourceRequest = 0;
   let loading: Promise<void> | undefined;
   let pending: Readonly<{ data: unknown; from: LegacyAppScreen }> | undefined;
   const deferred: DeferredAction[] = [];
@@ -84,6 +95,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     else { deferred.push(action); ensureLoaded(); }
   }
   function enter(data: unknown, from: LegacyAppScreen = "menu"): boolean {
+    sourceRequest++;
+    if (active === "finale") { finale.exit(); active = undefined; }
     if (active === "theater") theater.exit();
     if (active === "comparison") comparison.exit();
     if (active === "theater" || active === "comparison") active = undefined;
@@ -102,6 +115,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     ui.text(services.canvas, "◇", services.width / 2, services.height / 2, 36, "center", 0.5);
   }
   function exit(): void {
+    sourceRequest++;
+    if (active === "finale") { const destination = finale.exit() ?? "profile"; active = undefined; services.setScreen(destination); return; }
     if (active === "theater") {
       const destination = theater.exit() ?? d.APP.replayReturn;
       active = undefined;
@@ -124,29 +139,60 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   }
 
   async function enterGhostCapsule(id: string, from: LegacyAppScreen = "profile"): Promise<GhostTheaterOpenResult> {
+    const request = ++sourceRequest;
     const capsule = await readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined);
+    if (request !== sourceRequest) return refuseGhostTheater("source-invalid");
     if (capsule === undefined) return refuseGhostTheater("capsule-unavailable");
+    let finaleOrigin: ReturnType<typeof readGhostFinaleCompanion>;
+    try { finaleOrigin = readGhostFinaleCompanion(capsule.manifest.provenance); }
+    catch { return refuseGhostTheater("source-invalid", capsule.manifest.rootIntegrity); }
+    if (finaleOrigin !== undefined) {
+      const candidate = createFinaleAdapter();
+      try {
+        const { parent, permit, confirm } = await reopenGhostFinaleCompanion(services.browserIndexedDb, capsule);
+        if (request !== sourceRequest) return refuseGhostTheater("source-invalid");
+        candidate.open(capsule, permit, from);
+        await confirm();
+        if (request !== sourceRequest) { candidate.exit(); return refuseGhostTheater("source-invalid"); }
+        finale.exit(); finale = candidate;
+        if (active === "legacy" && runtime !== undefined) runtime.exit();
+        if (active === "comparison") comparison.exit();
+        theater.exit(); active = "finale"; pending = undefined; finalLink = parent.manifest.id;
+        services.setScreen("replay", { returnTo: from });
+        return { kind: "opened", root: capsule.manifest.rootIntegrity, tick: finaleOrigin.origin.tick };
+      } catch { candidate.exit(); return refuseGhostTheater("source-verification", capsule.manifest.rootIntegrity); }
+    }
     let evidence: Awaited<ReturnType<typeof reopenRecordedGhostChallenge>>;
     try { evidence = await reopenRecordedGhostChallenge(services.browserIndexedDb, capsule); }
     catch { return refuseGhostTheater("source-verification", capsule.manifest.rootIntegrity); }
+    const manifests = await listBrowserGhostCapsuleManifests(services.browserIndexedDb);
+    if (request !== sourceRequest) return refuseGhostTheater("source-invalid");
     const opened = theater.open(capsule, from, evidence);
     if (opened.kind === "refused") return opened;
     if (active === "legacy" && runtime !== undefined) runtime.exit();
     if (active === "comparison") comparison.exit();
+    if (active === "finale") finale.exit();
     pending = undefined;
     active = "theater";
+    finalLink = manifests.find((manifest) => {
+      try { return readGhostFinaleCompanion(manifest.provenance)?.parentId === id; } catch { return false; }
+    })?.id;
+    theater.finaleLink(finalLink !== undefined);
     services.setScreen("replay", { returnTo: from });
     return opened;
   }
 
   async function enterGhostComparison(ids: readonly string[], from: LegacyAppScreen = "profile"): Promise<boolean> {
+    const request = ++sourceRequest;
     if (ids.length < 2 || new Set(ids).size !== ids.length) return false;
     const capsules = await Promise.all(ids.map((id) => readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined)));
+    if (request !== sourceRequest) return false;
     if (capsules.some((capsule) => capsule === undefined) || !comparison.open(capsules.filter((capsule): capsule is NonNullable<typeof capsule> => capsule !== undefined), from)) {
       return false;
     }
     if (active === "legacy" && runtime !== undefined) runtime.exit();
     if (active === "theater") theater.exit();
+    if (active === "finale") finale.exit();
     pending = undefined;
     active = "comparison";
     services.setScreen("replay", { returnTo: from });
@@ -154,16 +200,22 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   }
 
   const adapter: ReplayScreenAdapter = {
-    enter, enterGhostCapsule, enterGhostComparison, exit, render: () => {
-      if (active === "theater") theater.render();
+    cancelPendingOpen: () => { sourceRequest++; pending = undefined; deferred.splice(0); },
+    enter, enterGhostCapsule, enterGhostComparison, exit,
+    openFinale: () => { if (finalLink !== undefined) {
+      const promise = enterGhostCapsule(finalLink, theater.status()?.from ?? finale.status()?.from ?? "profile"), request = sourceRequest;
+      void promise.then((result) => { if (request === sourceRequest && result.kind === "refused" && active === "finale") finale.notice(result.detail); });
+    } }, render: () => {
+      if (active === "finale") finale.render();
+      else if (active === "theater") theater.render();
       else if (active === "comparison") comparison.render();
       else if (runtime) runtime.render(); else renderLoading();
     },
-    togglePause: () => { if (active === "theater") theater.togglePause(); else if (active !== "comparison") invoke((value) => { value.togglePause(); }); },
-    seekBy: (delta) => { if (active === "theater") theater.seekBy(delta); else if (active !== "comparison") invoke((value) => { value.seekBy(delta); }); },
-    seekToFraction: (fraction) => { if (active === "theater") theater.seekToFraction(fraction); else if (active !== "comparison") invoke((value) => { value.seekToFraction(fraction); }); },
-    jumpChapter: (direction) => { if (active === "theater") theater.jumpCheckpoint(direction); else if (active === "comparison") comparison.stepOccurrence(direction < 0 ? -1 : 1); else invoke((value) => { value.jumpChapter(direction); }); },
-    restart: () => { if (active === "theater") theater.restart(); else if (active === "comparison") comparison.restart(); else invoke((value) => { value.restart(); }); },
+    togglePause: () => { if (active === "finale") finale.togglePause(); else if (active === "theater") theater.togglePause(); else if (active !== "comparison") invoke((value) => { value.togglePause(); }); },
+    seekBy: (delta) => { if (active === "finale") finale.seekBy(delta); else if (active === "theater") theater.seekBy(delta); else if (active !== "comparison") invoke((value) => { value.seekBy(delta); }); },
+    seekToFraction: (fraction) => { if (active === "finale") finale.seekToFraction(fraction); else if (active === "theater") theater.seekToFraction(fraction); else if (active !== "comparison") invoke((value) => { value.seekToFraction(fraction); }); },
+    jumpChapter: (direction) => { if (active === "finale") finale.jumpCheckpoint(direction); else if (active === "theater") theater.jumpCheckpoint(direction); else if (active === "comparison") comparison.stepOccurrence(direction < 0 ? -1 : 1); else invoke((value) => { value.jumpChapter(direction); }); },
+    restart: () => { if (active === "finale") finale.restart(); else if (active === "theater") theater.restart(); else if (active === "comparison") comparison.restart(); else invoke((value) => { value.restart(); }); },
     practice: () => { if (active === "theater") theater.practice(); },
     openChallenges: () => { if (active === "theater") theater.openChallenges(); },
     startChallenge: (id) => { if (active === "theater") theater.startChallenge(id); },
@@ -180,9 +232,9 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     exportStudio: () => { if (active === "theater") theater.exportStudio(); },
     cancelStudio: () => { if (active === "theater") theater.cancelStudio(); },
     downloadStudio: () => { if (active === "theater") theater.downloadStudio(); },
-    toggleInfo: () => { if (active === "theater") theater.toggleInfo(); else if (active !== "comparison") invoke((value) => { value.toggleInfo(); }); },
-    setSpeed: (speed) => { if (active === "theater") theater.setSpeed(speed); else if (active !== "comparison") invoke((value) => { value.setSpeed(speed); }); },
-    status: () => theater.status() ?? comparison.status() ?? runtime?.status() ?? (pending === undefined ? null : {
+    toggleInfo: () => { if (active === "finale") finale.toggleInfo(); else if (active === "theater") theater.toggleInfo(); else if (active !== "comparison") invoke((value) => { value.toggleInfo(); }); },
+    setSpeed: (speed) => { if (active === "finale") finale.setSpeed(speed); else if (active === "theater") theater.setSpeed(speed); else if (active !== "comparison") invoke((value) => { value.setSpeed(speed); }); },
+    status: () => finale.status() ?? theater.status() ?? comparison.status() ?? runtime?.status() ?? (pending === undefined ? null : {
       paused: true, speed: 1, infoVisible: false, progress: 0, from: pending.from,
     }),
   };

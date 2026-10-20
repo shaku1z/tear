@@ -195,6 +195,7 @@ export interface ReplayComparisonView {
   readonly runs: readonly Readonly<{ sourceId: string; tick: number | null; semanticHash: string | null }>[];
 }
 export interface ReplayScreenView {
+  readonly finaleNavigation?: "FINALE CONTINUATION" | "BACK TO SCORED RUN";
   readonly id: "replay"; readonly title: string; readonly detail: string; readonly paused: boolean;
   readonly speed: number; readonly elapsed: string; readonly duration: string; readonly progress: number;
   readonly stage?: string; readonly score?: string;

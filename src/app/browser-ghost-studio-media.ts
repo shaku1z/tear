@@ -1,11 +1,15 @@
+import { createFinaleRenderer } from "../presentation/world/finale";
+import { drawCinematicDirector } from "../presentation/cinematics";
+import type { CinematicUiPort } from "../presentation/cinematics";
+import type { WorldUiPort } from "../presentation/world/contracts";
 import { encodeStudioVp8Webm, studioWebCodecsAvailable } from "./browser-ghost-studio-webm";
 import { isDrawableEnemy, projectPresentationEnemy, projectSceneBoss } from "./live-world-presentation-adapters";
 import { A11Y, GFX, THEME } from "../config/game-config";
-import { stageAt } from "../gameplay/stages";
+import { STAGES, stageAt } from "../gameplay/stages";
 import { clamp, len, lerp } from "../domain/geometry";
 import { createBackdrop } from "../presentation/backdrop";
 import { createProductionReplayFrame } from "../presentation/world/production-replay-frame";
-import { buildEntityLayerSnapshot, buildSceneEffectsSnapshot } from "../presentation/world/runtime-snapshots";
+import { buildFinaleWorldSnapshot, buildEntityLayerSnapshot, buildSceneEffectsSnapshot } from "../presentation/world/runtime-snapshots";
 import { formatEnemyLabel } from "../presentation/world/entity-layer";
 import { buildEnvironmentPresentationSnapshot } from "../gameplay/environment/presentation-snapshot";
 import { renderVerdantEnvironmentPresentation } from "../presentation/environment/verdant-environment-presentation";
@@ -22,7 +26,7 @@ import { parseGhostApplicationClockEvent } from "../ghost/application-frame-even
 import { mapGhostCapsuleToReplayEnvelope } from "../ghost/capsule-replay-envelope";
 import { stableVerificationHash } from "../replay/hash";
 
-type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"];
+type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"] & CinematicUiPort & WorldUiPort;
 /** Each reconstructed world gets its own theme, backdrop caches, FX and renderer constructors. */
 export function createBrowserGhostReplayPresentation(document: Document, ui: Ui): Pick<ProductionGhostReplayCompositionOptions, "presentation" | "renderView"> {
   const owners = new WeakMap<object, Readonly<{ theme: typeof THEME; backdrop: ReturnType<typeof createBackdrop>; graphics: typeof GFX; accessibility: typeof A11Y }>>();
@@ -76,7 +80,13 @@ export function createBrowserGhostReplayPresentation(document: Document, ui: Ui)
           setEffectView: (bounds) => { replay.effects.setViewRect(bounds); },
           drawBackdrop: (_stage, seconds, x, bounds) => { backdrop.draw(replayCanvas(), stage, seconds, x, bounds); },
           drawPlatform: (platform, _stage, floor, bounds) => { backdrop.platform(replayCanvas(), platform, stage, floor, bounds); },
-          drawFinale: () => undefined, drawTutorialGhost: () => undefined, tutorialActive: false,
+          drawFinale: (layer) => {
+            const finale = replay.finale.story.finale; if (finale === null) return;
+            createFinaleRenderer({ canvas: replayCanvas(), ui, width, height, safe: { top: 0, right: 0, bottom: 0, left: 0 }, screen: { x: 0, y: 0, w: width, h: height },
+              ink: theme.ink, darkTheme: theme.dark, timeSeconds: replay.clock.sim, lowGraphics: graphics.low, reducedMotion: accessibility.reducedMotion, highContrast: accessibility.highContrast })(layer,
+              buildFinaleWorldSnapshot(finale, { fragmentCap: config.finale.fragmentCap, stageAccents: STAGES.map((entry) => entry.accent), groundY: config.world.groundY, perfectColor: config.colors.perfect,
+                relicColors: [config.colors.boss, config.colors.armoredShield, config.colors.bomber, "#b06cff"], blade: { x: blade.x, y: blade.y } }));
+          }, drawTutorialGhost: () => undefined, tutorialActive: false,
           drawPlayer: () => { player.draw(replayCanvas()); }, drawBlade: () => { blade.draw(replayCanvas(), player); },
           drawEffects: () => { replay.effects.draw(replayCanvas()); }, drawDebug: () => undefined,
           drawEnvironment: () => {
@@ -88,7 +98,15 @@ export function createBrowserGhostReplayPresentation(document: Document, ui: Ui)
         } });
       return Object.freeze({ ...frame, draw(canvas: CanvasRenderingContext2D, rectangle: Parameters<typeof frame.draw>[1]) {
         if (activeCanvas !== undefined) throw new Error("replay draw is reentrant");
-        activeCanvas = canvas; try { frame.draw(canvas, rectangle); } finally { activeCanvas = undefined; }
+        activeCanvas = canvas; try { frame.draw(canvas, rectangle);
+          if (replay.world.context.cinema.active) {
+            const fit = Math.min(rectangle.w / width, rectangle.h / height);
+            canvas.save(); try { canvas.beginPath(); canvas.rect(rectangle.x, rectangle.y, rectangle.w, rectangle.h); canvas.clip();
+              canvas.translate(rectangle.x + (rectangle.w - width * fit) / 2, rectangle.y + (rectangle.h - height * fit) / 2); canvas.scale(fit, fit);
+              drawCinematicDirector(replay.world.context.cinema, config, canvas, ui, { x: 0, y: 0, w: width, h: height }, accessibility.reducedMotion);
+            } finally { canvas.restore(); }
+          }
+        } finally { activeCanvas = undefined; }
       } });
       function replayCanvas(): CanvasRenderingContext2D { if (activeCanvas === undefined) throw new Error("replay draw has no target"); return activeCanvas; }
     },

@@ -2,7 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { withJourney } = require("./browser-journey-harness");
+const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 
 const scenario = Object.freeze({
   format: "tear-contract", kind: "scenario", schemaVersion: 1, version: 1,
@@ -13,12 +13,13 @@ const scenario = Object.freeze({
   tags: ["c27a", "campaign", "source", "finale", "state-forge"],
 });
 
-withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
+const companionMode = process.env.TEAR_R07_FINALE_COMPANION === "1";
+withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
   await page.mouse.click(10, 10);
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
     undefined, { timeout: 20_000 });
-  const evidence = await page.evaluate((scenarioValue) => {
+  let evidence = await page.evaluate(async ({ scenarioValue, companionMode: companion }) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     environment.reset(scenarioValue);
     const started = environment.forgeCampaignFinalWave();
@@ -35,6 +36,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     let sourceSpawn = null;
 
     for (let index = 0; index < 1_200; index += 1) {
+      if (companion && index % 8 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
       const before = environment.observe();
       if (before.entities.some((actor) => actor.kind === "source")) {
         sourceSpawn = snapshot("campaign-source-production-spawn");
@@ -70,6 +72,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     let defeated = false;
     let preFinaleHeldActions = [];
     for (let index = 0; index < 3_600 && !defeated; index += 1) {
+      if (companion && index % 8 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
       const observation = environment.observe();
       const source = observation.entities.find((actor) => actor.kind === "source");
       if (source === undefined) { defeated = true; break; }
@@ -114,6 +117,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
     // Death animation/removal and wave clearing remain fixed-step production
     // work. The authored finale itself advances through application frames.
     for (let index = 0; index < 1_200 && environment.observe().availableActions.includes("move"); index += 1) {
+      if (companion && index % 8 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
       const transition = environment.step([]);
       trace.push({ kind: "death-and-clear", tick: transition.observation.tick, hash: transition.info.canonicalStateHash });
       const state = snapshot(`campaign-source-clear-${String(index)}`);
@@ -124,6 +128,10 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
       throw new Error("production wave clear did not begin the Adventure finale");
     }
 
+    if (companion) {
+      window.__R07_FINALE_ENVIRONMENT__ = environment;
+      return { started, sourceSpawn, combatReady, surgical, preFinale, preFinaleHeldActions, finaleStart, trace };
+    }
     for (let frame = 0; frame < 900 && uiState(snapshot(`campaign-finale-${String(frame)}`)).screen !== "win"; frame += 1) {
       const advanced = environment.advanceApplicationFrame(1 / 60, { skipCinematic: frame === 0 });
       trace.push({ kind: "finale", frame, ...advanced });
@@ -143,7 +151,110 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page }) => {
       terminalRun: runState(terminal), terminalWorld: worldState(terminal),
       terminalUi: uiState(terminal), terminalCinema: cinemaState(terminal),
     };
-  }, scenario);
+  }, { scenarioValue: scenario, companionMode });
+
+  if (companionMode) {
+    // Constructed final-wave origin and existing surgical Source defeat above are
+    // engineering evidence, never a naturally completed sixty-wave Campaign.
+    // From the committed finale launch onward use real host confirm samples,
+    // with no skip/finish/landing/HP injection or later state restoration.
+    await page.keyboard.up("Enter");
+    for (let frame = 0; frame < 900; frame++) {
+      if (frame === 60) await page.keyboard.down("Enter");
+      const terminal = await page.evaluate(() => {
+        const environment = window.__R07_FINALE_ENVIRONMENT__;
+        environment.advanceApplicationFrame(1 / 60);
+        return environment.captureSnapshot("r07-finale-frame", "recorded-canonical").state["tear.ui.v1"].screen === "win";
+      });
+      if (terminal) break;
+    }
+    await page.keyboard.up("Enter");
+    evidence = { ...evidence, ...await page.evaluate(() => {
+      const environment = window.__R07_FINALE_ENVIRONMENT__, terminal = environment.captureSnapshot("r07-final-win", "recorded-canonical");
+      return { terminal, events: environment.engineEventProjection(), terminalRun: terminal.state["tear.run.v1"],
+        terminalWorld: terminal.state["tear.world.v1"], terminalUi: terminal.state["tear.ui.v1"], terminalCinema: terminal.state["tear.cinematic.v1"] };
+    }) };
+    assert.equal(evidence.terminalUi.screen, "win", "actual confirmation/assist, gravity and landing must reach final presentation");
+    const completed = await waitForBrowserValue(page, async () => {
+      const failure = window.__TEAR_GHOST_V3__.failure();
+      if (failure !== null) throw new Error(`finale recording failed: ${JSON.stringify(failure)}`);
+      const manifests = await window.__TEAR_GHOST_V3__.manifests();
+      return manifests.find((manifest) => manifest.status === "complete" && manifest.provenance?.finaleCompanion)?.id;
+    });
+    const child = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), completed);
+    const parentId = child.manifest.provenance.finaleCompanion.parentId;
+    const parent = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), parentId);
+    const artifactDir = process.env.TEAR_R07_FINALE_ARTIFACT_DIR || path.join("artifacts", "tearbench", "c27a", "finale-companion");
+    fs.mkdirSync(artifactDir, { recursive: true });
+    fs.writeFileSync(path.join(artifactDir, "source-pair.json"), JSON.stringify({ classification: "constructed-final-wave-surgical-source", parent, child, evidence }, null, 2));
+    // Preserve original encoded Vault strings as evidence; this is not a new
+    // paired portable archive format or a synthesized custody source.
+    const encodedPair = await page.evaluate((ids) => new Promise((resolve, reject) => {
+      const request = indexedDB.open("tear-ghost-v3"); request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result, tx = db.transaction(["manifests", "chunks"], "readonly"), pair = {};
+        for (const id of ids) {
+          const m = tx.objectStore("manifests").get(id);
+          m.onsuccess = () => {
+            const text = m.result; if (typeof text !== "string") { tx.abort(); return; }
+            const manifest = JSON.parse(text), chunks = {}; pair[id] = { manifestText: text, chunks };
+            for (const entry of manifest.chunks) {
+              const c = tx.objectStore("chunks").get(entry.id); c.onsuccess = () => { if (typeof c.result !== "string") { tx.abort(); return; } chunks[entry.id] = c.result; };
+            }
+          };
+        }
+        tx.oncomplete = () => { db.close(); resolve(pair); }; tx.onabort = () => { db.close(); reject(tx.error || new Error("source pair read failed")); };
+      };
+    }), [parentId, completed]);
+    fs.writeFileSync(path.join(artifactDir, "encoded-source-pair.json"), JSON.stringify(encodedPair, null, 2));
+    const verified = await page.evaluate((id) => window.__TEAR_GHOST_V3__.verify(id), completed);
+    fs.writeFileSync(path.join(artifactDir, "verification.json"), JSON.stringify(verified, null, 2));
+    assert.equal(verified.status, "verified", JSON.stringify(verified));
+    const profile = await page.evaluate(() => ({ meta: localStorage.getItem("tear_meta"), profile: localStorage.getItem("tear_profile_v2") }));
+    await boot();
+    await page.evaluate(() => {
+      const positions = []; window.__R07_FINALE_POSITIONS__ = positions;
+      const original = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function captureFinaleText(text, x, y, ...rest) {
+        if (["PROFILE", "▶ REPLAY"].includes(String(text)) && y < 80) positions.length = 0;
+        positions.push({ text: String(text), x, y }); return original.call(this, text, x, y, ...rest);
+      };
+    });
+    const clickText = async (label, index = 0) => {
+      await page.waitForFunction((text) => window.__R07_FINALE_POSITIONS__?.some((point) => point.text === text), label);
+      const point = await page.evaluate(({ label: text, index: at }) => window.__R07_FINALE_POSITIONS__.filter((p) => p.text === text)[at], { label, index });
+      assert.ok(point, `missing rendered ${label}`); await page.mouse.click(point.x, point.y);
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    };
+    await page.mouse.click(260, 266); await waitScreen("profile");
+    await page.mouse.click(875, 271);
+    await page.waitForFunction(() => window.__R07_FINALE_POSITIONS__.some((p) => p.text === "◆ THEATER"));
+    // Newest complete capsule is the companion; its row goes through the normal
+    // library action and exact-parent lease, never a debug state/restore hook.
+    await clickText("◆ THEATER"); await waitScreen("replay");
+    await page.waitForFunction(() => window.__R07_FINALE_POSITIONS__.some((p) => p.text.startsWith("FINALE CONTINUATION   ·")));
+    await page.screenshot({ path: path.join(artifactDir, "theater-origin.png") });
+    await clickText("▶");
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: path.join(artifactDir, "theater-playing.png") });
+    // Actual transport seeks by fraction using the rendered progress track.
+    await page.mouse.click(1280, 810);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.screenshot({ path: path.join(artifactDir, "theater-restoration.png") });
+    await clickText("BACK TO SCORED RUN");
+    await page.waitForFunction(() => window.__R07_FINALE_POSITIONS__.some((p) => p.text === "FINALE CONTINUATION")
+      || window.__R07_FINALE_POSITIONS__.some((p) => p.text === "The Ghost source is not verified for Theater.")
+      || window.__R07_FINALE_POSITIONS__.some((p) => p.text === "◆ THEATER" && p.y < 80));
+    // The surgical prefix may be refused by the ordinary scored verifier. It
+    // must report that truthfully rather than promote the constructed origin.
+    const after = await page.evaluate(() => ({ meta: localStorage.getItem("tear_meta"), profile: localStorage.getItem("tear_profile_v2") }));
+    assert.deepEqual(after, profile, "detached continuation must not repeat scored/profile effects");
+    assert.deepEqual(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), completed), child);
+    assert.deepEqual(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), parentId), parent);
+    fs.writeFileSync(path.join(artifactDir, "reopen.json"), JSON.stringify({ completed, parentId, profile, after, positions: await page.evaluate(() => window.__R07_FINALE_POSITIONS__) }, null, 2));
+    console.log(`R07 finale companion: ${completed} bound to ${parentId}; constructed final-wave proof only`);
+    return;
+  }
 
   assert.equal(evidence.sourceSpawn.state["tear.run.v1"].wave, 60);
   assert.equal(evidence.sourceSpawn.state["tear.run.v1"].stage, 5);

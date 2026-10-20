@@ -75,8 +75,8 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     })),
     authoritativeResult: options.authoritativeResult,
     stopRecording: (summary) => {
-      try { return d.GHOST.stopRec(recordingMetadata(summary)); }
-      finally { d.Input.stopSemanticRecording(); }
+      try { return d.GHOST.stopRec(recordingMetadata(summary), { continueSemanticInput: summary.won && active().mode === "campaign" }); }
+      finally { if (!(summary.won && active().mode === "campaign")) d.Input.stopSemanticRecording(); }
     },
     storeReplay: (recording, summary) => d.VAULT.add(recording, storedRecordingMetadata(summary)),
     setLastRecording: options.setLastRecording,

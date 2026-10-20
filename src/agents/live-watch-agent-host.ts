@@ -485,6 +485,11 @@ export function createLiveWatchAgentHost(
       } else {
         let routed = false;
         for (const action of decision.actions) routed = context.routeAction(action) || routed;
+        if (screen === "cinematic") {
+          const beforeTick = context.authoritative()?.tick ?? 0;
+          context.advanceApplicationFrame(1 / 60);
+          state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
+        }
         if (!routed && screen !== "cinematic") {
           state.noProgressTicks += 1;
         }

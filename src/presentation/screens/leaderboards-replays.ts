@@ -172,6 +172,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     if (view.theater) context.enqueue({ x: 644 + safe.l, y: controlY, w: 180, h: 44, label: "PRACTICE",
       enabled: view.practiceAvailable === true, action: { type: "replay.practice" } });
     if (view.theater) context.enqueue({ x: width / 2 - 110, y: 76, w: 220, h: 32, label: "LOCAL CHALLENGE", action: { type: "replay.challenge.open" } });
+    if (view.finaleNavigation) context.enqueue({ x: width - 280 - safe.r, y: 76, w: 240, h: 32, label: view.finaleNavigation, action: { type: "replay.finale" } });
     if (view.theater) context.enqueue({ x: 832 + safe.l, y: controlY, w: 120, h: 44, label: "COACH",
       action: { type: "replay.coach.open" } });
     if (view.theater) context.enqueue({ x: 960 + safe.l, y: controlY, w: 120, h: 44, label: "RUN DNA",

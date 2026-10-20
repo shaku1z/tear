@@ -7,6 +7,9 @@ import type {
   FinaleStartInput,
   FinaleState,
 } from "./finale-controller";
+import { parseFinaleBinding, type FinaleBindingV1 } from "./finale-binding";
+
+const finaleInputs = new WeakMap<FinaleRuntimeState, FinaleStartInput>();
 
 export interface FinaleCinematicDirector {
   readonly elapsed: number;
@@ -105,7 +108,15 @@ export function launchAdventureFinale(options: FinaleSequenceLaunchOptions): boo
   options.dispatch(result.intents);
   if (result.sequence === null || result.state === null) return false;
 
-  const beats: readonly (FinaleCinematicBeat<FinaleState> & FinaleBeat)[] = result.sequence.beats.map((beat) => ({
+  finaleInputs.set(options.runtime, structuredClone(options.input));
+  const binding = bindAdventureFinale(options, result.sequence, result.state);
+  options.cinema.start(binding.script, binding.context);
+  return true;
+}
+
+function bindAdventureFinale(options: FinaleSequenceLaunchOptions, sequence: FinaleSequence, state: FinaleState) {
+  const controller = options.runtime.finaleController;
+  const beats: readonly (FinaleCinematicBeat<Record<string, unknown>> & FinaleBeat)[] = sequence.beats.map((beat) => ({
     ...beat,
     onEnter() {
       options.dispatch(controller.enterBeat(beat.id, options.viewportWidth));
@@ -117,8 +128,8 @@ export function launchAdventureFinale(options: FinaleSequenceLaunchOptions): boo
     },
     waitUntil(_context, detail) { return controller.waitComplete(detail.elapsed); },
   }));
-  const script: FinaleCinematicScript<FinaleState> & FinaleSequence = {
-    ...result.sequence,
+  const script: FinaleCinematicScript<Record<string, unknown>> & FinaleSequence = {
+    ...sequence,
     beats,
     onStart() { options.dispatch(controller.onStart()); },
     onSkip(_context, director) {
@@ -134,8 +145,8 @@ export function launchAdventureFinale(options: FinaleSequenceLaunchOptions): boo
     },
     onCancel() { options.dispatch(controller.cancel()); },
   };
-  options.cinema.start(script, result.state);
-  return true;
+  void state;
+  return { script, context: {} };
 }
 
 export interface FinaleCutOptions {
@@ -215,6 +226,9 @@ export interface FinaleRuntimeOptions {
 }
 
 export interface FinaleRuntimeApi {
+  readonly clearBinding: () => void;
+  readonly captureBinding: () => FinaleBindingV1 | null;
+  readonly stageBinding: (value: unknown, candidateController?: FinaleController) => { binding: ReturnType<typeof bindAdventureFinale>; install(): void } | undefined;
   readonly severAnchor: (assisted: boolean) => boolean;
   readonly beginRestoration: () => void;
   readonly tryBladeCut: (segment: FinaleBladeSegment) => void;
@@ -251,6 +265,29 @@ export function createFinaleRuntime(options: FinaleRuntimeOptions): FinaleRuntim
   };
 
   const api: FinaleRuntimeApi = {
+    clearBinding: () => { options.runtime.resetFinale(); finaleInputs.delete(options.runtime); },
+    captureBinding: () => {
+      const input = finaleInputs.get(options.runtime), state = options.runtime.finale;
+      return input === undefined || state === null ? null : structuredClone({ version: 1, input, state });
+    },
+    stageBinding: (value, candidateController) => {
+      if (value === undefined || value === null) return undefined;
+      const saved = parseFinaleBinding(value), controller = candidateController ?? options.runtime.finaleController.fork();
+      const started = controller.start(saved.input);
+      if (started.sequence === null) throw new TypeError("Finale binding requires Campaign");
+      if (started.state === null || JSON.stringify(started.state.origin) !== JSON.stringify(saved.state.origin)
+        || started.state.anchors.some((anchor, index) => { const savedAnchor = saved.state.anchors[index]; return savedAnchor === undefined
+          || ["x", "y", "r", "depth"].some((key) => Reflect.get(anchor, key) !== Reflect.get(savedAnchor, key)); })) throw new TypeError("Finale anchors differ from source input/configuration");
+      controller.state = structuredClone(saved.state);
+      const staged: FinaleRuntimeState = { get finale() { return controller.state; }, set finale(value) { options.runtime.finale = value; }, finaleController: controller,
+        resetFinale: () => undefined, syncFinale: () => { options.runtime.finale = controller.state; return controller.state; } };
+      const binding = bindAdventureFinale({ runtime: staged, cinema: options.cinema, input: saved.input,
+        viewportWidth: options.viewport.width, dispatch, stopPlayer: () => undefined, assistVelocity: velocity }, started.sequence, controller.state);
+      return { binding, install() {
+        options.runtime.finaleController = controller; options.runtime.finale = controller.state;
+        finaleInputs.set(options.runtime, structuredClone(saved.input));
+      } };
+    },
     severAnchor: (assisted: boolean) => {
       const before = options.runtime.finale?.severed ?? 0;
       dispatch(options.runtime.finaleController.sever(

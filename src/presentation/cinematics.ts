@@ -41,66 +41,72 @@ export interface CinematicPresentationRuntime {
 export function createCinematics(policy: CinematicPresentationPolicy): CinematicPresentationRuntime {
   class Director extends CinematicTimeline.Director {
     draw(ctx: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion = false): void {
-      const script = this.script;
+      drawCinematicDirector(this, policy, ctx, ui, screen, reducedMotion);
+    }
+  }
+
+  return Object.freeze({ Director } satisfies CinematicPresentationRuntime);
+}
+
+export function drawCinematicDirector(director: Readonly<Pick<InstanceType<typeof CinematicTimeline.Director>,
+  "script" | "beat" | "skipping" | "elapsed" | "progress" | "brief" | "totalElapsed" | "revealProgress" | "fullyVisibleElapsed" | "latchArmed" | "latchHoldSeconds" | "autoImminent">>,
+  policy: CinematicPresentationPolicy, ctx: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion = false): void {
+      const script = director.script;
       if (!script) return;
-      const b = this.beat;
+      const b = director.beat;
       if (script.kind === "chapter") {
         const S = script, mo = ui.t.motion;
-        const hint = this.skipping ? (S.skipHint ?? "SKIPPING CHAPTER") : (S.hint ?? "TAP TO REVEAL  ·  HOLD TO SKIP");
+        const hint = director.skipping ? (S.skipHint ?? "SKIPPING CHAPTER") : (S.hint ?? "TAP TO REVEAL  ·  HOLD TO SKIP");
         if (b?.view === "page") {
           // enter fades the whole composition in; the EXIT beat holds the header
           // and chapter label while only the lore fragment softens away.
-          const inK = b.exit ? 1 : Math.min(1, this.elapsed / (mo.chapterPageCross ?? 0.26));
-          const loreK = b.exit ? Math.max(0, 1 - this.progress) : inK;
+          const inK = b.exit ? 1 : Math.min(1, director.elapsed / (mo.chapterPageCross ?? 0.26));
+          const loreK = b.exit ? Math.max(0, 1 - director.progress) : inK;
           const art = { color: b.color ?? S.color, composition: b.composition, wash: b.wash, transition: b.transition };
           ui.chapterHeader(ctx, Object.assign({ label: b.label, title: b.title, amount: inK }, art));
           ui.chapterProgress(ctx, Object.assign({ index: b.pageIndex, count: b.pageCount, amount: inK }, art));
-          ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: b.exit ? 1 : this.revealProgress, amount: loreK }, art));
+          ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: b.exit ? 1 : director.revealProgress, amount: loreK }, art));
           if (!b.exit) ui.chapterPrompt(ctx, Object.assign({ text: hint, amount: inK }, art));
         } else if (b && (b.view === "reveal" || b.view === "ready")) {
-          const revDur = this.brief ? (mo.biomeRevealBrief ?? 1.0) : (mo.biomeRevealFull ?? 1.6);
+          const revDur = director.brief ? (mo.biomeRevealBrief ?? 1.0) : (mo.biomeRevealFull ?? 1.6);
           ui.biomeReveal(ctx, { number: b.number, name: b.name, line: b.line, color: b.color ?? S.color,
             composition: b.composition, wash: b.wash,
-            amount: b.view === "ready" ? 1 : Math.min(1, this.elapsed / revDur), ready: b.view === "ready" });
+            amount: b.view === "ready" ? 1 : Math.min(1, director.elapsed / revDur), ready: b.view === "ready" });
         }
         return;
       }
       if (script.kind === "finale") {
-        ui.cinematicFrame(ctx, { screen, amount: Math.min(1, this.totalElapsed / 0.45),
+        ui.cinematicFrame(ctx, { screen, amount: Math.min(1, director.totalElapsed / 0.45),
           color: script.color, reducedMotion });
         if (b && (b.id === "silence" || b.id === "wound")) ui.finaleFracture(ctx, {
-          amount: b.id === "silence" ? this.progress * 0.35 : 0.35 + this.progress * 0.65, color: script.color });
+          amount: b.id === "silence" ? director.progress * 0.35 : 0.35 + director.progress * 0.65, color: script.color });
         if (b?.view === "epilogue") {
-          const inK = Math.min(1, this.elapsed / 0.26), art = { color: b.color ?? script.color, composition: "left", wash: "dark" };
+          const inK = Math.min(1, director.elapsed / 0.26), art = { color: b.color ?? script.color, composition: "left", wash: "dark" };
           ui.chapterHeader(ctx, Object.assign({ label: b.label, title: b.title, amount: inK }, art));
-          ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: this.revealProgress, amount: inK }, art));
+          ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: director.revealProgress, amount: inK }, art));
           ui.chapterPrompt(ctx, Object.assign({ text: b.hint ?? script.hint, amount: inK }, art));
         }
         else if (b?.view === "reward") ui.finalReward(ctx, { label: b.label, title: b.title, sigil: b.sigil,
           reward: b.reward, detail: b.detail, color: b.color ?? script.color,
-          amount: Math.min(1, this.elapsed / ui.t.motion.finalRewardIn), hint: b.hint ?? script.hint });
-        else if (b?.hint) ui.cinematicPrompt(ctx, { text: b.hint, amount: Math.min(1, this.elapsed / 0.22),
+          amount: Math.min(1, director.elapsed / ui.t.motion.finalRewardIn), hint: b.hint ?? script.hint });
+        else if (b?.hint) ui.cinematicPrompt(ctx, { text: b.hint, amount: Math.min(1, director.elapsed / 0.22),
           color: b.color ?? script.color });
         return;
       }
-      ui.cinematicFrame(ctx, { screen, amount: Math.min(1, this.totalElapsed / 0.45),
+      ui.cinematicFrame(ctx, { screen, amount: Math.min(1, director.totalElapsed / 0.45),
         color: script.color, reducedMotion });
       if (b?.line) {
         // shared reading affordances (no countdown bar): a continue chevron once
         // readable, a hold ring while a newly armed skip charges, AUTO near a timeout.
         const shared = { speaker: b.speaker, line: b.line, color: b.color ?? script.color,
-          amount: Math.min(1, this.elapsed / 0.22), reveal: reducedMotion ? 1 : this.revealProgress,
-          canAdvance: this.revealProgress >= 1 && this.fullyVisibleElapsed >= policy.presentation.minFullyVisible * 0.5,
-          holdRing: this.latchArmed ? Math.min(1, this.latchHoldSeconds / policy.presentation.skipHold) : 0,
-          auto: this.autoImminent };
+          amount: Math.min(1, director.elapsed / 0.22), reveal: reducedMotion ? 1 : director.revealProgress,
+          canAdvance: director.revealProgress >= 1 && director.fullyVisibleElapsed >= policy.presentation.minFullyVisible * 0.5,
+          holdRing: director.latchArmed ? Math.min(1, director.latchHoldSeconds / policy.presentation.skipHold) : 0,
+          auto: director.autoImminent };
         // Boss transformation rituals anchor the line to a corner so world
         // choreography owns the center; other scripts keep the dialogue card.
         if (script.kind === "ritual") ui.bossDeclaration(ctx, Object.assign({ anchor: b.anchor, maxWidth: b.maxWidth }, shared));
-        else ui.dialogueCard(ctx, Object.assign({ hint: this.skipping ? (script.skipHint ?? "SKIPPING — GAMEPLAY OUTCOME PRESERVED") :
+        else ui.dialogueCard(ctx, Object.assign({ hint: director.skipping ? (script.skipHint ?? "SKIPPING — GAMEPLAY OUTCOME PRESERVED") :
           (script.hint ?? "TAP TO ADVANCE  ·  HOLD TO SKIP") }, shared));
       }
-    }
-  }
-
-  return Object.freeze({ Director } satisfies CinematicPresentationRuntime);
 }
