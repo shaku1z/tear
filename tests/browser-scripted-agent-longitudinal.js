@@ -51,10 +51,41 @@ withJourney({ name: r18 ? "R18 controlled Normal depth cohort" : "C24 longitudin
       for (const key of ["a", "d", "w", "s", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"]) await page.keyboard.up(key);
       await page.mouse.up({ button: "left" }); await page.mouse.up({ button: "right" });
     };
+    // Capture existing sidecar diagnostics without starting, sealing or repairing it.
+    const observeRecorder = () => page.evaluate(async () => {
+      const inspector = window.__TEAR_GHOST_V3__;
+      const observation = { observedAt: new Date().toISOString(), recorder: inspector === undefined ? null : {
+        failure: inspector.failure(), active: inspector.active(), manifest: inspector.manifest(),
+      }, databasePresent: false, capsuleStatuses: [] };
+      if (!(await indexedDB.databases()).some((entry) => entry.name === "tear-ghost-v3")) return observation;
+      observation.databasePresent = true;
+      const database = await new Promise((resolve, reject) => {
+        const request = indexedDB.open("tear-ghost-v3"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+        request.onupgradeneeded = () => { request.transaction.abort(); reject(new Error("capsule database disappeared during observation")); };
+      });
+      try {
+        if (!database.objectStoreNames.contains("manifests")) return observation;
+        observation.capsuleStatuses = await new Promise((resolve, reject) => {
+          const transaction = database.transaction("manifests", "readonly"), statuses = [];
+          const request = transaction.objectStore("manifests").openCursor();
+          request.onsuccess = () => {
+            const cursor = request.result; if (!cursor) return;
+            try {
+              const manifest = JSON.parse(cursor.value);
+              statuses.push({ key: cursor.key, id: manifest.id, status: manifest.status, chunkCount: manifest.chunks?.length });
+            } catch (error) { statuses.push({ key: cursor.key, parseError: String(error) }); }
+            cursor.continue();
+          };
+          transaction.oncomplete = () => resolve(statuses); transaction.onerror = () => reject(transaction.error); transaction.onabort = () => reject(transaction.error);
+        });
+        return observation;
+      } finally { database.close(); }
+    });
     // Read-only archival copy of already completed local capsules. No sealing,
     // repair, publication, admission, profile mutation or synthetic capsule.
     const preserveCapsules = async () => {
       if (page.isClosed()) { report.capsuleAbsence = "page closed before readback"; return; }
+      report.recorderAtArchive = await observeRecorder(); save();
       const available = await page.evaluate(async () => {
         if (!(await indexedDB.databases()).some((entry) => entry.name === "tear-ghost-v3")) return [];
         const database = await new Promise((resolve, reject) => {
@@ -150,6 +181,7 @@ withJourney({ name: r18 ? "R18 controlled Normal depth cohort" : "C24 longitudin
           const run = snapshot.state["tear.run.v1"];
           return { wave: run.wave, score: run.score, time: run.runTime, difficulty: run.diff, weapon: run.weaponId, runUpgrades: run.mods.owned };
         });
+        episode.recorderAtTerminal = await observeRecorder(); save();
         await page.screenshot({ path: path.join(directory, `run-${String(index + 1)}-terminal.png`) });
         if (episode.passiveTimedOut || screen !== "gameover") { save(); break; } // No forced outcome or replacement of an unfinished run.
         await page.evaluate(() => { window.__R18_TEXT__.length = 0; });
