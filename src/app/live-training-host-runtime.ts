@@ -61,6 +61,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     return value;
   };
   const tutorial = createLiveTutorialRuntime({
+    reducedMotion: () => d.A11Y.reducedMotion,
     bossCatalog: () => d.practiceEncounterPersistence?.bossCatalog() ?? [],
     enemyCatalog: () => d.practiceEncounterPersistence?.catalog() ?? practiceEnemyCatalog((key) => d.PROFILE.stat(key)),
     config: d.CONFIG, viewportWidth: context.width, groundY: () => d.CONFIG.world.groundY,

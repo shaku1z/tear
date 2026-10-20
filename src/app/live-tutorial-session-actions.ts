@@ -31,6 +31,8 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
     }
     const tutorial = ports.tutorial;
     if (ports.screen() !== "paused" || (ports.mode() !== "tutorial" && !(ports.mode() === "playground" && tutorial.session().phase === "free-practice"))) return;
+    if (command === "demo") { if (tutorial.demonstrate()) { ports.resetFocus(); ports.resume(); } return; }
+    if (command.startsWith("coach-")) { const changed = tutorial.coachAction(command === "coach-rate" ? "rate" : command === "coach-compare" ? "compare" : "diagnostic"); if (changed) { ports.resetFocus(); ports.resume(); } return; }
     if (command === "help") { tutorial.showHelp(); return; }
     if (command === "annexes") { tutorial.showAnnexes(); return; }
     if (command === "bosses") { tutorial.showBosses(); return; }
@@ -58,7 +60,7 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
       } else tutorial.restoreSession(saved);
       tutorial.restorePresentation(display);
     }
-    const changed = bossId !== undefined ? command === "restart" ? tutorial.restart() : tutorial.selectBoss(bossId) : enemyId !== undefined ? command === "restart" ? tutorial.restart() : tutorial.selectEnemy(enemyId) : annexId !== undefined ? tutorial.selectAnnex(annexId) : command === "demo" ? tutorial.demonstrate() : command === "restart" ? tutorial.restart() : tutorial.selectLesson(lessonId ?? "");
+    const changed = bossId !== undefined ? command === "restart" ? tutorial.restart() : tutorial.selectBoss(bossId) : enemyId !== undefined ? command === "restart" ? tutorial.restart() : tutorial.selectEnemy(enemyId) : annexId !== undefined ? tutorial.selectAnnex(annexId) : command === "restart" ? tutorial.restart() : tutorial.selectLesson(lessonId ?? "");
     if (changed) { ports.resetFocus(); ports.resume(); }
   };
   return Object.freeze({ dispatch });

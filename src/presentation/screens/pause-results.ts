@@ -150,7 +150,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       { label: complete ? "CONTINUE PRACTICE" : "RESUME LESSON", action: { type: "run.resume" } },
       ...(current?.canPractice || session.annex || session.enemyPractice || session.bossPractice ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }] : []),
       { label: session.helpVisible ? "HIDE HELP" : "LESSON HELP", action: { type: "tutorial.action", command: "help" } },
-      ...(session.phase !== "free-practice" && current?.canPractice && !session.annex && !session.enemyPractice && !session.bossPractice ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }] : []),
+      ...(session.coach?.available && current?.canPractice && !session.annex && !session.enemyPractice && !session.bossPractice ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }] : []),
       ...(lab ? [{ label: annexes ? "BASELINE EXERCISES" : "WEAPON ANNEXES", action: { type: "tutorial.action", command: "annexes" } as const }] : []),
       ...(lab ? [{ label: bosses ? "BASELINE EXERCISES" : "BOSS PRACTICE", action: { type: "tutorial.action", command: "bosses" } as const }] : []),
       ...(lab ? [{ label: catalog ? "BASELINE EXERCISES" : "ENEMY CATALOG", action: { type: "tutorial.action", command: "catalog" } as const }] : []),
@@ -186,6 +186,12 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       : complete
       ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then evade and punish. Select any technique above to revisit its baseline exercise."
       : "Pause at any time to restart a block or revisit a reached lesson. Complete the action yourself to advance.";
+    if (session.coach?.available && !bosses && !catalog && !annexes) {
+      const coach = session.coach, controls: { label: string; command: "coach-rate" | "coach-diagnostic" | "coach-compare" }[] = [{ label: `PLAYBACK ${String(coach.rate)}×`, command: "coach-rate" }, { label: "DIAGNOSTIC DEMO", command: "coach-diagnostic" }, ...(coach.canCompare ? [{ label: "COMPARE ATTEMPT", command: "coach-compare" as const }] : [])];
+      controls.forEach((control, index) => { context.enqueue({ x: panelX + index * panelW / controls.length, y: height - 48, w: panelW / controls.length - 8, h: 30, label: control.label, action: { type: "tutorial.action", command: control.command }, size: ui.t.type.micro }); });
+      wrapText(session.helpVisible ? session.instruction : coach.diagnosis, panelX, height - 96, panelW, 16, ui.t.type.micro, ui.ink);
+      return;
+    }
     canvas.textBaseline = "alphabetic";
     wrapText(help, panelX, rowTop + rows * rowH + (catalog ? 28 : 18), panelW, compact ? 15 : 20, compact ? ui.t.type.micro : ui.t.type.body, ui.ink);
   }

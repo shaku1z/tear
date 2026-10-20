@@ -131,6 +131,12 @@ describe("legacy screen renderer registry", () => {
     expect(exercises).toHaveLength(13);
     expect(exercises.every((control) => control.enabled && !control.label.includes("✓") && !control.label.includes("LOCKED"))).toBe(true);
     controls.length = 0;
+    renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: { ...controller.session(), coach: {
+      available: true, visible: false, mode: "comparison", rate: .5, diagnosis: "Valid objective recorded.", canCompare: true, reducedMotion: true, tick: 0, fromTick: 0, toTick: 10,
+    } } });
+    expect(controls.filter((control) => control.action.type === "tutorial.action").map((control) => control.label)).toEqual(expect.arrayContaining(["SHOW DEMO", "PLAYBACK 0.5×", "DIAGNOSTIC DEMO", "COMPARE ATTEMPT"]));
+    expect(controls.filter((control) => control.label === "COMPARE ATTEMPT").every((control) => control.y + control.h <= context.height)).toBe(true);
+    controls.length = 0;
     controller.showAnnexes(); controller.selectAnnex("hammer");
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-annex").map((control) => control.label))

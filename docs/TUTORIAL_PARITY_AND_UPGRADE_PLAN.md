@@ -697,6 +697,38 @@ Version 2 should teach or deliberately defer each one:
 
 ## Ghost 2.0: a movement coach, not scenery
 
+The current implementation replaces normal lesson ghost motion with a verified
+immutable 120 Hz corpus for all thirteen action blocks, plus an explicitly
+separate legacy Field Test reference. Saved-origin production replays retain
+actual body, blade, target, projectile and stage states, canonical inputs and
+accepted contact/objective facts. Source validation runs once; shipping data is
+reused. Gold proof origins explicitly omit the coach's own presentation identity
+so corpus hashes do not recursively depend on the previous corpus.
+
+The product default remains explicit **SHOW DEMO / LESSON HELP**, without a new
+automatic first-attempt or idle trigger. Preview is finite; meaningful gameplay
+dismisses it, while aim drift alone does not. Long successful proofs remain
+intact. Display selects actual successful contact/takeoff/launch or projectile
+spawn context, shows the recorded segment duration, and keeps the mixed Field
+Test's whole two-wave route. Diagnostic help reports observed facts and leaves
+uncertain causes explicitly unknown. The 1× / 0.5× control changes only display
+time. Glyph pulses are anchored to recorded ticks; reduced motion uses discrete
+poses and markers without trajectory trails. Contact/target response is never
+replaced by authored motion.
+
+Optional comparison follows a genuinely valid baseline Practice Lab attempt.
+It retains the shortest valid duration for the same reference in the current
+session, ties newest; this is not mastery grading or population evidence.
+Personal paths retain at most 128 observed poses with event markers under a
+24 KB presentation bound. Reset aborts unfinished recording; a new lesson or
+document reload clears personal comparison. State Forge retains a bounded
+completed comparison and verified gold identity/cursor, never shipping gold;
+restoring aborts partial capture and requires reset before recording anew. Coaching never grants
+objective or reward evidence. The existing normal browser journey adds rendered
+coach controls and a genuine lesson-driver Lab attempt; parent fresh-build UI
+acceptance remains separate from the corpus proof. Physical usability and
+Version 1 retirement are unclaimed.
+
 The current hand-authored ghost is renderer-neutral and deterministic, but it is
 kinematic and visually shallow. It demonstrates a rough pose, not the timing,
 momentum, contact, or recovery a player needs.
@@ -1012,7 +1044,8 @@ the fixed 1600×900 canvas; it establishes visibility, not compact pagination or
 mobile usability. The separate logical 800×360 renderer control checks compact
 geometry. These fixtures do not establish natural human encounter history or
 physical-device acceptance.
-Gold traces, personal ghost comparison and mastery medals remain separate work.
+Gold coaching and session-local baseline comparison are described above;
+mastery medals remain separate work.
 
 The finite tutorial should unlock a separate revisitable Practice Lab:
 

@@ -33,6 +33,22 @@ function capture(source: Source) { return captureProductionReplayCheckpoint(sour
 function restore(source: Source) { return composition().create(JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1); }
 
 describe("production tutorial reconstructed-byte continuation", () => {
+  it("records a genuine baseline MOVE attempt for optional comparison without course effects", () => {
+    const source = composition().create(undefined), tutorial = source.replay.tutorial;
+    expect(tutorial.openPractice(1)).toBe(true); expect(tutorial.selectLesson("move")).toBe(true);
+    for (let tick = 1; tick <= 400 && !tutorial.session().coach?.canCompare; tick++) {
+      const x = tick <= 140 ? -1000 : 1000;
+      source.simulation.advanceOne([{ kind: "command", id: tick, tick, command: { type: "move", x, y: 0 } }]);
+    }
+    expect(tutorial.session().progress).toEqual([2, 2]);
+    expect(tutorial.session().coach?.canCompare).toBe(true);
+    const before = tutorial.captureSession();
+    expect(tutorial.coachAction("compare")).toBe(true);
+    expect(tutorial.captureSession()).toEqual(before);
+    const restored = restore(source);
+    expect(restored.replay.tutorial.capturePresentation()).toEqual(tutorial.capturePresentation());
+    expect(restored.replay.tutorialOutward.some((event) => event.startsWith("complete-course:") || event === "achievement-check")).toBe(false);
+  });
   function bossAttempt(bossId: "source" | "aldric" | "colossus" | "rootbound", phase: 1 | 2 | 3) {
     const source = composition().create(undefined);
     const retained: PracticeBossState = { bossId, phase, knowledge: "encountered-phase", defeated: false,

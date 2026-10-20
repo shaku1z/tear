@@ -263,6 +263,7 @@ export function captureProductionReplayCheckpoint(
   waveReward: ProductionWaveRewardRuntime,
   id: string,
   buildIdentity?: Omit<TearBuildIdentityV1, "configHash">,
+  presentation?: Readonly<{ omitGoldCoach?: boolean }>,
 ): ProductionReplayCheckpointCapture {
   const runtime = productionRuntimeState(replay);
   const stateForge = createLiveStateForgeAdapter({
@@ -297,7 +298,8 @@ export function captureProductionReplayCheckpoint(
     runtimeState: runtime.capture,
     particlesPresentation: createLiveParticlePresentationState(replay.effects, () => ({ effects: replay.configuration.value.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }), replay.cosmeticEmissionRandom),
     ...(replay.tutorial.captureSession() === undefined ? {} : {
-      tutorialPresentation: { capture: () => replay.tutorial.capturePresentation(), restore: (value) => { replay.tutorial.restorePresentation(value); } },
+      tutorialPresentation: { capture: () => { const saved = replay.tutorial.capturePresentation(); if (!presentation?.omitGoldCoach) return saved;
+        const independent = { ...saved }; delete independent.goldCoach; return independent; }, restore: (value) => { replay.tutorial.restorePresentation(value); } },
     }),
     restoreRuntimeState: runtime.restore,
     captureCinema: replay.world.context.cinema.captureState.bind(replay.world.context.cinema),

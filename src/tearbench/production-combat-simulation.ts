@@ -1,3 +1,4 @@
+import { liveTutorialCoachFrame } from "../app/live-tutorial-coach-frame";
 import type { AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import { createTearCombatSimulation } from "../gameplay/runtime/tear-combat-simulation";
 import type { ProductionReplayWorld } from "./production-world-factory";
@@ -38,8 +39,8 @@ export function createProductionCombatSimulation<State>(
       };
     },
     authoritative: {
-      actionPort: replay.input.actionPort,
-      snapshot: (tick, input) => { replay.tutorial.afterWorldStep(); return options.snapshot(tick, input); },
+      actionPort: { apply(input, tick, actions) { replay.tutorial.captureCoachCommands(actions.map((entry) => entry.command)); replay.input.actionPort.apply(input, tick, actions); } },
+      snapshot: (tick, input) => { replay.tutorial.afterWorldStep(liveTutorialCoachFrame(replay.tutorial, tick, replay.world.state, core.combatEntityRuntime, replay.stage.index), input.snapshot()); return options.snapshot(tick, input); },
     },
   });
   const config = replay.configuration.value;

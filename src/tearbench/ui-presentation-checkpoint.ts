@@ -1,3 +1,4 @@
+import { parseTutorialCoachCheckpoint, type TutorialCoachCheckpoint } from "../gameplay/training/tutorial-ghost-coach";
 /** Portable presentation-only data. Never part of gameplay semantic projection. */
 export type UiHudPresentationCheckpoint = Readonly<{
   version: 1;
@@ -12,6 +13,7 @@ export type UiTutorialPresentationCheckpoint = Readonly<{
   coachIdle: number; coachDemoTime: number; helpVisible: boolean;
   annexSelector?: boolean;
   catalogSelector?: boolean; bossSelector?: boolean;
+  goldCoach?: TutorialCoachCheckpoint;
 }>;
 
 export function parseUiTutorialPresentationCheckpoint(value: unknown): UiTutorialPresentationCheckpoint | undefined {
@@ -20,7 +22,8 @@ export function parseUiTutorialPresentationCheckpoint(value: unknown): UiTutoria
   const data = value as Record<string, unknown>;
   const numbers = ["ghostTime", "anchorX", "coachIdle", "coachDemoTime"];
   const flags = ["evidencePulse", "helpVisible"];
-  if (data.version !== 1 || Object.keys(data).some((key) => !["version", "annexSelector", "catalogSelector", "bossSelector", ...numbers, ...flags].includes(key)) ||
+  const goldCoach = parseTutorialCoachCheckpoint(data.goldCoach);
+  if (data.version !== 1 || Object.keys(data).some((key) => !["version", "goldCoach", "annexSelector", "catalogSelector", "bossSelector", ...numbers, ...flags].includes(key)) ||
     (data.annexSelector !== undefined && typeof data.annexSelector !== "boolean") ||
     (data.bossSelector !== undefined && typeof data.bossSelector !== "boolean") ||
     (data.catalogSelector !== undefined && typeof data.catalogSelector !== "boolean") ||
@@ -29,6 +32,7 @@ export function parseUiTutorialPresentationCheckpoint(value: unknown): UiTutoria
   return Object.freeze({ version: 1, ghostTime: data.ghostTime as number, anchorX: data.anchorX as number,
     evidencePulse: data.evidencePulse as boolean, coachIdle: data.coachIdle as number,
     coachDemoTime: data.coachDemoTime as number, helpVisible: data.helpVisible as boolean,
+    ...(goldCoach === undefined ? {} : { goldCoach }),
     ...(data.annexSelector === undefined ? {} : { annexSelector: data.annexSelector }),
     ...(data.bossSelector === undefined ? {} : { bossSelector: data.bossSelector }),
     ...(data.catalogSelector === undefined ? {} : { catalogSelector: data.catalogSelector }) });

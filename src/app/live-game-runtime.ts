@@ -1,4 +1,4 @@
-import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
+import { liveTutorialCoachFrame } from "./live-tutorial-coach-frame"; import { createLiveBossPhasePractice } from "./live-boss-phase-practice"; import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../gameplay/run/boss-encounter";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./live-ghost-frame-recording"; import { createBrowserLiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
@@ -528,8 +528,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     },
     frame: frameContext, coordinator: coordinatorContext,
     authoritative: {
-      actionPort: liveInputAdapter.actionPort,
-      snapshot: (tick, input) => { TUT.afterWorldStep(); return projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
+      actionPort: { apply(input, tick, actions) { TUT.captureCoachCommands(actions.map((entry) => entry.command)); liveInputAdapter.actionPort.apply(input, tick, actions); } },
+      snapshot: (tick, input) => { TUT.afterWorldStep(liveTutorialCoachFrame(TUT, tick, hostState, combatRuntime, stageRuntime.index), input.snapshot()); return projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
         hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()); },
     },
   });

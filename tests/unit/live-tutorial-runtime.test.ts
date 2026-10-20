@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
 import { createLiveTutorialSessionActions } from "../../src/app/live-tutorial-session-actions";
@@ -54,13 +55,14 @@ describe("live tutorial runtime", () => {
     expect(completeCourse).not.toHaveBeenCalled(); expect(addProfileStat).not.toHaveBeenCalled();
   });
   it("owns tutorial state, spawning, stabilization and ghost presentation", () => {
+    const config = structuredClone(CONFIG); applyWeapon(config, "sword");
     const enemies = [{ kind: "charger", dead: false, tutDummy: true, hp: 10, maxHp: 100,
       stun: 0, x: 0, y: 0, hh: 20, contactDmg: 5 }];
     const tutorialEnemy = enemies[0];
     if (tutorialEnemy === undefined) throw new Error("tutorial fixture missing enemy");
     const drawGhost = vi.fn();
     const runtime = createLiveTutorialRuntime({
-      config: CONFIG, viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
+      config, viewportWidth: 1600, groundY: () => 700, skipPressed: () => false,
       movingLeft: () => false, movingRight: () => false,
       player: () => ({ onGround: true, vy: 0, dashTimer: 0, x: 400, facing: 1 }),
       bladeState: () => "held", enemies: () => enemies, playSound: vi.fn(),
@@ -72,6 +74,7 @@ describe("live tutorial runtime", () => {
     runtime.start();
     runtime.mark("moveL");
     runtime.update(1 / 60);
+    expect(runtime.demonstrate()).toBe(true); // Explicit requests, never idle-loop scenery.
     runtime.drawGhost();
 
     expect(runtime.active).toBe(true);
@@ -83,6 +86,7 @@ describe("live tutorial runtime", () => {
     expect(typeof runtime.step().d).toBe("string");
     runtime.stop();
     expect(runtime.captureSession()).toBeUndefined();
+    expect(runtime.capturePresentation().goldCoach).toBeUndefined();
     runtime.restoreSession(undefined); runtime.restorePresentation(undefined);
     expect(runtime.session()).toMatchObject({ phase: "inactive", helpVisible: false });
     expect(runtime.capturePresentation()).toMatchObject({ ghostTime: 0, coachDemoTime: 0, anchorX: 0 });

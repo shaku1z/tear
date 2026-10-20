@@ -4,6 +4,14 @@ export interface TutorialInputPrompt {
   readonly description: string;
   readonly keys: readonly string[];
 }
+/** Semantic gold edges are labelled by the active device, never baked into the trace. */
+export function tutorialGoldGlyphs(actions: readonly string[], mode: InputMode, gamepad: Pick<LegacyGamepad, "bindingLabel">): readonly string[] {
+  const keyboard: Readonly<Record<string, string>> = { left: "A", right: "D", up: "W", down: "S", jump: "SPACE", dash: "SHIFT", throw: "RMB", primary: "LMB", swing: "MOUSE SWING", aim: "MOUSE AIM" };
+  const touch: Readonly<Record<string, string>> = { left: "MOVE ←", right: "MOVE →", up: "MOVE ↑", down: "MOVE ↓", jump: "JUMP", dash: "DASH", throw: "THROW", primary: "HOLD", swing: "DRAG SWING", aim: "AIM" };
+  const pad: Readonly<Record<string, string>> = { left: "LS ←", right: "LS →", up: "LS ↑", down: "LS ↓", jump: gamepad.bindingLabel("jump"), dash: gamepad.bindingLabel("dash"), throw: gamepad.bindingLabel("throw"), primary: gamepad.bindingLabel("tether"), swing: "RS SWING", aim: "RS AIM" };
+  const labels = mode === "touch" ? touch : mode === "gamepad" ? pad : keyboard;
+  return actions.map((action) => labels[action] ?? action);
+}
 
 const keyboardPrompt = (description: string, keys: readonly string[]): TutorialInputPrompt =>
   ({ description, keys });

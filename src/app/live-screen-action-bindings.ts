@@ -36,7 +36,7 @@ export interface ScreenActionBindingPorts {
   readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
   readonly signIn: () => void; readonly signOut: () => void; readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void; readonly dispatchPlayground: (id: string) => void;
-  readonly tutorialAction?: (command: "open-practice" | "restart" | "select" | "help" | "demo" | "annexes" | "select-annex" | "catalog" | "select-enemy" | "bosses" | "select-boss", lessonId?: string) => void;
+  readonly tutorialAction?: (command: "open-practice" | "restart" | "select" | "help" | "demo" | "coach-rate" | "coach-compare" | "coach-diagnostic" | "annexes" | "select-annex" | "catalog" | "select-enemy" | "bosses" | "select-boss", lessonId?: string) => void;
   readonly library: LibraryScreenAdapters; readonly replay: ReplayScreenAdapter; readonly settings: SettingsRenameAdapters;
 }
 

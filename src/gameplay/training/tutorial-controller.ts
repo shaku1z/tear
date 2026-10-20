@@ -5,6 +5,7 @@ import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { createWeaponAnnex, recordWeaponAnnexEffect, TUTORIAL_WEAPON_ANNEXES, validateWeaponAnnex, weaponAnnexLesson, weaponAnnexTargets, type TutorialWeaponAnnexState } from "./tutorial-weapon-annexes";
 import { isPracticeEnemy, practiceEnemyLesson, updatePracticeEnemy, validatePracticeEnemy, type PracticeEnemyEntry, type PracticeEnemyState } from "./practice-enemy-catalog";
 import type { EnemyKind } from "../run/content-director";
+import type { TutorialCoachView, TutorialGoldDisplay } from "./tutorial-ghost-coach";
 
 export type TutorialMark =
   | "airHit" | "dash" | "deflect" | "jump" | "launch" | "moveL" | "moveR"
@@ -23,6 +24,7 @@ export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "
 type FieldEncounter = "charger" | "breath" | "mixed";
 interface TutorialPracticeOrigin { readonly kind: "durable-profile-completion"; readonly tutorialDone: number }
 export interface TutorialSessionView {
+  readonly coach?: TutorialCoachView;
   readonly practiceOnly?: boolean;
   readonly annexSelector?: boolean;
   readonly annex?: Readonly<TutorialWeaponAnnexState>;
@@ -174,6 +176,7 @@ export type TutorialIntent =
   | Readonly<{ type: "achievement-check" }>;
 
 export interface TutorialGhostSnapshot {
+  readonly gold?: TutorialGoldDisplay;
   readonly visible: boolean;
   readonly demonstrating: boolean;
   readonly lesson: string;

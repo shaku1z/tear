@@ -39,6 +39,8 @@ export interface TearSimulationAdvanceLifecycle {
   shouldStep?(tick: number): boolean;
   /** Runs immediately before command capture/application for an executed tick. */
   beforeStep?(tick: number): void;
+  /** Immutable copies of the actual canonical command batch, before one-shot inputs are consumed. */
+  captureCommands?(tick: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   /** Runs only after the authoritative step completed for an executed tick. */
   afterStep?(tick: number): void;
   /** Runs after every attempted executed tick, including an exceptional one. */
@@ -91,7 +93,9 @@ export class TearSimulationRuntime<State> {
     if (lifecycle.shouldStep?.(tick) === false) return null;
     try {
       lifecycle.beforeStep?.(tick);
-      const result = this.#authoritativeStep.execute(tick, seconds, actionsForTick(tick));
+      const actions = actionsForTick(tick);
+      lifecycle.captureCommands?.(tick, Object.freeze(actions.map((action) => Object.freeze({ ...action, command: Object.freeze({ ...action.command }) }))));
+      const result = this.#authoritativeStep.execute(tick, seconds, actions);
       lifecycle.afterStep?.(tick);
       return result;
     } finally {

@@ -97,7 +97,7 @@ export function renderLegacyWorldFrame<Platform extends WorldPlatform>(ports: Le
   ports.drawEnvironment?.();
   renderEntityLayer(canvas, ports.enemies, ports.player, ports.entityOptions);
   for (const projectile of ports.projectiles) projectile.draw(canvas);
-  if (ports.tutorialActive) ports.drawTutorialGhost();
+  ports.drawTutorialGhost(); // The coach owns visibility, including optional completed Practice Lab comparison.
   ports.drawPlayer(); ports.drawBlade(); ports.drawEffects();
   ports.drawDebug(visible, painted);
   renderFloaters(canvas, ports.floaters);

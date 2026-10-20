@@ -111,7 +111,8 @@ export function createProductionReplayRun(
     mode, diff: plan.difficulty, diffDmg: plan.playerDamageMultiplier,
     diffHp: plan.scaling.enemyHp, diffCount: plan.scaling.enemyCount,
     coinMod: plan.scaling.coin, scoreMod: plan.scaling.score,
-    mods: newMods(), mult: 1, lifestealCd: 0,
+    // Match createRunSession's style baseline before any source snapshot exists.
+    mods: newMods(), combo: 0, comboTimer: 0, mult: 1, rank: "", lastTrick: "", lifestealCd: 0,
     weaponId, runSeed, voidSeed: deriveVoidSeed(runSeed), wave: 1, score: 0, waveKills: 0, wavePeak: 1, waveTime: 0, runTime: 0,
     spawnQueue: [], spawnTimer: 0, clearTimer: -1, waveLog: [],
     specialBlock: -1, specialsOffered: 0, reservedUpgrade: null,

@@ -1,3 +1,4 @@
+import { assertTutorialGoldFresh, tutorialGoldSourceFingerprint } from "./scripts/tutorial-gold-compatibility.mjs";
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
@@ -92,10 +93,11 @@ function applicationChunk(id: string): string | undefined {
   return undefined;
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const testBuild = mode === "test-standalone" || mode === "test-crazygames";
   const target = mode === "crazygames" || mode === "test-crazygames" ? "crazygames" : "standalone";
   const source = readSourceIdentitySync(process.cwd());
+  const tutorialGoldHash = command === "build" ? assertTutorialGoldFresh() : tutorialGoldSourceFingerprint().sourceHash;
   return {
     // CrazyGames unpacks uploads below a portal-owned path, so bundle assets
     // must be relative instead of rooted at the host origin.
@@ -134,6 +136,7 @@ export default defineConfig(({ mode }) => {
       })] : []),
     ],
     define: {
+      __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: JSON.stringify(tutorialGoldHash),
       __TEAR_TEST_BUILD__: JSON.stringify(testBuild),
       __TEAR_BUILD_REVISION__: JSON.stringify(source.revision),
       __TEAR_BUILD_SOURCE_STATE__: JSON.stringify(source.state),

@@ -1,3 +1,4 @@
+import { tutorialGoldGlyphs } from "../presentation/world/tutorial-input-prompts";
 import { createLiveWeaponRuntime } from "../gameplay/combat/live-weapon-runtime";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import { drawTutorialGhost } from "../presentation/tutorial-ghost";
@@ -139,7 +140,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     ...(options.resetTrainingCarry === undefined ? {} : { resetTrainingCarry: options.resetTrainingCarry }),
     selectedWeapon: () => options.state.selectedWeapon(),
     selectWeapon: (weapon) => { options.state.setSelectedWeapon(weapon); }, addFloater,
-    drawGhost: (snapshot) => { drawTutorialGhost(options.context, snapshot, {
+    drawGhost: (snapshot) => { drawTutorialGhost(options.context, snapshot.gold ? { ...snapshot, gold: { ...snapshot.gold, glyphs: tutorialGoldGlyphs(snapshot.gold.glyphs, d.Input.mode, d.PAD) } } : snapshot, {
       ink: d.THEME.ink, accent: d.CONFIG.colors.perfect, target: d.CONFIG.colors.charger,
       hostileShot: d.CONFIG.colors.enemyShot,
     }, { draw(context, text, x, y, color) { d.UI.tag(context, text, x, y, color, "center", d.UI.t.type.micro); } }); },
