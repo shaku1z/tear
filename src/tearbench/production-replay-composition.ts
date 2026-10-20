@@ -1,3 +1,4 @@
+import type { ProductionCombatPhaseOptions } from "./production-combat-phases";
 import type { GhostForkOriginV1 } from "../ghost/fork-origin";
 import type { GhostReplayRenderView } from "../ghost/replay-world";
 import type { ProductionReplayWorldOptions } from "./production-world-factory";
@@ -62,6 +63,8 @@ const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveR
 export type ProductionApplicationFrameConfirm = NonNullable<Parameters<InstanceType<typeof CinematicTimeline.Director>["update"]>[1]>;
 
 export interface ProductionGhostReplayCompositionOptions {
+  readonly observeStyle?: ProductionCombatPhaseOptions["observeStyle"];
+  readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly presentation?: ProductionReplayWorldOptions["presentation"];
   readonly renderView?: (world: ProductionReplayWorld, tick: number, screen: string) => GhostReplayRenderView;
   readonly seed: string;
@@ -500,13 +503,14 @@ export function createProductionGhostReplayComposition(
       if (staged !== undefined && replay.tutorial.captureSession()?.version !== 6) assertDetachedSourceVoidSupported(staged.run);
       let outcome: ProductionRunOutcomeRuntime | null = null;
       const core = createProductionCombatSimulation<CanonicalGameplayState>(replay, {
+        ...(options.observeStyle === undefined ? {} : { observeStyle: options.observeStyle }),
         ...(staged === undefined || staged.platforms.length === 0 ? {} : { platforms: staged.platforms }),
         updateWave: (seconds) => { waveReward?.update(seconds); },
         ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
         endRun: () => { options.endRun?.(); outcome?.controller.defeat(); },
         snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input),
       });
-      outcome = createProductionRunOutcomeRuntime(replay, options.gameplayEvents);
+      outcome = createProductionRunOutcomeRuntime(replay, options.gameplayEvents, options.observeTerminal);
       waveReward = createProductionWaveRewardRuntime(replay, {
         ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
         ...(options.recordWaveIntent === undefined ? {} : { recordIntent: options.recordWaveIntent }),

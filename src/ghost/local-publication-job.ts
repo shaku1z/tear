@@ -263,3 +263,6 @@ export class GhostLocalPublicationJobs {
     return cancelled;
   }
 }
+
+/** Read-only retained-record parsers; do not revalidate or mutate consent/job authority. */
+export { parseJob as parseGhostLocalPublicationJob, parseCustody as parseGhostPublicationCustody };

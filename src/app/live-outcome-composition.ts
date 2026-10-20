@@ -18,6 +18,7 @@ const recordingMetadata = (summary: RecordingSummary): Readonly<Record<string, u
 const storedRecordingMetadata = (summary: StoredRecordingSummary): Readonly<Record<string, unknown>> => ({ ...summary });
 
 export interface LiveOutcomeCompositionOptions {
+  readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly lifecycle: RunLifecycleController;
   readonly controllers: LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVictory>;
@@ -65,6 +66,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     d.GAMEPLAY_EVENTS, () => options.lifecycle.snapshot().sessionId,
   );
   createLiveRunOutcomeHost<ReplayPacket>({
+    ...(options.observeTerminal === undefined ? {} : { observeTerminal: options.observeTerminal }),
     snapshot: () => snapshotOutcomeRun(active()),
     displayName: () => d.Cloud.displayName(),
     stageIndex: options.stageIndex,

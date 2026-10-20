@@ -5,6 +5,7 @@ import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 import type { LiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
+import type { CareerPort } from "./ghost-career-controller";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
@@ -14,6 +15,8 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
+  readonly career?: CareerPort;
+  readonly enterCareerSource?: (id: string, command: string) => unknown;
   readonly dependencies: Dependencies;
   readonly renderers: Renderers;
   readonly canvas: CanvasRenderingContext2D;
@@ -35,6 +38,7 @@ export interface LibraryScreenServices {
 }
 
 export interface LibraryScreenAdapters {
+  readonly careerAction: (command: string, id?: string) => void;
   readonly categories: Readonly<Record<string, Category>>;
   readonly fallbackCategory: Category;
   readonly categoryOrder: readonly string[];
@@ -94,6 +98,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
   }
 
   const adapters: LibraryScreenAdapters = {
+    careerAction: (command, id) => { invoke((value) => { value.careerAction(command, id); }); },
     categories, fallbackCategory, categoryOrder: ABILITY_CATEGORY_ORDER, specialColor: SPECIAL_ABILITY_COLOR,
     abilityBadge: (upgrade) => abilityBadge(upgrade, services.dependencies.UI.t.color.unique, services.dependencies.UI.t.color.muted),
     renderCodex: () => { render((value) => { value.renderCodex(); }); },

@@ -29,7 +29,7 @@ export interface ScreenActionBindingPorts {
   readonly restoreFoundryBaseline?: (scheduleHash: string, intentHash: string) => void;
   readonly promoteFoundry?: (scheduleHash: string, intentHash: string) => void;
   readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
-  readonly openGhostLab: (destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence") => void;
+  readonly openGhostLab: (destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career") => void;
   readonly openGhostPublication: (id: string) => void; readonly grantGhostPublication: () => void; readonly runGhostPublicationOnce: () => void; readonly cancelGhostPublication: () => void;
   readonly openGhostSupport: (id: string) => void; readonly createGhostSupport: () => void;
   readonly loadOwnGhostCapsules: () => void; readonly recoverOwnGhostCapsule: (id: string) => void; readonly closeOwnGhostCatalog: () => void;
@@ -102,6 +102,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.compareGhostCapsule": (action) => { ports.library.compareGhostCapsule(action.id); },
     "profile.openGhostComparison": () => { ports.library.openGhostComparison(); },
     "profile.repairGhostCapsule": (action) => { ports.library.repairGhostCapsule(action.id); },
+    "career.control": (action) => { ports.library.careerAction(action.command, action.id); },
     "profile.pickGhostArchive": () => { ports.ghostFiles.pickArchive(); },
     "profile.reselectGhostArchive": (action) => { ports.ghostFiles.pickArchive(action.id); },
     "profile.restoreGhostArchive": (action) => { ports.ghostFiles.restoreArchive(action.id, action.revision); },

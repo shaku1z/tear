@@ -84,6 +84,13 @@ export function createLiveScreenPresentationComposition(
     ...options.library, renderers: renderer,
     enterReplay: (record, from) => replay.enter(record, isLegacyScreen(from) ? from : "profile"),
     enterGhostTheater: (id) => replay.enterGhostCapsule(id, "profile"),
+    enterCareerSource: async (id, command) => {
+      if (command === "download") { options.actions.ghostFiles.downloadArchive(id); return; }
+      if (command === "publish") { options.actions.openGhostPublication(id); return; }
+      const result = await replay.enterGhostCapsule(id, "profile");
+      if (result.kind === "refused") throw new Error(result.detail);
+      if (command === "coach") replay.openCoach(); else if (command === "challenge") replay.openChallenges();
+    },
     enterGhostComparison: (ids) => replay.enterGhostComparison(ids, "profile"),
   });
   const settings: SettingsRenameAdapters = createLiveSettingsRenameAdapters({

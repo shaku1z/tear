@@ -1,3 +1,4 @@
+import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-archive";
 import type { GhostCoachHistoryView } from "../../ghost/coach-history";
 import type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
@@ -170,6 +171,7 @@ export interface ProfileScreenView {
   readonly records?: readonly { readonly mode: string; readonly difficulty: string; readonly wave: string; readonly time: string; readonly score: string; readonly accent?: string }[];
   readonly journey?: { readonly biomes: readonly ChoiceView[]; readonly bosses: readonly ChoiceView[] };
   readonly emptyMessage?: string;
+  readonly career?: Readonly<{ usage?: CareerUsage; status: "idle" | "loading" | "ready" | "failed"; indexing: boolean; message: string; query: CareerQuery; rows: readonly CareerRow[]; selected: CareerRow | undefined; confirming: boolean; retained: number; known: number; total: number; page: number; pages: number }>;
   readonly archive?: GhostArchiveOperationView;
   readonly ownerRecovery?: GhostOwnerRecoveryView;
 }
@@ -311,7 +313,7 @@ export interface GhostLabScreenView {
   readonly id: "ghostlab";
   readonly subtitle: string;
   readonly routes: readonly Readonly<{
-    readonly id: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence";
+    readonly id: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career";
     readonly label: string;
     readonly detail: string;
   }>[];

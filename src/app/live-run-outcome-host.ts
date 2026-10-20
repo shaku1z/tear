@@ -9,6 +9,7 @@ import { LivePendingFinaleController, type PendingFinalePlayer, type PendingFina
 interface BestRecord { readonly wave: number; readonly score: number; readonly time: number }
 
 export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
+  readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly snapshot: () => OutcomeRunState;
   readonly displayName: () => string;
   readonly stageIndex: () => number;
@@ -96,6 +97,7 @@ export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
     storePreparedVictory: context.storePreparedVictory,
     stopClipper: context.stopClipper,
     terminate: context.terminate,
+    ...(context.observeTerminal === undefined ? {} : { observeTerminal: context.observeTerminal }),
     publishTerminal: context.publishTerminal,
     saveBest: context.saveBest,
     best: context.best,

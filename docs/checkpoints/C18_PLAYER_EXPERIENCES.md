@@ -34,3 +34,10 @@ Complete. Trusted local Ghost truth now supports challenges, media creation, tra
 ## Decision
 
 Promote C18. Begin C19 cloud publication, verification, privacy, and moderation.
+
+
+The historical in-memory `GhostCareerArchive` scaffold is not the durable Career
+product. The normal Profile/GhostLab Career route, source-bound native observations,
+retained visual-only compatibility and local retention/deletion contract are tracked
+in [C37](C37_COACH_PRACTICE_FOUNDATION.md#durable-career-archive-native-career-v1).
+Historical missing measurements remain unknown.

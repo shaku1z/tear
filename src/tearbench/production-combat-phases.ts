@@ -1,3 +1,4 @@
+import type { LiveStyleAchievementOptions } from "../gameplay/scoring/live-style-achievement-runtime";
 import { bindRunDnaShot, runDnaObserver } from "../gameplay/runtime/run-dna-observer";
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
 import { GFX, THEME } from "../config/game-config";
@@ -27,6 +28,7 @@ import type { ProductionReplayWorld } from "./production-world-factory";
  * persist device output.
  */
 export interface ProductionCombatPhaseOptions {
+  readonly observeStyle?: LiveStyleAchievementOptions<never>["observeStyle"];
   /** Defaults to the replay world's arena; hydration may supply its own platforms. */
   readonly platforms?: readonly unknown[];
   /** The production wave update, when the caller wants live content spawning. */
@@ -88,6 +90,7 @@ export function createProductionCombatPhases(
     lowGraphics: () => GFX.low,
   });
   const style = createLiveStyleAchievementRuntime({
+    ...(options.observeStyle === undefined ? {} : { observeStyle: options.observeStyle }),
     run: () => world.state.run() as never,
     player: () => player(),
     enemies: () => world.state.enemies() as never,

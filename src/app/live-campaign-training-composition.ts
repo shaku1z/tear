@@ -1,3 +1,4 @@
+import type { LiveStyleHostServices } from "./live-style-host";
 import { tutorialGoldGlyphs } from "../presentation/world/tutorial-input-prompts";
 import { createLiveWeaponRuntime } from "../gameplay/combat/live-weapon-runtime";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
@@ -30,6 +31,7 @@ type Controllers = LiveRunControllerRegistry<GameRun, ReplayPacket, PreparedVict
 type Cinema = InstanceType<GameRuntimeDependencies["Cinematics"]["Director"]>;
 
 export interface LiveCampaignTrainingOptions {
+  readonly observeStyle?: LiveStyleHostServices["observeStyle"];
   readonly persistentEffects?: () => boolean;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
@@ -179,6 +181,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
   });
 
   style = createLiveStyleHost({
+    ...(options.observeStyle === undefined ? {} : { observeStyle: options.observeStyle }),
     ...(options.persistentEffects === undefined ? {} : { persistentEffects: options.persistentEffects }),
     dependencies: d, entities: options.entities, state: options.state, tutorial: training.tutorial,
     captureGhost: (trick, x, y, importance) => {

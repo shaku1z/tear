@@ -1,3 +1,4 @@
+import type { LiveStyleAchievementOptions } from "../gameplay/scoring/live-style-achievement-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { LiveGameHostState } from "./live-game-host-state";
 import type { LiveWorldEntityConstructionPort } from "./live-world-entity-factory";
@@ -6,6 +7,7 @@ import { createLiveStyleAchievementRuntime } from "../gameplay/scoring/live-styl
 import { isTutorialMark } from "../gameplay/training/tutorial-controller";
 
 export interface LiveStyleHostServices {
+  readonly observeStyle?: LiveStyleAchievementOptions<never>["observeStyle"];
   readonly persistentEffects?: () => boolean;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: Pick<LiveWorldEntityConstructionPort, "createProjectile">;
@@ -30,6 +32,7 @@ export function createLiveStyleHost(services: LiveStyleHostServices) {
   const achievementCheck = () => { if (persistent()) d.styleAchievementPersistence.checkAndSave(); };
   const profileMax = (stat: string, value: number) => { if (persistent()) d.profileStatsPersistence.max(stat, value); };
   return createLiveStyleAchievementRuntime({
+    ...(services.observeStyle === undefined ? {} : { observeStyle: services.observeStyle }),
     persistentEffects: persistent, run: () => state.run(), player, enemies: () => state.enemies(),
     moving: () => d.Input.left() || d.Input.right(), tuning: () => d.CONFIG.trick,
     colors: () => d.CONFIG.colors, ghostRecording: () => d.GHOST.recording(),

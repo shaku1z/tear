@@ -57,10 +57,10 @@ describe("live style host persistence adapter", () => {
   });
   it("keeps restored-mode Coach practice style math while refusing all outward persistence", async () => {
     const actual = await vi.importActual<typeof StyleAchievementModule>("../../src/gameplay/scoring/live-style-achievement-runtime");
-    const writes: string[] = []; let practice = true;
+    const writes: string[] = []; const observed = vi.fn(); let practice = true;
     const run = { mode: "campaign", runTime: 12, clearTimer: 0, combo: 0, comboTimer: 0, lastTrick: "", mult: 1, rank: "", wavePeak: 1 };
     const player = { x: 30, y: 40, onGround: false };
-    createLiveStyleHost({ persistentEffects: () => !practice,
+    createLiveStyleHost({ persistentEffects: () => !practice, observeStyle: observed,
       dependencies: { CONFIG: { trick: { pts: { parry: 15 }, variety: 1.5, decay: 4, drainRate: 10, hitLoss: .3, tiers: [] }, colors: {} },
         Input: { left: () => false, right: () => false, buzz: () => undefined }, GHOST: { recording: () => false },
         META: { level: () => 0 }, DAILY: { bump: () => { writes.push("daily"); } },
@@ -74,6 +74,7 @@ describe("live style host persistence adapter", () => {
     runtime.addStyle("parry"); runtime.achievements.parry(); runtime.achievements.onKill(); runtime.achievements.stageDone(); runtime.check();
     expect(run.combo).toBe(22.5); expect(run.mode).toBe("campaign"); expect(writes).toEqual([]); expect(runtime.tracks()).toBe(false);
     practice = false; runtime.addStyle("parry"); runtime.achievements.parry(); runtime.check();
+    expect(observed).toHaveBeenCalledWith("parry", expect.objectContaining({ combo: 22.5 }), expect.objectContaining({ combo: 37.5 }), expect.objectContaining({ pts: { parry: 15 } }));
     expect(run.combo).toBe(37.5); expect(runtime.tracks()).toBe(true);
     expect(writes).toContain("profile-add"); expect(writes).toContain("profile-max"); expect(writes).toContain("daily"); expect(writes).toContain("check/save");
   });

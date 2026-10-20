@@ -1,4 +1,7 @@
+import type { CareerPort } from "./ghost-career-controller";
+import { legacyCareerRow } from "../ghost/career-archive";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
+import { createGhostCareerController } from "./ghost-career-controller";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { BOSS_ROSTER } from "../gameplay/run/content-director";
@@ -38,6 +41,8 @@ export interface LibraryScreenServices {
   readonly ease: (value: number) => number;
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
+  readonly career?: CareerPort;
+  readonly enterCareerSource?: (id: string, command: string) => unknown;
   readonly ghostVault: GhostVaultLibraryPort;
   readonly ownerRecovery?: Pick<LiveGhostOwnerRecoveryController, "snapshot" | "close">;
   readonly enterReplay: (record: unknown, from: string) => boolean;
@@ -52,6 +57,7 @@ export interface LibraryScreenAdapters {
   readonly specialColor: string;
   readonly abilityBadge: (upgrade: GameRuntimeDependencies["UPGRADES"][number]) => Readonly<{ label: string; color: string }>;
   readonly renderCodex: () => void;
+  readonly careerAction: (command: string, id?: string) => void;
   readonly renderProfile: () => void;
   readonly renderAchievements: () => void;
   readonly renderLeaderboards: () => void;
@@ -76,13 +82,23 @@ export interface LibraryScreenAdapters {
 
 export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenServices): LibraryScreenAdapters {
   const d = services.dependencies, colors = d.CONFIG.colors;
+  const careerPort = services.career;
+  const career = careerPort ? createGhostCareerController({ ...careerPort,
+    list: async (signal) => [...await careerPort.list(signal), ...d.VAULT.index().map(legacyCareerRow)],
+    current: async (entry) => entry.kind === "legacy-visual" ? d.VAULT.index().some((row) => row.id === entry.id && legacyCareerRow(row).entry.manifestHash === entry.manifestHash) : careerPort.current(entry),
+    annotate: async (entry, notes, tags, retention) => { if (entry.kind !== "legacy-visual") return careerPort.annotate(entry, notes, tags, retention);
+      if (tags.length || !["recent", "pinned"].includes(retention)) throw new Error("Visual-only legacy recordings support original PIN controls; canonical tags and retention are unavailable.");
+      const raw = d.VAULT.index().find((row) => row.id === entry.id); if (!raw || legacyCareerRow(raw).entry.manifestHash !== entry.manifestHash || !d.VAULT.pin(entry.id, retention === "pinned")) throw new Error("Legacy recording changed or original pin limit reached"); },
+    remove: async (entry, notes) => { if (entry.kind !== "legacy-visual") return careerPort.remove(entry, notes); const raw = d.VAULT.index().find((row) => row.id === entry.id);
+      if (!raw || legacyCareerRow(raw).entry.manifestHash !== entry.manifestHash) throw new Error("Legacy recording changed"); d.VAULT.remove(entry.id); },
+  }) : undefined;
   const categories: Readonly<Record<string, Category>> = Object.freeze({
     offense: { name: "OFFENSE", color: colors.charger }, throw: { name: "THROW", color: colors.bomber },
     parry: { name: "PARRY", color: colors.perfect }, mobility: { name: "MOBILITY", color: colors.ranged },
     resilience: { name: "RESILIENCE", color: colors.deflected }, utility: { name: "UTILITY", color: colors.armored },
   });
   const fallbackCategory = categories.utility ?? { name: "UTILITY", color: colors.armored };
-  const profileTabs = [["bests", "BESTS"], ["replays", "REPLAYS"], ["vault", "VAULT"], ["stats", "STATS"]] as const;
+  const profileTabs = [["bests", "BESTS"], ["replays", "REPLAYS"], ["vault", "VAULT"], ["career", "CAREER"], ["stats", "STATS"]] as const;
   const leaderboardTabs = [["global", "GLOBAL"], ["feed", "FEED"]] as const;
   const difficultyHeat: Readonly<Record<string, string | null>> = {
     easy: "#2f9e6b", normal: "#13c4d6", hard: "#e0a326", extreme: null, onehit: "#b06cff",
@@ -181,7 +197,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     services.renderers.codex(result.view);
   };
   const renderProfile = (): void => {
-    profileTab = services.stepTab(profileTabs, profileTab, () => { services.setScroll(0); profileMessage = ""; services.ownerRecovery?.close(); });
+    if (profileTab === "career") career?.open();
+    profileTab = services.stepTab(profileTabs, profileTab, () => { services.setScroll(0); profileMessage = ""; services.ownerRecovery?.close(); if (profileTab !== "career") career?.close(); });
     let ghostVault = services.ghostVault.snapshot();
     if (profileTab === "vault" && ghostVault.status === "idle") {
       services.ghostVault.refresh();
@@ -236,7 +253,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     const ownerRecovery = profileTab === "vault" ? services.ownerRecovery?.snapshot() : undefined;
     const maximumScroll = ownerRecovery?.catalogVisible === true ? Math.max(0, ownerRecovery.entries.length * 96 - (services.height - 110 - 390)) : result.maximumScroll;
     services.setScroll(services.clamp(services.scroll(), 0, maximumScroll));
-    services.renderers.profile({ ...result.view, ...(ownerRecovery === undefined ? {} : { ownerRecovery }),
+    services.renderers.profile({ ...result.view, ...(profileTab === "career" && career ? { career: career.snapshot() } : {}), ...(ownerRecovery === undefined ? {} : { ownerRecovery }),
       ...(ownerRecovery?.catalogVisible === true ? { canScrollUp: services.scroll() > 0, canScrollDown: services.scroll() < maximumScroll } : {}),
       ...(profileTab === "vault" && ghostVault.archive !== undefined ? { archive: ghostVault.archive } : {}) });
   };
@@ -311,7 +328,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     cycleCodexSort: () => { codexSort = codexSort === "category" ? "name" : codexSort === "name" ? "type" : "category"; services.setScroll(0); },
     inspectCodexAbility: (id) => { if (codexTab !== "abilities") return; const upgrade = d.UPGRADES.find((entry) => entry.id === id);
       const count = 1 + (upgrade?.tiers?.length ?? 0); if (count > 1) codexTierView[id] = ((codexTierView[id] ?? 0) + 1) % count; },
-    selectProfileTab: (id) => { services.ownerRecovery?.close(); profileTab = id; services.setScroll(0); profileMessage = ""; }, setProfileMessage: (message) => { profileMessage = message; },
+    careerAction: (command, id) => { if (command === "suspend") career?.close(); else if (command === "select" && id) career?.select(id); else if (["watch", "coach", "challenge", "download", "publish"].includes(command)) { void career?.sourceAction((source) => { if (career.snapshot().selected?.entry.kind === "legacy-visual") { if (command !== "watch") throw new Error("This tool requires a canonical capsule"); replayLibrary.watch(source, "profile"); return undefined; } else return services.enterCareerSource?.(source, command); }); } else career?.control(command); },
+    selectProfileTab: (id) => { if (id !== "career") career?.close(); services.ownerRecovery?.close(); profileTab = id; services.setScroll(0); profileMessage = ""; }, setProfileMessage: (message) => { profileMessage = message; },
     selectAchievementCategory: (id) => { achievementFilter = id; services.setScroll(0); },
     selectLeaderboardTab: (id) => { leaderboardTab = id; services.setScroll(0); leaderboardMessage = ""; },
     selectLeaderboardBoard: (id) => { const [kind, value = ""] = id.split(":"); if (kind === "mode") leaderboardMode = value;

@@ -1,3 +1,4 @@
+import { GhostCareerStore } from "./career-archive-store";
 import { GhostDoctor } from "./ghost-doctor";
 import { GhostVaultKnowledgeLibraries, type GhostVaultKnowledgeLibraryInventory } from "./durable-knowledge-libraries";
 import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
@@ -54,7 +55,7 @@ export async function maintainGhostVault(
     throw new RangeError("Ghost Vault maximum bytes must be a non-negative safe integer");
   }
   await options.beforeQuota?.(vault);
-  const evictedCapsuleIds = await vault.enforceQuota(maximumBytes, options.retention ?? {});
+  const evictedCapsuleIds = await vault.enforceQuota(maximumBytes, { ...await new GhostCareerStore(vault.backend()).retention(), ...options.retention });
   const remaining = await manifests(vault);
   const doctor = new GhostDoctor(vault);
   const checkedAt = (options.now ?? (() => new Date().toISOString()))();

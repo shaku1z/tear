@@ -1,10 +1,13 @@
+import { createCareerArchiveRenderer } from "./career-archive";
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
 import { backControl, ellipsize, replayRow, scrollHint, tabs } from "./screen-primitives";
 
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
   const { ui } = context;
+  const career = createCareerArchiveRenderer(context);
 
   function profile(view: ProfileScreenView): void {
+    if (view.career) { career(view.career); return; }
     const { canvas } = context;
     ui.title(canvas, "PROFILE", context.width / 2, 92, ui.t.type.h1);
     canvas.fillStyle = "#b06cff"; canvas.globalAlpha = context.enterAmount;

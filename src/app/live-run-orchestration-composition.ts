@@ -33,6 +33,7 @@ type TrainingHost = LiveTrainingHost;
 type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
 
 export interface LiveRunOrchestrationOptions {
+  readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
   readonly state: LiveGameHostState;
@@ -177,6 +178,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     d, options.achievementCheck, (won) => { options.controllers.api.finishRecording(won); },
   );
   createLiveOutcomeComposition({
+    ...(options.observeTerminal === undefined ? {} : { observeTerminal: options.observeTerminal }),
     dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
     environment: options.environment,
     run: options.run, player: options.player, stageIndex: () => stage.index,

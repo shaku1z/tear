@@ -253,3 +253,76 @@ progression services. Child playback rebuilds every endpoint from the admitted
 origin; later archived quit-confirmation keyframes retain their original bytes
 and clock bindings without becoming restore authority. Nested recorded forks
 are explicitly refused. Guidance stays inside the rendered challenge panel.
+
+
+## Durable Career Archive (native Career v1)
+
+Profile → CAREER and GhostLab → CAREER ARCHIVE open the whole retained local
+catalog. The catalog is metadata-first; one cancellable module worker sequentially
+reads and verifies canonical recordings, writes source-root/manifest/projector-bound
+derived indexes and leaves malformed or unavailable history visible with unknown
+facts. Leaving the route terminates enrichment; late results cannot replace a new
+selection. Navigation never runs Vault maintenance, repairs or quota eviction.
+Retained Ghost2 recordings are separately labeled visual-only, have no canonical
+root or native measurements, and use their original playback, deletion and pin
+limits. Only history actually retained on this device is available.
+
+The search dialog exposes all eighteen §71.12 filters: date, mode, difficulty,
+weapon, wave, outcome, build category, accepted ability/technique, boss, score,
+damage, verification, recorded human/bot attribution, tags, pin, recorded sharing,
+resume and game version. Empty fields mean any; unknown means unavailable.
+Numeric ranges use `min..max`, dates accept inclusive calendar-day ranges, and tags
+can require multiple comma-separated labels. Local residence does not imply human
+authorship. The archive has a paginated all-runs view and the nine career views:
+personal-best timeline, first clears, best by weapon, comparable boss clear-time
+change, favorite builds, near misses, style milestones, longest survival and Run
+DNA history. Category comparisons bind source gameplay build; temporal views use
+parsed timestamps and expose only recorded coverage, not human skill claims.
+
+Fresh ordinary recordings passively capture independently versioned Career result
+witnesses outside canonical snapshots/RNG. Loadout categories count distinct owned
+upgrade IDs using the captured source catalog; stack counts and tiers remain
+separate, all dominant ties are shown, and an empty known loadout is unupgraded.
+Accepted authored style uses, combo/multiplier peaks and ranks retain source tuning
+and authored rank order. Ability search also includes the validated native Run DNA
+maneuvers actually used, independently of newer Career style-witness coverage;
+available but unused capabilities are excluded. Boss clear comparisons require an exact identified spawn
+loadout and no intervening loadout choices, matching encounter/variant, mode,
+difficulty, weapon, source build/catalog and loadout. They report first recorded
+clear to the best strictly later clear, raw 120 Hz ticks and sample count, including
+intro time. They do not infer why elapsed time changed. A near miss means native
+defeat with a pre-cleanup living, non-dying boss in committed phase three at
+`0 < HP <= 10% maxHP`; other near-miss interpretations are unavailable. Ordinary
+abandonment captures a genuine endpoint too, without inventing defeat or victory.
+Old capsules lacking these witnesses retain unknown values; legacy analyzers and
+Run DNA formulas are unchanged.
+
+Tags and retention are mutable local settings separate from immutable capsules.
+Pin, milestone, diagnostic and imported retention use existing source-protection
+markers; exact-player annotations win over automatic enrichment policy. Newly
+indexed first clears, recorded bests and style milestones receive milestone holds;
+validated matching explicit cold-file imports receive imported holds. Temporary
+and recent sources feed the existing quota owner in that order. Foreign holds,
+repair ancestry, shared chunks, changed source manifests and stale note revisions
+remain guarded at final deletion/annotation transactions. Explicit local deletion
+removes the selected local recording/history and unreferenced chunks only; it never
+claims remote deletion. Metadata navigation does not enforce quota. The view shows
+recorded compressed chunk bytes, protected chunk bytes and browser usage/quota
+when the browser exposes them; pending encoder bytes, per-profile allocation and
+asset/analysis cache measurements remain explicitly unavailable. This slice does
+not add automatic preview-cache eviction, remote cloud stubs or a profile quota
+estimator.
+
+Recorded sharing is a read-only join of strictly parsed matching publication job,
+custody and transport acknowledgement. Finalized public/unlisted, finalized
+private, queued and unknown remain distinct; upload intent alone is not sharing.
+This join neither creates consent nor contacts a service. Career → Theater/Coach/
+Challenge/Download/Publish retains each existing owner/admission/consent gate;
+Theater return preserves the Career query and selection. Cloud-only recordings
+without a retained local source are not fabricated.
+
+Focused evidence: `ghost-career-archive.test.ts` covers native witness projection,
+old/visual-only availability, all-history pagination, durable notes/holds, actual
+final-CAS source replacement, protected deletion refusal and late-result
+cancellation; directly affected outcome/style and renderer controls preserve the
+existing owners. Normal-build browser acceptance is pending integration.

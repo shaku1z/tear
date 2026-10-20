@@ -17,6 +17,7 @@ export interface ProductionRunOutcomeRuntime {
 export function createProductionRunOutcomeRuntime(
   replay: ProductionReplayWorld,
   gameplayEvents?: TearGameplayEventPort,
+  observeTerminal?: (outcome: "defeat" | "victory") => void,
 ): ProductionRunOutcomeRuntime {
   const outward: string[] = [];
   const active = () => replay.world.state.run() as never as Record<string, unknown>;
@@ -24,6 +25,7 @@ export function createProductionRunOutcomeRuntime(
     ? () => undefined
     : createTearTerminalRunFactPublisher(gameplayEvents, () => replay.world.lifecycle.snapshot().sessionId);
   const port: LiveOutcomeControllerPort = {
+    ...(observeTerminal === undefined ? {} : { observeTerminal }),
     snapshot: () => snapshotOutcomeRun(active() as never),
     replaceWaveLog: (log) => { active().waveLog = [...log]; },
     waveActive: () => replay.world.lifecycle.isWaveActive,

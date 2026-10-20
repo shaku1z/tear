@@ -1607,3 +1607,21 @@ separate. Focused controller/service/Vault and UI controls cover this local
 wiring; the parent owns fresh negative normal-browser navigation evidence.
 Positive real-account retrieval, cross-device/outage acceptance, deployment and
 account deletion remain unverified or separate work.
+
+
+### Durable local Career Archive
+
+Profile CAREER / GhostLab CAREER ARCHIVE provide metadata-first whole retained
+history, eighteen searchable filters, nine evidence-bounded career views and
+paginated details. Canonical recordings enrich sequentially in one cancellable
+worker; retained Ghost2 recordings remain visual-only under their original owners.
+Career v1 passively records source-catalog loadouts, authored style/rank peaks,
+exact spawn loadouts and pre-cleanup terminal boss witnesses. Native Run DNA and
+legacy formula semantics are preserved. Mutable tags/retention are separate from
+immutable sources; existing protection/shared-chunk/CAS owners govern pin and local
+deletion. Publication status comes from matching retained declarations and finalized
+acknowledgements, never residence or upload intent. Missing historical facts, remote
+stubs and unavailable quota dimensions remain explicit. See the
+[C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#durable-career-archive-native-career-v1).
+Focused causal unit controls exist; fresh normal-build browser acceptance remains
+pending integration.

@@ -14,6 +14,7 @@ type TerminalOutcome = "defeat" | "victory";
 type BestRecord = Readonly<{ wave: number; score: number; time: number }>;
 
 export interface LiveOutcomeControllerPort {
+  observeTerminal?(outcome: TerminalOutcome, run: OutcomeRunState): void;
   snapshot(): OutcomeRunState;
   replaceWaveLog(log: OutcomeRunState["waveLog"]): void;
   waveActive(): boolean;
@@ -55,6 +56,7 @@ export class LiveRunOutcomeController {
     let run = this.#port.snapshot();
     this.#port.replaceWaveLog(appendDefeatWave(run.waveLog, this.#port.waveActive(), run));
     run = this.#port.snapshot();
+    this.#port.observeTerminal?.("defeat", run);
     this.#port.terminate("defeat");
     this.#record({ type: "outcome.lifecycle-terminated", outcome: "defeat" });
     this.#port.publishTerminal("defeat", run);
@@ -82,6 +84,7 @@ export class LiveRunOutcomeController {
     const prepared = this.#prepareResult(run);
     // Completion is established at the scored/progression boundary. This must
     // precede the victory recording intent, which closes the V3 sidecar.
+    this.#port.observeTerminal?.("victory", run);
     this.#port.publishTerminal("victory", run);
     this.#record({ type: "outcome.terminal-published", outcome: "victory", run });
     const achievementTracking = this.#achievementTracking();

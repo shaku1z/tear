@@ -136,3 +136,6 @@ export class GhostPublicationTransport {
   }
   async cancel(jobId: string, _now: string): Promise<GhostPublicationTransportStateV1> { void _now; const job = await this.#o.jobs.cancel(jobId); const persistedState = await this.state(jobId), state = persistedState ?? initial(job); if (state.terminal !== undefined) return state; try { const response = await this.#request(jobId, `/v1/uploads/${encodeURIComponent(job.source.capsuleId)}/abort`, { method: "POST" }, false); if (!response.ok && response.status !== 404) throw new Error(`publication abort failed: ${String(response.status)}`); } catch { /* explicit local cancellation remains durable even when remote abort is unavailable */ } return this.#save(freeze({ ...state, terminal: "cancelled", terminalMetadata: { status: "cancelled-by-player" } }), persistedState); }
 }
+
+/** Read-only retained acknowledgement parser; never starts transport. */
+export { parse as parseGhostPublicationTransportState };

@@ -3,7 +3,7 @@ import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from "../../
 import type { OutcomeRunState, PreparedVictory } from "../../src/gameplay/run/outcome-planner";
 import { createOutcomeChronologyJournal } from "../../src/gameplay/run/outcome-chronology-journal";
 
-function createHarness(options: Readonly<{ achievementTracking?: boolean; timeline?: string[] }> = {}) {
+function createHarness(options: Readonly<{ achievementTracking?: boolean; timeline?: string[]; terminal?: (outcome: string) => void }> = {}) {
   let run: OutcomeRunState = {
     mode: "endless", diff: "normal", wave: 4, score: 1200, runTime: 42,
     waveTime: 8, waveKills: 3, wavePeak: 2, waveLog: [], weaponId: "sword",
@@ -14,6 +14,7 @@ function createHarness(options: Readonly<{ achievementTracking?: boolean; timeli
   const trace = (event: string): void => { options.timeline?.push(event); };
   const chronology = createOutcomeChronologyJournal();
   const port: LiveOutcomeControllerPort = {
+    observeTerminal: (outcome) => { options.terminal?.(outcome); },
     snapshot: () => run,
     replaceWaveLog: (waveLog) => { run = { ...run, waveLog }; events.push("append-wave"); },
     waveActive: () => true,
@@ -46,6 +47,10 @@ function createHarness(options: Readonly<{ achievementTracking?: boolean; timeli
 }
 
 describe("LiveRunOutcomeController", () => {
+  it("exposes Career defeat before native cleanup, once at the real endpoint", () => {
+    const timeline: string[] = []; const h = createHarness({ timeline, terminal: (outcome) => timeline.push(`career:${outcome}`) });
+    h.controller.defeat(); expect(timeline.indexOf("career:defeat")).toBeLessThan(timeline.indexOf("returned:terminate:defeat")); expect(timeline.filter((x) => x === "career:defeat")).toHaveLength(1);
+  });
   it("persists an active final wave and terminates before presenting defeat", () => {
     const { controller, events } = createHarness();
     const result = controller.defeat();

@@ -24,6 +24,7 @@ export type ScreenAction =
   | { readonly type: "codex.cycleSort" }
   | { readonly type: "codex.inspect"; readonly id: string }
   | { readonly type: "shop.buy"; readonly id: string }
+  | { readonly type: "career.control"; readonly command: string; readonly id?: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }
   | { readonly type: "profile.watchGhostCapsule"; readonly id: string }
@@ -108,10 +109,10 @@ export type ScreenAction =
   | { readonly type: "game-agent.open" }
   | { readonly type: "run-monitor.open" }
   | { readonly type: "run-monitor.control"; readonly command: "start" | "pause" | "resume" | "stop" }
-  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career" }
   | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }
