@@ -119,3 +119,25 @@ Source branch to the existing campaign-victory browser journey; parent execution
 and visual inspection remain pending for this source. This does not establish a
 natural sixty-wave Campaign, ten-minute recording, device capacity or full R07
 closure.
+
+
+Source restoration preserves the frozen run-owned void graph after the actual
+finale owner replaces the collision roster with stage-zero floors. The codec
+validates this retired graph's full platform definitions, chunk/lane aliases,
+recent generator metadata and ingress inside their own declared data scope.
+It grants no collision identities: active/descent and actual player, boss and
+projectile references still require current actors. The exception requires the
+validated Campaign restoration binding, stage zero, frozen/inactive/nonforming
+scroll and cleared descent. Unknown/conflicting local aliases refuse. Live
+Source death positions may retain their existing bounded color field; these
+original bytes are preserved rather than normalized or migrated.
+
+The original external native parent/companion pair from1145316b supplied the
+fail-first input: nineteen frozen records remained after six floor actors
+replaced them. The unchanged encoded pair now passes full detached finale
+admission and continuation. A small direct shared Source descent/stream →
+constructed finale launch → restoration/restore → completion case passes with
+negative live/history reference controls. This is not a natural sixty-wave
+Campaign claim. The original browser caller now yields to native RAF after each
+finale application frame without changing its900-frame/input/wait limits;
+fresh normal paired-file/Theater browser acceptance remains parent-owned.

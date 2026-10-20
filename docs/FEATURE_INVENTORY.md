@@ -891,6 +891,11 @@ frozen evidence record.
    campaign-victory browser branch is constructed final-wave evidence pending
    parent execution. Paired portable export, natural full-Campaign/ten-minute
    acceptance and broader R07 closure remain open.
+   Retired Source restoration snapshots now validate frozen run-owned graph
+   aliases without installing them as collision actors; active/live references
+   stay strict. The unchanged external native finale pair passes continuation,
+   and the direct shared-owner restoration/refusal controls pass. Parent fresh
+   paired-file/Theater browser acceptance remains pending.
    Schema-two C30 checkpoints require explicit held aim magnitude and reject older
    or missing frontiers before replacement. Canonical input adds an optional nonfull
    magnitude while preserving full-scale hashes. Fresh Ghost receipts explicitly

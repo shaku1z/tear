@@ -1,3 +1,4 @@
+import { sourceVoidHistoryReferences } from "./source-void-history-references";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
@@ -164,8 +165,10 @@ export function createDataOnlyCodec(id: TearCodecId): TearStateCodec {
       indexIdentitiesAndReferences(world, id, cloned);
     },
     resolveReferences(world) {
-      const issues: TearCodecIssue[] = [];
+      const history = id === "tear.run.v1" ? sourceVoidHistoryReferences(world) : undefined;
+      const issues: TearCodecIssue[] = [...(history?.issues ?? [])];
       for (const [source, target] of world.references) {
+        if (history?.local.has(source)) continue;
         if (source.startsWith(`${id}:`) && !world.entityIds.has(target) && !isCanonicalReferenceTarget(source, target)) {
           issues.push({ codecId: id, path: `references.${source}`, message: `reference target ${target} does not exist` });
         }
@@ -275,7 +278,8 @@ export interface TearIdentityGraph {
 export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph {
   const identities = new Map<string, Readonly<{ codecId: TearCodecId; path: string }>>();
   const references = new Map<string, string>();
-  const issues: TearCodecIssue[] = [];
+  const history = sourceVoidHistoryReferences(world);
+  const issues: TearCodecIssue[] = [...history.issues];
   const visit = (codecId: TearCodecId, value: TearCodecValue, path: string): void => {
     if (Array.isArray(value)) {
       const entries = value as readonly TearCodecValue[];
@@ -311,6 +315,7 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
     if (value !== undefined) visit(codecId, value, "$");
   }
   for (const [source, target] of references) {
+    if (history.local.has(source)) continue;
     if (isCanonicalReferenceTarget(source, target) || identities.has(target) || world.entityIds.has(target)) continue;
     const separator = source.indexOf(":");
     const codecId = source.slice(0, separator) as TearCodecId;

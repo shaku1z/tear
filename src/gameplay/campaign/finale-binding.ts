@@ -19,7 +19,11 @@ export function parseFinaleConfig(value: unknown): FinaleConfig {
   if (names.some((key) => !number(config[key], 0, 100000))) throw new TypeError("Invalid finale configuration");
   return structuredClone(config) as unknown as FinaleConfig;
 }
-function point(value: unknown): void { const p = data(value, ["x", "y"]); if (!number(p.x) || !number(p.y)) throw new TypeError("Invalid finale point"); }
+function point(value: unknown, sourceDeath = false): void {
+  // Live finalBossDeath retains the Source presentation color with its position.
+  const p = data(value, sourceDeath ? ["x", "y", "color"] : ["x", "y"]);
+  if (!number(p.x) || !number(p.y) || (p.color !== undefined && (typeof p.color !== "string" || p.color.length > 128))) throw new TypeError("Invalid finale point");
+}
 
 /** Strict fresh behavior data. Missing historical controller state is never inferred. */
 export function parseFinaleBinding(value: unknown): FinaleBindingV1 {
@@ -32,7 +36,7 @@ export function parseFinaleBinding(value: unknown): FinaleBindingV1 {
     || !number(input.score, 0) || typeof input.formattedTime !== "string" || input.formattedTime.length > 128
     || typeof input.perfectColor !== "string" || input.perfectColor.length > 128
     || [input.reducedMotion, input.lowGraphics].some((v) => v !== undefined && typeof v !== "boolean")) throw new TypeError("Invalid finale input");
-  point(input.player); if (input.death !== undefined) point(input.death); if (input.rememberedDeath !== undefined) point(input.rememberedDeath);
+  point(input.player); if (input.death !== undefined) point(input.death, true); if (input.rememberedDeath !== undefined) point(input.rememberedDeath, true);
   const viewport = data(input.viewport, ["width", "height"]);
   if (!number(viewport.width, 1, 16384) || !number(viewport.height, 1, 16384)) throw new TypeError("Invalid finale viewport");
   const state = data(saved.state, ["origin", "anchors", "severed", "phase", "relicProgress", "relicSounds", "restore", "landed", "cutFlash", "restoring", "restoredColor", "restoredGravity", "tearClosed", "prepared"]);

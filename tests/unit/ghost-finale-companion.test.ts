@@ -90,6 +90,50 @@ describe("source-linked finale continuation", () => {
       expect(projectProductionReplayCanonicalState(resumed.replay, resumed.simulation.scheduler.tick, resumed.simulation.input))
         .toEqual(projectProductionReplayCanonicalState(source.replay, source.simulation.scheduler.tick, source.simulation.input));
     }
+    // Constructed launch after real descent/stream activity, not a natural Source
+    // kill. The actual finale owner freezes history and restores the real floors.
+    Object.assign(source.replay.configuration.value.finale, { silence: 0.02, wound: 0.02, relics: 0.02, cutAutoAt: 0.02, cutAutoStep: 0.02, restorationMin: 0.02, epilogueReveal: 0.02, rewardHold: 0.02 });
+    source.replay.finale.runtime.start();
+    for (let index = 0; index < 180 && source.replay.finale.runtime.captureBinding()?.state.restoring !== true; index++) step(source, 1);
+    expect(source.replay.finale.runtime.captureBinding()?.state.restoring).toBe(true);
+    const landing = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "source-history-restoration");
+    const history = stableVerificationHash((landing.snapshot.state["tear.run.v1"] as Record<string, unknown>).voidScroll);
+    const landed = createProductionGhostReplayComposition({ seed: landing.snapshot.seed, inputSnapshots: new Map([[landing.snapshot.tick, landing.input]]) }).create(landing.snapshot);
+    expect(landed.replay.stage.platforms).toHaveLength(6);
+    expect(stableVerificationHash(landed.replay.world.state.run()?.voidScroll)).toBe(history);
+    const bad = structuredClone(landing.snapshot), badRun = bad.state["tear.run.v1"] as Record<string, unknown>;
+    const graph = badRun.voidScroll as { chunks: { platforms: { platformId: string }[] }[] };
+    const alias = graph.chunks[0]?.platforms[0]; if (alias === undefined) throw new Error("Source graph fixture missing");
+    alias.platformId = "unknown-history-platform";
+    expect(() => createProductionGhostReplayComposition({ seed: "source-negative" }).create(bad)).toThrow(/Source.*alias|reference target/);
+    const conflict = structuredClone(landing.snapshot);
+    const conflictRun = conflict.state["tear.run.v1"] as { voidScroll: { chunks: { platforms: { x: number }[] }[] } };
+    const position = conflictRun.voidScroll.chunks[0]?.platforms[0]; if (position === undefined) throw new Error("Source graph fixture missing");
+    position.x += 1;
+    expect(() => createProductionGhostReplayComposition({ seed: "source-negative" }).create(conflict)).toThrow(/Source.*alias/);
+    const missing = structuredClone(stream.snapshot); (missing.state["tear.platform.v1"] as unknown[]).pop();
+    expect(() => createProductionGhostReplayComposition({ seed: "source-negative" }).create(missing)).toThrow(/reference target/);
+    const support = structuredClone(landing.snapshot);
+    (support.state["tear.player.v1"] as Record<string, unknown>).supportPlatform = { platformId: "unknown-live-platform" };
+    expect(() => createProductionGhostReplayComposition({ seed: "source-negative" }).create(support)).toThrow(/reference target/);
+    for (let index = 0; index < 180; index++) { step(source, 1); step(landed, 1); expect(witness(landed)).toEqual(witness(source)); if (source.waveReward.screen() === "win") break; }
+    expect(source.waveReward.screen()).toBe("win");
+  });
+
+  it.skipIf(process.env.TEAR_FINALE_SOURCE_PAIR === undefined)("restores the unchanged original native Source/finale archive pair", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const file = process.env.TEAR_FINALE_SOURCE_PAIR; if (file === undefined) throw new Error("pair path unavailable");
+    const decoded: unknown = JSON.parse(await readFile(file, "utf8"));
+    const pair = decoded as Record<string, { manifestText: string; chunks: Record<string, string> }>;
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    for (const value of Object.values(pair)) { const manifest: unknown = JSON.parse(value.manifestText); await vault.importCapsule(JSON.stringify({ manifest, chunks: value.chunks })); }
+    const reader = new GhostCapsuleReader(vault), sources = await Promise.all(Object.keys(pair).map((id) => reader.read(id)));
+    const child = sources.find((value) => readGhostFinaleCompanion(value.manifest.provenance) !== undefined);
+    if (child === undefined) throw new Error("native companion missing");
+    const declaration = readGhostFinaleCompanion(child.manifest.provenance), parent = sources.find((value) => value.manifest.id === declaration?.parentId);
+    if (parent === undefined) throw new Error("native parent missing");
+    const playback = createGhostFinalePlayback(child, admitGhostFinaleCompanion(child, parent));
+    expect(playback.seekFrame(playback.positions.length - 1).result.tick).toBe(playback.positions.at(-1)?.tick);
   });
 
   it.each(["completion", "replacement", "newer-session"])("streams a real final-wave handoff with pause and %s lifetime", async (ending) => {

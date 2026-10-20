@@ -179,9 +179,10 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
     await page.keyboard.up("Enter");
     for (let frame = 0; frame < 900; frame++) {
       if (frame === 60) await page.keyboard.down("Enter");
-      const terminal = await page.evaluate(() => {
+      const terminal = await page.evaluate(async () => {
         const environment = window.__R07_FINALE_ENVIRONMENT__;
         environment.advanceApplicationFrame(1 / 60);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
         return environment.captureSnapshot("r07-finale-frame", "recorded-canonical").state["tear.ui.v1"].screen === "win";
       });
       if (terminal) break;
