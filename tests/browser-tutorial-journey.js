@@ -108,6 +108,9 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   assert.equal(practice.session.courseCompleted, true, "practice must retain the course completion guard");
   const appFrame = () => page.evaluate(() => window.__tutorialJourneyEnvironment.advanceApplicationFrame(1 / 120));
   const clickLabel = async (label) => {
+    // Class A owns rendering too; async menu transitions can settle after the prior frame.
+    await page.evaluate(() => { window.__TUTORIAL_COACH_TEXT__.length = 0; });
+    await appFrame();
     await page.waitForFunction((expected) => window.__TUTORIAL_COACH_TEXT__.some((entry) => entry.text === expected), label);
     const point = await page.evaluate((expected) => window.__TUTORIAL_COACH_TEXT__.findLast((entry) => entry.text === expected), label);
     await page.evaluate(() => { window.__TUTORIAL_COACH_TEXT__.length = 0; });
