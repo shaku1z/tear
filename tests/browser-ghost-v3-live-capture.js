@@ -14,7 +14,8 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     });
     for (let tick = 1; tick <= 240; tick += 1) {
       environment.step(tick === 1 ? [{ kind: "command", tick, id: 1, command: { type: "move", x: 1000, y: 0 } }]
-        : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: 1000, y: 0 } }] : []);
+        : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: 1000, y: 0 } }] : tick === 140 ? [{ kind: "command", tick, id: 3, command: { type: "weapon", intent: "throw", phase: "pressed" } }]
+        : tick === 180 ? [{ kind: "command", tick, id: 4, command: { type: "weapon", intent: "recall", phase: "pressed" } }] : []);
     }
     environment.pause();
     environment.resume();
@@ -76,7 +77,8 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     });
     for (let tick = 1; tick <= 240; tick += 1) {
       environment.step(tick === 1 ? [{ kind: "command", tick, id: 1, command: { type: "move", x: -1000, y: 0 } }]
-        : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: -1000, y: 0 } }] : []);
+        : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: -1000, y: 0 } }] : tick === 140 ? [{ kind: "command", tick, id: 3, command: { type: "weapon", intent: "throw", phase: "pressed" } }]
+        : tick === 180 ? [{ kind: "command", tick, id: 4, command: { type: "weapon", intent: "recall", phase: "pressed" } }] : []);
     }
     environment.pause();
     environment.resume();
@@ -102,7 +104,8 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
       });
       for (let tick = 1; tick <= 240; tick += 1) {
         environment.step(tick === 1 ? [{ kind: "command", tick, id: 1, command: { type: "move", x: number % 2 === 0 ? 1000 : -1000, y: 0 } }]
-          : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: number % 2 === 0 ? 1000 : -1000, y: 0 } }] : []);
+          : tick === 25 ? [{ kind: "command", tick, id: 2, command: { type: "dash", x: number % 2 === 0 ? 1000 : -1000, y: 0 } }] : tick === 140 ? [{ kind: "command", tick, id: 3, command: { type: "weapon", intent: "throw", phase: "pressed" } }]
+        : tick === 180 ? [{ kind: "command", tick, id: 4, command: { type: "weapon", intent: "recall", phase: "pressed" } }] : []);
       }
       environment.pause();
       environment.resume();
@@ -194,20 +197,25 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.ok(dnaTexts.some((text) => String(text).includes("UNAVAILABLE · no declared run-dna-metrics-v1 result")),
     "Run DNA inferred metrics instead of exposing the actual capsule declaration gap");
   await page.mouse.click(892, 854); // rendered C37 COACH control; it has no implicit baseline
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH · SELECTED VERIFIED PAIR"), undefined, { timeout: 10000 });
-  await page.waitForTimeout(180); // local Vault candidates arrive through the normal browser reader
-  await page.mouse.click(250, 212); // explicitly select the first displayed distinct local baseline
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("TARGET ") && String(text).includes("BASELINE ")),
-    undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH · YOUR SELECTED RUNS"), undefined, { timeout: 10000 });
+  await page.waitForTimeout(180);
+  await page.mouse.click(750, 189); // explicit first compatible local recording, no peer auto-selection
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/2 usable recordings")), undefined, { timeout: 30000 });
+  await page.mouse.click(445, 125); // RUNS
+  await page.mouse.click(750, 247); // select another distinct run for a three-recording distribution
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/3 usable recordings")), undefined, { timeout: 30000 });
   const coachTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(coachTexts.some((text) => String(text).includes("COACH · SELECTED VERIFIED PAIR")), "Coach panel did not render through Theater");
-  assert.ok(coachTexts.some((text) => String(text).startsWith("TARGET ") && String(text).includes("BASELINE ")),
-    "Coach did not surface its selected source IDs");
-  await page.mouse.click(734, 854); // visible PRACTICE launches the verified checkpoint child
+  assert.ok(coachTexts.some((text) => String(text).includes("CHRONOLOGICAL HISTORY")), "Coach did not render per-measure run history");
+  assert.ok(coachTexts.some((text) => String(text).includes("Count distribution:")), "Coach did not disclose count distribution");
+  assert.ok(coachTexts.some((text) => String(text).includes("OPEN RUN MOMENT") && String(text).includes("TICK 140")), "Coach omitted the actual identified native throw");
+  await page.mouse.click(555, 493); // VIEW MOMENT through normal source-owned seek
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("Current verified replay: TICK 140")), undefined, { timeout: 10000 });
+  await page.mouse.click(1040, 493); // PRACTICE BEFORE the cited event, strictly preceding checkpoint120
   await waitScreen("playing");
   const launchedPractice = await page.evaluate(() => window.__TEAR_GHOST_V3__.activePractice());
   assert.ok(Object.hasOwn(durableSourcesBeforeVisiblePractice, launchedPractice.sourceGhostId));
-  assert.equal(launchedPractice.id, `${launchedPractice.sourceGhostId}:practice:120:exact-practice`);
+  assert.equal(launchedPractice.id, `${launchedPractice.sourceGhostId}:practice:120:coach-assisted`);
+  assert.equal(launchedPractice.mode, "coach-assisted");
   assert.equal(typeof launchedPractice.sourceRootHash, "string");
   assert.equal(launchedPractice.forkTick, 120);
   assert.equal(launchedPractice.rankedEligible, false);

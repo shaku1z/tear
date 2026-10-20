@@ -1,3 +1,4 @@
+import type { GhostCoachHistoryView } from "../../ghost/coach-history";
 import type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
 export type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
@@ -204,13 +205,8 @@ export interface ReplayScreenView {
   /** C29 comparison is semantic source-simulation evidence, not output-device fidelity. */
   readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
-  /** C37 Coach is an explicit, local same-build comparison; missing domains stay unavailable. */
-  readonly coach?: Readonly<{
-    readonly targetId: string; readonly baselineId?: string; readonly buildId?: string; readonly provenanceHash?: string;
-    readonly candidates: readonly Readonly<{ id: string; enabled: boolean; detail: string }>[];
-    readonly findings: readonly Readonly<{ id: string; domain: string; detail: string; practiceAvailable: boolean }>[];
-    readonly unavailable: readonly string[];
-  }>;
+  /** Explicit selected-recording observations; no skill or accuracy inference. */
+  readonly coach?: GhostCoachHistoryView;
   /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
   readonly runDna?: Readonly<{
     readonly available: boolean; readonly formulaVersion: string; readonly evidenceCustody: string;

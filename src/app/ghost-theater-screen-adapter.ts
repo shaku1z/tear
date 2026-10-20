@@ -6,7 +6,8 @@ import type { GhostPracticeChild, GhostSeekResult } from "../ghost/replay-world"
 import type { ReplayScreenView } from "../presentation/screens/contracts";
 import type { LegacyAppScreen } from "./legacy-state-controller";
 import type { GhostPracticeLaunchResult } from "./ghost-practice-launch";
-import { projectGhostCoachPractice, type GhostCoachPracticeProjection } from "../ghost/coach-practice";
+import { ghostCoachCandidate } from "../ghost/coach-history";
+import { createGhostCoachHistoryController, type GhostCoachHistoryPort } from "./ghost-coach-history-controller";
 import { projectGhostRunDnaTheater } from "../ghost/run-dna-theater";
 import { createGhostStudioCutListFromTheater } from "../ghost/studio-cut-list-theater";
 import type { GhostStudioEditDecisionList } from "../ghost/player-experiences";
@@ -17,7 +18,7 @@ export interface GhostTheaterScreenServices {
   readonly width: () => number;
   readonly deltaSeconds: () => number;
   readonly launchPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
-  readonly loadCoachCandidates: () => Promise<readonly GhostReadCapsule[]>;
+  readonly coachHistory: GhostCoachHistoryPort;
 }
 
 export interface GhostTheaterScreenStatus {
@@ -39,8 +40,6 @@ interface GhostTheaterContext {
   fractionalTicks: number;
   message?: string;
   coachOpen: boolean;
-  coachCandidates: readonly GhostReadCapsule[];
-  coach: GhostCoachPracticeProjection | undefined;
   runDnaOpen: boolean;
   studioOpen: boolean;
   studioCutList: GhostStudioEditDecisionList | undefined;
@@ -60,17 +59,20 @@ function isSpeed(value: number): value is (typeof SPEEDS)[number] {
  */
 export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServices) {
   let context: GhostTheaterContext | undefined;
+  const history = createGhostCoachHistoryController(services.coachHistory);
 
-  const seek = (targetTick: number): void => {
-    if (context === undefined) return;
+  const seek = (targetTick: number): boolean => {
+    if (context === undefined) return false;
     const bounded = Math.max(0, Math.min(context.capsule.maxTick, Math.floor(targetTick)));
     try {
       context.result = context.session.seek(bounded);
       context.transport.seek(bounded);
       delete context.message;
+      return context.result.tick === bounded;
     } catch (error) {
       context.transport.pause();
       context.message = `Replay halted: ${error instanceof Error ? error.message : String(error)}`;
+      return false;
     }
   };
 
@@ -103,17 +105,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
       theater: true,
       practiceAvailable: currentContext.checkpoints.includes(current),
-      ...(currentContext.coachOpen ? { coach: Object.freeze({
-        targetId: currentContext.capsule.manifest.id,
-        ...(currentContext.coach === undefined ? {} : { baselineId: currentContext.coach.baselineId, buildId: currentContext.coach.buildId, provenanceHash: currentContext.coach.provenanceHash }),
-        candidates: currentContext.coachCandidates.filter((candidate) => candidate.manifest.id !== currentContext.capsule.manifest.id).map((candidate) => Object.freeze({
-          id: candidate.manifest.id, enabled: true, detail: candidate.manifest.recordingProfile.toUpperCase(),
-        })),
-        findings: (currentContext.coach?.findings ?? []).map((finding) => Object.freeze({ id: finding.id, domain: finding.domain,
-          detail: `${finding.suggestedDrill.title} · TICK ${String(finding.range.fromTick)}–${String(finding.range.toTick)}`,
-          practiceAvailable: currentContext.checkpoints.includes(current),
-        })), unavailable: currentContext.coach?.unavailable ?? Object.freeze(["select one distinct healthy same-build baseline"]),
-      }) } : {}),
+      ...(currentContext.coachOpen ? { coach: history.snapshot() } : {}),
       ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
       ...(currentContext.studioOpen ? { studioCutList: currentContext.studioCutList === undefined
         ? Object.freeze({ available: context.checkpoints.includes(current), ...(context.checkpoints.includes(current)
@@ -139,6 +131,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
 
   return Object.freeze({
     open(capsule: GhostReadCapsule, from: LegacyAppScreen): GhostTheaterOpenResult {
+      history.close();
       let mapped: ReturnType<typeof mapGhostCapsuleToReplayEnvelope>;
       try { mapped = mapGhostCapsuleToReplayEnvelope(capsule); }
       catch {
@@ -164,8 +157,6 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           infoVisible: false,
           fractionalTicks: 0,
           coachOpen: false,
-          coachCandidates: Object.freeze([]),
-          coach: undefined,
           runDnaOpen: false,
           studioOpen: false,
           studioCutList: undefined,
@@ -184,6 +175,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     exit(): LegacyAppScreen | undefined {
       const from = context?.from;
       context = undefined;
+      history.close();
       return from;
     },
     togglePause(): void {
@@ -220,34 +212,45 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     openCoach(): void {
       if (context === undefined) return;
-      context.coachOpen = true;
-      context.message = "Coach: select a distinct healthy local baseline.";
-      void services.loadCoachCandidates().then((candidates) => {
-        if (context !== undefined) context.coachCandidates = candidates;
-      }).catch(() => { if (context !== undefined) context.message = "Coach baseline list is unavailable in this browser."; });
+      delete context.message;
+      context.coachOpen = !context.coachOpen;
+      context.runDnaOpen = context.studioOpen = false;
+      context.transport.pause();
+      if (context.coachOpen) void history.open(ghostCoachCandidate(context.capsule.manifest)); else history.close();
     },
-    selectCoachBaseline(id: string): void {
+    selectCoachBaseline(id: string): void { if (context?.coachOpen) { delete context.message; void history.toggle(id); } },
+    controlCoach(command: "close" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section", delta: number): void {
       if (!context?.coachOpen) return;
-      const baseline = context.coachCandidates.find((candidate) => candidate.manifest.id === id);
-      if (baseline === undefined) { context.message = "Coach baseline is not available."; return; }
-      try { context.coach = projectGhostCoachPractice(context.capsule, baseline); context.message = "Coach findings use only the selected verified same-build pair."; }
-      catch (error) { context.coach = undefined; context.message = `Coach unavailable: ${error instanceof Error ? error.message : String(error)}`; }
+      if (command === "close") { context.coachOpen = false; history.close(); }
+      else if (command === "details") history.details();
+      else if (command === "sources") history.sources();
+      else history[command](delta);
     },
-    practiceCoachFinding(findingId: string): void {
-      if (context?.coach === undefined) return;
-      const finding = context.coach.findings.find((candidate) => candidate.id === findingId);
-      if (finding === undefined) return;
-      const tick = context.result.tick;
-      if (!context.checkpoints.includes(tick)) { context.message = "Coach practice requires the current verified checkpoint."; return; }
-      try {
-        const child = context.session.forkPractice(tick, "coach-assisted");
-        context.transport.pause();
-        const launched = services.launchPractice(child);
-        context.message = launched.ok ? `Coach practice launched for ${finding.domain}; it is unranked and non-persistent.` : launched.message;
-      } catch (error) { context.message = `Coach practice unavailable: ${error instanceof Error ? error.message : String(error)}`; }
+    viewCoachMoment(id: string): void {
+      const captured = context;
+      if (!captured?.coachOpen) return;
+      void history.action(id, (moment) => {
+        if (context !== captured) return;
+        captured.transport.pause();
+        if (seek(moment.tick) && captured.result.tick === moment.tick) captured.message = `Replay seek reached TICK ${String(moment.tick)}. Recorded facts are not a full visual-world rendering.`;
+      });
     },
-    toggleRunDna(): void { if (context !== undefined) context.runDnaOpen = !context.runDnaOpen; },
-    toggleStudio(): void { if (context !== undefined) context.studioOpen = !context.studioOpen; },
+    practiceCoachFinding(id: string): void {
+      const captured = context;
+      if (!captured?.coachOpen) return;
+      void history.action(id, (moment) => {
+        if (context !== captured || moment.priorTick === undefined || !captured.checkpoints.includes(moment.priorTick)) return;
+        try {
+          const child = captured.session.forkPractice(moment.priorTick, "coach-assisted");
+          captured.transport.pause();
+          const launched = services.launchPractice(child);
+          captured.message = launched.ok ? "Practice launched before the cited moment · unranked and non-persistent." : launched.message;
+          if (launched.ok) { history.close(); captured.coachOpen = false; }
+        } catch (error) { captured.message = `Practice unavailable: ${error instanceof Error ? error.message : String(error)}`; }
+      });
+    },
+    toggleRunDna(): void { if (context !== undefined) { context.runDnaOpen = !context.runDnaOpen; context.coachOpen = context.studioOpen = false; history.close(); } },
+    toggleStudio(): void { if (context !== undefined) { context.studioOpen = !context.studioOpen; context.coachOpen = context.runDnaOpen = false; history.close(); } },
     createStudioCutList(): void {
       if (context === undefined) return;
       const projected = createGhostStudioCutListFromTheater(context.capsule, context.session, context.result.tick);

@@ -1,5 +1,5 @@
 import type { LeaderboardsScreenView, ReplayScreenView, ScreenRenderContext } from "./contracts";
-import { backControl, chips, replayRow, scrollHint, tabs } from "./screen-primitives";
+import { backControl, ellipsize, chips, replayRow, scrollHint, tabs } from "./screen-primitives";
 import { REPLAY_EDITOR_ACTIONS } from "../../replay/surface-route";
 
 const LEADERBOARD_HUE = "#e0a326";
@@ -161,6 +161,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     canvas.textAlign = "right"; canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(12, true);
     canvas.fillText(`${view.elapsed} / ${view.duration}`, barX + barWidth, barY - 10); canvas.restore();
 
+    if (view.coach) { coachState(view); return; }
     const controlY = height - 66 - safe.b;
     context.enqueue({ x: 220 + safe.l, y: controlY, w: 64, h: 44, label: "|◀", action: { type: "replay.jumpChapter", direction: -1 } });
     context.enqueue({ x: 292 + safe.l, y: controlY, w: 96, h: 44, label: view.paused ? "▶" : "❚❚", action: { type: "replay.togglePause" } });
@@ -177,7 +178,6 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: width - 320 - safe.r, y: controlY, w: 200, h: 44, label: "‹  BACK", action: { type: "replay.exit" } });
     if (view.notice) ui.text(canvas, view.notice, width / 2, barY - 34, ui.t.type.caption, "center", ui.t.alpha.muted);
     if (view.infoVisible) replayInfo(view);
-    if (view.coach) coachState(view);
     if (view.runDna) runDnaState(view);
     if (view.studioCutList) studioCutListState(view);
   }
@@ -253,22 +253,85 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     const coach = view.coach;
     if (coach === undefined) return;
     const { canvas, safeInsets: safe } = context;
-    const panelWidth = Math.min(860, width - 80 - safe.l - safe.r), panelHeight = 340;
-    const x = width / 2 - panelWidth / 2, y = 90 + safe.t;
+    const panelWidth = Math.min(980, width - 48 - safe.l - safe.r);
+    const x = width / 2 - panelWidth / 2, y = 50 + safe.t;
+    const panelHeight = Math.min(650, height - y - 30 - safe.b), compact = panelHeight < 470;
     ui.panel(canvas, x, y, panelWidth, panelHeight); ui.accentStrip(canvas, x, y, panelWidth, REPLAY_CYAN);
-    ui.title(canvas, "COACH · SELECTED VERIFIED PAIR", width / 2, y + 38, ui.t.type.lead);
-    ui.text(canvas, `TARGET ${coach.targetId}  ·  BASELINE ${coach.baselineId ?? "SELECT ONE"}`, x + 24, y + 68, ui.t.type.micro, "left", ui.t.alpha.soft);
-    if (coach.buildId) ui.text(canvas, `BUILD ${coach.buildId}  ·  PROVENANCE ${coach.provenanceHash ?? "UNAVAILABLE"}`, x + 24, y + 88, ui.t.type.micro, "left", ui.t.alpha.muted);
-    coach.candidates.slice(0, 3).forEach((candidate, index) => { context.enqueue({ x: x + 24 + index * 270, y: y + 106, w: 252, h: 34,
-      label: `BASELINE ${candidate.id}`, enabled: candidate.enabled, selected: candidate.id === coach.baselineId,
-      action: { type: "replay.coach.selectBaseline", id: candidate.id } }); });
-    coach.findings.slice(0, 2).forEach((finding, index) => {
-      const rowY = y + 164 + index * 54;
-      ui.text(canvas, `${finding.domain.toUpperCase()} · ${finding.detail}`, x + 24, rowY + 18, ui.t.type.caption, "left", ui.t.alpha.soft);
-      context.enqueue({ x: x + panelWidth - 188, y: rowY - 4, w: 164, h: 34, label: "PRACTICE FINDING",
-        enabled: finding.practiceAvailable, action: { type: "replay.coach.practice", findingId: finding.id } });
-    });
-    coach.unavailable.slice(0, 2).forEach((entry, index) => { ui.text(canvas, `UNAVAILABLE · ${entry}`, x + 24, y + 286 + index * 18, ui.t.type.micro, "left", ui.t.alpha.muted); });
+    const text = (value: string, row: number, muted = false) => {
+      canvas.font = ui.font(ui.t.type.micro);
+      ui.text(canvas, ellipsize(canvas, value, panelWidth - 40), x + 20, y + row, ui.t.type.micro, "left", muted ? ui.t.alpha.muted : ui.t.alpha.soft);
+    };
+    const button = (label: string, column: number, row: number, command: "close" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section", delta = 0, enabled = true) => {
+      const w = (panelWidth - 52) / 4;
+      context.enqueue({ x: x + 20 + column * (w + 4), y: y + row, w, h: 30, label, enabled,
+        action: { type: "replay.coach.control", command, delta } });
+    };
+    text("COACH · YOUR SELECTED RUNS", 27);
+    text(view.notice ?? coach.message, 49);
+    button("RUNS", 0, 60, "sources"); button("DETAILS", 1, 60, "details", 0, coach.result !== undefined);
+    button(coach.busy ? "CANCEL" : "CLOSE", 3, 60, "close");
+    if (coach.selection || coach.result === undefined) {
+      text(`Open run + ${String(coach.selected.length)} selected · up to 8 total`, 113);
+      const start = coach.page;
+      const visible = Math.max(1, Math.min(3, Math.floor((panelHeight - 164) / (compact ? 36 : 58))));
+      coach.candidates.slice(start, start + visible).forEach((candidate, index) => {
+        const rowY = y + 124 + index * (compact ? 36 : 58);
+        if (rowY + 30 > y + panelHeight - 40) return;
+        context.enqueue({ x: x + 20, y: rowY, w: panelWidth - 40, h: 30,
+          label: `${coach.selected.includes(candidate.id) ? "✓ " : "+ "}${candidate.createdAt.slice(0, 19)} · ${candidate.id.slice(-20)}`, selected: coach.selected.includes(candidate.id),
+          action: { type: "replay.coach.selectBaseline", id: candidate.id } });
+        if (!compact) text(candidate.detail, 166 + index * 58, true);
+      });
+      if (coach.candidates.length === 0) text("No distinct compatible recordings available.", 151, true);
+      button("PREVIOUS", 0, panelHeight - 34, "page", -1, coach.page > 0);
+      button(`MORE ${String(coach.page + 1)}/${String(Math.max(1, coach.candidates.length))}`, 1, panelHeight - 34, "page", 1,
+        coach.page + visible < coach.candidates.length);
+      return;
+    }
+    const result = coach.result;
+    if (coach.details) {
+      const lines = [`${result.version} · evidence ${result.provenanceHash}`, `Shared window (${String(result.fromTick)}, ${String(result.toTick)}] · ${String(result.ticks)} recorded ticks · 120 Hz`,
+        ...result.sources.map((source) => `${source.id} · ${source.detail} · root ${source.root}`), ...result.limitations, ...(coach.measurement?.history.map((row) => `${row.id}: first8 witness IDs ${row.eventIds.slice(0, 8).join(", ") || "none"}; unclassified ${row.unclassifiedEventIds.slice(0, 8).join(", ") || "none"}`) ?? [])];
+      const perPage = Math.max(1, Math.min(10, Math.floor((panelHeight - 154) / 26))), offset = coach.rows;
+      lines.slice(offset, offset + perPage).forEach((line, index) => { text(line, 115 + index * 26, true); });
+      button("PREVIOUS", 0, panelHeight - 34, "rows", -1, coach.rows > 0);
+      button("MORE", 1, panelHeight - 34, "rows", 1, offset + perPage < lines.length);
+      return;
+    }
+    const metric = coach.measurement;
+    if (metric === undefined) return;
+    if (compact) {
+      button("COUNTS", 0, 100, "section", 0); button("HISTORY", 1, 100, "section", 1); button("MOMENTS", 2, 100, "section", 2);
+    }
+    if (!compact || coach.section === 0) {
+    const countsY = compact ? 151 : 113;
+    text(`${metric.label} · n=${String(metric.sampleCount)}/${String(result.sources.length)} usable recordings`, countsY);
+    text(`Count distribution: min ${metric.minimum === null ? "unavailable" : String(metric.minimum)} · median ${metric.median === null ? "unavailable" : String(metric.median)} · max ${metric.maximum === null ? "unavailable" : String(metric.maximum)}`, countsY + 23);
+    text(`Same window (${String(result.fromTick)}, ${String(result.toTick)}] · ${String(result.ticks)} recorded ticks. No skill rating.`, countsY + 45, true);
+    button("‹ MEASURE", 0, countsY + 59, "metric", -1); button("MEASURE ›", 1, countsY + 59, "metric", 1);
+    }
+    if (!compact || coach.section === 1) {
+      const historyY = compact ? 151 : 229;
+      text("CHRONOLOGICAL HISTORY · count / per 1,000 recorded ticks", historyY);
+      metric.history.slice(coach.rows, coach.rows + 3).forEach((row, index) => {
+        text(`${new Date(row.createdAt).toISOString().slice(0, 19)}Z · ${row.count === null ? `unavailable (${String(row.knownCount)} known; ${String(row.unclassified)} unclassified)` : String(row.count)} / ${row.per1000Ticks?.toFixed(2) ?? "unavailable"} · ${row.id === result.targetId ? "OPEN RUN" : row.id.slice(-12)}`, historyY + 25 + index * 23);
+      });
+      button("‹ HISTORY", 0, historyY + 90, "rows", -1, coach.rows > 0);
+      button("HISTORY ›", 1, historyY + 90, "rows", 1, coach.rows + 3 < metric.history.length);
+    }
+    if (compact && coach.section !== 2) return;
+    const momentY = compact ? 151 : 382, cited = coach.cited;
+    text(cited === undefined ? "No identified cited moment in the open run for this measure." : `OPEN RUN MOMENT ${String(coach.moment + 1)}/${String(coach.momentCount)} · TICK ${String(cited.tick)}`, momentY);
+    if (cited !== undefined && momentY + 76 < panelHeight) {
+      button("‹ MOMENT", 0, momentY + 10, "moment", -1, coach.moment > 0);
+      button("MOMENT ›", 1, momentY + 10, "moment", 1, coach.moment + 1 < coach.momentCount);
+      context.enqueue({ x: x + 20, y: y + momentY + 46, w: (panelWidth - 44) / 2, h: 30, label: "VIEW MOMENT",
+        action: { type: "replay.coach.viewMoment", id: cited.id } });
+      context.enqueue({ x: x + 24 + (panelWidth - 44) / 2, y: y + momentY + 46, w: (panelWidth - 44) / 2, h: 30,
+        label: "PRACTICE BEFORE", enabled: cited.priorTick !== undefined, action: { type: "replay.coach.practice", findingId: cited.id } });
+      if (!compact) text(cited.priorTick === undefined ? "No strictly preceding verified checkpoint." : `Practice begins at checkpoint ${String(cited.priorTick)} · unranked · no saved progression`, momentY + 100, true);
+      if (!compact) text(`Current verified replay: ${view.elapsed}`, momentY + 124, true);
+    }
   }
 
   function runDnaState(view: ReplayScreenView): void {

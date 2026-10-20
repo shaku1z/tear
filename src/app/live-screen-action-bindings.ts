@@ -131,6 +131,8 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.seekTo": (action) => { ports.replay.seekToFraction(action.fraction); },
     "replay.jumpChapter": (action) => { ports.replay.jumpChapter(action.direction); }, "replay.restart": () => { ports.replay.restart(); },
     "replay.practice": () => { ports.replay.practice(); },
+    "replay.coach.viewMoment": (action) => { ports.replay.viewCoachMoment(action.id); },
+    "replay.coach.control": (action) => { ports.replay.controlCoach(action.command, action.delta); },
     "replay.coach.open": () => { ports.replay.openCoach(); },
     "replay.coach.selectBaseline": (action) => { ports.replay.selectCoachBaseline(action.id); },
     "replay.coach.practice": (action) => { ports.replay.practiceCoachFinding(action.findingId); },

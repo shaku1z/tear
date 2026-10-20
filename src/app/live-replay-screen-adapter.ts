@@ -1,7 +1,8 @@
+import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-history";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyAppScreen } from "./legacy-state-controller";
-import { listBrowserGhostCapsuleManifests, readBrowserGhostCapsule } from "../ghost/browser-capsule-vault";
+import { readBrowserGhostCapsule } from "../ghost/browser-capsule-vault";
 import { createGhostComparisonScreenAdapter } from "./ghost-comparison-screen-adapter";
 import { createGhostTheaterScreenAdapter } from "./ghost-theater-screen-adapter";
 import type { GhostPracticeChild } from "../ghost/replay-world";
@@ -35,12 +36,14 @@ export interface ReplayScreenAdapter {
   readonly practice: () => void;
   readonly openCoach: () => void; readonly selectCoachBaseline: (id: string) => void;
   readonly practiceCoachFinding: (findingId: string) => void;
+  readonly viewCoachMoment: (id: string) => void;
+  readonly controlCoach: (command: "close" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section", delta: number) => void;
   readonly toggleRunDna: () => void;
   readonly toggleStudio: () => void; readonly createStudioCutList: () => void;
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
 }
 
-type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "toggleRunDna" | "toggleStudio" | "createStudioCutList">;
+type LegacyReplayScreenAdapter = Omit<ReplayScreenAdapter, "enterGhostCapsule" | "enterGhostComparison" | "practice" | "openCoach" | "selectCoachBaseline" | "practiceCoachFinding" | "viewCoachMoment" | "controlCoach" | "toggleRunDna" | "toggleStudio" | "createStudioCutList">;
 type DeferredAction = (adapter: LegacyReplayScreenAdapter) => void;
 
 /** Route-triggered replay facade; heavyweight world playback loads only when a replay is opened. */
@@ -49,12 +52,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   let runtime: LegacyReplayScreenAdapter | undefined;
   const theater = createGhostTheaterScreenAdapter({ render: services.renderers.replay, width: () => services.width,
     deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice,
-    loadCoachCandidates: async () => {
-      const manifests = await listBrowserGhostCapsuleManifests(services.browserIndexedDb);
-      const ids = manifests.filter((manifest) => manifest.status === "complete").map((manifest) => manifest.id);
-      const values = await Promise.all(ids.map((id) => readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined)));
-      return Object.freeze(values.filter((value): value is NonNullable<typeof value> => value !== undefined));
-    } });
+    coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });
   const comparison = createGhostComparisonScreenAdapter({ render: services.renderers.replay });
   let active: "legacy" | "theater" | "comparison" | undefined;
   let loading: Promise<void> | undefined;
@@ -157,6 +155,8 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     openCoach: () => { if (active === "theater") theater.openCoach(); },
     selectCoachBaseline: (id) => { if (active === "theater") theater.selectCoachBaseline(id); },
     practiceCoachFinding: (findingId) => { if (active === "theater") theater.practiceCoachFinding(findingId); },
+    viewCoachMoment: (id) => { if (active === "theater") theater.viewCoachMoment(id); },
+    controlCoach: (command, delta) => { if (active === "theater") theater.controlCoach(command, delta); },
     toggleRunDna: () => { if (active === "theater") theater.toggleRunDna(); },
     toggleStudio: () => { if (active === "theater") theater.toggleStudio(); },
     createStudioCutList: () => { if (active === "theater") theater.createStudioCutList(); },

@@ -61,6 +61,8 @@ export type ScreenAction =
   | { readonly type: "replay.restart" }
   | { readonly type: "replay.practice" }
   | { readonly type: "replay.coach.open" }
+  | { readonly type: "replay.coach.viewMoment"; readonly id: string }
+  | { readonly type: "replay.coach.control"; readonly command: "close" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section"; readonly delta: number }
   | { readonly type: "replay.coach.selectBaseline"; readonly id: string }
   | { readonly type: "replay.coach.practice"; readonly findingId: string }
   | { readonly type: "replay.runDna.toggle" }
