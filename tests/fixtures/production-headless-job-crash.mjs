@@ -8,7 +8,7 @@ import { readSourceIdentitySync } from "../../scripts/release-artifact.mjs";
 import { executionToolchainBinding } from "../../scripts/tearbench-runtime-identity.mjs";
 
 // Real subprocess supervisor. Artifacts and SQLite live outside the source fingerprint.
-const [path, requestPath, stopAt = "none"] = process.argv.slice(2);
+const [path, requestPath, stopAt = "none", protocol = "v1"] = process.argv.slice(2);
 if (requestPath === undefined) {
   // Adversarial transport fixture, never evidence of a production episode.
   const fault = process.env.TEAR_C30_TEST_WORKER_FAULT;
@@ -40,7 +40,8 @@ if (requestPath === undefined) {
   process.on("disconnect", () => process.exit(0));
 } else {
 const store = new ProductionHeadlessJobStore({ path, leaseMilliseconds: 1000,
-  limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 } });
+  limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 },
+  ...(protocol === "v2" ? { checkpoint: { intervalTicks: 32, maxBytes: 4_194_304 } } : {}) });
 let spawns = 0;
 const send = (message) => { if (process.connected) process.send(message); };
 const dispatcher = new ProductionHeadlessWorkerDispatcher({ store, maxWorkers: 1, deadlineMilliseconds: 60_000,

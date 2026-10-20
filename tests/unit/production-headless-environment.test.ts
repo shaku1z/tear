@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createGhostV3, GhostProductionReplayWorld, type GhostReplayTrident } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { captureProductionReplayCheckpoint } from "../../src/tearbench/production-replay-composition";
 import type { GameAction } from "../../src/input/game-action";
+import { validateProductionHeadlessCheckpointRequest } from "../../src/tearbench/production-headless-environment";
 import {
   createProductionGhostReplayComposition,
   createProductionHeadlessEnvironment,
@@ -49,6 +50,19 @@ function normalizeLegacyFixtureRevision(value: unknown): unknown {
   return clone;
 }
 
+function expectLegacyTerminalFixture(fixture: unknown, terminal: ProductionHeadlessTerminalArtifact | undefined): void {
+  if (terminal === undefined) throw new Error("missing actual terminal");
+  const reference = normalizeLegacyFixtureRevision(fixture) as ProductionHeadlessTerminalArtifact;
+  const actual = structuredClone(terminal);
+  if (reference.bootstrap.applicationFramePolicy === undefined) {
+    // These two retained fixtures predate declared frame-policy metadata. Assert
+    // the current policy separately; this does not attribute frames to history.
+    expect(actual.bootstrap.applicationFramePolicy).toEqual({ version: 1, kind: "generated-step-intro", secondsPerStep: 1 / 120 });
+    Reflect.deleteProperty(actual.bootstrap, "applicationFramePolicy");
+  }
+  expect(actual).toEqual(reference);
+}
+
 function bindCheckpoint(value: ProductionHeadlessCheckpoint): ProductionHeadlessCheckpoint {
   const delivery = { nextSequence: value.delivery.nextSequence, pendingEvents: value.delivery.pendingEvents };
   return { ...value, delivery: { ...delivery, hash: stableVerificationHash({ ...value, delivery }) } };
@@ -69,6 +83,56 @@ function expectContinuation(actual: ProductionHeadlessCheckpoint, source: Produc
 }
 
 describe("C30 production headless environment", () => {
+  it("captures checkpoint target/content from the actual injected bootstrap identity", () => {
+    vi.stubGlobal("__TEAR_BUILD_REVISION__", "d".repeat(40));
+    vi.stubGlobal("__TEAR_BUILD_TARGET__", "source-worker");
+    vi.stubGlobal("__TEAR_BUILD_SOURCE_FINGERPRINT__", "e".repeat(64));
+    const environment = createProductionHeadlessEnvironment();
+    try {
+      environment.reset(scenario); environment.step([]);
+      const checkpoint = environment.captureCheckpoint();
+      expect(checkpoint.bootstrap.build).toMatchObject({ target: "source-worker", contentHash: "e".repeat(64) });
+      expect(checkpoint.snapshot.provenance.build).toMatchObject({ target: "source-worker", contentHash: "e".repeat(64) });
+    } finally { environment.dispose(); vi.unstubAllGlobals(); }
+  });
+  it("cooperative recovery binds the original action prefix, retains held partial aim and executes only the suffix", async () => {
+    const batches = [{ tick: 1, actions: [{ type: "move", x: 1000, y: 0 },
+      { type: "aim", turn: 125000, magnitude: 250 }, { type: "weapon", intent: "primary", phase: "pressed" }] },
+    { tick: 50, actions: [{ type: "move", x: 0, y: 0 }] }];
+    const source = createProductionHeadlessEnvironment(), target = createProductionHeadlessEnvironment();
+    try {
+      source.reset(scenario);
+      const pending = source.captureCheckpoint();
+      expect(pending.delivery.pendingEvents.length).toBeGreaterThan(0);
+      target.restoreCheckpoint(validateProductionHeadlessCheckpointRequest(pending, scenario, batches));
+      const first = batches[0]; if (first === undefined) throw new Error("missing source batch");
+      expect(target.step(first.actions as GameAction[])).toEqual(source.step(first.actions as GameAction[]));
+      for (let tick = 2; tick <= 32; tick += 1) source.step([]);
+      const checkpoint = source.captureCheckpoint();
+      expect(checkpoint.input).toMatchObject({ primaryHeld: true, aimMagnitude: 250, moveX: 1 });
+      validateProductionHeadlessCheckpointRequest(checkpoint, scenario, batches);
+      const policy = { decide: (observations: readonly { tick: number }[]) => {
+        const current = observations.at(-1); if (current === undefined) throw new Error("missing source observation");
+        return [(batches.find((batch) => batch.tick === current.tick + 1)?.actions ?? []) as GameAction[]];
+      } };
+      const suffix = await new TearHeadlessRunner(target).runCooperatively({ id: "bound", scenario, maxTicks: scenario.maxTicks }, policy, {
+        initialize: () => ({ tick: 32, observation: target.restoreCheckpoint(checkpoint) }), yieldToHost: () => Promise.resolve(),
+      });
+      let terminal;
+      for (let tick = 33; tick <= scenario.maxTicks; tick += 1) terminal = source.step((batches.find((batch) => batch.tick === tick)?.actions ?? []) as GameAction[]);
+      expect(suffix).toMatchObject({ startTick: 32, endTick: 120, executedTicks: 88 });
+      if (terminal === undefined) throw new Error("missing source terminal");
+      expect(suffix.episode.observations.at(-1)).toEqual(terminal.observation);
+      expect(suffix.episode.events?.some((event) => event.type === "run.started")).toBe(false);
+      for (const invalid of [
+        { ...scenario, seed: "wrong" }, { ...scenario, maxTicks: scenario.maxTicks + 1 },
+      ]) expect(() => validateProductionHeadlessCheckpointRequest(checkpoint, invalid, batches)).toThrow(/scenario/);
+      const changed = structuredClone(batches), changedFirst = changed[0];
+      if (changedFirst === undefined) throw new Error("missing changed source batch"); changedFirst.actions.reverse();
+      expect(() => validateProductionHeadlessCheckpointRequest(checkpoint, scenario, changed)).toThrow(/prefix/);
+      expect(() => validateProductionHeadlessCheckpointRequest(checkpoint, scenario, [])).toThrow(/prefix/);
+    } finally { source.dispose(); target.dispose(); }
+  });
   it("completes natural boss intros using an explicit generated cadence preserved across checkpoint continuation", () => {
     const source = createProductionHeadlessEnvironment(), restored = createProductionHeadlessEnvironment();
     source.reset({ ...scenario, start: { ...scenario.start, mode: "bossonly" }, maxTicks: 600 });
@@ -555,7 +619,7 @@ describe("C30 production headless environment", () => {
     ]);
     expect(terminal?.terminal.semanticHash).toMatch(/^[a-f0-9]{16}$/u);
     const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-movement-jump.json"), "utf8"));
-    expect(normalizeLegacyFixtureRevision(fixture)).toEqual(terminal);
+    expectLegacyTerminalFixture(fixture, terminal);
   });
 
   it("produces a real natural one-hit failure through the shared source lifecycle", () => {
@@ -575,7 +639,7 @@ describe("C30 production headless environment", () => {
     environment.dispose();
 
     const fixture: unknown = JSON.parse(readFileSync(resolve("tests", "fixtures", "c30-production-headless-terminal-onehit-failure.json"), "utf8"));
-    expect(terminal).toEqual(normalizeLegacyFixtureRevision(fixture));
+    expectLegacyTerminalFixture(fixture, terminal);
     expect(terminal?.terminal).toEqual({
       tick: 222, semanticHash: "f981b3bb62116114", terminated: true, truncated: false,
     });

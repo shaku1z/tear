@@ -6,7 +6,8 @@ import { join, relative, resolve, sep } from "node:path";
 import process from "node:process";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { ProductionHeadlessJobStore, headlessAttemptLease } from "../scripts/production-headless-job-store.mjs";
+import { ProductionHeadlessJobStore, headlessAttemptLease, validateHeadlessWorkerReply } from "../scripts/production-headless-job-store.mjs";
+import { checkpointDigest } from "../scripts/production-headless-checkpoint.mjs";
 
 const bytePolicy = { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 };
 const execution = { source: { revision: "a".repeat(40), state: "dirty", fingerprint: "b".repeat(64) },
@@ -35,6 +36,115 @@ function fixture(context, options = {}) {
   } };
 }
 const code = (expected) => (error) => error.code === expected;
+const checkpointPolicy = { intervalTicks: 32, maxBytes: 4_194_304 };
+function checkpointClaim(store) {
+  const active = claim(store);
+  return store.markStarted(headlessAttemptLease(active), { workerPid: 42, tick: 1 });
+}
+// Transport-only fixtures; actual native snapshot validity is exercised by the production environment/worker.
+function checkpointOffer(record, tick = 32) {
+  const attempt = record.job.attempts.at(-1), actions = [];
+  for (const batch of record.input.request.actions.filter((entry) => entry.tick <= tick).sort((a, b) => a.tick - b.tick)) {
+    for (const command of batch.actions) actions.push({ kind: "command", id: actions.length + 1, tick: batch.tick, command });
+  }
+  return { format: "tearbench-durable-headless-checkpoint", schemaVersion: 1,
+    requestId: record.job.id, requestDigest: record.requestDigest, executionDigest: checkpointDigest(record.input.binding),
+    generation: (record.checkpoint?.value.generation ?? 0) + 1, previousDigest: record.checkpoint?.digest ?? null,
+    attempt: { ordinal: attempt.ordinal, token: attempt.token, owner: attempt.owner, claimRevision: attempt.claimRevision },
+    checkpoint: { format: "tearbench-production-headless-checkpoint", schemaVersion: 2, scenario: record.input.request.scenario,
+      checkpoint: { tick, nextCommandId: actions.length, semanticHash: "a".repeat(16) }, snapshot: { tick },
+      input: { tick, aimMagnitude: 250 }, actions, delivery: { nextSequence: 0, pendingEvents: [], hash: "a".repeat(16) } },
+    nativeTerminalEvents: [] };
+}
+
+test("checkpoint v2 commits custody jointly, selects immutable recovery origin and fences the interrupted publisher", (context) => {
+  const f = fixture(context, { checkpoint: checkpointPolicy }), active = checkpointClaim(f.store), lease = headlessAttemptLease(active);
+  const offer = checkpointOffer(active), saved = f.store.publishCheckpoint(lease, null, offer);
+  assert.equal(saved.checkpoint.digest, checkpointDigest(offer));
+  assert.equal(saved.job.checkpointRef.revision, saved.job.revision);
+  const interrupted = f.store.interrupt(lease), resumed = f.store.claim("episode", interrupted.job.revision, "owner-b");
+  assert.deepEqual(resumed.job.attempts[1].origin, { digest: saved.checkpoint.digest, generation: 1, tick: 32 });
+  const before = f.store.read("episode");
+  assert.throws(() => f.store.publishCheckpoint(lease, saved.checkpoint.digest, checkpointOffer(saved, 64)), code("stale-owner"));
+  assert.deepEqual(f.store.read("episode"), before);
+  assert.throws(() => f.store.markStarted(headlessAttemptLease(resumed), { workerPid: 42, tick: 1 }), code("invalid-record"));
+  const started = f.store.markStarted(headlessAttemptLease(resumed), { workerPid: 42, tick: 33 });
+  const next = f.store.publishCheckpoint(headlessAttemptLease(started), saved.checkpoint.digest, checkpointOffer(started, 64));
+  assert.equal(next.checkpoint.value.generation, 2);
+  assert.deepEqual(next.job.attempts[1].origin, resumed.job.attempts[1].origin);
+});
+
+test("checkpoint v2 rejects identity/frontier/corruption/replacement changes without successor writes", (context) => {
+  const f = fixture(context, { checkpoint: checkpointPolicy }), active = checkpointClaim(f.store), lease = headlessAttemptLease(active);
+  for (const mutate of [
+    (v) => { v.requestDigest = "d".repeat(64); }, (v) => { v.executionDigest = "d".repeat(64); },
+    (v) => { v.attempt.token = "foreign"; }, (v) => { v.attempt.claimRevision += 1; },
+    (v) => { v.checkpoint.actions[0].id = 2; }, (v) => { v.checkpoint.input.tick += 1; },
+    (v) => { v.checkpoint.scenario = { ...v.checkpoint.scenario, seed: "foreign" }; },
+    (v) => { v.checkpoint.delivery = { nextSequence: 1, pendingEvents: [{ sequence: 9 }], hash: "a" }; },
+  ]) {
+    const offer = checkpointOffer(active); mutate(offer);
+    assert.throws(() => f.store.publishCheckpoint(lease, null, offer), code("invalid-record"));
+    assert.deepEqual(f.store.read("episode"), active);
+  }
+  const saved = f.store.publishCheckpoint(lease, null, checkpointOffer(active));
+  assert.throws(() => f.store.publishCheckpoint(lease, null, checkpointOffer(saved, 64)), code("invalid-record"));
+  assert.deepEqual(f.store.read("episode"), saved);
+  const db = new DatabaseSync(f.path); context.after(() => db.close());
+  db.prepare("UPDATE checkpoints SET bytes=? WHERE id='episode'").run("corrupt");
+  assert.throws(() => f.store.claim("episode", saved.job.revision, "other"), code("invalid-record"));
+  assert.equal(db.prepare("SELECT bytes FROM checkpoints WHERE id='episode'").get().bytes, "corrupt");
+});
+
+test("checkpoint v2 cancellation and original deadline defeat late offers and retain last custody", (context) => {
+  for (const cancel of [true, false]) {
+    const f = fixture(context, { checkpoint: checkpointPolicy }), active = checkpointClaim(f.store), lease = headlessAttemptLease(active);
+    const saved = f.store.publishCheckpoint(lease, null, checkpointOffer(active));
+    if (cancel) f.store.cancel("episode", saved.job.revision); else f.time(saved.job.deadlineAt);
+    const before = f.store.read("episode");
+    assert.throws(() => f.store.publishCheckpoint(lease, saved.checkpoint.digest, checkpointOffer(saved, 64)), code("stale-owner"));
+    assert.deepEqual(f.store.read("episode"), before);
+  }
+});
+
+test("checkpoint v2 resolves lost commit response from exact joint custody and never migrates a v1 store", (context) => {
+  let lose = false;
+  const f = fixture(context, { checkpoint: checkpointPolicy, afterCommit: () => { if (lose) throw new Error("lost response"); } });
+  const active = checkpointClaim(f.store); lose = true;
+  const saved = f.store.publishCheckpoint(headlessAttemptLease(active), null, checkpointOffer(active));
+  assert.equal(saved.job.checkpointRef.digest, saved.checkpoint.digest);
+  assert.deepEqual(f.store.read("episode"), saved);
+  const old = fixture(context); old.store.close(); const before = readFileSync(old.path);
+  assert.throws(() => new ProductionHeadlessJobStore({ ...old.settings, checkpoint: checkpointPolicy }), code("invalid-record"));
+  assert.deepEqual(readFileSync(old.path), before);
+});
+
+test("checkpoint v2 freezes bounded policy and refuses oversized custody before mutation", (context) => {
+  const f = fixture(context, { checkpoint: { intervalTicks: 32, maxBytes: 32 } }), active = checkpointClaim(f.store);
+  assert.throws(() => f.store.publishCheckpoint(headlessAttemptLease(active), null, checkpointOffer(active)), code("checkpoint-too-large"));
+  assert.deepEqual(f.store.read("episode"), active);
+  assert.throws(() => fixture(context, { checkpoint: { intervalTicks: 32, maxBytes: 8_388_609 } }), code("invalid-record"));
+});
+
+test("checkpoint execution claims require explicit v2 admission in the validator and v1 store", (context) => {
+  const f = fixture(context), active = claim(f.store), result = completed();
+  result.execution = { startTick: 32, endTick: 120, executedTicks: 88, checkpointDigest: "a".repeat(64), evidence: "checkpoint-suffix" };
+  assert.throws(() => validateHeadlessWorkerReply(result, request()), code("invalid-record"));
+  assert.throws(() => f.store.publish(headlessAttemptLease(active), result), code("invalid-record"));
+  assert.deepEqual(f.store.read("episode"), active);
+});
+
+test("checkpoint v2 refuses a premature offer and a persisted result that drops its claimed origin", (context) => {
+  const f = fixture(context, { checkpoint: checkpointPolicy }), active = claim(f.store), lease = headlessAttemptLease(active);
+  assert.throws(() => f.store.publishCheckpoint(lease, null, checkpointOffer(active)), code("invalid-record"));
+  assert.deepEqual(f.store.read("episode"), active);
+  const result = { ...completed(), execution: { startTick: 0, endTick: 120, executedTicks: 120, checkpointDigest: null, evidence: "checkpoint-suffix" } };
+  const terminal = f.store.publish(lease, result), corrupt = JSON.parse(JSON.stringify(terminal.result)); delete corrupt.execution;
+  const text = JSON.stringify(corrupt), db = new DatabaseSync(f.path); context.after(() => db.close());
+  db.prepare("UPDATE results SET bytes=?,digest=? WHERE id='episode'").run(text, createHash("sha256").update(text).digest("hex"));
+  assert.throws(() => f.store.read("episode"), code("invalid-record"));
+  assert.equal(db.prepare("SELECT bytes FROM results WHERE id='episode'").get().bytes, text);
+});
 function claim(store, admitted = store.admit(request(), execution, policy)) {
   return store.claim("episode", admitted.job.revision, "owner-a");
 }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { fork } from "node:child_process";
 import { once } from "node:events";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import process from "node:process";
@@ -42,8 +42,8 @@ async function waitForExit(pid) {
   throw new Error(`worker ${String(pid)} did not exit after SIGTERM`);
 }
 
-function supervisor(context, path, requestPath, stage = "none") {
-  const child = fork(resolve("tests/fixtures/production-headless-job-crash.mjs"), [path, requestPath, stage], { silent: true });
+function supervisor(context, path, requestPath, stage = "none", protocol = "v1") {
+  const child = fork(resolve("tests/fixtures/production-headless-job-crash.mjs"), [path, requestPath, stage, protocol], { silent: true });
   let stderr = "";
   child.stderr.on("data", (chunk) => { stderr += String(chunk); });
   const messages = [];
@@ -64,6 +64,75 @@ function supervisor(context, path, requestPath, stage = "none") {
     throw new Error(`supervisor did not reach ${kind}: ${stderr}`);
   } };
 }
+
+test(process.env.TEAR_R12_NATIVE_BASELINE_ONLY === "1" ? "R12 checkpoint v2 baseline-only native prefix readiness (no crash)"
+  : "R12 checkpoint v2 real supervisor kill resumes the committed nonzero origin and only its suffix", async (context) => {
+  const natural = process.env.TEAR_R12_NATURAL_TERMINAL === "1";
+  const folder = mkdtempSync(resolve(tmpdir(), "tear-r12-checkpoint-native-"));
+  context.diagnostic(JSON.stringify({ artifactDirectory: folder, stage: "begin" }));
+  const input = resolve(folder, "request.json"), path = resolve(folder, "recovery.sqlite");
+  const value = request("checkpoint-native", { retry: "idempotent-on-worker-exit",
+    ...(natural ? { scenario: JSON.parse(readFileSync(resolve("tests/fixtures/c30-production-headless-terminal-onehit-failure.json"), "utf8")).scenario } : {}), actions: [
+    { tick: 1, actions: [...(natural ? [] : [{ type: "move", x: 1000, y: 0 }]), { type: "aim", turn: 125000, magnitude: 250 },
+      { type: "weapon", intent: "primary", phase: "pressed" }] },
+    { tick: 70, actions: [...(natural ? [] : [{ type: "move", x: -1000, y: 0 }]), { type: "weapon", intent: "primary", phase: "released" }] },
+  ] });
+  writeFileSync(input, JSON.stringify(value));
+  const baseline = supervisor(context, resolve(folder, "baseline.sqlite"), input, "none", "v2");
+  const reference = await baseline.next("done"); await baseline.exited;
+  writeFileSync(resolve(folder, "baseline.json"), JSON.stringify(reference));
+  assert.equal(reference.kind, "done", JSON.stringify(reference)); assert.equal(reference.result.kind, "completed", JSON.stringify(reference.result));
+  if (natural) {
+    assert.equal(reference.result.episodeOutcome, "terminated", "natural fixture must actually terminate under this held/partial-aim prefix");
+    assert.ok(reference.result.nativeTerminalEvents.some((event) => event.type === "run.defeated"));
+  }
+  if (process.env.TEAR_R12_NATIVE_BASELINE_ONLY === "1") {
+    context.diagnostic(JSON.stringify({ artifactDirectory: folder, baselineOnly: true, natural,
+      outcome: reference.result.episodeOutcome, ticks: reference.result.ticks, nativeTerminalEvents: reference.result.nativeTerminalEvents }));
+    return;
+  }
+  const interrupted = supervisor(context, path, input, "checkpoint-published", "v2");
+  const barrier = await interrupted.next("barrier");
+  assert.equal(barrier.kind, "barrier", JSON.stringify(barrier));
+  writeFileSync(resolve(folder, "barrier.json"), JSON.stringify(barrier));
+  const saved = barrier.record, checkpoint = saved.checkpoint.value.checkpoint, tick = checkpoint.checkpoint.tick;
+  assert.equal(tick, 32); assert.equal(saved.checkpoint.value.generation, 1);
+  assert.equal(checkpoint.input.aimMagnitude, 250); assert.equal(checkpoint.input.primaryHeld, true);
+  assert.deepEqual(checkpoint.delivery.pendingEvents, [], "completed step already delivered its original facts");
+  assert.ok(checkpoint.delivery.nextSequence > 0);
+  interrupted.child.kill(); await interrupted.exited; await waitForExit(barrier.workerPid);
+  await delay(Math.max(0, saved.job.lease.expiresAt - Date.now()) + 20);
+  const restarted = supervisor(context, path, input, "none", "v2");
+  const recovered = await restarted.next("done"); await restarted.exited;
+  writeFileSync(resolve(folder, "baseline.json"), JSON.stringify(reference));
+  writeFileSync(resolve(folder, "recovered.json"), JSON.stringify(recovered));
+  assert.equal(recovered.kind, "done", JSON.stringify(recovered));
+  assert.equal(recovered.result.kind, reference.result.kind);
+  assert.equal(recovered.result.episodeOutcome, reference.result.episodeOutcome);
+  assert.equal(recovered.result.semanticHash, reference.result.semanticHash);
+  assert.deepEqual(recovered.result.terminal, reference.result.terminal);
+  assert.deepEqual(recovered.result.nativeTerminalEvents, reference.result.nativeTerminalEvents);
+  assert.deepEqual(recovered.result.execution, { startTick: tick, endTick: reference.result.ticks,
+    executedTicks: reference.result.ticks - tick, checkpointDigest: saved.checkpoint.digest, evidence: "checkpoint-suffix" });
+  assert.equal(recovered.record.job.attempts.length, 2);
+  assert.equal(recovered.record.job.attempts[1].started.tick, tick + 1);
+  assert.equal(recovered.record.job.attempts[1].origin.digest, saved.checkpoint.digest);
+  assert.equal(recovered.record.job.admittedAt, saved.job.admittedAt);
+  assert.equal(recovered.record.job.deadlineAt, saved.job.deadlineAt);
+  assert.equal(recovered.record.requestDigest, saved.requestDigest);
+  const store = new ProductionHeadlessJobStore({ path, limits: { maxRequestBytes: 8_388_608, maxResultBytes: 33_554_432 },
+    checkpoint: { intervalTicks: 32, maxBytes: 4_194_304 } });
+  try {
+    const before = store.read(saved.job.id);
+    assert.throws(() => store.publishCheckpoint({ requestId: saved.job.id, ...saved.job.lease }, null, saved.checkpoint.value),
+      (error) => error.code === "stale-owner");
+    assert.deepEqual(store.read(saved.job.id), before);
+  } finally { store.close(); }
+  context.diagnostic(JSON.stringify({ artifactDirectory: folder, killedSupervisor: interrupted.child.pid,
+    killedWorker: barrier.workerPid, restoredWorker: recovered.result.workerPid, checkpointTick: tick,
+    checkpointDigest: saved.checkpoint.digest, execution: recovered.result.execution,
+    semanticHash: recovered.result.semanticHash, outcome: recovered.result.episodeOutcome }));
+}, { timeout: 120_000 });
 
 test("C30 durable subprocess recovery preserves all four real kill boundaries and exact terminal no-redispatch", async (context) => {
   for (const stage of ["admitted", "started", "before-publish", "published"]) {

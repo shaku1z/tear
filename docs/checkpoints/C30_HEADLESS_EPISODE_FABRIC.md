@@ -204,8 +204,9 @@ operational boundary it proves.
   replacing the active destination. The environment namespace rebases, so raw
   snapshot hashes need not equal the original; owned runtime components and
   semantic state remain equal, and repeated destination captures are stable.
-  This is caller-retained in-memory custody, not durable checkpoint/worker
-  transport or original full-trace attestation. Explicit external frame inputs
+  This environment API alone provides caller-retained in-memory custody, not
+  original full-trace attestation. The opt-in durable transport below retains
+  its native checkpoint without inventing prefix observations. Explicit external frame inputs
   are not recorded in terminal command artifacts. Opt-in native source tracks
   label restored output as a suffix; surgical State Forge hydration does not
   deliver the natural source's pending facts as original evidence.
@@ -236,7 +237,7 @@ operational boundary it proves.
   input, unknown schemas and malformed records refuse without repair.
   A claimed attempt consumes budget before send. Only an explicitly idempotent
   worker exit or interrupted owner permits a second origin attempt; `never`
-  allows one total. This is origin replay, not checkpoint continuation.
+  allows one total. Version-one stores retain origin replay behavior.
   The original absolute deadline starts at admission and includes queue,
   startup and process restart, bounded by any shorter cooperative timeout.
   Lease renewal and opaque attempt tokens fence stale output; durable
@@ -263,10 +264,51 @@ operational boundary it proves.
   reads, Node IPC and canonicalization may allocate before length checks.
   Local process-crash tests do not certify power loss, network filesystems,
   exactly-once computation, remote scheduling or training quality.
-- [ ] Declared-target capacity and recovered checkpoint/finale evidence.
+- [x] Opt-in version-two durable nonterminal checkpoint transport. An explicit
+  `checkpoint: { intervalTicks: 32, maxBytes: 4194304 }` store policy creates a
+  separate version-two SQLite schema; opening an existing version-one database
+  with that policy refuses without migration. Policy is immutable at admission:
+  cadence is a positive integer up to 120 ticks and checkpoint bytes cannot
+  exceed either existing request/result ceiling. Production callers use 32 ticks
+  and 4 MiB; actual request/offer wire envelopes remain capped at 8 MiB. These
+  are application limits, not whole-heap guarantees.
+  One runner iterator owns source stepping. Synchronous callers drain it as
+  before; the cooperative driver yields bounded quanta and awaits one checkpoint
+  commit acknowledgement before another source step. Checkpoint capture forwards
+  the actual bootstrap build identity, preserving injected target/content checks.
+  The parent atomically adopts checkpoint bytes/digest and its job reference
+  under the active owner/token/attempt fence before ACK. Claim binds the exact
+  old checkpoint digest/generation/tick to the new attempt, independently of its
+  new token. Heartbeats continue while waiting. Cancellation, terminal state,
+  expired leases, original admission deadline and stale publishers retain their
+  existing authority; interruption consumes the original maximum-two-attempt
+  budget. Unknown/corrupt custody never silently restarts from origin.
+  Before candidate restoration, the production parser validates schema-two
+  state, original scenario and normalized ordered action prefix. The current
+  worker policy is the stateless absolute-tick action schedule at batch size one;
+  arbitrary stateful policy recovery is not supported. A resumed first source
+  step is `startTick + 1`; result `ticks` is absolute, with separate start/end and
+  executed suffix counts. V1 callers cannot introduce checkpoint execution claims.
+  Native pending facts and next sequence survive unchanged, without hydration
+  facts. Already-delivered native terminal facts are retained separately;
+  observations and general event streams remain suffix evidence. Post-step
+  checkpoints naturally have no pending facts. The native tick-zero roundtrip
+  separately exercises a genuinely nonempty pending frontier.
+  A bounded developer probe killed the supervisor after committed tick 32 but
+  before ACK; a new worker began at 33 and ran 88 steps to the original 120-tick
+  truncation, matching the uninterrupted terminal hash and complete action trace.
+  That proof is truncation, not natural defeat. A baseline-only check of the
+  existing 720-tick One-Hit scenario with held primary/partial aim naturally
+  defeated at tick 222; its final clean-source crash/recovery acceptance remains
+  separate. Run the named `R12 checkpoint v2 real supervisor kill` test in
+  `tests/production-headless-worker-dispatcher.test.mjs` with
+  `TEAR_R12_NATURAL_TERMINAL=1` and without `TEAR_R12_NATIVE_BASELINE_ONLY` for that
+  acceptance. The default named test retains the bounded 120-tick control.
+- [ ] Declared-target capacity and broader natural terminal/finale recovery evidence.
   Timeout, validation, and ordinary worker-reported failures are not retried.
   No target host is declared in this repository. Durable origin restart does
-  not close durable checkpoint transport or natural victory/finale continuation.
+  not close natural victory/finale continuation. Prepared/active checkpoint
+  eligibility stays explicit; completed/finale/horizon states are not extended.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
@@ -356,6 +398,6 @@ episode-fabric budgets, then run it on that declared target host and retain the
 artifact before capacity can be assessed. While that waits, the next
 implementation boundary is C31 eligibility, consent, and provenance before its
 Academy candidate intake can become a corpus. Keep all completed C30 boundaries
-restricted to their stated natural or constructed boundary evidence. In-memory
-nonterminal continuation must not become a new simulator, storage format,
-durable checkpoint-recovery claim, or natural full-Campaign acceptance.
+restricted to their stated natural or constructed boundary evidence. Durable
+checkpoint transport reuses the existing runtime; its bounded recovery evidence
+does not imply natural full-Campaign/finale acceptance or target-host capacity.

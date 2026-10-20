@@ -5,6 +5,8 @@ import { once } from "node:events";
 import { resolve } from "node:path";
 import test from "node:test";
 import { canonicalJson } from "../scripts/tearbench-task-receipts.mjs";
+import { checkpointDigest } from "../scripts/production-headless-checkpoint.mjs";
+import { setTimeout as delay } from "node:timers/promises";
 
 const workerPath = resolve("scripts", "production-headless-worker.mjs");
 
@@ -34,6 +36,34 @@ function request(id, options = {}) {
     ...(options.timeoutMilliseconds === undefined ? {} : { timeoutMilliseconds: options.timeoutMilliseconds }),
   }));
 }
+
+test("R12 worker checkpoint acknowledgements apply bounded backpressure and refuse a mismatched ACK", async (context) => {
+  const worker = fork(workerPath, { silent: true }), exited = once(worker, "exit");
+  context.after(async () => { if (worker.connected) worker.disconnect(); await exited; });
+  const [ready] = await once(worker, "message");
+  assert.equal(ready.durable.checkpointVersion, 2);
+  const durable = { schemaVersion: 2, requestDigest: "d".repeat(64), executionDigest: checkpointDigest(ready.durable.binding),
+    token: randomUUID(), owner: randomUUID(), ordinal: 1, claimRevision: 1, origin: { digest: null, generation: 0, tick: 0 },
+    deadlineAt: Date.now() + 30_000, checkpointPolicy: { intervalTicks: 32, maxBytes: 4_194_304 } };
+  const messages = []; worker.on("message", (message) => messages.push(message));
+  const checkpointReady = once(worker, "message");
+  worker.send({ ...request("ack-refusal"), durable, checkpoint: null });
+  await checkpointReady; // The started message precedes the checkpoint offer.
+  const until = Date.now() + 10_000;
+  while (!messages.some((message) => message.kind === "checkpoint") && Date.now() < until) await delay(5);
+  const offer = messages.find((message) => message.kind === "checkpoint");
+  assert.ok(offer); assert.equal(offer.value.checkpoint.checkpoint.tick, 32);
+  await delay(25);
+  assert.equal(messages.filter((message) => message.kind === "checkpoint").length, 1);
+  assert.equal(messages.some((message) => ["completed", "failed"].includes(message.kind)), false);
+  const finished = once(worker, "message");
+  worker.send({ format: "tearbench-production-headless-worker", schemaVersion: 1, kind: "checkpoint-ack",
+    requestId: "ack-refusal", durable, digest: "0".repeat(64), generation: 1, revision: 3 });
+  const [reply] = await finished;
+  assert.equal(reply.kind, "failed"); assert.match(reply.error, /uncorrelated checkpoint acknowledgement/u);
+  assert.equal(messages.filter((message) => message.kind === "checkpoint").length, 1);
+  assert.equal(reply.terminal, undefined, "a rejected ACK cannot produce an adopted terminal");
+}, { timeout: 30_000 });
 
 test("C30 worker process keeps production worlds behind serialized episode messages", async (context) => {
   const worker = fork(workerPath, { silent: true });

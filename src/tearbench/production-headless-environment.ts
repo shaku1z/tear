@@ -122,6 +122,39 @@ export interface ProductionHeadlessCheckpoint {
   }>;
 }
 
+/** Expected lifecycle pressure, distinct from malformed or incompatible checkpoint data. */
+export class ProductionCheckpointUnavailableError extends RangeError {
+  override name = "ProductionCheckpointUnavailableError";
+}
+
+/** Bind a retained checkpoint to the admitted original schedule, without replaying its prefix. */
+export function validateProductionHeadlessCheckpointRequest(
+  value: unknown, sourceScenario: unknown, batches: readonly Readonly<{ tick: number; actions: readonly unknown[] }>[],
+): ProductionHeadlessCheckpoint {
+  const checkpoint = validateProductionHeadlessCheckpoint(value), scenario = requireScenario(sourceScenario);
+  if (stableVerificationHash(scenario) !== stableVerificationHash(checkpoint.scenario)) {
+    throw new TypeError("checkpoint scenario differs from admitted request");
+  }
+  const ticks = new Set<number>(), actions: CommandEnvelope<GameAction>[] = [];
+  for (const batch of [...batches].sort((a, b) => a.tick - b.tick)) {
+    if (!Number.isSafeInteger(batch.tick) || batch.tick < 1 || ticks.has(batch.tick) || !Array.isArray(batch.actions)) {
+      throw new TypeError("invalid admitted checkpoint action schedule");
+    }
+    ticks.add(batch.tick);
+    for (const action of batch.actions) {
+      const normalized = normalizeGameAction(action);
+      if (!normalized.ok) throw new TypeError(`invalid admitted checkpoint action: ${normalized.reason}`);
+      if (batch.tick <= checkpoint.checkpoint.tick) actions.push(Object.freeze({
+        kind: "command", id: actions.length + 1, tick: batch.tick, command: normalized.action,
+      }));
+    }
+  }
+  if (stableVerificationHash(actions) !== stableVerificationHash(checkpoint.actions)) {
+    throw new TypeError("checkpoint action prefix differs from admitted request");
+  }
+  return checkpoint;
+}
+
 /** A State Forge recovery frontier bound to one natural source checkpoint; arbitrary surgical snapshot execution stays unavailable. */
 export interface ProductionHeadlessStateForgeEvaluation {
   readonly source: ProductionHeadlessCheckpoint;
@@ -376,7 +409,7 @@ export function createProductionHeadlessEnvironment(
         || !current.replay.world.context.cinema.active || current.replay.world.context.cinema.script?.kind !== "chapter")
       || (selecting ? screen !== selection.phase : !["playing", "paused"].includes(screen))
       || current.simulation.simulationRuntime.scheduler.tick >= current.scenario.maxTicks) {
-      throw new RangeError("production headless checkpoints require a coherent nonterminal prepared, active or reward episode");
+      throw new ProductionCheckpointUnavailableError("production headless checkpoints require a coherent nonterminal prepared, active or reward episode");
     }
   };
 
@@ -561,6 +594,7 @@ export function createProductionHeadlessEnvironment(
       const captured = captureProductionReplayCheckpoint(
         current.replay, current.simulation, current.waveReward,
         `c30.${current.scenario.id}.checkpoint.${String(tick)}`,
+        current.bootstrap.build,
       );
       const value = {
         format: "tearbench-production-headless-checkpoint", schemaVersion: 2,

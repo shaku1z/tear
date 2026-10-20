@@ -265,8 +265,12 @@ export class ProductionHeadlessWorkerDispatcher {
       record = this.#store.claim(requestId, record.job.revision, this.#owner);
       if (record.result !== null) break;
       const lease = headlessAttemptLease(record);
-      const envelope = { schemaVersion: 1, requestDigest: record.requestDigest,
-        executionDigest: digest(canonicalJson(observed)), token: lease.token, owner: lease.owner, ordinal: lease.ordinal };
+      const checkpointEnabled = record.job.schemaVersion === 2;
+      const attempt = record.job.attempts.at(-1);
+      const envelope = { schemaVersion: checkpointEnabled ? 2 : 1, requestDigest: record.requestDigest,
+        executionDigest: digest(canonicalJson(observed)), token: lease.token, owner: lease.owner, ordinal: lease.ordinal,
+        ...(checkpointEnabled ? { claimRevision: attempt.claimRevision, origin: attempt.origin,
+          deadlineAt: record.job.deadlineAt, checkpointPolicy: record.input.policy.checkpoint } : {}) };
       let slot, failure;
       const active = { stop: () => {
         failure ??= new HeadlessJobError("stale-owner", "durable attempt stopped");
@@ -291,11 +295,13 @@ export class ProductionHeadlessWorkerDispatcher {
         slot.reserved = true; slot.reservation = lease.token;
         if (failure !== undefined) throw failure;
         if (slot.readiness?.durable?.schemaVersion !== 1
-          || canonicalJson(slot.readiness.durable.binding) !== canonicalJson(observed)) {
+          || canonicalJson(slot.readiness.durable.binding) !== canonicalJson(observed)
+          || checkpointEnabled && slot.readiness.durable.checkpointVersion !== 2) {
           throw new HeadlessJobError("worker-binding", "worker lacks the exact durable execution binding");
         }
         const result = await this.#dispatchDurable(slot, { ...record.input.request,
-          timeoutMilliseconds: remaining(), durable: envelope }, remaining(), lease, record.input.policy.maxResultBytes);
+          timeoutMilliseconds: remaining(), durable: envelope,
+          ...(checkpointEnabled ? { checkpoint: record.checkpoint } : {}) }, remaining(), lease, record.input.policy.maxResultBytes);
         if (result.fenceError !== undefined) throw result.fenceError;
         if (result.dispatch === "worker-exit") {
           record = this.#store.interrupt(lease);
@@ -350,8 +356,27 @@ export class ProductionHeadlessWorkerDispatcher {
               record: this.#store.read(request.requestId) });
             return;
           }
+          if (message.kind === "checkpoint") {
+            if (request.durable.schemaVersion !== 2
+              || Buffer.byteLength(canonicalJson(message)) > 8_388_608) {
+              throw new HeadlessJobError("worker-protocol", "invalid checkpoint offer transport");
+            }
+            const committed = this.#store.publishCheckpoint(lease, message.value?.previousDigest, message.value);
+            await this.#boundary("checkpoint-published", { requestId: request.requestId, workerPid: slot.child.pid, record: committed });
+            // Recheck ownership after any asynchronous observer, immediately before acknowledging custody.
+            const current = this.#store.read(request.requestId);
+            if (current.job.state !== "running" || current.job.lease?.token !== lease.token
+              || current.checkpoint?.digest !== committed.checkpoint.digest
+              || Date.now() >= current.job.lease.expiresAt || Date.now() >= current.job.deadlineAt) {
+              throw new HeadlessJobError("stale-owner", "checkpoint acknowledgement lost ownership");
+            }
+            slot.child.send({ format: workerFormat, schemaVersion: 1, kind: "checkpoint-ack", requestId: request.requestId,
+              durable: request.durable, digest: committed.checkpoint.digest,
+              generation: committed.checkpoint.value.generation, revision: committed.job.revision });
+            return;
+          }
           const result = { ...message }; delete result.durable;
-          validateHeadlessWorkerReply(result, request, maxResultBytes);
+          validateHeadlessWorkerReply(result, request, maxResultBytes, request.durable.schemaVersion === 2);
           settle({ ...result, workerPid: slot.child.pid });
         }).catch((error) => settle({ fenceError: error }));
       };
@@ -361,6 +386,9 @@ export class ProductionHeadlessWorkerDispatcher {
       }, remaining);
       slot.active = { requestId: request.requestId, resolve: settle };
       slot.child.on("message", onMessage);
+      if (request.durable.schemaVersion === 2 && Buffer.byteLength(canonicalJson(request)) > 8_388_608) {
+        settle({ fenceError: new HeadlessJobError("request-too-large", "checkpoint recovery wire exceeds request ceiling") }); return;
+      }
       slot.child.send(request, (error) => {
         if (error) settle({ fenceError: new HeadlessJobError("worker-send", error.message) });
       });

@@ -3,6 +3,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "./tearbench-task-receipts.mjs";
+import { checkpointOrigin, validateCheckpointPolicy, validateDurableCheckpoint } from "./production-headless-checkpoint.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const format = "tearbench-production-headless-worker";
@@ -17,6 +18,7 @@ const tables = [
   "CREATE TABLE jobs(id TEXT PRIMARY KEY REFERENCES requests(id), record TEXT NOT NULL)",
   "CREATE TABLE results(id TEXT PRIMARY KEY REFERENCES requests(id), bytes TEXT NOT NULL, digest TEXT NOT NULL)",
 ];
+const checkpointTable = "CREATE TABLE checkpoints(id TEXT PRIMARY KEY REFERENCES requests(id), bytes TEXT NOT NULL, digest TEXT NOT NULL)";
 
 export class HeadlessJobError extends Error {
   constructor(code, message, options) { super(message, options); this.code = code; }
@@ -85,7 +87,7 @@ function binding(value) {
   requireValue(keys(value.toolchain, ["node", "pnpm", "playwright"])
     && Object.values(value.toolchain).every((entry) => typeof entry === "string" && entry.length > 0));
 }
-function input(request, executionBinding, policy, bytePolicy) {
+function input(request, executionBinding, policy, bytePolicy, checkpointPolicy) {
   data(request); data(executionBinding); data(policy);
   const allowed = ["format", "schemaVersion", "kind", "requestId", "scenario", "actions", "cancelled",
     "timeoutMilliseconds", "deadlineMilliseconds", "retry"];
@@ -110,7 +112,8 @@ function input(request, executionBinding, policy, bytePolicy) {
   binding(executionBinding);
   const duration = Math.min(policy.deadlineMilliseconds, request.timeoutMilliseconds ?? Infinity);
   const normalized = { request, binding: executionBinding, policy: { ...policy, ...bytePolicy, duration,
-    maxAttempts: policy.retry === "never" ? 1 : 2 } };
+    maxAttempts: policy.retry === "never" ? 1 : 2,
+    ...(checkpointPolicy === undefined ? {} : { checkpoint: validateCheckpointPolicy(checkpointPolicy, bytePolicy) }) } };
   const text = bytes(normalized, bytePolicy.maxRequestBytes, "request-too-large");
   return { text, digest: sha(text), value: JSON.parse(text) };
 }
@@ -120,23 +123,31 @@ function resultBase(result, request) {
 }
 
 /** Serialized transport/disposition validation only: no resimulation or authenticity claim. */
-export function validateHeadlessWorkerReply(result, request, maxResultBytes) {
+export function validateHeadlessWorkerReply(result, request, maxResultBytes, checkpointEnabled = false) {
   data(result); resultBase(result, request);
   if (maxResultBytes !== undefined) {
     requireValue(Number.isSafeInteger(maxResultBytes) && maxResultBytes > 0 && maxResultBytes <= ceilings.maxResultBytes);
     bytes(result, maxResultBytes, "result-too-large");
   }
   const allowed = ["format", "schemaVersion", "kind", "requestId", "workerPid", "ticks", "semanticHash",
-    "episodeOutcome", "terminal", "nativeTerminalEvents", "error"];
+    "episodeOutcome", "terminal", "nativeTerminalEvents", "error", "execution"];
   requireValue(Object.keys(result).every((key) => allowed.includes(key)), "unknown worker result field");
+  requireValue(checkpointEnabled || !Object.hasOwn(result, "execution"), "checkpoint execution was not admitted");
   if (result.workerPid !== undefined) requireValue(integer(result.workerPid) && result.workerPid > 0);
   if (result.kind === "failed") {
     requireValue(typeof result.error === "string" && result.error.length > 0
-      && ["ticks", "semanticHash", "episodeOutcome", "terminal", "nativeTerminalEvents"].every((key) => !Object.hasOwn(result, key)));
+      && ["ticks", "semanticHash", "episodeOutcome", "terminal", "nativeTerminalEvents", "execution"].every((key) => !Object.hasOwn(result, key)));
     return;
   }
   requireValue(integer(result.ticks) && result.ticks <= request.scenario.maxTicks
     && typeof result.semanticHash === "string" && /^[a-f0-9]{16}$/u.test(result.semanticHash));
+  if (result.execution !== undefined) {
+    const value = result.execution;
+    requireValue(keys(value, ["startTick", "endTick", "executedTicks", "checkpointDigest", "evidence"])
+      && integer(value.startTick) && value.startTick <= result.ticks && value.endTick === result.ticks
+      && value.executedTicks === result.ticks - value.startTick && value.evidence === "checkpoint-suffix"
+      && (value.checkpointDigest === null ? value.startTick === 0 : /^[a-f0-9]{64}$/u.test(value.checkpointDigest)));
+  }
   if (result.kind === "completed") {
     requireValue(result.ticks >= 1 && ["terminated", "truncated"].includes(result.episodeOutcome)
       && (result.episodeOutcome !== "truncated" || result.ticks === request.scenario.maxTicks));
@@ -166,7 +177,7 @@ export function validateHeadlessWorkerReply(result, request, maxResultBytes) {
   }
 }
 
-function resultValid(result, request) {
+function resultValid(result, request, checkpointEnabled = false) {
   resultBase(result, request);
   if (result.dispatch !== undefined) {
     const kinds = { "attempt-budget": "failed", "durable-refusal": "failed", deadline: "timed-out",
@@ -178,7 +189,7 @@ function resultValid(result, request) {
     if (result.errorCode !== undefined) requireValue(typeof result.errorCode === "string");
   } else {
     const reply = { ...result }; delete reply.requestDigest; delete reply.attempts;
-    validateHeadlessWorkerReply(reply, request);
+    validateHeadlessWorkerReply(reply, request, undefined, checkpointEnabled);
   }
 }
 function topology(job, policy, receipt) {
@@ -216,9 +227,11 @@ function outside(rootPath, candidate) {
 /** Opt-in local process recovery. SQLite/IPC reads can allocate before these application caps. */
 export class ProductionHeadlessJobStore {
   #db; #limits; #clock; #leaseMilliseconds; #afterCommit; #inside = false;
+  #checkpointPolicy;
 
-  constructor({ path, limits: bytePolicy, clock = Date.now, leaseMilliseconds = 5_000, afterCommit } = {}) {
+  constructor({ path, limits: bytePolicy, clock = Date.now, leaseMilliseconds = 5_000, afterCommit, checkpoint } = {}) {
     this.#limits = limits(bytePolicy);
+    this.#checkpointPolicy = checkpoint === undefined ? undefined : validateCheckpointPolicy(checkpoint, this.#limits);
     requireValue(typeof path === "string" && isAbsolute(path), "durable path must be absolute");
     requireValue(outside(root, resolve(path)), "durable database must be outside source tree");
     const canonical = existsSync(path) ? realpathSync(path) : resolve(realpathSync(dirname(path)), path.split(/[\\/]/u).at(-1));
@@ -230,15 +243,18 @@ export class ProductionHeadlessJobStore {
     try {
       const version = this.#db.prepare("PRAGMA user_version").get().user_version;
       const schema = this.#db.prepare("SELECT sql FROM sqlite_master WHERE substr(name,1,7) <> 'sqlite_' ORDER BY name").all();
+      const expectedTables = this.#checkpointPolicy === undefined ? tables : [...tables, checkpointTable];
+      const expectedVersion = this.protocolVersion;
       if (version === 0 && schema.length === 0) {
-        this.#db.exec(`BEGIN IMMEDIATE; ${tables.join(";")}; PRAGMA user_version=1; COMMIT;`);
-      } else requireValue(version === 1 && canonicalJson(schema.map((entry) => entry.sql).sort())
-        === canonicalJson([...tables].sort()), "unsupported durable database schema");
+        this.#db.exec(`BEGIN IMMEDIATE; ${expectedTables.join(";")}; PRAGMA user_version=${expectedVersion}; COMMIT;`);
+      } else requireValue(version === expectedVersion && canonicalJson(schema.map((entry) => entry.sql).sort())
+        === canonicalJson([...expectedTables].sort()), "unsupported durable database schema");
       this.#db.exec("PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;");
     } catch (error) { this.#db.close(); throw error; }
   }
 
   get leaseMilliseconds() { return this.#leaseMilliseconds; }
+  get protocolVersion() { return this.#checkpointPolicy === undefined ? 1 : 2; }
   close() { this.#db.close(); }
 
   #now(previous = 0) {
@@ -259,7 +275,9 @@ export class ProductionHeadlessJobStore {
     const request = this.#db.prepare("SELECT bytes,digest FROM requests WHERE id=?").get(requestId);
     const row = this.#db.prepare("SELECT record FROM jobs WHERE id=?").get(requestId);
     const result = this.#db.prepare("SELECT bytes,digest FROM results WHERE id=?").get(requestId);
-    if (request === undefined && row === undefined && result === undefined) return null;
+    const checkpointRow = this.#checkpointPolicy === undefined ? undefined
+      : this.#db.prepare("SELECT bytes,digest FROM checkpoints WHERE id=?").get(requestId);
+    if (request === undefined && row === undefined && result === undefined && checkpointRow === undefined) return null;
     requireValue(request !== undefined && row !== undefined && typeof request.bytes === "string"
       && sha(request.bytes) === request.digest);
     const value = decode(request.bytes);
@@ -267,22 +285,32 @@ export class ProductionHeadlessJobStore {
     requireValue(object(policy));
     const storedLimits = limits({ maxRequestBytes: policy.maxRequestBytes, maxResultBytes: policy.maxResultBytes });
     const normalized = input(value.request, value.binding,
-      { deadlineMilliseconds: policy.deadlineMilliseconds, retry: policy.retry }, storedLimits);
+      { deadlineMilliseconds: policy.deadlineMilliseconds, retry: policy.retry }, storedLimits, policy.checkpoint);
+    requireValue(canonicalJson(policy.checkpoint ?? null) === canonicalJson(this.#checkpointPolicy ?? null), "checkpoint policy mismatch");
     requireValue(normalized.text === request.bytes && value.request.requestId === requestId);
     const job = decode(row.record);
-    requireValue(keys(job, ["schemaVersion", "id", "revision", "state", "admittedAt", "lastNow", "deadlineAt", "attempts", "lease"])
-      && job.schemaVersion === 1 && job.id === requestId && integer(job.revision)
+    requireValue(keys(job, ["schemaVersion", "id", "revision", "state", "admittedAt", "lastNow", "deadlineAt", "attempts", "lease",
+      ...(this.protocolVersion === 2 ? ["checkpointRef"] : [])])
+      && job.schemaVersion === this.protocolVersion && job.id === requestId && integer(job.revision)
       && ["pending", "running", "terminal"].includes(job.state) && finite(job.admittedAt)
       && finite(job.lastNow) && job.lastNow >= job.admittedAt
       && job.deadlineAt === job.admittedAt + policy.duration && finite(job.deadlineAt)
       && Array.isArray(job.attempts) && job.attempts.length <= policy.maxAttempts);
     for (const [index, attempt] of job.attempts.entries()) {
-      requireValue(keys(attempt, ["ordinal", "token", "owner", "claimedAt", "started", "outcome"])
+      const resumed = this.protocolVersion === 2;
+      requireValue(keys(attempt, ["ordinal", "token", "owner", "claimedAt", "started", "outcome", ...(resumed ? ["origin", "claimRevision"] : [])])
         && attempt.ordinal === index + 1 && id(attempt.token) && id(attempt.owner)
         && finite(attempt.claimedAt) && attempt.claimedAt >= job.admittedAt && attempt.claimedAt <= job.lastNow
         && (attempt.started === null || keys(attempt.started, ["workerPid", "tick"])
-          && integer(attempt.started.workerPid) && attempt.started.workerPid > 0 && attempt.started.tick === 1)
+          && integer(attempt.started.workerPid) && attempt.started.workerPid > 0 && attempt.started.tick === (resumed ? attempt.origin?.tick + 1 : 1))
         && (attempt.outcome === null || ["interrupted", "worker-exit", "completed", "failed", "cancelled", "timed-out"].includes(attempt.outcome)));
+      if (resumed) requireValue(keys(attempt.origin, ["digest", "generation", "tick"])
+        && integer(attempt.origin.generation) && integer(attempt.origin.tick) && attempt.origin.tick < value.request.scenario.maxTicks
+        && (attempt.origin.digest === null ? attempt.origin.generation === 0 && attempt.origin.tick === 0
+          : typeof attempt.origin.digest === "string" && /^[a-f0-9]{64}$/u.test(attempt.origin.digest) && attempt.origin.generation > 0)
+        && integer(attempt.claimRevision) && attempt.claimRevision <= job.revision && attempt.claimRevision > 0);
+      if (resumed && index > 0) requireValue(attempt.claimRevision > job.attempts[index - 1].claimRevision
+        && attempt.origin.generation >= job.attempts[index - 1].origin.generation, "attempt origin regressed");
     }
     if (job.state === "running") {
       const lease = job.lease, attempt = job.attempts.at(-1);
@@ -297,13 +325,40 @@ export class ProductionHeadlessJobStore {
       requireValue(typeof result.bytes === "string" && Buffer.byteLength(result.bytes) <= policy.maxResultBytes
         && result.digest === sha(result.bytes));
       receipt = decode(result.bytes);
-      resultValid(receipt, value.request);
+      resultValid(receipt, value.request, this.protocolVersion === 2);
+      requireValue(this.protocolVersion === 2 || receipt.execution === undefined, "v1 result cannot claim checkpoint execution");
+      if (this.protocolVersion === 2 && receipt.dispatch === undefined && receipt.kind !== "failed") {
+        requireValue(receipt.execution !== undefined, "v2 result lost its execution origin");
+      }
       requireValue(receipt.requestDigest === request.digest
         && canonicalJson(receipt.attempts) === canonicalJson(job.attempts));
     }
     requireValue(value.request.cancelled !== true || job.attempts.length === 0);
     topology(job, policy, receipt);
-    return frozen({ requestDigest: request.digest, input: value, job, result: receipt });
+    const record = { requestDigest: request.digest, input: value, job, result: receipt };
+    if (this.protocolVersion === 2) {
+      record.checkpoint = null;
+      requireValue((job.checkpointRef === null) === (checkpointRow === undefined), "checkpoint custody missing");
+      if (checkpointRow !== undefined) {
+        requireValue(typeof checkpointRow.bytes === "string" && Buffer.byteLength(checkpointRow.bytes) <= policy.checkpoint.maxBytes
+          && checkpointRow.digest === sha(checkpointRow.bytes), "checkpoint bytes corrupt");
+        const payload = validateDurableCheckpoint(decode(checkpointRow.bytes), record), ref = job.checkpointRef;
+        requireValue(keys(ref, ["digest", "generation", "tick", "revision"]) && ref.digest === checkpointRow.digest
+          && ref.generation === payload.generation && ref.tick === payload.checkpoint.checkpoint.tick
+          && integer(ref.revision) && ref.revision <= job.revision && ref.revision > payload.attempt.claimRevision);
+        record.checkpoint = { digest: checkpointRow.digest, value: payload };
+      }
+      for (const attempt of job.attempts) requireValue(attempt.origin.digest === null || job.checkpointRef !== null
+        && attempt.origin.generation <= job.checkpointRef.generation && attempt.origin.tick <= job.checkpointRef.tick
+        && (attempt.origin.generation !== job.checkpointRef.generation
+          || attempt.origin.digest === job.checkpointRef.digest && attempt.origin.tick === job.checkpointRef.tick),
+      "orphan checkpoint origin");
+      if (receipt?.execution !== undefined) {
+        const origin = job.attempts.at(-1).origin;
+        requireValue(receipt.execution.startTick === origin.tick && receipt.execution.checkpointDigest === origin.digest);
+      }
+    }
+    return frozen(record);
   }
 
   #transaction(requestId, operation) {
@@ -338,7 +393,7 @@ export class ProductionHeadlessJobStore {
   }
 
   admit(request, executionBinding, policy) {
-    const prepared = input(request, executionBinding, policy, this.#limits);
+    const prepared = input(request, executionBinding, policy, this.#limits, this.#checkpointPolicy);
     const requestId = prepared.value.request.requestId;
     return this.#transaction(requestId, () => {
       const existing = this.read(requestId);
@@ -347,8 +402,9 @@ export class ProductionHeadlessJobStore {
         return existing;
       }
       const now = this.#now();
-      const job = { schemaVersion: 1, id: requestId, revision: 0, state: "pending", admittedAt: now,
-        lastNow: now, deadlineAt: now + prepared.value.policy.duration, attempts: [], lease: null };
+      const job = { schemaVersion: this.protocolVersion, id: requestId, revision: 0, state: "pending", admittedAt: now,
+        lastNow: now, deadlineAt: now + prepared.value.policy.duration, attempts: [], lease: null,
+        ...(this.protocolVersion === 2 ? { checkpointRef: null } : {}) };
       requireValue(finite(job.deadlineAt));
       this.#db.prepare("INSERT INTO requests VALUES(?,?,?)").run(requestId, prepared.text, prepared.digest);
       this.#db.prepare("INSERT INTO jobs VALUES(?,?)").run(requestId, canonicalJson(job));
@@ -356,7 +412,7 @@ export class ProductionHeadlessJobStore {
   }
 
   #terminal(current, job, result) {
-    resultValid(result, current.input.request);
+    resultValid(result, current.input.request, this.protocolVersion === 2);
     job.state = "terminal"; job.lease = null;
     const receipt = { ...result, requestDigest: current.requestDigest, attempts: job.attempts };
     const text = bytes(receipt, current.input.policy.maxResultBytes, "result-too-large");
@@ -385,7 +441,8 @@ export class ProductionHeadlessJobStore {
       if (now >= job.deadlineAt) return this.#control(current, job, "timed-out", "deadline");
       if (job.attempts.length >= current.input.policy.maxAttempts) return this.#control(current, job, "failed", "attempt-budget");
       const token = randomUUID(), ordinal = job.attempts.length + 1;
-      job.attempts.push({ ordinal, token, owner, claimedAt: now, started: null, outcome: null });
+      job.attempts.push({ ordinal, token, owner, claimedAt: now, started: null, outcome: null,
+        ...(this.protocolVersion === 2 ? { origin: checkpointOrigin(current), claimRevision: job.revision } : {}) });
       job.state = "running";
       job.lease = { token, owner, ordinal, expiresAt: Math.min(job.deadlineAt, now + this.#leaseMilliseconds) };
       this.#save(current.job, job);
@@ -413,9 +470,10 @@ export class ProductionHeadlessJobStore {
     });
   }
   markStarted(lease, { workerPid, tick }) {
-    requireValue(integer(workerPid) && workerPid > 0 && tick === 1);
+    requireValue(integer(workerPid) && workerPid > 0 && integer(tick));
     return this.#leased(lease, (current, job) => {
       requireValue(job.attempts.at(-1).started === null, "duplicate attempt start");
+      requireValue(tick === (this.protocolVersion === 2 ? job.attempts.at(-1).origin.tick + 1 : 1), "wrong resumed start tick");
       job.attempts.at(-1).started = { workerPid, tick };
       this.#save(current.job, job);
     });
@@ -423,9 +481,33 @@ export class ProductionHeadlessJobStore {
   publish(lease, result) {
     data(result);
     return this.#leased(lease, (current, job) => {
-      resultValid(result, current.input.request);
+      resultValid(result, current.input.request, this.protocolVersion === 2);
+      requireValue(this.protocolVersion === 2 || result.execution === undefined, "v1 result cannot claim checkpoint execution");
+      if (this.protocolVersion === 2 && result.dispatch === undefined && result.kind !== "failed") {
+        requireValue(result.execution !== undefined && result.execution.startTick === job.attempts.at(-1).origin.tick
+          && result.execution.checkpointDigest === job.attempts.at(-1).origin.digest, "result lacks claimed origin");
+      }
       job.attempts.at(-1).outcome = result.kind;
       this.#terminal(current, job, result);
+    });
+  }
+  publishCheckpoint(lease, previousDigest, payload) {
+    requireValue(this.protocolVersion === 2, "checkpoint protocol not enabled");
+    return this.#leased(lease, (current, job) => {
+      const text = bytes(payload, current.input.policy.checkpoint.maxBytes, "checkpoint-too-large");
+      validateDurableCheckpoint(payload, current);
+      const attempt = job.attempts.at(-1), old = current.checkpoint;
+      requireValue(attempt.started !== null && payload.checkpoint.checkpoint.tick >= attempt.started.tick
+        && payload.attempt.token === attempt.token && payload.attempt.ordinal === attempt.ordinal
+        && payload.previousDigest === previousDigest && (old?.digest ?? null) === previousDigest
+        && payload.generation === (old?.value.generation ?? 0) + 1
+        && payload.checkpoint.checkpoint.tick > (old?.value.checkpoint.checkpoint.tick ?? 0), "checkpoint replacement conflict");
+      requireValue(canonicalJson(payload.nativeTerminalEvents.slice(0, old?.value.nativeTerminalEvents.length ?? 0))
+        === canonicalJson(old?.value.nativeTerminalEvents ?? []), "checkpoint discarded delivered facts");
+      job.checkpointRef = { digest: sha(text), generation: payload.generation, tick: payload.checkpoint.checkpoint.tick, revision: job.revision };
+      this.#save(current.job, job);
+      this.#db.prepare("INSERT INTO checkpoints VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET bytes=excluded.bytes,digest=excluded.digest")
+        .run(job.id, text, job.checkpointRef.digest);
     });
   }
   interrupt(lease) {
