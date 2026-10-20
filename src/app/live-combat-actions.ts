@@ -1,3 +1,4 @@
+import { createLiveCollisionGameplayBindings } from "../gameplay/combat/live-collision-gameplay-bindings";
 import { bindRunDnaShot, runDnaObserver } from "../gameplay/runtime/run-dna-observer";
 import { updateMirrorCombat } from "../gameplay/combat/mirror-combat-feedback";
 import { overrunMovementMultiplier } from "../gameplay/combat/overrun";
@@ -7,7 +8,7 @@ import type { LiveOpeningPhaseHost } from "../gameplay/combat/live-opening-phase
 import type { LiveCollisionPhaseHost } from "../gameplay/combat/live-collision-phase";
 import type { LiveKillHost } from "../gameplay/combat/live-kill-runtime";
 import type { LiveCombatActionAdapters, LiveCombatActionContext, CombatEnemy, CombatProjectile } from "./live-combat-action-context";
-import type { LiveCollisionPhaseState } from "../gameplay/combat/live-collision-phase";
+import type { LiveEnemy, LiveCollisionPhaseState } from "../gameplay/combat/live-collision-phase";
 import type { ParryProjectile } from "../gameplay/combat/blade-parry-runtime";
 
 /** Builds the detailed legacy effect/event adapters outside the application composition root. */
@@ -21,6 +22,15 @@ export function createLiveCombatActions<
   const profileStats = d.profileStatsPersistence;
   const player = () => live.player(), blade = () => live.blade(), run = () => live.run();
   const enemies = () => live.enemies(), projectiles = () => live.projectiles();
+  const gameplay = createLiveCollisionGameplayBindings<LiveEnemy, unknown>({
+    run, blade, simulationSeconds: () => d.CLOCK.sim, makeEvent: f.makeEvent, dispatch: (name, event) => { f.fireMod(f.modHook(name), event); },
+    applySever: f.applySever, damageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage,
+    emitThrowResolve: f.emitThrowResolve, maximumThrowSpeed: () => d.CONFIG.blade.throw.maxSpeed,
+    projectileSpeed: () => d.CONFIG.proj.speed, perfectColor: () => d.CONFIG.colors.perfect, clamp: d.clamp,
+    weaponEffect: (weaponId, effect) => { ports.tutorial.weaponEffect?.(weaponId, effect); },
+    presentAttack: (cue) => { context.attackPresentation.emit(cue); }, floater: f.addFloater,
+    log: f.logWeaponEvent, resolveKill: context.resolveKill,
+  });
   const entities: CombatEntityRuntimeHooks = {
     actors: enemies, projectiles, player,
     slowZones: () => live.slowZones(), setSlowZones: (value) => { live.setSlowZones(value); },
@@ -31,51 +41,8 @@ export function createLiveCombatActions<
     dashDodge: ports.achievement.dashDodge, maxStat: profileStats.max,
     checkAchievements: f.checkAchievements,
     noteFirstDamage: f.entityNoteFirstDamage,
-    reflectedHit: (enemy, shot, source) => {
-      f.fireMod(f.modHook("onReflectedHit"), f.makeEvent(enemy.x, enemy.y, enemy, "reflected",
-        { projectile: shot, sourceEnemy: source, applySever: f.applySever }));
-    },
-    weaponProjectileHit(projectile, target, hit) {
-      const enemy = target as Enemy;
-      let damage = hit.damage;
-      if (hit.secondary && Number(run().mods.secondPass)) damage *= Number(run().mods.secondPass);
-      damage *= f.runDamageMultiplier() * enemy.damageTakenMult();
-      const first = enemy.firstPlayerDamageAt == null;
-      const priorHp = enemy.hp;
-      enemy.hit(damage, hit.dx, hit.dy);
-      if (enemy.hp < priorHp) ports.tutorial.weaponEffect?.(hit.weaponId, hit.secondary ? "backblastRoundHit" : "razorRoundHit");
-      f.noteFirstDamage(enemy, first);
-      const event = f.makeEvent(enemy.x, enemy.y, enemy, hit.secondary ? "secondary" : "weaponProjectile", {
-        type: "weaponProjectileHit", weaponId: hit.weaponId, attackId: hit.attackId,
-        throwId: hit.throwId, remote: hit.remote, secondary: hit.secondary, damageDealt: damage,
-      });
-      f.fireMod(f.modHook("onHit"), event);
-      if (hit.secondary) f.fireMod(f.modHook("onReturnHit"), event);
-      if (hit.remote) {
-        f.emitThrowResolve(enemy, damage);
-        const ramp = Number(run().mods.throwRamp) || 0;
-        if (ramp > 0) {
-          const scale = 1 + ramp, weapon = blade();
-          weapon.throwDmg = Math.min(weapon.throwDmg * scale, (weapon.throwBaseDmg ?? weapon.throwDmg) * 2);
-          const speed = Math.hypot(weapon.vx, weapon.vy), cap = d.CONFIG.blade.throw.maxSpeed * 1.2;
-          if (speed > 0) {
-            const next = Math.min(cap, speed * scale);
-            weapon.vx = weapon.vx / speed * next; weapon.vy = weapon.vy / speed * next;
-          }
-        }
-      }
-      if (run().mods.razorStun && !enemy.isBoss) enemy.stun = Math.max(enemy.stun, 0.45);
-      context.attackPresentation.emit({ weaponId: "riftlock", attackId: hit.attackId, throwId: hit.throwId,
-        action: "projectile", phase: "contact", variant: hit.secondary ? "backblastRound" : "razorRound",
-        sourceX: projectile.x, sourceY: projectile.y, x: enemy.x, y: enemy.y,
-        directionX: hit.dx, directionY: hit.dy, normalX: -hit.dx, normalY: -hit.dy, material: "flesh",
-        intensity: d.clamp(Math.hypot(hit.dx, hit.dy) / Math.max(1, d.CONFIG.proj.speed), 0, 1) });
-      f.addFloater(enemy.x, enemy.y - 28, String(Math.round(damage)), true, d.CONFIG.colors.perfect);
-      f.logWeaponEvent(hit.secondary ? "backblastRoundHit" : "razorRoundHit",
-        { attackId: hit.attackId, throwId: hit.throwId, remote: hit.remote, damage });
-      projectile.dead = true;
-      if (enemy.dead) context.resolveKill(enemy, "skill");
-    },
+    reflectedHit: (enemy, shot, source) => { gameplay.reflectedHit(enemy as Enemy, shot, source); },
+    weaponProjectileHit: (projectile, target, hit) => { gameplay.weaponProjectileHit(projectile, target as Enemy, hit); },
     bossHit: f.entityBossHit, onKill: f.entityResolveKill,
     areaDamage: (x, y, radius, damage, playerOwned) => f.areaDamage(x, y, radius, damage, playerOwned),
   };
@@ -216,10 +183,10 @@ export function createLiveCombatActions<
     },
     updateEffects: (seconds) => { d.FX.update(seconds); }, random: d.cosmeticEmissionRandom.next,
   };
-  return { entities, opening, collision: createCollision(context), kill: createKill(context) };
+  return { entities, opening, collision: createCollision(context, gameplay), kill: createKill(context) };
 }
 
-function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
+function createCollision(context: LiveCombatActionContext, gameplay: ReturnType<typeof createLiveCollisionGameplayBindings<LiveEnemy, unknown>>): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
   const { dependencies: d, live, ports } = context, f = ports.functions;
   const profileStats = d.profileStatsPersistence;
   const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
@@ -243,7 +210,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     config: d.CONFIG,
     reducedMotion: () => d.A11Y.reducedMotion,
     environment: context.environment,
-    environmentTick: () => Math.max(0, Math.round(d.CLOCK.sim * 120)),
+    environmentTick: gameplay.environmentTick,
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
     weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
     throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
@@ -262,13 +229,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     distance: d.len, clamp: d.clamp, lerp: d.lerp, nearestEnemy: f.nearestEnemy, areaDamage: f.areaDamage,
     lobExplode: f.lobExplode, splitProjectile: f.splitProjectile, triggerSlowMotion: f.triggerSlowMotion,
     emitPerfectParry: () => { context.emitMusicEvent("perfect-parry", { weaponId: live.run().weaponId }); },
-    makeHitEvent: (enemy, x, y) => { f.fireMod(f.modHook("onHit"), f.makeEvent(x, y, enemy, "hit", {
-      weaponId: live.run().weaponId, swingId: live.blade().swingId, attackId: live.blade().attackId, throwId: live.blade().throwId,
-    })); },
-    makeSwingEvent: (enemy, x, y, damage, quality, mechanic) => { f.fireMod(f.modHook("onSwingHit"), f.makeEvent(x, y, enemy, "swing", {
-      type: "swingHit", damageDealt: damage, quality, mechanic, weaponId: live.run().weaponId,
-      swingId: live.blade().swingId, attackId: live.blade().attackId, throwId: live.blade().throwId,
-    })); },
+    makeHitEvent: gameplay.makeHitEvent, makeSwingEvent: gameplay.makeSwingEvent,
     observeProjectile: (shot) => {
       if (seenProjectiles.has(shot)) return;
       seenProjectiles.add(shot); emitProjectile("spawned", shot);
@@ -276,12 +237,8 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     projectileDeflected: (shot) => { emitProjectile("deflected", shot); emitProjectile("owner-changed", shot); },
     projectileHit: (shot, enemy) => { emitProjectile("hit", shot, enemy); },
     projectileExpired: (shot) => { emitProjectile("expired", shot); },
-    makeSlamEvent: (enemy) => { f.fireMod(f.modHook("onSlam"), f.makeEvent(enemy.x, enemy.y, enemy)); },
-    makeReturnEvent: (enemy, damage) => { f.fireMod(f.modHook("onReturnHit"), f.makeEvent(enemy.x, enemy.y, enemy, "secondary", {
-      type: "returnHit", throwId: live.blade().throwId, weaponId: live.run().weaponId,
-      attackId: live.blade().attackId, damageDealt: damage,
-    })); },
-    makePerfectParryEvent: (shot) => { const event = f.makeEvent(shot.x, shot.y, null, "parry", { type: "perfectParry", sourceEnemy: shot.sourceEnemy ?? shot.owner, projectile: shot, applySever: f.applySever }); f.fireMod(f.modHook("onParry"), event); f.fireMod(f.modHook("onPerfectParry"), event); },
+    makeSlamEvent: gameplay.makeSlamEvent, makeReturnEvent: gameplay.makeReturnEvent,
+    makePerfectParryEvent: gameplay.makePerfectParryEvent,
     profileAdd: profileStats.add, profileMax: profileStats.max,
     dailyBump: (name, value) => { d.DAILY.bump(name, value); }, achievementsEnabled: f.achievementsEnabled,
     achievement(name, enemy) { if (name === "swing") { if (enemy) ports.achievement.bossHit(enemy, "melee"); else ports.achievement.swung(); }

@@ -1,3 +1,5 @@
+import { overrunDamageMultiplier } from "../../src/gameplay/combat/overrun";
+import { tierUp } from "../../src/gameplay/upgrades";
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import type { GameAction } from "../../src/input/game-action";
 import { describe, expect, it } from "vitest";
@@ -21,6 +23,45 @@ import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { projectGhostRunDnaTheater } from "../../src/ghost/run-dna-theater";
 
 describe("production TearBench combat parity", () => {
+  it("dispatches acquired held-hit callbacks and the existing Overrun multiplier", () => {
+    const source = semanticBindingFixture(); source.acquire("rupture"); source.acquire("overrun");
+    const { blade, run, target } = source; run.mods.overrunStacks = 2;
+    Object.assign(blade, { x: target.x - 30, y: target.y, tipX: target.x + 30, tipY: target.y, tipVX: 1300, tipVY: 0, tipSpeed: 1300 });
+    expect.soft(source.host.combat.collision.runDamageMultiplier()).toBe(overrunDamageMultiplier(run.mods, source.host.replay.configuration.value.overrun));
+    runLiveCollisionPhase(source.host.combat.collision, 1 / 120);
+    expect(target.hp).toBeLessThan(target.maxHp); expect(target.bleedStacks).toBe(1);
+  });
+  it("dispatches acquired perfect-parry hooks and preserves their HP/transient effects", () => {
+    const source = semanticBindingFixture(); source.acquire("riposte", 2);
+    source.player.hp = source.player.maxHp - 12;
+    const { blade } = source, speed = source.host.replay.configuration.value.blade.perfectSpeed * 1.1;
+    Object.assign(blade, { x: 800, y: 600, tipX: 900, tipY: 600, tipVX: speed, tipVY: 0, tipSpeed: speed });
+    const shot = source.host.replay.world.entities.createProjectile(880, 600, -100, 0); source.host.replay.world.state.setProjectiles([shot]);
+    runLiveCollisionPhase(source.host.combat.collision, 1 / 120);
+    expect(shot.perfect).toBe(true); expect(source.player.hp).toBe(source.player.maxHp - 6);
+    expect(source.host.replay.transient.impact.slowMotion).toBe(source.host.replay.configuration.value.juice.parrySlowmo);
+  });
+  it.each([false, true])("routes actual absorbed damage through native shield feedback and burst=%s", (burst) => {
+    const source = semanticBindingFixture(); source.acquire("aegis", burst ? 3 : 1);
+    source.player.shield = 1; source.target.x = source.player.x + 80; source.target.y = source.player.y;
+    const hp = source.target.hp;
+    source.host.combat.combatEntityRuntime.execute([{ type: "damage-player", damage: 2, sourceX: source.player.x + 30, sourceId: null,
+      cause: "projectile", projectileId: "missing", onHit: [], onRejected: [], onAbsorbed: [{ type: "shield-absorbed" }] }], new Map());
+    expect(source.player.shield).toBe(0); expect(source.host.replay.transient.impact.hitStop).toBe(source.host.replay.configuration.value.hitStop.small);
+    expect(source.target.hp).toBe(burst ? hp - 28 : hp);
+  });
+  it("routes authored environment contacts through the per-world native clock", () => {
+    const source = semanticBindingFixture(), environment = source.host.replay.world.context.environment;
+    environment.setStage("verdant-sanctum", "restore");
+    environment.addCombatObject({ id: "binding-link", factoryId: "root-link", kind: "root-link", ownerId: null, targetId: null,
+      geometry: { x: 830, y: 580, w: 8, h: 40 }, integrity: 1, maxIntegrity: 1, counterplayTags: ["cut"], procEligible: false,
+      damageDedupeId: "binding-link:damage", state: "active", stateTick: 1, cleanupReason: null });
+    source.host.replay.clock.sim = 3.125; source.host.simulation.scheduler.reset(900);
+    Object.assign(source.blade, { x: 800, y: 600, tipX: 900, tipY: 600, tipVX: 1300, tipVY: 0, tipSpeed: 1300 });
+    runLiveCollisionPhase(source.host.combat.collision, 1 / 120);
+    expect(environment.combatObjects()[0]).toMatchObject({ state: "destroyed", stateTick: 375, integrity: 0 });
+  });
+
   it("aims a real perfect parry from the projectile rather than the blade origin", () => {
     // Engineered settled collision boundary, composed from actual production actors.
     const source = createProductionGhostReplayComposition({ seed: "projectile-origin-parry", mode: "endless" }).create(undefined);
@@ -350,3 +391,16 @@ describe("production TearBench combat parity", () => {
   // Source descent, restored stream continuity and malformed bindings are covered by ghost-finale-companion.test.ts.
 
 });
+
+function semanticBindingFixture() {
+  const host = createProductionGhostReplayComposition({ seed: "semantic-collision-bindings", mode: "endless" }).create(undefined);
+  const run = host.replay.world.state.run(), player = host.replay.world.state.player(), blade = host.replay.world.state.blade();
+  if (!run || !player || !blade) throw new Error("production binding actors missing");
+  const target = host.replay.world.entities.createEnemy("charger", 1100, 600, run);
+  Object.assign(target, { spawnT: 0, hp: 10000, maxHp: 10000, stun: 10 }); host.replay.world.state.setEnemies([target]);
+  const context = { mods: run.mods, player, blade, config: host.replay.configuration.value };
+  return { host, run, player, blade, target, acquire(id: string, tier = 1) {
+    const upgrade = UPGRADES.find(candidate => candidate.id === id); if (!upgrade) throw new Error(`missing upgrade ${id}`);
+    applyUpgrade(upgrade, context); for (let level = 1; level < tier; level++) tierUp(id, context);
+  } };
+}

@@ -1,9 +1,10 @@
+import { createLiveCollisionGameplayBindings } from "../gameplay/combat/live-collision-gameplay-bindings";
 import type { LiveStyleAchievementOptions } from "../gameplay/scoring/live-style-achievement-runtime";
 import { bindRunDnaShot, runDnaObserver } from "../gameplay/runtime/run-dna-observer";
 import { aabbOverlap, clamp, len, lerp, segCircle, segPointDist } from "../domain/geometry";
 import { GFX, THEME } from "../config/game-config";
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks, type LiveCombatEntity } from "../gameplay/combat/combat-entity-runtime";
-import { createLiveWeaponRuntime, type LiveWeaponEnemy } from "../gameplay/combat/live-weapon-runtime";
+import { createLiveWeaponRuntime, type LiveWeaponEnemy, type LiveWeaponEvent } from "../gameplay/combat/live-weapon-runtime";
 import { bindLiveHammerMeteor } from "../gameplay/combat/live-hammer-meteor";
 import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../gameplay/combat/live-collision-phase";
 import type { LiveKillHost } from "../gameplay/combat/live-kill-runtime";
@@ -124,6 +125,11 @@ export function createProductionCombatPhases(
   };
   let actorId: ((enemy: object & { id?: string }) => string) | null = null;
   let weaponRuntime: ReturnType<typeof createLiveWeaponRuntime<LiveWeaponEnemy>> | null = null;
+  const requireWeaponRuntime = () => {
+    if (weaponRuntime === null) throw new Error("production weapon runtime has not been composed");
+    return weaponRuntime;
+  };
+  type NativeEnemy = ReturnType<typeof world.entities.createEnemy>;
   const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
   const dealArea = (x: number, y: number, radius: number, damage: number, playerOwned = true): number =>
     weaponRuntime?.dealArea(x, y, radius, damage, { playerOwned }) ?? 0;
@@ -183,30 +189,20 @@ export function createProductionCombatPhases(
     burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => { effects.burst(x, y, dx, dy, count, color); },
     explode: (x: number, y: number, color: string, scale: number) => { effects.explode(x, y, color, scale); },
     fxFlash: (x: number, y: number, radius: number, color: string) => { effects.flash(x, y, radius, color); },
-    floater: note("floater"), shake: note("shake"), flash: note("flash"),
+    floater: (...args: Parameters<typeof addFloater>) => { addFloater(...args); }, shake: (amount: number) => { requireWeaponRuntime().addShake(amount); }, flash: (amount: number) => { requireWeaponRuntime().addFlash(amount); },
     sound: (cue: string) => { outward.push(`sound:${cue}`); },
-    loseStyle: () => { style.loseStyle(); }, shieldAbsorbed: note("shieldAbsorbed"),
+    loseStyle: () => { style.loseStyle(); }, shieldAbsorbed: () => { requireWeaponRuntime().shieldAbsorb(); },
     addStyle: (kind: string) => { style.addStyle(kind); },
     dashDodge: (projectile: unknown) => { style.achievements.dashDodge(projectile as never); },
     maxStat: note("maxStat"), checkAchievements: () => { style.check(); },
-    noteFirstDamage: note("noteFirstDamage"), reflectedHit: note("reflectedHit"), bossHit: note("bossHit"),
+    noteFirstDamage: (enemy: NativeEnemy, first: boolean) => { requireWeaponRuntime().noteFirstDamage(enemy, first); },
+    reflectedHit: (enemy: NativeEnemy, shot: unknown, source: unknown) => { gameplay.reflectedHit(enemy, shot, source); }, bossHit: note("bossHit"),
     onKill: (enemy: { dead?: boolean }, cause: string) => { resolveKill(enemy, cause); },
     areaDamage: (x: number, y: number, radius: number, damage: number, playerOwned: boolean) =>
       dealArea(x, y, radius, damage, playerOwned),
     weaponProjectileHit: (projectile: LiveCombatEntity, target: LiveCombatEntity,
       hit: Parameters<NonNullable<CombatEntityRuntimeHooks["weaponProjectileHit"]>>[2]) => {
-      const enemy = target as unknown as LiveWeaponEnemy;
-      const first = enemy.firstPlayerDamageAt == null;
-      let damage = hit.damage;
-      if (hit.secondary && Number((world.state.run() as never as { mods?: { secondPass?: number } }).mods?.secondPass)) {
-        damage *= (world.state.run() as never as { mods: { secondPass: number } }).mods.secondPass;
-      }
-      const priorHp = target.hp;
-      enemy.hit(damage, hit.dx, hit.dy, { playerOwned: true });
-      if (target.hp !== undefined && priorHp !== undefined && target.hp < priorHp) replay.tutorial.weaponEffect(hit.weaponId, hit.secondary ? "backblastRoundHit" : "razorRoundHit");
-      weaponRuntime?.noteFirstDamage(enemy, first);
-      projectile.dead = true;
-      if (enemy.dead) resolveKill(enemy, "skill");
+      gameplay.weaponProjectileHit(projectile, target as NativeEnemy, hit);
     },
   } as unknown as CombatEntityRuntimeHooks;
   let combat = options.deferCombatRuntime === true ? null : new CombatEntityRuntime(entityHooks);
@@ -239,6 +235,35 @@ export function createProductionCombatPhases(
     deathShards: () => config.juice.deathShards,
     parrySound: () => undefined, recallSound: () => undefined,
     onKill: (enemy, cause) => { resolveKill(enemy, cause); },
+  });
+  const gameplay = createLiveCollisionGameplayBindings<NativeEnemy, LiveWeaponEvent<LiveWeaponEnemy>>({
+    run: () => {
+      const run = world.state.run();
+      if (run === null) throw new Error("collision gameplay requires an active run");
+      return run;
+    },
+    blade: () => {
+      const active = world.state.blade();
+      if (active == null) throw new Error("collision gameplay requires a blade");
+      return active;
+    },
+    makeEvent: (x, y, enemy: NativeEnemy | null, cause, detail) => requireWeaponRuntime().makeEvent(x, y, enemy, cause, detail),
+    dispatch: (name, event) => {
+      const run = world.state.run();
+      if (run === null) throw new Error("collision gameplay requires an active run");
+      requireWeaponRuntime().fire(run.mods[name], event);
+    },
+    simulationSeconds: () => replay.clock.sim,
+    applySever: weaponRuntime.applySever, damageMultiplier: weaponRuntime.damageMultiplier,
+    noteFirstDamage: weaponRuntime.noteFirstDamage,
+    emitThrowResolve: (enemy, damage) => {
+      emitWeaponFact("throw-resolved", undefined, damage); requireWeaponRuntime().emitThrowResolve(enemy, damage);
+    },
+    maximumThrowSpeed: () => config.blade.throw.maxSpeed, projectileSpeed: () => config.proj.speed,
+    perfectColor: () => config.colors.perfect, clamp,
+    weaponEffect: (weaponId, effect) => { replay.tutorial.weaponEffect(weaponId, effect); },
+    presentAttack: () => { outward.push("weaponProjectileContact"); }, floater: addFloater,
+    log: weaponRuntime.log, resolveKill: (enemy, cause) => { resolveKill(enemy, cause); },
   });
   const lobExplode = bindLiveHammerMeteor({
     blade: () => blade(), enemies: () => world.state.enemies(),
@@ -405,12 +430,12 @@ export function createProductionCombatPhases(
     flash: (...args: Parameters<typeof effects.flash>) => { outward.push("fx:flash"); effects.flash(...args); },
     ribbon: (...args: Parameters<typeof effects.ribbon>) => { outward.push("fx:ribbon"); effects.ribbon(...args); },
     explode: (...args: Parameters<typeof effects.explode>) => { outward.push("fx:explode"); effects.explode(...args); },
-    floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
+    floater: addFloater, shake: weaponRuntime.addShake, zoom: weaponRuntime.addZoom,
     buzz: note("fx:buzz"), sound: (name: string) => { outward.push(`hit:${name}`); },
     style: (kind: string) => { style.addStyle(kind); }, tutorial: (kind: "strike" | "airHit") => { replay.tutorial.mark(kind); outward.push("fx:tutorial"); },
   };
   const collision = {
-    config,
+    config, environment: world.context.environment, environmentTick: gameplay.environmentTick,
     get player() { return player(); }, get blade() { return blade(); },
     get run() { return world.state.run() as never; },
     get combat() {
@@ -427,9 +452,9 @@ export function createProductionCombatPhases(
       return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onThrowHit",
         { config, blade: blade(), player: player(), enemy, secondary, throwId }) as never;
     },
-    runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
+    runDamageMultiplier: weaponRuntime.damageMultiplier, noteFirstDamage: weaponRuntime.noteFirstDamage,
     observeTutorialAttempt: (fact: Parameters<typeof replay.tutorial.observeAttemptFact>[0]) => { replay.tutorial.observeAttemptFact(fact); },
-    logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
+    logWeapon: weaponRuntime.log,
     weaponEffect: (weaponId: string, effect: string) => { replay.tutorial.weaponEffect(weaponId, effect); },
     emitThrowResolve: (enemy: LiveWeaponEnemy | null, damage: number) => {
       outward.push("emitThrowResolve");
@@ -437,9 +462,9 @@ export function createProductionCombatPhases(
       weaponRuntime.emitThrowResolve(enemy, damage);
     },
     onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
-    addFloater: note("addFloater"), effects: collisionEffects,
+    addFloater, effects: collisionEffects,
     sound: (cue: string) => { outward.push(`sound:${cue}`); }, flare: note("flare"),
-    addShake: note("addShake"), addZoom: note("addZoom"), addFlash: note("addFlash"),
+    addShake: weaponRuntime.addShake, addZoom: weaponRuntime.addZoom, addFlash: weaponRuntime.addFlash,
     addStyle: (kind: string) => { style.addStyle(kind); },
     segmentCircle: (x1: number, y1: number, x2: number, y2: number, x: number, y: number, radius: number) =>
       segCircle(x1, y1, x2, y2, x, y, radius),
@@ -452,9 +477,9 @@ export function createProductionCombatPhases(
     nearestEnemy: (x: number, y: number) => weaponRuntime.nearestEnemy(x, y),
     areaDamage: (x: number, y: number, radius: number, damage: number) => dealArea(x, y, radius, damage), lobExplode,
     splitProjectile: (projectile: never) => { style.splitProjectile(projectile); },
-    triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
-    makeHitEvent: note("makeHitEvent"), makeSwingEvent: note("makeSwingEvent"), makeSlamEvent: note("makeSlamEvent"),
-    makeReturnEvent: note("makeReturnEvent"), makePerfectParryEvent: note("makePerfectParryEvent"),
+    triggerSlowMotion: weaponRuntime.triggerSlowmo, emitPerfectParry: note("emitPerfectParry"),
+    makeHitEvent: gameplay.makeHitEvent, makeSwingEvent: gameplay.makeSwingEvent, makeSlamEvent: gameplay.makeSlamEvent,
+    makeReturnEvent: gameplay.makeReturnEvent, makePerfectParryEvent: gameplay.makePerfectParryEvent,
     observeProjectile: (projectile: Parameters<typeof emitProjectileFact>[1]) => {
       outward.push("projectile:spawned"); emitProjectileFact("spawned", projectile);
     },
@@ -480,7 +505,7 @@ export function createProductionCombatPhases(
     updateTrick: (seconds: number) => { style.update(seconds); },
     achievementTick: (seconds: number) => { style.achievements.tick(seconds); }, updateTutorial: (seconds: number) => { replay.tutorial.update(seconds); },
     updatePlayground: () => undefined, overlap: aabbOverlap,
-    onShieldAbsorb: note("onShieldAbsorb"), loseStyle: () => { style.loseStyle(); }, buzz: () => undefined,
+    onShieldAbsorb: weaponRuntime.shieldAbsorb, loseStyle: () => { style.loseStyle(); }, buzz: () => undefined,
     requestAdContinue: note("requestAdContinue"), adAvailable: () => false,
     endRun: options.endRun ?? note("endRun"),
   } as unknown as LiveCollisionPhaseHost;
