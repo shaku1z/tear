@@ -23,19 +23,25 @@ export function createLiveGhostFinaleCompanion(options: Readonly<{
   return Object.freeze({
     observed(snapshot: TearSnapshotV1 | undefined, receipt: GhostAuthoritativeReceiptV1) { if (snapshot !== undefined) observed = { snapshot, receipt }; },
     interceptFinish(result: Readonly<Record<string, unknown>>) {
-      if (!options.finaleActive()) return false;
       const recorder = options.session.recorder(), context = options.session.replayContext();
-      if (recorder?.active !== true || context === undefined) return false;
+      // Scored victory closes before FinaleRuntime installs its binding. The
+      // stop intent must not depend on an optional DNA observer deferring it.
+      if (result.won !== true || recorder?.active !== true || context?.run.mode !== "campaign") return false;
       options.frames.prepareHandoff();
       pending = { result, run: options.run(), recorder, context, sessionId: recorder.activeSessionId }; return true;
     },
-    reset() { if (active?.recorder.active === true && active.recorder.activeSessionId === active.id) active.recorder.interrupt("Finale capture interrupted by run replacement"); pending = undefined; observed = undefined; active = undefined; },
+    reset() {
+      if (active?.recorder.active === true && active.recorder.activeSessionId === active.id) active.recorder.interrupt("Finale capture interrupted by run replacement");
+      if (pending?.recorder.active === true && pending.recorder.activeSessionId === pending.sessionId) pending.recorder.interrupt("Finale launch interrupted by run replacement");
+      pending = undefined; observed = undefined; active = undefined;
+    },
     afterTick() {
-      if (pending === undefined || !options.finaleActive()) return;
+      if (pending === undefined) return;
       const recorder = options.session.recorder(), context = options.session.replayContext(), owner = pending, result = owner.result;
       pending = undefined;
       if (recorder?.active !== true || context === undefined || owner.run !== options.run() || recorder !== owner.recorder
         || context !== owner.context || recorder.activeSessionId !== owner.sessionId) return;
+      if (!options.finaleActive()) { recorder.interrupt("Scored Campaign victory did not launch its finale"); options.session.setReplayContext(undefined); return; }
       if (observed?.snapshot.tick !== options.tick()) options.captureReceipt(options.tick());
       if (observed?.snapshot.tick !== options.tick()) { recorder.interrupt("Finale committed origin was not captured"); options.session.setReplayContext(undefined); return; }
       const origin = observed, handoff = options.frames.handoff(result);

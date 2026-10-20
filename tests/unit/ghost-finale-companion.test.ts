@@ -15,6 +15,7 @@ import { projectProductionReplayCanonicalState } from "../../src/tearbench/produ
 import { admitGhostFinaleCompanion, readGhostFinaleCompanion } from "../../src/ghost/finale-companion";
 import { createGhostFinalePlayback } from "../../src/ghost/finale-playback";
 import { CAMPAIGN_STAGE_IDS, stageAt } from "../../src/gameplay/stages";
+import { LegacyGhostEngine } from "../../src/replay/legacy-compat";
 
 function finaleSource() {
   const source = createProductionGhostReplayComposition({ seed: "constructed-finale-owner", mode: "campaign" }).create(undefined);
@@ -122,11 +123,22 @@ describe("source-linked finale continuation", () => {
     const companion = createLiveGhostFinaleCompanion({ session, frames, tick: () => source.simulation.scheduler.tick, run: () => currentRun,
       finaleActive: () => source.replay.world.lifecycle.snapshot().phase === "finale", completed: () => source.waveReward.screen() === "win", captureReceipt: capture, witness: state });
     bus.subscribe((event) => { if (recorder.active) recorder.record("events", event.tick, createGameplayCausalEvent(event, ++sequence, `native-${String(sequence)}`, "engine")); if (event.kind === "run" && event.transition === "completed") finishRequested = true; });
+    const ghost = new LegacyGhostEngine({ store: { get: () => null, set: () => undefined }, document: {} as Document,
+      now: () => 1, random: () => 0.5, defaults: { rulesetVersion: "finale-fixture", build: { version: "0.1.0", revision: "fixture", target: "standalone" }, ticksPerSecond: 120, tearScore: () => ({ enabled: false }) } });
+    // Exercise the real stop observer before FinaleRuntime launches its binding.
+    // No Run DNA observer is present to defer this boundary until after the tick.
+    ghost.setRecordingObserver({ started: () => undefined, stopped: (meta) => { frames.finish(meta); } }); ghost.startRec();
+    source.replay.finale.bindOutcome((campaign, persist) => {
+      const prepared = source.outcome.controller.prepareVictory(campaign, persist);
+      expect(source.replay.world.lifecycle.snapshot().phase).not.toBe("finale");
+      ghost.stopRec({ won: true }, { continueSemanticInput: true });
+      return prepared;
+    }, (campaign) => { source.outcome.controller.victory(campaign); source.waveReward.restoreScreen("win"); });
     recorder.start({ sessionId: "scored-parent", createdAt: "2026-10-20T00:00:00Z", provenance: { replayContext: context } });
     const confirm = { key: false, touch: false, pad: false, click: false };
     frames.begin(1 / 60, confirm, false); source.advanceApplicationFrame(1 / 60, confirm); frames.preludeApplied();
     source.simulation.advanceOne([{ kind: "command", id: 1, tick: 120, command: { type: "aim", turn: 0, magnitude: 400 } }]);
-    expect(finishRequested).toBe(true); frames.finish({ won: true });
+    expect(finishRequested).toBe(true); expect(ghost.recording()).toBe(false);
     capture(120); companion.afterTick();
     source.simulation.advanceOne([]); companion.afterTick(); frames.end(2); await recorder.drain();
     expect(recorder.activeSessionId).toBe("scored-parent:finale");

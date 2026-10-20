@@ -193,17 +193,23 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
         terminalWorld: terminal.state["tear.world.v1"], terminalUi: terminal.state["tear.ui.v1"], terminalCinema: terminal.state["tear.cinematic.v1"] };
     }) };
     assert.equal(evidence.terminalUi.screen, "win", "actual confirmation/assist, gravity and landing must reach final presentation");
+    const artifactDir = process.env.TEAR_R07_FINALE_ARTIFACT_DIR || path.join("artifacts", "tearbench", "c27a", "finale-companion");
+    fs.mkdirSync(artifactDir, { recursive: true });
+    fs.writeFileSync(path.join(artifactDir, "terminal-evidence.json"), JSON.stringify(evidence, null, 2), { flag: "wx" });
     const completed = await waitForBrowserValue(page, async () => {
       const failure = window.__TEAR_GHOST_V3__.failure();
       if (failure !== null) throw new Error(`finale recording failed: ${JSON.stringify(failure)}`);
       const manifests = await window.__TEAR_GHOST_V3__.manifests();
       return manifests.find((manifest) => manifest.status === "complete" && manifest.provenance?.finaleCompanion)?.id;
+    }).catch(async (error) => {
+      const status = await page.evaluate(async () => ({ active: window.__TEAR_GHOST_V3__.active(),
+        failure: window.__TEAR_GHOST_V3__.failure(), manifests: await window.__TEAR_GHOST_V3__.manifests() }));
+      fs.writeFileSync(path.join(artifactDir, "recording-failure.json"), JSON.stringify({ error: String(error), ...status }, null, 2), { flag: "wx" });
+      throw error;
     });
     const child = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), completed);
     const parentId = child.manifest.provenance.finaleCompanion.parentId;
     const parent = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), parentId);
-    const artifactDir = process.env.TEAR_R07_FINALE_ARTIFACT_DIR || path.join("artifacts", "tearbench", "c27a", "finale-companion");
-    fs.mkdirSync(artifactDir, { recursive: true });
     fs.writeFileSync(path.join(artifactDir, "source-pair.json"), JSON.stringify({ classification: "constructed-final-wave-surgical-source", parent, child, evidence }, null, 2));
     // Preserve original encoded Vault strings as evidence; this is not a new
     // paired portable archive format or a synthesized custody source.
