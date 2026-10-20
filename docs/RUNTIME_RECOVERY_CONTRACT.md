@@ -141,3 +141,17 @@ negative live/history reference controls. This is not a natural sixty-wave
 Campaign claim. The original browser caller now yields to native RAF after each
 finale application frame without changing its900-frame/input/wait limits;
 fresh normal paired-file/Theater browser acceptance remains parent-owned.
+
+
+V3 Theater and finale now forward the existing native Input to the same replay
+transport controller used by legacy replay. Scrub geometry uses SAFE insets;
+Theater maps relative source seconds into its actual recorded tick range, while
+finale maps seconds into captured application-frame positions, including zero-tick
+frames. Space and arrow keys handled by V3 transport are consumed before general
+UI confirmation/navigation; open Coach, challenge, Run DNA and editor overlays
+retain their own input. Existing button controls and legacy/comparison behavior
+remain unchanged. A causal control failed at tick600 instead of the requested
+90%tick1680 before repair. Focused transport/finale controls pass. The normal
+paired-file browser caller now requires rendered90%restoration and final-frame
+ordinal/tick/state-hash witnesses plus unchanged source bytes/profile; fresh
+parent browser acceptance is pending for this source.

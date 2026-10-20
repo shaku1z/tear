@@ -1,3 +1,4 @@
+import { handleReplayTransport, type ReplayNativeTransport } from "./replay-transport-controller";
 import { recordedGhostChallengeChoices, type RecordedGhostChallenge, type RecordedGhostChallengeResult } from "../ghost/recorded-challenge";
 import type { GhostForkPermit } from "../ghost/fork-origin";
 import type { ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
@@ -26,6 +27,7 @@ export interface GhostTheaterScreenServices {
   readonly studioMedia?: GhostStudioBrowserMediaPort;
   readonly width: () => number;
   readonly deltaSeconds: () => number;
+  readonly nativeTransport?: () => ReplayNativeTransport;
   readonly launchPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
   readonly coachHistory: GhostCoachHistoryPort;
 }
@@ -210,6 +212,14 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     render(): void {
       advance();
+      if (context !== undefined && !context.coachOpen && !context.challengeOpen && !context.runDnaOpen && !context.studioOpen) {
+        const native = services.nativeTransport?.(), current = context;
+        if (native !== undefined) handleReplayTransport({ ...native,
+          currentTime: (current.result.tick - current.firstTick) / TICKS_PER_SECOND,
+          duration: (current.lastTick - current.firstTick) / TICKS_PER_SECOND,
+          seek: (seconds) => { seek(current.firstTick + Math.round(seconds * TICKS_PER_SECOND)); },
+          toggle: () => { if (current.transport.state().playing) current.transport.pause(); else current.transport.play(); } });
+      }
       const snapshot = view();
       if (context?.frame !== undefined) services.drawWorld?.(context.frame);
       if (snapshot !== undefined) services.render(snapshot);

@@ -1,3 +1,4 @@
+import { replayTransportScrub } from "./replay-transport-controller";
 import { reopenGhostFinaleCompanion } from "../ghost/browser-finale-companion";
 import { createGhostFinaleScreenAdapter } from "./ghost-finale-screen-adapter";
 import { readGhostFinaleCompanion } from "../ghost/finale-companion";
@@ -66,12 +67,12 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   });
   const theater = createGhostTheaterScreenAdapter({ presentation: createBrowserGhostReplayPresentation(services.document, d.UI), studioMedia,
     drawWorld: (frame) => { frame.draw(services.canvas, { x: 0, y: 56, w: services.width, h: services.height - 172 }); }, render: (view) => { services.renderers.replay(view); if (view.studioMedia?.thumbnail !== undefined) studioMedia.drawThumbnail?.(services.canvas, { x: services.width / 2 + 260, y: 220, w: 160, h: 90 }); }, width: () => services.width,
-    deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice,
+    deltaSeconds: services.deltaSeconds, nativeTransport: () => ({ controls: d.Input, scrub: replayTransportScrub(services.width, services.height, d.SAFE), consumeKey: (key) => { d.Input.pressed.delete(key); } }), launchPractice: services.launchGhostPractice,
     coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });
   const comparison = createGhostComparisonScreenAdapter({ render: services.renderers.replay });
   const createFinaleAdapter = () => createGhostFinaleScreenAdapter({ presentation: createBrowserGhostReplayPresentation(services.document, d.UI),
     drawWorld: (frame) => { frame.draw(services.canvas, { x: 0, y: 56, w: services.width, h: services.height - 172 }); }, render: services.renderers.replay,
-    width: () => services.width, deltaSeconds: services.deltaSeconds, launchPractice: services.launchGhostPractice, coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });
+    width: () => services.width, deltaSeconds: services.deltaSeconds, nativeTransport: () => ({ controls: d.Input, scrub: replayTransportScrub(services.width, services.height, d.SAFE), consumeKey: (key) => { d.Input.pressed.delete(key); } }), launchPractice: services.launchGhostPractice, coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb) });
   let finale = createFinaleAdapter();
   let active: "legacy" | "theater" | "comparison" | "finale" | undefined;
   let finalLink: string | undefined;

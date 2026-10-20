@@ -896,6 +896,11 @@ frozen evidence record.
    stay strict. The unchanged external native finale pair passes continuation,
    and the direct shared-owner restoration/refusal controls pass. Parent fresh
    paired-file/Theater browser acceptance remains pending.
+   Native Theater/finale pointer and keyboard transport now reuse the existing
+   controller with SAFE geometry and source-time mapping; open overlays isolate
+   their input. The normal file caller asserts rendered restoration/final-frame
+   witnesses, rather than inferring seek success from a screenshot filename.
+   Focused transport controls pass; parent fresh browser acceptance is pending.
    Schema-two C30 checkpoints require explicit held aim magnitude and reject older
    or missing frontiers before replacement. Canonical input adds an optional nonfull
    magnitude while preserving full-scale hashes. Fresh Ghost receipts explicitly

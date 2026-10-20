@@ -262,9 +262,24 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
     await clickText("▶");
     await page.waitForTimeout(500);
     await page.screenshot({ path: path.join(artifactDir, "theater-playing.png") });
-    // Actual transport seeks by fraction using the rendered progress track.
+    await page.keyboard.press("Space");
+    await page.waitForFunction(() => window.__R07_FINALE_POSITIONS__.some((p) => p.text === "▶"));
+    // A screenshot filename is not evidence of a seek: require the actual
+    // rendered source-time position and its original closed-frame identity.
     await page.mouse.click(1280, 810);
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.waitForFunction(() => window.__R07_FINALE_POSITIONS__.some((p) => {
+      const m = /^([0-9.]+)s · TICK ([0-9]+) \/ ([0-9.]+)s$/u.exec(p.text); return m && Number(m[1]) / Number(m[3]) >= .9;
+    }));
+    const sought = await page.evaluate(() => {
+      const positions = window.__R07_FINALE_POSITIONS__, text = positions.find((p) => /^([0-9.]+)s · TICK /u.test(p.text))?.text;
+      const match = /^([0-9.]+)s · TICK ([0-9]+) \/ ([0-9.]+)s$/u.exec(text || "");
+      return { elapsed: Number(match?.[1]), tick: Number(match?.[2]), duration: Number(match?.[3]), frame: Number(positions.find((p) => /^FRAME [0-9]+$/u.test(p.text))?.text.slice(6)) };
+    });
+    const witnesses = child.tracks.results.filter((entry) => entry.value?.format === "tearghost-finale-frame").map((entry) => entry.value);
+    assert.ok(witnesses.some((w) => w.cursor.ordinal === sought.frame && w.tick === sought.tick));
+    const restoration = child.tracks.keyframes.find((entry) => entry.value.state["tear.run.v1"].stage === 0 && entry.value.state["tear.world.v1"].runtime.finaleBinding?.state.restoring);
+    assert.ok(restoration && sought.tick >= restoration.tick, "rendered seek did not reach the captured restoration interval");
+    fs.writeFileSync(path.join(artifactDir, "actual-transport-seek.json"), JSON.stringify(sought, null, 2));
     await page.screenshot({ path: path.join(artifactDir, "theater-restoration.png") });
     await clickText("BACK TO SCORED RUN");
     await page.waitForFunction(() => window.__R07_FINALE_POSITIONS__.some((p) => p.text === "FINALE CONTINUATION")

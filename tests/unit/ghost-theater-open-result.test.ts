@@ -28,6 +28,29 @@ function hostileCapsule(): GhostReadCapsule {
 }
 
 describe("Ghost Theater open result", () => {
+  it("uses native pointer/keyboard transport over the recorded range and isolates open overlays", () => {
+    fixture.mapped = { ghost: { events: [] }, issues: [] };
+    const seeks: number[] = [], rendered: ReplayScreenView[] = [];
+    fixture.session = { firstTick: 600, lastTick: 1800, sourceRootHash: "root", verifiedReceiptTicks: [600, 1800],
+      seek(tick: number) { seeks.push(tick); return { tick, semanticHash: "hash" }; } };
+    const pressed = new Set<string>(), takeClick = vi.fn(() => ({ x: 1120, y: 804 }));
+    const controls = { clicked: true, clickX: 1120, clickY: 804, pressed, takeClick };
+    const services = { render: (view: ReplayScreenView) => { rendered.push(view); }, width: () => 1600, deltaSeconds: () => 0,
+      nativeTransport: () => ({ controls, scrub: { x: 220, y: 804, width: 1000 }, consumeKey: (key: string) => { pressed.delete(key); } }),
+      launchPractice: () => ({ ok: false as const, message: "unused" }), coachHistory: { list: () => Promise.resolve([]), current: () => Promise.resolve(true), analyze: () => { throw new Error("unused"); } } };
+    const theater = createGhostTheaterScreenAdapter(services);
+    expect(theater.open(hostileCapsule(), "profile").kind).toBe("opened"); theater.render();
+    expect(seeks.at(-1)).toBe(1680); expect(rendered.at(-1)?.progress).toBe(.9);
+    controls.clicked = false; pressed.add("Space"); theater.render(); expect(theater.status()?.paused).toBe(false); expect(pressed.has("Space")).toBe(false);
+    pressed.clear(); pressed.add("ArrowLeft"); theater.render(); expect(seeks.at(-1)).toBe(1080);
+    pressed.clear(); pressed.add("ArrowRight"); theater.render(); expect(seeks.at(-1)).toBe(1680);
+    pressed.clear(); pressed.add("Space"); theater.render(); expect(theater.status()?.paused).toBe(true);
+    theater.toggleStudio(); controls.clicked = true; const accepted = takeClick.mock.calls.length;
+    pressed.clear(); pressed.add("ArrowLeft"); theater.render();
+    expect(seeks.at(-1)).toBe(1680); expect(takeClick).toHaveBeenCalledTimes(accepted);
+    theater.toggleStudio(); controls.clicked = false; pressed.clear(); theater.seekBy(-5); theater.render();
+    expect(seeks.at(-1)).toBe(1080); fixture.session = undefined;
+  });
   it("refuses a codec-preflight source before creating a session or transport", () => {
     fixture.sessionCalls = 0;
     fixture.mapped = Object.freeze({ ghost: { events: [] }, issues: Object.freeze([

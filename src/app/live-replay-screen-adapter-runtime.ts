@@ -8,7 +8,7 @@ import type { VariantEnemy } from "../gameplay/variants";
 import { createReplayPuppet } from "../presentation/replay-puppet-factory";
 import { renderReplayWorldFrame } from "../presentation/replay-world-frame";
 import { buildReplayScreenSnapshot } from "../presentation/replay-snapshots";
-import { handleReplayTransport } from "./replay-transport-controller";
+import { handleReplayTransport, replayTransportScrub } from "./replay-transport-controller";
 import { AttackPresentationDirector } from "../presentation/combat/attack-presentation-director";
 import { decodeAttackPresentationEffect } from "../presentation/combat/attack-presentation-effect-codec";
 
@@ -98,9 +98,8 @@ export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServi
       } });
     const modeId = String(data.mode), mode = d.CONFIG.modes.find((entry) => entry.id === modeId)?.label ?? modeId;
     const playback = d.GHOST.play, duration = d.GHOST.duration(); if (playback === null) return;
-    const scrubY = services.height - 96 - d.SAFE.b, scrubX = 220 + d.SAFE.l;
     handleReplayTransport({ controls: d.Input, currentTime: playback.t, duration,
-      scrub: { x: scrubX, y: scrubY, width: services.width - 440 - d.SAFE.l - d.SAFE.r },
+      scrub: replayTransportScrub(services.width, services.height, d.SAFE),
       seek: (seconds) => { d.GHOST.seek(seconds); }, toggle: () => { d.GHOST.toggle(); } });
     services.renderers.replay(buildReplayScreenSnapshot({ data, modeLabel: mode, playback, duration,
       progress: d.GHOST.progress(), stageName: stage.name, wave: d.GHOST.waveAt(), chapters: d.GHOST.chapters(),

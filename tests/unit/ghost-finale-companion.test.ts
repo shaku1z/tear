@@ -1,3 +1,5 @@
+import { createGhostFinaleScreenAdapter } from "../../src/app/ghost-finale-screen-adapter";
+import type { ReplayScreenView } from "../../src/presentation/screens/contracts";
 import { describe, it, expect } from "vitest";
 import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint, restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
 import { stableVerificationHash } from "../../src/replay/hash";
@@ -217,6 +219,17 @@ describe("source-linked finale continuation", () => {
     const playback = createGhostFinalePlayback(child, admitGhostFinaleCompanion(child, parent));
     expect(playback.positions.at(-1)?.tick).toBe(source.simulation.scheduler.tick);
     const last = playback.seekFrame(playback.positions.length - 1); expect(last.result.semanticHash).toBe(stableVerificationHash(state()));
+    let rendered: ReplayScreenView | undefined;
+    const pressed = new Set<string>(), controls = { clicked: true, clickX: 90, clickY: 0, pressed, takeClick: () => ({ x: 90, y: 0 }) };
+    const screen = createGhostFinaleScreenAdapter({ render: (value) => { rendered = value; }, width: () => 1600, deltaSeconds: () => 0,
+      nativeTransport: () => ({ controls, scrub: { x: 0, y: 0, width: 100 } }), launchPractice: () => ({ ok: false, message: "unused" }),
+      coachHistory: { list: () => Promise.resolve([]), current: () => Promise.resolve(false), analyze: () => { throw new Error("unused"); } } });
+    screen.open(child, admitGhostFinaleCompanion(child, parent), "profile"); screen.render();
+    expect(screen.status()?.progress).toBeGreaterThanOrEqual(.9);
+    controls.clicked = false; pressed.add("ArrowRight"); screen.render();
+    expect(screen.status()?.progress).toBe(1); expect(rendered?.score).toBe(`FRAME ${String(playback.positions.at(-1)?.ordinal)}`);
+    expect(rendered?.infoRows?.at(-1)?.value).toBe(last.result.semanticHash);
+
     expect(() => admitGhostFinaleCompanion(child, { ...parent, manifest: { ...parent.manifest, rootIntegrity: "changed" } })).toThrow(/root/);
     expect(() => createGhostFinalePlayback(child, {} as never)).toThrow(/custody/);
   });

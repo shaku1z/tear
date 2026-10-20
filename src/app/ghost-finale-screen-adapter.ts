@@ -1,3 +1,4 @@
+import { handleReplayTransport } from "./replay-transport-controller";
 import { createGhostFinalePlayback } from "../ghost/finale-playback";
 import type { GhostFinalePermit } from "../ghost/finale-companion";
 import type { GhostReadCapsule } from "../ghost/capsule-reader";
@@ -9,6 +10,11 @@ export function createGhostFinaleScreenAdapter(services: GhostTheaterScreenServi
   let active: { source: ReturnType<typeof createGhostFinalePlayback>; index: number; elapsed: number;
     playing: boolean; speed: number; info: boolean; from: LegacyAppScreen; notice?: string } | undefined;
   const seek = (index: number) => { if (active === undefined) return; active.index = Math.max(0, Math.min(active.source.positions.length - 1, Math.floor(index))); active.elapsed = active.source.positions[active.index]?.seconds ?? 0; };
+  const seekSeconds = (target: number) => {
+    if (active === undefined) return;
+    const index = active.source.positions.findIndex((position) => position.seconds >= target);
+    seek(index < 0 ? active.source.positions.length - 1 : index);
+  };
   return Object.freeze({
     open(capsule: GhostReadCapsule, permit: GhostFinalePermit, from: LegacyAppScreen) {
       const source = createGhostFinalePlayback(capsule, permit, services.presentation);
@@ -25,6 +31,9 @@ export function createGhostFinaleScreenAdapter(services: GhostTheaterScreenServi
         while (state.index + 1 < state.source.positions.length && (state.source.positions[state.index + 1]?.seconds ?? Infinity) <= state.elapsed) state.index++;
         if (state.index === state.source.positions.length - 1) state.playing = false;
       }
+      const native = services.nativeTransport?.();
+      if (native !== undefined) handleReplayTransport({ ...native, currentTime: state.elapsed, duration, seek: seekSeconds,
+        toggle: () => { state.playing = !state.playing; } });
       const selected = state.source.seekFrame(state.index), position = state.source.positions[state.index];
       if (selected.frame !== undefined) services.drawWorld?.(selected.frame);
       services.render({ id: "replay", title: "FINALE CONTINUATION", detail: "SOURCE-LINKED · RECORDED APPLICATION CLOCK",
@@ -35,8 +44,8 @@ export function createGhostFinaleScreenAdapter(services: GhostTheaterScreenServi
         ...(state.notice === undefined ? {} : { notice: state.notice }), finaleNavigation: "BACK TO SCORED RUN" });
     },
     togglePause() { if (active !== undefined) active.playing = !active.playing; },
-    seekBy(seconds: number) { if (active === undefined) return; const target = active.elapsed + seconds; const index = active.source.positions.findIndex((p) => p.seconds >= target); seek(index < 0 ? active.source.positions.length - 1 : index); },
-    seekToFraction(fraction: number) { if (active === undefined) return; const target = (active.source.positions.at(-1)?.seconds ?? 0) * Math.max(0, Math.min(1, fraction)); const index = active.source.positions.findIndex((p) => p.seconds >= target); seek(index < 0 ? active.source.positions.length - 1 : index); },
+    seekBy(seconds: number) { if (active !== undefined) seekSeconds(active.elapsed + seconds); },
+    seekToFraction(fraction: number) { if (active !== undefined) seekSeconds((active.source.positions.at(-1)?.seconds ?? 0) * Math.max(0, Math.min(1, fraction))); },
     jumpCheckpoint(direction: number) { seek((active?.index ?? 0) + Math.sign(direction)); },
     restart() { seek(0); },
     toggleInfo() { if (active !== undefined) active.info = !active.info; },
