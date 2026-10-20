@@ -125,7 +125,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   }
   const interfaceInteraction = createLiveInterfaceInteractionState();
   const sessionServices = createLiveSessionServices({
-    beat: { screen: () => state, capture: () => liveStateForge.capture().components, tick: () => simulationRuntime.scheduler.tick, recording: ghostV3Session, nativeStart: { session: () => session, prepare: () => { chase.stop(); setState("setup"); }, start: (mode, difficulty) => { startRunImmediate(mode, difficulty); } } },
+    beat: { screen: () => state, capture: () => liveStateForge.capture().components, tick: () => simulationRuntime.scheduler.tick, recording: ghostV3Session, nativeStart: { session: () => session, prepare: () => { chase.stop(); setState("setup"); }, start: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
+      refuse: () => { try { abandonLiveRun("beat-start-refused"); } finally { setState("menu"); setState("profile"); } } } },
     dependencies, run: liveRun, player: livePlayer, blade: liveBlade, seedRace: { recording: { runId: () => ghostV3Session.replayContext()?.run.id, active: () => ghostV3?.active === true, nextSequence: ghostV3Session.nextEventSequence, tick: () => simulationRuntime.scheduler.tick, record: (event) => { ghostV3?.record("events", event.tick, event); } }, baseline: () => configuration.baseSnapshot(), capture: () => liveStateForge.capture().components, setup: () => ({ mode: session.selectedMode() as "endless", difficulty: session.selectedDifficulty(), weapon: session.selectedWeapon(), boss: session.selectedMode() === "bossonly" ? session.selectedBoss() : "shuffle" }) },
     screen: () => state, setScreen: (screen) => { setState(screen); },
     achievementTracking: () => achTracks(),

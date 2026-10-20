@@ -4,7 +4,10 @@ import type { LiveWorldSessionState } from "./live-world-session-state";
 import type { RunMode, RunDifficulty } from "../gameplay/run/session";
 import type { LiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
 import { createBrowserBeatThisRun } from "../ghost/browser-beat-this-run";
-import { BEAT_RULES, beatRunBinding, decodeBeatThisRunCode, encodeBeatThisRunCode, type BeatRule, type BeatThisRunCode } from "../ghost/beat-this-run";
+import { assertBeatRuntimeCompatibility, BEAT_RULES, beatRunBinding, decodeBeatThisRunCode, encodeBeatThisRunCode, type BeatRule, type BeatThisRunCode } from "../ghost/beat-this-run";
+import { injectedBuildIdentity } from "../tearbench/live-runtime-snapshots";
+import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
+import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
 import { seedRaceInitialBuildHash } from "../ghost/seed-race-contract";
 import { stableVerificationHash } from "../replay/hash";
 import { createCareerTextPort } from "./browser-ghost-career-search";
@@ -16,7 +19,7 @@ import type { GameRun } from "./game-runtime-state";
 
 export function createLiveBeatThisRunController(options: Readonly<{
   factory: IDBFactory | undefined; publication: GhostPublicationRuntime; document: Document;
-  run(): GameRun | null; screen(): string; nativeStart: Readonly<{ session(): Pick<LiveWorldSessionState, "setSelectedWeapon" | "setSelectedMode" | "setSelectedDifficulty" | "setSelectedBoss" | "setRunSeed">; prepare(): void; start(mode: RunMode, difficulty: RunDifficulty): void }>;
+  run(): GameRun | null; screen(): string; nativeStart: Readonly<{ session(): Pick<LiveWorldSessionState, "setSelectedWeapon" | "setSelectedMode" | "setSelectedDifficulty" | "setSelectedBoss" | "setRunSeed">; prepare(): void; start(mode: RunMode, difficulty: RunDifficulty): void; refuse(): void }>;
   capture(): ReadonlyMap<string, unknown>; tick(): number; recording: LiveGhostRecordingSessionState;
 }>) {
   const service = createBrowserBeatThisRun(options.factory, options.publication), text = createCareerTextPort(options.document);
@@ -41,14 +44,24 @@ export function createLiveBeatThisRunController(options: Readonly<{
         if (!await service.current(parsed)) throw new Error("Prepared source custody changed");
         signal.throwIfAborted();
         if (options.screen() !== "profile") throw new Error("Return to Career before starting a Beat attempt");
+        const contentHash = stableVerificationHash(ENTITY_KIND_REGISTRY.ids), build = injectedBuildIdentity("standalone", contentHash);
+        if (!build) throw new Error("Beat requires an identified game build");
+        assertBeatRuntimeCompatibility(parsed, { version: build.version, revision: build.revision, target: build.target,
+          rulesetVersion: CURRENT_RULESET_VERSION, contentHash, configHash: parsed.setup.configuration });
         pending = parsed;
+        let preparing = false;
         try {
           const mode = MODE_IDS.find(id => id === parsed.setup.mode), difficulty = DIFFICULTY_IDS.find(id => id === parsed.setup.difficulty), seed = Number(parsed.setup.seed);
           if (!mode || !difficulty || !Number.isSafeInteger(seed) || seed < 1 || seed > 0xffff_ffff) throw new Error("Unsupported Beat setup");
-          options.nativeStart.prepare(); const session = options.nativeStart.session();
+          preparing = true; options.nativeStart.prepare(); const session = options.nativeStart.session();
           session.setSelectedWeapon(parsed.setup.weapon); session.setSelectedMode(mode); session.setSelectedDifficulty(difficulty); session.setSelectedBoss(parsed.setup.boss);
           session.setRunSeed(seed); options.nativeStart.start(mode, difficulty); message = `BEAT THIS RUN · ${parsed.rule} · noncompetitive / no progression`; }
-        finally { pending = undefined; }
+        catch (error) {
+          if (!preparing) throw error;
+          pending = undefined;
+          try { options.nativeStart.refuse(); }
+          finally { message = `BEAT THIS RUN unavailable: ${error instanceof Error ? error.message : String(error)}`; }
+        } finally { pending = undefined; }
       });
     });
   };

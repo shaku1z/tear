@@ -17,7 +17,7 @@ import { ghostLiveBootstrapEventId, createLiveGhostCausalEvent } from "../../src
 import { createBrowserGhostCareer } from "../../src/app/browser-ghost-career";
 import type { LiveGhostRecordingSessionState } from "../../src/app/live-ghost-recording-session-state";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { createBeatThisRunCode, validateBeatSource, decodeBeatThisRunCode, encodeBeatThisRunCode, beatRunBinding, evaluateBeatThisRun, readBeatThisRunCode, type BeatThisRunCode } from "../../src/ghost/beat-this-run";
+import { assertBeatRuntimeCompatibility, createBeatThisRunCode, validateBeatSource, decodeBeatThisRunCode, encodeBeatThisRunCode, beatRunBinding, evaluateBeatThisRun, readBeatThisRunCode, type BeatThisRunCode } from "../../src/ghost/beat-this-run";
 import { verifyGhostCapsuleProductionReplay } from "../../src/ghost/production-replay-verification";
 import { tracksAchievements } from "../../src/gameplay/progression/achievement-runtime";
 
@@ -53,6 +53,10 @@ describe("Beat This Run native authority", () => {
     expect(verifyGhostCapsuleProductionReplay(source)).toMatchObject({ status: "verified" });
     const code = createBeatThisRunCode(source, { capsule: source.manifest.id, root: source.manifest.rootIntegrity, manifest: stableVerificationHash(source.manifest), contentSha256: "a".repeat(64) }, "score");
     expect(decodeBeatThisRunCode(encodeBeatThisRunCode(code))).toEqual(code);
+    const runtime = readGhostReplayRunContext(source.manifest.provenance)?.build;
+    if (!runtime) throw new Error("Native runtime unavailable");
+    expect(() => { assertBeatRuntimeCompatibility(code, runtime); }).not.toThrow();
+    expect(() => { assertBeatRuntimeCompatibility(code, { ...runtime, revision: `${runtime.revision}-other` }); }).toThrow(/different game build/);
     const changed = Object.fromEntries(Object.entries(code).filter(([key]) => key !== "hash")); changed.target = Number(code.target) + 1;
     const forged = readBeatThisRunCode({ ...changed, hash: stableVerificationHash(changed) });
     expect(() => { validateBeatSource(forged, source); }).toThrow(/target\/setup/);

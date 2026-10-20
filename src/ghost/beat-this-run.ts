@@ -1,7 +1,7 @@
 import { canonicalStringify, stableVerificationHash } from "../replay/hash";
 import { projectCareerEntry, type CareerEntry } from "./career-archive";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
-import { readGhostReplayRunContext } from "./replay-admission";
+import { readGhostReplayRunContext, type GhostReplayBuildFingerprint } from "./replay-admission";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
 import { seedRaceInitialBuildHash } from "./seed-race-contract";
 import { readBeatRunBinding, type BeatRunBinding } from "../gameplay/run/beat-run";
@@ -96,6 +96,9 @@ export function beatRunBinding(code: BeatThisRunCode): BeatRunBinding {
 }
 export function validateBeatSource(code: BeatThisRunCode, capsule: GhostReadCapsule): void {
   if (canonicalStringify(createBeatThisRunCode(capsule, code.source, code.rule)) !== canonicalStringify(code)) throw new TypeError("Code target/setup differs from its native published source");
+}
+export function assertBeatRuntimeCompatibility(code: BeatThisRunCode, current: GhostReplayBuildFingerprint): void {
+  if (stableVerificationHash(current) !== code.setup.runtime) throw new TypeError("Beat source requires a different game build; start refused");
 }
 export function evaluateBeatThisRun(code: BeatThisRunCode, source: GhostReadCapsule, attempt: GhostReadCapsule) {
   validateBeatSource(code, source);

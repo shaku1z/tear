@@ -51,7 +51,7 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
   const unavailableBeat = (): never => { throw new Error("Beat This Run start unavailable"); };
   const beat = createLiveBeatThisRunController({ factory: d.browserIndexedDb, publication: d.ghostPublication, document: d.browserDocument, run: options.run,
     ...(options.beat ?? { screen: options.screen, capture: unavailableBeat, tick: unavailableBeat, recording: { recorder: () => null, replayContext: () => undefined, reset: unavailableBeat, nextEventSequence: unavailableBeat, setReplayContext: unavailableBeat },
-      nativeStart: { session: () => ({ setSelectedWeapon: unavailableBeat, setSelectedMode: unavailableBeat, setSelectedDifficulty: unavailableBeat, setSelectedBoss: unavailableBeat, setRunSeed: unavailableBeat }), prepare: unavailableBeat, start: unavailableBeat } }) });
+      nativeStart: { session: () => ({ setSelectedWeapon: unavailableBeat, setSelectedMode: unavailableBeat, setSelectedDifficulty: unavailableBeat, setSelectedBoss: unavailableBeat, setRunSeed: unavailableBeat }), prepare: unavailableBeat, start: unavailableBeat, refuse: unavailableBeat } }) });
   const reward = createRewardRuntime({
     ...(options.seedRace === undefined ? {} : { beforeDecision: (decision: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[0], before: Parameters<ReturnType<typeof createLiveSeedRace>["recordDecision"]>[1]) => options.run().beatThisRun ? beat.recordDecision(decision, before) : seedRace.recordDecision(decision, before) }),
     run: options.run,
