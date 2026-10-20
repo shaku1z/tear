@@ -597,6 +597,9 @@ export function createProductionGhostReplayComposition(
         bootstrap,
         combat: core,
         simulation: core.simulationRuntime,
+        // Native fixedSimulationLifecycle consumes a scheduler tail after a
+        // draft opens, without executing input, gameplay or simulation clocks.
+        replayLifecycle: Object.freeze({ shouldStep: () => waveReward.screen() === "playing" }),
         outcome,
         waveReward,
         routeAction: waveReward.routeAction,

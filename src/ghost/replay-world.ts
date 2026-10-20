@@ -1,7 +1,7 @@
 import type { RecordedGhostChallenge } from "./recorded-challenge";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { stableVerificationHash } from "../replay/hash";
-import type { TearSimulationRuntime } from "../gameplay/runtime/tear-simulation-runtime";
+import type { TearSimulationRuntime, TearSimulationAdvanceLifecycle } from "../gameplay/runtime/tear-simulation-runtime";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import {
   createDefaultStateCodecRegistry,
@@ -53,6 +53,8 @@ export interface GhostSeekResult {
  */
 export interface GhostProductionReplaySession<State> {
   readonly simulation: TearSimulationRuntime<State>;
+  /** Production-owned screen gating; absent for generic unconditional sessions. */
+  readonly replayLifecycle?: TearSimulationAdvanceLifecycle;
   renderView?(): GhostReplayRenderView;
   semanticProjection(): unknown;
   /** Optional State Forge semantic hash, only when its codec projection is available. */
@@ -217,7 +219,7 @@ export class GhostProductionReplayWorld<State> {
     for (let tick = this.#tick + 1; tick <= targetTick; tick += 1) {
       const actions = this.#ghost.actions.filter((action) => action.tick === tick);
       session.beforeReplayAdvance?.(tick);
-      session.simulation.advanceOne(actions);
+      session.simulation.advanceExact(() => actions, session.replayLifecycle);
       session.afterReplayAdvance?.();
     }
     this.#tick = targetTick;

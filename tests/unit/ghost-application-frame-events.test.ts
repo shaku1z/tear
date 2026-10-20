@@ -1,3 +1,7 @@
+import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
+import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
+import { createSeedRaceDecision, readSeedRaceDecisions } from "../../src/ghost/seed-race-decisions";
+import { mapGhostCapsuleToReplayEnvelope } from "../../src/ghost/capsule-replay-envelope";
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
@@ -65,6 +69,73 @@ function fixture() {
 }
 
 describe("Ghost application-frame evidence", () => {
+  it.each(["seek", "reference"] as const)("keeps the native blocked draft scheduler tail through %s", async (consumer) => {
+    // Source-owned engineered clear at the origin, then real countdown/draft/choice.
+    // The source uses the existing native shouldStep lifecycle; no recorded receipts are injected later.
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-10-20T00:00:01Z" });
+    const bus = new TearGameplayEventBus(); let nativeTick = 0, sequence = 0;
+    bus.setTickSource(() => nativeTick);
+    bus.subscribe(event => { if (recorder.active) recorder.record("events", event.tick, createGameplayCausalEvent(event, ++sequence, `tail-native-${String(sequence)}`, "engine")); });
+    const source = createProductionGhostReplayComposition({ seed: "draft-tail-source", mode: "endless", gameplayEvents: bus }).create(undefined);
+    const run = source.replay.world.state.run(); if (!run) throw new Error("source run missing");
+    run.spawnQueue = []; source.replay.world.state.setEnemies([]);
+    const initial = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "tail-initial");
+    run.seedRace = declareSeedRace({ format: "tear-seed-race", version: 1, mode: "endless", difficulty: run.diff, weapon: run.weaponId, boss: "shuffle", seed: run.runSeed,
+      metaRanks: {}, variantDiscovery: run.variantDiscovery ?? [], headstartId: null, initialBuildHash: seedRaceInitialBuildHash(initial.snapshot.state),
+      baselineHash: stableVerificationHash(source.replay.configuration.baseSnapshot()), build: initial.snapshot.provenance.build,
+      draft: { policy: "seed-locked-common-offers.v1", seed: run.runSeed, catalogHash: seedRaceCatalogHash() } });
+    source.waveReward.reward.reset();
+    const runId = "draft-tail-run", id = "draft-tail-capsule";
+    const context = createGhostReplayRunContext({ runId, seed: initial.snapshot.seed, mode: "endless", difficulty: run.diff, weaponId: run.weaponId,
+      ticksPerSecond: 120, initialState: "seeded-run-start", build: initial.snapshot.provenance.build, rng: initial.snapshot.rng });
+    const capture = () => {
+      const value = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, `tail-${String(nativeTick)}`, context.build);
+      const snapshot = { ...value.snapshot, provenance: { ...value.snapshot.provenance, sourceId: ghostLiveBootstrapEventId(id) } };
+      recorder.record("keyframes", nativeTick, snapshot); recorder.record("rng", nativeTick, snapshot.rng);
+      recorder.record("results", nativeTick, createGhostAuthoritativeReceipt(nativeTick, value.semanticHash, value.input)); return { ...value, snapshot };
+    };
+    recorder.start({ sessionId: id, createdAt: "2026-10-20T00:00:00Z", provenance: { replayContext: context, seedRace: run.seedRace } });
+    const origin = capture(); let opened = 0, selected = 0, drains = 0, afterOpen: string | undefined;
+    for (let tick = 1; tick <= 120; tick++) {
+      nativeTick = tick;
+      const executed = source.simulation.advanceExact(() => {
+        drains++;
+        const actions: ReplayActionEnvelope[] = tick === 1 ? [{ kind: "command", tick, id: 1, command: { type: "move", x: 1000, y: 0 } }]
+          : selected && tick === selected + 1 ? [{ kind: "command", tick, id: 2, command: { type: "move", x: 0, y: 0 } }] : [];
+        actions.forEach(action => { recorder.record("commands", tick, action); }); return actions;
+      }, { shouldStep: () => source.waveReward.screen() === "playing" });
+      if (!opened && source.waveReward.screen() === "draft") {
+        opened = tick; afterOpen = JSON.stringify({ input: source.simulation.input.snapshot(), seconds: source.replay.world.context.services.clock.seconds(), runTime: run.runTime });
+      } else if (opened && !selected) {
+        expect(executed.steps).toBe(0);
+        expect(JSON.stringify({ input: source.simulation.input.snapshot(), seconds: source.replay.world.context.services.clock.seconds(), runTime: run.runTime })).toBe(afterOpen);
+      }
+      if (opened && tick === opened + 2) {
+        const before = source.waveReward.reward.snapshot(); if (!before) throw new Error("draft missing");
+        const decision = createSeedRaceDecision(++sequence, tick, runId, run.seedRace.sharedHash, before, { kind: "draft", index: 0 });
+        recorder.record("events", tick, decision); source.waveReward.reward.decide({ kind: "draft", index: 0 }, decision.sequence); selected = tick;
+      }
+    }
+    expect(opened).toBeGreaterThan(1); expect(selected).toBe(opened + 2); expect(drains).toBe(118);
+    const expected = capture(); await recorder.finish();
+    const capsule = await new GhostCapsuleReader(vault).read(id), raw = await vault.exportCapsule(id);
+    expect(verifyGhostCapsuleProductionReplay(capsule).status).toBe("verified");
+    if (consumer === "reference") {
+      const reference = await prepareGhostLiveReference(capsule, () => Promise.resolve());
+      expect(reference.frames.at(-1)).toMatchObject({ tick: 120, time: run.runTime, wave: 2 });
+    } else {
+      const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
+      const composition = createProductionGhostReplayComposition({ seed: origin.snapshot.seed, raceDecisions: readSeedRaceDecisions(capsule, runId), inputSnapshots: new Map([[0, origin.input]]) });
+      let restored: ReturnType<typeof composition.create> | undefined;
+      const replay = new GhostProductionReplayWorld(createGhostV3({ ...mapped.ghost, snapshots: [origin.snapshot] }), { create(snapshot) { restored = composition.create(snapshot); return restored; } });
+      expect(replay.seek(120).semanticHash).toBe(expected.semanticHash);
+      expect(restored?.simulation.scheduler.tick).toBe(120); expect(restored?.simulation.input.snapshot()).toEqual(expected.input);
+      expect(restored?.replay.world.context.services.clock.seconds()).toBe(source.replay.world.context.services.clock.seconds());
+      expect(restored?.waveReward.reward.snapshot()?.decisionSequence).toBe(source.waveReward.reward.snapshot()?.decisionSequence);
+    }
+    expect(await vault.exportCapsule(id)).toBe(raw);
+  });
+
   it.skipIf(process.env.TEAR_R07_ORIGINAL_ARCHIVE === undefined)("continues an original normal downloaded intro archive", async () => {
     const path = process.env.TEAR_R07_ORIGINAL_ARCHIVE; if (path === undefined) throw new Error("original archive path missing");
     const encoded = readFileSync(path, "utf8"), vault = new GhostLocalVault(createMemoryGhostVaultBackend());

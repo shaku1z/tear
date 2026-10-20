@@ -81,7 +81,7 @@ export async function prepareGhostLiveReference(capsule: GhostReadCapsule, yield
   session.completeRecordedOpening();
   for (let tick = 1; tick <= last; tick++) {
     if (cancelled()) throw new Error("Reference preparation cancelled.");
-    replayTick = tick; session.beforeReplayAdvance(tick); session.simulation.advanceOne(actions.get(tick) ?? []); capture(tick);
+    replayTick = tick; session.beforeReplayAdvance(tick); session.simulation.advanceExact(() => actions.get(tick) ?? [], session.replayLifecycle); capture(tick);
     if (tick % 32 === 0) await yieldToHost();
   }
   const actor = capsule.manifest.provenance?.actor;

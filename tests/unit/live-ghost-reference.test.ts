@@ -1,3 +1,5 @@
+import * as browserReference from "../../src/app/browser-live-ghost-reference";
+import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { drawLiveGhostSplits } from "../../src/presentation/world/live-ghost-reference";
 import { createLiveGhostChase } from "../../src/app/live-ghost-chase-composition";
 import { describe, expect, it, vi } from "vitest";
@@ -19,6 +21,23 @@ const state = (reference: GhostLiveReference): GhostChaseLiveState => ({ runId: 
   score: 40, hp: 80, maxHp: 120, arena: "arena", blocked: false, assistance: reference.assistance });
 
 describe("live Chase reference ownership", () => {
+  it("preserves actual preparation and refusal messages over the current reference fallback", async () => {
+    let reject: (error: Error) => void = () => undefined;
+    const prepare = new Promise<GhostLiveReference>((_, fail) => { reject = fail; });
+    const port = vi.spyOn(browserReference, "createBrowserLiveGhostReference").mockReturnValue({ prepare: () => prepare, current: () => Promise.resolve(true) });
+    try {
+      const replay = createProductionReplayWorld({ seed: "pending-reference-message" }), run = replay.world.state.run(), player = replay.world.state.player();
+      if (!run || !player) throw new Error("view fixture actors missing");
+      Object.assign(run, { seedRace: { role: "reference" } }); // Projection-only fixture, no entitlement/admission claim.
+      const chase = createLiveGhostChase({ factory: undefined, ui: { font: () => "", t: { type: { micro: 12 }, color: { cinema: "", cinemaInk: "", accent: "" } } },
+        run: () => run, player: () => player, stage: () => 0, platforms: () => [], blocked: () => true, prepareStart: () => undefined, start: () => undefined });
+      const choosing = chase.chooseRace("unavailable-source");
+      expect(chase.snapshot().message).toBe("Preparing verified reference\u2026");
+      reject(new Error("Reference forward continuation differs at tick1920")); await choosing;
+      expect(chase.snapshot().message).toBe("Reference forward continuation differs at tick1920");
+    } finally { port.mockRestore(); }
+  });
+
   it("shows a compact new-reference status without absent competitor comparisons", () => {
     const text: string[] = [], rectangles: unknown[][] = [];
     const canvas = new Proxy({}, { get: (_, key) => key === "fillText" ? (value: string) => { text.push(value); }
