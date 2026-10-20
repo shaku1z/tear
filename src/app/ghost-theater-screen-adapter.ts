@@ -136,7 +136,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       ]),
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
       theater: true, worldVisible: currentContext.frame !== undefined, coachReturnAvailable: currentContext.coachScene,
-      practiceAvailable: currentContext.checkpoints.includes(current),
+      practiceAvailable: currentContext.challengeResult === undefined && currentContext.checkpoints.includes(current),
       ...(currentContext.challengeOpen ? { challenge: { choices: currentContext.challengeResult === undefined ? currentContext.challengeChoices.map((choice) => ({ id: choice.rule + ":" + choice.target, label: choice.label })) : [],
         tick: current, ...(currentContext.challengeResult === undefined ? {} : { result: currentContext.challengeResult.status, elapsedTicks: currentContext.challengeResult.elapsedTicks }) } } : {}),
       ...(currentContext.coachOpen ? { coach: history.snapshot() } : {}),

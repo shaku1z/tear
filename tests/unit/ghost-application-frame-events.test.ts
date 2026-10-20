@@ -195,7 +195,7 @@ describe("Recorded local challenge continuation", () => {
         let paused = false, endpoint: ReturnType<typeof capture> | undefined, finished: Promise<unknown> | undefined;
         const owner = createLiveGhostChallengeController({ prepare: () => Promise.resolve({ ok: true, child, semanticHash: anchor.semanticHash }),
           pause: () => { paused = true; }, notice: () => undefined,
-          captureEndpoint(tick) { endpoint = capture(session, id); finalTick = tick; },
+          captureEndpoint(tick) { session.waveReward.restoreScreen("confirmquit"); endpoint = capture(session, id); finalTick = tick; },
           finish(reason, tick) {
             const result = recorder.finish({ format: "tearghost-challenge-end", reason, authoritativeTick: tick, originTick: 120 }).then(async () => {
               const sealed = await reader.read(id); return verifyRecordedGhostChallenge(sealed, parent, issueGhostForkPermit(sealed, parent));
@@ -218,6 +218,7 @@ describe("Recorded local challenge continuation", () => {
       expect(result.proof.completed).toBe(!stop);
       const reopened = createGhostProductionReplaySession(capsule, {}, permit);
       expect(reopened.firstTick).toBe(120); expect(reopened.lastTick).toBe(finalTick); expect(reopened.seek(finalTick).tick).toBe(finalTick); expect(() => reopened.seek(119)).toThrow(/range/); expect(() => reopened.seek(finalTick + 1)).toThrow(/range/);
+      expect(() => reopened.forkPractice(finalTick, "exact-practice")).toThrow(/Nested/);
       expect(() => createGhostProductionReplaySession(capsule)).toThrow(/admission/);
       expect(() => issueGhostForkPermit(capsule, { ...parent, manifest: { ...parent.manifest, rootIntegrity: "changed" } })).toThrow(/changed/);
       expect(() => readGhostForkOrigin({ forkOrigin: { ...origin, schemaVersion: 99 } })).toThrow(/Unsupported/);

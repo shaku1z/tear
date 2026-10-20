@@ -184,6 +184,8 @@ export function verifyGhostCapsuleProductionReplay(
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
     requireRecordedApplicationFrames: true, ...(applicationClock === undefined ? {} : { applicationClock }),
     ...(openingPermit === undefined ? {} : { openingPermit }) });
+  const replayGhost = forkOrigin === undefined ? mapped.ghost : createGhostV3({ ...mapped.ghost,
+    snapshots: mapped.ghost.snapshots.filter((snapshot) => snapshot.tick === forkOrigin.checkpoint.tick) });
   const comparisons: GhostProductionReceiptComparison[] = [];
   for (const receipt of receipts) {
     const snapshot = mapped.ghost.snapshots.find((candidate) => candidate.tick === receipt.tick);
@@ -193,13 +195,14 @@ export function verifyGhostCapsuleProductionReplay(
       continue;
     }
     try {
-      let restoredInput: AuthoritativeInputSnapshot | undefined;
-      const result = new GhostProductionReplayWorld(mapped.ghost, { create(snapshot) {
+      let restoredInput: AuthoritativeInputSnapshot | undefined, currentInput: (() => AuthoritativeInputSnapshot) | undefined;
+      const result = new GhostProductionReplayWorld(replayGhost, { create(snapshot) {
         const session = composition.create(snapshot);
         restoredInput = session.simulation.input.snapshot();
+        currentInput = () => session.simulation.input.snapshot();
         return session;
       } }).seek(receipt.tick);
-      const inputEqual = stableVerificationHash(restoredInput) === stableVerificationHash(canonicalReceiptInput(receipt.input));
+      const inputEqual = stableVerificationHash(forkOrigin === undefined ? restoredInput : currentInput?.()) === stableVerificationHash(canonicalReceiptInput(receipt.input));
       comparisons.push(Object.freeze({ tick: receipt.tick, snapshotId: snapshot.id, expectedHash: receipt.stateHash,
         actualHash: result.semanticHash, equal: inputEqual && result.semanticHash === receipt.stateHash,
         ...(inputEqual ? {} : { reason: "restored held input does not match original receipt fields" }) }));

@@ -6,6 +6,7 @@ import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
 import { issueGhostRecordedOpeningPermit, readGhostReplayRunContext } from "./replay-admission";
 import { readGhostApplicationClockSchedule } from "./application-frame-events";
+import { createGhostV3 } from "./truth-kernel";
 import { createPracticeFromHere, GhostProductionReplayWorld, type GhostPracticeChild, type GhostPracticeMode, type GhostSeekResult, type GhostReplayRenderView } from "./replay-world";
 
 export interface GhostVerifiedReplayRenderView extends GhostReplayRenderView {
@@ -41,6 +42,10 @@ export function createGhostProductionReplaySession(
     throw new TypeError(`production replay requires verified authoritative receipts (${verification.status})`);
   }
   const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
+  // Child continuation is rebuilt from its admitted origin. Later archived UI
+  // checkpoints (including quit confirmation) are evidence, not restore authority.
+  const replayGhost = forkOrigin === undefined ? mapped.ghost : createGhostV3({ ...mapped.ghost,
+    snapshots: mapped.ghost.snapshots.filter((snapshot) => snapshot.tick === firstTick) });
   const receipts = capsule.tracks.results.flatMap((entry) => {
     const receipt = readGhostAuthoritativeReceipt(entry.value);
     return receipt?.tick === entry.tick ? [receipt] : [];
@@ -63,7 +68,7 @@ export function createGhostProductionReplaySession(
   const checkpointAt = (tick: number) => mapped.ghost.snapshots.find((snapshot) => snapshot.tick === tick);
   const seek = (tick: number): GhostSeekResult => {
     if (!Number.isSafeInteger(tick) || tick < firstTick || tick > maxTick) throw new RangeError("production replay seek is outside the recorded source range");
-    return new GhostProductionReplayWorld(mapped.ghost, composition).seek(tick);
+    return new GhostProductionReplayWorld(replayGhost, composition).seek(tick);
   };
   return Object.freeze({
     firstTick, lastTick: maxTick, sourceId: mapped.ghost.id,
@@ -73,12 +78,13 @@ export function createGhostProductionReplaySession(
     seek,
     ...(presentation.renderView === undefined ? {} : { renderFrame(tick: number): GhostVerifiedReplayRenderView {
       if (!Number.isSafeInteger(tick) || tick < firstTick || tick > maxTick) throw new RangeError("render tick is outside the recorded source range");
-      const world = new GhostProductionReplayWorld(mapped.ghost, composition), result = world.seek(tick);
+      const world = new GhostProductionReplayWorld(replayGhost, composition), result = world.seek(tick);
       if (result.correction !== undefined) throw new TypeError("corrected replay states cannot become media frames");
       return Object.freeze({ ...world.renderView(), sourceId: mapped.ghost.id, sourceRootHash: mapped.ghost.rootHash,
         sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity, semanticHash: result.semanticHash });
     } }),
     forkPractice(tick: number, mode: GhostPracticeMode): GhostPracticeChild {
+      if (forkOrigin !== undefined) throw new TypeError("Nested recorded practice forks are not supported.");
       const snapshot = checkpointAt(tick);
       if (snapshot === undefined || !verifiedReceiptTicks.has(tick)) {
         throw new RangeError("practice forks require a verified recorded checkpoint");
