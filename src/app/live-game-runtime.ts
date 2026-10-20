@@ -143,10 +143,10 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { read: getBest, record: saveBest } = bestScores.api;
   let state: LegacyAppScreen = APP.screen, canonicalTickStartedAt: number | null = null;
   const interfaceFrame = createLiveInterfaceFrameState(state);
-  function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
+  let interruptTutorialCoaching = () => { /* Training is loaded later. */ }; function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
     const prior = state;
     state = APP.transition(next, context); Input.allowLock = state === "playing";
-    if (prior === "playing" && state !== "playing") Input.discardSemanticInput();
+    if (prior === "playing" && state !== "playing") { interruptTutorialCoaching(); Input.discardSemanticInput(); }
     else if (prior !== "playing" && state === "playing") Input.discardSemanticInput();
     if (prior === "playing" && state === "paused") emitRunScreenTransition("paused");
     else if (prior === "paused" && state === "playing") emitRunScreenTransition("resumed");
@@ -239,9 +239,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     updateAbilities: updateWeaponAbilities, emitThrowResolve,
     activateThrowSecondary, hook: weaponHook, shieldAbsorb: onShieldAbsorb, dealArea: dealAoE,
     addKillScore, fire, makeEvent: makeEv } = weaponRuntime;
-  const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost; const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
+  const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost; interruptTutorialCoaching = () => { TUT.interruptCoaching(); }; browserWindow.addEventListener("blur", interruptTutorialCoaching); const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
   const tutorialSessionActions = createLiveTutorialSessionActions({ training: trainingHost, tutorial: TUT, screen: () => state, mode: () => liveRun().mode,
-    selectPracticeWeapon: (id) => { hostState.setSelectedWeapon(id); }, startLessonRun: () => { tutorialPracticeStart = TUT.session().practiceOnly === true; try { startRunImmediate("tutorial", "normal"); } finally { tutorialPracticeStart = false; } },
+    selectPracticeWeapon: (id) => { hostState.setSelectedWeapon(id); }, startLessonRun: () => { tutorialPracticeStart = TUT.session().practiceOnly === true || TUT.session().unfinished === true; try { startRunImmediate("tutorial", "normal"); } finally { tutorialPracticeStart = false; } },
     resetFocus: () => { interfaceInteraction.setFocus(0); }, resume: () => { setState("playing"); requestOwnedPointerLock(); } });
   const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => TUT.session().bossPractice?.defeated ? undefined : sourceVoidRuntime.syncPlayer(...args); const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { if (!TUT.session().bossPractice?.defeated) sourceVoidRuntime.update(...args); };
   const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = cinematicRuntime;
@@ -340,7 +340,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
           playerOwned === undefined ? dealAoE(x, y, radius, damage) : dealAoE(x, y, radius, damage, { playerOwned }),
         lobExplode, splitProjectile: (projectile) => { if (isGameProjectile(projectile)) spawnSplitShards(projectile); },
         triggerSlowMotion: triggerSlowmo,
-        logWeapon: logWeaponEvent,
+        logWeapon: logWeaponEvent, observeTutorialAttempt: (fact) => { TUT.observeAttemptFact(fact); },
         emitThrowResolve: (enemy, damage) => { const activeBlade = liveBlade(); GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "throw-resolved", weaponId: liveRun().weaponId, throwId: activeBlade.throwId, x: activeBlade.x, y: activeBlade.y, damage }); emitThrowResolve(isGameEnemy(enemy) ? enemy : null, damage); },
         updateTrick, updatePlayground: stepPlayground,
         endRun, checkAchievements: achCheck, addKillScore,

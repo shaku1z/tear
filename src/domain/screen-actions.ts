@@ -127,4 +127,4 @@ export type ScreenAction =
   | { readonly type: "results.watchReplay" }
   | { readonly type: "results.descendAgain" }
   | { readonly type: "playground.action"; readonly id: string }
-  | { readonly type: "tutorial.action"; readonly command: "open-practice" | "restart" | "select" | "help" | "demo" | "coach-rate" | "coach-compare" | "coach-diagnostic" | "annexes" | "select-annex" | "catalog" | "select-enemy" | "bosses" | "select-boss"; readonly lessonId?: string };
+  | { readonly type: "tutorial.action"; readonly command: "open-practice" | "restart" | "select" | "help" | "demo" | "coach-rate" | "coach-compare" | "coach-diagnostic" | "skip" | "assist" | "annexes" | "select-annex" | "catalog" | "select-enemy" | "bosses" | "select-boss"; readonly lessonId?: string };

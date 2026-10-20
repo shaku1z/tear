@@ -160,6 +160,7 @@ export function createLiveCombatActions<
       f.fireMod(f.modHook("onThrowLaunch"), f.makeEvent(activeBlade.x, activeBlade.y, null, "throw",
         { type: "throwLaunch", throwId, weaponId: activeRun.weaponId, attackId: activeBlade.attackId }));
     },
+    observeTutorialAttempt: (fact) => { f.observeTutorialAttempt?.(fact); },
     logThrowLaunch: (throwId) => { f.logWeaponEvent("throwLaunch", { throwId }); },
     weaponWorldImpact() {
       const effect = f.weaponWorldImpact(), activeBlade = blade(), weaponId = run().weaponId;
@@ -243,7 +244,7 @@ function createCollision(context: LiveCombatActionContext): Omit<LiveCollisionPh
     get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
     weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
     throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
-    runDamageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage, logWeapon: f.logWeapon,
+    runDamageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage, observeTutorialAttempt: (fact) => { f.observeTutorialAttempt?.(fact); }, logWeapon: f.logWeapon,
     weaponEffect: (weaponId, effect) => { ports.tutorial.weaponEffect?.(weaponId, effect); },
     emitThrowResolve: f.emitThrowResolve, onKill: context.resolveKill,
     addFloater: f.addFloater, addShake: f.addShake, addZoom: f.addZoom, addFlash: f.addFlash, addStyle: f.addStyle,

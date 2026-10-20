@@ -140,29 +140,32 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   function tutorialPaused(session: NonNullable<PausedScreenView["tutorial"]>): void {
     const { canvas } = context;
     ui.dim(canvas, width, height, 0.9);
+    const unfinished = session.unfinished === true && session.phase === "free-practice";
     const lab = session.practiceOnly === true, annexes = lab && session.annexSelector === true, catalog = lab && session.catalogSelector === true, bosses = lab && session.bossSelector === true,
       complete = (session.courseCompleted || lab) && session.phase === "free-practice", current = session.lessons.find((lesson) => lesson.current);
     const compact = height < 650, titleY = compact ? 34 : 78, top = compact ? 84 : 170;
-    ui.title(canvas, lab ? "PRACTICE LAB" : complete ? "TECHNIQUES LEARNED" : "CUTTING ROOM", width / 2, titleY, compact ? ui.t.type.lead : ui.t.type.display);
+    ui.title(canvas, lab ? "PRACTICE LAB" : unfinished ? "UNFINISHED COURSE" : complete ? "TECHNIQUES LEARNED" : "CUTTING ROOM", width / 2, titleY, compact ? ui.t.type.lead : ui.t.type.display);
     const activeTitle = session.bossPractice ? `${session.bossPractice.bossId.toUpperCase()} · PHASE ${String(session.bossPractice.phase)}` : session.enemyPractice ? `${session.enemyPractice.id.toUpperCase()} ENCOUNTER` : session.annex ? `${session.annex.id.toUpperCase()} ANNEX` : current?.title ?? "";
-    ui.text(canvas, complete ? lab ? bosses ? "Choose a boss phase · baseline sword · no rewards" : catalog ? "Choose an opponent · baseline sword · no rewards" : annexes ? "Choose a weapon · baseline loadout · no rewards" : "Choose a technique · baseline sword · no rewards" : "Course complete · baseline practice · no waves" : `${activeTitle} · ${String(session.progress[0])} / ${String(session.progress[1])}`, width / 2, titleY + (compact ? 25 : 34), compact ? ui.t.type.caption : ui.t.type.body, "center", ui.t.alpha.soft);
+    ui.text(canvas, unfinished ? "Skipped exercises remain unearned · revisit below · no course reward or Lab unlock" : complete ? lab ? bosses ? "Choose a boss phase · baseline sword · no rewards" : catalog ? "Choose an opponent · baseline sword · no rewards" : annexes ? "Choose a weapon · baseline loadout · no rewards" : "Choose a technique · baseline sword · no rewards" : "Course complete · baseline practice · no waves" : `${activeTitle} · ${String(session.progress[0])} / ${String(session.progress[1])}`, width / 2, titleY + (compact ? 25 : 34), compact ? ui.t.type.caption : ui.t.type.body, "center", ui.t.alpha.soft);
     const menu: { label: string; action: ScreenAction }[] = [
-      { label: complete ? "CONTINUE PRACTICE" : "RESUME LESSON", action: { type: "run.resume" } },
+      { label: unfinished ? "CONTINUE FREE PRACTICE" : complete ? "CONTINUE PRACTICE" : "RESUME LESSON", action: { type: "run.resume" } },
       ...(current?.canPractice || session.annex || session.enemyPractice || session.bossPractice ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }] : []),
       { label: session.helpVisible ? "HIDE HELP" : "LESSON HELP", action: { type: "tutorial.action", command: "help" } },
       ...(session.coach?.available && current?.canPractice && !session.annex && !session.enemyPractice && !session.bossPractice ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }] : []),
+      ...(session.helpVisible && current?.canPractice && session.phase !== "free-practice" && !session.annex && !session.enemyPractice && !session.bossPractice ? [{ label: "SKIP UNFINISHED", action: { type: "tutorial.action", command: "skip" } as const }] : []),
+      ...(session.coach?.adaptive?.assistOffered && session.phase !== "free-practice" ? [{ label: "ADVANCE UNFINISHED", action: { type: "tutorial.action", command: "assist" } as const }] : []),
       ...(lab ? [{ label: annexes ? "BASELINE EXERCISES" : "WEAPON ANNEXES", action: { type: "tutorial.action", command: "annexes" } as const }] : []),
       ...(lab ? [{ label: bosses ? "BASELINE EXERCISES" : "BOSS PRACTICE", action: { type: "tutorial.action", command: "bosses" } as const }] : []),
       ...(lab ? [{ label: catalog ? "BASELINE EXERCISES" : "ENEMY CATALOG", action: { type: "tutorial.action", command: "catalog" } as const }] : []),
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ];
-    const menuGap = compact ? 4 : 8, menuH = compact ? Math.max(24, Math.min(38, (height - top - 16) / menu.length - menuGap)) : 44;
+    const menuGap = compact ? 4 : 8, menuH = Math.max(24, Math.min(compact ? 38 : 44, (height - top - 16) / menu.length - menuGap));
     menu.forEach((item, index) => { context.enqueue({ x: width * 0.06, y: top + index * (menuH + menuGap),
       w: width * 0.29, h: menuH, label: item.label, action: item.action, size: compact ? ui.t.type.micro : ui.t.type.caption }); });
     const panelX = width * 0.39, panelW = width * 0.54, rowTop = top + (compact ? 38 : 45), helpH = compact ? catalog ? 70 : 90 : 130;
     ui.tag(canvas, bosses ? "BOSS PHASE ENTRIES" : catalog ? "KNOWN OPPONENTS" : annexes ? "CHOOSE A WEAPON" : lab ? "UNLOCKED EXERCISES" : complete ? "PRACTICE A TECHNIQUE" : "REACHED LESSONS", panelX, top, ui.t.color.accent, "left", ui.t.type.micro);
-    ui.text(canvas, bosses ? "P1: defeated identity or seen phase · P2/3: saved exact exposure" : catalog ? "Unknown history stays unknown · practice never unlocks entries" : annexes ? "Real weapon effects · restart any attempt · no rewards" : lab ? "Restart any exercise, or use help and demos." : "Help and demos give no credit.", panelX, top + 21, ui.t.type.micro, "left", ui.t.alpha.soft);
+    ui.text(canvas, bosses ? "P1: defeated identity or seen phase · P2/3: saved exact exposure" : catalog ? "Unknown history stays unknown · practice never unlocks entries" : annexes ? "Real weapon effects · restart any attempt · no rewards" : lab ? "Restart any exercise, or use help and demos." : session.coach?.adaptive?.assistOffered ? "Assist: advance checkpoint unfinished. No completion credit." : "Skip advances unfinished. Revisit it to earn completion.", panelX, top + 21, ui.t.type.micro, "left", ui.t.alpha.soft);
     const exercises = bosses ? (session.bossCatalog ?? []).map((boss) => ({ ...boss, current: session.bossPractice?.bossId === boss.bossId && session.bossPractice.phase === boss.phase, completed: false, reached: true })) : catalog ? (session.enemyCatalog ?? []).map((enemy) => ({ ...enemy, current: session.enemyPractice?.id === enemy.id, completed: false, reached: true })) : annexes ? (session.annexes ?? []).map((annex) => ({ ...annex, completed: false, reached: true, canPractice: true })) : session.lessons.filter((lesson) => lesson.id !== "ready");
     const rows = bosses ? compact ? 3 : 6 : catalog ? Math.max(1, Math.ceil(exercises.length / 2)) : 7, rowH = Math.min(bosses ? compact ? 42 : 62 : catalog ? 62 : 46, (height - rowTop - helpH - 16) / rows);
     const bossOffset = bosses && compact ? clampValue(Math.floor(context.scroll / 48), 0, 3) * 3 : 0;
@@ -170,7 +173,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       const index = originalIndex - bossOffset; if (bosses && compact && (index < 0 || index >= 9)) return;
       const columns = bosses ? 3 : 2, column = index % columns, row = Math.floor(index / columns);
       context.enqueue({ x: panelX + column * (panelW / (bosses ? 3 : 2) + 4), y: rowTop + row * rowH, w: panelW / (bosses ? 3 : 2) - 8, h: rowH - 4,
-        label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${lesson.reached ? "" : " · LOCKED"}`,
+        label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · UNFINISHED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
         ...("knowledge" in lesson && typeof lesson.knowledge === "string" ? { sub: ({ "defeated-identity": "DEFEATED IDENTITY", "encountered-phase": "SAVED PHASE EXPOSURE", "confirmed-defeated": "CONFIRMED DEFEATED", encountered: "ENCOUNTERED", "save-unconfirmed": "SAVE NOT CONFIRMED", unknown: "HISTORY NOT RECORDED" } as Readonly<Record<string, string>>)[lesson.knowledge] } : {}),
         enabled: lesson.canPractice, selected: lesson.current,
         action: { type: "tutorial.action", command: bosses ? "select-boss" : catalog ? "select-enemy" : annexes ? "select-annex" : "select", lessonId: lesson.id }, size: compact ? ui.t.type.micro : ui.t.type.caption });
@@ -189,7 +192,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     if (session.coach?.available && !bosses && !catalog && !annexes) {
       const coach = session.coach, controls: { label: string; command: "coach-rate" | "coach-diagnostic" | "coach-compare" }[] = [{ label: `PLAYBACK ${String(coach.rate)}×`, command: "coach-rate" }, { label: "DIAGNOSTIC DEMO", command: "coach-diagnostic" }, ...(coach.canCompare ? [{ label: "COMPARE ATTEMPT", command: "coach-compare" as const }] : [])];
       controls.forEach((control, index) => { context.enqueue({ x: panelX + index * panelW / controls.length, y: height - 48, w: panelW / controls.length - 8, h: 30, label: control.label, action: { type: "tutorial.action", command: control.command }, size: ui.t.type.micro }); });
-      wrapText(session.helpVisible ? session.instruction : coach.diagnosis, panelX, height - 96, panelW, 16, ui.t.type.micro, ui.ink);
+      wrapText(coach.adaptive?.assistOffered ? "ASSIST OFFER: advance checkpoint unfinished. No credit or reward. Choose ADVANCE UNFINISHED explicitly." : coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : coach.diagnosis), panelX, height - 96, panelW, 16, ui.t.type.micro, ui.ink);
       return;
     }
     canvas.textBaseline = "alphabetic";

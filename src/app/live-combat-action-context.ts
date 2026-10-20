@@ -76,6 +76,7 @@ export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
       cause?: string, detail?: Readonly<Record<string, unknown>>): unknown;
     weaponHook(name: string, detail: Readonly<Record<string, unknown>>): Readonly<{ mechanic?: string }> | null | undefined;
     modHook(name: keyof UpgradeMods): unknown; fireMod(hook: unknown, event: unknown): void;
+    observeTutorialAttempt?: Collision["observeTutorialAttempt"];
     logWeaponEvent(name: string, detail: Readonly<Record<string, unknown>>): void;
     weaponWorldImpact(): Readonly<{ mechanic?: string }> | null;
     startTransformation: Opening["startTransformation"]; achievementsEnabled: Collision["achievementsEnabled"];

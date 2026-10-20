@@ -1251,3 +1251,33 @@ The following should be prototyped and playtested before locking:
 
 The plan deliberately defines the learning outcome and verification contract
 while leaving these experience variables open to evidence.
+
+
+### Implemented adaptive coaching (current curriculum, 2026-10-19)
+
+Current baseline drills resolve genuine swing, contact-separation, accepted takeoff/landing,
+dash-end, throw/return and refused-recall episodes. Native collision facts retain accepted
+strike classification and target identity; projectile observations retain shot identity.
+Below-speed contact, grounded wrong-strike contact and out-of-range recall are observed
+facts. Missed-contact/shot position or early/late timing explanations remain unknown when
+not established by the source owner. Repeated transfer without new objective progress is
+guidance, not fabricated failure-cause certainty. No-input/idle, walking/exploration,
+settings, pointer drift alone, resets and interrupted attempts do not escalate assistance.
+
+Two related resolved failures show a nudge; four play one finite diagnostic gold segment
+at the resolved boundary; six offer an explicit **ADVANCE UNFINISHED** checkpoint assist.
+New objective progress decays the local variant count; ordinary lesson selection retains
+that variant's ledger. Field Test Charger and mixed variants are separate; breath is not an
+attempt. New coach-presentation v2 saves bounded ledgers and aborts partial episodes on
+restore. Historical coach v1 and tutorial-session v1–v6 meanings remain unchanged.
+Annex, enemy and boss exercises are outside baseline gold-reference adaptive coaching.
+
+Objective help exposes **SKIP UNFINISHED**. Skip and the disclosed checkpoint assist do
+not synthesize marks, completed lessons, profile completion, Lab eligibility or Apprentice
+coins. In an issued course, v7 records skipped/unearned work with the original issued ID;
+READY shows an unfinished summary and revisitable exercises. Redo uses the original
+objective predicates, preserves genuinely completed work, and reaches normal completion
+only after every remaining exercise is earned. In already-unlocked Lab drills, the same
+explicit advance exits the attempt without changing durable eligibility or prior credit.
+Normal full-course acceptance remains required. Browser acceptance of these new controls
+is pending the parent’s final fresh build and normal journey.

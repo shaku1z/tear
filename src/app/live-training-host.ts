@@ -82,6 +82,8 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     restart: () => loaded?.tutorial.restart() ?? false, selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
     selectAnnex: (id) => loaded?.tutorial.selectAnnex(id) ?? false, showAnnexes: () => { loaded?.tutorial.showAnnexes(); },
     bindBossPractice: (port) => { bossPractice = port; loaded?.tutorial.bindBossPractice(port); }, afterWorldStep: (frame, input) => { loaded?.tutorial.afterWorldStep(frame, input); },
+    interruptCoaching: () => { loaded?.tutorial.interruptCoaching(); },
+    observeAttemptFact: (fact) => { loaded?.tutorial.observeAttemptFact(fact); }, advanceUnfinished: (assisted) => loaded?.tutorial.advanceUnfinished(assisted) ?? false,
     captureCoachCommands: (commands) => { loaded?.tutorial.captureCoachCommands(commands); }, coachAction: (command) => loaded?.tutorial.coachAction(command) ?? false,
     showBosses: () => { loaded?.tutorial.showBosses(); }, selectBoss: (id, retained) => loaded?.tutorial.selectBoss(id, retained) ?? false,
     selectEnemy: (id) => loaded?.tutorial.selectEnemy(id) ?? false, showCatalog: () => { loaded?.tutorial.showCatalog(); },

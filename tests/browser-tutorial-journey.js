@@ -187,6 +187,61 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   assert.deepEqual(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().counters), objectiveBeforeCompare);
   assert.deepEqual(await effects(), beforeAttempt);
   if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "tutorial-gold-comparison-reduced-motion.png") });
+  // Keep the ordinary full-course acceptance above intact. Start a separate genuinely issued
+  // course to exercise rendered Skip/unfinished summary and Assist without forged marks/counts.
+  await pause(); await clickLabel("MAIN MENU"); await clickLabel("QUIT");
+  await page.evaluate(() => window.__PANTHEON_TEST.startMode("tutorial", "normal"));
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing" && window.__PANTHEON_TEST.tutorial().active);
+  await page.evaluate((scenarioValue) => {
+    const environment = window.__tutorialJourneyEnvironment;
+    const origin = environment.captureSnapshot("adaptive-issued-origin", "recorded-canonical");
+    environment.reset({ ...scenarioValue, seed: origin.seed });
+    const restored = environment.restoreSnapshot(origin); if (!restored.ok) throw new Error(JSON.stringify(restored));
+    window.__tutorialJourneyCommandId = 0;
+  }, scenario);
+  const beforeUnearned = await effects();
+  for (let lesson = 0; lesson < 13; lesson++) {
+    assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.tutorial())).lessonIndex, lesson);
+    await pause(); await clickLabel("LESSON HELP"); await clickLabel("SKIP UNFINISHED");
+  }
+  await pump(210);
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "playground" && window.__PANTHEON_TEST.state().game === "paused");
+  const unfinished = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
+  assert.equal(unfinished.unfinished, true); assert.equal(unfinished.courseCompleted, false);
+  assert.equal(unfinished.skipped.length, 13);
+  assert.deepEqual(await effects(), beforeUnearned, "skipped READY cannot award profile completion or Apprentice coins");
+  if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "tutorial-unfinished-summary.png") });
+  await page.evaluate(() => {
+    const environment = window.__tutorialJourneyEnvironment;
+    const saved = environment.captureSnapshot("adaptive-unearned-summary", "recorded-canonical");
+    const restored = environment.restoreSnapshot(JSON.parse(JSON.stringify(saved))); if (!restored.ok) throw new Error(JSON.stringify(restored));
+  });
+  await clickLabel("SLAM · UNFINISHED");
+  await pump(900);
+  assert.equal((await coach()).adaptive.failures, 0, "idle cannot escalate coaching");
+  const ladder = await page.evaluate(() => {
+    const environment = window.__tutorialJourneyEnvironment, seen = new Set(); let demo = false;
+    const step = (command) => { const tick = environment.observe().tick + 1;
+      environment.step(command ? [{ kind: "command", id: ++window.__tutorialJourneyCommandId, tick, command }] : []);
+      const coach = window.__PANTHEON_TEST.tutorial().session.coach;
+      seen.add(coach.adaptive.failures); if (coach.adaptive.failures === 4 && coach.mode === "diagnostic" && coach.visible) demo = true;
+    };
+    for (let attempt = 0; attempt < 16 && !window.__PANTHEON_TEST.tutorial().session.coach.adaptive.assistOffered; attempt++) {
+      step({ type: "aim", turn: attempt % 2 ? 375000 : 625000, magnitude: 1000 });
+      for (let tick = 0; tick < 100; tick++) step();
+    }
+    return { seen: [...seen], demo, coach: window.__PANTHEON_TEST.tutorial().session.coach };
+  });
+  assert.ok([2, 4, 6].every((count) => ladder.seen.includes(count))); assert.equal(ladder.demo, true);
+  assert.equal(ladder.coach.adaptive.assistOffered, true);
+  await pause();
+  if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "tutorial-adaptive-assist.png") });
+  await clickLabel("ADVANCE UNFINISHED");
+  const assisted = await page.evaluate(() => window.__PANTHEON_TEST.tutorial());
+  assert.equal(assisted.lessonIndex, 7); assert.equal(assisted.session.courseCompleted, false);
+  assert.ok(assisted.session.skipped.includes("slam"));
+  assert.deepEqual(await effects(), beforeUnearned, "explicit checkpoint assist retains unearned work without reward");
+  if (directory) fs.writeFileSync(path.join(path.resolve(directory), "tutorial-adaptive.json"), JSON.stringify({ unfinished, ladder, assisted }, null, 2));
   await page.evaluate(() => { delete window.__tutorialJourneyEnvironment; });
   console.log(`Tutorial journey passed in ${result.metrics.fixedTicks} fixed ticks`);
   } catch (error) {

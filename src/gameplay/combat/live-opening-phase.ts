@@ -1,3 +1,4 @@
+import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { stepCombatPrelude, type CombatPreludeBlade, type CombatPreludePlayer, type CombatPreludeRun } from "./combat-step-prelude";
 import { stepLocomotionCombat, type LocomotionBlade, type LocomotionEnemy, type LocomotionPlayer } from "./locomotion-combat-runtime";
@@ -77,6 +78,7 @@ export interface LiveOpeningPhaseHost {
   fireDashContact: (enemy: LiveEnemy) => void;
   fireWeaponCatch: () => void;
   fireThrowLaunch: (throwId: number) => void;
+  observeTutorialAttempt?(fact: TutorialAttemptFact): void;
   logThrowLaunch: (throwId: number) => void;
   weaponWorldImpact: () => Readonly<{ mechanic?: string }> | null;
   lobExplode: () => void;
@@ -184,7 +186,7 @@ function runTransport(host: LiveOpeningPhaseHost): void {
     onThrow: (throwId) => { host.run.weaponStats.throws++; host.logThrowLaunch(throwId); host.burst(host.blade.x, host.blade.y, host.blade.vx, host.blade.vy, 6); host.shake(); host.sound("throwBlade"); host.fireThrowLaunch(throwId); },
     onRecall: host.activateThrowSecondary,
     onQueued: (x, y) => { host.floater(x, y - 40, "LINK QUEUED", false, "bladeTrail"); },
-    onTooFar: (x, y) => { host.floater(x, y - 40, "too far", false); } });
+    onTooFar: (x, y) => { host.observeTutorialAttempt?.({ kind: "recall", result: "too-far" }); host.floater(x, y - 40, "too far", false); } });
   host.state.throwCooldown = result.cooldown;
 }
 

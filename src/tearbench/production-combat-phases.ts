@@ -335,6 +335,7 @@ export function createProductionCombatPhases(
     }, fireDashContact: note("fireDashContact"),
     fireWeaponCatch: () => { outward.push("fireWeaponCatch"); emitWeaponFact("catch"); },
     fireThrowLaunch: (throwId: number) => { outward.push("fireThrowLaunch"); emitWeaponFact("throw-launch", throwId); },
+    observeTutorialAttempt: (fact: Parameters<typeof replay.tutorial.observeAttemptFact>[0]) => { replay.tutorial.observeAttemptFact(fact); },
     logThrowLaunch: note("logThrowLaunch"),
     weaponWorldImpact: () => {
       const result = invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onWorldImpact", {
@@ -453,6 +454,7 @@ export function createProductionCombatPhases(
         { config, blade: blade(), player: player(), enemy, secondary, throwId }) as never;
     },
     runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
+    observeTutorialAttempt: (fact: Parameters<typeof replay.tutorial.observeAttemptFact>[0]) => { replay.tutorial.observeAttemptFact(fact); },
     logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
     weaponEffect: (weaponId: string, effect: string) => { replay.tutorial.weaponEffect(weaponId, effect); },
     emitThrowResolve: (enemy: LiveWeaponEnemy | null, damage: number) => {

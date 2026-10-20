@@ -584,7 +584,7 @@ export function createProductionGhostReplayComposition(
           }
           // Match RuntimeFrameCoordinator: cinema input precedes the playing prelude.
           if (waveReward.screen() === "playing" && replay.world.context.cinema.active) replay.world.context.cinema.update(deltaSeconds, confirm);
-          if (waveReward.screen() !== "playing") return;
+          if (waveReward.screen() !== "playing") { replay.tutorial.interruptCoaching(); return; }
           const transient = replay.world.context.transient, intro = replay.world.state.bossIntro(), beat = replay.world.state.bossBeat();
           const frame: MutableFramePreludeState = {
             slowMotion: transient.impact.slowMotion, timeScale: transient.feel.timeScale,

@@ -31,6 +31,7 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
     }
     const tutorial = ports.tutorial;
     if (ports.screen() !== "paused" || (ports.mode() !== "tutorial" && !(ports.mode() === "playground" && tutorial.session().phase === "free-practice"))) return;
+    if (command === "skip" || command === "assist") { if (tutorial.advanceUnfinished(command === "assist")) { ports.resetFocus(); if (tutorial.active) ports.resume(); } return; }
     if (command === "demo") { if (tutorial.demonstrate()) { ports.resetFocus(); ports.resume(); } return; }
     if (command.startsWith("coach-")) { const changed = tutorial.coachAction(command === "coach-rate" ? "rate" : command === "coach-compare" ? "compare" : "diagnostic"); if (changed) { ports.resetFocus(); ports.resume(); } return; }
     if (command === "help") { tutorial.showHelp(); return; }

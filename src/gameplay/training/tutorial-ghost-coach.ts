@@ -1,3 +1,4 @@
+import { TutorialFailureCoach, parseTutorialFailures, type TutorialAttemptFact, type TutorialFailureCheckpoint, type TutorialFailureView } from "./tutorial-failure-coach";
 import shipping from "./tutorial-gold-reference-data.json";
 import { loadTutorialGoldCorpus, sampleTutorialGold, tutorialGoldContactEdges, tutorialGoldReference, type TutorialGoldCorpus, type TutorialGoldFrame, type TutorialGoldLessonId, type TutorialGoldReference } from "./tutorial-gold-reference";
 import type { GameAction } from "../../input/game-action";
@@ -15,12 +16,13 @@ export function shippingTutorialGold(): TutorialGoldCorpus | undefined {
 export interface TutorialCoachView {
   readonly available: boolean; readonly visible: boolean; readonly mode: "preview" | "diagnostic" | "comparison";
   readonly rate: 1 | .5; readonly diagnosis: string; readonly canCompare: boolean; readonly reducedMotion: boolean;
+  readonly adaptive?: TutorialFailureView;
   readonly tick: number; readonly fromTick: number; readonly toTick: number;
 }
 type Pose = readonly [tick: number, x: number, y: number, tipX: number, tipY: number, marker: string];
 type Attempt = Pick<{ duration: number; poses: Pose[]; contact: boolean; groundedContact: boolean }, "duration" | "poses" | "contact" | "groundedContact">;
 export type TutorialCoachCheckpoint = Readonly<{
-  readonly version: 1; readonly reference: string; readonly mode: TutorialCoachView["mode"]; readonly rate: 1 | .5;
+  readonly version: 1 | 2; readonly failures?: TutorialFailureCheckpoint; readonly reference: string; readonly mode: TutorialCoachView["mode"]; readonly rate: 1 | .5;
   readonly cursor: number; readonly from: number; readonly to: number; readonly visible: boolean; readonly diagnosis: string;
   readonly current?: Attempt; readonly best?: Attempt;
 }>;
@@ -33,17 +35,18 @@ export interface TutorialGoldDisplay extends TutorialCoachView {
 }
 const MAX_POSES = 128, MAX_PRESENTATION_BYTES = 24000;
 function lastWhere<T>(items: readonly T[], predicate: (item: T) => boolean): T | undefined { for (let index = items.length - 1; index >= 0; index--) { const item = items[index]; if (item !== undefined && predicate(item)) return item; } return undefined; }
-const fields = ["version", "reference", "mode", "rate", "cursor", "from", "to", "visible", "diagnosis", "current", "best"];
+const fields = ["version", "reference", "mode", "rate", "cursor", "from", "to", "visible", "diagnosis", "current", "best", "failures"];
 export function parseTutorialCoachCheckpoint(value: unknown): TutorialCoachCheckpoint | undefined {
   if (value === undefined) return undefined;
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("Invalid gold coach presentation");
   const data = value as TutorialCoachCheckpoint;
   const version: unknown = Reflect.get(value, "version");
-  if (Object.keys(data).some((key) => !fields.includes(key)) || version !== 1 || !/^[a-f0-9]{16}$/.test(data.reference)
+  if (Object.keys(data).some((key) => !fields.includes(key)) || (version !== 1 && version !== 2) || !/^[a-f0-9]{16}$/.test(data.reference)
     || !["preview", "diagnostic", "comparison"].includes(data.mode) || ![1, .5].includes(data.rate)
     || ![data.cursor, data.from, data.to].every((n) => Number.isFinite(n) && n >= 0 && n <= 20000)
     || data.from > data.to || data.cursor < data.from || data.cursor > data.to || typeof data.visible !== "boolean"
     || typeof data.diagnosis !== "string" || data.diagnosis.length > 120 || JSON.stringify(data).length > MAX_PRESENTATION_BYTES) throw new TypeError("Invalid gold coach cursor");
+  if (version === 2) parseTutorialFailures(data.failures); else if (data.failures !== undefined) throw new TypeError("Historical coach cannot contain adaptive failures");
   if (data.mode === "comparison" && data.best === undefined || !shippingTutorialGold()?.references.some((reference) => reference.contentHash === data.reference && data.to <= reference.durationTicks)) throw new RangeError("Gold coach reference incompatible");
   for (const raw of [data.current, data.best] as readonly unknown[]) if (raw !== undefined) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new TypeError("Invalid personal attempt");
@@ -74,17 +77,21 @@ export class TutorialGhostCoach {
   private current: Attempt | undefined; private best: Attempt | undefined;
   private previous: TutorialGoldFrame | undefined; private origin = 0; private completed = false;
   private commands: readonly GameAction[] = [];
-  constructor(private readonly corpus: () => TutorialGoldCorpus | undefined = shippingTutorialGold, private readonly minimumHitSpeed = Number.POSITIVE_INFINITY) {}
-  select(lesson: string, version: 1 | 2, eligible = true): void {
+  private readonly failures: TutorialFailureCoach;
+  constructor(private readonly corpus: () => TutorialGoldCorpus | undefined = shippingTutorialGold, private readonly minimumHitSpeed = Number.POSITIVE_INFINITY) { this.failures = new TutorialFailureCoach(minimumHitSpeed); }
+  select(lesson: string, version: 1 | 2, eligible = true, encounter: "charger" | "breath" | "mixed" = "charger"): void {
+    this.failures.select(version === 2 && eligible ? `${lesson}:${encounter === "mixed" ? "mixed" : "charger"}` : "");
     const selection = `${lesson}:${String(version)}:${String(eligible)}`;
     if (selection === this.selection) return;
     const corpus = eligible ? this.corpus() : undefined;
     const next = corpus ? tutorialGoldReference(corpus, lesson as TutorialGoldLessonId, version) : undefined;
     if (next?.contentHash === this.reference?.contentHash) { this.selection = selection; return; }
-    this.clear(); this.selection = selection; this.reference = next; if (next) { [this.from, this.to] = this.segment(); this.cursor = this.from; }
+    this.clear(true); this.selection = selection; this.reference = next; if (next) { [this.from, this.to] = this.segment(); this.cursor = this.from; }
   }
-  clear(): void { this.selection = ""; this.reference = undefined; this.visible = false; this.current = undefined; this.best = undefined; this.previous = undefined; this.completed = false; this.commands = []; this.cursor = 0; this.from = 0; this.to = 0; this.diagnosis = "No recorded attempt yet. Cause unknown."; }
-  restart(): void { this.current = undefined; this.previous = undefined; this.completed = false; this.visible = false; this.commands = []; }
+  clear(preserveFailures = false): void { this.selection = ""; this.reference = undefined; this.visible = false; this.current = undefined; this.best = undefined; this.previous = undefined; this.completed = false; this.commands = []; this.cursor = 0; this.from = 0; this.to = 0; this.diagnosis = "No recorded attempt yet. Cause unknown."; if (preserveFailures) this.failures.abort(); else this.failures.restore(); }
+  restart(): void { this.failures.abort(); this.current = undefined; this.previous = undefined; this.completed = false; this.visible = false; this.commands = []; }
+  abortFailures(): void { this.failures.abort(); }
+  observeFact(fact: TutorialAttemptFact): void { this.failures.fact(fact); }
   captureCommands(commands: readonly GameAction[]): void { this.commands = commands; }
   private segment(): readonly [number, number] {
     const ref = this.reference; if (!ref) return [0, 0];
@@ -108,8 +115,10 @@ export class TutorialGhostCoach {
     this.mode = mode; [this.from, this.to] = this.segment(); this.cursor = this.from; this.visible = true; return true;
   }
   setRate(rate: 1 | .5): void { this.rate = rate; }
-  observe(frame: TutorialGoldFrame, input: AuthoritativeInputSnapshot, valid: boolean, recording = true): void {
+  observe(frame: TutorialGoldFrame, input: AuthoritativeInputSnapshot, valid: boolean, recording = true, progress = 0, adaptive = false): void {
     if (!this.reference) { this.commands = []; return; }
+    this.failures.select(adaptive ? `${this.reference.lessonId}:${frame.encounter === "mixed" ? "mixed" : "charger"}` : "");
+    const demonstrate = this.failures.observe(frame, this.commands, progress, adaptive && recording, valid);
     const before = this.previous;
     const explicit = input.moveX !== 0 || input.moveY !== 0 || this.commands.some((action) =>
       action.type === "dash" || action.type === "jump" && action.phase === "pressed" || action.type === "weapon" && action.phase === "pressed");
@@ -136,11 +145,12 @@ export class TutorialGhostCoach {
         else this.diagnosis = frame.blade.state !== "held" ? "Blade is away. Cause of incomplete objective unknown." : "No accepted contact recorded. Cause unknown.";
       }
     }
+    if (demonstrate) this.play("diagnostic");
     this.previous = frame; this.commands = [];
   }
   view(lab: boolean, reducedMotion: boolean): TutorialCoachView {
     return { available: !!this.reference, visible: this.visible, mode: this.mode, rate: this.rate, diagnosis: this.diagnosis,
-      canCompare: lab && !!this.best, reducedMotion, tick: Math.floor(this.cursor), fromTick: this.from, toTick: this.to };
+      adaptive: this.failures.view(), canCompare: lab && !!this.best, reducedMotion, tick: Math.floor(this.cursor), fromTick: this.from, toTick: this.to };
   }
   display(lab: boolean, reducedMotion: boolean): TutorialGoldDisplay | undefined {
     const ref = this.reference; if (!ref || !this.visible) return undefined;
@@ -176,12 +186,13 @@ export class TutorialGhostCoach {
       path: path.filter((_, index) => index % Math.max(1, Math.ceil(path.length / 128)) === 0), markers,
       trail: ref.frames.filter((pose) => pose.tick <= tick && pose.tick >= tick - 16).slice(-12) };
   }
-  capture(): TutorialCoachCheckpoint | undefined { return this.reference ? { version: 1, reference: this.reference.contentHash, mode: this.mode, rate: this.rate,
+  capture(): TutorialCoachCheckpoint | undefined { return this.reference ? { version: 2, failures: this.failures.capture(), reference: this.reference.contentHash, mode: this.mode, rate: this.rate,
     cursor: this.cursor, from: this.from, to: this.to, visible: this.visible, diagnosis: this.diagnosis,
     ...(this.best ? { best: structuredClone(this.best) } : {}) } : undefined; }
   restore(value: unknown): void {
     const saved = parseTutorialCoachCheckpoint(value); this.restart(); this.best = undefined;
     this.completed = true; // A partially restored objective is not a new full attempt; explicit reset starts recording again.
+    this.failures.restore(saved?.failures);
     if (!saved) return;
     if (saved.reference !== this.reference?.contentHash || saved.to > this.reference.durationTicks) throw new RangeError("Gold coach reference incompatible");
     this.mode = saved.mode; this.rate = saved.rate; this.cursor = saved.cursor; this.from = saved.from; this.to = saved.to; this.visible = saved.visible; this.diagnosis = saved.diagnosis;

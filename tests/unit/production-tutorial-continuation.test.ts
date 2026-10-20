@@ -1,3 +1,6 @@
+import { driveTutorialLesson, type TutorialDriverPort } from "../../src/tearbench/tutorial-course-driver";
+import type { TutorialGoldProof } from "../../src/tearbench/tutorial-gold-generation";
+import type { GameAction } from "../../src/input/game-action";
 import { isPracticeBossActor } from "../../src/app/live-boss-phase-practice";
 import type { PracticeBossState } from "../../src/gameplay/training/practice-boss-catalog";
 import { describe, expect, it } from "vitest";
@@ -31,6 +34,120 @@ function boundary(source: Source, change: Partial<TutorialSessionCheckpoint>) {
 }
 function capture(source: Source) { return captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "tutorial-boundary"); }
 function restore(source: Source) { return composition().create(JSON.parse(JSON.stringify(capture(source).snapshot)) as TearSnapshotV1); }
+
+describe("adaptive production tutorial coaching", () => {
+  const proof = () => JSON.parse(readFileSync("tests/fixtures/tutorial-gold-reference-proof.json", "utf8")) as TutorialGoldProof;
+  it("resolves real failed swings into 2/4/6 help and an explicit unearned Lab exit, without walking or idle failures", () => {
+    const source = composition().create(undefined), tutorial = source.replay.tutorial;
+    tutorial.openPractice(1); tutorial.selectLesson("slam");
+    expect(tutorial.step().d).toBe(tutorial.session().instruction); expect(tutorial.session().instruction.length).toBeGreaterThan(0);
+    let commandId = 0;
+    const step = (...commands: GameAction[]) => {
+      const tick = source.simulation.scheduler.tick + 1;
+      source.simulation.advanceOne(commands.map((command) => ({ kind: "command" as const, id: ++commandId, tick, command })));
+    };
+    for (let tick = 0; tick < 900; tick++) step();
+    step({ type: "move", x: -350, y: 0 }); for (let tick = 0; tick < 15; tick++) step(); step({ type: "move", x: 0, y: 0 });
+    for (let tick = 0; tick < 120; tick++) step();
+    expect(tutorial.session().coach?.adaptive?.failures).toBe(0);
+    step({ type: "aim", turn: 375000, magnitude: 1000 }); step(); step();
+    const beforeInterruption = tutorial.session().coach?.adaptive?.failures;
+    source.waveReward.restoreScreen("paused"); source.advanceApplicationFrame(1 / 120);
+    source.waveReward.restoreScreen("settings"); source.advanceApplicationFrame(1 / 120);
+    source.waveReward.restoreScreen("playing");
+    for (let tick = 0; tick < 120; tick++) step();
+    expect(tutorial.session().coach?.adaptive?.failures).toBe(beforeInterruption);
+    const seen = new Set<number>(); let diagnostic = false;
+    for (let attempt = 0; attempt < 16 && !tutorial.session().coach?.adaptive?.assistOffered; attempt++) {
+      // Actual left-facing native blade swings, with a real live target on the other side.
+      step({ type: "aim", turn: attempt % 2 ? 375000 : 625000, magnitude: 1000 });
+      for (let tick = 0; tick < 100; tick++) {
+        step(); const coach = tutorial.session().coach;
+        seen.add(coach?.adaptive?.failures ?? 0);
+        if (coach?.adaptive?.failures === 2) expect(coach.adaptive.nudge).toMatch(/unknown/);
+        if (coach?.adaptive?.failures === 4 && coach.mode === "diagnostic" && coach.visible) diagnostic = true;
+      }
+    }
+    expect([...seen]).toEqual(expect.arrayContaining([2, 4, 6])); expect(diagnostic).toBe(true);
+    const presentation = tutorial.capturePresentation(), saved = tutorial.captureSession();
+    const reconstructed = restore(source);
+    expect(reconstructed.replay.tutorial.session().coach?.adaptive?.assistOffered).toBe(true);
+    expect(reconstructed.replay.tutorial.selectAnnex("sword")).toBe(true);
+    expect(reconstructed.replay.tutorial.session().annex?.id).toBe("sword");
+    expect(reconstructed.replay.tutorial.session().coach?.adaptive?.assistOffered).toBe(false);
+    expect(reconstructed.replay.tutorial.advanceUnfinished(true)).toBe(false);
+    tutorial.selectLesson("jump"); tutorial.selectLesson("slam");
+    // Selection/restart does not erase the related-failure ledger, nor count an aborted partial action.
+    step(); expect(tutorial.session().coach?.adaptive?.assistOffered).toBe(true);
+    expect(tutorial.advanceUnfinished(true)).toBe(true);
+    expect(tutorial.session()).toMatchObject({ phase: "free-practice", courseCompleted: false, practiceOnly: true });
+    expect(tutorial.captureSession()?.completed).toEqual(saved?.completed);
+    expect(presentation.goldCoach?.failures?.variants.some((entry) => entry.failures >= 6)).toBe(true);
+    expect(source.replay.tutorialOutward.some((event) => event.startsWith("complete-course:") || event === "achievement-check")).toBe(false);
+    // A real CUT completion still has a 1.1s world simulation delay. Continuing real
+    // swings there cannot become failures merely because its objective is capped.
+    const cutProof = proof().references.find((entry) => entry.lessonId === "cut" && entry.curriculumVersion === 2);
+    if (!cutProof) throw new Error("Actual CUT origin missing");
+    const cut = composition().create(cutProof.origin), cutOwner = cut.replay.tutorial;
+    cut.simulation.input.restore(cutProof.input);
+    const commands = new Map(cutProof.actions.map((entry) => [entry.tick, entry.commands])); let cutCommandId = 0;
+    for (let index = 0; index < cutProof.hashes.length && cutOwner.doneT <= 0; index++) {
+      const tick = cut.simulation.scheduler.tick + 1;
+      cut.advanceApplicationFrame(1 / 120);
+      cut.simulation.advanceOne((commands.get(index + 1) ?? []).map((command) => ({ kind: "command", id: ++cutCommandId, tick, command })));
+    }
+    expect(cutOwner.n.strike).toBeGreaterThanOrEqual(6); expect(cutOwner.doneT).toBeGreaterThan(0);
+    const failuresAfterSuccess = cutOwner.session().coach?.adaptive?.failures;
+    const blade = cut.replay.world.state.blade(); if (!blade) throw new Error("Actual CUT blade missing");
+    const swingAtSuccess: unknown = Reflect.get(blade, "swingId"); if (typeof swingAtSuccess !== "number") throw new Error("Native swing identity missing");
+    for (let index = 0; index < 110; index++) {
+      const tick = cut.simulation.scheduler.tick + 1;
+      cut.simulation.advanceOne(index % 24 === 0 ? [{ kind: "command", id: ++cutCommandId, tick, command: { type: "aim", turn: index % 48 ? 375000 : 625000, magnitude: 1000 } }] : []);
+      expect(cutOwner.session().coach?.adaptive?.failures).toBe(failuresAfterSuccess);
+    }
+    expect(cutOwner.idx).toBe(3); expect(Reflect.get(blade, "swingId")).toBeGreaterThan(swingAtSuccess);
+    expect(cutOwner.session().coach?.adaptive?.assistOffered).toBe(false);
+  });
+  it("retains skipped READY as unearned, restores it, then earns the actual Field Test and completes the same issued course once", () => {
+    // These are genuine all-prior-lessons-completed bytes produced by the retained full-course driver.
+    const opening = proof().references.find((entry) => entry.lessonId === "field-test" && entry.curriculumVersion === 2);
+    if (!opening) throw new Error("Actual Field Test origin missing");
+    const source = composition().create(opening.origin), tutorial = source.replay.tutorial;
+    const issued = tutorial.captureSession()?.courseSessionId;
+    expect(tutorial.advanceUnfinished()).toBe(true);
+    for (let tick = 0; tick < 210; tick++) source.simulation.advanceOne([]);
+    expect(tutorial.session()).toMatchObject({ phase: "free-practice", unfinished: true, skipped: ["field-test"], courseCompleted: false });
+    expect(tutorial.captureSession()).toMatchObject({ version: 7, courseSessionId: issued, completionAwarded: false });
+    expect(source.replay.tutorialOutward.some((event) => event.startsWith("complete-course:"))).toBe(false);
+    const continued = restore(source), owner = continued.replay.tutorial;
+    expect(owner.session()).toMatchObject({ unfinished: true, skipped: ["field-test"], courseCompleted: false });
+    expect(owner.openPractice(0)).toBe(false); // No durable Lab eligibility was minted.
+    expect(owner.selectLesson("field-test")).toBe(true);
+    const world = continued.replay.world.state;
+    const observe = () => {
+      const player = world.player(), blade = world.blade(); if (!player || !blade) throw new Error("Actual teaching actors missing");
+      return { tick: continued.simulation.scheduler.tick, player: { x: player.x, y: player.y, grounded: player.onGround },
+        blade: { handX: blade.x, handY: blade.y, tipSpeed: blade.tipSpeed, state: blade.state },
+        entities: world.enemies().filter((actor) => !actor.dead).map((actor) => ({ kind: actor.kind, x: actor.x, y: actor.y, state: actor.atk })) };
+    };
+    const port: TutorialDriverPort = {
+      environment: { observe, step: (actions) => { continued.advanceApplicationFrame(1 / 120); const result = continued.simulation.advanceOne(actions); return { observation: observe(), info: { canonicalStateHash: result.stateHash } }; },
+        canonicalState: () => continued.simulation.lastResult?.state ?? null, metrics: () => ({}),
+        captureSnapshot: (id) => captureProductionReplayCheckpoint(continued.replay, continued.combat, continued.waveReward, id).snapshot,
+        engineEventProjection: () => [] },
+      tutorial: () => ({ lessonIndex: owner.idx, lesson: owner.step().t, description: owner.step().d, arena: owner.step().arena, counters: owner.n, active: owner.active }),
+      state: () => ({ game: "playing", mode: "tutorial", enemyTrace: world.enemies().map((enemy) => ({ kind: enemy.kind, hitCooldown: enemy.hitCd })), projectileTrace: world.projectiles().map((shot) => ({ x: shot.x, y: shot.y, deflected: shot.deflected })) }),
+    };
+    driveTutorialLesson(port, 12, { ...scenario, maxTicks: 16000 });
+    expect(owner.idx).toBe(13); expect(owner.captureSession()?.completed).toContain("field-test");
+    for (let tick = 0; tick < 240; tick++) continued.simulation.advanceOne([]);
+    expect(owner.session()).toMatchObject({ phase: "free-practice", courseCompleted: true });
+    expect(continued.replay.tutorialOutward.filter((event) => event === `complete-course:${issued ?? ""}`)).toHaveLength(1);
+    const completed = restore(continued);
+    for (let tick = 0; tick < 240; tick++) completed.simulation.advanceOne([]);
+    expect(completed.replay.tutorialOutward.some((event) => event.startsWith("complete-course:"))).toBe(false);
+  }, 30000);
+});
 
 describe("production tutorial reconstructed-byte continuation", () => {
   it("records a genuine baseline MOVE attempt for optional comparison without course effects", () => {

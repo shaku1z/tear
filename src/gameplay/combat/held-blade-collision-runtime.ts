@@ -41,7 +41,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
       if (baseDamage > 0) { enemy.hitCd = 0.18; fx.burst(enemy.x, enemy.y, blade.tipVX, blade.tipVY, 4, enemy.color); }
       continue;
     }
-    if (baseDamage <= 0) continue;
+    if (baseDamage <= 0) { hooks.observeTutorialContact?.(enemy, { kind: "contact", result: "slow", grounded: player.onGround }); continue; }
 
     if (enemy.parryBaton && (enemy.batonStrike ?? 0) > 0) {
       const baton = liveWeapon ?? enemy.batonSegment?.();
@@ -107,6 +107,7 @@ export function resolveHeldBladeEnemyCollisions(input: HeldBladeCollisionInput):
     const strikeType = strike.spike ? "spike" : strike.empoweredSlam ? "superslam"
       : strike.slam ? "slam" : strike.empoweredLaunch ? "updraft" : strike.launch ? "launch" : "hit";
     const airborne = enemy.y < t.groundY - enemy.hh - 14;
+    hooks.observeTutorialContact?.(enemy, { kind: "contact", result: "accepted", grounded: player.onGround, strike: strikeType });
     hooks.logHit(strike.damage, quality, { strikeType, airborne }, weaponEffect?.mechanic);
     applyWeaponEffect(input, enemy, weaponEffect);
 

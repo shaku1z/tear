@@ -24,6 +24,7 @@ export type TutorialSessionPhase = "inactive" | "course" | "lesson-practice" | "
 type FieldEncounter = "charger" | "breath" | "mixed";
 interface TutorialPracticeOrigin { readonly kind: "durable-profile-completion"; readonly tutorialDone: number }
 export interface TutorialSessionView {
+  readonly unfinished?: boolean; readonly skipped?: readonly TutorialLessonId[];
   readonly coach?: TutorialCoachView;
   readonly practiceOnly?: boolean;
   readonly annexSelector?: boolean;
@@ -44,7 +45,7 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("Invalid tutorial session");
   const data = value as Record<string, unknown>;
   const ids = (entry: unknown): entry is TutorialLessonId[] => Array.isArray(entry) && new Set(entry as unknown[]).size === entry.length && (entry as unknown[]).every((id) => TUTORIAL_LESSON_IDS.some((valid) => valid === id));
-  if ((data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4 && data.version !== 5 && data.version !== 6) || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
+  if ((data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4 && data.version !== 5 && data.version !== 6 && data.version !== 7) || typeof data.courseSessionId !== "string" || !["inactive", "course", "lesson-practice", "free-practice"].includes(String(data.phase)) ||
     typeof data.phase !== "string" || !TUTORIAL_LESSON_IDS.includes(data.lessonId as TutorialLessonId) || !ids(data.reached) || !ids(data.completed) ||
     typeof data.active !== "boolean" || typeof data.completionAwarded !== "boolean" || typeof data.previousGrounded !== "boolean" || typeof data.dashLatched !== "boolean" ||
     typeof data.previousBladeState !== "string" || (data.pendingArena !== null && !TUTORIAL_LESSONS.some((lesson) => lesson.arena === data.pendingArena))) throw new TypeError("Invalid tutorial session fields");
@@ -57,7 +58,11 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   }
   const marks = ["airHit", "dash", "deflect", "jump", "launch", "moveL", "moveR", "evade", "parry", "punish", "recall", "slam", "strike", "superslam", "throwHit", "updraft"];
   if (typeof data.counters !== "object" || data.counters === null || Array.isArray(data.counters) || Object.entries(data.counters).some(([key, number]) => !marks.includes(key) || typeof number !== "number" || !Number.isFinite(number) || number < 0)) throw new TypeError("Invalid tutorial counters");
-  const reached = data.reached;
+  const reached = data.reached, completed = data.completed;
+  if (data.version === 7) {
+    const allowed = ["version", "courseSessionId", "phase", "active", "lessonId", "reached", "completed", "completionAwarded", "counters", "pendingArena", "completionDelay", "endingTime", "observedLaunches", "observedStrikes", "risingCutWindow", "chargeCommitWindow", "chargeRecoveryWindow", "chargeCommitAwayX", "bladeAwayTime", "previousGrounded", "previousBladeState", "dashLatched", "previousPlayerX", "curriculumVersion", "fieldEncounter", "interWaveRemaining", "skipped"];
+    if (Object.keys(data).some((key) => !allowed.includes(key)) || !ids(data.skipped) || data.skipped.length === 0 || data.skipped.includes("ready") || data.courseSessionId === "" || data.phase === "lesson-practice" || data.skipped.some((id) => !reached.includes(id) || completed.includes(id)) || (data.completionAwarded || completed.includes("ready") || (data.phase === "free-practice" && data.lessonId !== "ready"))) throw new RangeError("Invalid unfinished tutorial course");
+  } else if (data.skipped !== undefined) throw new RangeError("Historical tutorial cannot contain skipped progress");
   if (data.version === 3 || data.version === 4 || data.version === 5 || data.version === 6) {
     const origin = data.practiceOrigin;
     if (typeof origin !== "object" || origin === null || Array.isArray(origin) ||
@@ -93,8 +98,8 @@ export function parseTutorialSessionCheckpoint(value: unknown): TutorialSessionC
   if (data.active !== (data.phase === "course" || data.phase === "lesson-practice") ||
     (data.active && (!data.reached.includes(data.lessonId as TutorialLessonId) || (!data.courseSessionId && data.version !== 3 && data.version !== 4 && data.version !== 5 && data.version !== 6))) ||
     data.completed.some((id) => !reached.includes(id)) ||
-    ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded && data.version !== 3 && data.version !== 4 && data.version !== 5 && data.version !== 6)) throw new RangeError("Inconsistent tutorial session");
-  if (data.version === 2 || data.version === 3 || data.version === 4 || data.version === 5 || data.version === 6) {
+    ((data.phase === "lesson-practice" || data.phase === "free-practice") && !data.completionAwarded && data.version !== 3 && data.version !== 4 && data.version !== 5 && data.version !== 6 && data.version !== 7)) throw new RangeError("Inconsistent tutorial session");
+  if (data.version === 2 || data.version === 3 || data.version === 4 || data.version === 5 || data.version === 6 || data.version === 7) {
     if (data.curriculumVersion !== 2 || (data.fieldEncounter !== "charger" && data.fieldEncounter !== "breath" && data.fieldEncounter !== "mixed") ||
       typeof data.interWaveRemaining !== "number" || !Number.isFinite(data.interWaveRemaining) || data.interWaveRemaining < 0 || data.interWaveRemaining > FIELD_BREATH_SECONDS ||
       (data.fieldEncounter !== "charger" && data.lessonId !== "field-test") ||
@@ -301,7 +306,7 @@ export class TutorialController {
   private phase: TutorialSessionPhase = "inactive";
   private courseSessionId = "";
   private reached = new Set<TutorialLessonId>();
-  private completed = new Set<TutorialLessonId>();
+  private completed = new Set<TutorialLessonId>(); private skipped = new Set<TutorialLessonId>();
   private completionAwarded = false;
   private helpVisible = false;
   private curriculumVersion: 1 | 2 = 2;
@@ -316,7 +321,7 @@ export class TutorialController {
 
   session(): TutorialSessionView {
     const lessonId = TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move", lesson = this.step();
-    return { phase: this.phase, lessonId, courseCompleted: this.completionAwarded, helpVisible: this.helpVisible,
+    return { ...(this.skipped.size ? { unfinished: true, skipped: [...this.skipped] } : {}), phase: this.phase, lessonId, courseCompleted: this.completionAwarded, helpVisible: this.helpVisible,
       ...(this.practiceOrigin === undefined ? {} : { practiceOnly: true }),
       ...(this.practiceOrigin === undefined ? {} : { annexSelector: this.annexSelector,
         annexes: TUTORIAL_WEAPON_ANNEXES.map(({ id, title }) => ({ id, title, current: this.annex?.id === id })) }),
@@ -364,6 +369,12 @@ export class TutorialController {
     this.active = true; this.phase = this.completionAwarded || this.practiceOrigin !== undefined ? "lesson-practice" : "course";
     this.enterLesson(index); return true;
   }
+  advanceUnfinished(): boolean {
+    if (!this.active || this.curriculumVersion !== 2 || this.step().final || this.annex || this.enemyPractice || this.bossPractice || this.completionDelay > 0) return false;
+    const id = this.session().lessonId; if (!this.practiceOrigin && !this.completed.has(id)) this.skipped.add(id);
+    if (this.practiceOrigin) { this.active = false; this.phase = "free-practice"; }
+    else this.enterLesson(this.lessonIndex + 1);
+    return true; }
   showHelp(): void { this.helpVisible = !this.helpVisible; }
   demonstrate(): boolean {
     if (!this.active || this.step().final || this.annex !== undefined || this.enemyPractice !== undefined || this.bossPractice !== undefined) return false;
@@ -380,6 +391,7 @@ export class TutorialController {
     if (this.curriculumVersion === 1) return checkpoint;
     const current = { ...checkpoint, version: 2 as const, curriculumVersion: 2 as const,
       fieldEncounter: this.fieldEncounter, interWaveRemaining: this.interWaveRemaining };
+    if (this.skipped.size) return { ...current, version: 7 as const, skipped: [...this.skipped] };
     if (this.practiceOrigin === undefined) return current;
     const practice = { ...current, version: 3 as const, practiceOrigin: { ...this.practiceOrigin } };
     if (this.bossPractice !== undefined) return { ...practice, version: 6 as const, bossPractice: structuredClone(this.bossPractice) };
@@ -399,6 +411,7 @@ export class TutorialController {
     this.annex = data.version === 4 ? validateWeaponAnnex(data.annex) : undefined;
     this.bossPractice = data.version === 6 ? validatePracticeBoss(data.bossPractice) : undefined;
     this.enemyPractice = data.version === 5 ? validatePracticeEnemy(data.enemyPractice) : undefined;
+    this.skipped = new Set(data.version === 7 ? data.skipped : []);
     this.courseSessionId = data.courseSessionId; this.phase = data.phase; this.active = data.active;
     this.lessonIndex = TUTORIAL_LESSON_IDS.indexOf(data.lessonId); this.reached = new Set(data.reached); this.completed = new Set(data.completed);
     this.completionAwarded = data.completionAwarded; this.counters = { ...data.counters }; this.pendingArena = data.pendingArena;
@@ -423,7 +436,7 @@ export class TutorialController {
     this.practiceOrigin = undefined;
     this.annex = undefined; this.annexSelector = false; this.enemyPractice = undefined; this.catalogSelector = false; this.bossPractice = undefined; this.bossSelector = false;
     this.curriculumVersion = 2; this.fieldEncounter = "charger"; this.interWaveRemaining = 0;
-    this.courseSessionId = courseSessionId; this.phase = "course"; this.reached = new Set(["move"]); this.completed.clear(); this.completionAwarded = false; this.helpVisible = false;
+    this.courseSessionId = courseSessionId; this.phase = "course"; this.reached = new Set(["move"]); this.completed.clear(); this.skipped.clear(); this.completionAwarded = false; this.helpVisible = false;
     this.active = true; this.lessonIndex = 0; this.completionDelay = 0; this.endingTime = 0;
     this.ghostTime = 0; this.anchorX = viewportWidth * 0.2; this.previousGrounded = true;
     this.previousBladeState = "held"; this.dashLatched = false;
@@ -604,7 +617,7 @@ export class TutorialController {
       if (this.evidencePulse) { this.coachIdle = 0; this.evidencePulse = false; }
       else this.coachIdle += dt;
       if (this.coachDemoTime > 0) this.coachDemoTime = Math.max(0, this.coachDemoTime - dt);
-      else if (this.coachIdle >= 7) { this.coachIdle = 0; this.coachDemoTime = 3.8; this.ghostTime = 0; }
+      else if (this.curriculumVersion === 1 && this.coachIdle >= 7) { this.coachIdle = 0; this.coachDemoTime = 3.8; this.ghostTime = 0; }
     }
     if (lesson.coachCharger && !charger) {
       const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 330, snapshot.viewportWidth - 160));
@@ -618,7 +631,8 @@ export class TutorialController {
           this.active = false; this.phase = "free-practice";
           return [...intents, { type: "release-pointer" }, { type: "begin-practice" }];
         }
-        this.enterLesson(this.lessonIndex + 1);
+        const next = this.curriculumVersion === 2 ? TUTORIAL_LESSON_IDS.findIndex((id, index) => index > this.lessonIndex && !this.completed.has(id)) : this.lessonIndex + 1;
+        this.enterLesson(next < 0 ? TUTORIAL_LESSON_IDS.length - 1 : next);
         if ((this.step().dummyCount ?? 0) > 0) {
           const x = Math.max(160, Math.min(player.x + (player.facing || 1) * 180, snapshot.viewportWidth - 160));
           for (const enemy of liveDummies) intents.push({ type: "reset-dummy", enemyId: enemy.id, x });
@@ -630,7 +644,7 @@ export class TutorialController {
         // Completion is a handoff, not an ejection. The Playground is a
         // no-wave training run, preserving the course's zero-upgrade baseline.
         this.stop(); this.phase = "free-practice";
-        if (!this.completionAwarded && this.practiceOrigin === undefined) {
+        if (!this.completionAwarded && this.practiceOrigin === undefined && this.skipped.size === 0) {
           this.completionAwarded = true; this.completed.add("ready");
           intents.push({ type: "complete-course", courseSessionId: this.courseSessionId });
         }
@@ -645,7 +659,7 @@ export class TutorialController {
         this.coachDemoTime = 0; this.coachIdle = 0; this.evidencePulse = false;
         return [...intents, { type: "sound", cue: "rankup" }, { type: "reset-training-space" }];
       }
-      this.completed.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
+      this.completed.add(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move"); this.skipped.delete(TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move");
       this.completionDelay = 1.1; intents.push({ type: "sound", cue: "rankup" });
     }
     return intents;

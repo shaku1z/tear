@@ -1,3 +1,4 @@
+import type { TutorialAttemptFact } from "./tutorial-failure-coach";
 import type { BossPracticeCandidate, BossPracticePort, PracticeBossEntry, PracticeBossState } from "./practice-boss-catalog";
 import { TutorialGhostCoach, shippingTutorialGold, type TutorialCoachCheckpoint } from "./tutorial-ghost-coach";
 import { stableVerificationHash } from "../../replay/hash";
@@ -138,6 +139,9 @@ export interface LiveTutorialRuntime {
   selectEnemy(id: string): boolean;
   showCatalog(): void; showBosses(): void; selectBoss(id: string, retained?: PracticeBossState): boolean; bindBossPractice(port: BossPracticePort): void; afterWorldStep(frame?: TutorialGoldFrame, input?: AuthoritativeInputSnapshot): void;
   showAnnexes(): void;
+  interruptCoaching(): void;
+  observeAttemptFact(fact: TutorialAttemptFact): void;
+  advanceUnfinished(assisted?: boolean): boolean;
   coachAction(command: "rate" | "compare" | "diagnostic"): boolean;
   captureCoachCommands(commands: readonly GameAction[]): void;
   weaponEffect(weaponId: string, effect: string): void;
@@ -173,16 +177,16 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
   const controller = new TutorialController(port.config);
   const coach = new TutorialGhostCoach(() => { const corpus = shippingTutorialGold(); return corpus?.compatibility.configurationHash === stableVerificationHash(port.config) ? corpus : undefined; }, port.config.blade.minHitSpeed);
   const emptyGhost: TutorialGhostSnapshot = { visible: false, demonstrating: false, lesson: "", time: 0, actor: { x: 0, y: 0, facing: 1, dashAfterimages: [] }, target: { visible: false, x: 0, y: 0, hit: false }, blade: { x: 0, y: 0, angle: 0, swinging: false, thrown: false, hit: false }, shot: { visible: false, x: 0, y: 0, deflected: false } };
-  const syncCoach = () => { const session = controller.session(), saved = controller.captureSession(); coach.select(session.lessonId, saved.version === 1 ? 1 : 2, session.phase !== "inactive" && !session.annex && !session.enemyPractice && !session.bossPractice); };
-  const coachView = () => { syncCoach(); return coach.view(controller.session().practiceOnly === true, port.reducedMotion?.() === true); };
+  const syncCoach = () => { const session = controller.session(), saved = controller.captureSession(); coach.select(session.lessonId, saved.version === 1 ? 1 : 2, session.phase !== "inactive" && !session.annex && !session.enemyPractice && !session.bossPractice, saved.version === 1 ? "charger" : saved.fieldEncounter); };
+  const coachView = () => { syncCoach(); const view = coach.view(controller.session().practiceOnly === true, port.reducedMotion?.() === true); return view.adaptive && controller.step().complete(controller.counters) ? { ...view, adaptive: { ...view.adaptive, nudge: undefined, assistOffered: false } } : view; };
   const installPendingArena = (): void => {
     const arena = controller.consumePendingArena();
     if (arena !== null) { port.resetTrainingSpace(); port.installArena(arena); }
   };
   const lessonView = (): LiveTutorialLessonView => {
-    const lesson = controller.step();
+    const lesson = controller.step(), nudge = coachView().adaptive?.nudge;
     return {
-      t: lesson.title, d: lesson.instruction?.(controller.counters) ?? lesson.description, keys: lesson.keys,
+      t: lesson.title, d: nudge ?? lesson.instruction?.(controller.counters) ?? lesson.description, keys: lesson.keys,
       need: lesson.dummyCount, ranged: lesson.ranged, final: lesson.final,
       arena: lesson.arena ?? "runway", arenaLabel: tutorialArenaDefinition(lesson.arena ?? "runway").label,
       teachingFocus: lesson.teachingFocus ?? "movement",
@@ -194,7 +198,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     openPractice: (tutorialDone) => { const changed = controller.openPractice(port.viewportWidth, tutorialDone); if (changed) { coach.clear(); bossPort?.restore(undefined); } return changed; },
     session: () => { const session = { ...controller.session(), coach: coachView() }; return session.practiceOnly ? { ...session, enemyCatalog: port.enemyCatalog?.() ?? [], bossCatalog: port.bossCatalog?.() ?? [] } : session; },
     bindBossPractice: (value) => { bossPort = value; },
-    afterWorldStep: (frame, input) => { syncCoach(); if (frame && input) coach.observe(frame, input, controller.step().complete(controller.counters), controller.active); const saved = controller.session().bossPractice; if (!saved || saved.defeated) return; const next = bossPort?.afterWorldStep(); if (next) { controller.syncBoss({ ...saved, ...next }); if (next.defeated) port.finishBossPractice?.(); } },
+    afterWorldStep: (frame, input) => { syncCoach(); if (frame && input) coach.observe(frame, input, controller.step().complete(controller.counters), controller.active, controller.step().progress(controller.counters)[0], controller.captureSession().version !== 1); const saved = controller.session().bossPractice; if (!saved || saved.defeated) return; const next = bossPort?.afterWorldStep(); if (next) { controller.syncBoss({ ...saved, ...next }); if (next.defeated) port.finishBossPractice?.(); } },
     selectBoss: (id, retained) => { const entry = retained && id === `${retained.bossId}:${String(retained.phase)}` ? { ...retained, id, title: retained.bossId, canPractice: true } : port.bossCatalog?.().find((boss) => boss.id === id); if (!entry?.canPractice || !bossPort || !controller.session().practiceOnly) return false;
       port.resetTrainingSpace(); return controller.selectBoss(entry, bossPort.begin(entry)); },
     showBosses: () => { controller.showBosses(); },
@@ -202,9 +206,12 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     selectLesson: (id) => { const changed = controller.selectLesson(id); if (changed) { syncCoach(); coach.restart(); installPendingArena(); } return changed; },
     selectAnnex: (id) => { const changed = controller.selectAnnex(id); if (changed) installPendingArena(); return changed; },
     selectEnemy: (id) => { const entry = port.enemyCatalog?.().find((enemy) => enemy.id === id); const changed = entry !== undefined && controller.selectEnemy(entry); if (changed) installPendingArena(); return changed; },
+    interruptCoaching: () => { coach.abortFailures(); },
+    observeAttemptFact: (fact) => { coach.observeFact(fact); },
+    advanceUnfinished: (assisted = false) => { if (assisted && !coachView().adaptive?.assistOffered) return false; const changed = controller.advanceUnfinished(); if (changed) { syncCoach(); coach.restart(); installPendingArena(); if (!controller.active) { port.releasePointer(); port.beginPractice(); } } return changed; },
     showCatalog: () => { controller.showCatalog(); },
     showAnnexes: () => { controller.showAnnexes(); }, weaponEffect: (weaponId, effect) => { controller.weaponEffect(weaponId, effect); },
-    showHelp: () => { controller.showHelp(); if (controller.session().helpVisible) { syncCoach(); coach.play("diagnostic"); } }, demonstrate: () => { syncCoach(); return coach.play("preview"); },
+    showHelp: () => { coach.abortFailures(); controller.showHelp(); if (controller.session().helpVisible) { syncCoach(); coach.play("diagnostic"); } }, demonstrate: () => { syncCoach(); return coach.play("preview"); },
     coachAction(command) { syncCoach(); if (command === "rate") { coach.setRate(coachView().rate === 1 ? .5 : 1); return false; } return coach.play(command === "compare" ? "comparison" : "diagnostic"); },
     captureCoachCommands: (commands) => { syncCoach(); coach.captureCommands(commands); },
     captureSession: () => { if (controller.session().phase === "inactive") return undefined; if (controller.session().bossPractice && !controller.session().bossPractice?.defeated) bossPort?.capture(); return controller.captureSession(); },
@@ -236,7 +243,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     get gT() { return controller.ghostTime; },
     get anchor() { return controller.anchorX; },
     steps: TUTORIAL_LESSONS,
-    start(courseSessionId = "unissued") { controller.start(port.viewportWidth, courseSessionId); installPendingArena(); },
+    start(courseSessionId = "unissued") { coach.clear(); controller.start(port.viewportWidth, courseSessionId); installPendingArena(); },
     stop() { if (controller.session().bossPractice) bossPort?.cancel(); controller.stop(); coach.clear(); },
     mark(kind) { controller.mark(kind); },
     step: lessonView,
