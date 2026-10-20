@@ -33,6 +33,7 @@ type TrainingHost = LiveTrainingHost;
 type WeaponRuntime = ReturnType<typeof createLiveWeaponRuntime<GameEnemy>>;
 
 export interface LiveRunOrchestrationOptions {
+  readonly runInstalled?: (run: GameRun) => void;
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly entities: LiveWorldEntityConstructionPort;
@@ -125,6 +126,7 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   });
 
   createLiveRunStartHost({
+    ...(options.runInstalled === undefined ? {} : { runInstalled: options.runInstalled }),
     dependencies: d, state: options.state, width: options.width, services: options.worldServices,
     prepareWorld: options.prepareWorld, applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {

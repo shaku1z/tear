@@ -11,6 +11,7 @@ export type LegacyScreenId =
   | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication" | "ghostsupport";
 
 export type ScreenAction =
+  | { readonly type: "chase.control"; readonly command: "toggle" | "stop" }
   | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
   | { readonly type: "menu.resumeFinale" }
   | { readonly type: "menu.claimFinale" }

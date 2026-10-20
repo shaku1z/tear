@@ -95,7 +95,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       finally { d.Input.stopSemanticRecording(); }
     },
     publishTerminal,
-    saveBest: (run) => practicing() ? false : options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
+    saveBest: (run) => practicing() || run.ghostAssistance !== undefined ? false : options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
     best: (run) => options.getBest(run.mode, run.diff),
     awardCoins: (score) => practicing() ? 0 : options.awardCoins(score),
     coins: () => d.META.coins(),

@@ -63,6 +63,7 @@ export interface LiveOpeningCaptureBoundary {
 }
 
 interface RunStartHostContext {
+  readonly runInstalled?: (run: GameRun) => void;
   readonly dependencies: GameRuntimeDependencies;
   readonly state: LiveGameHostState;
   readonly width: number;
@@ -189,6 +190,7 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
         pg: {}, reservedUpgrade: null,
       };
       context.installRun(run);
+      context.runInstalled?.(run);
     },
     startLifecycle: (sessionId) => { context.lifecycle.start(sessionId); },
     exposeDebugState: () => {

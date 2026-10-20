@@ -12,7 +12,8 @@ vi.mock("../../src/ghost", async () => {
   } };
 });
 
-import { GhostLocalPublicationConsentLedger, GhostLocalVault, GhostStreamingRecorder, createMemoryGhostVaultBackend } from "../../src/ghost";
+import { GhostLocalPublicationConsentLedger, GhostLocalPublicationJobs, GhostLocalVault, GhostStreamingRecorder, createMemoryGhostVaultBackend, classifyRunEligibility, parseGhostLocalPublicationJob } from "../../src/ghost";
+import { stableVerificationHash } from "../../src/replay/hash";
 import { LiveGhostPublicationController } from "../../src/app/live-ghost-publication-controller";
 import type { GhostPublicationRuntime } from "../../src/platform/ghost-publication-runtime";
 
@@ -20,8 +21,8 @@ const capsuleId = "controller-capsule";
 const runtime: GhostPublicationRuntime = Object.freeze({ available: true, endpoint: "https://publication.test", acquireAuthorization: () => Promise.resolve({ authorization: "Bearer test" }) });
 
 function deferred<T>(): { readonly promise: Promise<T>; readonly resolve: (value: T) => void } { let resolve!: (value: T) => void; const promise = new Promise<T>((next) => { resolve = next; }); return { promise, resolve }; }
-async function seed(backend: GhostVaultBackend, id: string): Promise<void> {
-  const vault = new GhostLocalVault(backend), recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-08-09T00:00:00.000Z", vault, chunkEntries: 1, maxPendingWrites: 1 });
+async function seed(backend: GhostVaultBackend, id: string, provenance?: Readonly<Record<string, unknown>>): Promise<void> {
+  const vault = new GhostLocalVault(backend), recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-08-09T00:00:00.000Z", vault, chunkEntries: 1, maxPendingWrites: 1, ...(provenance === undefined ? {} : { provenance }) });
   await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { command: "move" } }); await recorder.finalize("2026-08-09T00:00:01.000Z");
 }
 async function fixture(id = capsuleId): Promise<{ readonly backend: GhostVaultBackend; readonly factory: IDBFactory }> {
@@ -32,6 +33,30 @@ async function fixture(id = capsuleId): Promise<{ readonly backend: GhostVaultBa
 
 describe("LiveGhostPublicationController durable C38 lifecycle", () => {
   afterEach(() => { vi.unstubAllGlobals(); factoryQueue = []; activeBackend = undefined; });
+
+  it("retains source assistance in durable publication and Worker metadata and refuses contradictory resumed custody", async () => {
+    const f = await fixture(), id = "assisted-publication", actor = "signed-in-player";
+    await seed(f.backend, id, { actor: "bot", ghostAssistance: { format: "tear-ghost-chase", version: 1, sourceId: "original", sourceManifestHash: "a".repeat(16), sourceRoot: "b".repeat(16), actor: "unknown", coachEnabled: true, ghostVisible: true, competitiveEligible: false } });
+    const controller = new LiveGhostPublicationController(f.factory, runtime, () => actor); await controller.open(id); await controller.grant();
+    const jobs = new GhostLocalPublicationJobs(new GhostLocalVault(f.backend), new GhostLocalPublicationConsentLedger(f.backend));
+    const custody = await jobs.readCustody(id); if (custody === undefined) throw new Error("missing custody");
+    expect(custody.eligibility).toMatchObject({ coached: true, ghostAssisted: true, bot: true });
+    expect(classifyRunEligibility(custody.eligibility).eligibleForHumanRecords).toBe(false);
+    const fetch = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(() => Promise.resolve(Response.json({ error: "unauthorized" }, { status: 401 }))); vi.stubGlobal("fetch", fetch);
+    await controller.runOnce();
+    const init = fetch.mock.calls[0]?.[1]; if (typeof init?.body !== "string") throw new Error("Worker init missing");
+    expect(JSON.parse(init.body)).toMatchObject({ eligibility: { coached: true, ghostAssisted: true, bot: true } });
+    // Reproduce a fully hash-consistent queued custody written by the old false-flag caller.
+    const key = (await f.backend.keys("uploadJobs"))[0]; if (key === undefined) throw new Error("job missing");
+    const raw = await f.backend.get("uploadJobs", key); if (raw === undefined) throw new Error("job bytes missing");
+    const job = parseGhostLocalPublicationJob(raw), { custodyHash: oldCustodyHash, ...draft } = custody; void oldCustodyHash;
+    const badDraft = { ...draft, eligibility: { ...custody.eligibility, coached: false, ghostAssisted: false, bot: false } };
+    const badCustody = { ...badDraft, custodyHash: stableVerificationHash(badDraft) }, { jobHash: oldJobHash, ...jobDraft } = job; void oldJobHash;
+    const badJobDraft = { ...jobDraft, custodyHash: badCustody.custodyHash };
+    await f.backend.commitIfMatches([{ store: "uploadJobs", key, expected: raw }], [{ store: "analysis", key: `ghost-publication-custody:v1:${id}`, value: JSON.stringify(badCustody) }, { store: "uploadJobs", key, value: JSON.stringify({ ...badJobDraft, jobHash: stableVerificationHash(badJobDraft) }) }]);
+    await expect(jobs.authorityGuards(job.id)).rejects.toThrow(/contradicts/);
+    expect(await jobs.read(job.id)).toMatchObject({ status: "cancelled", cancellationReason: "source-or-custody-changed" });
+  });
 
   it("reopens the same durable job without creating another consent revision or custody", async () => {
     const f = await fixture(); const actor = "signed-in-player";

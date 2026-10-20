@@ -23,6 +23,8 @@ import { createGhostProductionReplaySession } from "../../src/ghost/production-r
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-events";
 import { stableVerificationHash } from "../../src/replay/hash";
+import { prepareGhostLiveReference } from "../../src/ghost/live-ghost-reference";
+import { drawLiveGhostReference } from "../../src/presentation/world/live-ghost-reference";
 import type { ReplayActionEnvelope } from "../../src/replay/envelope";
 import { reopenRecordedGhostChallenge } from "../../src/ghost/browser-recorded-challenge";
 import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
@@ -173,8 +175,31 @@ describe("Recorded local challenge continuation", () => {
     }
     capture(source, "challenge-parent"); await recorder.finish();
     const parent = await reader.read("challenge-parent"), original = await vault.exportCapsule(parent.manifest.id), parentSession = createGhostProductionReplaySession(parent);
-    const definition = recordedGhostChallengeChoices(parent, checkpoint?.snapshot ?? first.snapshot).find((choice) => choice.rule === "blade-return");
-    if (definition === undefined || checkpoint === undefined) throw new Error(`Actual source catch/checkpoint missing: ${JSON.stringify({ screen: source.waveReward.screen(), blade: source.replay.world.state.blade()?.state, events: parent.tracks.events.map((entry) => entry.value).filter((value) => typeof value === "object" && value !== null && "type" in value && String(value.type).startsWith("blade.")) })}`);
+    const reference = await prepareGhostLiveReference(parent, () => Promise.resolve());
+    const pose = reference.frames.find((frame) => frame.tick === 120);
+    if (pose === undefined || checkpoint === undefined) throw new Error("Actual reference/checkpoint absent");
+    const capturedPlayer = checkpoint.snapshot.state["tear.player.v1"] as { x: number; y: number };
+    expect(pose.player).toMatchObject({ x: capturedPlayer.x, y: capturedPlayer.y });
+    expect(reference.assistance).toMatchObject({ sourceId: parent.manifest.id, competitiveEligible: false, actor: "unknown" });
+    await expect(prepareGhostLiveReference({ ...parent, manifest: { ...parent.manifest, provenance: { ...parent.manifest.provenance, ghostAssistance: reference.assistance } } }, () => Promise.resolve())).rejects.toThrow(/unassisted/);
+    const divergent = { ...parent, tracks: { ...parent.tracks, commands: parent.tracks.commands.map((entry) => entry.tick !== 140 ? entry : { ...entry,
+      value: { kind: "command", tick: 140, id: 1, command: { type: "move", x: 1000, y: 0 } } }) } };
+    // Same-tick restored receipts alone remain valid; the displayed origin-forward world must also agree.
+    expect(verifyGhostCapsuleProductionReplay(divergent).status).toBe("verified");
+    await expect(prepareGhostLiveReference(divergent, () => Promise.resolve())).rejects.toThrow(/forward continuation.*receipt/);
+    const painted = createProductionGhostReplayComposition({ seed: first.snapshot.seed }).create(first.snapshot);
+    const hidden = createProductionGhostReplayComposition({ seed: first.snapshot.seed }).create(first.snapshot);
+    const canvas = new Proxy({}, { get: () => () => undefined, set: () => true }) as CanvasRenderingContext2D;
+    for (let tick = 1; tick <= 180; tick++) {
+      painted.simulation.advanceOne(actionsAt(tick)); hidden.simulation.advanceOne(actionsAt(tick));
+      drawLiveGhostReference(canvas, { active: true, visible: true, message: "", pose });
+      drawLiveGhostReference(canvas, { active: true, visible: false, message: "" });
+      expect(painted.simulation.lastResult?.state).toEqual(hidden.simulation.lastResult?.state);
+      expect(painted.replay.world.context.services.random.snapshot()).toEqual(hidden.replay.world.context.services.random.snapshot());
+    }
+    expect(await vault.exportCapsule(parent.manifest.id)).toBe(original);
+    const definition = recordedGhostChallengeChoices(parent, checkpoint.snapshot).find((choice) => choice.rule === "blade-return");
+    if (definition === undefined) throw new Error(`Actual source catch/checkpoint missing: ${JSON.stringify({ screen: source.waveReward.screen(), blade: source.replay.world.state.blade()?.state, events: parent.tracks.events.map((entry) => entry.value).filter((value) => typeof value === "object" && value !== null && "type" in value && String(value.type).startsWith("blade.")) })}`);
     expect(definition.forkTick).toBe(120); expect(parentSession.seek(120).tick).toBe(120);
     const child = { ...parentSession.forkPractice(120, "race-practice"), challenge: definition };
     for (const stop of [false, true]) {

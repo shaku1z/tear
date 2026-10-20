@@ -2,9 +2,17 @@ import { stableVerificationHash } from "../replay/hash";
 import { parseGhostCapsuleManifest, prepareGhostCapsuleSourceGuards, type GhostLocalVault, type GhostVaultBackend, type GhostVaultGuard, type TearGhostManifest } from "./capsule-vault";
 import { ghostSha256, type GhostPrivacyClass, type GhostRunEligibilityInput, type GhostVisibility } from "./cloud-publication";
 import { parseGhostPublicationConsentRecord, type GhostPublicationConsentRecordV1, type GhostPublicationConsentValidator } from "./publication-consent-ledger";
+import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
 
 const JOB_PREFIX = "ghost-publication-job:v1:";
 const CUSTODY_PREFIX = "ghost-publication-custody:v1:";
+
+/** Source declarations may restrict eligibility; a caller cannot erase them. */
+export function ghostPublicationSourceEligibility(manifest: TearGhostManifest, input: GhostRunEligibilityInput): GhostRunEligibilityInput {
+  const assistance = readGhostRunAssistance(manifest.provenance?.ghostAssistance), actor = manifest.provenance?.actor;
+  return Object.freeze({ ...input, coached: input.coached || assistance !== undefined, ghostAssisted: input.ghostAssisted || assistance !== undefined,
+    bot: input.bot || actor === "bot" || actor === "tearbot" });
+}
 
 export interface GhostPublicationCustodyV1 {
   readonly format: "tear-ghost-publication-custody";
@@ -164,7 +172,7 @@ export class GhostLocalPublicationJobs {
     for (const chunk of manifest.chunks) if (typeof chunks[chunk.id] !== "string") throw new TypeError("publication export is missing a source chunk");
     const consentAuthority = await this.#publicationConsent.prepareForJob(input.custody.publicationConsent), publicationConsent = consentAuthority.record;
     const custody = freezeCustody({ format: "tear-ghost-publication-custody", schemaVersion: 1, capsuleId: input.capsuleId, sourceConsent: input.custody.sourceConsent, publicationConsent,
-      privacy: input.custody.privacy, visibility: input.custody.visibility, eligibility: input.custody.eligibility, decidedAt: input.custody.decidedAt });
+      privacy: input.custody.privacy, visibility: input.custody.visibility, eligibility: ghostPublicationSourceEligibility(manifest, input.custody.eligibility), decidedAt: input.custody.decidedAt });
     if (custody.sourceConsent.capsuleId !== manifest.id || custody.sourceConsent.rootIntegrity !== manifest.rootIntegrity || custody.sourceConsent.actorHash !== publicationConsent.actorHash || custody.sourceConsent.revision !== publicationConsent.revision || custody.sourceConsent.decidedAt !== publicationConsent.decidedAt) throw new RangeError("publication source consent does not match current capsule authority");
     const source = sourceBinding(manifest, exported), transfer = await parts(exported, input.partBytes);
     const workerManifest = Object.freeze({ schemaVersion: 1, byteLength: source.byteLength, contentSha256: await ghostSha256(exported), partCount: transfer.chunkCount, topologySha256: await ghostSha256(JSON.stringify(transfer.parts)) });
@@ -193,7 +201,9 @@ export class GhostLocalPublicationJobs {
     const job = parseJob(raw); if (job.status === "cancelled") return job;
     const [manifestRaw, custodyRaw] = await Promise.all([this.#backend.get("manifests", job.source.capsuleId), this.#backend.get("analysis", custodyKey(job.source.capsuleId))]);
     let current: boolean;
-    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); if (custody === undefined) throw new TypeError("publication custody is unavailable"); const consent = await this.#publicationConsent.acceptForJob(custody.publicationConsent); current = manifest?.status === "complete" && custody.custodyHash === job.custodyHash && custody.sourceConsent.capsuleId === manifest.id && custody.sourceConsent.rootIntegrity === manifest.rootIntegrity && custody.sourceConsent.actorHash === consent.actorHash && custody.sourceConsent.revision === consent.revision && custody.sourceConsent.decidedAt === consent.decidedAt && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && (!verifyExport || hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash); } catch { current = false; }
+    try { const manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw)); const custody = custodyRaw === undefined ? undefined : parseCustody(custodyRaw); if (custody === undefined) throw new TypeError("publication custody is unavailable");
+      if (manifest !== undefined && hash16(ghostPublicationSourceEligibility(manifest, custody.eligibility)) !== hash16(custody.eligibility)) throw new TypeError("publication custody contradicts source assistance");
+      const consent = await this.#publicationConsent.acceptForJob(custody.publicationConsent); current = manifest?.status === "complete" && custody.custodyHash === job.custodyHash && custody.sourceConsent.capsuleId === manifest.id && custody.sourceConsent.rootIntegrity === manifest.rootIntegrity && custody.sourceConsent.actorHash === consent.actorHash && custody.sourceConsent.revision === consent.revision && custody.sourceConsent.decidedAt === consent.decidedAt && manifest.rootIntegrity === job.source.rootIntegrity && hash16(manifest) === job.source.manifestHash && (!verifyExport || hash16(await this.#vault.exportCapsule(job.source.capsuleId)) === job.source.exportHash); } catch { current = false; }
     if (current) return job;
     const { jobHash: ignoredJobHash, ...prior } = job; void ignoredJobHash;
     const cancelled = freezeJob({ ...prior, status: "cancelled", cancellationReason: "source-or-custody-changed" });
@@ -226,6 +236,7 @@ export class GhostLocalPublicationJobs {
     const source = await prepareGhostCapsuleSourceGuards(this.#backend, job.source.capsuleId, job.source.rootIntegrity);
     const manifestRaw = source[0]?.expected; if (manifestRaw === undefined) throw new RangeError("publication source is unavailable");
     const manifest = parseGhostCapsuleManifest(JSON.parse(manifestRaw));
+    if (hash16(ghostPublicationSourceEligibility(manifest, custody.eligibility)) !== hash16(custody.eligibility)) throw new RangeError("publication custody contradicts source assistance");
     if (manifest.status !== "complete" || hash16(manifest) !== job.source.manifestHash || custody.custodyHash !== job.custodyHash
       || custody.sourceConsent.capsuleId !== manifest.id || custody.sourceConsent.rootIntegrity !== manifest.rootIntegrity
       || custody.sourceConsent.actorHash !== consent.record.actorHash || custody.sourceConsent.revision !== consent.record.revision

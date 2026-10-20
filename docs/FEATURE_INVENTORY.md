@@ -1,5 +1,14 @@
 # Tear Feature Preservation Inventory
 
+Chase Your Best now has a local source-backed implementation through Career's
+recorded-best views: verified production replay supplies immutable player/blade
+poses and native splits to a fresh independent run. Hiding the projection retains
+comparisons and the run's assisted/noncompetitive disposition; ordinary best-score,
+leaderboard submission and automatic publication paths refuse that disposition.
+Focused production replay/state/RNG and lifecycle/fairness controls pass. Normal
+browser acceptance is pending; seed-locked racing and full-Campaign qualification
+are not implied.
+
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
 ## Current integrated content authority

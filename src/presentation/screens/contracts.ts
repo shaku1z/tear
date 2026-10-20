@@ -250,6 +250,7 @@ export interface TierUpScreenView {
   readonly id: "tierup"; readonly cards: readonly DraftCardView[]; readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
 }
 export interface PausedScreenView {
+  readonly ghostChase?: Readonly<{ visible: boolean; message: string }>;
   readonly tutorial?: TutorialSessionView;
   readonly id: "paused"; readonly runSummary?: string; readonly abilities: readonly CardView[]; readonly progress: readonly ProgressView[];
   /** Present only for a locally running Player Watch; never a Foundry operation. */

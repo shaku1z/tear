@@ -22,6 +22,7 @@ function parseEntry(raw: string): CareerEntry {
   const list = (value: unknown, check: (value: Record<string, unknown>) => boolean) => Array.isArray(value) && value.every((v: unknown) => check(careerObject(v)));
   if (![entry.score, entry.wave, entry.seconds, entry.damage, entry.epoch].every((v) => v === null || finite(v))
     || ![entry.mode, entry.difficulty, entry.weapon, entry.result, entry.gameVersion, entry.build].every(nullableText)
+    || (entry.assisted !== undefined && typeof entry.assisted !== "boolean")
     || ![entry.resumed, entry.shared].every((v) => v === null || typeof v === "boolean") || typeof entry.present !== "boolean"
     || ![entry.categories, entry.abilities, entry.bosses].every((v) => v === null || strings(v)) || !strings(entry.unavailable) || !strings(entry.witnesses)
     || !["integrity", "receipts", "unavailable"].includes(String(entry.verified)) || !["human", "bot", "unknown"].includes(String(entry.actor))

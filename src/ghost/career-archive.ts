@@ -12,6 +12,7 @@ export type CareerRetention = "recent" | "temporary" | "pinned" | "milestone" | 
 export interface CareerNotes { readonly revision: number; readonly tags: readonly string[]; readonly retention: CareerRetention; }
 export interface CareerWitness { readonly format: "tearghost-career-witness"; readonly version: 1; readonly kind: "coverage" | "style" | "terminal" | "boss"; readonly sessionId: string; readonly runId: string; readonly tick: number; readonly data: Readonly<Record<string, unknown>>; }
 export interface CareerEntry {
+  readonly assisted?: boolean;
   readonly kind: "capsule" | "legacy-visual"; readonly version: typeof CAREER_VERSION; readonly id: string; readonly root: string; readonly manifestHash: string;
   readonly date: string; readonly epoch: number | null; readonly mode: string | null; readonly difficulty: string | null; readonly weapon: string | null;
   readonly wave: number | null; readonly result: string | null; readonly score: number | null; readonly seconds: number | null;
@@ -37,7 +38,7 @@ const number = (value: unknown): number | null => typeof value === "number" && N
 export function provisionalCareerEntry(manifest: TearGhostManifest): CareerEntry {
   let context; try { context = readGhostReplayRunContext(manifest.provenance); } catch { /* Preserve the metadata row. */ }
   const actor = manifest.provenance?.actor;
-  return Object.freeze({ kind: "capsule", version: CAREER_VERSION, id: manifest.id, root: manifest.rootIntegrity, manifestHash: stableVerificationHash(manifest), date: manifest.completedAt ?? manifest.createdAt,
+  return Object.freeze({ kind: "capsule", version: CAREER_VERSION, assisted: manifest.provenance?.ghostAssistance !== undefined, id: manifest.id, root: manifest.rootIntegrity, manifestHash: stableVerificationHash(manifest), date: manifest.completedAt ?? manifest.createdAt,
     epoch: Number.isFinite(Date.parse(manifest.completedAt ?? manifest.createdAt)) ? Date.parse(manifest.completedAt ?? manifest.createdAt) : null,
     mode: context?.run.mode ?? null, difficulty: context?.run.difficulty ?? null, weapon: context?.run.weaponId ?? null,
     wave: null, result: null, score: null, seconds: null, categories: null, composition: null, loadout: null, catalogHash: "unknown",
@@ -155,7 +156,7 @@ export function queryCareer(rows: readonly CareerRow[], query: CareerQuery, page
   if (["personal-best", "best-weapon", "first-clear"].includes(query.view)) {
     const best = new Map<string, CareerRow>();
     for (const row of [...selected].sort((a, b) => (a.entry.epoch ?? Infinity) - (b.entry.epoch ?? Infinity))) {
-      const e = row.entry; if (e.resumed !== false || e.epoch === null || e.score === null || e.wave === null || query.view === "first-clear" && e.result !== "victory") continue;
+      const e = row.entry; if (e.assisted || e.resumed !== false || e.epoch === null || e.score === null || e.wave === null || query.view === "first-clear" && e.result !== "victory") continue;
       const key = [e.mode, e.difficulty, query.view === "best-weapon" ? e.weapon : "", e.build].join(":"); const old = best.get(key);
       if (!old || query.view !== "first-clear" && (e.wave > (old.entry.wave ?? -1) || e.wave === old.entry.wave && e.score > (old.entry.score ?? -1))) { best.set(key, row); details.set(e.id, "Recorded category best · wave then score; no cross-build ranking"); }
     }

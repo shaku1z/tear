@@ -1,4 +1,5 @@
 import type { DifficultyId } from "./difficulty-catalog";
+import type { GhostRunAssistance } from "./ghost-assistance";
 
 export type RunMode = "campaign" | "endless" | "gauntlet" | "playground" | "tutorial" | "bossonly" | "sandbox";
 export type RunDifficulty = DifficultyId;
@@ -43,6 +44,7 @@ export interface RunWaveLogEntry {
 }
 
 export interface RunSession<TMods> {
+  ghostAssistance?: GhostRunAssistance;
   mode: RunMode;
   diff: RunDifficulty;
   wave: number;

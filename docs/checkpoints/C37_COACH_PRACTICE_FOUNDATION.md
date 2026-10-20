@@ -343,3 +343,30 @@ artifact hash `7f6f4424353a834c6626d4790f7f0f3eca6d30e226c5444d6b95e6df593e6f56`
 Evidence: `C:/Users/realm/.codex/tmp/tear-resumption-20261018/career-1ee4ab92/journey.json`.
 Earlier fixture/refresh failures remain retained beside this accepted packet.
 Broader C37 tools and the unattended training cycle remain open.
+
+## Chase Your Best: local implementation, normal-browser proof pending
+
+Career's Personal Bests and Best by Weapon views can prepare a selected unassisted
+recorded best in one cancellable module worker. The existing production verifier
+and replay composition supply actual player/body/blade poses, native wave-boundary
+elapsed times, score, health with both maxima, and wave progression. Preparation
+requires the exact retained source identity and a compatible original game build;
+adoption rechecks custody. No source actor, command, collision or random value is
+installed into the live world.
+
+The new run uses its own seed and choices. Encounter/geometry or recorded coverage
+divergence hides the projection with an explicit notice; shared splits remain.
+Pause controls hide/show or stop the reference. Hiding, stopping, recording and
+reload retain the source-bound assisted/noncompetitive declaration. Ordinary
+personal-best saving, board submission and automatic publication are gated;
+normal rewards and progression retain their existing behavior. Explicit publication
+shows the original source attribution and keeps its existing consent/admission
+gates. Local residence is not evidence of human authorship.
+
+The focused controls cover actual production-reference preparation, unchanged
+source bytes, identical canonical state and RNG with the silhouette drawn/hidden,
+cancellation/source drift, native comparisons, and local-only assisted recording.
+The existing Career browser caller has an opt-in `TEAR_C37_CHASE=1` continuation for
+normal Chase, hide/show, coverage refusal, stop and retained disposition after
+reload. It has been authored but not run for this change. This is not seed locking,
+learned-quality evidence, device qualification, or full-Campaign completion proof.

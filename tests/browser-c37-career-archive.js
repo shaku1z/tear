@@ -165,6 +165,49 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
     evidence.phases.push("foreign protection refuses deletion; explicit local deletion; real download and import preserve exact source/chunk bytes");
     evidence.finalIndexes = final.indexes.filter(([key]) => key.startsWith("career:v1:")).map(([key, raw]) => ({ key, entry: JSON.parse(raw) }));
     evidence.sourceBindings = originals.map(({ id, manifest, chunks }) => ({ id, manifestSha256: hash(manifest), chunks: chunks.map(([key, raw]) => ({ id: key, sha256: hash(raw) })) }));
+    if (process.env.TEAR_C37_CHASE === "1") {
+      // Existing generated sources are engineering recordings, not human skill evidence.
+      let chaseSourceId = sourceId;
+      if (process.env.TEAR_C37_CHASE_ARCHIVE) {
+        const referenceArchive = JSON.parse(await readFile(process.env.TEAR_C37_CHASE_ARCHIVE, "utf8"));
+        chaseSourceId = referenceArchive.manifest.id;
+        await click("PROFILE"); await click("VAULT");
+        const [referenceChooser] = await Promise.all([page.waitForEvent("filechooser", { timeout: 10000 }), click("SELECT ARCHIVE")]);
+        await referenceChooser.setFiles(process.env.TEAR_C37_CHASE_ARCHIVE);
+        await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("READY / ")), undefined, { timeout: 20000 }); await click("RESTORE");
+        await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("COMPLETE / ")), undefined, { timeout: 30000 });
+        await click("CAREER"); await indexed(chaseSourceId);
+      }
+      const chaseSource = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), chaseSourceId);
+      const waveClears = chaseSource.tracks.events.filter((entry) => entry.value?.source === "engine" && entry.value.type === "wave.cleared");
+      assert.ok(waveClears.length > 0, "Chase acceptance requires a genuine compatible reference with an actual native wave clear; supply TEAR_C37_CHASE_ARCHIVE if the short Career fixture has none");
+      await backToResults(); await click("ALL RUNS"); await select(chaseSourceId);
+      assert.ok((await labels()).some((text) => text.includes("CHASE: independent seed")));
+      const sourceBeforeChase = await vault();
+      await click("CHASE BEST"); await waitScreen("playing"); await page.mouse.click(800, 450);
+      await page.waitForFunction(() => window.__CAREER_TEXTS__.some((text) => text.startsWith("CHASE ") && text.includes("NONCOMPETITIVE")), undefined, { timeout: 30000 });
+      await page.keyboard.down("d"); await page.waitForTimeout(250); await page.keyboard.up("d");
+      evidence.chase = { declaredSource: chaseSource.manifest.provenance?.actor ?? "unknown attribution", nativeWaveClears: waveClears, live: await page.evaluate(() => window.__PANTHEON_TEST.state()) };
+      await page.screenshot({ path: join(directory, "chase-live.png") });
+      await page.keyboard.press("Escape"); await waitScreen("paused"); await click("HIDE GHOST"); await click("RESUME"); await waitScreen("playing");
+      await page.waitForFunction(() => window.__CAREER_TEXTS__.some((text) => text.startsWith("CHASE ") && text.includes("HIDDEN")));
+      await page.screenshot({ path: join(directory, "chase-hidden-splits.png") });
+      await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.includes("projection unavailable")), undefined, { timeout: 10000 });
+      evidence.chase.coverageRefusal = (await labels()).find((text) => text.includes("projection unavailable"));
+      await page.keyboard.press("Escape"); await waitScreen("paused"); await click("SHOW GHOST"); await click("STOP CHASE"); await click("RESUME"); await waitScreen("playing");
+      await page.waitForFunction(() => window.__CAREER_TEXTS__.some((text) => text.includes("Assisted / noncompetitive run")));
+      await page.keyboard.press("Escape"); await waitScreen("paused"); await click("MAIN MENU"); await waitScreen("confirmquit"); await click("QUIT"); await waitScreen("menu");
+      const assisted = await waitForBrowserValue(page, async () => {
+        const v = await window.__CAREER_VAULT__();
+        return v.manifests.map(([, raw]) => JSON.parse(raw)).find((m) => m.status === "complete" && m.provenance?.ghostAssistance?.format === "tear-ghost-chase") || null;
+      }, undefined, { timeout: 30000 });
+      assert.equal(assisted.provenance.ghostAssistance.sourceId, chaseSourceId); assert.equal(assisted.provenance.ghostAssistance.competitiveEligible, false);
+      evidence.chase.assisted = assisted;
+      const afterChase = await vault(); for (const original of originals.filter((entry) => entry.id !== deletedId)) assertSourceBytes(afterChase, original);
+      assertSourceBytes(sourceBeforeChase, originals.find((entry) => entry.id === sourceId));
+      await ordinaryBoot(); assert.ok((await vault()).manifests.some(([, raw]) => JSON.parse(raw).id === assisted.id && JSON.parse(raw).provenance.ghostAssistance.competitiveEligible === false));
+      await writeFile(join(directory, "chase-evidence.json"), JSON.stringify(evidence.chase, null, 2));
+    }
     evidence.pageErrors = errors; evidence.status = "passed";
   } catch (error) {
     evidence.status = "failed"; evidence.error = String(error); evidence.pageErrors = errors;

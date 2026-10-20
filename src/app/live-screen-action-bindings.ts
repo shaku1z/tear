@@ -7,6 +7,7 @@ import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 
 export interface ScreenActionBindingPorts {
+  readonly controlChase?: (command: "toggle" | "stop") => void;
   readonly ghostFiles: Pick<GhostVaultLibraryPort, "pickArchive" | "restoreArchive" | "cancelArchive" | "downloadArchive">;
   readonly setScreen: (screen: LegacyAppScreen) => void; readonly resetScroll: () => void;
   readonly setSetupSelection: (kind: "mode" | "difficulty" | "weapon" | "boss", id: string) => void;
@@ -103,6 +104,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.openGhostComparison": () => { ports.library.openGhostComparison(); },
     "profile.repairGhostCapsule": (action) => { ports.library.repairGhostCapsule(action.id); },
     "career.control": (action) => { ports.library.careerAction(action.command, action.id); },
+    "chase.control": (action) => { ports.controlChase?.(action.command); },
     "profile.pickGhostArchive": () => { ports.ghostFiles.pickArchive(); },
     "profile.reselectGhostArchive": (action) => { ports.ghostFiles.pickArchive(action.id); },
     "profile.restoreGhostArchive": (action) => { ports.ghostFiles.restoreArchive(action.id, action.revision); },

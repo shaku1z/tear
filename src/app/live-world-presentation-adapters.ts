@@ -62,6 +62,7 @@ export interface WorldPresentationState {
 }
 
 export interface WorldPresentationServices {
+  readonly chase?: Readonly<{ draw(canvas: CanvasRenderingContext2D): void; hud(canvas: CanvasRenderingContext2D, width: number): void }>;
   readonly dependencies: Dependencies;
   readonly canvas: CanvasRenderingContext2D;
   readonly width: number;
@@ -215,7 +216,7 @@ export function createLiveWorldPresentationAdapters(
       drawBackdrop: (_value, time, playerX, bounds) => { d.Backdrop.draw(canvas, stage.current, time, playerX, bounds); },
       drawPlatform: (platform, _value, floor, bounds) => { d.Backdrop.platform(canvas, platform, stage.current, floor, bounds); },
       drawFinale: drawFinaleWorld, tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active,
-      drawTutorialGhost: () => { tutorial.drawGhost(); }, drawPlayer: () => { player?.draw(canvas); },
+      drawTutorialGhost: () => { tutorial.drawGhost(); if (actorsIncluded && state.screen() === "playing") services.chase?.draw(canvas); }, drawPlayer: () => { player?.draw(canvas); },
       drawBlade: () => { if (blade && player) blade.draw(canvas, player); },
       drawEffects: () => { if (actorsIncluded) d.FX.draw(canvas); }, drawEnvironment, drawDebug: drawPantheonDebug });
   };
@@ -252,6 +253,7 @@ export function createLiveWorldPresentationAdapters(
       shieldColor: d.CONFIG.colors.armoredShield, trickDecay: d.CONFIG.trick.decay,
       formatTime: services.formatTime, trickColor: services.trickColor, ease: services.ease });
     world.hud({ ...result.snapshot, protectTextContrast: d.Backdrop.needsHudTextContrast(stage.current) });
+    services.chase?.hud(canvas, width);
     if (run.mode === "tutorial") drawTutorialCard();
     else if (run.mode === "playground") drawPlaygroundHelp();
   };

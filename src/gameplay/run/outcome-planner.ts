@@ -1,8 +1,10 @@
 import type { RunDifficulty, RunMode, RunWaveLogEntry } from "./session";
+import type { GhostRunAssistance } from "./ghost-assistance";
 
 export type OutcomeWaveLogEntry = RunWaveLogEntry;
 
 export interface OutcomeRunState {
+  readonly ghostAssistance?: GhostRunAssistance;
   readonly mode: RunMode;
   readonly diff: RunDifficulty;
   readonly wave: number;
@@ -20,6 +22,7 @@ export function snapshotOutcomeRun(
   run: Omit<OutcomeRunState, "damagedThisRun"> & Readonly<{ _dmgThisRun?: boolean }>,
 ): OutcomeRunState {
   return Object.freeze({
+    ...(run.ghostAssistance === undefined ? {} : { ghostAssistance: run.ghostAssistance }),
     mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, runTime: run.runTime,
     waveTime: run.waveTime, waveKills: run.waveKills, wavePeak: run.wavePeak,
     waveLog: run.waveLog, weaponId: run.weaponId, damagedThisRun: Boolean(run._dmgThisRun),
@@ -29,6 +32,7 @@ export function snapshotOutcomeRun(
 export interface RecordingLoadoutEntry { readonly id: string; readonly tier: number; readonly count: number }
 
 export interface RecordingSummary {
+  readonly ghostAssistance?: GhostRunAssistance;
   readonly mode: RunMode;
   readonly diff: RunDifficulty;
   readonly wave: number;
@@ -57,6 +61,7 @@ export function buildRecordingSummary(
   }>,
 ): RecordingSummary {
   return Object.freeze({
+    ...(run.ghostAssistance === undefined ? {} : { ghostAssistance: run.ghostAssistance }),
     mode: run.mode,
     diff: run.diff,
     wave: run.wave,

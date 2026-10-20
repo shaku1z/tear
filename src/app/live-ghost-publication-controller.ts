@@ -1,23 +1,27 @@
 import type { GhostPublicationScreenView } from "../presentation/screens/contracts";
-import { GhostLocalPublicationConsentLedger, GhostLocalPublicationJobs, GhostLocalVault, GhostPublicationTransport, createGhostPlayerPublicationSourceConsent, createIndexedDbGhostVaultBackend } from "../ghost";
+import { GhostLocalPublicationConsentLedger, GhostLocalPublicationJobs, GhostLocalVault, GhostPublicationTransport, createGhostPlayerPublicationSourceConsent, createIndexedDbGhostVaultBackend, ghostPublicationSourceEligibility } from "../ghost";
 import type { GhostLocalPublicationJobV1 } from "../ghost";
 import type { GhostPublicationTransportStateV1 } from "../ghost";
 import type { GhostPublicationRuntime } from "../platform/ghost-publication-runtime";
+import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
 
 /** Normal C38 review boundary. Transport exists only during an explicit player action. */
 export class LiveGhostPublicationController {
+  #assisted = false;
   #view: GhostPublicationScreenView = Object.freeze({ id: "ghostpublication", status: "unavailable", detail: "Choose a healthy complete Ghost Vault capsule first.", capability: "unavailable", privacy: "pseudonymous", visibility: "private", training: "no-training", canGrant: false });
   #capsuleId: string | undefined; #jobId: string | undefined; #openGeneration = 0; #actionGeneration = 0;
   readonly #factory: IDBFactory | undefined; readonly #runtime: GhostPublicationRuntime; readonly #actor: () => string | undefined;
   constructor(factory: IDBFactory | undefined, runtime: GhostPublicationRuntime, actor: () => string | undefined) { this.#factory = factory; this.#runtime = runtime; this.#actor = actor; }
-  snapshot = (): GhostPublicationScreenView => this.#view;
+  snapshot = (): GhostPublicationScreenView => this.#assisted ? Object.freeze({ ...this.#view, detail: `ASSISTED / NONCOMPETITIVE. Original Chase source and recorded attribution remain in the capsule. ${this.#view.detail}` }) : this.#view;
   async open(capsuleId: string): Promise<void> {
+    this.#assisted = false;
     const generation = ++this.#openGeneration;
     this.#capsuleId = capsuleId; this.#jobId = undefined; this.#set("Loading Ghost capsule review…", capsuleId);
     if (this.#factory === undefined) { this.#set("Ghost Vault is unavailable in this browser."); return; }
     try { const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(this.#factory)); const manifest = await vault.getManifest(capsuleId);
       if (generation !== this.#openGeneration) return;
       if (manifest?.status !== "complete") { this.#set("Only a healthy complete Ghost Vault capsule can be reviewed."); return; }
+      this.#assisted = readGhostRunAssistance(manifest.provenance?.ghostAssistance) !== undefined;
       if (!this.#runtime.available) { this.#set(`Publication unavailable: ${this.#runtime.reason ?? "capability unavailable"}.`, capsuleId, manifest.rootIntegrity); return; }
       const actor = this.#actor(); if (actor === undefined) { this.#set("Publication requires a signed-in nonanonymous account.", capsuleId, manifest.rootIntegrity); return; }
       const ledger = new GhostLocalPublicationConsentLedger(vault.backend()), current = await ledger.read({ subject: actor, isAnonymous: false });
@@ -39,7 +43,8 @@ export class LiveGhostPublicationController {
       const decidedAt = new Date().toISOString();
       const consent = await ledger.decide({ subject: actor, isAnonymous: false }, { revision: current.revision + 1, cloudPublication: "granted", decidedAt });
       const sourceConsent = createGhostPlayerPublicationSourceConsent({ actorHash: consent.actorHash, revision: consent.revision, capsuleId, rootIntegrity: manifest.rootIntegrity, decidedAt });
-      const job = await jobs.enqueue({ capsuleId, createdAt: decidedAt, partBytes: 1024 * 1024, custody: { sourceConsent, publicationConsent: consent, privacy: "pseudonymous", visibility: "private", eligibility: { resumed: false, modded: false, coached: false, ghostAssisted: false, bot: false, debug: false, stateForge: false }, decidedAt } });
+      const eligibility = ghostPublicationSourceEligibility(manifest, { resumed: false, modded: false, coached: false, ghostAssisted: false, bot: false, debug: false, stateForge: false });
+      const job = await jobs.enqueue({ capsuleId, createdAt: decidedAt, partBytes: 1024 * 1024, custody: { sourceConsent, publicationConsent: consent, privacy: "pseudonymous", visibility: "private", eligibility, decidedAt } });
       if (!this.#isCurrent(generation, capsuleId, actor)) return;
       this.#jobId = job.id; this.#view = Object.freeze({ ...this.#view, status: "queued", detail: "Local publication custody and a queued job were recorded. Upload starts only when RUN UPLOAD ONCE is pressed.", canGrant: false, canRun: true, canCancel: true, attempts: 0 });
     } catch { if (this.#isCurrent(generation, capsuleId, actor)) this.#set("Publication custody could not be created; no upload was started."); }

@@ -15,8 +15,9 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
+  readonly chase?: Readonly<{ choose(id: string, expectedManifestHash?: string): Promise<void>; cancelPreparation(): void; snapshot(): Readonly<{ active: boolean; message: string }> }>;
   readonly career?: CareerPort;
-  readonly enterCareerSource?: (id: string, command: string) => unknown;
+  readonly enterCareerSource?: (id: string, command: string, expectedManifestHash?: string) => unknown;
   readonly dependencies: Dependencies;
   readonly renderers: Renderers;
   readonly canvas: CanvasRenderingContext2D;

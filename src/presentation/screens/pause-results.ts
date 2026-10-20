@@ -212,6 +212,11 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ], 220, 210);
     const watch = view.playerWatch;
+    if (view.ghostChase) {
+      const y = watch ? 540 : 426;
+      context.enqueue({ x: 80, y, w: 280, h: 42, label: view.ghostChase.visible ? "HIDE GHOST" : "SHOW GHOST", action: { type: "chase.control", command: "toggle" } });
+      context.enqueue({ x: 80, y: y + 50, w: 280, h: 42, label: "STOP CHASE", action: { type: "chase.control", command: "stop" } });
+    }
     if (watch !== undefined) {
       ui.tag(canvas, `RUN MONITOR / ${String(watch.decisions)} DECISIONS`, 220, 410, ui.t.color.accent, "center", ui.t.type.micro);
       context.enqueue({ x: 80, y: 426, w: 280, h: 42,

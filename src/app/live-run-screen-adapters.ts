@@ -40,6 +40,7 @@ export interface RunScreenState {
 }
 
 export interface RunScreenServices {
+  readonly ghostChase?: () => Readonly<{ active: boolean; visible: boolean; message: string }>;
   readonly dependencies: Dependencies;
   readonly reward: UpgradeRewardRuntime;
   readonly renderers: ScreenRenderers;
@@ -142,8 +143,8 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       const tutorial = services.tutorialSession?.();
       if (tutorial !== undefined) { renderers.paused({ id: "paused", abilities: [], progress: [], tutorial }); return; }
       const playerWatch = services.playerWatch();
-      renderers.paused({ ...buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
-        "   ·   " + String(run.score) + " pts   ·   " + services.formatTime(run.runTime),
+      renderers.paused({ ...(services.ghostChase?.().active ? { ghostChase: services.ghostChase() } : {}), ...buildPausedSnapshot({ summary: (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
+        "   ·   " + String(run.score) + " pts   ·   " + services.formatTime(run.runTime) + (run.ghostAssistance ? " ASSISTED / NONCOMPETITIVE" : ""),
         abilities: abilityCards(), progress: progressRows() }),
       ...(playerWatch.status === "running" || playerWatch.status === "paused"
         ? { playerWatch: { status: playerWatch.status, decisions: playerWatch.decisions } as const }
@@ -176,7 +177,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       const run = state.run();
       const completed = run.waveLog.length;
       if (completed > 0 && services.persistentEffects?.() !== false) {
-        services.saveBest(run.mode, run.diff, completed, run.score, run.runTime);
+        if (run.ghostAssistance === undefined) services.saveBest(run.mode, run.diff, completed, run.score, run.runTime);
         services.awardCoins(run.score);
       }
       if (services.cinema.active) services.cinema.cancel("quit-run");

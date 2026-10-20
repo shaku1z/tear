@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { LiveRecordingController } from "../../src/gameplay/run/live-recording-controller";
+import { readGhostRunAssistance } from "../../src/gameplay/run/ghost-assistance";
+import type { RecordingSummary } from "../../src/gameplay/run/outcome-planner";
 
 function snapshot() {
   return {
@@ -18,6 +20,17 @@ function snapshot() {
 }
 
 describe("LiveRecordingController", () => {
+  it("retains sticky assisted source metadata locally without ordinary score submission or automatic publication", () => {
+    const assistance = readGhostRunAssistance({ format: "tear-ghost-chase", version: 1, sourceId: "original", sourceManifestHash: "a".repeat(16), sourceRoot: "b".repeat(16), actor: "unknown", coachEnabled: true, ghostVisible: true, competitiveEligible: false });
+    if (assistance === undefined) throw new Error("missing disposition");
+    const submitScore = vi.fn(), publishReplay = vi.fn(), stopRecording = vi.fn<(summary: RecordingSummary) => { thumb: string }>(() => ({ thumb: "owned" }));
+    const controller = new LiveRecordingController({ snapshot: () => ({ ...snapshot(), ghostAssistance: assistance }), displayName: () => "", stageIndex: () => 0, loadout: () => [], authoritativeResult: () => null,
+      stopRecording, storeReplay: () => "retained", recordingStopped: () => undefined, replayStored: () => undefined, submitScore, publishReplay, linkReplay: vi.fn(), attachShareId: vi.fn() });
+    controller.finish(false); expect(submitScore).not.toHaveBeenCalled(); expect(publishReplay).not.toHaveBeenCalled();
+    expect(stopRecording.mock.calls[0]?.[0]).toMatchObject({ ghostAssistance: assistance });
+    expect(() => readGhostRunAssistance({ ...assistance, competitiveEligible: true })).toThrow();
+    expect(readGhostRunAssistance(JSON.parse(JSON.stringify(assistance)))).toEqual(assistance);
+  });
   it("packages, stores, submits, publishes, and links one replay", async () => {
     const events: string[] = [];
     const replay = { thumb: "data:image/png;base64,thumb" };

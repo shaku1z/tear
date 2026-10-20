@@ -120,7 +120,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       id: "replay",
       ...(currentContext.finaleAvailable ? { finaleNavigation: "FINALE CONTINUATION" as const } : {}),
       title: "GHOST 3 THEATER",
-      detail: `VERIFIED SOURCE SIMULATION · ${currentContext.capsule.manifest.recordingProfile.toUpperCase()}`,
+      detail: `VERIFIED SOURCE SIMULATION · ${currentContext.capsule.manifest.recordingProfile.toUpperCase()}${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED / NONCOMPETITIVE"}`,
       paused: !state.playing,
       speed: state.speed,
       elapsed: `TICK ${String(current)}`,

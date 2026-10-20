@@ -84,7 +84,8 @@ export function createLiveScreenPresentationComposition(
     ...options.library, renderers: renderer,
     enterReplay: (record, from) => replay.enter(record, isLegacyScreen(from) ? from : "profile"),
     enterGhostTheater: (id) => replay.enterGhostCapsule(id, "profile"),
-    enterCareerSource: async (id, command) => {
+    enterCareerSource: async (id, command, expectedManifestHash) => {
+      if (command === "chase") { await options.library.chase?.choose(id, expectedManifestHash); return; }
       if (command === "download") { options.actions.ghostFiles.downloadArchive(id); return; }
       if (command === "publish") { options.actions.openGhostPublication(id); return; }
       const result = await replay.enterGhostCapsule(id, "profile");
