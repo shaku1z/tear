@@ -78,14 +78,13 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
   try {
     await ordinaryBoot();
     // One genuine natural defeat produces the existing visual-only Ghost2 owner.
-    evidence.natural = await page.evaluate(() => {
-      const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-      environment.reset({ format: "tear-contract", kind: "scenario", schemaVersion: 1, id: "movement-jump", version: 1, description: "Natural one-hit legacy history fixture",
-        stateClass: "recorded-canonical", executionClass: "engineering", seed: "c30-onehit-natural-failure", start: { mode: "endless", difficulty: "onehit", weapon: "sword" }, maxTicks: 720, assertions: ["runtime.finite-state"], tags: ["c37", "career"] });
-      let steps = 0; while (steps < 720 && window.__PANTHEON_TEST.state().game !== "gameover") { environment.step([]); steps++; }
-      return { steps, game: window.__PANTHEON_TEST.state().game };
-    });
-    assert.equal(evidence.natural.game, "gameover", "Natural defeat must occur within the original fixture horizon");
+    await page.mouse.click(260, 360); await waitScreen("setup");
+    await page.mouse.click(430, 255); await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
+    await page.mouse.click(820, 435); await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.difficulty === "onehit");
+    assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().setup.weapon), "sword");
+    await page.mouse.click(800, 758); await waitScreen("playing");
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, { timeout: 90000 });
+    evidence.natural = { fixture: "ordinary setup input and real application frames; natural one-hit defeat, no forced outcome", state: await page.evaluate(() => window.__PANTHEON_TEST.state()) };
     await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest()?.status === "complete" || window.__TEAR_GHOST_V3__.failure(), undefined, { timeout: 20000 });
     assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
     const natural = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest()); evidence.sources.push(natural.id);
