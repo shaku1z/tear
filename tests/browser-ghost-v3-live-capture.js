@@ -169,6 +169,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await waitScreen("replay");
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("SEMANTIC COMPARISON"), undefined, { timeout: 10000 });
   await page.mouse.click(428, 854); // next semantic event through the rendered replay transport
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("EVENT 2 / EVENT ")), undefined, { timeout: 10000 });
   await page.mouse.click(428, 854); // a second repeated semantic occurrence
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("OCCURRENCE 2"), undefined, { timeout: 10000 });
   const comparisonTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
@@ -197,7 +198,9 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const secondScene = await page.screenshot({ path: join(outputDirectory, "theater-tick240.png"), clip: sceneRegion });
   assert.notEqual(createHash("sha256").update(firstScene).digest("hex"), createHash("sha256").update(secondScene).digest("hex"), "world-only scene must change independently of tick labels");
   await clickText("REPLAY EDITOR"); await page.waitForTimeout(120); await clickText("ENCODE WEBM");
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("WebM decoded locally. Click DOWNLOAD WEBM to request a browser save."), undefined, { timeout: 90000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("WebM decoded locally.") || String(text).startsWith("Studio export refused:")), undefined, { timeout: 90000 });
+  assert.ok(await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__?.includes("WebM decoded locally. Click DOWNLOAD WEBM to request a browser save.")),
+    `Studio did not produce media: ${await page.evaluate(() => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(-60).join(" | "))}`);
   await page.waitForFunction(() => window.__TEAR_C37_THUMBNAIL__?.startsWith("data:image/png"), undefined, { timeout: 5000 });
   const downloadPending = page.waitForEvent("download"); await clickText("DOWNLOAD WEBM"); const download = await downloadPending;
   assert.ok(download.suggestedFilename().endsWith(".webm")); const downloadPath = join(outputDirectory, download.suggestedFilename()); await download.saveAs(downloadPath);
