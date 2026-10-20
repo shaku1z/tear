@@ -127,3 +127,13 @@ while retaining original mode and style/combat mathematics. An integrated existi
 host/runtime control failed with eight outward calls before the repair and passes
 with zero practice writes and ordinary calls restored after practice ends. This
 is a bounded local implementation, not full Campaign or population acceptance.
+
+
+The local WebM encoder now uses native WebCodecs VP8 with explicit 30fps
+microsecond frame timestamps/durations and quality latency mode, rather than
+MediaRecorder wall time. A bounded WebM mux preserves native payload/key flags,
+1ms TimestampScale, exact duration, SeekHead and keyframe Cues. Reconstruction
+speed cannot retime the clip. Queued frames/encoder close on cancellation and
+unsupported native configuration refuses. The existing browser journey waits
+for actual UI frames and decodes separated video times (0.1s/0.8s) to PNGs.
+Native browser acceptance of this replacement remains pending parent execution.

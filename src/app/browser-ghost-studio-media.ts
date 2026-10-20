@@ -1,3 +1,4 @@
+import { encodeStudioVp8Webm, studioWebCodecsAvailable } from "./browser-ghost-studio-webm";
 import { isDrawableEnemy, projectPresentationEnemy, projectSceneBoss } from "./live-world-presentation-adapters";
 import { A11Y, GFX, THEME } from "../config/game-config";
 import { stageAt } from "../gameplay/stages";
@@ -118,29 +119,18 @@ function mediaWait(target: EventTarget, event: string, signal: AbortSignal, mill
     try { activate?.(); } catch (error) { finish(error); }
   });
 }
-function mediaPaint(signal: AbortSignal): Promise<void> {
-  signal.throwIfAborted();
-  return new Promise((resolve, reject) => {
-    const finish = (error?: Error): void => { cancelAnimationFrame(frame); clearTimeout(timer); signal.removeEventListener("abort", abort); if (error === undefined) resolve(); else reject(error); };
-    const abort = (): void => { finish(new Error("Studio paint cancelled", { cause: signal.reason })); };
-    const timer = setTimeout(() => { finish(new Error("Studio paint timed out")); }, 5000);
-    const frame = requestAnimationFrame(() => { finish(); }); signal.addEventListener("abort", abort, { once: true });
-  });
-}
 /** Browser-native local encoding of the dedicated reconstructed replay canvas, never the live game surface. */
 export function createBrowserGhostStudioMedia(document: Document, current: (id: string, manifestHash: string) => Promise<boolean>): GhostStudioBrowserMediaPort {
   const urls = new Set<string>(), timers = new Set<ReturnType<typeof setTimeout>>();
   const release = (url: string): void => { URL.revokeObjectURL(url); urls.delete(url); };
-  const mime = (): string | undefined => typeof MediaRecorder === "undefined" ? undefined
-    : ["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"].find((type) => MediaRecorder.isTypeSupported(type));
   let last: Readonly<{ artifact: GhostStudioWebmArtifact; manifestHash: string; image: HTMLImageElement }> | undefined;
   const check = async (id: string, hash: string, signal: AbortSignal): Promise<void> => {
     signal.throwIfAborted(); if (!(await current(id, hash))) throw new Error("Studio source custody changed"); signal.throwIfAborted();
   };
   return {
-    available: () => mime() !== undefined && typeof HTMLCanvasElement !== "undefined" && typeof HTMLCanvasElement.prototype.captureStream === "function",
+    available: studioWebCodecsAvailable,
     async render(capsule, session, edl, signal) {
-      const type = mime(); if (type === undefined) throw new Error("This browser has no supported WebM encoder. GIF is unavailable.");
+      if (!studioWebCodecsAvailable()) throw new Error("Timestamped WebCodecs VP8 export is unavailable. GIF is unavailable.");
       if (session.renderFrame === undefined || capsule.manifest.id !== session.sourceId || capsule.manifest.rootIntegrity !== session.sourceCapsuleRootIntegrity
         || edl.sourceGhostId !== session.sourceId || edl.sourceRootHash !== session.sourceRootHash || createStudioEdl(edl).edlHash !== edl.edlHash) throw new TypeError("Studio source/EDL binding is invalid");
       const ratios: Readonly<Partial<Record<string, number>>> = { "16:9": 16 / 9, "9:16": 9 / 16, "1:1": 1, "4:3": 4 / 3 }, ratio = ratios[edl.aspectRatio];
@@ -167,66 +157,37 @@ export function createBrowserGhostStudioMedia(document: Document, current: (id: 
       const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
       const context = canvas.getContext("2d", { alpha: false }); if (context === null) throw new Error("Studio canvas is unavailable");
       let scheduleHash = stableVerificationHash({ edlHash: edl.edlHash, width, height, fps: FPS, clock: "simulation-time-120hz", camera: "reconstructed-player-follow" });
-      const draw = (index: number): void => {
+      const draw = (index: number, accumulate = true): void => {
         signal.throwIfAborted(); const tick = plan[index]; if (tick === undefined) throw new Error("Studio frame plan is incomplete");
         const view = session.renderFrame?.(tick);
         if (view?.sourceRootHash !== edl.sourceRootHash || view.sourceCapsuleRootIntegrity !== capsule.manifest.rootIntegrity
           || view.clockBlocked || view.screen !== "playing") throw new TypeError("This frame is not supported gameplay-time media");
         view.draw(context, { x: 0, y: 0, w: width, h: height });
-        scheduleHash = stableVerificationHash({ prior: scheduleHash, tick, stateHash: view.semanticHash });
+        if (accumulate) scheduleHash = stableVerificationHash({ prior: scheduleHash, tick, stateHash: view.semanticHash });
       };
-      draw(0); const thumbnail = canvas.toDataURL("image/png");
-      const stream = canvas.captureStream(0), track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
-      if (track === undefined || typeof track.requestFrame !== "function") { stream.getTracks().forEach((item) => { item.stop(); }); throw new Error("Manual replay canvas capture is unavailable"); }
-      let recorder: MediaRecorder;
-      try { recorder = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 2000000 }); }
-      catch (error) { stream.getTracks().forEach((item) => { item.stop(); }); throw error; }
-      const chunks: Blob[] = []; let bytes = 0, encodingError: Error | undefined;
-      recorder.addEventListener("dataavailable", (event) => { bytes += event.data.size; if (bytes > MAX_BYTES) { encodingError = new RangeError("Studio media exceeds 64 MiB"); if (recorder.state !== "inactive") recorder.stop(); } else if (event.data.size > 0) chunks.push(event.data); });
-      recorder.addEventListener("error", () => { encodingError = new Error("Browser WebM encoding failed"); });
-      const abort = (): void => { if (recorder.state !== "inactive") recorder.stop(); };
-      signal.addEventListener("abort", abort, { once: true });
+      draw(0, false); const thumbnail = canvas.toDataURL("image/png");
+      const encoded = await encodeStudioVp8Webm(canvas, plan.length, draw, signal);
+      const blob = new Blob([Uint8Array.from(encoded).buffer], { type: "video/webm" });
+      if (blob.size === 0 || blob.size > MAX_BYTES) throw new Error("VP8 encoder returned invalid output size");
+      const url = URL.createObjectURL(blob); urls.add(url); const video = document.createElement("video"); video.muted = true; video.preload = "auto";
+      let durationSeconds: number;
       try {
-        // Native encoder startup is asynchronous. Its acknowledged start owns output time,
-        // not the preceding replay reconstruction or MediaRecorder.start() call.
-        await mediaWait(recorder, "start", signal, 10000, () => {
-          recorder.start(250);
-          // Canvas capture can require a first frame to acknowledge native startup.
-          // Prime only the accepted opening image; no subsequent source time is consumed.
-          track.requestFrame(); draw(0);
-        });
-        const started = performance.now();
-        for (let index = 0; index < plan.length; index++) {
-          signal.throwIfAborted(); if (encodingError !== undefined) throw encodingError;
-          // Capture is requested before a fresh canvas update, then allowed to reach paint.
-          // This also redraws the first frame after the encoder has actually started.
-          track.requestFrame(); draw(index); await mediaPaint(signal);
-          const delay = Math.max(0, started + (index + 1) * 1000 / FPS - performance.now());
-          await new Promise<void>((resolve) => { setTimeout(resolve, delay); });
-          if (performance.now() - started > 90000) throw new Error("Studio encoding exceeded its 90 second work budget");
-        }
-        const stopped = mediaWait(recorder, "stop", signal); recorder.stop(); await stopped; signal.throwIfAborted();
-        if (encodingError !== undefined) throw encodingError;
-        const blob = new Blob(chunks, { type: "video/webm" }); if (blob.size === 0 || blob.size > MAX_BYTES) throw new Error("WebM encoder returned invalid output size");
-        const url = URL.createObjectURL(blob); urls.add(url); const video = document.createElement("video"); video.muted = true; video.preload = "auto";
-        let durationSeconds: number;
-        try {
-          const loaded = mediaWait(video, "loadedmetadata", signal); video.src = url; await loaded;
-          if (!Number.isFinite(video.duration)) { const sought = mediaWait(video, "seeked", signal); video.currentTime = 1000000; await sought; }
-          durationSeconds = Number.isFinite(video.duration) ? video.duration : video.currentTime + 1 / FPS;
-          if (video.videoWidth !== width || video.videoHeight !== height || !Number.isFinite(durationSeconds)
-            || Math.abs(durationSeconds - plan.length / FPS) > Math.max(.35, plan.length / FPS * .05)) throw new Error("Decoded WebM dimensions/duration do not match the requested output");
-        } finally { video.removeAttribute("src"); video.load(); release(url); }
-        await check(session.sourceId, manifestHash, signal);
-        const exported = await renderStudioMediaLocally(mapGhostCapsuleToReplayEnvelope(capsule).ghost, edl, {
-          render: async () => ({ mimeType: "video/webm", bytes: new Uint8Array(await blob.arrayBuffer()), thumbnail }),
-        });
-        const artifact = Object.freeze({ ...exported, mimeType: "video/webm" as const,
-          sourceId: session.sourceId, sourceRootHash: session.sourceRootHash, sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity, edlHash: edl.edlHash,
-          width, height, durationSeconds, frameCount: plan.length, clock: "simulation-time-120hz" as const, camera: "reconstructed-player-follow" as const, frameScheduleHash: scheduleHash });
-        const image = document.createElement("img"), loadedImage = mediaWait(image, "load", signal); image.src = thumbnail; await loadedImage;
-        await check(session.sourceId, manifestHash, signal); last = { artifact, manifestHash, image }; return artifact;
-      } finally { signal.removeEventListener("abort", abort); if (recorder.state !== "inactive") recorder.stop(); stream.getTracks().forEach((item) => { item.stop(); }); }
+        const loaded = mediaWait(video, "loadedmetadata", signal); video.src = url; await loaded;
+        if (!Number.isFinite(video.duration)) { const sought = mediaWait(video, "seeked", signal); video.currentTime = 1000000; await sought; }
+        durationSeconds = Number.isFinite(video.duration) ? video.duration : video.currentTime + 1 / FPS;
+        if (video.videoWidth !== width || video.videoHeight !== height || !Number.isFinite(durationSeconds)
+          || Math.abs(durationSeconds - plan.length / FPS) > Math.max(.35, plan.length / FPS * .05)) throw new Error("Decoded WebM dimensions/duration do not match the requested output");
+      } finally { video.removeAttribute("src"); video.load(); release(url); }
+      await check(session.sourceId, manifestHash, signal);
+      const exported = await renderStudioMediaLocally(mapGhostCapsuleToReplayEnvelope(capsule).ghost, edl, {
+        render: async () => ({ mimeType: "video/webm", bytes: new Uint8Array(await blob.arrayBuffer()), thumbnail }),
+      });
+      const artifact = Object.freeze({ ...exported, mimeType: "video/webm" as const,
+        sourceId: session.sourceId, sourceRootHash: session.sourceRootHash, sourceCapsuleRootIntegrity: capsule.manifest.rootIntegrity, edlHash: edl.edlHash,
+        width, height, durationSeconds, frameCount: plan.length, clock: "simulation-time-120hz" as const, camera: "reconstructed-player-follow" as const, frameScheduleHash: scheduleHash });
+      const image = document.createElement("img"), loadedImage = mediaWait(image, "load", signal); image.src = thumbnail; await loadedImage;
+      await check(session.sourceId, manifestHash, signal); last = { artifact, manifestHash, image }; return artifact;
+
     },
     async download(artifact, signal) {
       const captured = last; if (captured?.artifact !== artifact) throw new Error("Studio output is stale");

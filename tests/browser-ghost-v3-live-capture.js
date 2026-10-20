@@ -143,7 +143,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     };
     const original = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function captureTheaterText(text, ...rest) {
-      texts.push(String(text)); if (String(text) === "PROFILE") positions.length = 0; positions.push({ text: String(text), x: rest[0], y: rest[1] });
+      texts.push(String(text)); if (["PROFILE", "\u25c6 THEATER", "\u25b6 REPLAY", "COMPARE"].includes(String(text))) positions.length = 0; positions.push({ text: String(text), x: rest[0], y: rest[1] });
       return original.call(this, text, ...rest);
     };
     window.__TEAR_C29_THEATER_TEXT__ = texts; window.__TEAR_C29_POSITIONS__ = positions;
@@ -156,6 +156,8 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     const point = await page.evaluate((label) => window.__TEAR_C29_POSITIONS__?.findLast((entry) => entry.text === label), text);
     assert.ok(point && Number.isFinite(point.x) && Number.isFinite(point.y), `Missing rendered ${text}`);
     await page.mouse.click(point.x, point.y);
+    // Normal canvas actions are consumed on an application frame, then repainted.
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
   let selectedCount = 0;
   for (let attempt = 0; attempt < 32 && selectedCount < 9; attempt++) {
@@ -210,14 +212,28 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     const video = document.createElement("video"); video.muted = true; video.preload = "auto";
     const event = (name) => new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error(`decode ${name} timeout`)), 10000); video.addEventListener(name, () => { clearTimeout(timer); resolve(); }, { once: true }); });
     try { const ready = event("loadedmetadata"); video.src = url; await ready; if (!Number.isFinite(video.duration)) { const sought = event("seeked"); video.currentTime = 100000; await sought; }
-      return { width: video.videoWidth, height: video.videoHeight, duration: Number.isFinite(video.duration) ? video.duration : video.currentTime, thumbnail: window.__TEAR_C37_THUMBNAIL__ };
+      const canvas = document.createElement("canvas"); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d"); if (!context) throw new Error("native decoded video canvas unavailable");
+      const frames = [];
+      for (const time of [.1, .8]) {
+        const sought = event("seeked"); video.currentTime = time; await sought;
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) throw new Error("native video did not decode a current frame");
+        context.drawImage(video, 0, 0); frames.push({ time, png: canvas.toDataURL("image/png") });
+      }
+      return { width: video.videoWidth, height: video.videoHeight, duration: Number.isFinite(video.duration) ? video.duration : video.currentTime, thumbnail: window.__TEAR_C37_THUMBNAIL__, frames };
     } finally { video.removeAttribute("src"); video.load(); URL.revokeObjectURL(url); }
   }, mediaBytes.toString("base64"));
   assert.equal(decoded.width, 640); assert.equal(decoded.height, 360); assert.ok(Math.abs(decoded.duration - 1) < .35, `decoded duration ${String(decoded.duration)}`);
+  const frameHashes = [];
+  for (const frame of decoded.frames) {
+    const bytes = Buffer.from(frame.png.split(",")[1], "base64"); frameHashes.push(createHash("sha256").update(bytes).digest("hex"));
+    await writeFile(join(outputDirectory, `decoded-${String(frame.time)}s.png`), bytes);
+  }
+  assert.equal(frameHashes.length, 2); assert.notEqual(frameHashes[0], frameHashes[1], "actual decoded moving video frames must differ");
   assert.ok(decoded.thumbnail.startsWith("data:image/png;base64,")); await writeFile(join(outputDirectory, "studio-thumbnail.png"), Buffer.from(decoded.thumbnail.split(",")[1], "base64"));
   const studioSourceAfter = JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id));
   assert.equal(studioSourceAfter, studioSourceBefore, "actual local WebM export changed durable source custody");
-  console.log(JSON.stringify({ studio: { directory: outputDirectory, bytes: mediaBytes.length, width: decoded.width, height: decoded.height, duration: decoded.duration, clock: "simulation-time-120hz", camera: "reconstructed-player-follow", fixture: "engineered canonical240tick source" } }));
+  console.log(JSON.stringify({ studio: { directory: outputDirectory, bytes: mediaBytes.length, width: decoded.width, height: decoded.height, duration: decoded.duration, decodedFrameHashes: frameHashes, clock: "simulation-time-120hz", camera: "reconstructed-player-follow", fixture: "engineered canonical240tick source" } }));
   await page.mouse.click(1020, 854); // rendered C37 RUN DNA control; it projects only declared capsule metrics
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA \u00b7 VERIFIED METRICS"), undefined, { timeout: 10000 });
   const dnaTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
