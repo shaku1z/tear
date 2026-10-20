@@ -174,3 +174,6 @@ export class TearC34ReturnModelRuntime {
     return boundedReturnDecision(this.#selector, source, this.#fallback, this.#now, "diagnostic-model");
   }
 }
+export { FACTORIZED_POLICY_FORMAT, FACTORIZED_POLICY_COMPATIBILITY, FACTORIZED_POLICY_PROTOCOL_HASH, createFactorizedPolicyCandidate,
+  parseFactorizedPolicyCandidate, FactorizedPolicyCandidateRegistry, FactorizedReturnPolicyRuntime } from "./c34-factorized-policy-runtime";
+export type { FactorizedRuntimeCheckpoint, FactorizedRuntimeDecision, FactorizedPolicyPayload } from "./c34-factorized-policy-runtime";

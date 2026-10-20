@@ -1,4 +1,8 @@
 import type { GhostVaultBackend } from "../ghost";
+// Separately versioned V4 path: no changes to V2/V3 fitting or selection.
+export { createFactorizedOnlinePlan, parseFactorizedOnlinePlan, createFactorizedOnlineCheckpoint, parseFactorizedOnlineCheckpoint,
+  materializeFactorizedOrigin, advanceFactorizedOnlineCheckpoint, evaluateFactorizedOnlineInSource, parseFactorizedOnlineEvaluation } from "./c34-factorized-online";
+export type { FactorizedSourceCase, FactorizedOnlinePlan, FactorizedOnlineCheckpoint, FactorizedOnlineEvaluation } from "./c34-factorized-online";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";

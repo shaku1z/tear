@@ -1,4 +1,9 @@
 import type { GhostVaultBackend } from "../ghost";
+// V4 is an explicit function-approximation protocol; existing V2/V3 bytes stay unchanged.
+export { createFactorizedOfflinePlan, parseFactorizedOfflinePlan, factorizedTrainingRows,
+  createFactorizedOfflineCheckpoint, parseFactorizedOfflineCheckpoint, advanceFactorizedOfflineCheckpoint,
+  completeFactorizedOfflineCheckpoint, parseFactorizedOfflineResult } from "./c34-factorized-training";
+export type { FactorizedOfflinePlan, FactorizedOfflineCheckpoint, FactorizedOfflineResult } from "./c34-factorized-training";
 import type { GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import {

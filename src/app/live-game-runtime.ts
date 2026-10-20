@@ -669,7 +669,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       resetSemanticInput: () => { Input.startSemanticRecording(); }, advanceFixedTick: () => liveFrameRuntime.advanceExactSimulation(),
       advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds), advanceApplicationFrame: (deltaSeconds) => { combatHost.frameCoordinator.run(deltaSeconds); },
       advanceStateForgeCinematicBeat: createLiveStateForgeCinematicAdvance(CINEMA),
-      authoritative: () => authoritativeStep.lastResult, ...createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }),
+      authoritative: () => authoritativeStep.lastResult, ...createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }), canonicalOriginState: () => simulationRuntime.scheduler.tick === 0 && state === "playing" ? projectCanonicalGameplayState(0, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()) : null,
       random: () => worldContext.services.random.snapshot(),
       ...interfaceComposition.capture.ports(() => { presentationHost.render(); }, () => canvas.toDataURL("image/png")), setCameraEffectsForTest: (effects) => { feel.zoom = effects.zoom; impact.shake = effects.shake; },
       subscribeEngineEvent: (listener) => GAMEPLAY_EVENTS.subscribe(listener),

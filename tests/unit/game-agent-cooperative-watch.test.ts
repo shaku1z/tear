@@ -3,6 +3,11 @@ import { createLiveWatchAgentHost } from "../../src/agents/live-watch-agent-host
 import type { LiveTearRuntimeEnvironmentContext } from "../../src/tearbench/live-runtime-contracts";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import type { TearC32CanonicalActivePolicyRuntime } from "../../src/agents/c32-canonical-active-policy-runtime";
+import type { CanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
+import type { TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
+import { advanceFactorizedReturnContext, beginFactorizedReturnContext, requireFactorizedReturnFrontier, type FactorizedReturnContext,
+  type FactorizedReturnTransition } from "../../src/agents/c34-causal-action-features";
 
 // These cases exercise the Watch scheduling/recorder boundary, not combat policy quality.
 vi.mock("../../src/agents/hierarchical-policy-adapter", () => ({ TearLiveHierarchicalPolicy: class {
@@ -15,7 +20,7 @@ function deferred<T>() {
   const promise = new Promise<T>((accept, refuse) => { resolve = accept; reject = refuse; });
   return { promise, resolve, reject };
 }
-function fixture(delayWrite = false, capture = true) {
+function fixture(delayWrite = false, capture = true, canonicalRuntime?: TearC32CanonicalActivePolicyRuntime) {
   const backend = createMemoryGhostVaultBackend(), write = deferred<undefined>(); let writeBlocked = false;
   const vault = new GhostLocalVault({ ...backend, async commitWhileJournalMatches(...args) {
     if (delayWrite && !writeBlocked && args[2].some((entry) => entry.store === "chunks")) { writeBlocked = true; await write.promise; }
@@ -24,9 +29,17 @@ function fixture(delayWrite = false, capture = true) {
   const recorder = new GhostLiveRecorder({ createVault: () => opening.promise, now: () => "2026-10-19T00:00:01Z" });
   let screen = "menu", tick = 0, entries = 0;
   const run = { runSeed: 121, wave: 1, weaponLog: [], weaponStats: { heldHits: 0, trueCuts: 0, throws: 0, throwHits: 0, perfectParries: 0 } };
+  let listener: ((event: TearGameplayEvent) => void) | undefined, ordinal = 0;
+  const nativeStart = () => { tick = 0; screen = "playing"; listener?.({ kind: "run", tick: 0, transition: "started", runId: `unit-run-${String(++ordinal)}`,
+    mode: "endless", difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 0 }); };
+  const canonical = (): CanonicalGameplayState => ({ tick, input: { tick, moveX: 0, moveY: 0, aimTurn: 0, primaryHeld: false },
+    run: { mode: "endless", wave: 1, seed: run.runSeed, score: 0, time: tick }, player: { x: 0, y: 0, vx: 0, vy: 0, hp: 100_000 },
+    blade: { state: "held", x: 1_000, y: 0, vx: 0, vy: 0 }, enemies: [] });
   const drain = vi.fn(() => recorder.drain());
   const context = {
-    screen: () => screen, subscribeEngineEvent: () => () => undefined,
+    screen: () => screen, subscribeEngineEvent: (next: typeof listener) => { listener = next; return () => undefined; },
+    canonicalGameplayState: canonical, canonicalOriginState: () => tick === 0 && screen === "playing" ? canonical() : null,
+    availableGameActions: () => ["weapon"], drainConsumedActions: () => [],
     state: { run: () => run, player: () => ({ hp: 100 }), enemies: () => [], blade: () => undefined },
     authoritative: () => ({ tick }), progression: () => ({ wallet: 0, lifetimeEarned: 0, levels: {}, shop: [] }),
     setSemanticInputAuthority: vi.fn(), stopFrameLoop: vi.fn(), startFrameLoop: vi.fn(), render: vi.fn(),
@@ -34,21 +47,35 @@ function fixture(delayWrite = false, capture = true) {
     activateControl: (action: { type: string; to?: string }) => {
       if (action.type === "navigate") screen = action.to ?? screen;
       if (action.type === "setup.start") {
-        screen = "playing"; if (capture) recorder.start({ sessionId: "cooperative-watch", createdAt: "2026-10-19T00:00:00Z", provenance: {} });
+        nativeStart(); if (capture) recorder.start({ sessionId: "cooperative-watch", createdAt: "2026-10-19T00:00:00Z", provenance: {} });
       }
       return true;
     },
     advanceApplicationFrame: (delta: number) => {
-      expect(delta).toBe(1 / 60); tick += 2;
+      expect(delta).toBe(canonicalRuntime?.requiresCausalContext === true ? 1 / 120 : 1 / 60); tick += canonicalRuntime?.requiresCausalContext === true ? 1 : 2;
       for (let index = 0; capture && index < 3; index++) recorder.record("commands", tick, { ordinal: ++entries });
     }, drainRecording: drain,
   } as unknown as LiveTearRuntimeEnvironmentContext;
-  const api = createLiveWatchAgentHost(context);
+  const api = createLiveWatchAgentHost(context, undefined, undefined, canonicalRuntime);
   const start = () => { api.start({ mode: "campaign", difficulty: "normal", weapon: "riftlock", seed: 121 }); while (screen === "setup") api.run(1); };
-  return { api, recorder, vault, opening, drain, start, write, writeBlocked: () => writeBlocked, tick: () => tick, menu: () => { screen = "menu"; } };
+  return { api, recorder, vault, opening, drain, start, write, nativeStart, writeBlocked: () => writeBlocked, tick: () => tick, menu: () => { screen = "menu"; } };
 }
 
 describe("cooperative Watch recording", () => {
+  it("starts new causal context only at a genuine next native run boundary", () => {
+    let context: FactorizedReturnContext | undefined, runId: string | undefined;
+    const begins = vi.fn((state: CanonicalGameplayState, id: string) => { context = beginFactorizedReturnContext(state); runId = id; });
+    const runtime = { requiresCausalContext: true,
+      clearCausalContext: vi.fn(() => { context = undefined; runId = undefined; }), beginCausalOrigin: begins,
+      decide: (state: CanonicalGameplayState) => { if (!context) throw new Error("missing native origin"); requireFactorizedReturnFrontier(context, state);
+        return { actions: [], source: "artifact", stateHash: "1".repeat(16), factorizedVersion: 4 }; },
+      observeCommitted: (transition: FactorizedReturnTransition, id: string) => { if (!context || id !== runId) throw new Error("wrong run"); context = advanceFactorizedReturnContext(context, transition); },
+    } as unknown as TearC32CanonicalActivePolicyRuntime;
+    const f = fixture(false, false, runtime); f.start(); f.api.run(2);
+    expect(f.tick()).toBe(2); expect(begins.mock.calls.map(call => call[1])).toEqual(["unit-run-1"]);
+    f.nativeStart(); f.api.run(1);
+    expect(f.tick()).toBe(1); expect(begins.mock.calls.map(call => [call[0].tick, call[1]])).toEqual([[0, "unit-run-1"], [0, "unit-run-2"]]);
+  });
   it("reproduces synchronous startup overload and retains all ordered entries cooperatively without partial chunk seals", async () => {
     const overloaded = fixture(); overloaded.start(); overloaded.api.run(200);
     expect(overloaded.recorder.failure).toContain("staging capacity exceeded (576 entries)");

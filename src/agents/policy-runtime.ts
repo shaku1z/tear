@@ -69,6 +69,9 @@ export interface TearPolicyDecisionReceipt {
   readonly activationHash?: string;
   /** Explicit return.v2 lookup support; absent on historical receipts. */
   readonly support?: Readonly<{ entryPresent: boolean; value: number; stateKey: string; semanticActionHash: string }>;
+  /** V4 factor response is not a tabular entry or a quality verdict. */
+  readonly factorizedSupport?: Readonly<{ kind: "observed-motor" | "generalized" | "unknown"; motorResponse: number; threatResponse: number; headUpdates: number }>;
+  readonly factorizedVersion?: 4;
   readonly decisionMilliseconds?: number;
 }
 

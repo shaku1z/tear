@@ -1684,3 +1684,16 @@ equal Q without changing older model meanings. The actual 24-case V3
 training/validation experiment did not establish transfer: feature validation
 was 0/4 and its separate held-out stage was not opened. See
 [C34 return-subskill evidence](checkpoints/C34_RL_SELF_PLAY_CURRICULUM.md#explicit-native-return-subskill-adapters-and-measured-limits).
+
+An explicit factorized-return V4 implementation now has continuous motor and
+independent threat value features, ordered past-action/native-effect context,
+training-only bounded Gaussian bases, offline/online TD and source-replayed
+recovery prefixes. Its inactive artifacts use a separate strict C32/Watch route
+and distinguish basis support, generalization, unknown support and refusal.
+Four bounded implementation cases cover the retained quantization failure,
+native fresh/tick-145 return conformance, exact resume and candidate/journal
+boundaries. They are not a governed learning or quality experiment. V2/V3
+models and six historical sources are unchanged; the 32 held-out cases remain
+unopened. Final runtime integration and the original train/validation quality
+criteria remain open. See the
+[V4 implementation boundary](checkpoints/C34_RL_SELF_PLAY_CURRICULUM.md#factorized-return-v4-implementation-boundary).

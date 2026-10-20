@@ -249,6 +249,8 @@ export interface LiveTearRuntimeEnvironmentContext {
    * V3 policy must never reconstruct its model input from an observation.
    */
   readonly canonicalGameplayState: () => CanonicalGameplayState | null;
+  /** V4 causal origin only; unavailable away from the actual native tick zero. */
+  readonly canonicalOriginState?: () => CanonicalGameplayState | null;
   /** Legal semantic action kinds advertised by the same live world/router. */
   readonly availableGameActions: () => readonly GameAction["type"][];
   readonly random: () => RunRandomStreamsSnapshot;

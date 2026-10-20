@@ -200,3 +200,5 @@ export function selectTearC34C32RuntimeAction(modelInput: TearC34C32RuntimeModel
     source: variant === undefined ? best.value === 0 ? "fallback" : "q" : best.present ? "q" : "fallback",
     ...(variant === undefined ? {} : { entryPresent: best.present, value: best.value, stateKey: encoding.stateHash }) });
 }
+export { createFactorizedQModel, parseFactorizedQModel, prepareFactorizedQSelector } from "./c34-factorized-action-q";
+export type { FactorizedQModel, FactorizedQSelection, FactorizedQSupport } from "./c34-factorized-action-q";
