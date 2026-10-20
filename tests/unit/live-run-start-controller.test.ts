@@ -27,6 +27,10 @@ import { createProductionReplayWorld } from "../../src/tearbench/production-worl
 import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench/state-codecs";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
+import { LegacyAppStateController } from "../../src/app/legacy-state-controller";
+import { createLiveGhostReferenceController } from "../../src/app/live-ghost-reference-controller";
+import type { GhostLiveReference } from "../../src/ghost/live-ghost-reference-data";
+import type { GameRun } from "../../src/app/game-runtime-state";
 
 /** Disclosed legacy-format model, authored before sealing. No historical archive is rewritten. */
 async function sealedLegacyAim(magnitudes: readonly number[], options: Readonly<{ legacyOpening?: boolean; freshLater?: boolean;
@@ -96,7 +100,7 @@ function openingDestinationEvidence(target: ReturnType<typeof createProductionRe
 }
 
 function actualOpeningHost(previousScreen = "setup", failStarted = false, injectedHeldInput = false,
-  observer?: Readonly<{ captured: (capture: ReturnType<typeof captureProductionReplayCheckpoint>, boundary: { runId: string; seed: number }) => void; event: (event: TearCausalEventV1) => void }>, baselinePractice = false) {
+  observer?: Readonly<{ captured: (capture: ReturnType<typeof captureProductionReplayCheckpoint>, boundary: { runId: string; seed: number }) => void; event: (event: TearCausalEventV1) => void; installed?: (run: GameRun) => void }>, baselinePractice = false, application?: LegacyAppStateController) {
   const source = createProductionGhostReplayComposition({ seed: "actual-opening-source" }).create(undefined);
   const { replay } = source, noop = () => undefined, order: string[] = [];
   let screen = previousScreen, captured: ReturnType<typeof captureProductionReplayCheckpoint> | undefined;
@@ -124,10 +128,10 @@ function actualOpeningHost(previousScreen = "setup", failStarted = false, inject
     services: replay.world.context.services, environment: replay.world.context.environment,
     prepareWorld: noop, applySettings: noop, configureBlade: (blade: { weapon: unknown; model: unknown }, id: string) => { const weapon = applyWeapon(replay.configuration.value, id); blade.weapon = weapon; blade.model = weapon.model; },
     createPlayer: (x: number, y: number) => replay.world.entities.createPlayer(x, y), createBlade: () => replay.world.entities.createBlade(),
-    installRun: (run: unknown) => { replay.world.state.setRun(run as never); }, world: { resetTransient: noop, finishReset: () => { replay.transient.resetOpening(); } },
+    installRun: (run: unknown) => { replay.world.state.setRun(run as never); }, runInstalled: observer?.installed, world: { resetTransient: noop, finishReset: () => { replay.transient.resetOpening(); } },
     resetAuthoritativeClocks: () => { source.simulation.reset(0); }, resetCombatIdentity: () => { source.combat.combatEntityRuntime.resetIdentity(); }, createRunSeed: () => 12345,
     loadStage: noop, stage: { platforms: [], resetBanner: noop }, story: { resetChapter: noop, resetFinale: noop }, lifecycle: replay.world.lifecycle, install: noop,
-    setScreen: (next: string) => { order.push("playing"); screen = next; source.waveReward.restoreScreen(next); },
+    setScreen: (next: "playing", detail: { runId: string }) => { application?.transition(next, detail); order.push("playing"); screen = next; source.waveReward.restoreScreen(next); },
     selectedBoss: () => "shuffle", shuffledRoster: () => [], bossBiome: () => 0, trainingPlatforms: () => [], playground: { state: {}, reset: noop }, tutorial: { start: noop },
     startNextWave: () => { order.push("opening"); source.waveReward.waves.startNextWave(); }, achievementTracking: () => true, achievementCheck, baselinePractice: () => baselinePractice,
     resetRewards: () => { source.waveReward.reward.reset(); }, music: { begin: noop }, requestPointerLock: noop, testMode: false, window: {},
@@ -136,7 +140,8 @@ function actualOpeningHost(previousScreen = "setup", failStarted = false, inject
     openingExposed: (runId: string) => { pending = false; order.push("completion"); openingCapture.exposed(runId); },
   } as unknown as Parameters<typeof createLiveRunStartHost>[0];
   const controller = createLiveRunStartHost(context);
-  return { controller, source, native, order, events, markMode, achievementCheck, captured: () => captured, boundary: () => boundary, pending: () => pending };
+  return { controller, source, native, order, events, markMode, achievementCheck, captured: () => captured, boundary: () => boundary, pending: () => pending,
+    prepareStart: () => { if (application?.screen !== "profile") throw new Error("Chase launch left Profile"); application.transition("setup"); screen = "setup"; source.waveReward.restoreScreen(screen); } };
 }
 
 /** Actual source-owned host/helper/bus/recorder; adversarial edits are resealed before Reader validation. */
@@ -231,6 +236,32 @@ async function sealedActualOpening(previousScreen = "menu", legacy = false, cont
 }
 
 describe("LiveRunStartController", () => {
+  it("launches admitted Chase from Profile through the real setup opening boundary", async () => {
+    const application = new LegacyAppStateController(); application.transition("profile");
+    expect(() => application.transition("playing", { runId: "unscoped" })).toThrow(/Illegal legacy application transition/);
+    const reference: GhostLiveReference = { version: 1, mode: "endless", difficulty: "normal", weapon: "sword", seed: "reference", frames: [], splits: [],
+      build: { version: "1", revision: "r", target: "test", rulesetVersion: "v", contentHash: "c", configHash: "config" },
+      assistance: { format: "tear-ghost-chase", version: 1, sourceId: "reference", sourceManifestHash: "a".repeat(16), sourceRoot: "b".repeat(16), actor: "unknown", coachEnabled: true, ghostVisible: true, competitiveEligible: false } };
+    const fixture = actualOpeningHost("profile", false, false, { captured: () => undefined, event: () => undefined,
+      installed: (run) => { const assistance = chase.assistance(); if (assistance) run.ghostAssistance = assistance; chase.installed(run.runSeed); } }, false, application);
+    const ports = { prepare: () => Promise.resolve(reference), current: () => Promise.resolve(true), prepareStart: () => {
+      expect(chase.takeSetupLaunch()).toBe(true); expect(chase.takeSetupLaunch()).toBe(false); fixture.prepareStart(); },
+      start: () => { fixture.controller.start("endless", "normal"); } };
+    const chase: ReturnType<typeof createLiveGhostReferenceController> = createLiveGhostReferenceController(ports);
+    await chase.choose("reference");
+    expect(chase.takeSetupLaunch()).toBe(false);
+    expect(application.screen, chase.snapshot().message).toBe("playing");
+    expect(chase.snapshot().active).toBe(true);
+    const capture = fixture.captured(), boundary = fixture.boundary(); if (!capture || !boundary) throw new Error("real opening missing");
+    expect(capture.snapshot.state["tear.ui.v1"]).toMatchObject({ screen: "setup" });
+    expect(capture.snapshot.state["tear.run.v1"]).toMatchObject({ ghostAssistance: reference.assistance });
+    expect(fixture.events.at(-1)).toMatchObject({ payload: { boundary: "recorded-opening-playing-exposed", screen: "playing" } });
+    const run = fixture.source.replay.world.state.run(); if (!run) throw new Error("real installed run missing");
+    const context = createGhostReplayRunContext({ runId: boundary.runId, seed: boundary.seed, mode: run.mode, difficulty: run.diff, weaponId: run.weaponId,
+      ticksPerSecond: 120, build: capture.snapshot.provenance.build, rng: capture.snapshot.rng,
+      opening: { version: 1, phase: boundary.phase, previousScreen: "setup", destination: "playing", runId: boundary.runId } });
+    expect(readGhostReplayRunContext({ replayContext: context })?.simulation.opening?.previousScreen).toBe("setup");
+  });
   it("keeps explicit baseline practice starts out of mode progression without changing ordinary or course starts", () => {
     for (const mode of ["playground", "tutorial", "endless"] as const) {
       const practice = actualOpeningHost("menu", false, false, undefined, true);

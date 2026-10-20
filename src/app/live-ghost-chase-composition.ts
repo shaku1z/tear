@@ -7,17 +7,17 @@ import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 
 export function createLiveGhostChase(options: Readonly<{ factory: IDBFactory | undefined; ui: GhostChaseUi; run(): GameRun; player(): GamePlayer; stage(): number;
   platforms(): readonly Readonly<{ x: number; y: number; w: number; h: number }>[]; blocked(): boolean;
-  start(reference: GhostLiveReference): void; }>) {
-  const controller = createLiveGhostReferenceController({ ...createBrowserLiveGhostReference(options.factory), start: options.start });
+  prepareStart(reference: GhostLiveReference): void; start(reference: GhostLiveReference): void; }>) {
+  const controller = createLiveGhostReferenceController({ ...createBrowserLiveGhostReference(options.factory), prepareStart: options.prepareStart, start: options.start });
   const live = (): GhostChaseLiveState | undefined => {
     const run = options.run(), player = options.player();
     return { runId: run.runSeed, mode: run.mode, difficulty: run.diff, weapon: run.weaponId, time: run.runTime, waveTime: run.waveTime,
       stage: options.stage(), wave: run.wave, score: run.score, hp: player.hp, maxHp: player.maxHp, arena: ghostReferenceArena(options.platforms()), blocked: options.blocked(),
       ...(run.ghostAssistance === undefined ? {} : { assistance: run.ghostAssistance }) };
   };
-  const view = () => { const value = controller.snapshot(live()); return !value.active && options.run().ghostAssistance ? Object.freeze({ ...value, message: "Assisted / noncompetitive run · reference not active" }) : value; };
+  const view = () => { const value = controller.snapshot(live()); return !value.active && options.run().ghostAssistance && value.message.length === 0 ? Object.freeze({ ...value, message: "Assisted / noncompetitive run · reference not active" }) : value; };
   return Object.freeze({
-    choose: controller.choose, cancelPreparation: controller.cancelPreparation, configuration: controller.configuration,
+    choose: controller.choose, takeSetupLaunch: controller.takeSetupLaunch, cancelPreparation: controller.cancelPreparation, configuration: controller.configuration,
     installed(run: GameRun): void { const assistance = controller.assistance(); if (assistance) run.ghostAssistance = assistance; controller.installed(run.runSeed); },
     toggle: controller.toggle, stop: controller.stop,
     observe(): void { const state = live(); if (state) controller.observe(state); },

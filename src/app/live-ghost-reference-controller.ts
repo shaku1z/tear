@@ -5,15 +5,17 @@ export interface GhostChaseLiveState { readonly runId: number; readonly mode: st
   readonly time: number; readonly waveTime: number; readonly wave: number; readonly stage: number; readonly score: number; readonly hp: number; readonly maxHp: number;
   readonly arena: string; readonly blocked: boolean; readonly assistance?: GhostRunAssistance; }
 interface ChasePorts { prepare(id: string, signal: AbortSignal): Promise<GhostLiveReference>; current(source: GhostRunAssistance): Promise<boolean>;
+  prepareStart?(reference: GhostLiveReference): void;
   start(reference: GhostLiveReference): void; }
 /** Reference state never supplies a live action, actor, random value or clock. */
 export function createLiveGhostReferenceController(ports: ChasePorts) {
   let reference: GhostLiveReference | undefined, selected: GhostReferenceFrame | undefined, owner: AbortController | undefined, generation = 0;
-  let starting = false, pending: GhostRunAssistance | undefined, boundRun: number | undefined, visible = true, message = "", lastWave = "", checking = false;
+  let starting = false, setupPermission = false, pending: GhostRunAssistance | undefined, boundRun: number | undefined, visible = true, message = "", lastWave = "", checking = false;
   let timeDelta: number | undefined, split: string | undefined;
   let byWave = new Map<string, readonly GhostReferenceFrame[]>(), cursor = 0, elapsedCursor = 0, elapsed: GhostReferenceFrame | undefined;
+  const setupLaunchPending = () => setupPermission;
   const cancelPreparation = () => { if (owner) { owner.abort(); owner = undefined; generation++; } };
-  const stop = (reason = "") => { cancelPreparation(); generation++; reference = selected = undefined; elapsed = undefined; byWave.clear(); pending = undefined; boundRun = undefined; message = reason; lastWave = ""; timeDelta = undefined; split = undefined; checking = false; };
+  const stop = (reason = "") => { cancelPreparation(); generation++; setupPermission = false; reference = selected = undefined; elapsed = undefined; byWave.clear(); pending = undefined; boundRun = undefined; message = reason; lastWave = ""; timeDelta = undefined; split = undefined; checking = false; };
   return Object.freeze({
     async choose(id: string, expectedManifestHash?: string): Promise<void> {
       stop(); const ticket = generation, signal = new AbortController(); owner = signal; message = "Preparing verified reference…";
@@ -26,10 +28,17 @@ export function createLiveGhostReferenceController(ports: ChasePorts) {
         const groups = new Map<string, GhostReferenceFrame[]>(); cursor = elapsedCursor = 0;
         for (const frame of value.frames) { const key = `${String(frame.stage)}:${String(frame.wave)}`; const group = groups.get(key); if (group) group.push(frame); else groups.set(key, [frame]); }
         byWave = groups;
-        starting = true; try { ports.start(value); } finally { starting = false; pending = undefined; }
+        starting = true; setupPermission = true;
+        try {
+          ports.prepareStart?.(value);
+          if (ticket !== generation || reference !== value) return;
+          if (ports.prepareStart !== undefined && setupLaunchPending()) throw new Error("Chase setup launch was not admitted.");
+          ports.start(value);
+        } finally { starting = setupPermission = false; pending = undefined; }
       } catch (error) { if (ticket === generation) stop(error instanceof Error ? error.message : "Reference unavailable."); }
     },
     cancelPreparation,
+    takeSetupLaunch(): boolean { if (!starting || !setupPermission || reference === undefined || boundRun !== undefined) return false; setupPermission = false; return true; },
     assistance: () => pending,
     installed(seed: number): void { if (starting && reference) boundRun = seed; else stop(); },
     configuration(hash: string): void { if (reference && reference.build.configHash !== hash) stop("Different live configuration; reference unavailable. This run remains assisted."); },

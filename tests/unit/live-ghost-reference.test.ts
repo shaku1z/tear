@@ -29,14 +29,14 @@ describe("live Chase reference ownership", () => {
     controller.observe({ ...live, runId: 72 }); expect(controller.snapshot().active).toBe(false);
   });
   it("refuses source drift and cannot adopt an async selection cancelled before launch", async () => {
-    const reference = fixture(), start = vi.fn();
-    const refused = createLiveGhostReferenceController({ prepare: () => Promise.resolve(reference), current: () => Promise.resolve(false), start });
+    const reference = fixture(), start = vi.fn(), prepareStart = vi.fn();
+    const refused = createLiveGhostReferenceController({ prepare: () => Promise.resolve(reference), current: () => Promise.resolve(false), prepareStart, start });
     await refused.choose("source"); expect(start).not.toHaveBeenCalled(); expect(refused.snapshot().active).toBe(false);
     const replaced = createLiveGhostReferenceController({ prepare: () => Promise.resolve(reference), current: () => Promise.resolve(true), start });
     await replaced.choose("source", "c".repeat(16)); expect(start).not.toHaveBeenCalled(); expect(replaced.snapshot().message).toContain("identity changed");
     let resolve: (value: GhostLiveReference) => void = () => undefined;
-    const delayed = createLiveGhostReferenceController({ prepare: () => new Promise((done) => { resolve = done; }), current: () => Promise.resolve(true), start });
+    const delayed = createLiveGhostReferenceController({ prepare: () => new Promise((done) => { resolve = done; }), current: () => Promise.resolve(true), prepareStart, start });
     const work = delayed.choose("source"); delayed.cancelPreparation(); resolve(reference); await work;
-    expect(start).not.toHaveBeenCalled(); expect(delayed.snapshot().active).toBe(false);
+    expect(prepareStart).not.toHaveBeenCalled(); expect(start).not.toHaveBeenCalled(); expect(delayed.snapshot().active).toBe(false); expect(delayed.takeSetupLaunch()).toBe(false);
   });
 });
