@@ -358,7 +358,7 @@ export function restoreProductionReplaySnapshot(replay: ProductionReplayWorld, s
   const staged = (() => {
     try {
       return hydrateTearCodecWorld(
-        { ...replay.world.entities, hydrateReward: (payload) => hydrateRewardCodecPayload(UPGRADES, payload) },
+        { ...replay.world.entities, hydrateReward: (payload, run) => hydrateRewardCodecPayload(UPGRADES, payload, run) },
         decoded,
         { requireIdentity: (id: string) => id },
       );

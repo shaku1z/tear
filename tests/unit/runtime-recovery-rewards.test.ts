@@ -1,3 +1,10 @@
+import { issueGhostRecordedOpeningPermit } from "../../src/ghost/replay-admission";
+import { readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { hydrateRewardCodecPayload } from "../../src/tearbench/reward-codec-hydrator";
+import type { TearCodecValue } from "../../src/tearbench/state-codecs";
+import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
+import { verifyGhostCapsuleProductionReplay } from "../../src/ghost/production-replay-verification";
 import { describe, expect, it } from "vitest";
 import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint,
   restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
@@ -12,6 +19,45 @@ function upgradeContext(replay: ProductionReplayWorld) {
 }
 
 describe("runtime recovery reward checkpoints", () => {
+  it("restores a declared Beat private draft frontier without inventing shared offers", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "beat-private-frontier", mode: "endless" }), source = composition.create(undefined);
+    const run = source.replay.world.state.run(); if (!run) throw new Error("Missing run");
+    run.beatThisRun = { format: "tear-beat-attempt", version: 1, codeHash: "a".repeat(16), source: { capsule: "source", root: "b".repeat(16), manifest: "c".repeat(16) } };
+    run.spawnQueue = []; source.replay.world.state.setEnemies([]); source.waveReward.update(1.5);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "beat-private-frontier"), reward = source.waveReward.reward.snapshot();
+    expect(reward?.decisionSequence).toBe(0); expect(reward?.seedLocked).toBeUndefined();
+    const restored = composition.create(checkpoint.snapshot);
+    expect(restored.waveReward.reward.snapshot()).toEqual(reward);
+    const choiceId = reward?.choices[0]?.id; if (!choiceId) throw new Error("Missing private choice");
+    for (const world of [source, restored]) expect(world.routeAction({ type: "draft-choice", choiceId })).toBe(true);
+    expect(restored.replay.configuration.snapshot()).toEqual(source.replay.configuration.snapshot());
+    expect(restored.replay.random.streams.snapshot()).toEqual(source.replay.random.streams.snapshot());
+    const payload = checkpoint.snapshot.state["tear.reward.v1"] as Record<string, TearCodecValue>;
+    const selection = payload.selection as Record<string, TearCodecValue>;
+    expect(() => hydrateRewardCodecPayload(UPGRADES, payload)).toThrow(/declared/);
+    expect(() => hydrateRewardCodecPayload(UPGRADES, { selection: { ...selection, rerollOrdinal: 0 } }, run)).toThrow(/shared draft/);
+    expect(() => hydrateRewardCodecPayload(UPGRADES, { selection: { ...selection, decisionSequence: -1 } }, run)).toThrow(/frontier/);
+    expect(() => hydrateRewardCodecPayload(UPGRADES, payload, { beatThisRun: { ...run.beatThisRun, codeHash: "invalid" } })).toThrow(/Beat/);
+  });
+  it.skipIf(!process.env.TEAR_BEAT_REWARD_INPUT)("admits the retained native Beat payload without changing its original bytes (optional local diagnostic)", () => {
+    const path = process.env.TEAR_BEAT_REWARD_INPUT; if (!path) throw new Error("Missing explicit native input");
+    const bytes = readFileSync(path), sha256 = createHash("sha256").update(bytes).digest("hex"), capsule = JSON.parse(bytes.toString("utf8")) as GhostReadCapsule;
+    const snapshot = capsule.tracks.keyframes[0]?.value as Parameters<ReturnType<typeof createProductionGhostReplayComposition>["create"]>[0];
+    if (!snapshot) throw new Error("Missing native snapshot");
+    const sourceRun = snapshot.state["tear.run.v1"] as Record<string, TearCodecValue>;
+    const sourceReward = snapshot.state["tear.reward.v1"] as Record<string, TearCodecValue>;
+    const openingPermit = issueGhostRecordedOpeningPermit(capsule); if (!openingPermit) throw new Error("Native opening permit unavailable");
+    const restored = createProductionGhostReplayComposition({ seed: snapshot.seed, openingPermit }).create(snapshot);
+    expect(restored.waveReward.reward.snapshot()?.decisionSequence).toBe((sourceReward.selection as Record<string, TearCodecValue>).decisionSequence);
+    expect(restored.replay.world.state.run()?.beatThisRun).toEqual(sourceRun.beatThisRun);
+    if (process.env.TEAR_BEAT_REWARD_REPORT) {
+      const verification = verifyGhostCapsuleProductionReplay(capsule);
+      writeFileSync(process.env.TEAR_BEAT_REWARD_REPORT, JSON.stringify({ classification: "Original decoded native capsule, current-source diagnostic; no injected build overrides or archive mutation", inputSha256: sha256, bytes: bytes.length, verification }));
+      expect(verification.status).toBe("verified");
+    }
+    expect(createHash("sha256").update(readFileSync(path)).digest("hex")).toBe(sha256);
+  });
+
   it("preserves interleaved acquisition and tier callback order without repeating numeric effects", () => {
     const composition = createProductionGhostReplayComposition({ seed: "interleaved-tier-hooks", mode: "endless" });
     const source = composition.create(undefined);

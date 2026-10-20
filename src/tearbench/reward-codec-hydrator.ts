@@ -1,3 +1,4 @@
+import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import type { RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../gameplay/upgrades";
 import { MODE_IDS } from "../gameplay/run/mode-catalog";
@@ -20,7 +21,7 @@ export function hydrateRewardUpgrade(catalog: readonly UpgradeDefinition[], valu
 
 /** Shared live and detached decoding; saved data never supplies upgrade functions. */
 export function hydrateRewardCodecPayload(
-  catalog: readonly UpgradeDefinition[], payload: TearCodecValue,
+  catalog: readonly UpgradeDefinition[], payload: TearCodecValue, incomingRun?: unknown,
 ): RewardSelectionSnapshot<UpgradeDefinition> | null {
   if (!record(payload) || !("selection" in payload)) throw new TypeError("reward codec requires selection");
   if (payload.selection === null) return null;
@@ -43,6 +44,8 @@ export function hydrateRewardCodecPayload(
     return upgrade;
   }));
   const seedLocked = readSeedLockedDraft(decoded.seedLocked);
+  const beat = record(incomingRun) ? readBeatRunBinding(incomingRun.beatThisRun) : undefined;
+  if (beat !== undefined && seedLocked !== undefined) throw new TypeError("Beat private rewards cannot declare shared draft offers");
   if (seedLocked !== undefined) {
     if (!Number.isSafeInteger(decoded.decisionSequence) || Number(decoded.decisionSequence) < 0) throw new TypeError("Invalid race decision frontier");
     if (!Number.isSafeInteger(decoded.rerollOrdinal) || Number(decoded.rerollOrdinal) < 0 || Number(decoded.rerollOrdinal) > 64) throw new TypeError("Invalid shared draft reroll ordinal");
@@ -56,7 +59,12 @@ export function hydrateRewardCodecPayload(
         if (choices(decoded.reserveChoices).map(choice => choice.id).join() !== expectedReserve.join()) throw new TypeError("Reserve cards differ from the common coordinate");
       }
     }
-  } else if (decoded.rerollOrdinal !== undefined || decoded.decisionSequence !== undefined) throw new TypeError("A reroll coordinate requires a shared draft declaration");
+  } else {
+    if (decoded.rerollOrdinal !== undefined) throw new TypeError("A reroll coordinate requires a shared draft declaration");
+    if (beat !== undefined) {
+      if (!Number.isSafeInteger(decoded.decisionSequence) || Number(decoded.decisionSequence) < 0) throw new TypeError("Invalid Beat private decision frontier");
+    } else if (decoded.decisionSequence !== undefined) throw new TypeError("A decision frontier requires a declared recording category");
+  }
   return Object.freeze({ ...decoded, choices: choices(decoded.choices), reserveChoices: choices(decoded.reserveChoices),
     reservedChoice: hydrateRewardUpgrade(catalog, decoded.reservedChoice) }) as RewardSelectionSnapshot<UpgradeDefinition>;
 }

@@ -265,7 +265,7 @@ function createWorldConstructionPort(
 > {
   return Object.freeze({
     ...entities,
-    hydrateReward: (payload: TearCodecValue) => hydrateRewardCodecPayload(dependencies.UPGRADES, payload),
+    hydrateReward: (payload: TearCodecValue, run: GameRun) => hydrateRewardCodecPayload(dependencies.UPGRADES, payload, run),
   });
 }
 

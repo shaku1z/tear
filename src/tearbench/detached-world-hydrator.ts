@@ -27,7 +27,7 @@ export interface TearWorldConstructionPort<
   Projectile extends object,
   Reward,
 > extends TearWorldEntityConstructionPort<Run, Player, Blade, Enemy, Projectile> {
-  hydrateReward(payload: TearCodecValue): Reward | null;
+  hydrateReward(payload: TearCodecValue, run: Run): Reward | null;
 }
 
 export interface TearStagedIdentityBinding {
@@ -298,7 +298,7 @@ export function hydrateTearCodecWorld<
     stageIndex: numberField(runPayload, "stage"),
     rng: decodeTearCodecValue(component(world, "tear.rng.v1"), identities) as Rng,
     configuration: decodeTearCodecValue(component(world, "tear.configuration.v1"), identities) as TearCodecValue,
-    reward: port.hydrateReward(component(world, "tear.reward.v1")),
+    reward: port.hydrateReward(component(world, "tear.reward.v1"), run),
     weaponId: stringField(bladePayload, "weaponId"),
     ghost: (record(worldPayload) && record(worldPayload.ghost)
       ? decodeTearCodecValue(worldPayload.ghost, identities)
