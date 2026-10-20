@@ -204,7 +204,13 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.tutorial())).lessonIndex, lesson);
     await pause(); await clickLabel("LESSON HELP"); await clickLabel("SKIP UNFINISHED");
   }
-  await pump(210);
+  await page.evaluate((maximumTicks) => {
+    let ticks = 0;
+    while (window.__PANTHEON_TEST.tutorial().active && ticks < maximumTicks) {
+      window.__tutorialJourneyEnvironment.step([]); ticks++;
+    }
+    if (window.__PANTHEON_TEST.tutorial().active) throw new Error("Unfinished READY exceeded its declared handoff limit");
+  }, 210);
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "playground" && window.__PANTHEON_TEST.state().game === "paused");
   const unfinished = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
   assert.equal(unfinished.unfinished, true); assert.equal(unfinished.courseCompleted, false);
