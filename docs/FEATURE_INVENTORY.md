@@ -42,6 +42,17 @@ This is the migration checklist for the architectural redesign. A checked featur
 
 ## Current integrated content authority
 
+- [x] Release/engineering surface policy: `src/domain/surface-availability.ts` is
+  the one source-owned table. Standalone and CrazyGames production builds use
+  the release channel; test builds and `vite dev` use the engineering channel.
+  Engineering-only (not drawn, not focusable, actions inert, screens refused):
+  Training Archive, Training Operations, Replay Hub, Game Agent Evidence, Run
+  Monitor controls, Boss Test and Enemy Test (still catalog modes) with the
+  boss picker, Seed-Locked Race, Beat This Run, Boss Memory, Coach, Replay
+  Editor, cloud capsule recovery, Vault/Career publish, support bundles,
+  linked-pair download, every engineering URL parameter (`test`, `stemcue`,
+  `stems`, `foundry*`, surface routes) and the weapon/audio-preview debug
+  globals.
 - [x] The published Adventure is exactly six stages and 60 waves: Grounds,
   Undercroft, Crimson Fields, Verdant Sanctum, Voidspire, and The Tear.
   Rootbound is the Wave 40 boss, Echo is Wave 50, and Source is Wave 60.

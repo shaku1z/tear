@@ -10,6 +10,9 @@ const forbidden = [
   "__TEAR_PLATFORM_SERVICES__",
   "__PANTHEON_TEST",
   "__TEAR_RUNTIME_ENVIRONMENT__",
+  // The surface channel is a build-time constant. A surviving identifier would
+  // let page script choose the channel instead of the build.
+  "__TEAR_ENGINEERING_SURFACES__",
 ];
 const failures = [];
 

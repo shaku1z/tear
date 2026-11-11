@@ -518,7 +518,8 @@ const CONFIG = {
     ...(mode.training ? { training: true } : {}),
     ...(mode.bossOnly ? { bossOnly: true } : {}),
     ...(mode.sandbox ? { sandbox: true } : {}),
-    ...(mode.id === "bossonly" || mode.id === "sandbox" ? { debug: true } : {}),
+    // `debug` is the historical runtime projection of an engineering-surface mode.
+    ...(mode.surface === "engineering" ? { debug: true } : {}),
   })),
 };
 

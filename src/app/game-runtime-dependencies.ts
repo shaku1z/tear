@@ -3,6 +3,8 @@ import type { PracticeEncounterPersistence } from "./live-practice-encounter-per
 import type { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../config/game-config";
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type * as Geometry from "../domain/geometry";
+import type { SurfaceAvailability } from "../domain/surface-availability";
+import type { EngineeringQuery } from "./engineering-query";
 import type * as Affixes from "../gameplay/affixes";
 import type { createBlade } from "../gameplay/entities/blade";
 import type { createEnemyTypes } from "../gameplay/entities/enemies";
@@ -65,6 +67,8 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>; readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: BackdropController; readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"]; readonly Boss: EnemyTypes["Boss"];
+  /** Release/engineering surface policy and its admitted engineering query (empty in release). */
+  readonly surfaces: SurfaceAvailability; readonly engineeringQuery: EngineeringQuery;
   readonly browserDocument: Document; readonly browserIndexedDb: IDBFactory | undefined; readonly browserStorage: Pick<Storage, "setItem">; readonly browserWindow: Window;
   readonly browserNavigator: Pick<Navigator, "getGamepads" | "hardwareConcurrency">;
   readonly CG: PlatformCompatibility["CG"]; readonly CLOCK: TearWorldClock; readonly CONFIG: typeof CONFIG;

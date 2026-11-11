@@ -41,15 +41,20 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       x: railX, y: 426 + index * 61, w: railWidth, h: 52, glyph, label, ghost: true,
       action: { type: "navigate", to, resetScroll: to !== "settings" },
     }); });
-    context.enqueue({ x: railX, y: 426 + rail.length * 61, w: railWidth, h: 52, glyph: "◇", label: "TRAINING ARCHIVE", ghost: true,
-      action: { type: "training-archive.open" } });
-    context.enqueue({ x: railX + railWidth + 18, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "T", label: "TRAINING OPERATIONS", ghost: true,
-      action: { type: "training-operations.open" } });
-    context.enqueue({ x: railX + railWidth + 250, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "◇", label: "REPLAY HUB", ghost: true,
-      sub: "LOCAL ROUTES", action: { type: "navigate", to: "ghostlab", resetScroll: true } });
+    // Engineering builds keep these three entries at their established coordinates.
+    if (view.engineeringRoutes === true) {
+      context.enqueue({ x: railX, y: 426 + rail.length * 61, w: railWidth, h: 52, glyph: "◇", label: "TRAINING ARCHIVE", ghost: true,
+        action: { type: "training-archive.open" } });
+      context.enqueue({ x: railX + railWidth + 18, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "T", label: "TRAINING OPERATIONS", ghost: true,
+        action: { type: "training-operations.open" } });
+      context.enqueue({ x: railX + railWidth + 250, y: 426 + rail.length * 61, w: 220, h: 52, glyph: "◇", label: "REPLAY HUB", ghost: true,
+        sub: "LOCAL ROUTES", action: { type: "navigate", to: "ghostlab", resetScroll: true } });
+    }
     if (view.nowPlaying) {
+      // Release builds place the music row in the slot directly under SETTINGS.
+      const musicY = view.engineeringRoutes === true ? 426 + (rail.length + 1) * 61 + 10 : 426 + rail.length * 61;
       context.enqueue({
-        x: railX, y: 426 + (rail.length + 1) * 61 + 10, w: railWidth, h: 46, glyph: "♪", ghost: true,
+        x: railX, y: musicY, w: railWidth, h: 46, glyph: "♪", ghost: true,
         label: view.nowPlaying.label, sub: view.nowPlaying.detail,
         action: { type: "navigate", to: "settings", tab: "music" },
       });
@@ -161,7 +166,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     if (view.practiceAvailable) context.enqueue({ x: width / 2 - startWidth / 2 - 270, y: 726, w: 250, h: 62,
       label: "PRACTICE LAB", sub: "BASELINE SWORD · NO REWARDS", ghost: true,
       action: { type: "tutorial.action", command: "open-practice" } });
-    if (view.modes.some(choice => choice.selected && ["endless", "campaign", "gauntlet", "bossonly"].includes(choice.id))) {
+    if (view.raceAvailable === true) {
       context.enqueue({ x: width / 2 + startWidth / 2 + 20, y: 726, w: 310, h: 62, label: "CREATE SEED-LOCKED RACE", sub: "SHARED SEED / OFFERS · UNRANKED", action: { type: "setup.start", race: true } });
       ui.text(canvas, "Race: shared setup, build and offers · your inputs, picks, rerolls, reserve and tier-ups · no progression rewards", width / 2, 822, ui.t.type.micro, "center", ui.t.alpha.muted);
     }

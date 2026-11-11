@@ -587,3 +587,59 @@ describe("legacy screen renderer registry", () => {
     ]) expect(contracts).toContain(field);
   });
 });
+
+describe("release and engineering surface rendering", () => {
+  const menuView = { id: "menu" as const, playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
+    modeLabel: "Endless", difficultyLabel: "Normal", nowPlaying: { label: "NOW PLAYING", detail: "Grounds" } };
+  const engineeringLabels = ["TRAINING ARCHIVE", "TRAINING OPERATIONS", "REPLAY HUB"];
+  it("omits the engineering menu routes in release and seats the music row directly under SETTINGS", () => {
+    const controls: ScreenControl[] = [];
+    createLegacyScreenRenderers(createRenderContext(controls)).menu(menuView);
+    expect(controls.some((control) => engineeringLabels.includes(control.label))).toBe(false);
+    const settings = controls.find((control) => control.label === "SETTINGS"), music = controls.find((control) => control.glyph === "♪");
+    expect(settings).toMatchObject({ y: 670, h: 52 });
+    expect(music).toMatchObject({ x: 100, y: 731, h: 46, action: { type: "navigate", to: "settings", tab: "music" } });
+    // The footer tagline is drawn at height - 46; the release music row ends well above it.
+    expect((music?.y ?? 0) + (music?.h ?? 0)).toBeLessThan(900 - 46 - 20);
+  });
+  it("keeps the engineering menu routes at their established coordinates", () => {
+    const controls: ScreenControl[] = [];
+    createLegacyScreenRenderers(createRenderContext(controls)).menu({ ...menuView, engineeringRoutes: true });
+    expect(controls.filter((control) => engineeringLabels.includes(control.label)).map(({ label, x, y }) => ({ label, x, y }))).toEqual([
+      { label: "TRAINING ARCHIVE", x: 100, y: 731 }, { label: "TRAINING OPERATIONS", x: 438, y: 731 }, { label: "REPLAY HUB", x: 670, y: 731 },
+    ]);
+    expect(controls.find((control) => control.glyph === "♪")).toMatchObject({ y: 802 });
+  });
+  it("renders a release setup with no DEV section, no race control and a centred START", () => {
+    const controls: ScreenControl[] = [], sectionLabels: string[] = [];
+    const context = createRenderContext(controls), ui = new TestUi();
+    ui.sectionLabel = (...values: Parameters<ScreenUiPort["sectionLabel"]>) => { sectionLabels.push(values[1]); return values[3] + 24; };
+    const base = { id: "setup" as const, modes: [{ id: "endless", label: "Endless", selected: true }], difficulties: [{ id: "normal", label: "Normal", selected: true }],
+      weapons: [{ id: "sword", label: "Sword", selected: true }], showDifficulty: true, startGlyph: "▢", startSummary: "ENDLESS · NORMAL · SWORD" };
+    createLegacyScreenRenderers({ ...context, ui }).setup(base);
+    expect(sectionLabels).toEqual(["MODE", "DIFFICULTY", "WEAPON"]);
+    expect(controls.some((control) => control.action.type === "setup.start" && control.action.race === true)).toBe(false);
+    const start = controls.find((control) => control.action.type === "setup.start");
+    expect((start?.x ?? 0) + (start?.w ?? 0) / 2).toBe(800);
+    controls.length = 0; sectionLabels.length = 0;
+    createLegacyScreenRenderers({ ...context, ui }).setup({ ...base, raceAvailable: true,
+      modes: [...base.modes, { id: "bossonly", label: "Boss Test", debug: true }] });
+    expect(sectionLabels).toContain("DEV");
+    expect(controls.find((control) => control.action.type === "setup.start" && control.action.race === true)).toMatchObject({ label: "CREATE SEED-LOCKED RACE" });
+  });
+  it("closes up the Career command row when a command surface is unavailable", () => {
+    const controls: ScreenControl[] = [];
+    const hidden = new Set(["coach", "publish", "race"]);
+    const context: ScreenRenderContext = { ...createRenderContext(controls),
+      available: (action) => action.type !== "career.control" || !hidden.has(action.command) };
+    const entry = { kind: "capsule", present: true, mode: "endless", weapon: "sword", result: "defeat", wave: 3, score: 10, date: "2026-11-11",
+      dna: {}, actor: "human", verified: "receipts", seconds: 1, damage: 1, categories: [], composition: {}, loadout: [], abilities: [], bosses: [],
+      style: null, nearMiss: [], sharing: "private", gameVersion: "0.1.0", unavailable: [], beatAttempt: false, assisted: false };
+    createLegacyScreenRenderers(context).profile({ id: "profile", tab: "career", tabs: [], name: "Guest", signedIn: false, stats: [],
+      career: { status: "ready", indexing: false, message: "", query: { view: "history", sort: "newest" }, rows: [], confirming: false,
+        selected: { entry, notes: { tags: [], retention: "normal" }, detail: "Recorded" }, retained: 1, known: 1, total: 1, page: 0, pages: 1 } } as never);
+    const row = controls.filter((control) => control.action.type === "career.control" && ["watch", "challenge", "download", "chase", "coach", "publish", "race"].includes(control.action.command));
+    expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
+    expect(row[3]).toMatchObject({ w: (1100 - 3 * 8) / 4 });
+  });
+});

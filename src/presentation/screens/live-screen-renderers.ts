@@ -54,6 +54,8 @@ export interface LiveScreenRendererOptions {
   readonly safeInsets?: () => Readonly<{ l: number; r: number; t: number; b: number }>;
   readonly dispatch: (action: ScreenAction) => void;
   readonly enqueue: (button: LiveScreenButton) => void;
+  /** Whether an action's surface is available in this build; omitted means every action is available. */
+  readonly available?: (action: ScreenAction) => boolean;
   readonly renderPreview: (id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
 }
 
@@ -133,6 +135,7 @@ export function createLiveScreenRenderers(options: LiveScreenRendererOptions): L
     },
     get safeInsets() { return options.safeInsets?.() ?? { l: 0, r: 0, t: 0, b: 0 }; },
     enqueue(control: ScreenControl) { options.enqueue(toButton(control, options.dispatch)); },
+    available: (action: ScreenAction) => options.available?.(action) ?? true,
     renderPreview: options.renderPreview,
   };
   const cold = createColdScreenBoundary(context);

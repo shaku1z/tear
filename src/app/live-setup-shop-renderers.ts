@@ -17,7 +17,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
         tutorialDone: d.PROFILE.stat("tutorialDone"),
         selectedWeapon: selected.weapon, selectedBoss: selected.boss, startGlyph: d.PAD.glyph(2), modes: d.CONFIG.modes,
         difficulties: d.CONFIG.difficulties, weapons: d.WEAPONS, bosses: BOSS_ROSTER,
-        ...(bounties === undefined ? {} : { bounties }), livePlatform: d.CG.live,
+        ...(bounties === undefined ? {} : { bounties }), surfaces: d.surfaces,
         best: services.getBest(selected.mode, selected.difficulty), formatTime: services.formatTime }));
     },
     renderShop(): void {

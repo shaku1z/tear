@@ -138,6 +138,9 @@ export default defineConfig(({ mode, command }) => {
     define: {
       __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: JSON.stringify(tutorialGoldHash),
       __TEAR_TEST_BUILD__: JSON.stringify(testBuild),
+      // Engineering surfaces (research screens, Boss/Enemy Test, engineering
+      // query routes and debug globals) exist only in test builds and `vite dev`.
+      __TEAR_ENGINEERING_SURFACES__: JSON.stringify(testBuild || command === "serve"),
       __TEAR_BUILD_REVISION__: JSON.stringify(source.revision),
       __TEAR_BUILD_SOURCE_STATE__: JSON.stringify(source.state),
       __TEAR_BUILD_SOURCE_FINGERPRINT__: JSON.stringify(source.fingerprint),

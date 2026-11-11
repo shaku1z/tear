@@ -7,7 +7,7 @@ import { planRunStart, type RunStartPlan } from "../gameplay/run/run-start-plan"
 import { RunReplacementGuard } from "../gameplay/run/run-replacement";
 import type { BossId } from "../gameplay/run/content-director";
 import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
-import { tracksModeProgress } from "../gameplay/run/mode-catalog";
+import { admittedRunMode, tracksModeProgress } from "../gameplay/run/mode-catalog";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
 import { tutorialUsesBaselineLoadout } from "../gameplay/training/tutorial-contract";
@@ -195,7 +195,8 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
     },
     startLifecycle: (sessionId) => { context.lifecycle.start(sessionId); },
     exposeDebugState: () => {
-      if (!context.testMode && !import.meta.env.DEV) return;
+      // The weapon inspector is an engineering global: never installed in release builds.
+      if (!dependencies.surfaces.allows("global:weapon-debug") || (!context.testMode && !import.meta.env.DEV)) return;
       context.window.TEAR_WEAPON_DEBUG = () => {
         const run = requireRun(state);
         const player = requirePlayer(state);
@@ -324,7 +325,9 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       gameVersion: "0.1.0", scoreVersion: SFX.musicScoreVersion() }); },
     requestPointerLock: context.requestPointerLock,
   });
-  context.install({ start(mode, difficulty) { controller.start(mode, difficulty); return requireRun(state); } });
+  // Every start path (setup, restart, retry, challenge codes) passes here, so an
+  // engineering mode can never start in a release build.
+  context.install({ start(mode, difficulty) { controller.start(admittedRunMode(mode, dependencies.surfaces), difficulty); return requireRun(state); } });
   return controller;
 }
 

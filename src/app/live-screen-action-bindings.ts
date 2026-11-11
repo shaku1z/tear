@@ -5,6 +5,8 @@ import type { ReplayScreenAdapter } from "./live-replay-screen-adapter";
 import type { SettingsRenameAdapters } from "./live-settings-rename-adapters";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
+import { screenActionAvailable, type SurfaceAvailability } from "../domain/surface-availability";
+import type { ScreenAction } from "../presentation/screens/contracts";
 
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
@@ -155,4 +157,16 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "codex.selectFilter": (action) => { ports.library.selectCodexFilter(action.id); },
     "codex.cycleSort": () => { ports.library.cycleCodexSort(); }, "codex.inspect": (action) => { ports.library.inspectCodexAbility(action.id); },
   });
+}
+
+/**
+ * Surface gate in front of the exhaustive action router. An action whose
+ * surface the build does not admit (an engineering screen, Run Monitor control
+ * or hidden unfinished feature) is inert, whichever path dispatched it.
+ */
+export function gateScreenActions(
+  surfaces: SurfaceAvailability,
+  dispatch: (action: ScreenAction) => void,
+): (action: ScreenAction) => void {
+  return (action) => { if (screenActionAvailable(surfaces, action)) dispatch(action); };
 }

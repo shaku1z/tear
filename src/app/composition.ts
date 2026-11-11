@@ -59,6 +59,8 @@ import { createTearWorldSimulationFactories } from "../gameplay/runtime/tear-wor
 import { createLiveWorldSimulationPresentationAdapter } from "./live-world-simulation-factories";
 import { startLiveGame } from "./live-game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
+import type { SurfaceAvailability } from "../domain/surface-availability";
+import type { EngineeringQuery } from "./engineering-query";
 
 export interface TearCompositionOptions {
   readonly target: "standalone" | "crazygames";
@@ -68,6 +70,10 @@ export interface TearCompositionOptions {
   readonly pwaUpdate: PwaUpdateCapability;
   /** An explicit browser storage capability is used only by isolated test builds. */
   readonly browserIndexedDb?: IDBFactory;
+  /** The build's release/engineering surface policy, resolved once by the entrypoint bootstrap. */
+  readonly surfaces: SurfaceAvailability;
+  /** Engineering query parameters admitted by `surfaces`; empty in release builds. */
+  readonly engineeringQuery: EngineeringQuery;
 }
 
 interface CompositionWindow extends Window {
@@ -81,9 +87,10 @@ interface CompositionWindow extends Window {
  * entrypoint so standalone builds do not import the CrazyGames implementation.
  */
 export function composeTearApplication(options: TearCompositionOptions): void {
-  const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate, browserIndexedDb = window.indexedDB } = options;
+  const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate, browserIndexedDb = window.indexedDB, surfaces, engineeringQuery } = options;
   const compositionWindow = window as CompositionWindow;
-  const tearTestMode = __TEAR_TEST_BUILD__ && new URLSearchParams(window.location.search).get("test") === "1";
+  // Test storage seeding stays test-build-only even where `vite dev` admits engineering surfaces.
+  const tearTestMode = __TEAR_TEST_BUILD__ && engineeringQuery.get("test") === "1";
   // Test pages may seed the isolated adapter before composition. Production never
   // reads this value and continues to use the platform's real storage adapter.
   const disposableValues = new Map<string, string>(tearTestMode
@@ -114,7 +121,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   // Test-build opt-in until final image-native acceptance. IN1 stays available
   // as a same-build control; only the selected package is fetched/decoded.
   // All consumers share this app owner; no world owns its lifetime.
-  const sceneNative = tearTestMode ? new URLSearchParams(window.location.search).get("sceneNative") : null;
+  const sceneNative = tearTestMode ? engineeringQuery.get("sceneNative") : null;
   const verdantCalibration = sceneNative === "1" || sceneNative === "control" || sceneNative === "layers" || sceneNative === "living"
     ? createPreparedVerdantCalibration(sceneNative === "control" ? verdantControlPackage
       : sceneNative === "layers" ? verdantLayerPackage : sceneNative === "living" ? verdantLivingPackage : verdantOverscanPackage, {
@@ -237,7 +244,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const tutorialCompletionPersistence = createLiveTutorialCompletionPersistence(PROFILE, META, ACH);
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
-  const APP = new LegacyAppStateController();
+  const APP = new LegacyAppStateController(surfaces);
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
@@ -251,7 +258,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
 
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, biomeProgressPersistence, Bomber, Boss, achievementToastPersistence,
-    browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
+    surfaces, engineeringQuery, browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, tutorialCompletionPersistence, practiceEncounterPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, Rimehound, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, PLAYGROUND_STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,

@@ -75,6 +75,8 @@ export interface ScreenRenderContext {
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;
   enqueue(control: ScreenControl): void;
+  /** Whether an action's surface is available in this build (layout hint; unavailable controls are never enqueued). */
+  available?(action: ScreenAction): boolean;
   renderPreview?(id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>): void;
 }
 
@@ -129,6 +131,8 @@ export interface MenuScreenView {
   readonly modeLabel: string; readonly difficultyLabel: string; readonly biome?: string;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
+  /** Engineering builds only: TRAINING ARCHIVE, TRAINING OPERATIONS and REPLAY HUB entries. */
+  readonly engineeringRoutes?: boolean;
 }
 export interface SetupScreenView {
   readonly practiceAvailable?: boolean;
@@ -138,6 +142,8 @@ export interface SetupScreenView {
   readonly bestSummary?: string; readonly bountySummary?: string;
   readonly bossChoices?: readonly ChoiceView[];
   readonly bounties?: readonly Readonly<{ label: string; detail: string; done: boolean }>[];
+  /** Engineering builds only: the selected mode can create a Seed-Locked Race. */
+  readonly raceAvailable?: boolean;
 }
 export interface PlayingScreenView { readonly id: "playing" }
 export interface CodexScreenView {

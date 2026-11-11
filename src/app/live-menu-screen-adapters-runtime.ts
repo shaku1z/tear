@@ -5,7 +5,7 @@ import { buildMenuSnapshot } from "../presentation/menu-setup-snapshots";
 import type { createLiveSetupShopRenderers } from "./live-setup-shop-renderers";
 
 type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "META" |
-  "PROFILE" | "SFX" | "SHOP" | "shopPurchaseProgressPersistence" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
+  "PROFILE" | "SFX" | "SHOP" | "shopPurchaseProgressPersistence" | "surfaces" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type BestScore = Readonly<{ wave: number; score: number; time?: number }>;
 
@@ -44,7 +44,7 @@ export function createLiveMenuScreenAdaptersRuntime(state: MenuScreenState, serv
         coins: d.META.coins(), shards: d.PROFILE.shards(), unlocked: d.PROFILE.unlockedCount(),
         selectedMode: selected.mode, selectedDifficulty: selected.difficulty,
         modes: d.CONFIG.modes, difficulties: d.CONFIG.difficulties,
-        biome: d.Attract.stage().name, pendingFinale: !!d.PROFILE.pendingFinale() }));
+        biome: d.Attract.stage().name, pendingFinale: !!d.PROFILE.pendingFinale(), surfaces: d.surfaces }));
       d.UI.ink = "#000";
     },
     renderSetup(): void { if (cold) cold.renderSetup(); else ensureCold(); },

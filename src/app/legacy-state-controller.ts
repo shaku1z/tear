@@ -1,3 +1,5 @@
+import { screenSurface, type SurfaceAvailability } from "../domain/surface-availability";
+
 export type LegacyAppScreen =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
@@ -66,6 +68,15 @@ export class IllegalLegacyAppTransitionError extends Error {
   }
 }
 
+/** Refusal for an engineering screen requested in a build whose surface policy does not admit it. */
+export class UnavailableLegacyAppScreenError extends IllegalLegacyAppTransitionError {
+  constructor(from: LegacyAppScreen, to: LegacyAppScreen) {
+    super(from, to);
+    this.message = `Unavailable application screen in this build: ${from} -> ${to}`;
+    this.name = "UnavailableLegacyAppScreenError";
+  }
+}
+
 function ensureScreen(value: LegacyAppScreen, label: string): LegacyAppScreen {
   if (!LEGACY_APP_SCREENS.includes(value)) throw new TypeError(`${label} is not a recognized application screen`);
   return value;
@@ -73,6 +84,7 @@ function ensureScreen(value: LegacyAppScreen, label: string): LegacyAppScreen {
 
 /** Authoritative owner for the classic shell while its render functions remain string-oriented. */
 export class LegacyAppStateController {
+  readonly #surfaces: SurfaceAvailability;
   #snapshot: LegacyAppSnapshot = Object.freeze({
     screen: "menu",
     previous: null,
@@ -81,6 +93,11 @@ export class LegacyAppStateController {
     replayReturn: "menu",
     revision: 0,
   });
+
+  /** The surface policy is the single entry guard: no path (including `rename -> *`) enters an unavailable screen. */
+  constructor(surfaces: SurfaceAvailability) {
+    this.#surfaces = surfaces;
+  }
 
   get screen(): LegacyAppScreen { return this.#snapshot.screen; }
   get settingsReturn(): LegacyAppScreen { return this.#snapshot.settingsReturn; }
@@ -91,6 +108,7 @@ export class LegacyAppStateController {
     ensureScreen(to, "to");
     const current = this.#snapshot;
     if (to === current.screen) return current.screen;
+    if (!this.canEnter(to)) throw new UnavailableLegacyAppScreenError(current.screen, to);
     if (!LEGAL_LEGACY_TRANSITIONS[current.screen].includes(to)) {
       throw new IllegalLegacyAppTransitionError(current.screen, to);
     }
@@ -123,6 +141,12 @@ export class LegacyAppStateController {
   }
 
   canTransition(to: LegacyAppScreen): boolean {
-    return to === this.screen || LEGAL_LEGACY_TRANSITIONS[this.screen].includes(to);
+    return to === this.screen || (this.canEnter(to) && LEGAL_LEGACY_TRANSITIONS[this.screen].includes(to));
+  }
+
+  /** False for an engineering screen that this build's surface policy does not admit. */
+  canEnter(screen: LegacyAppScreen): boolean {
+    const surface = screenSurface(screen);
+    return surface === undefined || this.#surfaces.allows(surface);
   }
 }

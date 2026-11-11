@@ -114,9 +114,87 @@ function crazyGamesSdkStub() {
   `;
 }
 
+// Engineering parameters that a production page must ignore: the test hook,
+// Watch Agent route, cue audition and Foundry audio preview.
+const engineeringQuery = "?test=1&watchagent=1&stemcue=fillet&foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=3";
+// Canvas labels that only engineering builds may draw on the main menu and setup screen.
+const engineeringMenuLabels = ["TRAINING ARCHIVE", "TRAINING OPERATIONS", "REPLAY HUB", "LOCAL ROUTES"];
+const engineeringSetupLabels = ["DEV", "BOSS TEST", "ENEMY TEST", "CREATE SEED-LOCKED RACE"];
+
+/** Records canvas text so production menus can be inspected without any test hook in the bundle. */
+function recordCanvasText() {
+  const drawn = [];
+  const original = CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText = function fillText(text, ...rest) {
+    drawn.push(String(text));
+    if (drawn.length > 20_000) drawn.splice(0, drawn.length - 10_000);
+    return original.call(this, text, ...rest);
+  };
+  Object.defineProperty(window, "__isolationDrawnText", { configurable: false, value: drawn });
+}
+
+/** Exact or fitted (ellipsized) canvas labels that belong to engineering controls. */
+function engineeringText(drawn, labels) {
+  return drawn.filter((text) => labels.some((label) => text === label
+    || (text.endsWith("…") && text.length > 4 && label.startsWith(text.slice(0, -1).trimEnd()))));
+}
+
+async function drawnTextAfterFrames(page, frames = 6) {
+  await page.evaluate(() => { window.__isolationDrawnText.length = 0; });
+  await page.evaluate((count) => new Promise((resolve) => {
+    let remaining = count;
+    const next = () => { remaining -= 1; if (remaining <= 0) resolve(); else requestAnimationFrame(next); };
+    requestAnimationFrame(next);
+  }), frames);
+  return page.evaluate(() => [...new Set(window.__isolationDrawnText)]);
+}
+
+async function waitForDrawnText(page, text, description) {
+  await page.waitForFunction((expected) => window.__isolationDrawnText.includes(expected), text,
+    { timeout: 30_000 }).catch(() => { throw new Error(`${description}: canvas never drew ${text}`); });
+}
+
+async function clickVirtual(page, x, y) {
+  const box = await page.locator("#game").boundingBox();
+  assert.ok(box, "game canvas has no layout box");
+  const scale = Math.min(box.width / 1600, box.height / 900);
+  const left = box.x + (box.width - 1600 * scale) / 2, top = box.y + (box.height - 900 * scale) / 2;
+  await page.mouse.move(left + x * scale, top + y * scale);
+  await page.mouse.click(left + x * scale, top + y * scale);
+}
+
+async function assertReleaseSurfaces(page, target) {
+  await waitForDrawnText(page, "SETTINGS", `${target} main menu`);
+  const menu = await drawnTextAfterFrames(page);
+  assert.ok(menu.includes("PLAY"), `${target} main menu did not render PLAY`);
+  assert.deepEqual(engineeringText(menu, engineeringMenuLabels), [],
+    `${target} production main menu rendered engineering entries`);
+  await clickVirtual(page, 260, 361);
+  await waitForDrawnText(page, "START", `${target} setup`);
+  const setup = await drawnTextAfterFrames(page);
+  assert.ok(setup.includes("ADVENTURE"), `${target} setup did not render its modes`);
+  assert.deepEqual(engineeringText(setup, engineeringSetupLabels), [],
+    `${target} production setup rendered engineering modes or controls`);
+  await clickVirtual(page, 800, 757);
+  await page.waitForFunction(() => {
+    const hint = document.getElementById("hint");
+    return hint !== null && hint.style.display === "block";
+  }, undefined, { timeout: 30_000 }).catch(() => { throw new Error(`${target} START did not enter a run`); });
+  await drawnTextAfterFrames(page, 30);
+  const globals = await page.evaluate(() => ({
+    weaponDebug: typeof window.TEAR_WEAPON_DEBUG,
+    weaponDebugPresent: "TEAR_WEAPON_DEBUG" in window,
+    foundryPreview: typeof window.__TEAR_FOUNDRY_AUDIO_PREVIEW__,
+    foundryPreviewPresent: "__TEAR_FOUNDRY_AUDIO_PREVIEW__" in window,
+  }));
+  assert.deepEqual(globals, { weaponDebug: "undefined", weaponDebugPresent: false, foundryPreview: "undefined", foundryPreviewPresent: false },
+    `${target} production run installed an engineering global`);
+}
+
 async function assertRuntimeIsolation(browser, target, directory) {
   const host = await serve(directory);
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  await context.addInitScript(recordCanvasText);
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
@@ -132,7 +210,7 @@ async function assertRuntimeIsolation(browser, target, directory) {
   });
 
   try {
-    await page.goto(`${host.origin}/?test=1&watchagent=1`, {
+    await page.goto(`${host.origin}/${engineeringQuery}`, {
       waitUntil: "domcontentloaded", timeout: 30_000,
     });
     await page.waitForFunction(
@@ -173,6 +251,8 @@ async function assertRuntimeIsolation(browser, target, directory) {
     assert.equal(result.watchValueType, "undefined");
     assert.equal(result.watchPanel, false, `${target} rendered the test-only Watch Agent panel`);
     assert.deepEqual(pageErrors, [], `${target} production bundle raised a page error while booting`);
+    await assertReleaseSurfaces(page, target);
+    assert.deepEqual(pageErrors, [], `${target} production bundle raised a page error during the release-surface journey`);
   } finally {
     await context.close();
     await host.close();
@@ -201,7 +281,7 @@ async function main() {
   } finally {
     await browser.close();
   }
-  console.log("production runtime bridge isolation passed for standalone and crazygames");
+  console.log("production runtime bridge and release-surface isolation passed for standalone and crazygames");
 }
 
 main().catch((error) => {

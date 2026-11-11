@@ -4,6 +4,7 @@ import { createMetaProgression } from "../../src/gameplay/progression/meta";
 import { seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
 import { describe, expect, it, vi } from "vitest";
 import { LiveRunStartController } from "../../src/gameplay/run/live-run-start-controller";
+import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 import { createLiveRunStartHost } from "../../src/app/live-run-start-host";
 import { createLiveGhostOpeningCapture } from "../../src/app/live-ghost-opening-capture";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
@@ -115,7 +116,7 @@ function actualOpeningHost(previousScreen = "setup", failStarted = false, inject
   const openingCapture = createLiveGhostOpeningCapture({ screen: () => screen, tick: () => source.simulation.scheduler.tick,
     replayRunId: () => boundary?.runId, nextSequence: () => events.length + 1, record: recordEvent, failed: (error) => { throw error; } });
   const markMode = vi.fn(), achievementCheck = vi.fn();
-  const dependencies = { ...replay.dependencies, REMOTE,
+  const dependencies = { ...replay.dependencies, REMOTE, surfaces: createSurfaceAvailability("engineering"),
     PROFILE: { data: { stats: {}, ach: {}, rewards: {} }, markMode }, META: { level: () => 0, apply: noop },
     SFX: { setVoidDescent: noop, setMusicDuck: noop, musicScoreVersion: () => "unit" }, newMods,
     Input: { startSemanticRecording: () => { order.push("input"); }, syncSemanticMovement: () => { order.push("held");
@@ -240,7 +241,7 @@ async function sealedActualOpening(previousScreen = "menu", legacy = false, cont
 
 describe("LiveRunStartController", () => {
   it("launches admitted Chase from Profile through the real setup opening boundary", async () => {
-    const application = new LegacyAppStateController(); application.transition("profile");
+    const application = new LegacyAppStateController(createSurfaceAvailability("engineering")); application.transition("profile");
     expect(() => application.transition("playing", { runId: "unscoped" })).toThrow(/Illegal legacy application transition/);
     const reference: GhostLiveReference = { version: 1, mode: "endless", difficulty: "normal", weapon: "sword", seed: "reference", frames: [], splits: [],
       build: { version: "1", revision: "r", target: "test", rulesetVersion: "v", contentHash: "c", configHash: "config" },

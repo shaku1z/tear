@@ -60,7 +60,7 @@ declare global {
 }
 
 export function requestedFoundryPreview(
-  search = window.location.search,
+  search: string,
 ): FoundryPreviewRequest | null {
   try {
     const query = new URLSearchParams(search);

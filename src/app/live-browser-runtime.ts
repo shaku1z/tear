@@ -5,7 +5,7 @@ import { InstallPromptController } from "./runtime-initialization";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
 type BrowserDependencies = Pick<GameRuntimeDependencies,
-  "CONFIG" | "Input" | "OVERSCAN" | "SAFE" | "browserDocument" | "browserWindow">;
+  "CONFIG" | "Input" | "OVERSCAN" | "SAFE" | "browserDocument" | "browserWindow" | "engineeringQuery">;
 
 export interface LiveBrowserRuntime {
   readonly canvas: HTMLCanvasElement; readonly context: CanvasRenderingContext2D;
@@ -28,7 +28,8 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
   const viewport = new CanvasViewport(element, d.CONFIG.view.w, d.CONFIG.view.h, d.OVERSCAN, d.SAFE, d.browserWindow, d.browserDocument);
   viewport.start();
   bindFullscreenButton(d.browserDocument);
-  const parameters = new URLSearchParams(d.browserWindow.location.search);
+  // Only composition-admitted engineering parameters are read; release builds receive none.
+  const parameters = d.engineeringQuery;
   return Object.freeze({ canvas: element, context, width: d.CONFIG.view.w, height: d.CONFIG.view.h, viewport,
     resizeCanvas: () => { viewport.resizeIfNeeded(); }, requestPointerLock: pointer.api.request,
     installPrompt: new InstallPromptController(d.browserWindow), lockHint: d.browserDocument.getElementById("lockhint"),

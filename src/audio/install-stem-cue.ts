@@ -46,10 +46,12 @@ async function fetchCue(cueId: string): Promise<LoadedCueRef> {
 /**
  * How this session wants music. Recorded biome stems are the DEFAULT; opt out
  * with `?stems=off` (procedural engine) or audition one cue with `?stemcue=<id>`.
+ * The caller passes the composition-admitted engineering query, which is empty
+ * in release builds.
  */
-export function requestedStemsMode(): { mode: "biome" } | { mode: "single"; cueId: string } | { mode: "off" } {
+export function requestedStemsMode(search: string): { mode: "biome" } | { mode: "single"; cueId: string } | { mode: "off" } {
   try {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(search);
     const single = params.get("stemcue");
     if (single) return { mode: "single", cueId: single };
     if (params.get("stems") === "off") return { mode: "off" };
@@ -80,8 +82,8 @@ export async function installBiomeStemBackend(): Promise<boolean> {
   }
 }
 
-/** Installs a single recorded cue (for `?stemcue=<id>` auditioning). */
-export async function installStemCueMusicBackend(cueId: string): Promise<boolean> {
+/** Installs a single recorded cue (for `?stemcue=<id>` auditioning) with an optional admitted Foundry preview query. */
+export async function installStemCueMusicBackend(cueId: string, previewSearch: string): Promise<boolean> {
   try {
     const base = `audio/cues/${cueId}`;
     const url = new URL(`${base}/cue.json`, document.baseURI).href;
@@ -89,7 +91,7 @@ export async function installStemCueMusicBackend(cueId: string): Promise<boolean
       if (!response.ok) throw new Error(`cue ${cueId} not found (${String(response.status)})`);
       return response.json();
     })) as StemCueManifest;
-    const preview = requestedFoundryPreview();
+    const preview = requestedFoundryPreview(previewSearch);
     installPrimaryMusicBackend(
       () => new StemCueMusicBackend(cue, base, preview),
     );

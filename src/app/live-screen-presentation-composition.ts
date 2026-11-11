@@ -5,7 +5,8 @@ import { createLiveMenuScreenAdapters, type MenuScreenServices, type MenuScreenS
 import { createLiveReplayEditor, type ReplayEditorAdapter as ReplayScreenAdapter,
   type ReplayEditorServices as ReplayScreenServices } from "./replay-editor";
 import { createLiveRunScreenAdapters, type RunScreenServices, type RunScreenState } from "./live-run-screen-adapters";
-import { createLiveScreenActionBindings, type ScreenActionBindingPorts } from "./live-screen-action-bindings";
+import { createLiveScreenActionBindings, gateScreenActions, type ScreenActionBindingPorts } from "./live-screen-action-bindings";
+import { screenActionAvailable, type SurfaceAvailability } from "../domain/surface-availability";
 import { createLiveSettingsRenameAdapters, type SettingsRenameAdapters,
   type SettingsRenameServices } from "./live-settings-rename-adapters";
 import type { LegacyAppScreen } from "./legacy-state-controller";
@@ -25,6 +26,8 @@ type ActionBase = Omit<ScreenActionBindingPorts, "chooseDraft" | "rerollDraft" |
   "chooseTier" | "quitRun" | "revive" | "buyShopItem" | "library" | "replay" | "settings">;
 
 export interface LiveScreenPresentationOptions {
+  /** Release builds neither draw, focus nor dispatch controls for unavailable surfaces. */
+  readonly surfaces: SurfaceAvailability;
   readonly renderer: RendererBase;
   readonly replay: ReplayBase;
   readonly library: LibraryBase;
@@ -68,6 +71,9 @@ export function createLiveScreenPresentationComposition(
 ): LiveScreenPresentationComposition {
   const renderer = createLiveScreenRenderers({
     ...options.renderer,
+    // Controls for unavailable surfaces are never enqueued, so they are not drawn and never take focus.
+    enqueue: (button) => { if (screenActionAvailable(options.surfaces, button.semanticAction)) options.renderer.enqueue(button); },
+    available: (action) => screenActionAvailable(options.surfaces, action),
     dispatch: (action) => { dispatch(action); },
     renderPreview: (id, bounds) => {
       if (id.startsWith("creature:")) library.drawCreaturePreview(id.slice("creature:".length), bounds);
@@ -105,13 +111,13 @@ export function createLiveScreenPresentationComposition(
     categoryOrder: library.categoryOrder, specialColor: library.specialColor, abilityBadge: library.abilityBadge,
   });
   const menu = createLiveMenuScreenAdapters(options.menuState, { ...options.menuServices, renderers: renderer });
-  const dispatch = createLiveScreenActionBindings({
+  const dispatch = gateScreenActions(options.surfaces, createLiveScreenActionBindings({
     ...options.actions,
     chooseDraft: run.chooseUpgrade, rerollDraft: run.rerollDraft,
     chooseReserve: run.chooseReserve, chooseTier: run.chooseTierUp,
     quitRun: run.quitRun, revive: run.reviveByAd, buyShopItem: menu.buyShopItem,
     library, replay, settings,
-  });
+  }));
 
   return Object.freeze({
     library, replay, settings, modelRenderers: renderer,

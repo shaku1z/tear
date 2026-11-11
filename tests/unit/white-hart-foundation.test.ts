@@ -19,6 +19,7 @@ import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
 import { createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
 import { createLegacyEnemyPresentation } from "../../src/presentation/enemies/legacy-enemy-renderers";
 import { buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
+import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 import { projectLiveBossObservation } from "../../src/tearbench/live-observation-actors";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { WHITE_HART_ATTACK_IDS } from "../../src/gameplay/entities/enemy-types/white-hart";
@@ -138,7 +139,7 @@ describe("White Hart production foundation", () => {
       startGlyph: "▶", modes: [{ id: "bossonly", label: "Boss Test", blurb: "bosses" }],
       difficulties: [{ id: "normal", label: "Normal", desc: "normal", mods: { score: 1, coin: 1 } }],
       weapons: [{ id: "sword", name: "Sword", blurb: "blade", tags: ["melee"], throwIdentity: "returning" }],
-      bosses: BOSS_ROSTER, livePlatform: false, best: { wave: 0, score: 0 }, formatTime: () => "0:00",
+      bosses: BOSS_ROSTER, surfaces: createSurfaceAvailability("engineering"), best: { wave: 0, score: 0 }, formatTime: () => "0:00",
     });
     expect(setup.bossChoices?.find(({ id }) => id === "white-hart")).toBeUndefined();
   });

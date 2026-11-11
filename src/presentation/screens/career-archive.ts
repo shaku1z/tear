@@ -50,7 +50,10 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
     const y = height - 100;
     if (view.confirming) { line("Delete local recording, unreferenced chunks, history and tags? Protected holds may refuse. Remote copies remain.", y - 14); button("DELETE LOCAL", "confirm-delete", left, y, 180); button("KEEP", "cancel-delete", left + 192, y); }
     else {
-      [["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"], ["PUBLISH", "publish"], ["CHASE BEST", "chase"], ["RACE THIS REFERENCE", "race"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 7, y, (available - 48) / 7, e.present && (e.kind === "capsule" || command === "watch") && (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible)); });
+      // Commands whose surface this build does not offer are omitted and the row closes up.
+      const sources = [["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"], ["PUBLISH", "publish"], ["CHASE BEST", "chase"], ["RACE THIS REFERENCE", "race"]]
+        .filter(([, command]) => context.available?.({ type: "career.control", command: command ?? "" }) !== false), slots = sources.length;
+      sources.forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / slots, y, (available - (slots - 1) * 8) / slots, e.present && (e.kind === "capsule" || command === "watch") && (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible)); });
       [["TAGS", "tags"], [notes.retention === "pinned" ? "UNPIN" : "PIN", "pin"], ["RETENTION", "retention"], ["DELETE LOCAL", "delete"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 4, y + 38, (available - 24) / 4, e.kind === "capsule" || command === "pin" || command === "delete"); });
     }
     line(view.message || "Local annotations are separate from immutable recordings. Other tools retain their own admission and consent gates.", height - 14, true);
