@@ -34,6 +34,7 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
   "plans/TEARBENCH_MASTER_HANDOFF.md",
   "plans/active/ECONOMY_REWORK_PLAN.md",
+  "plans/active/RELEASE_READINESS_PLAN.md",
 ]);
 
 // Compatibility export for callers that need the canonical active-plan list.
