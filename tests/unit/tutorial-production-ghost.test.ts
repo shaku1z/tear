@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { tutorialGoldSourceFingerprint, assertTutorialGoldFresh } from "../../scripts/tutorial-gold-compatibility.mjs";
 import { generateTutorialGold, verifyTutorialGoldReference, type TutorialGoldProof } from "../../src/tearbench/tutorial-gold-generation";
-import { loadTutorialGoldCorpus, packTutorialGoldCorpus, sampleTutorialGold, type TutorialGoldCorpus } from "../../src/gameplay/training/tutorial-gold-reference";
+import { bindTutorialGoldCorpus, loadTutorialGoldCorpus, packTutorialGoldCorpus, sampleTutorialGold, type TutorialGoldBinding, type TutorialGoldCorpus } from "../../src/gameplay/training/tutorial-gold-reference";
 import { describe, expect, it } from "vitest";
 import { createProductionReplayRun, createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { stableVerificationHash } from "../../src/replay/hash";
@@ -71,24 +71,30 @@ describe("verified tutorial gold corpus", () => {
     expect([fresh.rank, fresh.lastTrick]).toEqual(["", ""]);
     const sourceHash = tutorialGoldSourceFingerprint().sourceHash;
     const shippingPath = "src/gameplay/training/tutorial-gold-reference-data.json", proofPath = "tests/fixtures/tutorial-gold-reference-proof.json";
-    let rawCorpus: unknown, expectedCorpus: TutorialGoldCorpus | undefined, proof: TutorialGoldProof;
+    const bindingPath = "src/gameplay/training/tutorial-gold-binding.json";
+    let rawCorpus: unknown, expectedCorpus: TutorialGoldCorpus | undefined, proof: TutorialGoldProof, binding: TutorialGoldBinding;
     if (process.env.TEAR_TUTORIAL_GOLD_WRITE === "1") {
       const generated = generateTutorialGold(sourceHash); expectedCorpus = generated.corpus; rawCorpus = packTutorialGoldCorpus(generated.corpus); proof = generated.proof;
+      binding = generated.binding;
     } else {
       rawCorpus = JSON.parse(readFileSync(shippingPath, "utf8")) as unknown;
       proof = JSON.parse(readFileSync(proofPath, "utf8")) as TutorialGoldProof;
+      binding = JSON.parse(readFileSync(bindingPath, "utf8")) as TutorialGoldBinding;
     }
     const loadStarted = performance.now();
-    const loaded = loadTutorialGoldCorpus(rawCorpus, sourceHash);
+    const loaded = loadTutorialGoldCorpus(rawCorpus, binding, sourceHash);
     expect(loaded.status).toBe("ready");
     if (loaded.status !== "ready") throw new Error("Gold shipping decode refused");
     const corpus = loaded.corpus;
     const loadMilliseconds = performance.now() - loadStarted;
     if (expectedCorpus !== undefined) expect(corpus).toEqual(expectedCorpus);
-    const roundTrip = loadTutorialGoldCorpus(packTutorialGoldCorpus(corpus), sourceHash);
+    expect(bindTutorialGoldCorpus(corpus, sourceHash)).toEqual(binding);
+    const roundTrip = loadTutorialGoldCorpus(packTutorialGoldCorpus(corpus), binding, sourceHash);
     if (roundTrip.status !== "ready") throw new Error("Packed gold round trip refused");
     expect(roundTrip.corpus).toEqual(corpus);
-    expect(loadTutorialGoldCorpus(rawCorpus, "0".repeat(64))).toEqual({ status: "unavailable", reason: "incompatible" });
+    const incompatible = { status: "unavailable", reason: "incompatible" };
+    expect(loadTutorialGoldCorpus(rawCorpus, binding, "0".repeat(64))).toEqual(incompatible);
+    expect(loadTutorialGoldCorpus(rawCorpus, { ...binding, corpusContentHash: "0".repeat(16) }, sourceHash)).toEqual(incompatible);
     expect(corpus.references).toHaveLength(14);
     expect(corpus.compatibility.configurationHash).toBe(stableVerificationHash(createProductionReplayWorld({ seed: "gold-baseline", mode: "tutorial", weaponId: "sword", difficulty: "normal" }).configuration.value));
     for (const reference of corpus.references) {
@@ -105,7 +111,9 @@ describe("verified tutorial gold corpus", () => {
     const field = corpus.references.find((reference) => reference.lessonId === "field-test" && reference.curriculumVersion === 2);
     expect(new Set(field?.frames.map((frame) => frame.encounter))).toEqual(new Set(["charger", "breath", "mixed"]));
     if (process.env.TEAR_TUTORIAL_GOLD_WRITE === "1") {
+      // A source-only change rewrites just the binding; the corpus and proof change only with the gold output.
       writeFileSync(shippingPath, JSON.stringify(rawCorpus) + "\n"); writeFileSync(proofPath, JSON.stringify(proof) + "\n");
+      writeFileSync(bindingPath, JSON.stringify(binding, null, 2) + "\n");
     }
     expect(assertTutorialGoldFresh()).toBe(sourceHash);
     process.stdout.write(`Gold packed ${String(Buffer.byteLength(JSON.stringify(rawCorpus)))} bytes, decoded ${String(Buffer.byteLength(JSON.stringify(corpus)))} bytes; proof ${String(Buffer.byteLength(JSON.stringify(proof)))} bytes; detached hash/validation/freeze load ${String(loadMilliseconds)}ms; all 14 replayed\n`);

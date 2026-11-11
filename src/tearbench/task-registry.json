@@ -598,6 +598,71 @@
       "intentionalReplica": "none"
     },
     {
+      "taskId": "static.check-code-budget",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-code-budget.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:code-budget"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-code-budget",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/code-budget.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:code-budget"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-tutorial-gold-fingerprint",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/tutorial-gold-fingerprint.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:tutorial-gold-fingerprint"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
       "taskId": "unit.test-preservation-corpus",
       "version": 1,
       "runner": {
@@ -3799,6 +3864,9 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -3886,6 +3954,9 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -3971,6 +4042,9 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -4036,6 +4110,7 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit"
@@ -4071,6 +4146,9 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -4156,6 +4234,9 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -4215,7 +4296,8 @@
       "static.requirements-check",
       "static.typecheck",
       "static.lint",
-      "static.check-architecture"
+      "static.check-architecture",
+      "static.check-code-budget"
     ],
     "endurance": [
       "endurance.test-endurance",

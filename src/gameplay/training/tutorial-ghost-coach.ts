@@ -1,5 +1,6 @@
 import { TutorialFailureCoach, parseTutorialFailures, type TutorialAttemptFact, type TutorialFailureCheckpoint, type TutorialFailureView } from "./tutorial-failure-coach";
 import shipping from "./tutorial-gold-reference-data.json";
+import binding from "./tutorial-gold-binding.json";
 import { loadTutorialGoldCorpus, sampleTutorialGold, tutorialGoldContactEdges, tutorialGoldReference, type TutorialGoldCorpus, type TutorialGoldFrame, type TutorialGoldLessonId, type TutorialGoldReference } from "./tutorial-gold-reference";
 import type { GameAction } from "../../input/game-action";
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
@@ -8,8 +9,9 @@ declare const __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: string;
 let cached: TutorialGoldCorpus | null | undefined;
 export function shippingTutorialGold(): TutorialGoldCorpus | undefined {
   if (cached === undefined) {
-    const expected = typeof __TEAR_TUTORIAL_GOLD_COMPATIBILITY__ === "undefined" ? shipping.compatibility.sourceHash : __TEAR_TUTORIAL_GOLD_COMPATIBILITY__;
-    const loaded = loadTutorialGoldCorpus(shipping, expected); cached = loaded.status === "ready" ? loaded.corpus : null;
+    const expected = typeof __TEAR_TUTORIAL_GOLD_COMPATIBILITY__ === "undefined" ? binding.sourceHash : __TEAR_TUTORIAL_GOLD_COMPATIBILITY__;
+    const loaded = loadTutorialGoldCorpus(shipping, binding, expected);
+    cached = loaded.status === "ready" ? loaded.corpus : null;
   }
   return cached ?? undefined;
 }

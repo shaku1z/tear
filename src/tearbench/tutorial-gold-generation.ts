@@ -4,7 +4,8 @@ import { CONFIG } from "../config/game-config";
 import { stableVerificationHash } from "../replay/hash";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { TUTORIAL_LESSONS, TUTORIAL_LESSON_IDS } from "../gameplay/training/tutorial-controller";
-import { TUTORIAL_GOLD_LESSONS, tutorialGoldContactEdges, projectTutorialGoldFrame, type TutorialGoldCorpus, type TutorialGoldReference, type TutorialGoldFrame, type TutorialGoldFrameSource } from "../gameplay/training/tutorial-gold-reference";
+import { TUTORIAL_GOLD_LESSONS, bindTutorialGoldCorpus, tutorialGoldContactEdges, projectTutorialGoldFrame, type TutorialGoldBinding, type TutorialGoldCorpus,
+  type TutorialGoldReference, type TutorialGoldFrame, type TutorialGoldFrameSource } from "../gameplay/training/tutorial-gold-reference";
 import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint } from "./production-replay-composition";
 import { applyWeapon } from "../gameplay/weapons";
 import { driveTutorialCourse, type TutorialDriverObservation, type TutorialDriverPort } from "./tutorial-course-driver";
@@ -139,13 +140,15 @@ function course(legacy: boolean) {
   if (!result.reachedReady || references.length !== (legacy ? 1 : 13)) throw new Error("Gold driver failed complete required course coverage");
   return { references, proofs };
 }
-export function generateTutorialGold(sourceHash: string): { corpus: TutorialGoldCorpus; proof: TutorialGoldProof } {
+export function generateTutorialGold(sourceHash: string): { corpus: TutorialGoldCorpus; proof: TutorialGoldProof; binding: TutorialGoldBinding } {
   const current = course(false), legacy = course(true);
   const baseline = structuredClone(CONFIG); applyWeapon(baseline, "sword");
-  const compatibility: TutorialGoldCorpus["compatibility"] = { sourceHash, curriculumVersion: 2, simulationHz: 120, weaponId: "sword", difficulty: "normal",
+  const compatibility: TutorialGoldCorpus["compatibility"] = { curriculumVersion: 2, simulationHz: 120, weaponId: "sword", difficulty: "normal",
     configurationHash: stableVerificationHash(baseline), definitionHash: stableVerificationHash(TUTORIAL_LESSONS.map((lesson, index) => ({ id: TUTORIAL_LESSON_IDS[index], title: lesson.title, arena: lesson.arena ?? "runway", marks: lesson.entryMarks ?? [] }))) };
   const content = { format: "tear-tutorial-gold.v1" as const, schemaVersion: 1 as const, compatibility, references: [...current.references, ...legacy.references] };
-  return { corpus: { ...content, contentHash: stableVerificationHash(content) }, proof: { format: "tear-tutorial-gold-proof.v1", compatibility, references: [...current.proofs, ...legacy.proofs] } };
+  const corpus = { ...content, contentHash: stableVerificationHash(content) };
+  const proof: TutorialGoldProof = { format: "tear-tutorial-gold-proof.v1", compatibility, references: [...current.proofs, ...legacy.proofs] };
+  return { corpus, proof, binding: bindTutorialGoldCorpus(corpus, sourceHash) };
 }
 export function verifyTutorialGoldReference(reference: TutorialGoldReference, proof: TutorialGoldProofReference): void {
   if (reference.proofHash !== stableVerificationHash(proof) || stableVerificationHash(reference.initialInput) !== stableVerificationHash(proof.input)) throw new Error("Gold proof hash mismatch");

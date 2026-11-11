@@ -93,7 +93,10 @@ while iterating; `pnpm check:quick` for cheap static confidence;
 `pnpm check:functional` is what CI requires on every pull request;
 `pnpm check` is the full release gate and runs once for a release candidate
 ([docs/RELEASE_AUTHORITY.md](docs/RELEASE_AUTHORITY.md)). Never weaken a gate to
-make it pass. Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
+make it pass. `pnpm check:code-budget` ratchets file size, line length, packed lines
+and function size (see docs/ARCHITECTURE.md); never raise its baseline to pass.
+`pnpm test:determinism` must stay green for any refactor that claims no behaviour change.
+Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 `pnpm check:terminology`. Use the product names in
 `config/terminology-registry.json` in anything players or docs see.
 
@@ -128,12 +131,17 @@ make it pass. Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
   (Playwright's `path`, `--outFile`, `tar -f`) or use the Bash tool.
 - **Tutorial reference fingerprint.** Every build runs
   `assertTutorialGoldFresh()` from `scripts/tutorial-gold-compatibility.mjs`.
-  It hashes the tutorial roots listed there (player, blade, combat phases,
-  tutorial runtime and controller, and others) and everything they import. If
-  you edit any of those files, builds fail with "Tutorial gold references are
-  stale". Regenerate the data, then commit both rewritten files
-  (`src/gameplay/training/tutorial-gold-reference-data.json` and
-  `tests/fixtures/tutorial-gold-reference-proof.json`) with your change:
+  It hashes the code of the tutorial roots listed there (player, blade, combat
+  phases, tutorial runtime and controller, and others) and of every module they
+  import for values. Comments, whitespace, line breaks and import paths do not
+  count, so moving, renaming or reformatting those files is safe; changing their
+  code makes builds fail with "Tutorial gold references are stale". Moving a
+  root file also needs its new path in `TUTORIAL_GOLD_ROOTS`. Regenerate, then
+  commit every file it rewrites: always
+  `src/gameplay/training/tutorial-gold-binding.json`, and also
+  `src/gameplay/training/tutorial-gold-reference-data.json` and
+  `tests/fixtures/tutorial-gold-reference-proof.json` when the gold output
+  itself changed:
   - PowerShell: `$env:TEAR_TUTORIAL_GOLD_WRITE = "1"; pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts; Remove-Item Env:TEAR_TUTORIAL_GOLD_WRITE`
   - Bash: `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`
 - **`node_modules` junctions.** Some older worktrees use a Windows junction for

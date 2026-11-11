@@ -5,9 +5,16 @@ import { stableVerificationHash } from "../../replay/hash";
 export const TUTORIAL_GOLD_LESSONS = ["move", "jump", "dash", "cut", "launch", "juggle", "slam", "power-slam", "updraft", "throw", "parry", "read-the-charge", "field-test"] as const;
 export type TutorialGoldLessonId = typeof TUTORIAL_GOLD_LESSONS[number];
 export interface TutorialGoldCompatibility {
-  readonly sourceHash: string; readonly curriculumVersion: 2; readonly simulationHz: 120;
+  readonly curriculumVersion: 2; readonly simulationHz: 120;
   readonly weaponId: "sword"; readonly difficulty: "normal";
   readonly configurationHash: string; readonly definitionHash: string;
+}
+export const TUTORIAL_GOLD_BINDING_FORMAT = "tear-tutorial-gold-binding.v1";
+/** Binds a corpus to the source fingerprint it was generated from; a source-only refresh rewrites just this record. */
+export interface TutorialGoldBinding {
+  readonly format: typeof TUTORIAL_GOLD_BINDING_FORMAT;
+  readonly sourceHash: string;
+  readonly corpusContentHash: string;
 }
 export interface TutorialGoldBody { readonly x: number; readonly y: number; readonly vx: number; readonly vy: number; readonly facing: number; readonly grounded: boolean; readonly dashing: boolean }
 export interface TutorialGoldBlade { readonly x: number; readonly y: number; readonly tipX: number; readonly tipY: number;
@@ -100,16 +107,26 @@ function decodedCorpus(value: object): TutorialGoldCorpus {
     frames: tupleList(reference.frames, TUTORIAL_GOLD_MAX_TICKS + 1).map(readFrame),
   })) };
 }
+export function bindTutorialGoldCorpus(corpus: TutorialGoldCorpus, sourceHash: string): TutorialGoldBinding {
+  return { format: TUTORIAL_GOLD_BINDING_FORMAT, sourceHash, corpusContentHash: corpus.contentHash };
+}
+function readBinding(value: unknown): TutorialGoldBinding | undefined {
+  const binding = value as Partial<TutorialGoldBinding> | null;
+  if (binding?.format !== TUTORIAL_GOLD_BINDING_FORMAT) return undefined;
+  if (typeof binding.sourceHash !== "string" || typeof binding.corpusContentHash !== "string") return undefined;
+  return { format: binding.format, sourceHash: binding.sourceHash, corpusContentHash: binding.corpusContentHash };
+}
 /** Shipping data is detached, finite JSON; physics execution remains in the production generator/verifier. */
-export function loadTutorialGoldCorpus(value: unknown, expectedSourceHash: string):
+export function loadTutorialGoldCorpus(value: unknown, binding: unknown, expectedSourceHash: string):
   Readonly<{ status: "ready"; corpus: TutorialGoldCorpus }> | Readonly<{ status: "unavailable"; reason: "incompatible" | "invalid" }> {
   try {
+    const bound = readBinding(binding);
     const header = value as Partial<Record<"format" | "schemaVersion" | "references" | "compatibility", unknown>> | null;
     const compatibility = header?.compatibility as Partial<Record<keyof TutorialGoldCompatibility, unknown>> | undefined;
     if (header?.format !== "tear-tutorial-gold.v1" || header.schemaVersion !== 1 || !Array.isArray(header.references)
       || header.references.length !== 14 || compatibility?.simulationHz !== 120 || compatibility.curriculumVersion !== 2
       || compatibility.weaponId !== "sword" || compatibility.difficulty !== "normal") throw new Error("Invalid gold corpus");
-    if (!/^[a-f0-9]{64}$/.test(expectedSourceHash) || compatibility.sourceHash !== expectedSourceHash) return { status: "unavailable", reason: "incompatible" };
+    if (!/^[a-f0-9]{64}$/.test(expectedSourceHash) || bound?.sourceHash !== expectedSourceHash) return { status: "unavailable", reason: "incompatible" };
     const corpus = decodedCorpus(value as object);
     const ids = new Set<string>();
     for (const reference of corpus.references) {
@@ -131,6 +148,7 @@ export function loadTutorialGoldCorpus(value: unknown, expectedSourceHash: strin
     if (TUTORIAL_GOLD_LESSONS.some((id) => !ids.has(`${id}:2`)) || !ids.has("field-test:1")) throw new Error("Missing required gold reference");
     const { contentHash, ...content } = corpus;
     if (stableVerificationHash(content) !== contentHash) throw new Error("Gold corpus hash mismatch");
+    if (bound.corpusContentHash !== contentHash) return { status: "unavailable", reason: "incompatible" };
     return { status: "ready", corpus: freeze(JSON.parse(JSON.stringify(corpus)) as TutorialGoldCorpus) };
   } catch { return { status: "unavailable", reason: "invalid" }; }
 }
