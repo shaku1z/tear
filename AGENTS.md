@@ -142,6 +142,10 @@ make it pass. Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
   link alone first (`cmd /c rmdir <path>\node_modules`), then the worktree.
 - **One dev server per port.** Plain `pnpm dev` moves to 5174 and up when 5173
   is busy, possibly serving a different worktree than you think; check its URL.
+- **`git rebase` stops half-way.** HEAD is detached during a rebase, and the
+  commit guard refuses to commit on a detached HEAD. Abort it
+  (`git rebase --abort`) and bring commits across with `git cherry-pick` onto
+  the checked-out branch instead.
 
 ## Finishing
 
