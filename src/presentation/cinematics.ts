@@ -28,8 +28,13 @@ export interface CinematicPresentationPolicy {
 }
 
 export type CinematicRendererDirector = InstanceType<typeof CinematicTimeline.Director> & Readonly<{
-  draw(context: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion?: boolean): void;
+  draw(context: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion?: boolean,
+    prompt?: CinematicPromptTransform): void;
 }>;
+
+/** Rewrites an authored prompt for the active input device (see cinematic-prompts). */
+export type CinematicPromptTransform = (text: string) => string;
+const authoredPrompt: CinematicPromptTransform = (text) => text;
 
 export interface CinematicPresentationRuntime {
   readonly Director: new (
@@ -40,8 +45,9 @@ export interface CinematicPresentationRuntime {
 /** Creates the Canvas renderer class for one world's live presentation policy. */
 export function createCinematics(policy: CinematicPresentationPolicy): CinematicPresentationRuntime {
   class Director extends CinematicTimeline.Director {
-    draw(ctx: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion = false): void {
-      drawCinematicDirector(this, policy, ctx, ui, screen, reducedMotion);
+    draw(ctx: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion = false,
+      prompt: CinematicPromptTransform = authoredPrompt): void {
+      drawCinematicDirector(this, policy, ctx, ui, screen, reducedMotion, prompt);
     }
   }
 
@@ -50,13 +56,14 @@ export function createCinematics(policy: CinematicPresentationPolicy): Cinematic
 
 export function drawCinematicDirector(director: Readonly<Pick<InstanceType<typeof CinematicTimeline.Director>,
   "script" | "beat" | "skipping" | "elapsed" | "progress" | "brief" | "totalElapsed" | "revealProgress" | "fullyVisibleElapsed" | "latchArmed" | "latchHoldSeconds" | "autoImminent">>,
-  policy: CinematicPresentationPolicy, ctx: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion = false): void {
+  policy: CinematicPresentationPolicy, ctx: CanvasRenderingContext2D, ui: CinematicUiPort, screen: ScreenRect, reducedMotion = false,
+  prompt: CinematicPromptTransform = authoredPrompt): void {
       const script = director.script;
       if (!script) return;
       const b = director.beat;
       if (script.kind === "chapter") {
         const S = script, mo = ui.t.motion;
-        const hint = director.skipping ? (S.skipHint ?? "SKIPPING CHAPTER") : (S.hint ?? "TAP TO REVEAL  ·  HOLD TO SKIP");
+        const hint = director.skipping ? (S.skipHint ?? "SKIPPING CHAPTER") : prompt(S.hint ?? "TAP TO REVEAL  ·  HOLD TO SKIP");
         if (b?.view === "page") {
           // enter fades the whole composition in; the EXIT beat holds the header
           // and chapter label while only the lore fragment softens away.
@@ -84,12 +91,12 @@ export function drawCinematicDirector(director: Readonly<Pick<InstanceType<typeo
           const inK = Math.min(1, director.elapsed / 0.26), art = { color: b.color ?? script.color, composition: "left", wash: "dark" };
           ui.chapterHeader(ctx, Object.assign({ label: b.label, title: b.title, amount: inK }, art));
           ui.loreFragment(ctx, Object.assign({ text: b.text, reveal: director.revealProgress, amount: inK }, art));
-          ui.chapterPrompt(ctx, Object.assign({ text: b.hint ?? script.hint, amount: inK }, art));
+          ui.chapterPrompt(ctx, Object.assign({ text: prompt(b.hint ?? script.hint ?? ""), amount: inK }, art));
         }
         else if (b?.view === "reward") ui.finalReward(ctx, { label: b.label, title: b.title, sigil: b.sigil,
           reward: b.reward, detail: b.detail, color: b.color ?? script.color,
-          amount: Math.min(1, director.elapsed / ui.t.motion.finalRewardIn), hint: b.hint ?? script.hint });
-        else if (b?.hint) ui.cinematicPrompt(ctx, { text: b.hint, amount: Math.min(1, director.elapsed / 0.22),
+          amount: Math.min(1, director.elapsed / ui.t.motion.finalRewardIn), hint: prompt(b.hint ?? script.hint ?? "") });
+        else if (b?.hint) ui.cinematicPrompt(ctx, { text: prompt(b.hint), amount: Math.min(1, director.elapsed / 0.22),
           color: b.color ?? script.color });
         return;
       }
@@ -107,6 +114,6 @@ export function drawCinematicDirector(director: Readonly<Pick<InstanceType<typeo
         // choreography owns the center; other scripts keep the dialogue card.
         if (script.kind === "ritual") ui.bossDeclaration(ctx, Object.assign({ anchor: b.anchor, maxWidth: b.maxWidth }, shared));
         else ui.dialogueCard(ctx, Object.assign({ hint: director.skipping ? (script.skipHint ?? "SKIPPING — GAMEPLAY OUTCOME PRESERVED") :
-          (script.hint ?? "TAP TO ADVANCE  ·  HOLD TO SKIP") }, shared));
+          prompt(script.hint ?? "TAP TO ADVANCE  ·  HOLD TO SKIP") }, shared));
       }
 }

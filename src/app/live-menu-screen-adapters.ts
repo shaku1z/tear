@@ -3,7 +3,7 @@ import type { createLiveScreenRenderers } from "../presentation/screens/live-scr
 import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { createLiveMenuScreenAdaptersRuntime } from "./live-menu-screen-adapters-runtime";
 
-type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "META" |
+type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "Input" | "META" |
   "PROFILE" | "SFX" | "SHOP" | "shopPurchaseProgressPersistence" | "surfaces" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type BestScore = Readonly<{ wave: number; score: number; time?: number }>;

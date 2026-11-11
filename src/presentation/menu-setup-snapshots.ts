@@ -1,6 +1,7 @@
 import { nowPlayingLabel, nowPlayingDetail } from "../audio/music/now-playing";
 import type { MenuScreenView, SetupScreenView } from "./screens/contracts";
 import type { SurfaceAvailability } from "../domain/surface-availability";
+import { FIRST_RUN_PLAY_LABEL, FIRST_RUN_SETUP_GUIDANCE } from "../gameplay/progression/first-run-guidance";
 
 /** `debug` is the runtime projection of an engineering-surface mode (Boss Test, Enemy Test). */
 export interface MenuModeSource { readonly id: string; readonly label: string; readonly blurb: string; readonly debug?: boolean }
@@ -20,6 +21,8 @@ export interface BountyChoiceSource { readonly label: string; readonly detail: s
 
 export function buildMenuSnapshot(input: {
   readonly tutorialDone?: number;
+  /** The profile has never finished the tutorial and has no other history (see first-run-guidance). */
+  readonly firstRun?: boolean;
   readonly username: string; readonly campaignEmblem: boolean; readonly signedIn: boolean;
   readonly coins: number; readonly shards: number; readonly unlocked: number;
   readonly selectedMode: string; readonly selectedDifficulty: string;
@@ -33,6 +36,7 @@ export function buildMenuSnapshot(input: {
     signedIn: input.signedIn, coins: input.coins, shards: input.shards, unlocked: input.unlocked,
     modeLabel: input.modes.find((entry) => entry.id === input.selectedMode)?.label ?? "Endless",
     difficultyLabel: input.difficulties.find((entry) => entry.id === input.selectedDifficulty)?.label ?? "Normal",
+    ...(input.firstRun === true && input.selectedMode === "tutorial" ? { playSub: FIRST_RUN_PLAY_LABEL } : {}),
     biome: input.biome, pendingFinale: input.pendingFinale,
     ...(engineeringRoutes ? { engineeringRoutes: true } : {}) });
 }
@@ -45,6 +49,7 @@ const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>
 
 export function buildSetupSnapshot(input: {
   readonly tutorialDone?: number;
+  readonly firstRun?: boolean;
   readonly selectedMode: string; readonly selectedDifficulty: string; readonly selectedWeapon: string; readonly selectedBoss: string;
   readonly startGlyph: string;
   readonly modes: readonly MenuModeSource[]; readonly difficulties: readonly MenuDifficultySource[]; readonly weapons: readonly WeaponChoiceSource[];
@@ -76,6 +81,7 @@ export function buildSetupSnapshot(input: {
           (entry.weaknesses?.length ? `     WEAK: ${entry.weaknesses.join(" / ")}` : ""),
       }) })),
     showDifficulty, startGlyph: input.startGlyph,
+    ...(input.firstRun === true && input.selectedMode === "tutorial" ? { guidance: FIRST_RUN_SETUP_GUIDANCE } : {}),
     startSummary: ((mode?.label ?? "") + " · " + (showDifficulty && difficulty !== undefined ? difficulty.label + " · " : "") + (weapon?.name ?? "")).toUpperCase(),
     bestSummary: input.best.wave || input.best.score ? "YOUR BEST · wave " + String(input.best.wave) + " · " + String(input.best.score) + " pts · " + input.formatTime(input.best.time ?? 0)
       : "YOUR BEST · no record on this board yet",

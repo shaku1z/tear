@@ -6,6 +6,7 @@ import {
   type LiveWorldMirrors,
 } from "./live-world-composition";
 import { createLiveWorldSessionState, type LiveWorldSessionState } from "./live-world-session-state";
+import { defaultRunModeFor, firstRunProfileFacts } from "../gameplay/progression/first-run-guidance";
 
 export interface LiveProductionWorldOptions {
   readonly dependencies: GameRuntimeDependencies;
@@ -29,7 +30,8 @@ export function createLiveProductionWorld(options: LiveProductionWorldOptions): 
   if (options.dependencies.CONFIG !== options.configuration.value) {
     throw new Error("Live production world requires dependencies.CONFIG to be the world configuration value");
   }
-  const session = createLiveWorldSessionState();
+  const profile = options.dependencies.PROFILE;
+  const session = createLiveWorldSessionState(() => defaultRunModeFor(firstRunProfileFacts(profile)));
   const world = createLiveWorldComposition({
     dependencies: options.dependencies, configuration: options.configuration, session,
     worldId: options.worldId ?? "live-production",

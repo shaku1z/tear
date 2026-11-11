@@ -5,8 +5,10 @@ import type { ScreenRectangle } from "../presentation/render-pipeline";
 import type { WorldCamera } from "../presentation/world/legacy-world-frame";
 import type { CinematicUiPort } from "../presentation/cinematics";
 import type { ButtonLayerUiPort, CanvasUiButton } from "../presentation/screens/button-layer";
-import type { InteractiveUiButton, UiRuntimeInput } from "./ui-runtime-controller";
+import { createUiConfirmArming, type InteractiveUiButton, type UiRuntimeInput } from "./ui-runtime-controller";
 import { shouldDrawCanvasCursor } from "../presentation/cursor-contract";
+import { domChromeVisibility } from "../presentation/dom-chrome-policy";
+import { cinematicPromptForDevice } from "../presentation/cinematic-prompts";
 import { createLivePresentationHost, type LivePresentationHost } from "./live-presentation-host";
 
 export interface LivePresentationSurface {
@@ -35,7 +37,8 @@ interface CinematicPresentationState {
   readonly active: boolean;
   readonly hideHud: boolean;
   readonly playerMode?: string;
-  draw(context: CanvasRenderingContext2D, ui: PresentationUi, rectangle: ScreenRectangle, reducedMotion: boolean): void;
+  draw(context: CanvasRenderingContext2D, ui: PresentationUi, rectangle: ScreenRectangle, reducedMotion: boolean,
+    prompt?: (text: string) => string): void;
 }
 interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
   ink: string;
@@ -106,9 +109,14 @@ export interface LivePresentationFrameServices<Screen extends string,
   readonly capturePolicy: () => LiveCaptureLayerPolicy;
   readonly touchActive: () => boolean;
   readonly controller: () => Readonly<{ active: boolean; toastSeconds: number; toastText: string }> | null;
+  /** Controller confirm glyph in the connected pad's family (A / ✕). */
+  readonly confirmGlyph: () => string;
   readonly pointerLocked: () => boolean;
   readonly lockHint: HTMLElement | null;
   readonly inputHint: HTMLElement | null;
+  readonly fullscreenButton: HTMLElement | null;
+  /** Current run age and the profile's completed runs, for the control legend. */
+  readonly controlHintContext: () => Readonly<{ runSeconds: number; completedRuns: number }>;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
   readonly ease: (amount: number) => number;
   readonly blendColor: (from: string, to: string, amount: number) => string;
@@ -130,6 +138,7 @@ export interface LivePresentationFrameServices<Screen extends string,
   readonly playInterfaceSound: () => void;
   readonly chooseUpgrade: (index: number) => void;
   readonly chooseReserve: (index: number) => void;
+  readonly chooseTier: (index: number) => void;
   readonly rerollDraft: () => void;
   readonly hoverAnimation: Record<string, number>;
   readonly trickColor: (multiplier: number) => string;
@@ -142,6 +151,7 @@ export function createLivePresentationFrameHost<Screen extends string,
   services: LivePresentationFrameServices<Screen, Stage>,
 ): LivePresentationHost {
   const { context, ui } = services;
+  const confirmArming = createUiConfirmArming();
   return createLivePresentationHost<Screen>({
     dimensions: { width: services.width, height: services.height, overscan: services.overscan },
     framePorts: (host) => ({
@@ -174,7 +184,8 @@ export function createLivePresentationFrameHost<Screen extends string,
             alpha: Math.min(1, (1 - progress) * 6, progress * 5) });
         }
         if (services.capturePolicy().ui === "include" && state.bossIntroActive() && state.screen() === "playing") services.drawBossIntro();
-        if (services.capturePolicy().ui === "include" && services.cinema.active) services.cinema.draw(context, ui, host.screenRectangle(), services.reducedMotion());
+        if (services.capturePolicy().ui === "include" && services.cinema.active) services.cinema.draw(context, ui, host.screenRectangle(), services.reducedMotion(),
+          (text) => cinematicPromptForDevice(text, services.input.mode, services.confirmGlyph()));
         if (services.capturePolicy().ui === "include" && services.touchActive() && state.screen() === "playing" &&
           (!services.cinema.active || services.cinema.playerMode === "finalBlade") && !services.controller()?.active) {
           services.drawTouchControls();
@@ -216,7 +227,8 @@ export function createLivePresentationFrameHost<Screen extends string,
       drawButtons: () => { if (services.capturePolicy().ui === "include") host.drawButtons(); },
       drawPostLayers: () => { if (services.capturePolicy().ui === "include") { services.wipe.draw(state.deltaSeconds()); services.drawAchievementToast(state.deltaSeconds()); } },
       drawCursor: () => { ui.cursor(context, services.input.mouseX, services.input.mouseY); },
-      showCanvasCursor: () => services.capturePolicy().ui === "include" && shouldDrawCanvasCursor(state.screen()),
+      showCanvasCursor: () => services.capturePolicy().ui === "include" && shouldDrawCanvasCursor(state.screen(), services.input.mode)
+        && services.input.pointerInside !== false,
       drawControllerToast: () => {
         if (services.capturePolicy().ui !== "include") return;
         const controller = services.controller();
@@ -228,16 +240,23 @@ export function createLivePresentationFrameHost<Screen extends string,
       drawRotationGate: () => { if (services.capturePolicy().ui === "include") ui.rotateGate(context, host.screenRectangle(), state.timeSeconds()); },
       firstEnabledButton: host.firstEnabledButton, setFocus: state.setFocus,
       updateDomHints: (screen) => {
-        if (services.lockHint !== null) services.lockHint.style.display = services.capturePolicy().pointerLock === "include" && screen === "playing" &&
-          !services.pointerLocked() && !services.touchActive() ? "block" : "none";
-        if (services.inputHint !== null) services.inputHint.style.display = services.capturePolicy().ui === "include" && screen === "playing" &&
-          !services.touchActive() ? "block" : "none";
+        const capture = services.capturePolicy(), run = services.controlHintContext();
+        const visible = domChromeVisibility({ screen, uiIncluded: capture.ui === "include",
+          pointerLockIncluded: capture.pointerLock === "include", touch: services.touchActive(),
+          inputMode: services.input.mode, pointerLocked: services.pointerLocked(),
+          runSeconds: run.runSeconds, completedRuns: run.completedRuns,
+          presentationBusy: services.cinema.active || state.bossIntroActive() });
+        if (services.lockHint !== null) services.lockHint.style.display = visible.lockHint ? "block" : "none";
+        if (services.inputHint !== null) services.inputHint.style.display = visible.controlHint ? "block" : "none";
+        // "" hands display back to the stylesheet, which also hides it on coarse pointers.
+        if (services.fullscreenButton !== null) services.fullscreenButton.style.display = visible.fullscreen ? "" : "none";
       },
     }),
     uiPorts: () => ({ screen: state.screen, buttons: state.controls, focus: state.focus, setFocus: state.setFocus,
       scroll: state.scroll, setScroll: state.setScroll, input: services.input,
+      now: state.timeSeconds, arming: confirmArming,
       playInterfaceSound: services.playInterfaceSound, chooseUpgrade: services.chooseUpgrade,
-      chooseReserve: services.chooseReserve, rerollDraft: services.rerollDraft }),
+      chooseReserve: services.chooseReserve, chooseTier: services.chooseTier, rerollDraft: services.rerollDraft }),
     buttonLayer: () => ({ context, buttons: state.controls(), focus: state.focus(),
       pointerX: services.input.mouseX, pointerY: services.input.mouseY, deltaSeconds: state.deltaSeconds(),
       enterSeconds: state.enterSeconds(), hoverAnimation: services.hoverAnimation, ui,

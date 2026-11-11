@@ -97,6 +97,10 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     checkAchievements: () => { requireStyle().check(); },
     resetStageAchievements: () => { requireStyle().achievements.stageReset(); },
     rememberBiome(name) { if (options.persistentEffects?.() !== false) d.biomeProgressPersistence.remember(name); requireStyle().check(); },
+    biomesEnteredBeforeSession: () => {
+      const memory = d.PROFILE.data.stats._biomes;
+      return typeof memory === "object" ? Object.keys(memory) : [];
+    },
     cinematicPreference: options.applySettingsCinematicPreference,
     addFlash: (amount): FinaleMaximumFeelReceipt => {
       const before = options.getFlash(); options.setFlash(Math.max(before, amount));

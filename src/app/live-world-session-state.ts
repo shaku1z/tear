@@ -29,8 +29,14 @@ export interface LiveWorldSessionState extends LiveWorldSessionPort {
   takeRunSeed(): number | null;
 }
 
-export function createLiveWorldSessionState(): LiveWorldSessionState {
-  let mode: RunMode = "endless";
+/**
+ * `defaultMode` supplies the mode shown until the player picks one; it is read
+ * live so a profile that loads (or finishes the tutorial) after the session was
+ * created still gets the right first-run default. An explicit pick always wins.
+ */
+export function createLiveWorldSessionState(defaultMode: () => RunMode = () => "endless"): LiveWorldSessionState {
+  let chosenMode: RunMode | null = null;
+  const currentMode = (): RunMode => chosenMode ?? defaultMode();
   let difficulty: RunDifficulty = "normal";
   let weapon = "sword";
   let boss = "shuffle";
@@ -40,15 +46,15 @@ export function createLiveWorldSessionState(): LiveWorldSessionState {
   let winSeconds = 0;
   let runSeed: number | null = null;
   return Object.freeze({
-    selectedMode: () => mode,
-    setSelectedMode: (value) => { mode = value; },
+    selectedMode: currentMode,
+    setSelectedMode: (value) => { chosenMode = value; },
     selectedDifficulty: () => difficulty,
     setSelectedDifficulty: (value) => { difficulty = value; },
     selectedWeapon: () => weapon,
     setSelectedWeapon: (value) => { weapon = value; },
     selectedBoss: () => boss,
     setSelectedBoss: (value) => { boss = value; },
-    selection: () => Object.freeze({ mode, difficulty, weapon, boss }),
+    selection: () => Object.freeze({ mode: currentMode(), difficulty, weapon, boss }),
     setRunSeed: (value) => { runSeed = value; },
     takeRunSeed: () => { const value = runSeed; runSeed = null; return value; },
     outcome: () => outcome,

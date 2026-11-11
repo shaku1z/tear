@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { createLivePresentationHost } from "../../src/app/live-presentation-host";
+import { createUiConfirmArming } from "../../src/app/ui-runtime-controller";
 import * as hostModule from "../../src/app/live-presentation-host";
 import * as compositionModule from "../../src/app/live-presentation-composition";
 import * as screenModule from "../../src/app/live-screen-presentation-composition";
@@ -108,7 +109,7 @@ describe("live presentation host", () => {
       pressed: new Set<string>(), padBack: false, touchActive: () => false,
       takeUIScroll: () => ({ x: 0, y: 0 }), menuLeft: () => false, menuRight: () => false,
       menuUp: () => false, menuDown: () => false, menuPrev: () => false, menuNext: () => false,
-      confirmPressed: () => false, takeClick: () => null,
+      confirmPressed: () => false, confirmHeld: () => false, backPressed: () => false, takeClick: () => null,
     };
     const host = createLivePresentationHost({
       dimensions: { width: 80, height: 60, overscan: () => ({ x: 10, y: 20 }) },
@@ -127,8 +128,8 @@ describe("live presentation host", () => {
         setFocus: vi.fn(), updateDomHints: vi.fn(),
       }),
       uiPorts: () => ({ screen: () => "playing", buttons: () => buttons, focus: () => 0, setFocus: vi.fn(),
-        scroll: () => 0, setScroll: vi.fn(), input, playInterfaceSound: vi.fn(), chooseUpgrade: vi.fn(),
-        chooseReserve: vi.fn(), rerollDraft: vi.fn() }),
+        scroll: () => 0, setScroll: vi.fn(), input, now: () => 0, arming: createUiConfirmArming(),
+        playInterfaceSound: vi.fn(), chooseUpgrade: vi.fn(), chooseReserve: vi.fn(), chooseTier: vi.fn(), rerollDraft: vi.fn() }),
       buttonLayer: () => ({ context, buttons, focus: 0, pointerX: 0, pointerY: 0, deltaSeconds: 1 / 60,
         enterSeconds: 1, hoverAnimation: {}, ui: { pointIn: () => false, chip: vi.fn(), button: vi.fn() },
         entranceEase: (value) => value }),

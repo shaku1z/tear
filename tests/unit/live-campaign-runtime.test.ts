@@ -48,6 +48,51 @@ describe("live campaign runtime", () => {
     expect(chapterStates.at(-1)).toBe("WAVE_LIVE");
   });
 
+  it("plays a chapter in full the first time and skips it to the stage banner on a retry", () => {
+    const launch = (seenBefore: boolean) => {
+      let run = { mode: "campaign", chapterState: "LORE_ENTER", score: 0, runTime: 0 };
+      const startBinding = vi.fn();
+      const resetStageBanner = vi.fn();
+      const runtime = createLiveCampaignRuntime({
+        runtime: story(), cinema: { start: vi.fn(), startBinding }, run: () => run,
+        player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }), blade: () => ({}),
+        stageAt: () => ({ name: "Ash", blurb: "Descend", accent: "#f00", dark: false,
+          chapter: { number: 1, symbol: "I", title: "Embers", intro: "Enter", pages: [{ label: "A", text: "B" }] } }),
+        preference: () => "full", chapterSeenBefore: (_index, stage) => seenBefore && stage.name === "Ash",
+        preparedWave: () => true, activationDeferred: () => true,
+        chapterIntents: {
+          activatePreparedWave: vi.fn(), setChapterState: (state) => { run.chapterState = state; },
+          clearProjectiles: vi.fn(), musicDuck: vi.fn(), resetStageBanner, sound: vi.fn(),
+        },
+        finaleIntents: {
+          beginLifecycle: vi.fn(), clearCombat: vi.fn(), freezeVoid: vi.fn(), worldZoom: vi.fn(), finalBlade: vi.fn(),
+          ring: vi.fn(), burst: vi.fn(), flash: vi.fn(), shake: vi.fn(), vibrate: vi.fn(), sound: vi.fn(),
+          restoreStageZero: vi.fn(), restorePlayer: vi.fn(), voidMix: vi.fn(), musicDuck: vi.fn(), win: vi.fn(),
+        },
+        clearBossBeat: vi.fn(), prepareVictory: vi.fn(() => ({ isNew: false, earned: 0, coins: 0 })),
+        win: vi.fn(), formatTime: () => "0:00", viewport: { width: 1600, height: 900 },
+        perfectColor: () => "#fff", reducedMotion: () => false, lowGraphics: () => false,
+      });
+      return { runtime, startBinding, resetStageBanner, run: () => run,
+        retry: () => { run = { mode: "campaign", chapterState: "LORE_ENTER", score: 0, runTime: 0 }; } };
+    };
+
+    const fresh = launch(false);
+    fresh.runtime.beginChapter(0);
+    expect(fresh.startBinding).toHaveBeenCalledOnce();
+    expect(fresh.run().chapterState).toBe("LORE_ENTER");
+    fresh.retry();
+    fresh.runtime.beginChapter(0);
+    expect(fresh.startBinding).toHaveBeenCalledOnce();
+    expect(fresh.run().chapterState).toBe("WAVE_LIVE");
+    expect(fresh.resetStageBanner).toHaveBeenCalled();
+
+    const returning = launch(true);
+    returning.runtime.beginChapter(0);
+    expect(returning.startBinding).not.toHaveBeenCalled();
+    expect(returning.run().chapterState).toBe("WAVE_LIVE");
+  });
+
   it("forwards the portable immutable finale intent batch without app-layer encoding", () => {
     const run = { mode: "campaign", chapterState: "WAVE_LIVE", score: 42, runTime: 3 };
     const observed: unknown[] = [];

@@ -129,6 +129,8 @@ export interface MenuScreenView {
   readonly id: "menu"; readonly playerName: string; readonly signedIn: boolean;
   readonly coins: number; readonly shards: number; readonly unlocked: number;
   readonly modeLabel: string; readonly difficultyLabel: string; readonly biome?: string;
+  /** Replaces the PLAY sub-label (mode · difficulty), e.g. the first-run tutorial nudge. */
+  readonly playSub?: string;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
   /** Engineering builds only: TRAINING ARCHIVE, TRAINING OPERATIONS and REPLAY HUB entries. */
@@ -138,7 +140,10 @@ export interface SetupScreenView {
   readonly practiceAvailable?: boolean;
   readonly id: "setup"; readonly modes: readonly ChoiceView[]; readonly difficulties: readonly ChoiceView[];
   readonly weapons: readonly ChoiceView[]; readonly showDifficulty: boolean; readonly startSummary: string;
+  /** Context glyph for START; empty unless a controller owns input. */
   readonly startGlyph: string;
+  /** One line of plain first-run guidance shown near START. */
+  readonly guidance?: string;
   readonly bestSummary?: string; readonly bountySummary?: string;
   readonly bossChoices?: readonly ChoiceView[];
   readonly bounties?: readonly Readonly<{ label: string; detail: string; done: boolean }>[];

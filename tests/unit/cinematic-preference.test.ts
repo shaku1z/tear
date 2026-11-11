@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cinematicLaunchPolicy, sanitizeCinematicPreference } from "../../src/app/cinematic-preference";
+import { chapterLaunchPolicy, cinematicLaunchPolicy, sanitizeCinematicPreference } from "../../src/app/cinematic-preference";
 
 describe("cinematic preference policy", () => {
   it.each([
@@ -9,6 +9,15 @@ describe("cinematic preference policy", () => {
     ["off", { play: false, brief: false }],
   ] as const)("maps %s to an explicit launch decision", (preference, expected) => {
     expect(cinematicLaunchPolicy(preference)).toEqual(expected);
+  });
+
+  it("keeps a chapter's first viewing on the preference and skips a chapter already seen", () => {
+    expect(chapterLaunchPolicy("full", false)).toEqual({ play: true, brief: false });
+    expect(chapterLaunchPolicy("brief", false)).toEqual({ play: true, brief: true });
+    expect(chapterLaunchPolicy("off", false)).toEqual({ play: false, brief: false });
+    expect(chapterLaunchPolicy("full", true)).toEqual({ play: false, brief: false });
+    expect(chapterLaunchPolicy("brief", true)).toEqual({ play: false, brief: true });
+    expect(chapterLaunchPolicy("off", true)).toEqual({ play: false, brief: false });
   });
 
   it("uses full as the safe fallback for malformed persisted values", () => {

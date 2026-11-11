@@ -12,8 +12,65 @@ export interface UiActionButton extends FocusableRect {
 
 export interface UiPoint { readonly x: number; readonly y: number }
 
+/**
+ * The one settle window shared by every confirm path (keyboard, controller,
+ * number keys, mouse and touch). A screen that interrupts play ignores choices
+ * until the player has let go of confirm since it opened and this long has
+ * passed, so a jump or retry mash meant for the previous screen never picks.
+ */
+export const UI_CONFIRM_SETTLE_SECONDS = 0.35;
+
+/** Screens that interrupt play: keyboard, controller and number-key choices must be armed. */
+export const CONFIRM_ARMED_SCREENS: ReadonlySet<string> = new Set([
+  "draft", "reserve", "tierup", "gameover", "win", "continue", "paused", "confirmquit",
+]);
+
+/** Reward and results screens: a click aimed at the arena must not buy an upgrade or retry. */
+export const POINTER_SETTLE_SCREENS: ReadonlySet<string> = new Set([
+  "draft", "reserve", "tierup", "gameover", "win", "continue",
+]);
+
+export interface UiConfirmArmingState {
+  readonly screen: string;
+  readonly openedAtSeconds: number;
+  readonly releasedSinceOpen: boolean;
+}
+
+/** Records when the current screen opened and whether confirm has been up since then. */
+export function advanceUiConfirmArming(
+  previous: UiConfirmArmingState | null,
+  screen: string,
+  nowSeconds: number,
+  confirmHeld: boolean,
+): UiConfirmArmingState {
+  if (previous?.screen !== screen) {
+    return Object.freeze({ screen, openedAtSeconds: nowSeconds, releasedSinceOpen: !confirmHeld });
+  }
+  if (previous.releasedSinceOpen || confirmHeld) return previous;
+  return Object.freeze({ ...previous, releasedSinceOpen: true });
+}
+
+export interface UiConfirmGate {
+  /** Keyboard confirm, controller confirm and number-key choices may act. */
+  readonly confirm: boolean;
+  /** Mouse clicks and touch taps may activate a control. */
+  readonly pointer: boolean;
+}
+
+export function uiConfirmGate(screen: string, screenAgeSeconds: number, confirmReleasedSinceOpen: boolean): UiConfirmGate {
+  const settled = screenAgeSeconds >= UI_CONFIRM_SETTLE_SECONDS;
+  return Object.freeze({
+    confirm: !CONFIRM_ARMED_SCREENS.has(screen) || (settled && confirmReleasedSinceOpen),
+    pointer: !POINTER_SETTLE_SCREENS.has(screen) || settled,
+  });
+}
+
 export interface UiFrameInput {
   readonly screen: string;
+  /** Seconds since `screen` opened (see `advanceUiConfirmArming`). */
+  readonly screenAgeSeconds: number;
+  /** Every confirm input has been up at least once since `screen` opened. */
+  readonly confirmReleasedSinceOpen: boolean;
   readonly buttons: readonly UiActionButton[];
   readonly focus: number;
   readonly scroll: number;
@@ -26,7 +83,8 @@ export interface UiFrameInput {
   readonly previous: boolean;
   readonly next: boolean;
   readonly pressed: ReadonlySet<string>;
-  readonly padBack: boolean;
+  /** Semantic back: controller back, Escape, or Backspace outside text entry. */
+  readonly back: boolean;
   readonly confirm: boolean;
   readonly context1: boolean;
 }
@@ -34,6 +92,7 @@ export interface UiFrameInput {
 export type UiSemanticAction =
   | Readonly<{ type: "choose-upgrade"; index: number }>
   | Readonly<{ type: "choose-reserve"; index: number }>
+  | Readonly<{ type: "choose-tier"; index: number }>
   | Readonly<{ type: "reroll-draft" }>
   | Readonly<{ type: "activate-button"; index: number; source: "back" | "confirm" }>;
 
@@ -41,7 +100,8 @@ export interface UiFrameDecision {
   readonly focus: number;
   readonly scroll: number;
   readonly action: UiSemanticAction | null;
-  readonly consumePadBack: boolean;
+  /** The back request was handled or has nowhere to go; clear any latched controller back. */
+  readonly consumeBack: boolean;
   readonly pointer: "leave" | "consume" | "read";
   readonly playUiSound: boolean;
 }
@@ -81,6 +141,13 @@ export function stepUiTab<Key>(
     : Object.freeze({ key: next[0], changed: true });
 }
 
+function digitChoice(pressed: ReadonlySet<string>, count: number): number | null {
+  for (let index = 0; index < count; index += 1) {
+    if (pressed.has(`Digit${String(index + 1)}`)) return index;
+  }
+  return null;
+}
+
 function quickAction(
   screen: string,
   pressed: ReadonlySet<string>,
@@ -92,28 +159,29 @@ function quickAction(
     if (index >= 0) return Object.freeze({ type: "activate-button", index, source: "confirm" });
   }
   if (screen === "draft") {
-    for (let index = 0; index < 4; index += 1) {
-      if (pressed.has(`Digit${String(index + 1)}`)) return Object.freeze({ type: "choose-upgrade", index });
-    }
+    const index = digitChoice(pressed, 4);
+    if (index !== null) return Object.freeze({ type: "choose-upgrade", index });
     if (pressed.has("KeyR")) return Object.freeze({ type: "reroll-draft" });
   } else if (screen === "reserve") {
-    for (let index = 0; index < 3; index += 1) {
-      if (pressed.has(`Digit${String(index + 1)}`)) return Object.freeze({ type: "choose-reserve", index });
-    }
+    const index = digitChoice(pressed, 3);
+    if (index !== null) return Object.freeze({ type: "choose-reserve", index });
+  } else if (screen === "tierup") {
+    const index = digitChoice(pressed, 4);
+    if (index !== null) return Object.freeze({ type: "choose-tier", index });
   }
   return null;
 }
 
 export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
   if (input.screen === "playing") {
-    return Object.freeze({ focus: input.focus, scroll: input.scroll, action: null, consumePadBack: false, pointer: "leave", playUiSound: false });
+    return Object.freeze({ focus: input.focus, scroll: input.scroll, action: null, consumeBack: false, pointer: "leave", playUiSound: false });
   }
 
   const scroll = Math.max(0, Math.min(6_000,
     input.scroll + uiScrollDelta(input.scrollY, input.pageUp, input.pageDown)));
   const enabled = enabledButtonIndexes(input.buttons);
   if (enabled.length === 0) {
-    return Object.freeze({ focus: input.focus, scroll, action: null, consumePadBack: false, pointer: "consume", playUiSound: false });
+    return Object.freeze({ focus: input.focus, scroll, action: null, consumeBack: false, pointer: "consume", playUiSound: false });
   }
 
   let focus = input.focus;
@@ -136,27 +204,31 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
     else if (input.next) focus = enabled[(position + 1) % enabled.length] ?? focus;
   }
 
-  const shortcut = quickAction(input.screen, input.pressed, input.buttons, input.context1);
-  if (shortcut) return Object.freeze({ focus, scroll, action: shortcut, consumePadBack: false, pointer: "leave", playUiSound: false });
+  // Navigation above stays live through the settle window; choices wait for the gate.
+  const gate = uiConfirmGate(input.screen, input.screenAgeSeconds, input.confirmReleasedSinceOpen);
+  const shortcut = gate.confirm ? quickAction(input.screen, input.pressed, input.buttons, input.context1) : null;
+  if (shortcut) return Object.freeze({ focus, scroll, action: shortcut, consumeBack: false, pointer: "leave", playUiSound: false });
 
-  if (input.padBack) {
+  if (input.back) {
     const index = input.buttons.findIndex((button) => button.enabled !== false && button.label?.includes("BACK"));
     if (index >= 0) {
       return Object.freeze({
         focus, scroll, action: Object.freeze({ type: "activate-button", index, source: "back" }),
-        consumePadBack: true, pointer: "leave", playUiSound: true,
+        consumeBack: true, pointer: "leave", playUiSound: true,
       });
     }
   }
 
   const focused = input.buttons[focus];
-  if (input.confirm && focused !== undefined && focused.enabled !== false) {
+  if (gate.confirm && input.confirm && focused !== undefined && focused.enabled !== false) {
     return Object.freeze({
       focus, scroll, action: Object.freeze({ type: "activate-button", index: focus, source: "confirm" }),
-      consumePadBack: input.padBack, pointer: "leave", playUiSound: true,
+      consumeBack: input.back, pointer: "leave", playUiSound: true,
     });
   }
-  return Object.freeze({ focus, scroll, action: null, consumePadBack: input.padBack, pointer: "read", playUiSound: false });
+  return Object.freeze({
+    focus, scroll, action: null, consumeBack: input.back, pointer: gate.pointer ? "read" : "consume", playUiSound: false,
+  });
 }
 
 export function coordinateUiPointer(

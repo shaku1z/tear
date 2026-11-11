@@ -2,9 +2,10 @@ import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../presentation/screens/live-screen-renderers";
 import type { LegacyGamepad } from "../input/legacy-input-contracts";
 import { buildMenuSnapshot } from "../presentation/menu-setup-snapshots";
+import { firstRunProfileFacts, isFirstRunProfile } from "../gameplay/progression/first-run-guidance";
 import type { createLiveSetupShopRenderers } from "./live-setup-shop-renderers";
 
-type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "META" |
+type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "Input" | "META" |
   "PROFILE" | "SFX" | "SHOP" | "shopPurchaseProgressPersistence" | "surfaces" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type BestScore = Readonly<{ wave: number; score: number; time?: number }>;
@@ -39,7 +40,7 @@ export function createLiveMenuScreenAdaptersRuntime(state: MenuScreenState, serv
       const selected = state.selection();
       d.UI.ink = "#f1eff9";
       renderers.menu(buildMenuSnapshot({ username: d.PROFILE.username(),
-        tutorialDone: d.PROFILE.stat("tutorialDone"),
+        tutorialDone: d.PROFILE.stat("tutorialDone"), firstRun: isFirstRunProfile(firstRunProfileFacts(d.PROFILE)),
         campaignEmblem: d.PROFILE.data.rewards?.campaignEmblem === true, signedIn: d.Cloud.loggedIn(),
         coins: d.META.coins(), shards: d.PROFILE.shards(), unlocked: d.PROFILE.unlockedCount(),
         selectedMode: selected.mode, selectedDifficulty: selected.difficulty,

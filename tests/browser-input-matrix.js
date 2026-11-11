@@ -86,7 +86,9 @@ async function main() {
   await configure(ultrawide);
   await ultrawide.waitForFunction(() => document.body.dataset.imode === "mouse");
   assert.equal(await ultrawide.locator("canvas").evaluate((canvas) => getComputedStyle(canvas).cursor), "none");
-  assert.equal(await ultrawide.locator("#fs").evaluate((button) => getComputedStyle(button).cursor), "none");
+  // #fs sits above the canvas, where the canvas arrow cannot reach, so it carries the hardware
+  // arrow; the canvas hides its own arrow while the pointer is off the canvas (no double cursor).
+  assert.equal(await ultrawide.locator("#fs").evaluate((button) => getComputedStyle(button).cursor), "default");
   await ultrawide.mouse.move(480, 400);
   await ultrawide.waitForFunction(() => {
     const pointer = window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointer;
@@ -116,6 +118,9 @@ async function main() {
   await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await controller.mouse.click(260, 360);
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
+  // A fresh profile is preselected onto the Tutorial; pick Endless the way a player would.
+  await controller.mouse.click(430, 255);
+  await controller.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await controller.evaluate(() => {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 2;

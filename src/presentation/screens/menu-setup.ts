@@ -25,13 +25,13 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
 
     context.enqueue({
       x: railX, y: 240, w: railWidth, h: 58, label: view.playerName.toUpperCase(),
-      sub: `◆ ${String(view.coins)}    ⬡ ${String(view.shards)}    ★ ${String(view.unlocked)}`,
+      sub: `◆ ${view.coins.toLocaleString()}    ⬡ ${view.shards.toLocaleString()}    ★ ${view.unlocked.toLocaleString()}`,
       dot: view.signedIn ? "#2f9e6b" : "#8a93a6", ghost: true,
       action: { type: "navigate", to: "profile", resetScroll: true, tab: "bests" },
     });
     context.enqueue({
       x: railX, y: 318, w: railWidth, h: 86, label: "PLAY", glyph: "▶", hero: true, ghost: true,
-      sub: `${view.modeLabel} · ${view.difficultyLabel}`.toUpperCase(), action: { type: "navigate", to: "setup" },
+      sub: (view.playSub ?? `${view.modeLabel} · ${view.difficultyLabel}`).toUpperCase(), action: { type: "navigate", to: "setup" },
     });
     const rail = [
       ["◆", "SHOP", "shop"], ["★", "ACHIEVEMENTS", "achievements"],
@@ -163,6 +163,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       label: "START", glyph: view.startGlyph, sub: view.startSummary.toUpperCase(), hero: true, ghost: true, size: 26,
       action: { type: "setup.start" },
     });
+    if (view.guidance) ui.text(canvas, view.guidance, width / 2, 814, ui.t.type.caption, "center", ui.t.alpha.soft);
     if (view.practiceAvailable) context.enqueue({ x: width / 2 - startWidth / 2 - 270, y: 726, w: 250, h: 62,
       label: "PRACTICE LAB", sub: "BASELINE SWORD · NO REWARDS", ghost: true,
       action: { type: "tutorial.action", command: "open-practice" } });

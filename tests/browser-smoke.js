@@ -102,6 +102,9 @@ const path = require("node:path");
   };
   await page.mouse.click(260, 360); // PLAY
   await waitForScreen("setup");
+  // A fresh profile is preselected onto the Tutorial; this journey plays Endless, as a player would pick it.
+  await page.mouse.click(430, 255); // Endless
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await page.mouse.click(800, 758); // BEGIN
   await waitForScreen("playing");
   try {
@@ -173,6 +176,8 @@ const path = require("node:path");
       await page.waitForTimeout(450);
     }
     await page.mouse.click(1180, 196 + i * 60);
+    await page.waitForTimeout(80);
+    await page.mouse.click(430, 255); // Endless (a fresh profile is preselected onto the Tutorial)
     await page.waitForTimeout(80);
     await page.mouse.click(800, 758);
     await page.waitForTimeout(500);

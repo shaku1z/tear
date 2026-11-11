@@ -30,7 +30,12 @@ export class RenameController {
     const previous = this.ports.screen();
     this.#active = { error: "", firstRun, previous: previous === "rename" ? "profile" : previous };
     this.ports.setScreen("rename");
-    input.onkeydown = (event) => { if (event.key === "Enter") this.submit(); else if (event.key === "Escape") this.cancel(); };
+    // The field owns Enter and Escape: stop them reaching the game's window listener,
+    // which would otherwise read them as confirm/back on the screen this returns to.
+    input.onkeydown = (event) => {
+      if (event.key === "Enter") { event.stopPropagation(); this.submit(); }
+      else if (event.key === "Escape") { event.stopPropagation(); this.cancel(); }
+    };
   }
 
   submit(): void {

@@ -32,7 +32,7 @@ type ScreenOptions = Omit<LiveScreenPresentationOptions, "library" | "settings">
 type FrameServices = Omit<LivePresentationFrameServices<LegacyAppScreen,
   WorldPresentationServices["stage"]["current"]>, "wipe" | "renderWorld" | "drawHud" |
   "drawBossIntro" | "drawTouchControls" | "drawWaveBanner" | "drawStageBanner" |
-  "drawReticle" | "drawAchievementToast" | "chooseUpgrade" | "chooseReserve" | "rerollDraft" | "screenHue" | "capturePolicy">;
+  "drawReticle" | "drawAchievementToast" | "chooseUpgrade" | "chooseReserve" | "chooseTier" | "rerollDraft" | "screenHue" | "capturePolicy">;
 type WorldServices = Omit<WorldPresentationServices, "screenRectangle" | "world" |
   "achievementToast" | "touchOnboarding" | "capturePolicy">;
 
@@ -98,7 +98,7 @@ export function createLiveInterfaceComposition(
     drawStageBanner: () => { worldAdapters.drawStageBanner(); },
     drawReticle: () => { worldAdapters.drawReticle(); },
     drawAchievementToast: (deltaSeconds) => { worldAdapters.drawAchievementToast(deltaSeconds); },
-    chooseUpgrade: screens.chooseUpgrade, chooseReserve: screens.chooseReserve, rerollDraft: screens.rerollDraft,
+    chooseUpgrade: screens.chooseUpgrade, chooseReserve: screens.chooseReserve, chooseTier: screens.chooseTier, rerollDraft: screens.rerollDraft,
   });
   const worldAdapters = createLiveWorldPresentationAdapters(options.worldState, {
     ...options.worldServices, capturePolicy: capture.policy, screenRectangle: frame.screenRectangle, world: surface.world,

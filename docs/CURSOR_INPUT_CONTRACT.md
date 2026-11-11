@@ -17,10 +17,28 @@ Only one device owns menu focus and only one surface owns cursor presentation.
 | Keyboard owns input | Hidden | No | Directional input owns focus |
 | Gamepad owns input | Hidden | No | D-pad/stick input owns focus |
 | Touch owns input | Hidden | No hover | Taps use logical hit testing |
+| Mouse over the HTML fullscreen button (menus only) | Native browser arrow | No | The canvas arrow hides while the pointer is off the canvas |
 
 The native and canvas arrows must never render together. A keyboard, controller,
 or touch action must immediately suppress stale mouse hover. A meaningful mouse
-move or click returns ownership to the mouse.
+move or click returns ownership to the mouse. The `#fs` fullscreen button sits
+above the canvas, where the canvas arrow cannot be drawn, so it alone carries the
+native arrow; the canvas stops drawing its arrow on `mouseleave` and resumes on the
+next canvas `mouseenter`/`mousemove`. Touch never draws the canvas arrow, so no
+arrow is left parked at the last tap.
+
+## Confirm arming
+
+Screens that interrupt play (draft, reserve, tier-up, game over, victory, continue,
+pause and quit confirmation) ignore keyboard confirm, controller confirm and number
+keys until the confirm input has been released since the screen opened and
+`UI_CONFIRM_SETTLE_SECONDS` (0.35 s) has passed. Mouse clicks and touch taps on the
+reward and results screens wait for the same settle window. Navigation (hover,
+arrows, stick) stays live. The decision is the pure `uiConfirmGate` in
+`src/app/ui-action-coordinator.ts`; the pause toggle (P, Escape, controller Start)
+uses the same window so the Escape that released pointer lock cannot also resume.
+Escape, Backspace (outside text entry) and controller back activate a screen's
+BACK control.
 
 ## Coordinate pipeline
 

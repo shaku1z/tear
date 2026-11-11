@@ -2,7 +2,7 @@ import type { CampaignStage, ChapterPage } from "../gameplay/campaign/chapter-co
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
 import type { CampaignCinematicChannel } from "./live-campaign-sequences";
 import { launchCampaignChapter } from "./live-campaign-sequences";
-import { cinematicLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
+import { chapterLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
 import {
   dispatchChapterIntents,
   type ChapterIntentPorts,
@@ -52,6 +52,8 @@ export interface LiveCampaignRuntimePort {
   readonly blade: () => LiveCampaignBlade;
   readonly stageAt: (index: number) => CampaignStage | null;
   readonly preference: () => CinematicPreference;
+  /** Durable memory: this profile entered the stage before the current session began. */
+  readonly chapterSeenBefore?: (stageIndex: number, stage: CampaignStage) => boolean;
   readonly preparedWave: () => boolean;
   readonly activationDeferred: () => boolean;
   readonly chapterIntents: ChapterIntentPorts;
@@ -89,6 +91,8 @@ export interface StagedLiveChapterBinding {
 
 /** Bound campaign API that owns all spanning chapter/finale orchestration and intent dispatch. */
 export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCampaignRuntimeApi {
+  // Chapters played in this session; a retry of one of them skips its cinematic.
+  const playedChapters = new Set<number>();
   const dispatchChapter = (intents: Parameters<typeof dispatchChapterIntents>[0]): void => {
     dispatchChapterIntents(intents, port.chapterIntents);
   };
@@ -133,7 +137,9 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
         run.chapterState = "WAVE_LIVE";
         return;
       }
-      const policy = cinematicLaunchPolicy(port.preference());
+      const seenBefore = playedChapters.has(index) || port.chapterSeenBefore?.(index, stage) === true;
+      const policy = chapterLaunchPolicy(port.preference(), seenBefore);
+      if (policy.play) playedChapters.add(index);
       launchCampaignChapter({
         runtime: port.runtime, cinema: port.cinema, stageIndex: index, stage,
         priorOutro, brief: policy.brief, play: policy.play, prologueShown: run._prologueShown === true,

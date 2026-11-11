@@ -1,5 +1,6 @@
 import { BOSS_ROSTER } from "../gameplay/run/content-director";
 import { buildSetupSnapshot } from "../presentation/menu-setup-snapshots";
+import { firstRunProfileFacts, isFirstRunProfile } from "../gameplay/progression/first-run-guidance";
 import { buildShopSnapshot } from "../presentation/shop-snapshot";
 import type { MenuScreenServices, MenuScreenState } from "./live-menu-screen-adapters";
 
@@ -14,8 +15,9 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
           `${String(progress)}/${String(challenge.goal)} · +${String(challenge.shards)}⬡`, done };
       });
       renderers.setup(buildSetupSnapshot({ selectedMode: selected.mode, selectedDifficulty: selected.difficulty,
-        tutorialDone: d.PROFILE.stat("tutorialDone"),
-        selectedWeapon: selected.weapon, selectedBoss: selected.boss, startGlyph: d.PAD.glyph(2), modes: d.CONFIG.modes,
+        tutorialDone: d.PROFILE.stat("tutorialDone"), firstRun: isFirstRunProfile(firstRunProfileFacts(d.PROFILE)),
+        // The Square/X shortcut glyph only means something while a controller owns input.
+        selectedWeapon: selected.weapon, selectedBoss: selected.boss, startGlyph: d.Input.mode === "gamepad" ? d.PAD.glyph(2) : "", modes: d.CONFIG.modes,
         difficulties: d.CONFIG.difficulties, weapons: d.WEAPONS, bosses: BOSS_ROSTER,
         ...(bounties === undefined ? {} : { bounties }), surfaces: d.surfaces,
         best: services.getBest(selected.mode, selected.difficulty), formatTime: services.formatTime }));

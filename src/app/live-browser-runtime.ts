@@ -12,6 +12,7 @@ export interface LiveBrowserRuntime {
   readonly width: number; readonly height: number; readonly viewport: CanvasViewport;
   readonly resizeCanvas: () => void; readonly requestPointerLock: () => void;
   readonly installPrompt: InstallPromptController; readonly lockHint: HTMLElement | null; readonly hint: HTMLElement | null;
+  readonly fullscreenButton: HTMLElement | null;
   readonly pantheonDebug: boolean; readonly testMode: boolean;
 }
 
@@ -33,6 +34,6 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
   return Object.freeze({ canvas: element, context, width: d.CONFIG.view.w, height: d.CONFIG.view.h, viewport,
     resizeCanvas: () => { viewport.resizeIfNeeded(); }, requestPointerLock: pointer.api.request,
     installPrompt: new InstallPromptController(d.browserWindow), lockHint: d.browserDocument.getElementById("lockhint"),
-    hint: d.browserDocument.getElementById("hint"), pantheonDebug: __TEAR_TEST_BUILD__ && parameters.get("bossdebug") === "1",
+    hint: d.browserDocument.getElementById("hint"), fullscreenButton: d.browserDocument.getElementById("fs"), pantheonDebug: __TEAR_TEST_BUILD__ && parameters.get("bossdebug") === "1",
     testMode: parameters.get("test") === "1" });
 }

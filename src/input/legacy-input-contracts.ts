@@ -138,6 +138,10 @@ export interface LegacyInput {
   padScrollX: number;
   padScrollY: number;
   padBack: boolean;
+  /** Controller confirm (south face button) is physically down; written by the gamepad poll. */
+  padConfirmHeld: boolean;
+  /** The mouse is over the canvas; false while it rests on DOM chrome or outside the page. */
+  pointerInside: boolean;
   _uiTabPrev: boolean;
   _uiTabNext: boolean;
   _uiPageUp: boolean;
@@ -197,6 +201,8 @@ export interface LegacyInput {
   menuPrev(): boolean;
   menuNext(): boolean;
   confirmPressed(): boolean;
+  confirmHeld(): boolean;
+  backPressed(): boolean;
   consumeThrow(): boolean;
   takeClick(): Point | null;
   takeWheel(): number;

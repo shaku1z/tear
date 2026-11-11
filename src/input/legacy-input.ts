@@ -55,6 +55,8 @@ const Input: LegacyInput = {
   clickSource: "mouse",   // tags the active Input.clicked so a synthesized touch tap is never read as a mouse click
   padScrollX: 0, padScrollY: 0,   // controller right-stick scroll intent (px/frame), written by gamepad.js
   padBack: false,
+  padConfirmHeld: false,
+  pointerInside: true,    // the mouse is over the canvas (not over DOM chrome or outside the page)
   // one-frame UI edge flags the gamepad injects (consumed by updateUI):
   _uiTabPrev: false, _uiTabNext: false, _uiPageUp: false, _uiPageDown: false, _uiContext1: false, _uiContext2: false,
   setMode(m) {
@@ -87,7 +89,7 @@ const Input: LegacyInput = {
   updateUI() {
     const u = this.ui;
     u.up = this.menuUp(); u.down = this.menuDown(); u.left = this.menuLeft(); u.right = this.menuRight();
-    u.confirm = this.confirmPressed(); u.back = this.escapePressed() || this.padBack;
+    u.confirm = this.confirmPressed(); u.back = this.backPressed();
     // Q/E and PageUp/PageDown are keyboard analogues of L1/R1 and L2/R2
     u.tabPrev = this._uiTabPrev || this.pressed.has("KeyQ");
     u.tabNext = this._uiTabNext || this.pressed.has("KeyE");
@@ -183,8 +185,9 @@ const Input: LegacyInput = {
         this.lastPointerX = e.clientX; this.lastPointerY = e.clientY;
       }
     };
-    canvas.addEventListener("mousemove", updateMouse);
-    canvas.addEventListener("mouseenter", updateMouse);
+    canvas.addEventListener("mousemove", (e) => { this.pointerInside = true; updateMouse(e); });
+    canvas.addEventListener("mouseenter", (e) => { this.pointerInside = true; updateMouse(e); });
+    canvas.addEventListener("mouseleave", () => { this.pointerInside = false; });
 
     // left-click: capture the mouse while playing; otherwise it's a UI click
     canvas.addEventListener("click", (e) => {
@@ -368,6 +371,15 @@ const Input: LegacyInput = {
   // two input sources coexist without one clearing the other.
   get tetherHeld() { return this.lmb || this.padTether; },
   confirmPressed() { return this.pressed.has("Enter") || this.pressed.has("NumpadEnter") || this.pressed.has("Space"); },
+  // level state of every key or button that can confirm or choose on a menu; the UI
+  // arms confirm on a newly opened screen only after all of these have been let go.
+  confirmHeld() {
+    return this.padConfirmHeld || ["Enter", "NumpadEnter", "Space", "Digit1", "Digit2", "Digit3", "Digit4"]
+      .some((code) => this.held.has(code));
+  },
+  // semantic back: controller back, Escape, or Backspace. Keydown is ignored while a
+  // text field owns input (textEntryMode), so Backspace never leaves the rename field.
+  backPressed() { return this.padBack || this.escapePressed() || this.pressed.has("Backspace"); },
   // one-shot: the loop may run several fixed substeps per frame, so this edge must
   // be consumed on first read or a single click would throw AND recall in one frame.
   consumeThrow() { const v = this.rmb; this.rmb = false; return v; },

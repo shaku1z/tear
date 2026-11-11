@@ -1,4 +1,5 @@
 import type { InputMode, Point } from "../input/legacy-input-contracts";
+import { UI_CONFIRM_SETTLE_SECONDS } from "./ui-action-coordinator";
 
 export interface RuntimeFrameInputPort {
   readonly held: Set<string>;
@@ -97,6 +98,9 @@ export class RuntimeFrameCoordinator {
   #gameplayActive = false;
   #uiDensity: "desktop" | "touch" = "desktop";
   #previousFrameWorkMilliseconds = 0;
+  #frameStartedMilliseconds = 0;
+  /** When the pause screen was first seen; a resume key needs the shared settle window first. */
+  #pausedSinceMilliseconds: number | null = null;
 
   constructor(options: RuntimeFrameCoordinatorOptions) {
     this.#options = options;
@@ -104,6 +108,7 @@ export class RuntimeFrameCoordinator {
 
   run(deltaSeconds: number, frameIntervalSeconds = deltaSeconds): void {
     const frameStarted = this.#options.now();
+    this.#frameStartedMilliseconds = frameStarted;
     const startedPlaying = this.#options.state() === "playing";
     this.#prepareInput(deltaSeconds);
     let simulationSteps = 0;
@@ -163,12 +168,14 @@ export class RuntimeFrameCoordinator {
 
   #advancePlaying(deltaSeconds: number): number {
     const { canvas, document, input } = this.#options;
+    this.#pausedSinceMilliseconds = null;
     this.#options.advancePlayingPrelude(deltaSeconds);
     this.#options.applicationFrameRecording?.preludeApplied();
     if (input.locked) this.#wasPointerLocked = true;
     const lostCapture = this.#wasPointerLocked && !input.locked;
     const portraitGate = input.touchActive() && canvas.clientHeight > canvas.clientWidth;
     if (input.pausePressed() || input.escapePressed() || lostCapture || portraitGate) {
+      this.#consume("KeyP", "Escape");
       this.#options.setState("paused");
       this.#wasPointerLocked = false;
       try { document.exitPointerLock(); } catch { /* Pointer lock may already be gone. */ }
@@ -182,14 +189,35 @@ export class RuntimeFrameCoordinator {
     this.#options.resetSimulation();
     this.#wasPointerLocked = false;
     const state = this.#options.state();
-    if (state === "pgmenu" && (input.pressed.has("Tab") || input.escapePressed())) {
+    if (state !== "paused") this.#pausedSinceMilliseconds = null;
+    else this.#pausedSinceMilliseconds ??= this.#frameStartedMilliseconds;
+    const pauseSettled = this.#pausedSinceMilliseconds !== null
+      && this.#frameStartedMilliseconds - this.#pausedSinceMilliseconds >= UI_CONFIRM_SETTLE_SECONDS * 1_000;
+    if (state === "paused" && (input.pausePressed() || input.escapePressed())) {
+      // P, Escape and controller Start toggle pause. The settle window keeps the Escape
+      // that released pointer lock (and paused) from also resuming; a resume that cannot
+      // recapture the mouse leaves uncaptured play with the click-to-capture hint.
+      this.#consume("KeyP", "Escape");
+      if (pauseSettled) {
+        this.#options.setState("playing");
+        this.#options.requestPointerLock();
+      }
+    } else if (state === "pgmenu" && (input.pressed.has("Tab") || input.escapePressed())) {
+      this.#consume("Tab", "Escape");
       this.#options.setState("playing");
       this.#options.requestPointerLock();
     } else if (state === "pglab" && (input.pressed.has("Tab") || input.escapePressed())) {
+      this.#consume("Tab", "Escape");
       this.#options.setState("pgmenu");
     } else if (state === "replay" && input.escapePressed()) {
+      this.#consume("Escape");
       this.#options.exitReplay();
     }
+  }
+
+  /** A key this coordinator acted on must not also drive the next screen's UI frame. */
+  #consume(...codes: readonly string[]): void {
+    for (const code of codes) this.#options.input.pressed.delete(code);
   }
 
   #advanceApplication(deltaSeconds: number): void {

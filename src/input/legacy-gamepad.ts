@@ -246,9 +246,12 @@ const PAD: LegacyGamepadInternal = {
 
   poll(dt, uiMode) {
     if (this.toastT > 0) this.toastT -= dt;
+    Input.padConfirmHeld = false;
     if (!this.connected) return;
     const gp = navigator.getGamepads()[this.index];
     if (!gp) return;
+    // A held across a screen change must be released before that screen's confirm arms.
+    Input.padConfirmHeld = this._isDown(gp, 0);
     // post preset-switch: adopt the current physical button states as the baseline so
     // a button held across the switch is not read as a fresh press in the new map.
     if (this._resync) { for (let i = 0; i < gp.buttons.length; i++) this._prev[i] = this._isDown(gp, i); this._resync = false; }
@@ -313,7 +316,7 @@ const PAD: LegacyGamepadInternal = {
       if (this._edge(gp, 5)) Input._uiTabNext = true;            // R1 = next tab
       if (this._edge(gp, 6)) Input._uiPageUp = true;             // L2 = page up
       if (this._edge(gp, 7)) Input._uiPageDown = true;           // R2 = page down
-      this._edge(gp, 9);                                        // keep prev[] fresh for shared buttons
+      if (this._edge(gp, 9)) Input.tPause = true;               // Start toggles: resumes from the pause screen
       this._release(); Input.setPadTether(false); this._tetherLatched = false;   // no movement or tether while in menus
       this._tetherWas = tDown;
       if (tDown) this._tetherBlocked = true;

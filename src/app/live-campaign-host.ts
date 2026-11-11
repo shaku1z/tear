@@ -37,6 +37,8 @@ export interface CampaignHostServices {
   readonly checkAchievements: () => void;
   readonly resetStageAchievements: () => void;
   readonly rememberBiome: (name: string) => void;
+  /** Stage (biome) names the profile had entered before this session (existing biome memory). */
+  readonly biomesEnteredBeforeSession?: () => readonly string[];
   readonly cinematicPreference: () => CinematicPreference;
   readonly addFlash: (amount: number) => FinaleMaximumFeelReceipt;
   readonly addShake: (amount: number) => FinaleMaximumFeelReceipt;
@@ -80,7 +82,10 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
       d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index, ...(stageId === null ? {} : { stageId }), transition: "entered" });
     },
   }));
+  // Captured once at host creation, so a chapter first seen in this session keeps its full viewing.
+  const biomesBeforeSession = new Set(services.biomesEnteredBeforeSession?.() ?? []);
   const runtime = createLiveCampaignRuntime({ runtime: story,
+    chapterSeenBefore: (_index, chapterStage) => biomesBeforeSession.has(chapterStage.name),
     cinema: {
       start: (script, context) => { cinema.start(adaptCinematicScript(script, context), {}); },
       startBinding: (binding) => { cinema.start(binding.script, binding.context); },

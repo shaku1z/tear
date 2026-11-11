@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createScreenActionRouter, type ScreenActionHandlers } from "../../src/app/screen-action-router";
-import { firstEnabledUiButton, handleUiRuntimeFrame } from "../../src/app/ui-runtime-controller";
+import { createUiConfirmArming, firstEnabledUiButton, handleUiRuntimeFrame } from "../../src/app/ui-runtime-controller";
 import { renderPresentationFrame, type RenderPipelinePorts } from "../../src/presentation/render-pipeline";
 
 describe("presentation runtime boundaries", () => {
@@ -32,15 +32,59 @@ describe("presentation runtime boundaries", () => {
         pressed: new Set(), padBack: false,
         touchActive: () => false, takeUIScroll: () => ({ x: 0, y: 0 }),
         menuLeft: () => false, menuRight: () => false, menuUp: () => false, menuDown: () => false,
-        menuPrev: () => false, menuNext: () => false, confirmPressed: () => true, takeClick: () => null,
+        menuPrev: () => false, menuNext: () => false, confirmPressed: () => true,
+        confirmHeld: () => true, backPressed: () => false, takeClick: () => null,
       },
+      now: () => 0, arming: createUiConfirmArming(),
       playInterfaceSound: sound,
-      chooseUpgrade: vi.fn(), chooseReserve: vi.fn(), rerollDraft: vi.fn(),
+      chooseUpgrade: vi.fn(), chooseReserve: vi.fn(), chooseTier: vi.fn(), rerollDraft: vi.fn(),
     });
     expect(firstEnabledUiButton([{ x: 0, y: 0, w: 1, h: 1, enabled: false }, { x: 0, y: 0, w: 1, h: 1 }])).toBe(1);
     expect(focus).toBe(0);
     expect(action).toHaveBeenCalledOnce();
     expect(sound).toHaveBeenCalledOnce();
+  });
+
+  it("arms a just-opened draft only after confirm is released and the settle time passes", () => {
+    let screen = "playing", now = 0, held = true, confirm = false, digit = false, click: { x: number; y: number } | null = null;
+    const card = vi.fn();
+    const chooseTier = vi.fn();
+    const arming = createUiConfirmArming();
+    const frame = (): void => {
+      handleUiRuntimeFrame({
+        screen: () => screen, buttons: () => [{ x: 0, y: 0, w: 100, h: 200, label: "", confirm: true, action: card }],
+        focus: () => 0, setFocus: vi.fn(), scroll: () => 0, setScroll: vi.fn(),
+        input: {
+          mode: "keyboard", mouseX: 50, mouseY: 50, ui: { pageUp: false, pageDown: false, tabPrev: false, tabNext: false },
+          pressed: new Set(digit ? ["Digit2"] : []), padBack: false,
+          touchActive: () => false, takeUIScroll: () => ({ x: 0, y: 0 }),
+          menuLeft: () => false, menuRight: () => false, menuUp: () => false, menuDown: () => false,
+          menuPrev: () => false, menuNext: () => false, confirmPressed: () => confirm,
+          confirmHeld: () => held, backPressed: () => false,
+          takeClick: () => { const value = click; click = null; return value; },
+        },
+        now: () => now, arming, playInterfaceSound: vi.fn(),
+        chooseUpgrade: vi.fn(), chooseReserve: vi.fn(), chooseTier, rerollDraft: vi.fn(),
+      });
+    };
+    frame();                                   // jumping with Space held as the wave clears
+    screen = "draft"; confirm = true; frame(); // the draft opens on the same press
+    now = 0.5; confirm = false; frame();       // still held: no release yet
+    expect(card).not.toHaveBeenCalled();
+    held = false; now = 0.6; frame();          // released
+    held = true; confirm = true; now = 0.7; frame();
+    expect(card).toHaveBeenCalledOnce();
+
+    screen = "gameover"; now = 1; held = false; confirm = false; frame();
+    click = { x: 50, y: 50 }; now = 1.1; frame(); // a click aimed at the arena
+    expect(card).toHaveBeenCalledOnce();
+    click = { x: 50, y: 50 }; now = 1.5; frame();
+    expect(card).toHaveBeenCalledTimes(2);
+
+    screen = "tierup"; now = 2; digit = true; frame();
+    expect(chooseTier).not.toHaveBeenCalled();
+    now = 2.4; frame();
+    expect(chooseTier).toHaveBeenCalledWith(1);
   });
 
   it("keeps frame composition ordering stable and resets changed-screen navigation", () => {
