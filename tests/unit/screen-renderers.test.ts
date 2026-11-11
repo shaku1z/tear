@@ -19,12 +19,23 @@ import type { LivePlayerWatchController } from "../../src/app/live-player-watch-
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
   readonly t = {
-    type: { wordmark: 80, display: 52, h1: 40, h2: 30, title: 24, lead: 20, body: 16, label: 14, caption: 13, micro: 11 },
+    type: { wordmark: 80, display: 52, h1: 40, h2: 30, title: 24, lead: 20, body: 16, label: 15, caption: 14, micro: 13 },
     font: { brand: "'Courier New', monospace", display: "sans-serif", body: "monospace", displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500 },
-    alpha: { full: 1, soft: 0.8, muted: 0.6, faint: 0.3 },
-    color: { accent: "#13c4d6", muted: "#888", danger: "#e23b3b" },
-    metric: { btnH: 52, btnGap: 10 },
+    alpha: { full: 1, soft: 0.78, muted: 0.66, faint: 0.52, rail: 0.92, sheet: 0.96 },
+    color: { accent: "#13c4d6", muted: "#62646f", danger: "#e23b3b", paper: "#fff", rail: "#080a10", railInk: "#f1eff9", unique: "#13c4d6" },
+    metric: { btnH: 48, btnGap: 12, pageTitleY: 92, pageBodyTop: 156, backW: 220,
+      settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54 },
   };
+  sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }> { return { x: 180, y: 44, w: 1240, h: 820 }; }
+  readable(color: string): string { return color; }
+  textBox(...values: Parameters<ScreenUiPort["textBox"]>): ReturnType<ScreenUiPort["textBox"]> {
+    const size = values[5]?.size ?? 16, lineHeight = values[5]?.lineHeight ?? Math.round(size * 1.5);
+    return { size, lines: [values[1]], truncated: false, overflow: false, height: lineHeight, lastBaseline: values[3], lineHeight };
+  }
+  fitText(...values: Parameters<ScreenUiPort["fitText"]>): ReturnType<ScreenUiPort["fitText"]> {
+    return { size: values[3].size, lines: [values[1]], truncated: false, overflow: false };
+  }
+  emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number { return values[4] + 60; }
   text(): void { return; }
   wordmark(): void { return; }
   displayText(): void { return; }
@@ -111,12 +122,13 @@ describe("legacy screen renderer registry", () => {
       replays: [{ id: "local-source", title: "Local capsule", detail: "Local bytes", canDownloadArchive: true, available: true }] };
     const inactive = { status: "unavailable" as const, detail: "Sign in to your account.", catalogVisible: false, canLoad: false, canRecover: false, entries: [] };
     renderer.profile({ ...local, ownerRecovery: inactive });
-    expect(controls.find((control) => control.label === "LOAD MY CLOUD CAPSULES")).toMatchObject({ enabled: false, action: { type: "profile.loadOwnGhostCapsules" } });
-    expect(controls.find((control) => control.label === "DOWNLOAD")).toMatchObject({ x: 968, y: 504, action: { id: "local-source" } });
+    expect(controls.find((control) => control.label === "MY ACCOUNT'S REPLAYS")).toMatchObject({ enabled: false, action: { type: "profile.loadOwnGhostCapsules" } });
+    // The vault toolbar sits under the tabs (y 306); rows start below it (306 + 62).
+    expect(controls.find((control) => control.label === "DOWNLOAD")).toMatchObject({ x: 968, y: 430, action: { id: "local-source" } });
     controls.length = 0;
     renderer.profile({ ...local, ownerRecovery: { ...inactive, status: "ready", catalogVisible: true, canLoad: true, canRecover: true,
       entries: [{ capsuleId: "cloud-source", buildId: "source-build", rootIntegrity: "root", byteLength: 123 }] } });
-    expect(controls.find((control) => control.label === "RECOVER TO THIS DEVICE")).toMatchObject({ enabled: true, action: { type: "profile.recoverOwnGhostCapsule", id: "cloud-source" } });
+    expect(controls.find((control) => control.label === "RESTORE TO THIS DEVICE")).toMatchObject({ enabled: true, action: { type: "profile.recoverOwnGhostCapsule", id: "cloud-source" } });
     expect(controls.some((control) => control.label === "DOWNLOAD" || control.label.includes("THEATER"))).toBe(false);
     expect(controls.some((control) => control.action.type === "profile.closeOwnGhostCatalog")).toBe(true);
   });
@@ -171,6 +183,8 @@ describe("legacy screen renderer registry", () => {
       canvas.fillText = (text, x, y) => { if (wrapping) lines.push({ text, x, y, width: canvas.measureText(text).width, font: canvas.font }); };
       const wrapped = createUiFoundation({ presentation: { overscan: {}, view: {} } } as never).wrappedText.bind(ui as never);
       ui.wrappedText = (...args: Parameters<ScreenUiPort["wrappedText"]>) => { wrapping = true; try { wrapped(...args); } finally { wrapping = false; } };
+      const hints: { text: string; y: number; size: number | undefined }[] = [];
+      ui.text = (...args: Parameters<ScreenUiPort["text"]>) => { hints.push({ text: args[1], y: args[3], size: args[4] }); };
       const renderer = createLegacyScreenRenderers({ ...base, width, height, ui, canvas });
       const draft = { id: "draft" as const, wave: 1, rerolls: 0, cards: [{ id: "speed", label: "SPEED" }] };
       renderer.draft(draft); const draftControls = [...controls]; controls.length = 0;
@@ -186,8 +200,10 @@ describe("legacy screen renderer registry", () => {
       renderer.shop(unguided); const shopControls = [...controls]; controls.length = 0;
       renderer.shop(shop);
       expect(controls).toEqual(shopControls);
-      expect(lines.map((line) => line.text).join(" ")).toContain("Buying is optional");
-      expect(lines.every((line) => line.font.startsWith("16px") && line.y > 130 && line.y < 158 && line.x - line.width / 2 >= 32)).toBe(true);
+      // The first-run hint takes the header status row at the subtitle's own (caption) size.
+      const hint = hints.find((entry) => entry.text.includes("Buying is optional"));
+      expect(hint).toMatchObject({ size: ui.t.type.caption });
+      expect((hint?.y ?? 0) > 138 && (hint?.y ?? 0) < 180).toBe(true);
     }
   });
   it("is exhaustive for every canonical application screen", () => {
@@ -231,10 +247,17 @@ describe("legacy screen renderer registry", () => {
       screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } });
     renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Endless", difficultyLabel: "Normal", biome: "The Grounds" });
-    expect(rectangles[0]).toEqual([-120, -40, 920, 980]);
+    // The rail anchors to the true left edge (x = viewport.x + 100) and its solid backing
+    // reaches the physical edge, feathering out to the open scene on the right.
+    expect(rectangles[0]).toEqual([-120, -40, 728, 980]);
     expect(rectangles).toHaveLength(1);
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup"))
-      .toMatchObject({ x: 100, y: 318, w: 320, h: 86 });
+      .toMatchObject({ x: -20, y: 318, w: 320, h: 86 });
+    controls.length = 0;
+    createLegacyScreenRenderers({ ...base, touch: true, screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } }).menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
+      modeLabel: "Endless", difficultyLabel: "Normal" });
+    // Touch keeps the authored anchor: its overlay zoom scales around the centre.
+    expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup")).toMatchObject({ x: 100 });
     expect(controls[0]).toMatchObject({ dot: "#8a93a6", ghost: true });
   });
 
@@ -271,7 +294,7 @@ describe("legacy screen renderer registry", () => {
     for (const action of ["setup.selectMode", "setup.selectDifficulty", "setup.selectWeapon"]) {
       expect(controls.filter((control) => control.action.type === action).map(({ y, h }) => ({ y, h }))).toEqual(sharedGrid);
     }
-    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 726, h: 62, label: "START", glyph: "▢" });
+    expect(controls.find((control) => control.action.type === "setup.start")).toMatchObject({ y: 722, h: 58, label: "START", glyph: "▢" });
     expect(controls.filter((control) => control.action.type === "setup.selectBoss")).toHaveLength(2);
   });
 
@@ -287,10 +310,11 @@ describe("legacy screen renderer registry", () => {
         { label: "FORTUNE", items: [item("f1"), item("f2")] },
       ] });
     const buys = controls.filter((control) => control.action.type === "shop.buy");
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(217);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(481);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(217);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(333);
+    // 88 px rows (two-line descriptions), 14 px between categories; columns flow independently.
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(243);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(551);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(243);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(375);
   });
 
   it("models Codex guide details and rich profile/achievement surfaces without gameplay callbacks", () => {
@@ -330,9 +354,9 @@ describe("legacy screen renderer registry", () => {
     expect(controls.find((control) => control.action.type === "leaderboards.selectTab"))
       .toMatchObject({ y: 124, h: 34, hiddenBox: true });
     expect(controls.find((control) => control.action.type === "leaderboards.selectBoard" && control.action.id === "mode:endless"))
-      .toMatchObject({ y: 224, w: 190, h: 34, chip: true });
+      .toMatchObject({ y: 198, w: 190, h: 34, chip: true });
     expect(controls.find((control) => control.action.type === "leaderboards.watchReplay"))
-      .toMatchObject({ x: 872, y: 408, w: 48, h: 30 });
+      .toMatchObject({ x: 872, y: 392, w: 48, h: 30 });
     expect(controls.find((control) => control.action.type === "replay.togglePause"))
       .toMatchObject({ x: 292, y: 834, w: 96, h: 44 });
     expect(controls.find((control) => control.action.type === "replay.practice"))
@@ -481,9 +505,9 @@ describe("legacy screen renderer registry", () => {
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "local-1", title: "You — Endless · normal",
         detail: "wave 4 · 900 pts", available: true, local: true, pinned: false, shared: false }] });
     expect(controls.find((control) => control.action.type === "profile.watchReplay"))
-      .toMatchObject({ x: 968, y: 342, w: 110, h: 40 });
+      .toMatchObject({ x: 968, y: 324, w: 110, h: 40 });
     expect(controls.find((control) => control.action.type === "profile.pinReplay"))
-      .toMatchObject({ x: 1086, y: 342, w: 78, h: 40 });
+      .toMatchObject({ x: 1086, y: 324, w: 78, h: 40 });
   });
 
   it("renders Ghost Vault custody rows without exposing legacy replay mutations", () => {
@@ -504,10 +528,10 @@ describe("legacy screen renderer registry", () => {
       renderer.profile({ id: "profile", tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],
         replays: populated ? [{ id: "healthy", title: "Ghost", detail: "Complete", available: true, canDownloadArchive: true }] : [],
         archive: { status: "ready", detail: "Preview only", canPick: true, jobId: "intent", revision: 7, canReselect: true, canRestore: true, canCancel: true } });
-      expect(controls.find((control) => control.action.type === "profile.pickGhostArchive")).toMatchObject({ y: 312, enabled: true });
-      expect(controls.find((control) => control.action.type === "profile.restoreGhostArchive")).toMatchObject({ y: 312, action: { id: "intent", revision: 7 } });
+      expect(controls.find((control) => control.action.type === "profile.pickGhostArchive")).toMatchObject({ y: 306, enabled: true });
+      expect(controls.find((control) => control.action.type === "profile.restoreGhostArchive")).toMatchObject({ y: 306, action: { id: "intent", revision: 7 } });
       expect(controls.find((control) => control.action.type === "profile.cancelGhostRestore")).toMatchObject({ action: { id: "intent", revision: 7 } });
-      if (populated) expect(controls.find((control) => control.action.type === "profile.downloadGhostArchive")).toMatchObject({ y: 504, w: 116 });
+      if (populated) expect(controls.find((control) => control.action.type === "profile.downloadGhostArchive")).toMatchObject({ y: 452, w: 116 });
     }
   });
   it("offers a separate linked-pair download and named RESTORE BOTH while keeping the single download", () => {
@@ -518,7 +542,7 @@ describe("legacy screen renderer registry", () => {
     const downloads = controls.filter((control) => control.action.type === "profile.downloadGhostArchive");
     expect(downloads).toHaveLength(2);
     expect(downloads.find((c) => c.label === "DOWNLOAD")).toMatchObject({ action: { id: "parent" } });
-    expect(downloads.find((c) => c.label === "DOWNLOAD LINKED PAIR")).toMatchObject({ action: { id: "parent", paired: true } });
+    expect(downloads.find((c) => c.label === "DOWNLOAD RUN + FINALE")).toMatchObject({ action: { id: "parent", paired: true } });
     expect(controls.find((c) => c.action.type === "profile.restoreGhostArchive")).toMatchObject({ label: "RESTORE BOTH", action: { id: "pair", revision: 0 } });
     for (const control of downloads) expect(control.y + control.h).toBeLessThanOrEqual(790);
   });
@@ -529,10 +553,10 @@ describe("legacy screen renderer registry", () => {
         replays: Array.from({ length: 8 }, (_, index) => ({ id: `row-${String(index)}`, title: "Ghost", detail: "Complete", available: true, canDownloadArchive: true, local: tab === "replays" })),
         ...(tab === "vault" ? { archive: { status: "ready" as const, detail: "Preview", canPick: true, jobId: "intent", revision: 7, canReselect: true, canRestore: true, canCancel: true } } : {}) });
       const rowTypes = new Set(["profile.watchGhostCapsule", "profile.downloadGhostArchive", "profile.compareGhostCapsule", "profile.openGhostComparison", "profile.openGhostPublication", "profile.openGhostSupport", "profile.repairGhostCapsule", "profile.watchReplay", "profile.pinReplay", "profile.publishReplay", "profile.deleteReplay"]);
-      const rows = controls.filter((control) => rowTypes.has(control.action.type)), top = tab === "vault" ? 442 : 322, bottom = context.height - 110;
+      const rows = controls.filter((control) => rowTypes.has(control.action.type)), top = tab === "vault" ? 390 : 306, bottom = context.height - 110;
       expect(rows.filter((control) => control.y < top || control.y + control.h > bottom)).toEqual([]);
       expect(rows.some((control) => control.action.type === (tab === "vault" ? "profile.downloadGhostArchive" : "profile.watchReplay"))).toBe(true);
-      if (tab === "vault") for (const type of ["profile.pickGhostArchive", "profile.reselectGhostArchive", "profile.restoreGhostArchive", "profile.cancelGhostRestore"]) expect(controls.find((control) => control.action.type === type)).toMatchObject({ y: 312 });
+      if (tab === "vault") for (const type of ["profile.pickGhostArchive", "profile.reselectGhostArchive", "profile.restoreGhostArchive", "profile.cancelGhostRestore"]) expect(controls.find((control) => control.action.type === type)).toMatchObject({ y: 306 });
     }
   });
 
@@ -564,7 +588,7 @@ describe("legacy screen renderer registry", () => {
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "refused-capsule", title: "Ghost V3 - COACHING",
         detail: "COMPLETE - 3 CHUNKS - HEALTHY", available: false, theaterUnavailable: true, badge: "DURABLE CAPSULE" }] });
     expect(controls.find((control) => control.action.type === "profile.watchGhostCapsule"))
-      .toMatchObject({ label: "THEATER UNAVAILABLE", enabled: false });
+      .toMatchObject({ label: "CAN'T PLAY", enabled: false });
     expect(JSON.stringify(controls)).not.toContain("codec restore rejected");
   });
 
@@ -575,7 +599,7 @@ describe("legacy screen renderer registry", () => {
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "damaged-capsule", title: "Ghost V3 - COACHING",
         detail: "COMPLETE - 3 CHUNKS - NEEDS REPAIR", available: false, repairable: true, badge: "DURABLE CAPSULE" }] });
     expect(controls.find((control) => control.action.type === "profile.repairGhostCapsule"))
-      .toMatchObject({ label: "REPAIR", x: 968, y: 342, w: 110, h: 40, action: { type: "profile.repairGhostCapsule", id: "damaged-capsule" } });
+      .toMatchObject({ label: "REPAIR", x: 968, y: 324, w: 110, h: 40, action: { type: "profile.repairGhostCapsule", id: "damaged-capsule" } });
     expect(controls.some((control) => control.action.type === "profile.watchReplay")).toBe(false);
   });
 
@@ -608,7 +632,8 @@ describe("release and engineering surface rendering", () => {
     expect(controls.filter((control) => engineeringLabels.includes(control.label)).map(({ label, x, y }) => ({ label, x, y }))).toEqual([
       { label: "TRAINING ARCHIVE", x: 100, y: 731 }, { label: "TRAINING OPERATIONS", x: 438, y: 731 }, { label: "REPLAY HUB", x: 670, y: 731 },
     ]);
-    expect(controls.find((control) => control.glyph === "♪")).toMatchObject({ y: 802 });
+    // Extra rows continue the rail rhythm (61 px pitch) under the engineering row.
+    expect(controls.find((control) => control.glyph === "♪")).toMatchObject({ y: 792 });
   });
   it("renders a release setup with no DEV section, no race control and a centred START", () => {
     const controls: ScreenControl[] = [], sectionLabels: string[] = [];
@@ -640,6 +665,7 @@ describe("release and engineering surface rendering", () => {
         selected: { entry, notes: { tags: [], retention: "normal" }, detail: "Recorded" }, retained: 1, known: 1, total: 1, page: 0, pages: 1 } } as never);
     const row = controls.filter((control) => control.action.type === "career.control" && ["watch", "challenge", "download", "chase", "coach", "publish", "race"].includes(control.action.command));
     expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
-    expect(row[3]).toMatchObject({ w: (1100 - 3 * 8) / 4 });
+    // The page pattern content column is 1120 wide.
+    expect(row[3]).toMatchObject({ w: (1120 - 3 * 8) / 4 });
   });
 });

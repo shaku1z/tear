@@ -92,20 +92,20 @@ async function main() {
         await capture("menu");
         if (scenario.name.startsWith("desktop")) {
           await logicalClick(260, 452); await settle("shop"); await capture("shop");
-          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(800, 828); await settle("menu");
           await logicalClick(260, 360); await settle("setup"); await capture("setup");
-          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(800, 828); await settle("menu");
           await logicalClick(260, 696); await settle("settings"); await capture("settings");
           await logicalClick(800, 169); await page.waitForTimeout(120); await capture("settings-audio");
-          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(800, 828); await settle("menu");
           await logicalClick(260, 635); await settle("codex"); await capture("codex");
-          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(800, 828); await settle("menu");
           await logicalClick(260, 269); await settle("profile"); await capture("profile");
-          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(800, 828); await settle("menu");
           await logicalClick(260, 513); await settle("achievements"); await capture("achievements");
-          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(800, 828); await settle("menu");
           await logicalClick(260, 574); await settle("leaderboards"); await capture("leaderboards");
-          await logicalClick(800, 854); await settle("menu");
+          await logicalClick(800, 828); await settle("menu");
           await page.evaluate(() => window.__PANTHEON_TEST.openDraft({ expanded: true, rerolls: 2, reserve: true }));
           await settle("draft"); await capture("draft");
           await page.reload({ waitUntil: "domcontentloaded" });

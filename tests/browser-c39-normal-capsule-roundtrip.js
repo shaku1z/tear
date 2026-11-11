@@ -118,7 +118,7 @@ async function main() {
     const { page, boot, waitScreen, clickAndWait, buildInfo } = journey; producerBuild = buildInfo;
     await openVault(journey); const empty = await observe("A-empty-vault", page, buildInfo);
     await page.screenshot({ path: path.join(directory, "A-empty-vault.png") });
-    assert.equal((empty.vault.stores.manifests || []).length, 0); assert.match(empty.ui.text.recent.join("\n"), /SELECT ARCHIVE/u);
+    assert.equal((empty.vault.stores.manifests || []).length, 0); assert.match(empty.ui.text.recent.join("\n"), /IMPORT A REPLAY FILE/u);
     await page.mouse.click(800, 850); await waitScreen("menu"); await clickAndWait(260, 360, "setup");
     await page.mouse.click(430, 255); await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
     await page.mouse.click(820, 435); await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.difficulty === "onehit");
@@ -219,7 +219,7 @@ async function pairedMain(input) {
     assert.ok(await page.evaluate(() => window.__C39_FILE_TEXT__.recent.includes("RESTORE BOTH")));
     await page.mouse.click(714, 330); await waitStatus(page, "COMPLETE");
     await assertPair("pair-A-source-custody", journey);
-    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("DOWNLOAD LINKED PAIR"));
+    await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("DOWNLOAD RUN + FINALE"));
     const [download] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), page.mouse.click(1094, 564)]);
     await download.saveAs(archivePath); assert.equal(await download.failure(), null);
     downloaded = JSON.parse(fs.readFileSync(archivePath, "utf8"));

@@ -65,7 +65,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await page.mouse.click(875, 271); // VAULT, the third of four profile tabs
   await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("Ghost V3 - COACHING"), undefined, { timeout: 10000 });
   await page.waitForTimeout(250);
-  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("LOAD MY CLOUD CAPSULES"), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("MY ACCOUNT'S REPLAYS"), undefined, { timeout: 10000 });
   await page.mouse.click(1210, 90); // Disabled for the actual anonymous/unconfigured normal profile.
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert.deepEqual(recoveryRequests, [], "normal anonymous Vault navigation/click must not request cloud recovery");
@@ -80,7 +80,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const renderedVaultText = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__ ?? []);
   assert.ok(renderedVaultText.some((text) => text.includes("NEEDS REPAIR")), `Vault did not render the Doctor health state: ${renderedVaultText.slice(-80).join(" | ")}`);
-  assert.ok(!renderedVaultText.includes("opening Ghost Vault..."), "ready nonempty Vault retained its loading message");
+  assert.ok(!renderedVaultText.includes("Opening your saved replays…"), "ready nonempty Vault retained its loading message");
   assert.ok(renderedVaultText.includes("REPAIR"), `Vault did not render the repair control: ${renderedVaultText.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
   const repairPosition = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT_POSITIONS__.findLast((entry) => entry.text === "REPAIR"));

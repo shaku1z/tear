@@ -80,7 +80,7 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     assert.equal(JSON.parse(evidence.progressBefore.tear_meta).lifetimeSpent, 325);
     await openVault(); await openRow(0);
     await page.mouse.click(428, 854);
-    await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text === "TICK 120"));
+    await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text.startsWith("0:01 / ")));
     await clickText("LOCAL CHALLENGE");
     await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text.startsWith("RETURN RACE")));
     const race = await page.evaluate(() => window.__CHALLENGE_POSITIONS__.find((entry) => entry.text.startsWith("RETURN RACE")));
@@ -108,7 +108,7 @@ withJourney({ name: "C37 recorded local challenge", port: 8155, deferBoot: true,
     assert.equal(await readProof(succeeded.id), successProofBytes);
     await page.keyboard.press("Escape"); await waitScreen("profile");
     await openRow(1); await page.mouse.click(428, 854);
-    await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text === "TICK 120"));
+    await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text.startsWith("0:01 / ")));
     await clickText("LOCAL CHALLENGE");
     await page.waitForFunction(() => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text.startsWith("CLEAR WAVE")));
     const wave = await page.evaluate(() => window.__CHALLENGE_POSITIONS__.find((entry) => entry.text.startsWith("CLEAR WAVE")));

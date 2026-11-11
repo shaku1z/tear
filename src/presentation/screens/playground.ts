@@ -12,7 +12,7 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
     ui.header(canvas, view.title, view.subtitle, context.enterAmount);
     if (view.id === "pgmenu") renderBuildMenu(view);
     else renderAbilityLab(view);
-    scrollHint(context, view.canScrollUp, view.canScrollDown);
+    scrollHint(context, view.canScrollUp, view.canScrollDown, context.height - 88);
     // The build menu resumes through its own RESUME button (and Tab / Esc); only
     // the lab carries a back control, which returns to the build menu.
     if (view.id === "pglab") backControl(context, { type: "navigate", to: "pgmenu" });

@@ -31,26 +31,28 @@ const musicModeNotes: Readonly<Record<string, string>> = {
 const musicModeNote = (mode: string | undefined): string =>
   musicModeNotes[mode ?? "adaptive"] ?? "LAYERS FOLLOW THE FIGHT";
 
+/** Player wording for the station names the audio layer owns ("canonical" is the game's own choice). */
+export function playerStationLabel(id: string): string {
+  return id === "canonical" ? "AUTOMATIC" : stationLabel(id);
+}
+
 export function buildSettingsSections(tab: string, settings: SettingsSnapshotSource, environment: SettingsEnvironmentSnapshot): SettingsSections {
   const normalizedTab = normalizeMusicSettingsTab(tab);
   if (normalizedTab === "audio") return [{ label: "AUDIO MIX", rows: [
-    { key: "masterVolume", label: "Master volume", value: percent(settings.masterVolume), kind: "stepper" },
-    { key: "musicVolume", label: "Music volume", value: percent(settings.musicVolume), kind: "stepper" },
-    { key: "sfxVolume", label: "Sound effects volume", value: percent(settings.sfxVolume), kind: "stepper" },
-    { key: "interfaceVolume", label: "Interface volume", value: percent(settings.interfaceVolume), kind: "stepper" },
-    { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "MUSIC · SHELL SLOT" },
+    // One row per channel: the volume stepper carries its own mute switch.
+    { key: "masterVolume", label: "Master volume", value: percent(settings.masterVolume), kind: "stepper", muteKey: "masterMuted", muted: settings.masterMuted },
+    { key: "musicVolume", label: "Music volume", value: percent(settings.musicVolume), kind: "stepper", muteKey: "musicMuted", muted: settings.musicMuted },
+    { key: "sfxVolume", label: "Sound effects volume", value: percent(settings.sfxVolume), kind: "stepper", muteKey: "sfxMuted", muted: settings.sfxMuted },
+    { key: "interfaceVolume", label: "Interface volume", value: percent(settings.interfaceVolume), kind: "stepper", muteKey: "interfaceMuted", muted: settings.interfaceMuted },
+    { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "PLAYS ON THE MENUS" },
     { key: "musicMode", label: "Soundtrack behavior", value: (settings.musicMode ?? "adaptive").toUpperCase(), kind: "cycle", note: musicModeNote(settings.musicMode) },
-    { key: "masterMuted", label: "Master audio", value: "", kind: "toggle", on: !settings.masterMuted },
-    { key: "musicMuted", label: "Music", value: "", kind: "toggle", on: !settings.musicMuted },
-    { key: "sfxMuted", label: "Sound effects", value: "", kind: "toggle", on: !settings.sfxMuted },
-    { key: "interfaceMuted", label: "Interface sounds", value: "", kind: "toggle", on: !settings.interfaceMuted },
   ] }];
   if (normalizedTab === MUSIC_SETTINGS_TAB) {
     const np = getNowPlaying();
     return [{ label: "MUSIC", rows: [
-      { key: "nowPlaying", label: "Now playing", value: nowPlayingLabel(np), kind: "cycle", enabled: false },
-      { key: "station", label: "Station", value: stationLabel(settings.station ?? "canonical"), kind: "cycle", note: stationNote(settings.station ?? "canonical") },
-      { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "SHELL SLOT" },
+      { key: "nowPlaying", label: "Now playing", value: np.workId ? nowPlayingLabel(np) : "NOTHING YET", kind: "cycle", enabled: false },
+      { key: "station", label: "Station", value: playerStationLabel(settings.station ?? "canonical"), kind: "cycle", note: stationNote(settings.station ?? "canonical") },
+      { key: "menuMusic", label: "Menu music", value: menuMusicLabel(settings.menuMusic ?? "default"), kind: "cycle", note: "PLAYS ON THE MENUS" },
       { key: "musicMode", label: "Soundtrack behavior", value: (settings.musicMode ?? "adaptive").toUpperCase(), kind: "cycle", note: musicModeNote(settings.musicMode) },
     ] }];
   }

@@ -1,4 +1,5 @@
 import type { LegacyAppScreen } from "./legacy-state-controller";
+import { RENAME_FIELD } from "../presentation/rename-field";
 
 export interface RenameSnapshot { readonly active: boolean; readonly error: string; readonly firstRun: boolean;
   readonly previous: LegacyAppScreen; readonly value: string }
@@ -25,7 +26,7 @@ export class RenameController {
   begin(firstRun: boolean, debugBypass = false): void {
     if (!debugBypass && !this.ports.cloud.loggedIn()) return;
     this.ports.document.exitPointerLock(); this.ports.input.textEntryMode = true;
-    const input = this.#input(); input.value = this.ports.profile.username(); input.style.display = "block"; input.style.color = "#eafcff";
+    const input = this.#input(); input.value = this.ports.profile.username(); input.style.display = "block"; input.style.color = "#f1eff9";
     this.position(); setTimeout(() => { input.focus(); }, 50);
     const previous = this.ports.screen();
     this.#active = { error: "", firstRun, previous: previous === "rename" ? "profile" : previous };
@@ -53,14 +54,16 @@ export class RenameController {
     this.ports.setScreen(destination, destination === "replay" ? { returnTo: this.ports.replayReturn() } : undefined);
     this.#active = null;
   }
+  /** Places the DOM field inside the canvas frame using the renderer's shared geometry (RENAME_FIELD). */
   position(): void {
     const input = this.#input(), rect = this.ports.canvas.getBoundingClientRect(), overscan = this.ports.overscan();
-    const scale = rect.width / (this.ports.logicalWidth + overscan.x * 2), width = 460, height = 56;
-    const x = this.ports.logicalWidth / 2 - width / 2, y = 308;
+    const scale = rect.width / (this.ports.logicalWidth + overscan.x * 2), field = RENAME_FIELD;
+    const x = field.x + (this.ports.logicalWidth / 2 - (field.x + field.w / 2)) + field.inset, width = field.w - field.inset - field.counterW;
     input.style.left = String(rect.left + (x + overscan.x) * scale) + "px";
-    input.style.top = String(rect.top + (y + overscan.y) * scale) + "px";
-    input.style.width = String(width * scale) + "px"; input.style.height = String(height * scale) + "px";
-    input.style.fontSize = String(26 * scale) + "px";
+    input.style.top = String(rect.top + (field.y + overscan.y) * scale) + "px";
+    input.style.width = String(width * scale) + "px"; input.style.height = String(field.h * scale) + "px";
+    input.style.fontSize = String(field.fontSize * scale) + "px";
+    input.style.textAlign = "left";
   }
   snapshot(): RenameSnapshot {
     const active = this.#active;

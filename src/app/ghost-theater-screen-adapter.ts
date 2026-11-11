@@ -1,4 +1,5 @@
 import { readGhostBossMemory } from "../ghost/boss-memory-origin";
+import { replayClock } from "../presentation/replay-snapshots";
 import type { createBrowserBossMemory } from "./browser-boss-memory";
 import { handleReplayTransport, type ReplayNativeTransport } from "./replay-transport-controller";
 import { recordedGhostChallengeChoices, type RecordedGhostChallenge, type RecordedGhostChallengeResult } from "../ghost/recorded-challenge";
@@ -128,24 +129,25 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     return Object.freeze({
       id: "replay",
       ...(currentContext.finaleAvailable ? { finaleNavigation: "FINALE CONTINUATION" as const } : {}),
-      title: memory?.title ?? "GHOST 3 THEATER",
-      detail: memory ? "DERIVED ENCOUNTER · UNRANKED · SOURCE MEMBERSHIP UNPROVEN · NO TRAINING" : `VERIFIED SOURCE SIMULATION · ${currentContext.capsule.manifest.recordingProfile.toUpperCase()}${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED / NONCOMPETITIVE"}`,
+      title: memory?.title ?? "SAVED REPLAY",
+      detail: memory ? "BOSS ENCOUNTER · UNRANKED" : `RECORDED RUN${currentContext.capsule.manifest.provenance?.ghostAssistance === undefined ? "" : " · ASSISTED · UNRANKED"}`,
       paused: !state.playing,
       speed: state.speed,
-      elapsed: `TICK ${String(current)}`,
-      duration: `TICK ${String(currentContext.lastTick)}`,
+      // Players read time, not simulation ticks (120 per second).
+      elapsed: replayClock(current - currentContext.firstTick),
+      duration: replayClock(currentContext.lastTick - currentContext.firstTick),
       progress: currentContext.lastTick === 0 ? 1 : (current - currentContext.firstTick) / Math.max(1, currentContext.lastTick - currentContext.firstTick),
-      score: `TICK ${String(current)}`,
+      score: "",
       chapters: currentContext.checkpoints.map((tick) => Object.freeze({
         fraction: currentContext.lastTick === 0 ? 0 : (tick - currentContext.firstTick) / Math.max(1, currentContext.lastTick - currentContext.firstTick),
         boss: false,
       })),
       infoVisible: currentContext.infoVisible,
       infoRows: Object.freeze([
-        { label: "CAPSULE", value: currentContext.capsule.manifest.id },
-        { label: "CUSTODY", value: currentContext.session.sourceRootHash },
-        { label: "CHECKPOINT", value: currentContext.checkpoints.includes(current) ? "VERIFIED" : "REPLAYED" },
-        { label: "STATE HASH", value: currentContext.result.semanticHash },
+        { label: "POSITION", value: `${replayClock(current - currentContext.firstTick)} / ${replayClock(currentContext.lastTick - currentContext.firstTick)}` },
+        { label: "SAVED POINTS", value: String(currentContext.checkpoints.length) },
+        { label: "HERE", value: currentContext.checkpoints.includes(current) ? "AT A SAVED POINT" : "PLAYING" },
+        { label: "STORED", value: "ON THIS DEVICE" },
       ]),
       ...(currentContext.message === undefined ? {} : { notice: currentContext.message }),
       bossMemory: { available: services.bossMemory !== undefined && currentContext.checkpoints.includes(current) && challengeChoices().some(c=>c.rule==="boss-defeat") && currentContext.capsule.manifest.provenance?.bossMemory === undefined,

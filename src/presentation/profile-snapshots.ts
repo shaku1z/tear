@@ -28,8 +28,13 @@ export function buildProfileStats(stat: (key: string) => number, enterAmount: nu
   const countUp = Math.max(0, Math.min(1, enterAmount));
   return definitions.map(([key, label, glyph, accent, format]) => {
     const raw = stat(key);
-    return Object.freeze({ label, glyph, accent, value: format?.(raw) ?? Math.round(raw * countUp).toLocaleString() });
+    return Object.freeze({ label, glyph, accent, value: format?.(raw) ?? Math.round(raw * countUp).toLocaleString("en-US") });
   });
+}
+
+/** Difficulty ids as players read them ("onehit" -> "ONE-HIT"). */
+export function difficultyLabel(id: string): string {
+  return id === "onehit" ? "ONE-HIT" : id.toUpperCase();
 }
 
 export interface ReplayIndexSource {
@@ -40,8 +45,8 @@ export function buildProfileReplays(entries: readonly ReplayIndexSource[], modes
   return entries.map((entry) => {
     const summary = entry.sum ?? {}, mode = modes.find((item) => item.id === summary.mode);
     return Object.freeze({ id: entry.id,
-      title: (summary.name ?? "You") + " — " + (mode?.label ?? summary.mode ?? "Run") + " · " + (summary.diff ?? ""),
-      detail: "wave " + String(summary.wave ?? 0) + " · " + String(summary.score ?? 0) + " pts" + (summary.won ? " · ★ victory" : ""),
+      title: (summary.name ?? "You") + " — " + ((mode?.label ?? summary.mode ?? "Run") + (summary.diff ? " · " + difficultyLabel(summary.diff) : "")).toUpperCase(),
+      detail: "wave " + String(summary.wave ?? 0) + " · " + (summary.score ?? 0).toLocaleString("en-US") + " pts" + (summary.won ? " · ★ victory" : ""),
       available: true, local: true, pinned: entry.pin === true, shared: entry.shareId !== undefined,
       ...(summary.thumb === undefined ? {} : { thumbnailId: summary.thumb }),
       timestamp: new Date(entry.ts).toLocaleDateString() + (entry.shareId === undefined ? "" : " · PUBLISHED") });
@@ -58,13 +63,13 @@ export function buildLeaderboardRow(row: LeaderboardRowSource, modes: readonly M
   const mode = modes.find((entry) => entry.id === row.mode), id = row.replayId ?? row.shareId ?? fallbackId ?? "unavailable";
   const mine = row.uid !== undefined && row.uid === currentUserId;
   return Object.freeze({ id, title: row.mode !== undefined
-      ? (row.name ?? "Player") + " — " + (mode?.label ?? row.mode) + " · " + (row.diff ?? "")
+      ? (row.name ?? "Player") + " — " + ((mode?.label ?? row.mode) + (row.diff ? " · " + difficultyLabel(row.diff) : "")).toUpperCase()
       : (row.name ?? "Player") + (mine ? " (you)" : ""),
     detail: row.mode !== undefined
-      ? "wave " + String(row.wave ?? 0) + " · " + (row.score ?? 0).toLocaleString() + " pts" + (row.won ? " · ★ victory" : "")
-      : "wave " + String(row.wave ?? 0) + " · " + formatTime(row.time ?? 0) + " · " + (row.score ?? 0).toLocaleString() + " pts",
+      ? "wave " + String(row.wave ?? 0) + " · " + (row.score ?? 0).toLocaleString("en-US") + " pts" + (row.won ? " · ★ victory" : "")
+      : "wave " + String(row.wave ?? 0) + " · " + formatTime(row.time ?? 0) + " · " + (row.score ?? 0).toLocaleString("en-US") + " pts",
     available: row.replayId !== undefined || row.shareId !== undefined || fallbackId !== undefined, mine,
-    wave: String(row.wave ?? 0), time: formatTime(row.time ?? 0), score: (row.score ?? 0).toLocaleString(),
+    wave: String(row.wave ?? 0), time: formatTime(row.time ?? 0), score: (row.score ?? 0).toLocaleString("en-US"),
     ...(row.thumb === undefined ? {} : { thumbnailId: row.thumb }),
     ...(row.lb ? { badge: "LEADERBOARD RUN" } : {}),
     ...(row.createdAt === undefined ? {} : { timestamp: new Date(row.createdAt).toLocaleDateString()
@@ -88,7 +93,9 @@ export function buildProfileSnapshot(input: {
   readonly stat: (key: string) => number; readonly formatTime: (seconds: number) => string;
   readonly difficultyAccent: (difficultyId: string) => string;
 }): ProfileSnapshotResult {
-  const maximumScroll = Math.max(0, input.replays.length * (input.tab === "vault" && input.replays.some((r) => r.canDownloadLinkedPair) ? 128 : 96) - (input.height - 432 - (input.replayListInset ?? 0)));
+  // Visible list height: page body bottom (height - 110) minus the content top (306),
+  // a possible notice line (24) and the vault toolbar inset.
+  const maximumScroll = Math.max(0, input.replays.length * (input.tab === "vault" && input.replays.some((r) => r.canDownloadLinkedPair) ? 128 : 96) - (input.height - 440 - (input.replayListInset ?? 0)));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const rarityRank: Readonly<Record<string, number>> = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
   const showcases = input.achievements.filter((entry) => input.unlocked(entry.id))
@@ -98,8 +105,8 @@ export function buildProfileSnapshot(input: {
   const view: ProfileScreenView = { id: "profile", tab: input.tab,
     tabs: input.tabs.map(([id, label]) => ({ id, label, selected: id === input.tab })),
     name: input.username || (input.signedIn ? input.displayName : "GUEST"), signedIn: input.signedIn,
-    cloudStatus: input.signedIn ? "Signed in — progress synced to the cloud"
-      : (input.canSignIn ? "Playing as a guest — sign in to keep your progress everywhere" : "Progress saved on this device"),
+    cloudStatus: input.signedIn ? "Signed in — progress synced"
+      : (input.canSignIn ? "Guest — sign in to keep progress everywhere" : "Progress saved on this device"),
     message: input.message, stats: input.tab === "stats" ? input.stats : [], replays: input.replays,
     canScrollUp: scroll > 0, canScrollDown: scroll < maximumScroll,
     passport: { coins: input.coins, shards: input.shards, achievements: String(input.unlockedCount) + " / " + String(input.totalAchievements),
@@ -108,11 +115,11 @@ export function buildProfileSnapshot(input: {
       canRename: input.signedIn && !lockedName, canSignIn: !input.signedIn && input.canSignIn,
       canSignOut: input.signedIn && input.firebase,
       ...(input.canSignIn ? { signInLabel: (input.authRetryPrompt ? "RETRY · " : "") + input.signInLabel.toUpperCase() } : {}), showcases },
-    ...(input.tab === "bests" && top !== undefined ? { finest: { headline: "WAVE " + String(top.best.wave) + " · " + top.best.score.toLocaleString() + " PTS",
+    ...(input.tab === "bests" && top !== undefined ? { finest: { headline: "WAVE " + String(top.best.wave) + " · " + top.best.score.toLocaleString("en-US") + " PTS",
       detail: "YOUR FINEST — " + (top.mode.label + " · " + top.difficulty.label).toUpperCase() + " · " + input.formatTime(top.best.time ?? 0) } } : {}),
     ...(input.tab === "bests" ? { records: input.records.slice(0, 10).map(({ mode, difficulty, best }) => ({
       mode: mode.label, difficulty: difficulty.label, wave: String(best.wave), time: input.formatTime(best.time ?? 0),
-      score: best.score.toLocaleString(), accent: input.difficultyAccent(difficulty.id) })) } : {}),
+      score: best.score.toLocaleString("en-US"), accent: input.difficultyAccent(difficulty.id) })) } : {}),
     ...(input.tab === "stats" ? { journey: {
       biomes: input.stages.map((stage, index) => ({ id: stage.id ?? String(index), label: stage.name, selected: index < input.stat("biomesSeen") })),
       bosses: input.bosses.map((boss) => ({ id: boss.id, label: boss.name,

@@ -80,7 +80,8 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       touch: d.Input.touchActive(), installAvailable: services.installPrompt.available, update: d.PwaUpdate.snapshot(),
       presets: presetMeta, controllerGlyphs: [g(0), g(1), g(2), g(3)] });
     const rowCount = sections.reduce((count, section) => count + section.rows.length, 0);
-    maximumScroll = Math.max(0, rowCount * 54 + sections.length * 48 - 610);
+    // Matches the settings renderer: settingsRowH per row, 48 per section head, list from y=214 to the page footer (900 - 110 - 214 = 576 visible).
+    maximumScroll = Math.max(0, rowCount * d.UI.t.metric.settingsRowH + sections.length * 48 - 576);
     services.setScroll(services.clamp(services.scroll(), 0, maximumScroll));
     services.renderers.settings({ id: "settings", tab: settingsTab,
       tabs: settingsTabs.map(([id, label]) => ({ id, label, selected: id === settingsTab })), sections,

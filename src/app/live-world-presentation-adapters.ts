@@ -97,6 +97,9 @@ export interface LiveWorldPresentationAdapters {
   readonly drawReticle: () => void;
 }
 
+/** Menu screens drawn on the paper sheet (their header-left is empty). */
+const SHEET_SCREENS: ReadonlySet<string> = new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings"]);
+
 export function createLiveWorldPresentationAdapters(
   state: WorldPresentationState,
   services: WorldPresentationServices,
@@ -275,7 +278,11 @@ export function createLiveWorldPresentationAdapters(
         markSeen: d.achievementToastPersistence.markSeen, save: d.achievementToastPersistence.save,
         shardsFor: (achievement) => { const source = d.ACH.byId(achievement.id); return source ? d.ACH.shardsFor(source) : 0; },
         coinsFor: (achievement) => { const source = d.ACH.byId(achievement.id); return source ? d.ACH.coinsFor(source) : 0; } });
-      if (snapshot) world.achievementToast(snapshot);
+      if (snapshot) {
+        const screen = state.screen();
+        const placement = screen === "menu" ? "bottom-right" : SHEET_SCREENS.has(screen) ? "header-left" : "top-right";
+        world.achievementToast({ ...snapshot, placement });
+      }
     },
     drawTouchControls(): void {
       const onboarding = services.touchOnboarding.step(state.lastUiDelta(), !!d.PROFILE.stat("touchOnboarded"));

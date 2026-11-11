@@ -260,6 +260,6 @@ export function createLivePresentationFrameHost<Screen extends string,
     buttonLayer: () => ({ context, buttons: state.controls(), focus: state.focus(),
       pointerX: services.input.mouseX, pointerY: services.input.mouseY, deltaSeconds: state.deltaSeconds(),
       enterSeconds: state.enterSeconds(), hoverAnimation: services.hoverAnimation, ui,
-      entranceEase: services.ease }),
+      entranceEase: services.ease, focusVisible: services.input.mode === "keyboard" || services.input.mode === "gamepad" }),
   });
 }

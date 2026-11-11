@@ -186,13 +186,13 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   assert.equal(selectedCount, 9, "all nine rendered source selections must be reached within bounded scrolling");
   await page.waitForTimeout(140); await clickText("COMPARE 9");
   await waitScreen("replay");
-  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("SEMANTIC COMPARISON"), undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COMPARE RUNS"), undefined, { timeout: 10000 });
   await page.mouse.click(428, 854); // next semantic event through the rendered replay transport
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("EVENT 2 / EVENT ")), undefined, { timeout: 10000 });
   await page.mouse.click(428, 854); // a second repeated semantic occurrence
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("OCCURRENCE 2"), undefined, { timeout: 10000 });
   const comparisonTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(comparisonTexts.some((text) => text.includes("SEMANTIC COMPARISON")), "comparison panel did not render");
+  assert.ok(comparisonTexts.some((text) => text.includes("COMPARE RUNS")), "comparison panel did not render");
   assert.ok(comparisonTexts.filter((text) => text.includes("RUN ")).length >= 9, "comparison did not render all nine durable sources");
   await page.keyboard.press("Escape");
   await waitScreen("profile");
@@ -201,7 +201,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const theaterTextCount = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__?.length ?? 0);
   await page.waitForTimeout(250);
   await page.mouse.click(428, 854); // next verified checkpoint through the visible transport
-  await page.waitForFunction((count) => window.__TEAR_C29_THEATER_TEXT__?.slice(count).includes("TICK 120"), theaterTextCount, { timeout: 10000 });
+  await page.waitForFunction((count) => window.__TEAR_C29_THEATER_TEXT__?.slice(count).some((text) => String(text).startsWith("0:01 /")), theaterTextCount, { timeout: 10000 });
   const theaterTexts = await page.evaluate((count) => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(count), theaterTextCount);
   assert.ok(theaterTexts.some((text) => text.includes("THEATER")), `Theater header did not render: ${theaterTexts.slice(-80).join(" | ")}`);
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "replay");

@@ -16,9 +16,11 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 title: 24, // section / card name
                 lead: 20, // buttons, emphasised values
                 body: 16, // standard copy
-                label: 14, // list rows, secondary copy
-                caption: 13, // taglines, hints
-                micro: 11, // tags, pips, fine print
+                label: 15, // list rows, secondary copy
+                caption: 14, // taglines, hints
+                // Legibility floor: the smallest text a player must read. 13 logical px
+                // renders at 10.4 CSS px in a 1280×720 window (×0.8 layout scale).
+                micro: 13, // tags, pips, fine print
             },
             // spacing scale (px) — vertical rhythm + paddings
             space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
@@ -67,10 +69,18 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 rallyInset: 2,
                 settingsTop: 182, settingsContentInset: 40, settingsColumnGap: 40,
                 settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54,
+                // keyboard/controller focus ring: stroke width and gap outside the control
+                focusRing: 2, focusGap: 3,
+                // the shared page pattern (sheet-relative, see screen-primitives `page`)
+                pageTitleY: 92, pageBodyTop: 156, pageFooterH: 84, backW: 220,
             },
             // opacity roles for de-emphasised text
             alpha: {
-                full: 1, soft: 0.7, muted: 0.55, faint: 0.4, ghost: 0.25,
+                // Text roles are measured on their real surfaces: muted (secondary) ≥ 4.5:1
+                // and faint (tertiary) ≥ 3:1 on the solid sheet and on the dark rail.
+                full: 1, soft: 0.78, muted: 0.66, faint: 0.52, ghost: 0.25,
+                // content surfaces: the sheet and the main-menu rail are effectively solid
+                sheet: 0.96, rail: 0.92, modalDim: 0.9,
                 bossTrack: 0.20, bossGuardTrack: 0.16, bossNotch: 0.90, bossFlash: 0.85,
                 cinemaBar: 0.88, cinemaVignette: 0.30, cinemaSubtitle: 0.75,
                 bossPhasePanel: 0.82,
@@ -82,11 +92,15 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
             // from the game palette so the system and the game never drift apart.
             color: {
                 paper: "#fff",
-                muted: "#9a9a9a", // de-emphasised text / hairlines
+                muted: "#62646f", // de-emphasised text / hairlines (5.9:1 on paper)
                 disabled: "#bbb", // disabled controls
                 cinema: "#06070c", // fixed dark field for cinematic boss chrome
                 cinemaInk: "#f1eff9", // title ink on the cinematic field
                 cinemaMuted: "#c9ccd6",
+                // guaranteed-contrast modal pair: a dark scrim and the light ink drawn on it
+                scrim: "#06070c", scrimInk: "#f1eff9",
+                // main-menu rail backing and its foreground
+                rail: "#080a10", railInk: "#f1eff9",
                 guard: "#e0a326", // posture / guard-break meter
                 get rally() { return colors.bomber; },
                 get accent() { return colors.perfect; },

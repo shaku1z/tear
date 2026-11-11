@@ -2,6 +2,8 @@ import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-arc
 import type { GhostCoachHistoryView } from "../../ghost/coach-history";
 import type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
+import type { TextBoxOptions, TextBoxResult } from "../ui-text";
+import type { TextFitLayout, TextFitOptions } from "../ui-text-fit";
 export type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
 
 export interface ScreenControl {
@@ -19,9 +21,9 @@ export interface ScreenUiPort {
   readonly t: {
     readonly type: Record<string, number> & { readonly wordmark: number; readonly display: number; readonly h1: number; readonly h2: number; readonly title: number; readonly lead: number; readonly body: number; readonly label: number; readonly caption: number; readonly micro: number };
     readonly font: Readonly<{ readonly brand: string; readonly display: string; readonly body: string; readonly displayWeight: number; readonly bodyWeight: number; readonly bodyMediumWeight: number }>;
-    readonly alpha: Record<string, number> & { readonly full: number; readonly soft: number; readonly muted: number; readonly faint: number };
-    readonly color: Record<string, string> & { readonly accent: string; readonly muted: string; readonly danger: string };
-    readonly metric: Record<string, number> & { readonly btnH: number; readonly btnGap: number };
+    readonly alpha: Record<string, number> & { readonly full: number; readonly soft: number; readonly muted: number; readonly faint: number; readonly rail: number; readonly sheet: number };
+    readonly color: Record<string, string> & { readonly accent: string; readonly muted: string; readonly danger: string; readonly paper: string; readonly rail: string; readonly railInk: string; readonly unique: string };
+    readonly metric: Record<string, number> & { readonly btnH: number; readonly btnGap: number; readonly pageTitleY: number; readonly pageBodyTop: number; readonly backW: number; readonly settingsRowH: number; readonly settingsControlW: number; readonly settingsControlH: number; readonly settingsStepperW: number };
   };
   text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
   wordmark(context: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean): void;
@@ -48,7 +50,12 @@ export interface ScreenUiPort {
     push?: (button: Readonly<{ x: number; y: number; w: number; h: number; label: string; _tab?: number; _hideBox?: boolean }>) => void): void;
   keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
   tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
-  scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean): void;
+  scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean, align?: CanvasTextAlign): void;
+  sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
+  readable(color: string, ratio?: number): string;
+  textBox(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, options?: TextBoxOptions): TextBoxResult;
+  fitText(context: CanvasRenderingContext2D, text: string, maxWidth: number, options: TextFitOptions & { readonly bold?: boolean }): TextFitLayout;
+  emptyState(context: CanvasRenderingContext2D, glyph: string, line: string, cx: number, cy: number, detail?: string, width?: number): number;
   finalReward(context: CanvasRenderingContext2D, options: {
     amount: number; label: string; title: string; sigil: string; color: string; reward: string; detail: string;
   }): void;
@@ -201,6 +208,8 @@ export interface LeaderboardsScreenView {
   readonly modes?: readonly ChoiceView[]; readonly difficulties?: readonly ChoiceView[];
   readonly podium?: readonly { readonly rank: number; readonly name: string; readonly detail: string; readonly color: string; readonly mine?: boolean; readonly replayId?: string }[];
   readonly ownRank?: string; readonly signInRequired?: boolean; readonly legacyGhostId?: string;
+  /** Distinct designed states: account needed, loading, unreachable, nothing recorded yet, or rows to show. */
+  readonly status?: "signin" | "loading" | "offline" | "empty" | "ready";
 }
 export interface ReplayChapterView { readonly fraction: number; readonly boss: boolean }
 export interface ReplayComparisonView {
@@ -242,6 +251,8 @@ export interface ReplayScreenView {
 export interface SettingRowView {
   readonly key: string; readonly label: string; readonly value: string; readonly kind: "stepper" | "toggle" | "cycle";
   readonly on?: boolean; readonly enabled?: boolean; readonly note?: string;
+  /** A stepper's companion mute switch (toggled through settings.toggle with this key). */
+  readonly muteKey?: string; readonly muted?: boolean;
 }
 export interface SettingsScreenView {
   readonly id: "settings"; readonly tab: string; readonly tabs: readonly ChoiceView[];

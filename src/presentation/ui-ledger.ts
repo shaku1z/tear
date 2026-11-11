@@ -109,7 +109,7 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
         // a section label + hairline that RESERVES its vertical space (returns the y
         // content should start at) — so labels can never collide with what follows.
         sectionLabel(this: UiRuntime, ctx: CanvasRenderingContext2D, label: string, x: number, y: number, w: number, hue?: string) {
-            this.tag(ctx, label.toUpperCase(), x, y, truthyOr(hue, () => this.t.color.accent), "left", this.t.type.micro);
+            this.tag(ctx, label.toUpperCase(), x, y, this.readable(truthyOr(hue, () => this.t.color.accent)), "left", this.t.type.micro);
             ctx.font = this.font(this.t.type.micro, true);
             const lw = ctx.measureText(label.toUpperCase()).width;
             this.divider(ctx, x + lw + 12, y - 4, w - lw - 12, 0.14);
@@ -117,16 +117,25 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
         },
         // a designed empty state: big ghost glyph + one-liner (+ optional CTA the
         // caller registers as a button and passes for placement). Centred in a zone.
-        emptyState(this: UiRuntime, ctx: CanvasRenderingContext2D, glyph: string, line: string, cx: number, cy: number) {
+        // `detail` is an optional muted explanation wrapped to `width` under the line.
+        emptyState(this: UiRuntime, ctx: CanvasRenderingContext2D, glyph: string, line: string, cx: number, cy: number, detail?: string, width = 640) {
             ctx.textAlign = "center";
             ctx.textBaseline = "alphabetic";
-            ctx.globalAlpha = 0.09;
+            ctx.globalAlpha = 0.16;
             ctx.fillStyle = this.ink;
             ctx.font = this.font(56, true);
             ctx.fillText(glyph, cx, cy);
             ctx.globalAlpha = 1;
-            this.text(ctx, line, cx, cy + 36, this.t.type.body, "center", this.t.alpha.soft);
-            return cy + 60; // y for an optional CTA button under the line
+            this.displayText(ctx, line, cx, cy + 40, this.t.type.lead, "center");
+            let bottom = cy + 40;
+            if (detail) {
+                const box = this.fitText(ctx, detail, width, { size: this.t.type.body, floor: this.t.type.caption, maxLines: 3 });
+                ctx.save(); ctx.globalAlpha = this.t.alpha.muted; ctx.fillStyle = this.ink; ctx.font = this.font(box.size, false);
+                box.lines.forEach((text, index) => { ctx.fillText(text, cx, cy + 70 + index * 22); });
+                ctx.restore();
+                bottom = cy + 70 + (box.lines.length - 1) * 22;
+            }
+            return bottom + 28; // y for an optional CTA button under the copy
         },
         // ---- SURFACES -----------------------------------------------------------
         // THE SHEET: the content surface every sub-screen sits on — a calm paper zone
@@ -142,11 +151,11 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
             ctx.globalAlpha = 0.14;
             ctx.fillStyle = "#0a0b10"; // soft drop shadow
             ctx.fillRect(x + 6, y + 8, w, h);
-            ctx.globalAlpha = 0.70;
-            ctx.fillStyle = this.t.color.paper; // the paper surface
+            ctx.globalAlpha = this.t.alpha.sheet;
+            ctx.fillStyle = this.t.color.paper; // the paper surface: effectively solid so scene art never fights text
             ctx.fillRect(x, y, w, h);
-            ctx.globalAlpha = 0.28;
-            ctx.strokeStyle = this.ink;
+            ctx.globalAlpha = 0.32;
+            ctx.strokeStyle = "#0a0b10";
             ctx.lineWidth = 1;
             ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); // hairline frame
             ctx.globalAlpha = 1;

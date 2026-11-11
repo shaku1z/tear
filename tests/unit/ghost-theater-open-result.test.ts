@@ -98,7 +98,7 @@ describe("Coach cited seek refusal", () => {
     theater.openCoach(); await vi.waitFor(() => { theater.render(); expect(rendered.at(-1)?.coach?.candidates.length).toBe(1); });
     theater.selectCoachBaseline("other"); await vi.waitFor(() => { theater.render(); expect(rendered.at(-1)?.coach?.result).toBeDefined(); });
     theater.viewCoachMoment("throws:native-throw"); await vi.waitFor(() => { theater.render(); expect(rendered.at(-1)?.notice).toContain("Replay halted: source continuation refused"); });
-    expect(rendered.at(-1)?.elapsed).toBe("TICK 0");
+    expect(rendered.at(-1)?.elapsed).toBe("0:00");
     fixture.session = undefined;
   });
 });

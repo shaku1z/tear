@@ -1,6 +1,16 @@
 import { createCareerArchiveRenderer } from "./career-archive";
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
-import { backControl, ellipsize, replayRow, scrollHint, tabs } from "./screen-primitives";
+import { clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+
+const PROFILE_HUE = "#b06cff";
+/** First y under the profile tab strip; the snapshot's scroll bounds use the same value. */
+export const PROFILE_CONTENT_TOP = 306;
+
+const ARCHIVE_STATUS: Readonly<Record<string, string>> = Object.freeze({
+  idle: "", unavailable: "Importing replay files isn't available in this browser.", picking: "Choosing a file…",
+  validating: "Checking the file…", ready: "Ready to restore.", restoring: "Restoring…", "reselect-required": "Choose the file again to continue.",
+  complete: "Restored to this device.", cancelled: "Import cancelled.", failed: "That file couldn't be restored.", "download-requested": "Download started.",
+});
 
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
   const { ui } = context;
@@ -9,238 +19,265 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
   function profile(view: ProfileScreenView): void {
     if (view.career) { career(view.career); return; }
     const { canvas } = context;
-    ui.title(canvas, "PROFILE", context.width / 2, 92, ui.t.type.h1);
-    canvas.fillStyle = "#b06cff"; canvas.globalAlpha = context.enterAmount;
-    canvas.fillRect(context.width / 2 - 65 * context.enterAmount, 108, 130 * context.enterAmount, 3); canvas.globalAlpha = 1;
+    const layout = page(context, { title: "PROFILE", hue: PROFILE_HUE });
     passport(view);
     tabs(context, view.tabs, (id) => ({ type: "profile.selectTab", id }), 252);
-    if (view.tab === "vault" && view.ownerRecovery) {
+    const left = layout.left, listWidth = layout.contentWidth, bottom = layout.bodyBottom;
+    let top = PROFILE_CONTENT_TOP;
+
+    if (view.tab === "vault") top = vaultToolbar(view, top);
+    if (view.tab === "vault" && view.ownerRecovery?.catalogVisible === true) {
       const recovery = view.ownerRecovery;
-      context.enqueue({ x: context.width / 2 + 260, y: 64, w: 300, h: 52, size: ui.t.type.micro,
-        label: "LOAD MY CLOUD CAPSULES", sub: ellipsize(canvas, recovery.detail, 280), enabled: recovery.canLoad,
-        action: { type: "profile.loadOwnGhostCapsules" } });
-      if (recovery.catalogVisible) {
-        const left = context.width / 2 - 560, top = 390, bottom = context.height - 110;
-        context.enqueue({ x: left, y: 312, w: 180, h: 36, label: "LOCAL VAULT", action: { type: "profile.closeOwnGhostCatalog" } });
-        ui.text(canvas, ellipsize(canvas, recovery.detail, 900), left + 200, 336, ui.t.type.caption, "left", ui.t.alpha.soft);
-        if (recovery.entries.length === 0 && recovery.status === "ready") ui.text(canvas, "No recoverable cloud capsules.", left, top + 28, ui.t.type.body);
+      if (recovery.entries.length === 0 && recovery.status === "ready") ui.emptyState(canvas, "◇", "No saved replays in your account", context.width / 2, top + 120);
+      clipBody(context, top - 8, bottom, () => {
         recovery.entries.forEach((entry, index) => {
           const y = top + index * 96 - context.scroll;
-          if (y < top || y + 80 > bottom) return;
-          ui.text(canvas, ellipsize(canvas, entry.capsuleId, 650), left, y + 24, ui.t.type.label);
-          ui.text(canvas, ellipsize(canvas, `${entry.buildId} / ROOT ${entry.rootIntegrity} / ${String(entry.byteLength)} BYTES`, 650), left, y + 46, ui.t.type.micro, "left", ui.t.alpha.muted);
-          if (entry.localStatus) ui.text(canvas, entry.localStatus === "already-recovered" ? "ALREADY STORED ON THIS DEVICE" : "STORED ON THIS DEVICE", left, y + 67, ui.t.type.micro);
-          context.enqueue({ x: left + 770, y: y + 12, w: 350, h: 40, label: "RECOVER TO THIS DEVICE", enabled: recovery.canRecover,
+          if (y + 80 < top || y > bottom) return;
+          ui.card(canvas, left, y, listWidth, 84, false);
+          ui.displayText(canvas, `SAVED REPLAY ${String(index + 1)}`, left + 20, y + 32, ui.t.type.lead);
+          ui.text(canvas, entry.localStatus === "already-recovered" ? "Already on this device" : entry.localStatus === "recovered" ? "Restored to this device" : "Stored in your account",
+            left + 20, y + 58, ui.t.type.caption, "left", ui.t.alpha.soft);
+          if (y + 22 >= top && y + 62 <= bottom) context.enqueue({ x: left + listWidth - 300, y: y + 22, w: 280, h: 40, label: "RESTORE TO THIS DEVICE", enabled: recovery.canRecover,
             action: { type: "profile.recoverOwnGhostCapsule", id: entry.capsuleId } });
         });
-        scrollHint(context, view.canScrollUp, view.canScrollDown); backControl(context); return;
-      }
+      });
+      pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
+      return;
     }
-    const panelX = context.width / 2 - 460;
-    if (view.message) ui.text(canvas, view.message, context.width / 2, 296, ui.t.type.caption, "center", ui.t.alpha.muted);
-    if (view.tab === "vault" && view.archive) {
-      const archive = view.archive, left = context.width / 2 - 560;
-      context.enqueue({ x: left, y: 312, w: 180, h: 36, label: "SELECT ARCHIVE", enabled: archive.canPick, action: { type: "profile.pickGhostArchive" } });
-      if (archive.jobId !== undefined && archive.revision !== undefined) {
-        if (archive.canReselect) context.enqueue({ x: left + 192, y: 312, w: 180, h: 36, label: "RESELECT FILE", action: { type: "profile.reselectGhostArchive", id: archive.jobId } });
-        if (archive.canRestore) context.enqueue({ x: left + 384, y: 312, w: 180, h: 36, label: archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE", action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision } });
-        if (archive.canCancel) context.enqueue({ x: left + 576, y: 312, w: 150, h: 36, label: "CANCEL", action: { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision } });
-      }
-      if (archive.canCancelSelection) context.enqueue({ x: left + 768, y: 312, w: 180, h: 36, label: "CANCEL FILE", action: { type: "profile.cancelGhostArchiveSelection" } });
-      ui.text(canvas, ellipsize(canvas, `${archive.status.toUpperCase()} / ${archive.detail}`, 1120), left, 372, ui.t.type.caption, "left", ui.t.alpha.soft);
-      if (archive.pairedCapsuleIds) ui.text(canvas, ellipsize(canvas, `SCORED RUN: ${archive.pairedCapsuleIds[0] ?? ""} + FINALE: ${archive.pairedCapsuleIds[1] ?? ""}`, 1120), left, 420, ui.t.type.micro);
-      if (archive.sha256) ui.text(canvas, ellipsize(canvas, `SCHEMA ${String(archive.schemaVersion)} / ${String(archive.byteLength)} BYTES / ROOT ${archive.rootIntegrity ?? ""} / SHA256 ${archive.sha256}`, 1120), left, 396, ui.t.type.micro, "left", ui.t.alpha.muted);
-      ui.divider(canvas, left, archive.pairedCapsuleIds ? 436 : 418, 1120, 0.12);
+
+    const listEmpty = (view.tab === "replays" || view.tab === "vault") && (view.replays?.length ?? 0) === 0;
+    if (view.message && !listEmpty) {
+      ui.textBox(canvas, view.message, context.width / 2, top + 4, listWidth, { size: ui.t.type.caption, align: "center", alpha: ui.t.alpha.muted, maxLines: 1 });
+      top += 24;
     }
+
     if ((view.tab === "replays" || view.tab === "vault") && view.replays) {
-      const top = view.tab === "vault" && view.archive ? (view.archive.pairedCapsuleIds ? 454 : 442) : 322, bottom = context.height - 110, rowHeight = view.tab === "vault" && view.replays.some((r) => r.canDownloadLinkedPair) ? 128 : 96, listX = context.width / 2 - 560, listWidth = 1120;
-      if (view.replays.length === 0 && view.emptyMessage) {
-        ui.text(canvas, view.emptyMessage, context.width / 2, top + 140, ui.t.type.body, "center", ui.t.alpha.muted);
-        if (view.tab === "replays") {
-          context.enqueue({ x: context.width / 2 - 130, y: top + 168, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
-        }
+      const linkedPair = view.tab === "vault" && view.replays.some((r) => r.canDownloadLinkedPair);
+      const rowHeight = linkedPair ? 128 : 96;
+      if (listEmpty) {
+        const line = view.tab === "vault" ? "No saved replays yet" : "No runs recorded yet";
+        const detail = view.tab === "vault"
+          ? (view.message ?? "Every run you finish is saved here automatically, ready to watch from the start.")
+          : (view.emptyMessage ?? "Every real run lands here automatically.");
+        const ctaY = ui.emptyState(canvas, view.tab === "vault" ? "◆" : "▶", line, context.width / 2, top + 110, detail, 720);
+        if (view.tab === "replays") context.enqueue({ x: context.width / 2 - 130, y: ctaY, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
       }
-      canvas.save(); canvas.beginPath(); canvas.rect(0, top - 8, context.width, bottom - top + 16); canvas.clip();
       const enqueueRow = (control: Parameters<ScreenRenderContext["enqueue"]>[0]): void => {
         if (control.y >= top && control.y + control.h <= bottom) context.enqueue(control);
       };
-      view.replays.forEach((replay, index) => {
-        const y = top + index * rowHeight - context.scroll;
-        if (y + rowHeight < top - 8 || y > bottom + 8) return;
-        replayRow(context, replay, listX, y, listWidth, replay.pinned ? "#e0a326" : undefined);
-        const actionsX = listX + listWidth - 392;
-        if (view.tab === "vault" && replay.canDownloadArchive) enqueueRow({ x: actionsX, y: y + 62, w: 116, h: 28,
-          label: "DOWNLOAD", action: { type: "profile.downloadGhostArchive", id: replay.id } });
-        if (view.tab === "vault" && replay.repairable) {
-          enqueueRow({ x: actionsX, y: y + 20, w: 110, h: 40, label: "REPAIR", action: { type: "profile.repairGhostCapsule", id: replay.id } });
-        } else {
-          enqueueRow({ x: actionsX, y: y + 20, w: 110, h: 40,
-            label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH", enabled: replay.available,
-            ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "THEATER UNAVAILABLE" } : {}),
-            action: view.tab === "vault" ? { type: "profile.watchGhostCapsule", id: replay.id } : { type: "profile.watchReplay", id: replay.id } });
-        }
-        if (view.tab === "vault" && !replay.repairable) {
-          enqueueRow({ x: actionsX + 118, y: y + 20, w: 126, h: 40,
-            label: replay.comparisonSelected ? "SELECTED" : "SELECT", enabled: replay.available,
-            selected: replay.comparisonSelected, action: { type: "profile.compareGhostCapsule", id: replay.id } });
-          if ((replay.comparisonSourceCount ?? 0) >= 2) {
-            enqueueRow({ x: actionsX + 252, y: y + 20, w: 120, h: 40,
-              label: `COMPARE ${String(replay.comparisonSourceCount)}`, action: { type: "profile.openGhostComparison" } });
+      clipBody(context, top - 8, bottom, () => {
+        view.replays?.forEach((replay, index) => {
+          const y = top + index * rowHeight - context.scroll;
+          if (y + rowHeight < top - 8 || y > bottom + 8) return;
+          replayRow(context, replay, left, y, listWidth, replay.pinned ? "#e0a326" : undefined, 410);
+          const actionsX = left + listWidth - 392;
+          if (view.tab === "vault" && replay.canDownloadArchive) enqueueRow({ x: actionsX, y: y + 62, w: 116, h: 28,
+            label: "DOWNLOAD", size: ui.t.type.micro, action: { type: "profile.downloadGhostArchive", id: replay.id } });
+          if (view.tab === "vault" && replay.repairable) {
+            enqueueRow({ x: actionsX, y: y + 18, w: 110, h: 40, label: "REPAIR", action: { type: "profile.repairGhostCapsule", id: replay.id } });
+          } else {
+            enqueueRow({ x: actionsX, y: y + 18, w: 110, h: 40, size: ui.t.type.label,
+              label: view.tab === "vault" ? "◆ THEATER" : "▶  WATCH", enabled: replay.available,
+              ...(view.tab === "vault" && replay.theaterUnavailable ? { label: "CAN'T PLAY" } : {}),
+              action: view.tab === "vault" ? { type: "profile.watchGhostCapsule", id: replay.id } : { type: "profile.watchReplay", id: replay.id } });
           }
-          enqueueRow({ x: actionsX + 252, y: y + 62, w: 120, h: 28, label: "PUBLISH", enabled: replay.available,
-            action: { type: "profile.openGhostPublication", id: replay.id } });
-          enqueueRow({ x: actionsX + 124, y: y + 62, w: 120, h: 28, label: "SUPPORT", enabled: replay.available,
-            action: { type: "profile.openGhostSupport", id: replay.id } });
-        }
-        if (view.tab === "vault" && replay.canDownloadLinkedPair) enqueueRow({ x: actionsX, y: y + 96, w: 252, h: 28,
-          label: "DOWNLOAD LINKED PAIR", action: { type: "profile.downloadGhostArchive", id: replay.id, paired: true } });
-        if (replay.local) {
-          enqueueRow({ x: actionsX + 118, y: y + 20, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned,
-            action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned } });
-          enqueueRow({ x: actionsX + 204, y: y + 20, w: 96, h: 40, label: replay.shared ? "SHARED" : "SHARE", selected: replay.shared,
-            enabled: !replay.shared, action: { type: "profile.publishReplay", id: replay.id } });
-          enqueueRow({ x: actionsX + 308, y: y + 20, w: 64, h: 40, label: "✕", action: { type: "profile.deleteReplay", id: replay.id } });
-        }
+          if (view.tab === "vault" && !replay.repairable) {
+            enqueueRow({ x: actionsX + 118, y: y + 18, w: 126, h: 40, size: ui.t.type.label,
+              label: replay.comparisonSelected ? "SELECTED" : "SELECT", enabled: replay.available,
+              selected: replay.comparisonSelected, action: { type: "profile.compareGhostCapsule", id: replay.id } });
+            if ((replay.comparisonSourceCount ?? 0) >= 2) {
+              enqueueRow({ x: actionsX + 252, y: y + 18, w: 132, h: 40, size: ui.t.type.label,
+                label: `COMPARE ${String(replay.comparisonSourceCount)}`, action: { type: "profile.openGhostComparison" } });
+            }
+            enqueueRow({ x: actionsX + 252, y: y + 62, w: 132, h: 28, label: "PUBLISH", size: ui.t.type.micro, enabled: replay.available,
+              action: { type: "profile.openGhostPublication", id: replay.id } });
+            enqueueRow({ x: actionsX + 124, y: y + 62, w: 120, h: 28, label: "SUPPORT", size: ui.t.type.micro, enabled: replay.available,
+              action: { type: "profile.openGhostSupport", id: replay.id } });
+          }
+          if (view.tab === "vault" && replay.canDownloadLinkedPair) enqueueRow({ x: actionsX, y: y + 96, w: 252, h: 28, size: ui.t.type.micro,
+            label: "DOWNLOAD RUN + FINALE", action: { type: "profile.downloadGhostArchive", id: replay.id, paired: true } });
+          if (replay.local) {
+            enqueueRow({ x: actionsX + 118, y: y + 18, w: 78, h: 40, label: replay.pinned ? "★" : "PIN", selected: replay.pinned, size: ui.t.type.label,
+              action: { type: "profile.pinReplay", id: replay.id, pinned: !replay.pinned } });
+            enqueueRow({ x: actionsX + 204, y: y + 18, w: 104, h: 40, label: replay.shared ? "SHARED" : "SHARE", selected: replay.shared, size: ui.t.type.label,
+              enabled: !replay.shared, action: { type: "profile.publishReplay", id: replay.id } });
+            enqueueRow({ x: actionsX + 316, y: y + 18, w: 64, h: 40, label: "✕", action: { type: "profile.deleteReplay", id: replay.id } });
+          }
+        });
       });
-      canvas.restore();
     } else if (view.tab === "bests") {
       if (view.finest) {
-        ui.title(canvas, view.finest.headline, context.width / 2, 348, ui.t.type.h2);
-        ui.tag(canvas, view.finest.detail, context.width / 2, 372, "#b06cff", "center", ui.t.type.micro);
+        ui.title(canvas, view.finest.headline, context.width / 2, top + 40, ui.t.type.h2);
+        ui.tag(canvas, view.finest.detail, context.width / 2, top + 64, ui.readable(PROFILE_HUE), "center", ui.t.type.micro);
       }
       if (view.records && view.records.length > 0) {
-        const x = panelX, right = panelX + 920, headerY = 412;
+        const x = context.width / 2 - 460, right = x + 920, headerY = top + 104;
         ui.tag(canvas, "MODE", x, headerY, ui.t.color.muted, "left", ui.t.type.micro);
         ui.tag(canvas, "WAVE", right - 320, headerY, ui.t.color.muted, "right", ui.t.type.micro);
         ui.tag(canvas, "TIME", right - 180, headerY, ui.t.color.muted, "right", ui.t.type.micro);
         ui.tag(canvas, "SCORE", right - 20, headerY, ui.t.color.muted, "right", ui.t.type.micro);
-        ui.divider(canvas, x, headerY + 8, 920, 0.12);
-        view.records.slice(0, 10).forEach((record, index) => {
+        ui.divider(canvas, x, headerY + 8, 920, 0.16);
+        const rows = Math.max(1, Math.floor((bottom - (headerY + 34)) / 34) + 1);
+        view.records.slice(0, rows).forEach((record, index) => {
           const y = headerY + 34 + index * 34;
           ui.text(canvas, record.mode, x, y, ui.t.type.label);
-          ui.tag(canvas, record.difficulty.toUpperCase(), x + 164, y, record.accent, "left", ui.t.type.micro);
+          ui.tag(canvas, record.difficulty.toUpperCase(), x + 170, y, ui.readable(record.accent ?? ui.t.color.muted), "left", ui.t.type.micro);
           ui.text(canvas, record.wave, right - 320, y, ui.t.type.label, "right");
           ui.text(canvas, record.time, right - 180, y, ui.t.type.label, "right", ui.t.alpha.soft);
           ui.text(canvas, record.score, right - 20, y, ui.t.type.label, "right");
-          ui.divider(canvas, x, y + 11, 920, 0.06);
+          ui.divider(canvas, x, y + 11, 920, 0.08);
         });
       } else if (view.emptyMessage) {
-        ui.text(canvas, view.emptyMessage, context.width / 2, 440, ui.t.type.body, "center", ui.t.alpha.muted);
-        context.enqueue({ x: context.width / 2 - 130, y: 478, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
+        const ctaY = ui.emptyState(canvas, "▲", "No records yet", context.width / 2, top + 120, view.emptyMessage, 640);
+        context.enqueue({ x: context.width / 2 - 130, y: ctaY, w: 260, h: 46, label: "PLAY A RUN", action: { type: "profile.play" } });
       }
     } else {
+      const cardWidth = (listWidth - 3 * 18) / 4;
       view.stats.forEach((stat, index) => {
         const column = index % 4, row = Math.floor(index / 4);
-        const x = context.width / 2 - 560 + column * 284.5;
-        const y = 312 + row * 114;
-        ui.card(canvas, x, y, 266.5, 96, false);
-        if (stat.accent) { canvas.fillStyle = stat.accent; canvas.fillRect(x, y, 266.5, 4); }
-        if (stat.glyph) ui.tag(canvas, stat.glyph, x + 20, y + 40, stat.accent, "left", 20);
-        ui.title(canvas, stat.value, x + 141, y + 50, ui.t.type.h2);
-        ui.tag(canvas, stat.label.toUpperCase(), x + 133, y + 78, ui.t.color.muted, "center", ui.t.type.micro);
+        const x = left + column * (cardWidth + 18);
+        const y = top + row * 110;
+        ui.card(canvas, x, y, cardWidth, 96, false);
+        if (stat.accent) { canvas.fillStyle = stat.accent; canvas.fillRect(x, y, cardWidth, 4); }
+        if (stat.glyph) ui.tag(canvas, stat.glyph, x + 20, y + 42, stat.accent === undefined ? undefined : ui.readable(stat.accent), "left", 20);
+        ui.title(canvas, stat.value, x + cardWidth / 2 + 8, y + 50, ui.t.type.h2);
+        ui.tag(canvas, stat.label.toUpperCase(), x + cardWidth / 2, y + 80, ui.t.color.muted, "center", ui.t.type.micro);
       });
       if (view.journey) {
-        const x = context.width / 2 - 560, y = 664;
-        ui.sectionLabel(canvas, "THE JOURNEY", x, y, 1120, "#b06cff");
-        ui.text(canvas, view.journey.biomes.map((item) => `${item.selected ? "◆" : "◇"} ${item.label.toUpperCase()}`).join("   "), x, y + 34, ui.t.type.micro);
-        ui.text(canvas, view.journey.bosses.map((item) => `${item.selected ? "☠" : "◇"} ${item.label.toUpperCase()}`).join("   "), x, y + 58, ui.t.type.micro);
+        const y = top + Math.ceil(view.stats.length / 4) * 110 + 26;
+        ui.sectionLabel(canvas, "THE JOURNEY", left, y, listWidth, PROFILE_HUE);
+        const biomes = ui.textBox(canvas, view.journey.biomes.map((item) => `${item.selected ? "◆" : "◇"} ${item.label.toUpperCase()}`).join("    "),
+          left, y + 30, listWidth, { size: ui.t.type.micro, lineHeight: 20, maxLines: 2 });
+        ui.textBox(canvas, view.journey.bosses.map((item) => `${item.selected ? "☠" : "◇"} ${item.label.toUpperCase()}`).join("    "),
+          left, y + 30 + biomes.height + 4, listWidth, { size: ui.t.type.micro, lineHeight: 20, maxLines: 2 });
       }
     }
-    scrollHint(context, view.canScrollUp, view.canScrollDown);
-    backControl(context);
+    pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
+  }
+
+  /** Vault import / account-restore controls as one toolbar under the tabs; returns the next free y. */
+  function vaultToolbar(view: ProfileScreenView, top: number): number {
+    const { canvas } = context, left = context.width / 2 - 560, right = left + 1120;
+    const archive = view.archive, recovery = view.ownerRecovery;
+    if (archive === undefined && recovery === undefined) return top;
+    let x = left;
+    const button = (label: string, w: number, action: Parameters<ScreenRenderContext["enqueue"]>[0]["action"], enabled = true): void => {
+      context.enqueue({ x, y: top, w, h: 36, label, size: ui.t.type.label, enabled, action }); x += w + 10;
+    };
+    if (archive !== undefined) {
+      button("IMPORT A REPLAY FILE", 250, { type: "profile.pickGhostArchive" }, archive.canPick);
+      if (archive.jobId !== undefined && archive.revision !== undefined) {
+        if (archive.canReselect) button("CHOOSE AGAIN", 170, { type: "profile.reselectGhostArchive", id: archive.jobId });
+        if (archive.canRestore) button(archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE", 150, { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision });
+        if (archive.canCancel) button("CANCEL", 120, { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision });
+      }
+      if (archive.canCancelSelection) button("CANCEL", 120, { type: "profile.cancelGhostArchiveSelection" });
+    }
+    if (recovery !== undefined) {
+      if (recovery.catalogVisible) context.enqueue({ x: right - 470, y: top, w: 200, h: 36, label: "‹ THIS DEVICE", size: ui.t.type.label, action: { type: "profile.closeOwnGhostCatalog" } });
+      context.enqueue({ x: right - 260, y: top, w: 260, h: 36, label: "MY ACCOUNT'S REPLAYS", size: ui.t.type.label, enabled: recovery.canLoad,
+        action: { type: "profile.loadOwnGhostCapsules" } });
+    }
+    const status = archive === undefined ? "" : [ARCHIVE_STATUS[archive.status] ?? "", archive.pairedCapsuleIds ? "Includes the scored run and its finale." : ""].filter(Boolean).join(" ");
+    if (status) ui.textBox(canvas, status, left, top + 56, 1120, { size: ui.t.type.caption, alpha: ui.t.alpha.soft, maxLines: 1 });
+    ui.divider(canvas, left, top + (status ? 70 : 48), 1120, 0.14);
+    return top + (status ? 84 : 62);
   }
 
   function passport(view: ProfileScreenView): void {
     const { canvas } = context;
     const x = context.width / 2 - 560, right = context.width / 2 + 560, y = 130, height = 100;
     canvas.globalAlpha = 0.05; canvas.fillStyle = ui.ink; canvas.fillRect(x, y, right - x, height); canvas.globalAlpha = 1;
-    ui.spine(canvas, x, y, height, view.signedIn ? "#b06cff" : ui.t.color.muted);
+    ui.spine(canvas, x, y, height, view.signedIn ? PROFILE_HUE : ui.t.color.muted);
     ui.avatar(canvas, x + 16, y + 14, 72);
     canvas.beginPath(); canvas.arc(x + 84, y + 22, 6, 0, Math.PI * 2);
-    canvas.fillStyle = view.signedIn ? "#b06cff" : "#8a93a6"; canvas.fill();
+    canvas.fillStyle = view.signedIn ? PROFILE_HUE : "#8a93a6"; canvas.fill();
     canvas.strokeStyle = ui.ink; canvas.lineWidth = 1.5; canvas.stroke();
-    ui.displayText(canvas, view.name.toUpperCase(), x + 106, y + 42, ui.t.type.h2);
-    if (view.cloudStatus) ui.text(canvas, view.cloudStatus, x + 106, y + 66, ui.t.type.caption, "left", ui.t.alpha.muted);
-    const passport = view.passport;
-    if (!passport) return;
-    const coinWidth = ui.badge(canvas, `◆ ${passport.coins.toLocaleString()}`, x + 106, y + 90, "#e0a326", "left");
-    ui.badge(canvas, `⬡ ${String(passport.shards)}`, x + 116 + coinWidth, y + 90, "#b06cff", "left");
-    passport.showcases.forEach((seal, index) => { ui.seal(canvas, right - 560 + index * 46, y + 50, 16, seal.color, seal.glyph, false); });
-    context.enqueue({ x: right - 420, y: y + 30, w: 130, h: 40, label: `★ ${passport.achievements}`, action: { type: "profile.openAchievements" } });
-    const actionX = right - 244;
-    if (passport.renameLabel) context.enqueue({ x: actionX, y: y + 10, w: 230, h: 34, label: passport.renameLabel, enabled: passport.canRename, action: { type: "profile.rename" } });
-    if (passport.canSignOut) context.enqueue({ x: actionX, y: y + 52, w: 230, h: 34, label: "SIGN OUT", action: { type: "profile.signOut" } });
-    else if (passport.canSignIn) context.enqueue({ x: actionX, y: y + 28, w: 230, h: 40, label: passport.signInLabel ?? "SIGN IN", action: { type: "profile.signIn" } });
+    // Right zone, from the edge inwards: account actions, achievements, showcase seals.
+    const actionX = right - 256, achievementsX = actionX - 150, sealsRight = achievementsX - 24;
+    const passportData = view.passport, seals = passportData?.showcases.length ?? 0;
+    const textRight = (seals > 0 ? sealsRight - seals * 46 : achievementsX) - 20, textWidth = textRight - (x + 106);
+    const name = ui.fitText(canvas, view.name.toUpperCase(), textWidth, { size: ui.t.type.h2, floor: ui.t.type.lead, bold: true });
+    ui.displayText(canvas, name.lines[0] ?? view.name, x + 106, y + 42, name.size);
+    if (view.cloudStatus) ui.textBox(canvas, view.cloudStatus, x + 106, y + 66, textWidth, { size: ui.t.type.caption, alpha: ui.t.alpha.muted, maxLines: 1 });
+    if (!passportData) return;
+    const coinWidth = ui.badge(canvas, `◆ ${passportData.coins.toLocaleString("en-US")}`, x + 106, y + 90, "#a86a0c", "left");
+    ui.badge(canvas, `⬡ ${passportData.shards.toLocaleString("en-US")}`, x + 116 + coinWidth, y + 90, "#7d3fc8", "left");
+    passportData.showcases.forEach((seal, index) => { ui.seal(canvas, sealsRight - (seals - index) * 46 + 23, y + 50, 16, seal.color, seal.glyph, false); });
+    context.enqueue({ x: achievementsX, y: y + 30, w: 130, h: 40, label: `★ ${passportData.achievements}`, size: ui.t.type.label, action: { type: "profile.openAchievements" } });
+    if (passportData.renameLabel) context.enqueue({ x: actionX, y: y + 10, w: 242, h: 36, label: passportData.renameLabel, size: ui.t.type.label, enabled: passportData.canRename, action: { type: "profile.rename" } });
+    if (passportData.canSignOut) context.enqueue({ x: actionX, y: y + 54, w: 242, h: 36, label: "SIGN OUT", size: ui.t.type.label, action: { type: "profile.signOut" } });
+    else if (passportData.canSignIn) context.enqueue({ x: actionX, y: y + 28, w: 242, h: 44, label: passportData.signInLabel ?? "SIGN IN", size: ui.t.type.label, action: { type: "profile.signIn" } });
   }
 
   function achievements(view: AchievementsScreenView): void {
     const { canvas } = context;
-    ui.header(canvas, "ACHIEVEMENTS", "master the blade · earn shards", context.enterAmount, "#e0a326");
+    const gold = "#e0a326";
+    const layout = page(context, { title: "ACHIEVEMENTS", subtitle: "master the blade · earn shards", hue: gold });
+    const x = layout.left, width = layout.contentWidth;
     if (view.dailies) {
-      const x = context.width / 2 - 560, width = 1120;
-      ui.tag(canvas, "DAILY CHALLENGES", x, 150, ui.t.color.accent, "left", ui.t.type.micro);
-      if (view.resetsIn) ui.tag(canvas, `RESETS IN ${view.resetsIn}`, x + width, 150, ui.t.color.muted, "right", ui.t.type.micro);
+      ui.tag(canvas, "DAILY CHALLENGES", x, 172, ui.readable(ui.t.color.accent), "left", ui.t.type.micro);
+      if (view.resetsIn) ui.tag(canvas, `RESETS IN ${view.resetsIn}`, x + width, 172, ui.t.color.muted, "right", ui.t.type.micro);
       view.dailies.slice(0, 3).forEach((daily, index) => {
-        const cardWidth = (width - 32) / 3, cardX = x + index * (cardWidth + 16), y = 162;
-        ui.card(canvas, cardX, y, cardWidth, 86, false); ui.accentStrip(canvas, cardX, y, cardWidth, daily.done ? "#2f9e6b" : ui.t.color.accent);
-        ui.text(canvas, daily.label, cardX + 16, y + 30, ui.t.type.body);
-        ui.bar(canvas, cardX + 16, y + 46, cardWidth - 130, 6, daily.goal > 0 ? daily.current / daily.goal : 0, daily.done ? "#2f9e6b" : ui.t.color.accent);
-        ui.tag(canvas, daily.done ? "✓ DONE" : daily.reward, cardX + cardWidth - 16, y + 34, daily.done ? "#2f9e6b" : ui.t.color.accent, "right", ui.t.type.label);
-        ui.text(canvas, `${String(daily.current)} / ${String(daily.goal)}`, cardX + 16, y + 70, 11, "left", ui.t.alpha.soft);
+        const cardWidth = (width - 32) / 3, cardX = x + index * (cardWidth + 16), y = 182;
+        const done = daily.done === true, hue = done ? "#2f9e6b" : ui.t.color.accent;
+        ui.card(canvas, cardX, y, cardWidth, 84, false); ui.accentStrip(canvas, cardX, y, cardWidth, hue);
+        canvas.font = ui.font(ui.t.type.label, true);
+        const reward = done ? "✓ DONE" : daily.reward, rewardWidth = canvas.measureText(reward).width;
+        ui.textBox(canvas, daily.label, cardX + 16, y + 30, cardWidth - 48 - rewardWidth, { size: ui.t.type.body, floor: ui.t.type.caption, maxLines: 1 });
+        ui.tag(canvas, reward, cardX + cardWidth - 16, y + 30, ui.readable(hue), "right", ui.t.type.label);
+        ui.bar(canvas, cardX + 16, y + 46, cardWidth - 32, 6, daily.goal > 0 ? daily.current / daily.goal : 0, hue);
+        ui.text(canvas, `${daily.current.toLocaleString("en-US")} / ${daily.goal.toLocaleString("en-US")}`, cardX + 16, y + 72, ui.t.type.micro, "left", ui.t.alpha.soft);
       });
-      canvas.globalAlpha = 0.06; canvas.fillStyle = ui.ink; canvas.fillRect(x, 268, width, 46); canvas.globalAlpha = 1;
-      canvas.fillStyle = ui.t.color.accent; canvas.fillRect(x, 268, 4, 46);
-      ui.tag(canvas, `◆ ${String(view.shards ?? 0)} SHARDS`, x + 22, 296, "#0f9fb0", "left", 22);
-      ui.bar(canvas, x + 260, 288, 180, 6, view.total > 0 ? view.unlocked / view.total : 0, ui.t.color.accent);
-      ui.tag(canvas, `${String(view.unlocked)} / ${String(view.total)}`, x + 452, 296, ui.ink, "left", 13);
-      if (view.nextUp) ui.tag(canvas, `NEXT UP ▸  ${view.nextUp}`, x + width - 22, 292, ui.t.color.accent, "right", ui.t.type.micro);
+      canvas.globalAlpha = 0.06; canvas.fillStyle = ui.ink; canvas.fillRect(x, 278, width, 44); canvas.globalAlpha = 1;
+      canvas.fillStyle = ui.t.color.accent; canvas.fillRect(x, 278, 4, 44);
+      ui.tag(canvas, `◆ ${(view.shards ?? 0).toLocaleString("en-US")} SHARDS`, x + 22, 307, ui.readable("#0f9fb0"), "left", 22);
+      ui.bar(canvas, x + 270, 297, 180, 6, view.total > 0 ? view.unlocked / view.total : 0, ui.t.color.accent);
+      ui.tag(canvas, `${String(view.unlocked)} / ${String(view.total)}`, x + 462, 305, ui.ink, "left", ui.t.type.caption);
+      if (view.nextUp) ui.textBox(canvas, `NEXT UP ▸  ${view.nextUp}`, x + width - 22, 305, width - 600, { size: ui.t.type.micro, bold: true, align: "right", color: ui.readable(ui.t.color.accent), maxLines: 1 });
     }
-    tabs(context, view.categories, (id) => ({ type: "achievements.selectCategory", id }), view.dailies ? 328 : 150);
-    achievementGrid(view);
-    scrollHint(context, view.canScrollUp, view.canScrollDown);
-    backControl(context);
+    tabs(context, view.categories, (id) => ({ type: "achievements.selectCategory", id }), view.dailies ? 332 : 160);
+    achievementGrid(view, view.dailies ? 386 : 214, layout.bodyBottom);
+    pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
   }
 
-  function achievementGrid(view: AchievementsScreenView): void {
+  function achievementGrid(view: AchievementsScreenView, top: number, bottom: number): void {
     const { canvas } = context;
-    const cardWidth = 552, rowHeight = 124, cardHeight = 110;
-    const top = view.dailies ? 382 : 210, left = context.width / 2 - cardWidth - 12;
-    const visibleHeight = context.height - top - 130;
+    const cardWidth = 548, rowHeight = 124, cardHeight = 110;
+    const left = context.width / 2 - cardWidth - 12;
     const offsetRows = Math.max(0, Math.floor(context.scroll / rowHeight));
     const offsetWithinRow = context.scroll - offsetRows * rowHeight;
-    canvas.save(); canvas.beginPath(); canvas.rect(0, top - 10, context.width, visibleHeight + 18); canvas.clip();
-    view.cards.slice(offsetRows * 2).forEach((card, localIndex) => {
-      const column = localIndex % 2, row = Math.floor(localIndex / 2);
-      const x = left + column * (cardWidth + 24), y = top + row * rowHeight - offsetWithinRow;
-      if (y < top - rowHeight || y > top + visibleHeight) return;
-      const unlocked = card.locked !== true, rarityColor = card.accent ?? ui.t.color.muted;
-      ui.card(canvas, x, y, cardWidth, cardHeight, false, unlocked
-        ? { edge: rarityColor, ...(card.shimmer === undefined ? {} : { shimmer: card.shimmer }) }
-        : { dashed: true });
-      if (unlocked) {
-        canvas.globalAlpha = 0.07; canvas.fillStyle = rarityColor; canvas.fillRect(x, y, cardWidth, cardHeight); canvas.globalAlpha = 1;
-        ui.spine(canvas, x, y, cardHeight, rarityColor);
-      }
-      const textX = x + 90;
-      ui.seal(canvas, x + 45, y + 51, 24, rarityColor, card.glyph ?? "★", !unlocked);
-      canvas.fillStyle = unlocked ? ui.ink : "rgba(90,92,108,0.7)";
-      canvas.font = ui.font(ui.t.type.lead, true); canvas.textAlign = "left"; canvas.fillText(card.label, textX, y + 34);
-      if (card.badge) ui.tag(canvas, card.badge, textX, y + 52, unlocked ? rarityColor : "rgba(120,124,140,0.85)", "left", ui.t.type.micro);
-      if (card.description) {
-        canvas.font = ui.font(ui.t.type.micro, false);
-        canvas.fillStyle = unlocked ? "rgba(40,42,54,0.82)" : "rgba(110,112,126,0.6)";
-        canvas.fillText(ellipsize(canvas, card.description, 296), textX, y + 70);
-      }
-      const barWidth = cardWidth - (textX - x) - 96;
-      ui.bar(canvas, textX, y + 86, barWidth, 5, card.progress ?? 0, unlocked ? rarityColor : ui.t.color.accent);
-      if (card.progressLabel) ui.tag(canvas, card.progressLabel, textX, y + 102, unlocked ? rarityColor : ui.t.color.muted, "left", 10);
-      if (card.rewardPrimary) ui.tag(canvas, card.rewardPrimary, x + cardWidth - 16, y + 34, unlocked ? "#13c4d6" : "rgba(120,150,160,0.5)", "right", 11);
-      if (card.rewardSecondary) ui.tag(canvas, card.rewardSecondary, x + cardWidth - 16, y + 50, unlocked ? ui.t.color.accent : "rgba(220,120,120,0.4)", "right", 11);
-      if (card.footer) ui.tag(canvas, card.footer, x + cardWidth - 16, y + 66, rarityColor, "right", 10);
-      context.enqueue({ x, y, w: cardWidth, h: cardHeight, label: "", hiddenBox: true,
-        action: { type: "achievements.inspect", id: card.id } });
+    clipBody(context, top - 6, bottom, () => {
+      view.cards.slice(offsetRows * 2).forEach((card, localIndex) => {
+        const column = localIndex % 2, row = Math.floor(localIndex / 2);
+        const x = left + column * (cardWidth + 24), y = top + row * rowHeight - offsetWithinRow;
+        if (y < top - rowHeight || y > bottom) return;
+        const unlocked = card.locked !== true, rarityColor = card.accent ?? ui.t.color.muted;
+        const rarityInk = unlocked ? ui.readable(rarityColor) : ui.t.color.muted;
+        ui.card(canvas, x, y, cardWidth, cardHeight, false, unlocked
+          ? { edge: rarityColor, ...(card.shimmer === undefined ? {} : { shimmer: card.shimmer }) }
+          : { dashed: true });
+        if (unlocked) {
+          canvas.globalAlpha = 0.07; canvas.fillStyle = rarityColor; canvas.fillRect(x, y, cardWidth, cardHeight); canvas.globalAlpha = 1;
+          ui.spine(canvas, x, y, cardHeight, rarityColor);
+        }
+        const textX = x + 90, rewardsWidth = 150, textWidth = cardWidth - (textX - x) - rewardsWidth - 12;
+        ui.seal(canvas, x + 45, y + 51, 24, rarityColor, card.glyph ?? "★", !unlocked);
+        const title = ui.fitText(canvas, card.label, textWidth, { size: ui.t.type.lead, floor: ui.t.type.label, bold: true });
+        canvas.save(); canvas.globalAlpha = unlocked ? 1 : 0.72; ui.displayText(canvas, title.lines[0] ?? card.label, textX, y + 32, title.size); canvas.restore();
+        if (card.badge) ui.tag(canvas, card.badge, textX, y + 51, rarityInk, "left", ui.t.type.micro);
+        if (card.description) ui.textBox(canvas, card.description, textX, y + 69, cardWidth - (textX - x) - 16,
+          { size: ui.t.type.micro, maxLines: 1, alpha: unlocked ? ui.t.alpha.soft : ui.t.alpha.muted });
+        const barWidth = cardWidth - (textX - x) - 110;
+        ui.bar(canvas, textX, y + 82, barWidth, 5, card.progress ?? 0, unlocked ? rarityColor : ui.t.color.accent);
+        if (card.progressLabel) ui.tag(canvas, card.progressLabel, textX, y + 101, rarityInk, "left", ui.t.type.micro);
+        if (card.rewardPrimary) ui.tag(canvas, card.rewardPrimary, x + cardWidth - 16, y + 32, unlocked ? ui.readable("#13c4d6") : ui.t.color.muted, "right", ui.t.type.micro);
+        if (card.rewardSecondary) ui.tag(canvas, card.rewardSecondary, x + cardWidth - 16, y + 50, unlocked ? ui.readable(ui.t.color.accent) : ui.t.color.muted, "right", ui.t.type.micro);
+        if (card.footer) ui.tag(canvas, card.footer, x + cardWidth - 16, y + 101, rarityInk, "right", ui.t.type.micro);
+        if (y >= top - 6 && y + cardHeight <= bottom) context.enqueue({ x, y, w: cardWidth, h: cardHeight, label: "", hiddenBox: true,
+          action: { type: "achievements.inspect", id: card.id } });
+      });
     });
-    canvas.restore();
   }
 
   return { profile, achievements };

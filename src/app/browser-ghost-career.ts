@@ -52,7 +52,7 @@ export function createBrowserGhostCareer(factory: IDBFactory | undefined, docume
       if (typeof Worker === "undefined") { failed("Background indexing unavailable; metadata remains searchable."); return () => undefined; }
       let stopped = false; const worker = new Worker(new URL("../ghost/career-archive-worker.ts", import.meta.url), { type: "module" });
       worker.onmessage = (event: MessageEvent<{ progress?: string; complete?: boolean; error?: string }>) => { if (stopped) return; if (event.data.error) { failed(event.data.error); worker.terminate(); }
-        else if (event.data.complete) { changed(); failed("Indexing complete. Unknown historical facts remain unavailable."); worker.terminate(); } else changed(); };
+        else if (event.data.complete) { changed(); failed("All your runs are listed. Some older runs did not record every detail."); worker.terminate(); } else changed(); };
       worker.onerror = () => { failed("Background indexing refused; metadata remains available."); worker.terminate(); }; worker.postMessage({ id: 1 }); return () => { stopped = true; worker.terminate(); };
     },
     async current(entry) { const raw = await (await store()).backend.get("manifests", entry.id); return raw !== undefined && stableVerificationHash(JSON.parse(raw)) === entry.manifestHash; },

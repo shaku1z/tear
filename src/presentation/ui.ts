@@ -6,13 +6,15 @@ import { createUiFoundation } from "./ui-foundation";
 import { createUiLedger } from "./ui-ledger";
 import { createUiMenu } from "./ui-menu";
 import { createUiState } from "./ui-tokens";
+import { createUiText } from "./ui-text";
 
 type TearUi = ReturnType<typeof createUiState>
   & ReturnType<typeof createUiFoundation>
   & ReturnType<typeof createUiLedger>
   & ReturnType<typeof createUiCinematic>
   & ReturnType<typeof createUiChapter>
-  & ReturnType<typeof createUiMenu>;
+  & ReturnType<typeof createUiMenu>
+  & ReturnType<typeof createUiText>;
 
 function createUi(dependencies: UiDependencies): TearUi {
   const ui: TearUi = {
@@ -22,6 +24,7 @@ function createUi(dependencies: UiDependencies): TearUi {
     ...createUiCinematic(dependencies),
     ...createUiChapter(dependencies),
     ...createUiMenu(dependencies),
+    ...createUiText(),
   };
   return ui;
 }

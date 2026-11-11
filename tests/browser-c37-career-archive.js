@@ -131,11 +131,11 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
     await ordinaryBoot(); assert.deepEqual(payload(await saved()), payload(progressBefore)); await openCareer(); await indexed(sourceId); await select(sourceId);
     assert.ok((await labels()).includes("UNPIN")); assert.ok((await labels()).some((text) => text.startsWith("Tags: career-browser, return-catch")));
     const afterReload = await saved();
-    await click("THEATER"); await waitScreen("replay"); await click("RUN DNA"); await page.waitForFunction((id) => window.__CAREER_POSITIONS__.some((entry) => entry.text === `verified capsule ${id}`), sourceId);
+    await click("THEATER"); await waitScreen("replay"); await click("RUN DNA"); await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text === "RUN DNA · RECORDED METRICS"));
     await page.keyboard.press("Escape"); await waitScreen("profile"); assert.ok((await labels()).includes("BACK TO RESULTS"));
     await backToResults(); await click("SEARCH / FILTERS"); assert.equal(await page.getByRole("dialog").locator('[name="search"]').inputValue(), sourceId); await page.getByRole("dialog").getByRole("button", { name: "CANCEL", exact: true }).click();
-    await select(legacy[0].id); assert.ok((await labels()).some((text) => text.startsWith("VISUAL-ONLY LEGACY"))); await click("COACH"); assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
-    assert.ok((await labels()).some((text) => text.startsWith("VISUAL-ONLY LEGACY"))); await click("THEATER"); await waitScreen("replay"); await page.keyboard.press("Escape"); await waitScreen("profile");
+    await select(legacy[0].id); assert.ok((await labels()).some((text) => text.startsWith("OLDER RECORDING (WATCH ONLY)"))); await click("COACH"); assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile");
+    assert.ok((await labels()).some((text) => text.startsWith("OLDER RECORDING (WATCH ONLY)"))); await click("THEATER"); await waitScreen("replay"); await page.keyboard.press("Escape"); await waitScreen("profile");
     assert.equal(await page.evaluate((id) => localStorage.getItem(`tear_vault_${id}`), legacy[0].id), legacy[0].raw);
     evidence.phases.push("tags and pin survive reload; canonical Theater and visual-only legacy playback return to Career");
     // Real independent protection fixture; no forged gameplay/verification/sharing facts.
@@ -153,8 +153,8 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
     const [download] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), click("DOWNLOAD")]); const archivePath = join(directory, "career-export.tearghost.json"); await download.saveAs(archivePath);
     const archiveBytes = await readFile(archivePath), archive = JSON.parse(archiveBytes); assert.deepEqual(archive.manifest, source.manifest); evidence.archive = { path: archivePath, bytes: archiveBytes.length, sha256: hash(archiveBytes) };
     await click("DELETE LOCAL"); await click("DELETE LOCAL"); await waitForBrowserValue(page, async (id) => !(await window.__CAREER_VAULT__()).manifests.some(([key]) => key === id), sourceId);
-    await click("PROFILE"); await click("VAULT");
-    const [chooser] = await Promise.all([page.waitForEvent("filechooser", { timeout: 10000 }), click("SELECT ARCHIVE")]); await chooser.setFiles(archivePath);
+    await click("‹  BACK"); await click("VAULT");
+    const [chooser] = await Promise.all([page.waitForEvent("filechooser", { timeout: 10000 }), click("IMPORT A REPLAY FILE")]); await chooser.setFiles(archivePath);
     await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("READY / ")), undefined, { timeout: 20000 }); await click("RESTORE");
     await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("COMPLETE / ")), undefined, { timeout: 30000 });
     await click("CAREER"); await indexed(sourceId);
@@ -171,8 +171,8 @@ withJourney({ name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryW
       if (process.env.TEAR_C37_CHASE_ARCHIVE) {
         const referenceArchive = JSON.parse(await readFile(process.env.TEAR_C37_CHASE_ARCHIVE, "utf8"));
         chaseSourceId = referenceArchive.manifest.id;
-        await click("PROFILE"); await click("VAULT");
-        const [referenceChooser] = await Promise.all([page.waitForEvent("filechooser", { timeout: 10000 }), click("SELECT ARCHIVE")]);
+        await click("‹  BACK"); await click("VAULT");
+        const [referenceChooser] = await Promise.all([page.waitForEvent("filechooser", { timeout: 10000 }), click("IMPORT A REPLAY FILE")]);
         await referenceChooser.setFiles(process.env.TEAR_C37_CHASE_ARCHIVE);
         await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("READY / ")), undefined, { timeout: 20000 }); await click("RESTORE");
         await page.waitForFunction(() => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("COMPLETE / ")), undefined, { timeout: 30000 });

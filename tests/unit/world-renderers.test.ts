@@ -240,7 +240,7 @@ describe("legacy world presentation renderers", () => {
     expect(drawnText).toEqual(expect.arrayContaining([
       "DASH THROUGH", "BLOCK 2 / 5", "✓",
       "TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss",
-      "JUMP", "◉ MOVE", "DRAG TO AIM & SWING ↷", "UNLOCKED  ·  RARE", "◆ +5  +20c",
+      "JUMP", "◉ MOVE", "DRAG TO AIM & SWING ↷", "UNLOCKED · RARE", "◆ +5  +20c",
     ]));
   });
 

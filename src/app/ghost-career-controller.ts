@@ -22,7 +22,7 @@ export function createGhostCareerController(port: CareerPort) {
   const choose = () => queryCareer(rows, query, 3).rows.find((row) => careerRowKey(row) === selected) ?? rows.find((row) => careerRowKey(row) === selected);
   const mutate = async (callback: (row: CareerRow) => Promise<void>) => {
     const row = choose(), ticket = generation; if (!row) return;
-    try { await callback(row); if (ticket === generation) { message = "Saved locally; no profile or publication change."; await refresh(); } }
+    try { await callback(row); if (ticket === generation) { message = "Saved on this device."; await refresh(); } }
     catch (error) { if (ticket === generation) message = error instanceof Error ? error.message : "Career action refused"; }
   };
   return Object.freeze({
@@ -32,7 +32,7 @@ export function createGhostCareerController(port: CareerPort) {
     snapshot() { const result = queryCareer(rows, query, 3); return Object.freeze({ status, indexing, message, query, ...(usage ? { usage } : {}), ...result, selected: choose(), confirming, retained: rows.length, known: rows.filter(({ entry }) => entry.enriched).length }); },
     select(key: string) { selected = key; confirming = false; },
     control(command: string) {
-      if (command === "search") { const ticket = generation; port.text.edit("SEARCH YOUR SELECTED RUN ARCHIVE", { search: query.text, ...Object.fromEntries(CAREER_FILTERS.map((key) => [key, query.filters[key] ?? ""])) }, (fields) => {
+      if (command === "search") { const ticket = generation; port.text.edit("SEARCH YOUR RUNS", { search: query.text, ...Object.fromEntries(CAREER_FILTERS.map((key) => [key, query.filters[key] ?? ""])) }, (fields) => {
         if (ticket !== generation) return; const filters = Object.fromEntries(CAREER_FILTERS.flatMap((key) => fields[key] ? [[key, fields[key]]] : [])); query = { ...query, text: fields.search ?? "", filters, page: 0 }; }); }
       else if (command === "back") { selected = undefined; confirming = false; }
       else if (command === "clear") query = emptyCareerQuery();
@@ -40,10 +40,10 @@ export function createGhostCareerController(port: CareerPort) {
       else if (command === "view") query = { ...query, page: 0, view: CAREER_VIEWS[(CAREER_VIEWS.indexOf(query.view) + 1) % CAREER_VIEWS.length] ?? "history" };
       else if (command === "sort") query = { ...query, page: 0, sort: query.sort === "newest" ? "oldest" : query.sort === "oldest" ? "score" : "newest" };
       else if (command === "tags") { const row = choose(), ticket = generation; if (!row) return;
-        port.text.edit("LOCAL TAGS", { tags: row.notes.tags.join(", ") }, (fields) => { if (ticket === generation && choose()?.entry.manifestHash === row.entry.manifestHash && choose()?.notes.revision === row.notes.revision) void mutate((current) => port.annotate(current.entry, current.notes, (fields.tags ?? "").split(","), current.notes.retention)); }); }
+        port.text.edit("TAGS", { tags: row.notes.tags.join(", ") }, (fields) => { if (ticket === generation && choose()?.entry.manifestHash === row.entry.manifestHash && choose()?.notes.revision === row.notes.revision) void mutate((current) => port.annotate(current.entry, current.notes, (fields.tags ?? "").split(","), current.notes.retention)); }); }
       else if (command === "pin") void mutate((row) => port.annotate(row.entry, row.notes, row.notes.tags, row.notes.retention === "pinned" ? "recent" : "pinned"));
       else if (command === "retention") { const row = choose(), ticket = generation; if (!row) return;
-        port.text.edit("RETENTION · local only", { retention: row.notes.retention }, (fields) => { if (ticket === generation && choose()?.entry.manifestHash === row.entry.manifestHash && choose()?.notes.revision === row.notes.revision) void mutate((current) => port.annotate(current.entry, current.notes, current.notes.tags, fields.retention as CareerRetention)); }); }
+        port.text.edit("KEEP THIS RUN", { retention: row.notes.retention }, (fields) => { if (ticket === generation && choose()?.entry.manifestHash === row.entry.manifestHash && choose()?.notes.revision === row.notes.revision) void mutate((current) => port.annotate(current.entry, current.notes, current.notes.tags, fields.retention as CareerRetention)); }); }
       else if (command === "delete") confirming = true;
       else if (command === "cancel-delete") confirming = false;
       else if (command === "confirm-delete") { confirming = false; void mutate((row) => port.remove(row.entry, row.notes)); }
@@ -51,7 +51,7 @@ export function createGhostCareerController(port: CareerPort) {
     },
     async sourceAction(action: (id: string) => unknown) {
       const row = choose(), ticket = generation, identity = selected; if (!row) return;
-      try { if (!row.entry.present || !await port.current(row.entry)) { if (ticket === generation && identity === selected) message = "Exact source unavailable or changed; refresh before opening."; return; }
+      try { if (!row.entry.present || !await port.current(row.entry)) { if (ticket === generation && identity === selected) message = "This run changed or is no longer on this device — reopen the list and try again."; return; }
       if (ticket !== generation || identity !== selected) return; stop?.(); operation?.abort(); port.text.close(); indexing = false; await action(row.entry.id); } catch (error) { if (ticket === generation) { message = error instanceof Error ? error.message : "Source action refused"; operation = new AbortController(); } }
     },
   });

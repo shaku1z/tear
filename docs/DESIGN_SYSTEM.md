@@ -28,10 +28,12 @@ The ordinary game interface preserves Tear's established **Courier New** identit
 | `h2` | 30 | Secondary title / dialog heading |
 | `title` | 24 | Section / card name |
 | `lead` | 20 | Buttons, emphasised values |
-| `body` | 16 | Standard copy |
-| `label` | 14 | List rows, secondary copy |
-| `caption` | 13 | Taglines, hints |
-| `micro` | 11 | Tags, pips, fine print |
+| `body` | 16 | Standard copy (the minimum for paragraphs) |
+| `label` | 15 | List rows, secondary copy |
+| `caption` | 14 | Taglines, hints |
+| `micro` | 13 | Tags, pips, fine print — **the legibility floor** |
+
+**Legibility floor.** A 1280×720 window scales the 1600×900 layout by 0.8, so `micro` (13) renders at 10.4 CSS px. Nothing a player must read is drawn below `micro`; screens pass tokens, never literal sizes below it. When bigger text no longer fits, change the layout (wrap, rebalance, reduce chrome) instead of shrinking the text. The touch density profile adds its bump on top of these values.
 
 ### Spacing — `UI.t.space` (px)
 Vertical rhythm and paddings.
@@ -55,17 +57,24 @@ Vertical rhythm and paddings.
 | `chipH` | 28 | Chip height |
 | `chipW` | 96 | Chip width |
 | `barH` | 14 | Progress/HP bar height |
+| `focusRing` / `focusGap` | 2 / 3 | Keyboard/controller focus ring stroke and gap outside the control |
+| `pageTitleY` | 92 | Page title baseline (the shared page pattern) |
+| `pageBodyTop` | 156 | First body y under a page header |
+| `backW` | 220 | Width of the footer BACK control |
 
 ### Alpha roles — `UI.t.alpha`
-Opacity for de-emphasised text.
+Opacity for de-emphasised text and for the content surfaces. Text roles are measured on their real surface (the solid sheet and the dark rail): `muted` (secondary) stays at or above 4.5:1 and `faint` (tertiary) at or above 3:1.
 
 | Token | value | Use |
 |---|---|---|
 | `full` | 1 | Primary text |
-| `soft` | 0.7 | Slightly secondary |
-| `muted` | 0.55 | De-emphasised |
-| `faint` | 0.4 | Hints |
-| `ghost` | 0.25 | Barely-there / placeholder |
+| `soft` | 0.78 | Slightly secondary (was 0.7) |
+| `muted` | 0.66 | De-emphasised, still 4.5:1 or better (was 0.55) |
+| `faint` | 0.52 | Hints, 3:1 or better (was 0.4) |
+| `ghost` | 0.25 | Barely-there / placeholder (never for text a player must read) |
+| `sheet` | 0.96 | Paper sheet surface, effectively solid so scene art never shows through text (was a hard-coded 0.70) |
+| `rail` | 0.92 | Main-menu rail backing |
+| `modalDim` | 0.9 | Modal dim (Rename) |
 
 ### Colour roles — `UI.t.color`
 Semantic roles. `accent`, `danger`, and `unique` pull from `CONFIG.colors` so the system and the game palette never drift apart.
@@ -73,7 +82,9 @@ Semantic roles. `accent`, `danger`, and `unique` pull from `CONFIG.colors` so th
 | Token | value | Use |
 |---|---|---|
 | `paper` | `"#fff"` | Background / overlay fade target |
-| `muted` | `"#9a9a9a"` | De-emphasised text / hairlines |
+| `muted` | `"#62646f"` | De-emphasised text / hairlines, 5.9:1 on paper (was `#9a9a9a`, 2.8:1) |
+| `scrim` / `scrimInk` | `"#06070c"` / `"#f1eff9"` | Guaranteed-contrast modal pair (`UI.dim` with a light ink) |
+| `rail` / `railInk` | `"#080a10"` / `"#f1eff9"` | Main-menu rail backing and its foreground (also every dark-surface ghost control) |
 | `disabled` | `"#bbb"` | Disabled controls |
 | `accent` | from `CONFIG.colors` | Highlight / positive cue |
 | `danger` | from `CONFIG.colors` | Warning / hostile cue |
@@ -100,11 +111,24 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | `UI.accentStrip` | `UI.accentStrip(ctx, x, y, w, color, thick?)` | Coloured top strip (category cue) |
 | `UI.divider` | `UI.divider(ctx, x, y, w, alpha?)` | Hairline separator |
 | `UI.bar` | `UI.bar(ctx, x, y, w, h, frac, fill?, line?)` | Progress / HP / meter (`frac` 0–1) |
-| `UI.dim` | `UI.dim(ctx, w, h, a?)` | Overlay backdrop; fades toward `paper` |
-| `UI.scrollHint` | `UI.scrollHint(ctx, x, y, canUp, canDown)` | "▲ scroll ▼" affordance |
+| `UI.dim` | `UI.dim(ctx, w, h, a?)` | Overlay backdrop; fades toward `paper` for dark ink and toward `scrim` for light ink, so the dim and the ink are always a contrasting pair |
+| `UI.scrollHint` | `UI.scrollHint(ctx, x, y, canUp, canDown, align?)` | "▲ SCROLL ▼" affordance (sheet screens place it in the footer row via `pageFooter`) |
+| `UI.fitText` | `UI.fitText(ctx, text, maxW, { size, floor?, maxLines?, ellipsis?, wrapFirst?, bold? })` | The one fitting rule (below); returns `{ size, lines, truncated, overflow }` |
+| `UI.textBox` | `UI.textBox(ctx, text, x, y, maxW, opts?)` | Wrapped text in a box; `y` is the first baseline; **returns the height it used** so callers lay out below it |
+| `UI.readable` | `UI.readable(color, ratio?)` | A palette hue darkened to 4.5:1 when drawn on paper (passes through on dark surfaces) |
+| `UI.focusRing` | `UI.focusRing(ctx, box)` | Keyboard/controller focus ring outside a control (drawn by the button layer) |
+| `UI.emptyState` | `UI.emptyState(ctx, glyph, line, cx, cy, detail?, width?)` | Designed empty / loading / offline state; returns the y for an optional CTA |
 | `UI.cursor` | `UI.cursor(ctx, x, y)` | Pointer/cursor glyph |
 | `UI.pointIn` | `UI.pointIn(b, x, y)` | Hit-test: is point `(x,y)` inside box `b`? |
 | `UI.font` | `UI.font(size, bold)` | Build the canvas font string (used internally; prefer the components) |
+
+### The fitting rule (buttons, chips, tabs, text boxes)
+
+`src/presentation/ui-text-fit.ts` holds the single rule every component uses: **measure; if too wide, step the size down to a floor (normally `micro`); then wrap to two lines where the height allows; only then ellipsize**. A navigation label (rail, hero, tabs) is never ellipsized; the layout reports the overflow instead. Prose (`textBox`) wraps first and only shrinks when its line budget is exceeded. Selected controls never grow and strokes are inset, so no state draws outside its box.
+
+### The page pattern (sheet screens)
+
+`screen-primitives.ts` provides `page(context, { title, subtitle?, hue?, stat? })` for the header (with an optional right-aligned stat), `clipBody(context, top, bottom, draw)` to clip content to the body, and `pageFooter(context, { back?, canScrollUp?, canScrollDown? })` for BACK centred inside the sheet's footer row with the scroll hint to its right. `pageLayout(context)` exposes `left/right/contentWidth/bodyTop/bodyBottom/footerY`. Use these instead of hard-coding title, BACK or scroll-hint positions.
 
 ### Usage examples
 

@@ -36,7 +36,7 @@ describe("menu/setup snapshots", () => {
     expect(view.practiceAvailable).toBe(true);
     expect(view.startSummary).toBe("ENDLESS · NORMAL · BLADE");
     expect(view.startGlyph).toBe("▢");
-    expect(view.weapons[0]?.detail).toBe("H 5 · I 3 · R 4 · D 2     WEAK: armor");
+    expect(view.weapons[0]?.detail).toBe("Handling 5 · Impact 3 · Reach 4 · Difficulty 2\nWeak: armor");
   });
   it("offers Rootbound through the canonical Boss Test roster in engineering builds", () => {
     const view = buildSetupSnapshot({ selectedMode: "bossonly", selectedDifficulty: "normal", selectedWeapon: "blade", selectedBoss: "rootbound",

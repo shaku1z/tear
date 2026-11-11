@@ -10,12 +10,13 @@ const environment = { lowGraphics: false, touch: false, installAvailable: false,
 
 describe("settings snapshots", () => {
   it("keeps hierarchical audio channels separate", () => {
-    expect(buildSettingsSections("audio", settings, environment)[0]?.rows.map((row) => row.key)).toEqual([
-      // Volumes, then Music preferences, then the mute toggles.
+    const rows = buildSettingsSections("audio", settings, environment)[0]?.rows ?? [];
+    // One row per channel (each volume carries its own mute switch), then Music preferences.
+    expect(rows.map((row) => row.key)).toEqual([
       "masterVolume", "musicVolume", "sfxVolume", "interfaceVolume",
       "menuMusic", "musicMode",
-      "masterMuted", "musicMuted", "sfxMuted", "interfaceMuted",
     ]);
+    expect(rows.slice(0, 4).map((row) => row.muteKey)).toEqual(["masterMuted", "musicMuted", "sfxMuted", "interfaceMuted"]);
   });
   it("normalizes the legacy signal tab to the canonical Music surface", () => {
     const legacy = buildSettingsSections("signal", settings, environment);

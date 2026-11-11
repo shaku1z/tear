@@ -18,7 +18,7 @@ export function buildAchievementSnapshot(input: {
   readonly time: number; readonly mutedColor: string;
 }): AchievementSnapshotResult {
   const all = input.achievements, list = input.filter === "all" ? all : all.filter((entry) => entry.cat === input.filter);
-  const maximumScroll = Math.max(0, Math.ceil(list.length / 2) * 124 - (input.height - 382 - 130));
+  const maximumScroll = Math.max(0, Math.ceil(list.length / 2) * 124 - (input.height - 386 - 110));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const categories = ["all", ...Object.keys(input.categories)].map((id) => {
     const members = id === "all" ? all : all.filter((entry) => entry.cat === id);

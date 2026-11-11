@@ -9,7 +9,7 @@ import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
 import type { CareerPort } from "./ghost-career-controller";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
-  "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
+  "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Rootbinder" | "Rootbound" | "Source" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
   "Cloud" | "CONFIG" | "DAILY" | "FirebaseProvider" |
   "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT"> & Readonly<{ PAD: LegacyGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;

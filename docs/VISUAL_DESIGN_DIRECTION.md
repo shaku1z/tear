@@ -38,7 +38,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 
 ## Shared surface grammar
 
-- **Field sheet:** translucent paper over the live attract world, signature-color top edge, hairline boundary, restrained shadow, and registration marks.
+- **Field sheet:** effectively solid paper (`alpha.sheet`) over the live attract world, signature-color top edge, hairline boundary, restrained shadow, and registration marks. Scene art never shows through body text.
 - **Card:** solid readable body, hard border, optional identity edge, compact metadata line, measured description, and one clear state zone.
 - **Section:** condensed uppercase label, colored identity, count where useful, and a hairline that reserves separation before content.
 - **Primary action:** solid cyan or screen hue, dark label, clear action glyph, and an optional mono consequence line.
@@ -58,9 +58,9 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 
 ### Main-menu composition contract
 
-- The established logical anchors remain `x=100`, wordmark baseline `y=150`, identity `y=240`, PLAY `y=318`, and navigation beginning `y=426` in the 1600×900 composition.
-- Aspect-ratio overscan changes only the painted world and wash extent. It must not introduce a visible seam, resize the logo, relocate controls, or reinterpret a laptop browser as a special layout.
-- The left wash uses the original 0→800 logical gradient and extends its fill through the true viewport rectangle. This preserves the old laptop balance while preventing exposed canvas strips.
+- The established logical anchors are `x=100` measured from the **true left edge of the window** (`screenRectangle.x + 100`, plus the safe-area inset), wordmark baseline `y=150`, identity `y=240`, PLAY `y=318`, and navigation beginning `y=426` with a 61 px rhythm. Extra rows (Practice Lab after the tutorial, then the music row) continue that rhythm under SETTINGS.
+- On wider windows the rail stays anchored to the left edge and the extra width goes to the living scene on the right; an empty band never opens left of the rail. Touch keeps the authored `x=100` because its overlay zoom scales around the centre.
+- The rail sits on one solid dark backing (`color.rail` at `alpha.rail`) from the physical left edge to just past the rail, feathering out over 260 px, so every rail control reads at 4.5:1 or better whatever biome is showing.
 - The attract scene carries the spectacle: silhouette clarity, biome palette, and readable combat motion matter more than adding menu ornament.
 - Pending-finale recovery remains the sole justified secondary content block because it exposes otherwise unavailable actions.
 

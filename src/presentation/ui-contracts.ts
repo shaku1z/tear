@@ -149,6 +149,11 @@ export interface UiRuntime {
   cinematicPrompt(context: CanvasRenderingContext2D, options?: UiOptions): void;
   _chapterLayout(options: UiOptions): ChapterLayout;
   _bladeMark(context: CanvasRenderingContext2D, x: number, y: number, scale: number, color: string, direction: number): void;
+  _fitLabel(context: CanvasRenderingContext2D, label: string, maxWidth: number, size: number, height: number, nav: boolean): TextFitLayout;
+  _drawLines(context: CanvasRenderingContext2D, lines: readonly string[], x: number, centerY: number, size: number): void;
+  readable(color: string, ratio?: number): string;
+  fitText(context: CanvasRenderingContext2D, text: string, maxWidth: number, options: TextFitOptions & { readonly bold?: boolean }): TextFitLayout;
 }
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";
 import type { UiTokens } from "./ui-tokens";
+import type { TextFitLayout, TextFitOptions } from "./ui-text-fit";

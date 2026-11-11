@@ -21,10 +21,11 @@ import { renderReplayThumbnail } from "../presentation/replay-thumbnail";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 import type { LiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import type { GhostTheaterOpenResult } from "../ghost/theater-open-result";
+import type { BestiaryEntry } from "../presentation/bestiary-catalog";
 
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Cloud" | "Colossus" | "CONFIG" | "DAILY" | "Echo" | "FirebaseProvider" | "Flyer" |
-  "META" | "PROFILE" | "Ranged" | "STAGES" | "Support" | "UI" | "UPGRADES" | "VARIANTS" | "VAULT" |
+  "META" | "PROFILE" | "Ranged" | "Rootbinder" | "Rootbound" | "Source" | "STAGES" | "Support" | "UI" | "UPGRADES" | "VARIANTS" | "VAULT" |
   "Warden" | "Wraith" | "applyVariant"> & Readonly<{ PAD: LegacyGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
@@ -113,7 +114,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
   let profileTab = "bests", profileMessage = "", comparisonSources: string[] = [], achievementFilter = "all";
   let leaderboardTab = "global", leaderboardMode = "", leaderboardDifficulty = "normal", leaderboardKey = "";
   let leaderboardData: readonly LeaderboardRowSource[] | null = null, leaderboardLoading = false, leaderboardMessage = "";
-  let feedData: readonly LeaderboardRowSource[] | null = null, feedLoading = false;
+  let feedData: readonly LeaderboardRowSource[] | null = null, feedLoading = false, feedFailed = false, leaderboardFailed = false;
 
   const replayLibrary = new ReplayLibraryController({ vault: d.VAULT, cloud: d.Cloud,
     enterReplay: (record, from) => services.enterReplay(record, from),
@@ -128,51 +129,62 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     x: number; y: number; facing: number; flash: number; stun: number; spawnT: number; _noBar?: boolean;
     draw(context: CanvasRenderingContext2D, player: unknown): void;
   }
+  // Instances are keyed by the canonical enemy kind / boss id (bestiary-catalog.ts).
   let bestiaryInstances: Record<string, BestiaryInstance | null> | null = null;
-  const bestiaryInstance = (name: string): BestiaryInstance | null => {
+  const bestiaryInstance = (id: string): BestiaryInstance | null => {
     if (bestiaryInstances === null) {
       const safe = (make: () => unknown): BestiaryInstance | null => {
         try { return make() as BestiaryInstance; } catch { return null; }
       };
       const withVariant = (enemy: unknown, variant: unknown): unknown => { d.applyVariant(enemy as never, variant as never); return enemy; };
+      const boss = (bossId: string, make: () => unknown): BestiaryInstance | null => {
+        const instance = safe(make);
+        if (instance !== null) instance.bossId = bossId;
+        return instance;
+      };
       bestiaryInstances = {
-        "Charger": safe(() => withVariant(new d.Charger(0, 0), d.VARIANTS.charger?.[0])),
-        "Shooter": safe(() => withVariant(new d.Ranged(0, 0), d.VARIANTS.ranged?.[0])),
-        "Flyer": safe(() => withVariant(new d.Flyer(0, 0), d.VARIANTS.flyer?.[0])),
-        "Bomber": safe(() => withVariant(new d.Bomber(0, 0), d.VARIANTS.bomber?.[0])),
-        "Armored": safe(() => new d.Armored(0, 0)),
-        "Priest": safe(() => new d.Support(0, 0, "priest")),
-        "Mender": safe(() => new d.Support(0, 0, "mender")),
-        "Herald": safe(() => new d.Support(0, 0, "herald")),
-        "Anchor": safe(() => new d.Support(0, 0, "anchor")),
-        "Wraith": safe(() => new d.Wraith(0, 0)),
-        "Chimera": safe(() => new d.Chimera(0, 0)),
-        "The Warden": safe(() => new d.Warden(0, 0)),
-        "Iron Colossus": safe(() => new d.Colossus(0, 0)),
-        "Berserker King": safe(() => new d.Aldric(0, 0)),
-        "The Echo": safe(() => new d.Echo(0, 0)),
+        charger: safe(() => withVariant(new d.Charger(0, 0), d.VARIANTS.charger?.[0])),
+        ranged: safe(() => withVariant(new d.Ranged(0, 0), d.VARIANTS.ranged?.[0])),
+        flyer: safe(() => withVariant(new d.Flyer(0, 0), d.VARIANTS.flyer?.[0])),
+        bomber: safe(() => withVariant(new d.Bomber(0, 0), d.VARIANTS.bomber?.[0])),
+        armored: safe(() => new d.Armored(0, 0)),
+        priest: safe(() => new d.Support(0, 0, "priest")),
+        mender: safe(() => new d.Support(0, 0, "mender")),
+        herald: safe(() => new d.Support(0, 0, "herald")),
+        anchor: safe(() => new d.Support(0, 0, "anchor")),
+        wraith: safe(() => new d.Wraith(0, 0)),
+        chimera: safe(() => new d.Chimera(0, 0)),
+        rootbinder: safe(() => new d.Rootbinder(0, 0)),
+        warden: boss("warden", () => new d.Warden(0, 0)),
+        colossus: boss("colossus", () => new d.Colossus(0, 0)),
+        aldric: boss("aldric", () => new d.Aldric(0, 0)),
+        rootbound: boss("rootbound", () => new d.Rootbound(0, 0)),
+        echo: boss("echo", () => new d.Echo(0, 0)),
+        source: boss("source", () => new d.Source(0, 0)),
       };
     }
-    return bestiaryInstances[name] ?? null;
+    return bestiaryInstances[id] ?? null;
   };
-  const bestiaryDetail = (name: string, boss: boolean) => {
-    const inst = bestiaryInstance(name);
+  const bestiaryDetail = (entry: BestiaryEntry) => {
+    const boss = entry.boss === true, inst = bestiaryInstance(entry.id);
     if (inst === null) return undefined;
     const colors = d.CONFIG.colors as Record<string, string | undefined>;
-    const accent = (inst.kind !== undefined ? colors[inst.kind] : undefined)
+    // Supports share kind "support"; colour and kill tallies use the canonical identity.
+    const identity = entry.enemyKind ?? inst.kind;
+    const accent = (identity !== undefined ? colors[identity] ?? (inst.kind !== undefined ? colors[inst.kind] : undefined) : undefined)
       ?? (boss ? d.UI.t.color.danger : d.UI.t.color.accent);
     const stats = [
-      { label: "HP", value: String(Math.round(inst.maxHp)) },
+      { label: "HP", value: Math.round(inst.maxHp).toLocaleString("en-US") },
       { label: boss ? "TOUCH" : "DMG", value: String(Math.round(inst.contactDmg)) },
       ...(boss ? [] : [{ label: "SPD", value: String(Math.round(inst.speed ?? 0)) }]),
     ];
     let felled;
-    if (boss && inst.bossId !== undefined) {
-      const stat = d.PROFILE.stat("kill" + inst.bossId.charAt(0).toUpperCase() + inst.bossId.slice(1));
+    if (boss && entry.bossId !== undefined) {
+      const stat = d.PROFILE.stat("kill" + entry.bossId.charAt(0).toUpperCase() + entry.bossId.slice(1));
       if (stat) felled = { label: "☠ FELLED", color: "#2f9e6b" };
     } else if (!boss && inst.kind !== undefined) {
       const stat = d.PROFILE.stat("kill_" + inst.kind);
-      if (stat) felled = { label: "FELLED ×" + String(stat), color: accent };
+      if (stat) felled = { label: "FELLED ×" + stat.toLocaleString("en-US"), color: accent };
     }
     const affixes = boss ? undefined
       : d.AFFIXES.filter((affix) => affix.appliesTo(inst as never)).map((affix) => ({ id: affix.id, color: affix.color }));
@@ -213,9 +225,10 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     comparisonSources = comparisonSources.filter((id) => healthyCapsuleIds.has(id));
     const vaultReplays = ghostVault.capsules.map((capsule) => Object.freeze({
       id: capsule.id,
-      title: `Ghost V3 - ${capsule.recordingProfile.toUpperCase()}`,
-      detail: `${capsule.status.toUpperCase()} - ${String(capsule.chunkCount)} CHUNKS - ${capsule.healthy ? "HEALTHY" : "NEEDS REPAIR"}${capsule.repairChildId === undefined ? "" : " - REPAIRED COPY AVAILABLE"}${capsule.libraries.length === 0 ? "" : ` - ${capsule.libraries.join(" / ").toUpperCase()}`}`,
-      badge: "DURABLE CAPSULE",
+      // Player wording: these are saved replays (recordings); no ids, hashes or byte counts.
+      title: "SAVED REPLAY",
+      detail: `${capsule.status === "complete" ? "Complete recording" : "Recording still saving"} · ${capsule.healthy ? "ready to watch" : "needs repair"}${capsule.repairChildId === undefined ? "" : " · repaired copy available"}`,
+      badge: "SAVED REPLAY",
       available: capsule.healthy && capsule.status === "complete" && capsule.theaterEligible,
       theaterUnavailable: !capsule.theaterEligible,
       repairable: capsule.repairable,
@@ -226,20 +239,21 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       comparisonSourceCount: comparisonSources.length,
     }));
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
-    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "opening Ghost Vault...";
+    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "Opening your saved replays…";
     else if (profileTab === "vault" && ghostVault.evictedCapsuleIds.length > 0) {
-      profileMessage = `${String(ghostVault.evictedCapsuleIds.length)} older Ghost capsule(s) were removed by Vault retention.`;
+      profileMessage = `${String(ghostVault.evictedCapsuleIds.length)} older saved ${ghostVault.evictedCapsuleIds.length === 1 ? "replay was" : "replays were"} removed to make room.`;
     }
     else if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length === 0) {
-      profileMessage = "No Ghost capsules stored on this device yet.";
+      profileMessage = "";
     }
-    if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length > 0 && profileMessage === "opening Ghost Vault...") profileMessage = "";
+    if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length > 0 && profileMessage === "Opening your saved replays…") profileMessage = "";
     const signedIn = d.Cloud.loggedIn(), canSignIn = d.Cloud.canSignIn();
     const records = buildProfileRecords(d.CONFIG.modes, d.CONFIG.difficulties, services.getBest);
     const stats = profileTab === "stats" ? buildProfileStats((key) => d.PROFILE.stat(key),
       services.ease(services.clamp(services.enterSeconds() / 0.5, 0, 1)),
       { danger: d.UI.t.color.danger, cyan: "#13c4d6", green: "#2f9e6b", gold: "#e0a326" }, services.formatTime) : [];
-    const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? (ghostVault.archive.pairedCapsuleIds ? 132 : 120) : 0;
+    // The vault toolbar (import / account restore) sits above the list: profile-achievements vaultToolbar.
+    const archiveInset = profileTab === "vault" && (ghostVault.archive !== undefined || services.ownerRecovery !== undefined) ? 84 : 0;
     const result = buildProfileSnapshot({ tab: profileTab, tabs: profileTabs, signedIn, replayListInset: archiveInset,
       firebase: d.Cloud.provider === d.FirebaseProvider, canSignIn, canRename: signedIn && d.Cloud.canRename(),
       hasCustomName: signedIn && d.Cloud.hasCustomName(), renameCooldownDays: signedIn ? d.Cloud.renameCooldownDays() : 0,
@@ -288,11 +302,11 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     if (leaderboardTab === "feed") {
       if (cloud && feedData === null && !feedLoading) {
         feedLoading = true;
-        void d.Cloud.replayFeed(20).then((rows) => { feedData = rows ?? []; feedLoading = false; })
-          .catch(() => { feedData = []; feedLoading = false; leaderboardMessage = "couldn't load the feed"; });
+        void d.Cloud.replayFeed(20).then((rows) => { feedData = rows ?? []; feedLoading = false; feedFailed = false; })
+          .catch(() => { feedData = []; feedLoading = false; feedFailed = true; });
       }
       const result = buildFeedLeaderboardSnapshot({ tabs: leaderboardTabs, tab: leaderboardTab, cloudAvailable: cloud,
-        message: leaderboardMessage, loading: feedLoading, height: services.height, scroll: services.scroll(),
+        message: leaderboardMessage, loading: feedLoading, failed: feedFailed, height: services.height, scroll: services.scroll(),
         rows: (feedData ?? []).map((row) => rowView(row, row.shareId)) });
       services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll)); services.renderers.leaderboards(result.view); return;
     }
@@ -302,11 +316,11 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     if (cloud && key !== leaderboardKey) {
       leaderboardKey = key; leaderboardData = null; leaderboardLoading = true;
       void d.Cloud.topScores(leaderboardMode, leaderboardDifficulty, 25).then((rows) => {
-        if (leaderboardKey === key) { leaderboardData = rows ?? []; leaderboardLoading = false; }
-      }).catch(() => { if (leaderboardKey === key) { leaderboardData = []; leaderboardLoading = false; leaderboardMessage = "couldn't load the ranks"; } });
+        if (leaderboardKey === key) { leaderboardData = rows ?? []; leaderboardLoading = false; leaderboardFailed = false; }
+      }).catch(() => { if (leaderboardKey === key) { leaderboardData = []; leaderboardLoading = false; leaderboardFailed = true; } });
     }
     const result = buildRankedLeaderboardSnapshot({ tabs: leaderboardTabs, tab: leaderboardTab, cloudAvailable: cloud,
-      message: leaderboardMessage, loading: leaderboardLoading, height: services.height, scroll: services.scroll(),
+      message: leaderboardMessage, loading: leaderboardLoading, failed: leaderboardFailed, height: services.height, scroll: services.scroll(),
       data: leaderboardData ?? [], modes, difficulties: d.CONFIG.difficulties, mode: leaderboardMode,
       difficulty: leaderboardDifficulty, ...(d.Cloud.user === null ? {} : { currentUserId: d.Cloud.user.id }), localBest: services.getBest(leaderboardMode, leaderboardDifficulty),
       rowView: (row) => rowView(row) });
@@ -343,18 +357,18 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       else if (kind === "difficulty") leaderboardDifficulty = value; services.setScroll(0); leaderboardMessage = ""; },
     watchReplay: (id, from) => { replayLibrary.watch(id, from); },
     watchGhostCapsule: (id) => {
-      profileMessage = "opening Ghost Theater...";
+      profileMessage = "Opening the replay…";
       void services.enterGhostTheater(id).then((result) => {
         if (result.kind === "refused") {
           services.ghostVault.setTheaterEligibility(id, result);
-          profileMessage = `THEATER UNAVAILABLE · ${result.detail}`;
+          profileMessage = "This replay can't be played back right now.";
         }
       });
     },
     compareGhostCapsule: (id) => {
       const capsule = services.ghostVault.snapshot().capsules.find((entry) => entry.id === id);
       if (capsule?.healthy !== true || capsule.status !== "complete" || !capsule.theaterEligible) {
-        profileMessage = "Only healthy, complete Ghost capsules can be compared.";
+        profileMessage = "Only complete saved replays can be compared.";
         return;
       }
       if (comparisonSources.includes(id)) {
@@ -364,24 +378,24 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
         return;
       }
       if (comparisonSources.length >= 9) {
-        profileMessage = "A Ghost comparison can include at most nine sources.";
+        profileMessage = "You can compare up to nine replays at once.";
         return;
       }
       comparisonSources = [...comparisonSources, id];
       profileMessage = comparisonSources.length < 2
-        ? "Comparison source selected. Choose at least one more healthy Ghost capsule."
+        ? "Replay selected. Choose at least one more to compare."
         : `${String(comparisonSources.length)} comparison sources selected. Press COMPARE to open them.`;
     },
     openGhostComparison: () => {
       if (comparisonSources.length < 2) {
-        profileMessage = "Choose at least two healthy Ghost capsules to compare.";
+        profileMessage = "Choose at least two saved replays to compare.";
         return;
       }
       const sources = Object.freeze([...comparisonSources]);
-      profileMessage = "opening semantic comparison...";
+      profileMessage = "Opening the comparison…";
       void services.enterGhostComparison(sources).then((opened) => {
         if (opened) comparisonSources = [];
-        else profileMessage = "Those Ghost capsules could not open for comparison.";
+        else profileMessage = "Those replays could not be opened for comparison.";
       });
     },
     publishReplay: (id) => { replayLibrary.publish(id); },

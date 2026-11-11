@@ -12,9 +12,85 @@ export function ellipsize(context: CanvasRenderingContext2D, value: string, maxi
   return value.slice(0, low).trimEnd() + suffix;
 }
 
+/**
+ * THE PAGE PATTERN shared by every sheet screen: header (title, optional subtitle,
+ * optional right-aligned stat) -> clipped scrollable body -> footer with BACK in one
+ * consistent position inside the sheet. All geometry derives from the sheet rect.
+ */
+export interface PageLayout {
+  readonly sheet: Readonly<{ x: number; y: number; w: number; h: number }>;
+  /** Shared content column (1120 wide, centred). */
+  readonly left: number; readonly right: number; readonly contentWidth: number;
+  /** First y available under the header. */
+  readonly bodyTop: number;
+  /** Last y content may use; everything below belongs to the footer. */
+  readonly bodyBottom: number;
+  /** Top of the footer row (BACK). */
+  readonly footerY: number;
+}
+
+export function pageLayout(context: ScreenRenderContext): PageLayout {
+  const sheet = context.ui.sheetRect(), metric = context.ui.t.metric;
+  const footerY = sheet.y + sheet.h - metric.btnH - 12;
+  const left = context.width / 2 - 560;
+  return Object.freeze({ sheet, left, right: left + 1120, contentWidth: 1120,
+    bodyTop: metric.pageBodyTop, bodyBottom: footerY - 14, footerY });
+}
+
+export interface PageHeader {
+  readonly title: string; readonly subtitle?: string | undefined; readonly hue?: string | undefined;
+  /** Optional right-aligned figure in the header (for example the shop coin balance). */
+  readonly stat?: Readonly<{ value: string; label: string; color?: string | undefined; glyph?: string | undefined }> | undefined;
+}
+
+/** Draws the page header and returns the layout; `bodyTop` sits under the header's last line. */
+export function page(context: ScreenRenderContext, header: PageHeader): PageLayout {
+  const { canvas, ui, width } = context;
+  const layout = pageLayout(context), titleY = ui.t.metric.pageTitleY;
+  ui.title(canvas, header.title, width / 2, titleY, ui.t.type.h1);
+  const sweep = 130 * context.enterAmount;
+  canvas.save(); canvas.globalAlpha = context.enterAmount; canvas.fillStyle = header.hue ?? ui.t.color.accent;
+  canvas.fillRect(width / 2 - sweep / 2, titleY + 16, sweep, 3); canvas.restore();
+  let bodyTop = titleY + 36;
+  if (header.subtitle) {
+    ui.text(canvas, header.subtitle, width / 2, titleY + 46, ui.t.type.caption, "center", ui.t.alpha.muted);
+    bodyTop = titleY + 64;
+  }
+  if (header.stat) {
+    const statX = layout.sheet.x + layout.sheet.w - 48;
+    canvas.save(); canvas.textAlign = "right"; canvas.textBaseline = "alphabetic";
+    canvas.fillStyle = header.stat.color ?? ui.ink; canvas.font = ui.font(ui.t.type.h2, true);
+    const valueWidth = canvas.measureText(header.stat.value).width;
+    canvas.fillText(header.stat.value, statX, titleY - 4);
+    if (header.stat.glyph) { canvas.font = ui.font(ui.t.type.title, true); canvas.fillText(header.stat.glyph, statX - valueWidth - 12, titleY - 4); }
+    canvas.restore();
+    ui.tag(canvas, header.stat.label, statX, titleY + 18, ui.t.color.muted, "right", ui.t.type.micro);
+  }
+  return Object.freeze({ ...layout, bodyTop: Math.max(layout.bodyTop, bodyTop) });
+}
+
+/** Clips drawing to the page body so rows never paint over the header or footer. */
+export function clipBody(context: ScreenRenderContext, top: number, bottom: number, draw: () => void): void {
+  const sheet = context.ui.sheetRect();
+  context.canvas.save(); context.canvas.beginPath();
+  context.canvas.rect(sheet.x + 2, top, sheet.w - 4, Math.max(0, bottom - top)); context.canvas.clip();
+  try { draw(); } finally { context.canvas.restore(); }
+}
+
+/** Footer: BACK centred in the sheet footer row; the scroll hint sits to its right, never over rows. */
+export function pageFooter(context: ScreenRenderContext, options: Readonly<{
+  back?: ScreenAction; canScrollUp?: boolean | undefined; canScrollDown?: boolean | undefined;
+}> = {}): PageLayout {
+  const layout = pageLayout(context);
+  backControl(context, options.back);
+  scrollHint(context, options.canScrollUp, options.canScrollDown);
+  return layout;
+}
+
 export function backControl(context: ScreenRenderContext, to: ScreenAction = { type: "navigate", to: "menu" }): void {
+  const metric = context.ui.t.metric, layout = pageLayout(context);
   context.enqueue({
-    x: context.width / 2 - 110, y: context.height - 70, w: 220, h: 48,
+    x: context.width / 2 - metric.backW / 2, y: layout.footerY, w: metric.backW, h: metric.btnH,
     label: "‹  BACK", action: to,
   });
 }
@@ -32,30 +108,37 @@ export function tabs(context: ScreenRenderContext, values: readonly { id: string
 
 export function chips(context: ScreenRenderContext,
   values: readonly { id: string; label: string; selected?: boolean | undefined }[],
-  action: (id: string) => ScreenAction, y: number, width: number, height: number, gap = 8, size = 11): void {
+  action: (id: string) => ScreenAction, y: number, width: number, height: number, gap = 8, size?: number): void {
   if (values.length === 0) return;
   const start = (context.width - (width * values.length + gap * (values.length - 1))) / 2;
   values.forEach((value, index) => { context.enqueue({
     x: start + index * (width + gap), y, w: width, h: height, label: value.label,
-    selected: value.selected, chip: true, action: action(value.id), size,
+    selected: value.selected, chip: true, action: action(value.id), size: size ?? context.ui.t.type.micro,
   }); });
 }
 
 /** Oracle replay-vault/feed row shared by Profile and Leaderboards. */
 export function replayRow(context: ScreenRenderContext, replay: ReplayView,
-  x: number, y: number, width: number, spineColor?: string): void {
+  x: number, y: number, width: number, spineColor?: string, textRightReserve?: number): void {
   const { canvas, ui } = context;
   ui.card(canvas, x, y, width, 84, false);
   if (spineColor) ui.spine(canvas, x, y, 84, spineColor);
   canvas.save();
-  canvas.fillStyle = "#0e1017"; canvas.globalAlpha = 0.15; canvas.fillRect(x + 12, y + 6, 128, 72);
+  // Without a captured thumbnail the slot shows a designed dark tile, never an empty box.
+  canvas.fillStyle = "#0e1017"; canvas.globalAlpha = replay.thumbnailId ? 0.15 : 0.88; canvas.fillRect(x + 12, y + 6, 128, 72);
   canvas.globalAlpha = 1;
   if (replay.thumbnailId) context.renderPreview?.(replay.thumbnailId, { x: x + 12, y: y + 6, w: 128, h: 72 });
+  else {
+    canvas.fillStyle = ui.t.color.accent; canvas.font = ui.font(ui.t.type.h2, true); canvas.textAlign = "center"; canvas.textBaseline = "middle";
+    canvas.fillText("▶", x + 76, y + 40); canvas.textBaseline = "alphabetic";
+  }
   canvas.strokeStyle = ui.ink; canvas.globalAlpha = 0.35; canvas.lineWidth = 1; canvas.strokeRect(x + 12, y + 6, 128, 72);
   canvas.restore();
-  ui.displayText(canvas, replay.title, x + 156, y + 30, ui.t.type.lead);
-  ui.text(canvas, replay.detail, x + 156, y + 54, ui.t.type.caption, "left", ui.t.alpha.soft);
-  if (replay.timestamp) ui.text(canvas, replay.timestamp, x + 156, y + 72, ui.t.type.micro, "left", ui.t.alpha.muted);
+  const textWidth = Math.max(120, width - 156 - (textRightReserve ?? 400));
+  const title = ui.fitText(canvas, replay.title, textWidth, { size: ui.t.type.lead, floor: ui.t.type.label, bold: true });
+  ui.displayText(canvas, title.lines[0] ?? replay.title, x + 156, y + 30, title.size);
+  ui.textBox(canvas, replay.detail, x + 156, y + 54, textWidth, { size: ui.t.type.caption, alpha: ui.t.alpha.soft, maxLines: 1 });
+  if (replay.timestamp) ui.textBox(canvas, replay.timestamp, x + 156, y + 74, textWidth, { size: ui.t.type.micro, alpha: ui.t.alpha.muted, maxLines: 1 });
 }
 
 export function cardGrid(
@@ -119,8 +202,13 @@ export function cardGrid(
   });
 }
 
-export function scrollHint(context: ScreenRenderContext, canUp = false, canDown = false, y = context.height - 88): void {
-  if (canUp || canDown) context.ui.scrollHint(context.canvas, context.width / 2, y, canUp, canDown);
+/** Scroll affordance in the page footer row (right of BACK), so it can never overlap the last row. */
+export function scrollHint(context: ScreenRenderContext, canUp = false, canDown = false, legacyCentreY?: number): void {
+  if (!canUp && !canDown) return;
+  // Overlay screens without a sheet (draft, playground) keep their centred hint.
+  if (legacyCentreY !== undefined) { context.ui.scrollHint(context.canvas, context.width / 2, legacyCentreY, canUp, canDown); return; }
+  const layout = pageLayout(context);
+  context.ui.scrollHint(context.canvas, layout.sheet.x + layout.sheet.w - 48, layout.footerY + context.ui.t.metric.btnH / 2 + 5, canUp, canDown, "right");
 }
 
 export function verticalMenu(context: ScreenRenderContext, items: readonly { label: string; action: ScreenAction; enabled?: boolean }[], x: number, top: number, width = 280): void {

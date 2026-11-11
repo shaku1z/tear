@@ -17,13 +17,14 @@ function snapshot(rows: number, scroll: number, inset: number, tab = "vault") {
 describe("Profile archive list viewport", () => {
   it("C39 projection: computes the four-row archive viewport before clamping scroll and projecting both hints", () => {
     const result = snapshot(4, 20, 120);
-    expect(result.maximumScroll).toBe(36); expect(result.view.canScrollUp).toBe(true); expect(result.view.canScrollDown).toBe(true);
-    const end = snapshot(4, 100, 120); expect(end.maximumScroll).toBe(36); expect(end.view.canScrollUp).toBe(true); expect(end.view.canScrollDown).toBe(false);
+    // Visible list: 900 - 440 (header, tabs, notice line, footer) - 120 inset = 340; four 96 px rows scroll by 44.
+    expect(result.maximumScroll).toBe(44); expect(result.view.canScrollUp).toBe(true); expect(result.view.canScrollDown).toBe(true);
+    const end = snapshot(4, 100, 120); expect(end.maximumScroll).toBe(44); expect(end.view.canScrollUp).toBe(true); expect(end.view.canScrollDown).toBe(false);
   });
   it("does not add phantom scrolling to an empty or one-row Vault", () => {
     for (const rows of [0, 1]) { const result = snapshot(rows, 100, 120); expect(result.maximumScroll).toBe(0); expect(result.view.canScrollUp).toBe(false); expect(result.view.canScrollDown).toBe(false); }
   });
   it("preserves the ordinary replay viewport when no inset is requested", () => {
-    const result = snapshot(6, 20, 0, "replays"); expect(result.maximumScroll).toBe(108); expect(result.view.canScrollUp).toBe(true); expect(result.view.canScrollDown).toBe(true);
+    const result = snapshot(6, 20, 0, "replays"); expect(result.maximumScroll).toBe(116); expect(result.view.canScrollUp).toBe(true); expect(result.view.canScrollDown).toBe(true);
   });
 });

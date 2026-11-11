@@ -1,5 +1,6 @@
 import type { ChapterLayout, UiDependencies, UiOptions, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
+import { inkIsLight } from "./ui-color";
 
 export function createUiChapter(dependencies: UiDependencies) {
   const { clamp, presentation: { overscan, view } } = dependencies;
@@ -260,17 +261,20 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
         // ---- OVERLAY ------------------------------------------------------------
         // dim the frozen world behind an overlay (fades to PAPER, so overlay text is
         // always inked black regardless of the biome underneath)
+        // Theme-safe: the dim and the live ink are always a contrasting pair. Dark ink
+        // fades the world toward paper; light ink (dark-biome themes, modals) fades it
+        // toward the dark scrim instead, so text on the dim never washes out.
         dim(this: UiRuntime, ctx: CanvasRenderingContext2D, w: number, h: number, a?: number) {
             const ox = overscan.x;
             const oy = overscan.y;
             ctx.globalAlpha = a ?? 0.78;
-            ctx.fillStyle = this.t.color.paper;
+            ctx.fillStyle = inkIsLight(this.ink) ? this.t.color.scrim : this.t.color.paper;
             ctx.fillRect(-ox, -oy, w + ox * 2, h + oy * 2); // reach the true screen edges in fullscreen
             ctx.globalAlpha = 1;
         },
         // scroll affordance ("▲ scroll ▼") for long lists
-        scrollHint(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean) {
-            this.text(ctx, (canUp ? "▲ " : "") + "scroll" + (canDown ? " ▼" : ""), x, y, this.t.type.caption, "center", this.t.alpha.faint);
+        scrollHint(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean, align: CanvasTextAlign = "center") {
+            this.text(ctx, (canUp ? "▲ " : "") + "SCROLL" + (canDown ? " ▼" : ""), x, y, this.t.type.caption, align, this.t.alpha.muted);
         },
         // ---- MENU AMBIENCE + STRUCTURE -----------------------------------------
         // a faint, slowly drifting "tear-slash" backdrop drawn behind every menu screen.

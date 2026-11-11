@@ -153,6 +153,8 @@ export interface PlaygroundHelpSnapshot {
 export interface AchievementToastSnapshot {
   readonly name: string; readonly description: string; readonly rarityName: string; readonly rarityColor: string;
   readonly categoryIcon: string; readonly shards: number; readonly coins: number; readonly reveal: number;
+  /** Where the toast rests: in-run top-right, main-menu bottom-right, sheet screens in the empty header-left. */
+  readonly placement?: "top-right" | "bottom-right" | "header-left";
 }
 
 export interface TouchButtonSnapshot extends WorldPoint {

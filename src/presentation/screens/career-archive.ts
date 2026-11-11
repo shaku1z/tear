@@ -1,61 +1,96 @@
-import { careerRowKey } from "../../ghost/career-archive";
-import type { ProfileScreenView, ScreenRenderContext } from "./contracts";
-import { ellipsize } from "./screen-primitives";
+import { careerRowKey, type CareerEntry } from "../../ghost/career-archive";
+import type { ProfileScreenView, ScreenAction, ScreenRenderContext } from "./contracts";
+import { page, pageFooter } from "./screen-primitives";
 
 const labels: Readonly<Record<string, string>> = { history: "ALL RUNS", "personal-best": "PERSONAL BESTS", "first-clear": "FIRST CLEARS", "best-weapon": "BEST BY WEAPON", "boss-change": "BOSS CLEAR TIMES", "favorite-builds": "FAVORITE BUILDS", "near-miss": "BOSS NEAR MISSES", "style-milestones": "STYLE MILESTONES", "longest-survival": "LONGEST SURVIVAL", "dna-evolution": "RUN DNA HISTORY" };
+const PROFILE_HUE = "#b06cff";
+const unknown = (value: string | number | null | undefined, fallback = "—"): string => value === null || value === undefined || value === "" ? fallback : String(value);
+const clock = (seconds: number): string => `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+const percent = (value: number): string => `${String(Math.round(value * 100))}%`;
+const title = (value: string | null): string => value === null ? "—" : value.replace(/[-_]+/g, " ").toUpperCase();
+
+/** A run's facts in player language: no ids, hashes, byte counts or custody terms. */
+function runFacts(entry: CareerEntry, detail: string | undefined, notes: Readonly<{ tags: readonly string[]; retention: string }>, chaseEligible: boolean): readonly string[] {
+  const facts: string[] = [];
+  facts.push(detail ?? `${entry.kind === "legacy-visual" ? "OLDER RECORDING (WATCH ONLY) · " : ""}${title(entry.mode)} · ${title(entry.difficulty)} · ${title(entry.weapon)}`);
+  facts.push(`${entry.date.slice(0, 10)} · ${title(entry.result)} · wave ${unknown(entry.wave)} · score ${entry.score === null ? "—" : entry.score.toLocaleString("en-US")}`);
+  facts.push(`Time ${entry.seconds === null ? "—" : clock(entry.seconds)} · damage taken ${entry.damage === null ? "—" : String(Math.round(entry.damage))}`);
+  if (entry.loadout !== null) facts.push(`Build: ${entry.loadout.map((row) => `${title(row.id)}${row.count > 1 ? ` ×${String(row.count)}` : ""}${row.tier > 1 ? ` (tier ${String(row.tier)})` : ""}`).join(", ") || "no upgrades"}`);
+  if (entry.bosses !== null && entry.bosses.length > 0) facts.push(`Bosses: ${entry.bosses.map(title).join(", ")}`);
+  if (entry.style) facts.push(`Style: best combo ${String(Math.round(entry.style.combo))} · ×${entry.style.multiplier.toFixed(1)} multiplier${entry.style.rank ? ` · rank ${entry.style.rank}` : ""}`);
+  if (entry.nearMiss !== null && entry.nearMiss.length > 0) facts.push(`So close: ${entry.nearMiss.map((miss) => `${title(miss.boss)} left at ${String(Math.round(miss.hp))} / ${String(Math.round(miss.maxHp))} HP`).join(", ")}`);
+  const dna = Object.entries(entry.dna);
+  if (dna.length > 0) facts.push(`Run DNA: ${dna.map(([key, value]) => `${key} ${percent(value)}`).join(" · ")}`);
+  facts.push(`Tags: ${notes.tags.join(", ") || "none"} · ${notes.retention === "pinned" ? "pinned" : "kept with recent runs"}`);
+  facts.push(entry.beatAttempt ? "A Beat This Run attempt — unranked, no progression." : entry.seedRaceRole ? "Seed-Locked Race run — shared setup, unranked, no rewards."
+    : entry.assisted ? "Assisted run — unranked." : chaseEligible ? "CHASE is available: replay this best with your own choices (unranked)." : "");
+  return facts.filter((fact) => fact.length > 0);
+}
+
 /** Presentation only; text editing and source actions use explicit application ports. */
 export function createCareerArchiveRenderer(context: ScreenRenderContext) {
   return (view: NonNullable<ProfileScreenView["career"]>): void => {
-    const { ui, canvas, width, height } = context, left = Math.max(24, width / 2 - 550), available = Math.min(1100, width - 48);
-    const line = (text: string, y: number, muted = false, size = ui.t.type.caption) => { ui.text(canvas, ellipsize(canvas, text, available), left, y, size, "left", muted ? ui.t.alpha.muted : ui.t.alpha.soft); };
-    const button = (label: string, command: string, x: number, y: number, w = 154, enabled = true, id?: string) => { context.enqueue({ x, y, w, h: 32, label, size: ui.t.type.micro, enabled, action: { type: "career.control", command, ...(id ? { id } : {}) } }); };
-    ui.title(canvas, "CAREER ARCHIVE", width / 2, 40, ui.t.type.h2);
-    context.enqueue({ x: left, y: 12, w: 100, h: 30, label: "PROFILE", action: { type: "profile.selectTab", id: "bests" } });
-    button("RECEIVE BEAT CODE", "beat-receive", left + 120, 12, 210);
+    const { ui, canvas, width } = context;
+    const layout = page(context, { title: "CAREER ARCHIVE", subtitle: "every run recorded on this device", hue: PROFILE_HUE });
+    const left = layout.left, available = layout.contentWidth;
+    const back: ScreenAction = { type: "profile.selectTab", id: "bests" };
+    const line = (text: string, y: number, options: Readonly<{ muted?: boolean; size?: number; maxLines?: number }> = {}): number =>
+      ui.textBox(canvas, text, left, y, available, { size: options.size ?? ui.t.type.caption, alpha: options.muted === true ? ui.t.alpha.muted : ui.t.alpha.soft, maxLines: options.maxLines ?? 1 }).height;
+    const button = (label: string, command: string, x: number, y: number, w = 170, enabled = true, id?: string, h = 36) => {
+      context.enqueue({ x, y, w, h, label, size: ui.t.type.label, enabled, action: { type: "career.control", command, ...(id ? { id } : {}) } });
+    };
+    const toolbarY = layout.bodyTop;
     if (!view.selected) {
-      button("SEARCH / FILTERS", "search", left, 58, 190); button(labels[view.query.view] ?? view.query.view, "view", left + 200, 58, 240);
-      button(`SORT: ${view.query.sort.toUpperCase()}`, "sort", left + 450, 58, 180); button("CLEAR", "clear", left + 640, 58, 110);
-      line(`${String(view.total)} matches / ${String(view.retained)} retained records · ${String(view.known)} indexed${view.indexing ? " · indexing" : ""}`, 115);
-      const rowHeight = Math.max(42, Math.min(100, (height - 238) / 3));
-      view.rows.forEach((row, i) => { const e = row.entry, y = 132 + i * rowHeight;
-        button(`${e.mode ?? "UNKNOWN MODE"} · ${e.weapon ?? "?"} · ${e.result ?? "NOT CHECKED"}`, "select", left, y, available, true, careerRowKey(row));
-        const dnaValue = (key: string) => `${key}: ${e.dna[key] === undefined ? "unavailable" : String(Math.round(e.dna[key] * 10000) / 10000)}`;
-        if (rowHeight >= 62) line(view.query.view === "dna-evolution" ? ["aggression", "precision", "mobility"].map(dnaValue).join(" · ") : `${e.date} · wave ${String(e.wave ?? "unknown")} · score ${String(e.score ?? "unknown")} · ${row.notes.retention} · ${e.actor} attribution`, y + 51, true);
-        if (rowHeight >= 86) line(view.query.view === "dna-evolution" ? `${["defense", "experimentation"].map(dnaValue).join(" · ")} · ${e.date} · rounded 4dp` : row.detail ?? `Tags: ${row.notes.tags.join(", ") || "none"} · ${e.present ? "source retained" : "source unavailable"}`, y + 74, true);
+      button("SEARCH / FILTERS", "search", left, toolbarY, 220); button(labels[view.query.view] ?? title(view.query.view), "view", left + 232, toolbarY, 250);
+      button(`SORT: ${view.query.sort.toUpperCase()}`, "sort", left + 494, toolbarY, 190); button("CLEAR", "clear", left + 696, toolbarY, 120);
+      button("RECEIVE BEAT CODE", "beat-receive", left + available - 230, toolbarY, 230);
+      line(`${view.total.toLocaleString("en-US")} ${view.total === 1 ? "run" : "runs"} found · ${view.retained.toLocaleString("en-US")} kept on this device${view.indexing ? " · still reading older runs…" : ""}`, toolbarY + 66, { muted: true });
+      const listTop = toolbarY + 84, listBottom = layout.bodyBottom - 26;
+      const rowHeight = Math.max(48, Math.min(92, (listBottom - listTop) / Math.max(3, view.rows.length)));
+      view.rows.forEach((row, i) => {
+        const e = row.entry, y = listTop + i * rowHeight;
+        if (y + 38 > listBottom) return;
+        button(`${title(e.mode)} · ${title(e.weapon)} · ${title(e.result)}`, "select", left, y, available, true, careerRowKey(row), 38);
+        if (rowHeight >= 62) {
+          const summary = view.query.view === "dna-evolution"
+            ? Object.entries(e.dna).map(([key, value]) => `${key} ${percent(value)}`).join(" · ") || "Run DNA not recorded for this run"
+            : `${e.date.slice(0, 10)} · wave ${unknown(e.wave)} · score ${e.score === null ? "—" : e.score.toLocaleString("en-US")}${row.notes.retention === "pinned" ? " · pinned" : ""}${row.notes.tags.length ? ` · ${row.notes.tags.join(", ")}` : ""}`;
+          line(row.detail ?? summary, y + 56, { muted: true });
+        }
       });
-      if (!view.rows.length) line(view.status === "loading" ? "Reading retained metadata..." : "No matching retained records. Historical unknowns remain unavailable.", 164);
-      button("PREVIOUS", "previous", left, height - 76, 154, view.page > 0); button("NEXT", "next", left + 166, height - 76, 154, view.page + 1 < view.pages);
-      if (view.usage) line(`Recorded chunks ${String(view.usage.recordedChunkBytes)} B / protected ${String(view.usage.protectedChunkBytes)} B · browser usage/quota ${String(view.usage.browserUsage ?? "unknown")}/${String(view.usage.browserQuota ?? "unknown")} B · pending/profile/asset/analysis usage unavailable`, height - 92, true);
-      line(`Page ${String(view.page + 1)} / ${String(view.pages)} · ${view.message || "Select a run for recorded facts and local controls."}`, height - 20, true); return;
+      if (!view.rows.length) ui.emptyState(canvas, "◇", view.status === "loading" ? "Reading your runs…" : "No runs match", width / 2, listTop + 120,
+        view.status === "loading" ? undefined : "Try CLEAR to drop the filters, or play a run — it is recorded here automatically.", 640);
+      const footer = pageFooter(context, { back });
+      button("‹ PREVIOUS", "previous", left, footer.footerY + 6, 170, view.page > 0);
+      button("NEXT ›", "next", left + 182, footer.footerY + 6, 150, view.page + 1 < view.pages);
+      ui.text(canvas, `Page ${String(view.page + 1)} / ${String(Math.max(1, view.pages))}`, layout.right, footer.footerY + 30, ui.t.type.caption, "right", ui.t.alpha.muted);
+      if (view.message) line(view.message, layout.bodyBottom - 4, { muted: true });
+      return;
     }
     const { entry: e, notes, detail } = view.selected;
     const raceEligible = e.seedRaceRole === "reference" && e.verified === "receipts" && e.result !== null;
     const chaseEligible = !e.beatAttempt && !e.assisted && e.verified === "receipts" && detail?.startsWith("Recorded category best") === true;
-    const quantity = (value: number, digits = 2) => String(Number(value.toFixed(digits)));
-    const composition = Object.entries(e.composition ?? {}), dominant = composition.filter(([, n]) => n === Math.max(...composition.map(([, count]) => count))).map(([category]) => category).join(", ");
-    button(e.beatAttempt ? "BEAT RESULT" : "BEAT THIS RUN", e.beatAttempt ? "beat-review" : "beat", left + 205, 58, 180, e.present && e.kind === "capsule");
-    if (e.beatAttempt) { button("SAVE RESULT", "beat-save", left + 395, 58, 160); button("RETRY BEAT", "beat-retry", left + 565, 58, 160); }
-    button("BACK TO RESULTS", "back", left, 58, 190);
-    const facts = [detail ?? `${e.kind === "legacy-visual" ? "VISUAL-ONLY LEGACY · " : ""}${e.mode ?? "unknown mode"} / ${e.difficulty ?? "unknown difficulty"} / ${e.weapon ?? "unknown weapon"}`,
-      `${e.date} · ${e.result ?? "outcome unavailable"} · wave ${String(e.wave ?? "unknown")} · score ${String(e.score ?? "unknown")}`,
-      `Duration ${e.seconds === null ? "unavailable" : `${quantity(e.seconds)} seconds`} · damage ${e.damage === null ? "unavailable" : quantity(e.damage)} · verification ${e.verified}`,
-      `Build categories: ${e.categories?.join(", ") ?? "unavailable"} · distinct IDs ${e.composition === null ? "unavailable" : composition.map(([k, v]) => `${k}:${String(v)}`).join(", ") || "none"} · dominant ${dominant || (e.categories?.includes("unupgraded") ? "unupgraded" : "unavailable")} · owned: ${e.loadout === null ? "unavailable" : e.loadout.map((r) => `${r.id} x${String(r.count)} T${String(r.tier)}`).join(", ") || "no upgrades"}`,
-      `Accepted uses: ${e.abilities === null ? "unavailable" : e.abilities.join(", ") || "none recorded"} · bosses: ${e.bosses === null ? "unavailable" : e.bosses.join(", ") || "none recorded"}`,
-      `Style ${e.style ? `combo ${quantity(e.style.combo)} · x${quantity(e.style.multiplier)} · ${e.style.rank || "unranked"}` : "unavailable"} · near miss ${e.nearMiss === null ? "unavailable" : e.nearMiss.map((b) => `${b.boss}: ${quantity(b.hp)}/${quantity(b.maxHp)} HP, phase 3`).join(", ") || "none under final-phase <=10% rule"}`,
-      `Run DNA: ${Object.entries(e.dna).map(([k, v]) => `${k} ${quantity(v, 4)}`).join(" · ") || "unavailable"}`,
-      `Tags: ${notes.tags.join(", ") || "none"} · retention ${notes.retention} · recorded actor ${e.actor} · sharing ${e.sharing} · game ${e.gameVersion ?? "unknown"}`,
-      e.beatAttempt ? "BEAT THIS RUN · declared native target · independent input/legal private choices · noncompetitive / no progression" : e.seedRaceRole ? `SEED-LOCKED RACE ${e.seedRaceRole.toUpperCase()} · shared setup/offers · personal inputs, reserve and tier-ups · unranked / no progression rewards` : e.assisted ? "ASSISTED / NONCOMPETITIVE · original Chase source attribution is retained in this recording." : chaseEligible ? "CHASE: independent seed and choices · assisted / noncompetitive · no ordinary leaderboard submission." : "To Chase, choose an unassisted recorded best from Personal best timeline or Best per weapon.",
-      e.unavailable.join(" · ") || "Native witness coverage available; observations do not measure human skill."];
-    const spacing = Math.max(14, Math.min(30, (height - 220) / facts.length)); facts.forEach((fact, i) => { line(fact, 108 + i * spacing, i === facts.length - 1, ui.t.type.body); });
-    const y = height - 100;
-    if (view.confirming) { line("Delete local recording, unreferenced chunks, history and tags? Protected holds may refuse. Remote copies remain.", y - 14); button("DELETE LOCAL", "confirm-delete", left, y, 180); button("KEEP", "cancel-delete", left + 192, y); }
-    else {
+    button("BACK TO RESULTS", "back", left, toolbarY, 230);
+    button(e.beatAttempt ? "BEAT RESULT" : "BEAT THIS RUN", e.beatAttempt ? "beat-review" : "beat", left + 242, toolbarY, 190, e.present && e.kind === "capsule");
+    if (e.beatAttempt) { button("SAVE RESULT", "beat-save", left + 444, toolbarY, 170); button("RETRY BEAT", "beat-retry", left + 626, toolbarY, 170); }
+    const actionsY = layout.bodyBottom - 82;
+    let y = toolbarY + 74;
+    for (const [index, fact] of runFacts(e, detail, notes, chaseEligible).entries()) {
+      if (y > actionsY - 56) break;
+      y += line(fact, y, { size: index === 0 ? ui.t.type.lead : ui.t.type.body, maxLines: 2 }) + 6;
+    }
+    if (e.unavailable.length > 0 && y <= actionsY - 56) line(`Not recorded for this run: ${e.unavailable.join(", ")}`, y, { muted: true, maxLines: 2 });
+    if (view.confirming) {
+      line("Delete this run from this device? Its tags go too. Copies you shared elsewhere stay.", actionsY - 18);
+      button("DELETE LOCAL", "confirm-delete", left, actionsY, 240); button("KEEP", "cancel-delete", left + 252, actionsY, 150);
+    } else {
       // Commands whose surface this build does not offer are omitted and the row closes up.
       const sources = [["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"], ["PUBLISH", "publish"], ["CHASE BEST", "chase"], ["RACE THIS REFERENCE", "race"]]
         .filter(([, command]) => context.available?.({ type: "career.control", command: command ?? "" }) !== false), slots = sources.length;
-      sources.forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / slots, y, (available - (slots - 1) * 8) / slots, e.present && (e.kind === "capsule" || command === "watch") && (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible)); });
-      [["TAGS", "tags"], [notes.retention === "pinned" ? "UNPIN" : "PIN", "pin"], ["RETENTION", "retention"], ["DELETE LOCAL", "delete"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 4, y + 38, (available - 24) / 4, e.kind === "capsule" || command === "pin" || command === "delete"); });
+      sources.forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / slots, actionsY, (available - (slots - 1) * 8) / slots, e.present && (e.kind === "capsule" || command === "watch") && (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible)); });
+      [["TAGS", "tags"], [notes.retention === "pinned" ? "UNPIN" : "PIN", "pin"], ["KEEP…", "retention"], ["DELETE LOCAL", "delete"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 4, actionsY + 44, (available - 24) / 4, e.kind === "capsule" || command === "pin" || command === "delete"); });
     }
-    line(view.message || "Local annotations are separate from immutable recordings. Other tools retain their own admission and consent gates.", height - 14, true);
+    if (view.message && !view.confirming) line(view.message, actionsY - 18, { muted: true });
+    pageFooter(context, { back });
   };
 }
