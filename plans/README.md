@@ -34,7 +34,7 @@ their own.
 
 | Document | Owner | Status | Closure condition | Role |
 | --- | --- | --- | --- | --- |
-| [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone. | Partially implemented balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
+| [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone. | Partially implemented balance plan; catalogue totals are reconciled; remaining scope is fresh-profile progression and live-balance validation. |
 | [RELEASE_READINESS_PLAN.md](active/RELEASE_READINESS_PLAN.md) | Release-readiness owner | Active | Every phase in the plan is done or explicitly dropped by the owner, `pnpm check` passes from the final commit, and the owner has authorised the merge and deployment. | Phased plan to make the game releasable to players: gate developer surfaces, green gates, input and first-run fixes, UI system and screen passes, payload, repository and workflow cleanup. |
 
 ## Completed plans

@@ -19,6 +19,7 @@ import { runLiveOpeningPhase, type LiveOpeningPhaseHost } from "../../src/gamepl
 import { addKillScore, invokeWeaponHook } from "../../src/gameplay/combat/weapon-runtime-coordinator";
 import { updateMirrorCombat } from "../../src/gameplay/combat/mirror-combat-feedback";
 import { cosmeticRandom } from "../../src/presentation/cosmetic-random";
+import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
 import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from
@@ -129,11 +130,14 @@ export interface DetachedWorldOptions {
 export function createDetachedWorld(options: DetachedWorldOptions) {
   const { configuration, clock, random } = createTearWorldBootstrap(CONFIG);
   const config = configuration.value;
+  // Production composition owns one cosmetic emission stream per world and
+  // reseeds it from the run seed (52817956); detached worlds do the same.
+  const cosmeticEmissionRandom = createCosmeticEmissionRandom();
   const effects = createParticleSystem({
     effects: config.effects,
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,
-    random: cosmeticRandom,
+    random: cosmeticEmissionRandom.next,
   });
   random.streams.reset(options.seed);
   const factories = createTearWorldSimulationFactories({
@@ -141,10 +145,11 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
     input: idleInput() as Options["input"], presentation: detachedPresentation(),
     random: { enemyAi: random.streams.stream("enemy-ai"), boss: random.streams.stream("boss") },
     geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
-    cosmeticRandom,
+    cosmeticRandom: cosmeticEmissionRandom.next,
   });
   const dependencies = {
     CLOCK: clock, CONFIG: config, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
+    cosmeticRandom, cosmeticEmissionRandom,
     Backdrop: { resetFx: () => undefined }, Mirror: factories.mirrorTypes.Mirror, BOSSFX: factories.enemyTypes.BOSSFX,
     Cinematics: CinematicTimeline,
     Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
@@ -197,7 +202,7 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   // Platforms are mutable world state: a boss encounter swaps in its arena,
   // and both the wave runtime and the combat phases must see the same array.
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
-  return { world, configuration, clock, effects, random, factories, transient, input, run, stage };
+  return { world, configuration, clock, effects, random, cosmeticEmissionRandom, factories, transient, input, run, stage };
 }
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
@@ -420,10 +425,10 @@ export function createDetachedCombatPhases(
     spawnBossAdds: () => [], spawnBossClone: () => undefined, removeBossClone: () => undefined,
     dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
     updateEffects: (dt: number) => { effects.update(dt); },
-    // The live opening host passes cosmeticRandom here: this entropy is
-    // render-only. Drawing from a seeded stream instead would desynchronise
-    // enemy AI, so the detached world uses the same non-rules source.
-    random: cosmeticRandom,
+    // The live opening host passes the per-world cosmetic emission stream
+    // here (52817956): this entropy is render-only. Drawing from a seeded rules
+    // stream instead would desynchronise enemy AI.
+    random: detached.cosmeticEmissionRandom.next,
   } as unknown as LiveOpeningPhaseHost;
 
   // The collision phase mutates its state object in place, so it reads the

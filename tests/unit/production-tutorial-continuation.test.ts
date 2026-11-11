@@ -465,7 +465,13 @@ describe("production tutorial reconstructed-byte continuation", () => {
         { kind: "command" as const, id: 2, tick, command: { type: "weapon" as const, intent: "primary" as const, phase: "pressed" as const } }] : [];
       expect(restored.simulation.advanceOne(actions).state).toEqual(source.simulation.advanceOne(actions).state);
     }
-    expect(source.combat.outward).toContain("logWeapon:heldHit");
+    // Since edaab0fe replay routes weapon logging through the shared native
+    // weapon runtime instead of a test-only "logWeapon:*" outward marker, so the
+    // held hit is witnessed by its weapon hook and the run's native counter.
+    expect(source.combat.outward).toContain("weaponHit");
+    const heldHits = (composed: typeof source) => (composed.replay.world.state.run() as { weaponStats: { heldHits: number } } | null)?.weaponStats.heldHits;
+    expect(heldHits(source)).toBeGreaterThanOrEqual(1);
+    expect(heldHits(restored)).toBe(heldHits(source));
     expect(source.replay.world.state.enemies()[0]?.hp).toBeLessThan(1000);
     expect(restored.replay.tutorial.captureSession()).toMatchObject({ counters: { strike: 1, punish: 1 }, completionDelay: 1.1 });
     expect(restored.replay.stage.platforms).toEqual(source.replay.stage.platforms);

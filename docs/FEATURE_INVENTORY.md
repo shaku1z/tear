@@ -99,7 +99,7 @@ frozen evidence record.
     Sword, Hammer, Greatsword, Chainblade, and Riftlock, rejects Spear/Ringblade
     as active IDs, and supports `--expected-sha` fail-closed export validation.
 - [x] Progression reference catalogs — the fixed game-reference collections
-  now include 60 authored upgrades and 98 authored achievements with canonical
+  now include 60 authored upgrades and 100 authored achievements with canonical
   order, categories/rarities, explicit rule/tier metadata, and no runtime
   callbacks in the projection. `achievement-catalog.ts` is the immutable
   achievement metadata authority; runtime behavior joins onto it.

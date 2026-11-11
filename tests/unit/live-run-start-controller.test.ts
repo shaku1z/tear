@@ -547,24 +547,27 @@ describe("LiveRunStartController", () => {
     expect(initialInput).toMatchObject({ tick: 0, moveX: 0.75, primaryHeld: true });
     const openingReceipt = createGhostAuthoritativeReceipt(0, capture.semanticHash, initialInput);
     const composition = createProductionGhostReplayComposition({ seed: "unused", openingPermit: permit, inputSnapshots: new Map([[0, openingReceipt.input]]) });
-    const sampled = new Map<number, { stateHash: string; input: typeof initialInput }>(), created: ReturnType<typeof composition.create>[] = [], advances: number[] = [];
+    const sampled = new Map<number, { stateHash: string; input: typeof initialInput }>(), created: ReturnType<typeof composition.create>[] = [], advances: number[] = [], executed: number[] = [];
+    // Since c4d9569c production replay advances through the screen-gated
+    // advanceExact path (a gated tick returns a null result), not advanceOne.
     const recording = { create(snapshot: Parameters<typeof composition.create>[0]) {
-      const session = composition.create(snapshot), advance = session.simulation.advanceOne.bind(session.simulation), restore = vi.spyOn(session.simulation.input, "restore");
-      created.push(session); let count = 0;
-      vi.spyOn(session.simulation, "advanceOne").mockImplementation((actions) => { const result = advance(actions); count++; advances[created.length - 1] = count;
-        if ([1, 60, 120, 180].includes(result.tick)) sampled.set(result.tick, { stateHash: result.stateHash, input: session.simulation.input.snapshot() }); return result; });
+      const session = composition.create(snapshot), advance = session.simulation.advanceExact.bind(session.simulation), restore = vi.spyOn(session.simulation.input, "restore");
+      created.push(session); let count = 0, steps = 0;
+      vi.spyOn(session.simulation, "advanceExact").mockImplementation((actionsForTick, lifecycle) => { const advanced = advance(actionsForTick, lifecycle); count++; advances[created.length - 1] = count;
+        const result = advanced.result; if (result !== null) steps++; executed[created.length - 1] = steps;
+        if (result !== null && [1, 60, 120, 180].includes(result.tick)) sampled.set(result.tick, { stateHash: result.stateHash, input: session.simulation.input.snapshot() }); return advanced; });
       expect(session.simulation.input.snapshot()).toEqual(initialInput); expect(restore).not.toHaveBeenCalled();
       return session;
     } };
     const world = new GhostProductionReplayWorld(derived, recording);
     world.seek(0); expect(created[0]?.waveReward.screen()).toBe("setup");
-    world.seek(180); expect(advances[1]).toBe(180); expect(created[1]?.waveReward.screen()).toBe("playing");
+    world.seek(180); expect(advances[1]).toBe(180); expect(executed[1]).toBe(180); expect(created[1]?.waveReward.screen()).toBe("playing");
     for (const [tick, observed] of sampled) {
       const receiptEntry = capsule.tracks.results.find((entry) => entry.tick === tick);
       expect(receiptEntry?.value).toMatchObject(observed);
     }
     expect(sampled.size).toBe(4);
-    const repeated = world.seek(180); expect(repeated.semanticHash).toBe(sampled.get(180)?.stateHash); expect(advances[2]).toBe(180);
+    const repeated = world.seek(180); expect(repeated.semanticHash).toBe(sampled.get(180)?.stateHash); expect(advances[2]).toBe(180); expect(executed[2]).toBe(180);
     expect(stableVerificationHash(capsule)).toBe(before);
     const verification = verifyGhostCapsuleOpeningContinuation(capsule);
     expect(verification.status).toBe("verified"); expect(verification.continuation).toMatchObject({ steps: 180, laterKeyframesUsed: false, sourceRootIntegrity: capsule.manifest.rootIntegrity });

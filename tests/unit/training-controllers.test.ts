@@ -220,15 +220,31 @@ describe("tutorial controller", () => {
     const snapshot = { dt: 7, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
     left.update(snapshot); right.update(snapshot);
+    // Current curriculum demonstrations are explicit and finite (d1077fb0):
+    // idling alone never starts one, the DEMONSTRATE action does.
+    expect(left.ghostSnapshot(800).visible).toBe(false);
+    expect(left.demonstrate()).toBe(true); expect(right.demonstrate()).toBe(true);
     left.ghostTime = 1.25; right.ghostTime = 1.25;
     expect(left.ghostSnapshot(800)).toEqual(right.ghostSnapshot(800));
     expect(left.ghostSnapshot(800)).toMatchObject({ visible: true, demonstrating: true, lesson: "MOVE", actor: { y: 775 } });
   });
 
-  it("only demonstrates after the player has had room to attempt the current block", () => {
-    const controller = startTutorial();
+  it("only auto-demonstrates historical v1 courses after the player has had room to attempt the current block", () => {
     const snapshot = { dt: 1, skipPressed: false, movingLeft: false, movingRight: false, viewportWidth: 1600,
       player: { onGround: true, vy: 0, dashTimer: 0, x: 800, facing: 1 }, bladeState: "held", enemies: [] };
+    // The current curriculum replaced the idle auto-demonstration with
+    // explicit, finite gold demonstrations (d1077fb0, bb323a50).
+    const current = startTutorial();
+    for (let tick = 0; tick < 12; tick += 1) current.update(snapshot);
+    expect(current.ghostSnapshot(800)).toMatchObject({ visible: false, demonstrating: false });
+    expect(current.demonstrate()).toBe(true);
+    expect(current.ghostSnapshot(800)).toMatchObject({ visible: true, demonstrating: true });
+
+    // A restored v1 course keeps its historical seven-second idle threshold.
+    const historical = { ...startTutorial().captureSession(), version: 1 } as Record<string, unknown>;
+    delete historical.curriculumVersion; delete historical.fieldEncounter; delete historical.interWaveRemaining;
+    const controller = new TutorialController(CONFIG); controller.restoreSession(historical);
+    expect(controller.captureSession().version).toBe(1);
     for (let tick = 0; tick < 6; tick += 1) controller.update(snapshot);
     expect(controller.ghostSnapshot(800).visible).toBe(false);
     controller.update(snapshot);

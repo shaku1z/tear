@@ -59,6 +59,10 @@ async function capsuleFor(
     runId: source.episodeId, seed: sourceScenario.seed, mode: sourceScenario.start.mode,
     difficulty: sourceScenario.start.difficulty, weaponId: sourceScenario.start.weapon,
     ticksPerSecond: 120, build, rng: { world: { state: "1" } },
+    // Generated C30 hosts declare their intro frame policy (cc37e8d0); a
+    // capsule recorded from that source retains it, as the materializer does.
+    ...(source.artifact.bootstrap.applicationFramePolicy === undefined ? {}
+      : { applicationFramePolicy: source.artifact.bootstrap.applicationFramePolicy }),
   });
   const capsuleId = "c31-attested-candidate";
   const recorder = new GhostStreamingRecorder({
@@ -105,6 +109,8 @@ function declaration(
 describe("C31 Academy candidate source attestation", () => {
   it("binds a complete Vault capsule's sealed build and exact range to a real C30 terminal before pre-corpus eligibility", async () => {
     const source = await candidate();
+    expect(source.artifact.bootstrap.applicationFramePolicy)
+      .toEqual({ version: 1, kind: "generated-step-intro", secondsPerStep: 1 / 120 });
     const capsule = await capsuleFor(source);
     const attestation = await attestAcademyCandidateSource(source, capsule.vault, capsule.capsuleId);
     const bundle = captureAcademyCandidateTracks(source, attestation);

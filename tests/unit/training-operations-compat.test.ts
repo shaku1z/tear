@@ -86,6 +86,10 @@ describe("Training Operations compatibility facade", () => {
       bootstrap: "training-operations.bootstrap",
       scheduleEnable: "training-operations.schedule.enable",
       scheduleDisable: "training-operations.schedule.disable",
+      // Canonical-only actions added by c336d20e (promotion) and f3de399a
+      // (monitored baseline restore); they never had a legacy Foundry ID.
+      promote: "training-operations.promote",
+      restoreBaseline: "training-operations.restoreBaseline",
     });
     expect(LEGACY_TRAINING_OPERATIONS_ACTIONS).toEqual({
       refresh: "foundry.refresh",

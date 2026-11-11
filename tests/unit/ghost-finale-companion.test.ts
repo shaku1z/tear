@@ -138,7 +138,11 @@ describe("source-linked finale continuation", () => {
     expect(playback.seekFrame(playback.positions.length - 1).result.tick).toBe(playback.positions.at(-1)?.tick);
   });
 
-  it.each(["completion", "replacement", "newer-session"])("streams a real final-wave handoff with pause and %s lifetime", async (ending) => {
+  // Heavy by construction: the completion case drives up to 720 production
+  // application frames through the whole finale, records it, and reconstructs
+  // the child capsule. Measured alone on 2026-11-11: 4.2-6.3 s (the other two
+  // cases take <0.1 s), so the 5 s default timed out without a defect.
+  it.each(["completion", "replacement", "newer-session"])("streams a real final-wave handoff with pause and %s lifetime", { timeout: 30_000 }, async (ending) => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend()), reader = new GhostCapsuleReader(vault);
     const recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-10-20T00:00:01Z" });
     const bus = new TearGameplayEventBus(); let sequence = 0, finishRequested = false;

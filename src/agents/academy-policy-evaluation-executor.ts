@@ -273,8 +273,8 @@ async function runCase(entry: TearAcademyPolicyEvaluationCaseV1, recovery: TearA
   } finally { environment.dispose(); }
 }
 
-function candidatePolicy(artifact: TearPolicyArtifactV1): EvaluationPolicy {
-  const runtime = new TearActivePolicyRuntime(artifact);
+function candidatePolicy(artifact: TearPolicyArtifactV1, now: (() => number) | undefined): EvaluationPolicy {
+  const runtime = new TearActivePolicyRuntime(artifact, "competent", now === undefined ? {} : { now });
   return Object.freeze({ reset: () => runtime.reset(), decide: (observation: TearAgentObservation) => runtime.decide(observation) });
 }
 
@@ -304,7 +304,15 @@ function lessonMetrics(plan: TearAcademyPolicyEvaluationPlanV1, candidateRuns: r
 export class TearAcademyPolicyEvaluationExecutor {
   readonly #plans: TearAcademyPolicyEvaluationPlanVault;
   readonly #results: TearAcademyPolicyEvaluationResultVault;
-  constructor(backend: GhostVaultBackend) { this.#plans = new TearAcademyPolicyEvaluationPlanVault(backend); this.#results = new TearAcademyPolicyEvaluationResultVault(backend); }
+  readonly #now: (() => number) | undefined;
+  /**
+   * `now` is the candidate runtime's decision-budget clock. It defaults to the
+   * runtime's wall clock; contract tests inject one so a loaded host cannot
+   * turn a budget fallback into a different hash-bound verdict.
+   */
+  constructor(backend: GhostVaultBackend, options: Readonly<{ now?: () => number }> = {}) {
+    this.#plans = new TearAcademyPolicyEvaluationPlanVault(backend); this.#results = new TearAcademyPolicyEvaluationResultVault(backend); this.#now = options.now;
+  }
 
   async execute(input: TearAcademyPolicyEvaluationLaunchV1): Promise<TearAcademyPolicyEvaluationResultV1> {
     const launch = parseTearAcademyPolicyEvaluationLaunch(input);
@@ -323,7 +331,7 @@ export class TearAcademyPolicyEvaluationExecutor {
     const candidateRuns: TearAcademyPolicyEvaluationCaseRunV1[] = [], baselineRuns: TearAcademyPolicyEvaluationCaseRunV1[] = [];
     for (const entry of plan.cases) {
       const recovery = recoveryFor(launch, entry);
-      candidateRuns.push(await runCase(entry, recovery, candidatePolicy(launch.candidate), true));
+      candidateRuns.push(await runCase(entry, recovery, candidatePolicy(launch.candidate, this.#now), true));
       baselineRuns.push(await runCase(entry, recovery, baselinePolicy(plan.baselineProfile), false));
     }
     const lessons = lessonMetrics(plan, candidateRuns, baselineRuns);

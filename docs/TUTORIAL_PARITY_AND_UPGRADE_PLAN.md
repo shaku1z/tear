@@ -96,7 +96,7 @@ unrecorded future run. Callers must resume before advancing its fixed simulation
 the tutorial does not add a presentation clock or advance while the host is paused.
 
 The distinct `tearbench-production-tutorial-handoff` artifact is intentionally
-refused by ordinary production-terminal Academy/durable worker consumers; it is
+refused by ordinary production-terminal Training Archive/durable worker consumers; it is
 not an ordinary terminal receipt or a natural victory. Explicit support in those
 consumers is a separate contract. The existing full-course browser journey can
 optionally export its actual Field Test-to-READY snapshot, held input, commands
@@ -156,7 +156,7 @@ exercise. Completion opens a technique summary with a baseline, no-wave practice
 selector; completed exercises return to that summary without repeating course
 credit. Ordinary Playground starts retain their existing progression behavior.
 
-State Forge captures the behavior-bearing tutorial session in world runtime and
+Scenario Console captures the behavior-bearing tutorial session in world runtime and
 keeps help/ghost display cadence in a separate presentation-only UI field. Exact
 restore does not reinstall an already installed room; malformed or cold-loaded
 sessions are refused before mutation, and historical absence clears stale state.
@@ -173,7 +173,7 @@ its existing 75-coin payout together; only then does the profile acknowledge the
 outbox entry. Boot and subsequent commits drain pending entries, including the
 normal mastery achievement cascade. Repeating a completed course ID cannot add
 credit or coins. A fresh course adds credit; an already earned Apprentice does
-not pay again. Restart, practice and State Forge restore retain the course ID;
+not pay again. Restart, practice and Scenario Console restore retain the course ID;
 restore neither issues IDs nor writes persistence.
 
 Historical counts, balances and unlocks remain baseline values; migration does
@@ -721,7 +721,7 @@ It retains the shortest valid duration for the same reference in the current
 session, ties newest; this is not mastery grading or population evidence.
 Personal paths retain at most 128 observed poses with event markers under a
 24 KB presentation bound. Reset aborts unfinished recording; a new lesson or
-document reload clears personal comparison. State Forge retains a bounded
+document reload clears personal comparison. Scenario Console retains a bounded
 completed comparison and verified gold identity/cursor, never shipping gold;
 restoring aborts partial capture and requires reset before recording anew. Coaching never grants
 objective or reward evidence. The fresh `068c0514` test-standalone build and
@@ -969,7 +969,7 @@ These are unlocked exercises, not an invented historical lesson transcript.
 The practice session has explicit version-3 `durable-profile-completion` origin,
 the observed eligibility count, an empty course ID and `completionAwarded=false`.
 Historical completed lessons remain unknown; only new local practice attempts
-can populate local exercise progress. Restart, selection and exact State Forge
+can populate local exercise progress. Restart, selection and exact Scenario Console
 restore retain this origin. Practice completion returns to baseline practice and
 cannot emit course credit. Version-1/2 course checkpoint shapes stay unchanged.
 

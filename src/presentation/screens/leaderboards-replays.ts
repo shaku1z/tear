@@ -261,7 +261,7 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     ui.panel(canvas, x, top, w, Math.min(510, height - top - 16));
     ui.title(canvas, "LOCAL RECORDED CHALLENGE", width / 2, top + 32, ui.t.type.label);
     ui.text(canvas, `CHECKPOINT ${String(challenge.tick)} · UNRANKED · NO SAVED PROGRESSION`, width / 2, top + 56, ui.t.type.micro, "center");
-    ui.wrappedText(canvas, compact && view.notice ? view.notice.slice(0, 140) : "Same captured world, build and RNG. Pause → MAIN MENU → QUIT stops without success. Daily/community, learned and TearBot challenges are unavailable.", x + 24, top + 80, w - 48, 17, ui.t.type.micro, "left");
+    ui.wrappedText(canvas, compact && view.notice ? view.notice.slice(0, 140) : "Same captured world, build and RNG. Pause → MAIN MENU → QUIT stops without success. Daily, community and Game Agent challenges are not available yet.", x + 24, top + 80, w - 48, 17, ui.t.type.micro, "left");
     if (challenge.result !== undefined) ui.text(canvas, `RECORDED RESULT · ${challenge.result.toUpperCase()} · ${String(challenge.elapsedTicks)} TICKS`, width / 2, choicesY + 15, ui.t.type.label, "center");
     else if (challenge.choices.length === 0) ui.text(canvas, "Choose a verified playable checkpoint with a supported native goal.", width / 2, choicesY + 15, ui.t.type.micro, "center");
     challenge.choices.slice(0, 3).forEach((choice, index) => { context.enqueue({ x: x + 24, y: choicesY + index * 38, w: w - 48, h: 32, label: choice.label,

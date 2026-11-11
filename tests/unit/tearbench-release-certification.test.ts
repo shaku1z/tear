@@ -133,7 +133,9 @@ describe("TearBench release certification", () => {
   it.each([
     [["src/gameplay/combat/kill-runtime.ts", "src/unmapped/new-runtime-boundary.ts"]],
     [["docs/example.md", "src/unmapped/new-runtime-boundary.ts"]],
-  ])("keeps the TS compatibility projection aligned with executable selector for %j", (changedFiles) => {
+  // Each case spawns the real `scripts/tearbench.mjs select` Node process.
+  // Measured alone on 2026-11-11: 4.8 s per case, at the 5 s default.
+  ])("keeps the TS compatibility projection aligned with executable selector for %j", { timeout: 25_000 }, (changedFiles) => {
     const projection = selectDiffAwareEvidence(changedFiles, routes);
     expect(commonSelection(projection)).toEqual(commonSelection(executableProjection(changedFiles)));
   });

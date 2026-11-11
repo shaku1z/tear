@@ -1,3 +1,5 @@
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -27,10 +29,22 @@ function targetCapacityDeclaration() {
   });
 }
 
+// Retained heap is only meaningful after a collection (the long-run leak
+// profile already requires one). Measured alone on 2026-11-11: uncollected
+// heapUsed deltas ranged 23-81 MB across identical runs against the 64 MB
+// budget, while GC-before-sample deltas were -0.3 to +2.3 MB. Sampling after a
+// forced collection removes that GC-timing dependence.
+setFlagsFromString("--expose-gc");
+const collectGarbage = runInNewContext("gc") as () => void;
+function collectedHeapUsedBytes(): number {
+  collectGarbage();
+  return process.memoryUsage().heapUsed;
+}
+
 describe("C30 production headless benchmark", () => {
   it("records deterministic production-pool rate, latency, heap, and bounded artifacts", async () => {
     const benchmark = await measureProductionHeadlessEpisodes({
-      heapUsedBytes: () => process.memoryUsage().heapUsed,
+      heapUsedBytes: collectedHeapUsedBytes,
     });
     expect(benchmark).toMatchObject({
       format: "tearbench-production-headless-benchmark", schemaVersion: 1,
