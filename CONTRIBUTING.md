@@ -37,13 +37,13 @@ development server for game validation.
 
 ## Before submitting a change
 
-Run the smallest relevant tests while working, then the complete release gate:
+Run the smallest relevant tests while working (`pnpm exec vitest run <test files>`, `pnpm test:related <source files>`), then the cheap static gates:
 
 ```powershell
-pnpm check
+pnpm check:quick
 ```
 
-This includes strict type checking, lint, unit/contract/determinism and weapon tests, TearScore provenance, both production targets, bundle and reproducibility checks, browser flows, performance, audio, platform separation, and standalone offline behavior.
+CI validates every pull request with `pnpm check:functional`. The complete release gate, `pnpm check`, runs once for the final release candidate (see `docs/RELEASE_AUTHORITY.md`); it adds the controlled-host performance test to the functional gate. Together they include strict type checking, lint, unit/contract/determinism and weapon tests, TearScore provenance, both production targets, bundle and reproducibility checks, browser flows, performance, audio, platform separation, and standalone offline behavior.
 
 ## Design rules
 
@@ -53,7 +53,7 @@ This includes strict type checking, lint, unit/contract/determinism and weapon t
 - Add legal application/run transitions to their state models; do not coordinate them with screen-name strings or render functions.
 - Route sound through Master/Music/SFX/Interface and the internal effect buses.
 - Version and migrate saved data and replay changes.
-- Keep authored modules focused and normally below 500 lines. Large static content tables are the exception, not controllers.
+- Keep authored modules focused. `pnpm check:architecture` rejects `src/` modules over 700 lines; only the static data tables `src/config/game-config.ts` and `src/gameplay/upgrades.ts` are exempt.
 - Add characterization before refactoring behavior and update `docs/FEATURE_INVENTORY.md` with the evidence.
 
 See `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/PERFORMANCE_BUDGETS.md`, `docs/RELEASE_MATRIX.md`, and `DEPLOYMENT.md` for subsystem and release guidance.

@@ -5,9 +5,12 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
+  "AGENTS.md": "current authority",
+  "CLAUDE.md": "current authority",
   "CONTRIBUTING.md": "current authority",
   "CRAZYGAMES.md": "current authority",
   "DEPLOYMENT.md": "current authority",
+  "README.md": "current authority",
 });
 
 const ROOT_CLASSIFICATION_HEADING = "## Root Markdown classification";

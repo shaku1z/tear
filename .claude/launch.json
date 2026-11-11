@@ -3,9 +3,15 @@
   "configurations": [
     {
       "name": "tear",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "autoPort": true
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "vite", "--mode", "standalone", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "tear-preview-build",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "vite", "preview", "--mode", "standalone", "--port", "4173", "--strictPort"],
+      "port": 4173
     }
   ]
 }

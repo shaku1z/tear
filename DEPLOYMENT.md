@@ -6,7 +6,7 @@ Tear's canonical standalone host is **Cloudflare Workers Static Assets**. The ch
 
 - Node.js 24 or newer
 - pnpm 11.15.0 through Corepack
-- A Cloudflare account authenticated with `pnpm wrangler login`, or CI credentials configured outside the repository
+- No Cloudflare login for local work: the Wrangler dry run below needs none. Publishing credentials are GitHub Actions secrets used only by the deploy workflows, which run in the protected `Production` and `Preview` environments.
 
 Install exactly the locked dependency graph:
 
@@ -21,6 +21,8 @@ The complete release gate type-checks, lints, tests, builds both targets, and ru
 ```powershell
 pnpm check
 ```
+
+It runs once for the final release candidate. Every pull request is validated in CI by `pnpm check:functional`, which is the same gate without the controlled-host performance test. See `docs/RELEASE_AUTHORITY.md`.
 
 For normal local development:
 
@@ -46,17 +48,20 @@ Validate Wrangler's upload without changing Cloudflare state:
 pnpm check:cloudflare
 ```
 
-This same dry run is part of `pnpm check`. It must report `dist/standalone` as the assets directory. Source, tests, plans, repository metadata and the CrazyGames build must not appear in its upload.
+This same dry run is part of `pnpm check` and `pnpm check:functional`. It must report `dist/standalone` as the assets directory. Source, tests, plans, repository metadata and the CrazyGames build must not appear in its upload.
 
 ## Deploy
 
-```powershell
-pnpm deploy
-```
+No local command publishes the game. `pnpm deploy` and `pnpm deploy:dry-run` only build `dist/standalone` and run the Wrangler dry run above. pnpm runs the `deploy` script even when you add `--help`.
 
-`pnpm deploy` runs the complete release gate before `wrangler deploy`. The Worker name, current compatibility date, observability and the generated-assets boundary live in `wrangler.jsonc`.
+The only publisher is the protected GitHub Actions workflow, described fully in `docs/RELEASE_AUTHORITY.md`:
 
-Production CI should run `pnpm install --frozen-lockfile` followed by `pnpm deploy`. Cloudflare API tokens belong in the CI secret store, never in this repository or Wrangler variables.
+1. Merge the change into protected `main` through a pull request.
+2. Wait for the `Validate` run on that `main` commit to succeed. It uploads the built targets as `tear-release-targets-<sha>`, kept for 14 days.
+3. Optionally run `Rehearse Cloudflare Release` with that Validate run ID. It publishes the same artifact to the separate `tear-preview` Worker.
+4. Run `Deploy Cloudflare Production` with the Validate run ID and approve the protected `Production` environment. The workflow verifies and publishes the stored artifact; it does not rebuild.
+
+The Worker name, current compatibility date, observability and the generated-assets boundary live in `wrangler.jsonc`. Cloudflare API tokens belong in GitHub Actions secrets, never in this repository or Wrangler variables.
 
 ## Rollback
 

@@ -8,6 +8,8 @@ owning test/script references in one reviewable transaction.
 
 | Topic | Primary authority | Supporting contract/evidence |
 | --- | --- | --- |
+| Developer orientation and routine commands | [README.md](../README.md) | [CONTRIBUTING.md](../CONTRIBUTING.md); `package.json` scripts |
+| AI agent working guide | [AGENTS.md](../AGENTS.md) | [CLAUDE.md](../CLAUDE.md); `.agents/skills/`; the parent-directory `AGENTS.md` and the governance skill remain authoritative |
 | Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) | Current typed module boundaries and architecture checks |
 | Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
 | Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | — |
@@ -44,13 +46,16 @@ current paths and hashes until a separately authorized atomic migration.
 | [Pale Traverse Revision 3](../plans/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md) | Active Pale biome and engineering-freeze authority; current publication follows the tracked boundary and keeps Pale preview-only. |
 | [plans/README.md](../plans/README.md) | Index for direct, active, completed, and future archived plan locations. |
 
-## Root Markdown classification (remaining 3 root documents)
+## Root Markdown classification (6 root documents)
 
 | File | Classification |
 | --- | --- |
+| `AGENTS.md` | current authority |
+| `CLAUDE.md` | current authority |
 | `CONTRIBUTING.md` | current authority |
 | `CRAZYGAMES.md` | current authority |
 | `DEPLOYMENT.md` | current authority |
+| `README.md` | current authority |
 
 The root allowlist is enforced by `scripts/check-docs.mjs` and its focused
 authority-checker test. Root policy changes and each later move require a

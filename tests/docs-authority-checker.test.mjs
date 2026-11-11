@@ -22,9 +22,12 @@ import {
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootFiles = [
+  "AGENTS.md",
+  "CLAUDE.md",
   "CONTRIBUTING.md",
   "CRAZYGAMES.md",
   "DEPLOYMENT.md",
+  "README.md",
 ];
 
 function copyActivePlanFixture(fixtureRoot) {
@@ -54,11 +57,11 @@ function copyCurrentProgramFixture(fixtureRoot) {
 test("docs checker passes the canonical tracked documentation baseline", () => {
   const result = runDocsCheck({ root: repositoryRoot });
   assert.equal(result.ok, true, result.errors.join("\n"));
-  assert.equal(result.rootMarkdownFiles, 3);
+  assert.equal(result.rootMarkdownFiles, 6);
   assert.equal(result.pathBoundArtifacts, 10);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
-  assert.equal(result.currentAuthorities, 10);
+  assert.equal(result.currentAuthorities, 12);
   assert.equal(result.activePlans, ACTIVE_PLAN_METADATA_PATHS.length);
 });
 
@@ -102,7 +105,7 @@ test("current program-state checker accepts historical text while requiring curr
 test("current authority table has one local primary per unique topic", () => {
   const result = checkCurrentAuthorityTable(repositoryRoot);
   assert.deepEqual(result.errors, []);
-  assert.equal(result.rows.length, 10);
+  assert.equal(result.rows.length, 12);
 });
 
 test("current authority parser rejects duplicate topics, primary paths, and malformed multiple links", () => {
@@ -250,7 +253,7 @@ test("root classification parser accepts the explanatory history suffix", () => 
   const index = fs.readFileSync(path.join(repositoryRoot, "docs", "README.md"), "utf8");
   const parsed = parseRootClassificationTable(index);
   assert.equal(parsed.errors.length, 0, parsed.errors.join("\n"));
-  assert.equal(parsed.rows.size, 3);
+  assert.equal(parsed.rows.size, 6);
   assert.equal(parsed.rows.get("DEPLOYMENT.md"), "current authority");
 });
 
