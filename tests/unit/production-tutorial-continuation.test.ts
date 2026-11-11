@@ -3,7 +3,7 @@ import type { TutorialGoldProof } from "../../src/tearbench/tutorial-gold-genera
 import type { GameAction } from "../../src/input/game-action";
 import { isPracticeBossActor } from "../../src/app/live-boss-phase-practice";
 import type { PracticeBossState } from "../../src/gameplay/training/practice-boss-catalog";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController, TUTORIAL_LESSON_IDS, type TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
@@ -18,6 +18,10 @@ import { ProductionHeadlessAcademyIntake } from "../../src/tearbench/production-
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { createBlade } from "../../src/gameplay/entities/blade";
+import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
+
+// The shipped corpus is an on-demand asset; training preflight loads it before any lesson.
+beforeAll(async () => { await loadShippingTutorialGold(); });
 
 const scenario: TearScenarioV1 = {
   format: "tear-contract", kind: "scenario", schemaVersion: 1, id: "retained-tutorial", version: 1,

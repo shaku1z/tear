@@ -29,6 +29,8 @@ Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules mu
 
 `src/entrypoints/standalone.ts` and `src/entrypoints/crazygames.ts` are deliberately small. They compose platform capabilities and start the shared application. A future Steam web shell should add another entrypoint and adapter set without changing gameplay. A future native or console client may replace render, device input, audio, and platform adapters while retaining deterministic rules and application commands.
 
+Engineering-channel code (research and diagnostic screen controllers, human-calibration capture, the agent training modules behind them, and the test-only Verdant calibration scene) is loaded only by `src/app/composition.ts` through a dynamic import guarded by a build constant and injected into the runtime; release builds use inert stand-ins and their bundles contain none of it (`pnpm check:test-isolation`, `pnpm check:bundles`).
+
 The standalone build alone contains the generated web manifest and service worker. The CrazyGames artifact contains neither. Cloudflare deploys only `dist/standalone`; repository source is never a deploy asset.
 
 ## Adding features safely

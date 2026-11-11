@@ -48,6 +48,7 @@ import type { StyleAchievementPersistence } from "./live-style-achievement-persi
 import type { PlatformBootstrapPersistence } from "./live-platform-bootstrap-persistence";
 import type { VictoryProfileProgressPersistence } from "./live-victory-profile-progress-persistence";
 import type { TutorialCompletionPersistence } from "./live-tutorial-completion-persistence";
+import type { LiveEngineeringSurfaceFactory } from "./live-engineering-surfaces-contract";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -69,6 +70,8 @@ export interface GameRuntimeDependencies {
   readonly Bomber: EnemyTypes["Bomber"]; readonly Boss: EnemyTypes["Boss"];
   /** Release/engineering surface policy and its admitted engineering query (empty in release). */
   readonly surfaces: SurfaceAvailability; readonly engineeringQuery: EngineeringQuery;
+  /** Research/diagnostic surface controllers; composition supplies them only in engineering builds. */
+  readonly engineeringSurfaces?: LiveEngineeringSurfaceFactory;
   readonly browserDocument: Document; readonly browserIndexedDb: IDBFactory | undefined; readonly browserStorage: Pick<Storage, "setItem">; readonly browserWindow: Window;
   readonly browserNavigator: Pick<Navigator, "getGamepads" | "hardwareConcurrency">;
   readonly CG: PlatformCompatibility["CG"]; readonly CLOCK: TearWorldClock; readonly CONFIG: typeof CONFIG;

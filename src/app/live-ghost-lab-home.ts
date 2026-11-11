@@ -3,8 +3,8 @@ import type { LivePlayerWatchController } from "./live-player-watch-controller";
 
 /** Immutable normal-build C37 home projection; deliberately has no persistence or operational ports. */
 export class LiveGhostLabHomeController {
-  readonly #watch: LivePlayerWatchController;
-  constructor(watch: LivePlayerWatchController) { this.#watch = watch; }
+  readonly #watch: Pick<LivePlayerWatchController, "snapshot">;
+  constructor(watch: Pick<LivePlayerWatchController, "snapshot">) { this.#watch = watch; }
   snapshot(): GhostLabScreenView {
     const watch = this.#watch.snapshot();
     const watchAvailable = watch.status === "ready" || watch.status === "running" || watch.status === "paused";
@@ -36,7 +36,7 @@ export class LiveGhostLabHomeController {
   }
 }
 
-export function createLiveGhostLabHome(watch: LivePlayerWatchController): Readonly<{ snapshot: () => GhostLabScreenView }> {
+export function createLiveGhostLabHome(watch: Pick<LivePlayerWatchController, "snapshot">): Readonly<{ snapshot: () => GhostLabScreenView }> {
   const controller = new LiveGhostLabHomeController(watch);
   return Object.freeze({ snapshot: () => controller.snapshot() });
 }

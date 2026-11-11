@@ -373,7 +373,7 @@ describe("legacy screen renderer registry", () => {
 
   it("keeps Run Monitor embedded and derives unavailable routes from one watch snapshot", () => {
     const snapshot = vi.fn(() => ({ status: "ready" as const, detail: "canonical V3 locally available", decisions: 0 }));
-    const view = new LiveGhostLabHomeController({ snapshot } as unknown as LivePlayerWatchController).snapshot();
+    const view = new LiveGhostLabHomeController({ snapshot }).snapshot();
     expect(snapshot).toHaveBeenCalledOnce();
     expect(view.routes.map((route) => route.id)).not.toContain("watch");
     expect(view.routes.map((route) => route.id)).not.toContain("botevidence");

@@ -12,7 +12,7 @@ const crazyGamesWindow = window as Window & {
 
 void bootstrapTear("crazygames", async ({ surfaces, engineeringQuery }) => {
   const { composeTearApplication } = await import("../app/composition");
-  composeTearApplication({
+  await composeTearApplication({
     target: "crazygames", surfaces, engineeringQuery,
     ...(crazyGamesWindow.CrazyGames?.SDK === undefined ? {} : { sdk: crazyGamesWindow.CrazyGames.SDK }),
     createCrazyGamesServices: createCrazyGamesPlatformServices,

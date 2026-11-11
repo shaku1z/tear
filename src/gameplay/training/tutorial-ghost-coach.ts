@@ -1,20 +1,11 @@
 import { TutorialFailureCoach, parseTutorialFailures, type TutorialAttemptFact, type TutorialFailureCheckpoint, type TutorialFailureView } from "./tutorial-failure-coach";
-import shipping from "./tutorial-gold-reference-data.json";
-import binding from "./tutorial-gold-binding.json";
-import { loadTutorialGoldCorpus, sampleTutorialGold, tutorialGoldContactEdges, tutorialGoldReference, type TutorialGoldCorpus, type TutorialGoldFrame, type TutorialGoldLessonId, type TutorialGoldReference } from "./tutorial-gold-reference";
+import { sampleTutorialGold, tutorialGoldContactEdges, tutorialGoldReference, type TutorialGoldCorpus, type TutorialGoldFrame, type TutorialGoldLessonId, type TutorialGoldReference } from "./tutorial-gold-reference";
+import { shippingTutorialGold } from "./tutorial-gold-shipping";
 import type { GameAction } from "../../input/game-action";
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
 
-declare const __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: string;
-let cached: TutorialGoldCorpus | null | undefined;
-export function shippingTutorialGold(): TutorialGoldCorpus | undefined {
-  if (cached === undefined) {
-    const expected = typeof __TEAR_TUTORIAL_GOLD_COMPATIBILITY__ === "undefined" ? binding.sourceHash : __TEAR_TUTORIAL_GOLD_COMPATIBILITY__;
-    const loaded = loadTutorialGoldCorpus(shipping, binding, expected);
-    cached = loaded.status === "ready" ? loaded.corpus : null;
-  }
-  return cached ?? undefined;
-}
+// The shipped corpus is loaded on demand by training preflight; see tutorial-gold-shipping.ts.
+export { loadShippingTutorialGold, shippingTutorialGold } from "./tutorial-gold-shipping";
 export interface TutorialCoachView {
   readonly available: boolean; readonly visible: boolean; readonly mode: "preview" | "diagnostic" | "comparison";
   readonly rate: 1 | .5; readonly diagnosis: string; readonly canCompare: boolean; readonly reducedMotion: boolean;

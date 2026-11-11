@@ -25,3 +25,17 @@ The test writes its measured profile to `artifacts/tearbench/generated/browser-p
 Pull requests and `main` run the deterministic functional contract in the required `check` job. The machine-sensitive performance contract runs once for the final release candidate on a controlled host through `pnpm check`; its report records the exact browser executable and version. Manual TearBench canaries may also execute it on a shared provider for parallel-equivalence evidence. Raw scheduler cadence remains visible there, but CPU-throttled cadence is not attributed to game work. This keeps every numeric threshold and the unthrottled pacing gate intact without turning host contention into a gameplay budget change.
 
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.
+
+## Download and startup budgets
+
+`pnpm check:bundles` (`scripts/check-bundle-budget.mjs`, budgets in [`config/bundle-budgets.json`](../config/bundle-budgets.json)) measures both release builds, `dist/standalone` and `dist/crazygames`:
+
+- **Startup scripts.** The bytes of the entry script plus every `modulepreload` that `index.html` references are at most `startupScriptBytes` (2,300,000 bytes uncompressed; about 2.09 MB measured). The on-demand tutorial corpus may never be among them.
+- **Main chunk.** The largest application JavaScript chunk, excluding worker bundles and the on-demand tutorial corpus, stays within `standaloneMainGzipBytes` / `crazygamesMainGzipBytes` gzip bytes.
+- **Workers.** The largest worker bundle (Career Archive, coach history, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
+- **Tutorial corpus.** The tutorial demonstration corpus is a separate chunk of at most `tutorialGoldGzipBytes` gzip bytes. Training preflight fetches it before a tutorial or practice run; the service worker runtime-caches it on first use, so it then works offline, rather than precaching it for every player.
+- **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (42 entries and about 6.74 MB measured), and never the tutorial corpus.
+
+`pnpm check:test-isolation` proves the engineering channel stays out of both release builds. Research and diagnostic screens (Training Archive, Training Operations, Replay Hub, Game Agent evidence, Run Monitor), human-calibration capture and the agent training modules they use load only through a dynamic import guarded by `__TEAR_ENGINEERING_SURFACES__` in `src/app/composition.ts`, and the Verdant calibration scene only through one guarded by `__TEAR_TEST_BUILD__`. The gate fails if a release file contains one of their distinctive markers (storage keys, format identifiers and diagnostic sentences listed in the script) or a calibration image, and it fails if a marker disappears from its source module, so a renamed string cannot make the check pass vacuously.
+
+Set a new ceiling about 10% above a deliberate, measured change and record why here; never raise one to absorb an unexplained increase.

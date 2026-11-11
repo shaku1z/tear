@@ -1,4 +1,5 @@
 import type { LiveTutorialRuntime } from "../gameplay/training/live-tutorial-runtime";
+import { loadShippingTutorialGold } from "../gameplay/training/tutorial-gold-shipping";
 import type { PlaygroundRuntimeBridge } from "../gameplay/training/runtime-bridge";
 import type { createLivePlaygroundPresentation, PlaygroundScreenModel } from "../gameplay/training/live-playground-presentation";
 import type { ArenaPlatform } from "../gameplay/training/arena-rules";
@@ -70,11 +71,14 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
   let preparedCourseId: string | undefined;
   const fallbackState = { god: false, freeze: false, slow: false, hpMultiplier: 1, count: 1, arena: -1, labFilter: "all" };
 
+  // The tutorial gold corpus is fetched by the same preflight, so a lesson never
+  // starts before its demonstrations exist. A failed corpus load is retried by
+  // the next preflight; meanwhile the coach shows no demonstration.
   const ensureLoaded = (): Promise<void> => {
     loading ??= import("./live-training-host-runtime").then((module) => {
       loaded = module.createLiveTrainingHostRuntime(context); if (bossPractice) loaded.tutorial.bindBossPractice(bossPractice);
     });
-    return loading;
+    return Promise.all([loading, loadShippingTutorialGold()]).then(() => undefined);
   };
   const tutorial: LiveTutorialRuntime = {
     openPractice: (tutorialDone) => loaded?.tutorial.openPractice(tutorialDone) ?? false,

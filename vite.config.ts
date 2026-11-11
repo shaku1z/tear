@@ -70,6 +70,8 @@ function targetDependencyBoundary(target: "standalone" | "crazygames"): Plugin {
   };
 }
 
+const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
+
 /** Keep the async application composition below the release transfer budget. */
 function applicationChunk(id: string): string | undefined {
   const normalized = id.replaceAll("\\", "/");
@@ -85,6 +87,9 @@ function applicationChunk(id: string): string | undefined {
     if (file.includes("run-") || file.includes("campaign") || file.includes("wave") || file.includes("outcome")) return "runtime-app-run";
     return "runtime-app-core";
   }
+  // The ~1.5 MB tutorial demonstration corpus is imported only by training
+  // preflight; its own chunk keeps it out of the startup modulepreload set.
+  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
   if (topLevel === "gameplay") {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
     return `gameplay-${area}`;
@@ -132,6 +137,15 @@ export default defineConfig(({ mode, command }) => {
           clientsClaim: true,
           navigateFallback: "/index.html",
           globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
+          // The tutorial corpus is fetched on demand (training preflight), not at
+          // install: it is runtime-cached on first use so it then works offline.
+          // Workers bundle a lazy copy they never request; it is not precached.
+          globIgnores: ["**/node_modules/**/*", "assets/tutorial-gold-reference-*.js", "assets/worker-tutorial-gold-*.js"],
+          runtimeCaching: [{
+            urlPattern: /\/assets\/tutorial-gold-reference-[\w-]+\.js$/u,
+            handler: "CacheFirst",
+            options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 1 } },
+          }],
         },
       })] : []),
     ],
@@ -151,6 +165,7 @@ export default defineConfig(({ mode, command }) => {
     server: { watch: { ignored: ["**/artifacts/**", "**/dist/**"] } },
     // Both worker consumers use module workers. Keep the shipping gold data in
     // an imported ES chunk so every worker asset fits the ordinary PWA cache.
+    // Workers never run a tutorial, so they never request that lazy chunk.
     worker: {
       format: "es",
       rolldownOptions: {

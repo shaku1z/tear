@@ -4,7 +4,7 @@ import { createLiveGhostChase } from "./live-ghost-chase-composition"; import { 
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./live-ghost-frame-recording"; import { createBrowserLiveGhostOwnerRecoveryController } from "./live-ghost-owner-recovery-controller";
 import { projectCanonicalGameplayState } from "../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../presentation/world/primitives";
 import { createLiveBrowserRuntime } from "./live-browser-runtime"; import { createLiveCampaignTrainingComposition } from "./live-campaign-training-composition"; import { createLiveCombatActions } from "./live-combat-actions"; import { bindLiveRootbinderActors } from "./live-rootbinder-wiring"; import { bindLiveRootboundActors } from "./live-rootbound-wiring";
-import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveAcademyScreen, createLiveTrainingOperationsScreen, createLiveReplayHub, createLiveInterfaceComposition, GameAgentEvidenceController, RunMonitorController, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
+import { createLiveCombatComposition } from "./live-combat-composition"; import { createLiveAuthoritativeInputAdapter } from "./live-authoritative-input-adapter"; import { createLiveInterfaceComposition, isRunDifficultySelection, isRunModeSelection } from "./live-interface-composition";
 import { createLiveRunOrchestration } from "./live-run-orchestration-composition"; import { createLiveSessionServices } from "./live-session-services-composition";
 import { replayLiveStateForgeProgression } from "./live-state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "./live-state-forge-cinematic-advance";
 import type { TearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration"; import { commitBossIntroSnapshot } from "./live-frame-runtime";
@@ -39,7 +39,7 @@ import { stableVerificationHash } from "../replay/hash"; import { createLiveCano
 import { createLiveGhostRecordingSessionState } from "./live-ghost-recording-session-state";
 import { createLiveGhostOpeningCapture } from "./live-ghost-opening-capture";
 import { verifyGhostCapsuleOpeningContinuation } from "../ghost/production-replay-verification";
-import { createLiveHumanCalibrationCaptureComposition } from "./live-human-calibration-capture-composition";
+import { RELEASE_ENGINEERING_SURFACES, type LivePlayerWatchSurface } from "./live-engineering-surfaces-contract";
 import { createBrowserGhostVaultLibrary } from "./ghost-vault-library-controller"; import { bindGhostArchiveFileLifecycle } from "./browser-ghost-archive-files";
 import { createLiveInputAuthorityState } from "./live-input-authority-state"; import { createLiveGhostPracticeSessionState } from "./live-ghost-practice-session-state"; import { launchGhostPracticeChild } from "./ghost-practice-launch"; import { bindLiveBloomWellActors } from "./live-bloom-well-wiring"; import { bindLiveAuroraTrackActors } from "./live-aurora-track-wiring";
 import { bindLiveWhiteHartActors } from "./live-white-hart-wiring"; import { projectLiveCanonicalEnemy } from "./live-canonical-enemy-projection";
@@ -51,8 +51,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl, fullscreenButton,
     pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
-  const inputAuthority = createLiveInputAuthorityState(requestLock), requestOwnedPointerLock = inputAuthority.requestPointerLock;
-  const currentSignedInActor = (): string | undefined => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined, humanCalibration = createLiveHumanCalibrationCaptureComposition(browserIndexedDb, browserWindow, currentSignedInActor);
+  const inputAuthority = createLiveInputAuthorityState(requestLock), requestOwnedPointerLock = inputAuthority.requestPointerLock, engineering = dependencies.engineeringSurfaces ?? RELEASE_ENGINEERING_SURFACES;
+  const currentSignedInActor = (): string | undefined => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined, humanCalibration = engineering.humanCalibration(browserIndexedDb, browserWindow, currentSignedInActor);
   const ghostV3Options = createGhostV3BrowserTestOptions(TEST_MODE, dependencies.engineeringQuery.search) ?? {}, ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb); bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
   const ownerRecovery = createBrowserLiveGhostOwnerRecoveryController(browserIndexedDb, ghostPublication, currentSignedInActor, () => { ghostVault.refresh(); }, (input, init) => browserWindow.fetch(input, init)); Cloud.onChange(() => { ownerRecovery.accountChanged(); });
   const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb, { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); if (manifest.provenance?.beatThisRun !== undefined) beat.finalized(manifest.id); if (manifest.provenance?.forkOrigin === undefined && manifest.provenance?.finaleCompanion === undefined) await humanCalibration.capture?.finalized(manifest, vault); } }); const ghostV3 = ghostV3Session.recorder(); const career = createBrowserGhostCareer(browserIndexedDb, browserDocument, { session: ghostV3Session, run: liveRun, tick: () => simulationRuntime.scheduler.tick, enemies: () => hostState.enemies(), actorId: (actor) => combatRuntime.id(actor, "enemy") });
@@ -60,7 +60,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const openingCapture = createLiveGhostOpeningCapture({ screen: () => state, tick: () => simulationRuntime.scheduler.tick,
     replayRunId: () => ghostV3Session.replayContext()?.run.id, nextSequence: ghostV3Session.nextEventSequence,
     record: (event) => { ghostV3?.record("events", event.tick, event); }, failed: (error) => { console.warn("Ghost opening completion capture failed; live play continues", error); } });
-  const academyScreen = createLiveAcademyScreen(browserIndexedDb, currentSignedInActor), foundryScreen = createLiveTrainingOperationsScreen(browserIndexedDb), ghostPublicationScreen = new LiveGhostPublicationController(browserIndexedDb, ghostPublication, currentSignedInActor), ghostSupportScreen = new LiveGhostSupportController(browserIndexedDb);
+  const academyScreen = engineering.academy(browserIndexedDb, currentSignedInActor), foundryScreen = engineering.foundry(browserIndexedDb), ghostPublicationScreen = new LiveGhostPublicationController(browserIndexedDb, ghostPublication, currentSignedInActor), ghostSupportScreen = new LiveGhostSupportController(browserIndexedDb);
   // Keyframes attest the immutable bootstrap identity saved at recording boundary; never rebuild a divergent fingerprint later in the live loop.
   GHOST.setRecordingObserver(ghostV3 === null ? null : {
     started(context) {
@@ -104,7 +104,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
       ghostDna.finish(() => { ghostFrames.finish(meta); });
     },
   });
-  let observeChaseEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let cancelChaseForScreen: (screen: string) => void = () => undefined; let observeChallengeEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let stopChallengeRun: () => boolean = () => false; let observePlayerWatchEvent: RunMonitorController["observeRunEvent"] = () => undefined;
+  let observeChaseEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let cancelChaseForScreen: (screen: string) => void = () => undefined; let observeChallengeEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let stopChallengeRun: () => boolean = () => false; let observePlayerWatchEvent: LivePlayerWatchSurface["observeRunEvent"] = () => undefined;
   GAMEPLAY_EVENTS.subscribe((event) => {
     observePlayerWatchEvent(event); observeChallengeEvent(event); observeChaseEvent(event); career.observe(event);
     ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ghostV3Session.nextEventSequence()));
@@ -532,8 +532,8 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   });
   const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
     killRuntime: liveKillRuntime, frameRuntime: liveFrameRuntime, authoritativeStep } = combatHost;
-  const playerWatch = new RunMonitorController(browserIndexedDb, { bindRunEvents: true, canonicalState: () => authoritativeStep.lastResult?.state ?? null, availableActions: () => createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }).availableGameActions(), pushAction: (action) => { Input.semantic.push(action); }, setSemanticAuthority: inputAuthority.setSemanticInputAuthority, startNormalRun: () => { startRunWithPreflight("endless", "normal"); } });
-  observePlayerWatchEvent = playerWatch.observeRunEvent; void playerWatch.refresh(); const replayHub = createLiveReplayHub(playerWatch), botEvidence = new GameAgentEvidenceController(browserIndexedDb);
+  const playerWatch = engineering.playerWatch(browserIndexedDb, { bindRunEvents: true, canonicalState: () => authoritativeStep.lastResult?.state ?? null, availableActions: () => createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }).availableGameActions(), pushAction: (action) => { Input.semantic.push(action); }, setSemanticAuthority: inputAuthority.setSemanticInputAuthority, startNormalRun: () => { startRunWithPreflight("endless", "normal"); } });
+  observePlayerWatchEvent = playerWatch.observeRunEvent; void playerWatch.refresh(); const replayHub = engineering.replayHub(playerWatch), botEvidence = engineering.botEvidence(browserIndexedDb);
   const captureGhostAuthoritativeReceipt = (tick: number): TearSnapshotV1 | undefined => {
     if (ghostV3?.active !== true) return;
     const result = authoritativeStep.lastResult;

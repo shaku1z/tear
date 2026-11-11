@@ -2,12 +2,16 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { tutorialGoldSourceFingerprint, assertTutorialGoldFresh } from "../../scripts/tutorial-gold-compatibility.mjs";
 import { generateTutorialGold, verifyTutorialGoldReference, type TutorialGoldProof } from "../../src/tearbench/tutorial-gold-generation";
 import { bindTutorialGoldCorpus, loadTutorialGoldCorpus, packTutorialGoldCorpus, sampleTutorialGold, type TutorialGoldBinding, type TutorialGoldCorpus } from "../../src/gameplay/training/tutorial-gold-reference";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createProductionReplayRun, createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { CONFIG } from "../../src/config/game-config";
 import { productionGhostPath, recordProductionGhostTrace } from "../../src/gameplay/training/tutorial-production-ghost";
 import { TutorialGhostCoach, parseTutorialCoachCheckpoint, shippingTutorialGold } from "../../src/gameplay/training/tutorial-ghost-coach";
+import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
+
+// The shipped corpus is an on-demand asset; training preflight loads it before any lesson.
+beforeAll(async () => { await loadShippingTutorialGold(); });
 
 describe("gold coach presentation", () => {
   it("uses a brief real successful segment, finite display clocks and meaningful actions without pointer-drift credit", () => {

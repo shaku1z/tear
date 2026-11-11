@@ -14,14 +14,9 @@ import { TouchOnboardingController } from "./touch-onboarding-controller";
 import { createLiveInterfacePresentationCapture, type LivePresentationCaptureSource } from "./live-presentation-capture";
 import { isWorldScreen } from "../presentation/render-pipeline";
 
-export { createLiveAcademyScreen } from "./live-academy-screen";
-export { createLiveTrainingArchiveScreen } from "./training-archive";
-export { createLiveFoundryScreen } from "./live-foundry-screen";
-export { createLiveTrainingOperationsScreen } from "./training-operations";
-export { createLiveReplayHub, createLiveGhostLabHome } from "./replay-hub";
-export { LiveBotEvidenceController } from "./live-bot-evidence-controller";
-export { GameAgentEvidenceController } from "./game-agent";
-export { RunMonitorController } from "./run-monitor";
+// Research and diagnostic surface controllers are deliberately not re-exported
+// here: composition injects them only into engineering builds
+// (see live-engineering-surfaces-contract.ts).
 
 type SurfaceOptions = Parameters<typeof createLivePresentationSurface>[0];
 type SurfaceWorld = Omit<SurfaceOptions["world"], "screen">;

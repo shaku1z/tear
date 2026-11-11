@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
@@ -8,6 +8,10 @@ import { createProductionCombatSimulation } from "../../src/tearbench/production
 import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
 import { projectProductionReplayCanonicalState } from "../../src/tearbench/production-replay-composition";
 import { createLiveTutorialSessionActions } from "../../src/app/live-tutorial-session-actions";
+import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
+
+// The shipped corpus is an on-demand asset; training preflight loads it before any lesson.
+beforeAll(async () => { await loadShippingTutorialGold(); });
 
 describe("live tutorial runtime", () => {
   it("keeps the real Lab completion receipt before the deferred next-run reset and resumes canonical ticks", () => {
