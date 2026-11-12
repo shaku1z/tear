@@ -14,7 +14,7 @@ This builds only the CrazyGames target once and writes `artifacts/packages/tear-
 
 Do not use `git archive` for portal uploads after the Vite migration: it archives repository source at `HEAD`, not the generated CrazyGames application.
 
-Portal game assets use relative `./assets/...` URLs because the uploaded archive is mounted below a CrazyGames-owned path. The reproducibility gate rejects root-absolute bundle assets, more than 1,500 output files, or more than 22.5 MiB of unpacked output (`pnpm check:reproducible`, `scripts/check-reproducible-build.mjs`; unused music revision files are not counted). These are intentionally stricter than the portal's general 50 MB initial/250 MB total limits.
+Portal game assets use relative `./assets/...` URLs because the uploaded archive is mounted below a CrazyGames-owned path. The reproducibility gate rejects root-absolute bundle assets, more than 1,500 output files, or more than 22.5 MiB of unpacked output (`pnpm check:reproducible`, `scripts/check-reproducible-build.mjs`). The CrazyGames build leaves out files that build never requests: cue audio that no cue manifest names (superseded revisions, full-loop renders, stems a cue does not use) and the standalone PWA install icons (`scripts/crazygames-artifact-scope.mjs`). These are intentionally stricter than the portal's general 50 MB initial/250 MB total limits.
 
 Inspect the archive before uploading:
 
