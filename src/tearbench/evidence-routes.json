@@ -75,7 +75,7 @@
     "id": "presentation",
     "prefixes": [
       "src/presentation/",
-      "src/app/live-",
+      "src/app/",
       "tests/browser-"
     ],
     "scenarios": [
@@ -191,7 +191,7 @@
     "prefixes": [
       "src/gameplay/campaign/source-void-",
       "src/gameplay/runtime/gameplay-events.ts",
-      "src/app/live-source-void-",
+      "src/app/run/source-void-",
       "src/tearbench/gameplay-causal-events.ts",
       "src/tearbench/state-codecs.ts",
       "src/replay/legacy-compat.ts",
