@@ -1,9 +1,9 @@
-import type { LeaderboardsScreenView, ReplayScreenView, ScreenRenderContext } from "./contracts";
-import { chips, clipBody, ellipsize, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+import type { ReplayScreenView, ScreenRenderContext } from "./contracts";
+import { ellipsize } from "./screen-primitives";
+import { createLeaderboardRenderers } from "./leaderboards";
 import { REPLAY_EDITOR_ACTIONS } from "../../replay/surface-route";
 import { replayClock } from "../replay-snapshots";
 
-const LEADERBOARD_HUE = "#e0a326";
 const REPLAY_CYAN = "#13c4d6";
 const REPLAY_DARK = "#0e1017";
 const REPLAY_PAPER = "#f1eff9";
@@ -13,130 +13,32 @@ const REPLAY_TOP_RESERVE = 200;
 
 export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
+  const { leaderboards } = createLeaderboardRenderers(context);
 
-  function leaderboards(view: LeaderboardsScreenView): void {
-    const { canvas } = context;
-    const layout = page(context, { title: "LEADERBOARDS", hue: LEADERBOARD_HUE });
-    tabs(context, view.tabs, (id) => ({ type: "leaderboards.selectTab", id }), 124);
-    if (view.modes) {
-      ui.text(canvas, view.signInRequired ? "compete globally with an account" : "the world's finest runs",
-        width / 2, 184, ui.t.type.caption, "center", ui.t.alpha.muted);
-      chips(context, view.modes, (id) => ({ type: "leaderboards.selectBoard", id: `mode:${id}` }), 198, 190, 34);
-      if (view.difficulties) chips(context, view.difficulties,
-        (id) => ({ type: "leaderboards.selectBoard", id: `difficulty:${id}` }), 240, 150, 32);
-      rankedBoard(view, layout.bodyBottom);
-    } else {
-      replayFeed(view, layout.bodyBottom);
-    }
-    pageFooter(context, { canScrollUp: view.canScrollUp, canScrollDown: view.canScrollDown });
-  }
-
-  /** The designed non-ready states, shared by the ranked board and the feed. */
-  function boardState(view: LeaderboardsScreenView, centreY: number, feed: boolean): boolean {
-    const status = view.status ?? (view.signInRequired ? "signin" : "ready");
-    if (status === "ready") return false;
-    const { canvas } = context;
-    const copy = {
-      signin: ["☰", feed ? "Sign in to see the replay feed" : "Sign in to compete", view.message ?? "Global boards need an account — your runs are waiting to count."],
-      loading: ["◌", feed ? "Loading the feed…" : "Loading the ranks…", ""],
-      offline: ["⚠", feed ? "Can't reach the replay feed" : "Can't reach the leaderboards", "Check your connection and open this tab again. Your local bests stay in PROFILE ▸ BESTS."],
-      empty: [feed ? "▶" : "★", feed ? "Nothing published yet" : "No runs on this board yet",
-        feed ? "Share a run from PROFILE ▸ REPLAYS and it appears here." : "Finish a run in this mode and difficulty to set the first record."],
-    } as const;
-    const [glyph, line, detail] = copy[status];
-    const ctaY = ui.emptyState(canvas, glyph, line, width / 2, centreY, detail || undefined, 720);
-    if (status === "signin") context.enqueue({ x: width / 2 - 160, y: ctaY, w: 320, h: 46, label: "SIGN IN VIA PROFILE",
-      action: { type: "navigate", to: "profile", tab: "bests" } });
-    return true;
-  }
-
-  function rankedBoard(view: LeaderboardsScreenView, bodyBottom: number): void {
-    const { canvas } = context;
-    const top = 300, listX = width / 2 - 460, listWidth = 920;
-    if (boardState(view, top + 110, false)) return;
-    if (!view.podium || view.podium.length === 0) return;
-
-    const positions = [
-      { x: width / 2 - 130, y: top, w: 260, h: 132, numberSize: 52 },
-      { x: width / 2 - 420, y: top + 18, w: 260, h: 114, numberSize: 40 },
-      { x: width / 2 + 160, y: top + 28, w: 260, h: 104, numberSize: 40 },
-    ];
-    view.podium.slice(0, 3).forEach((entry, index) => {
-      const box = positions[index]; if (!box) return;
-      ui.card(canvas, box.x, box.y, box.w, box.h, false, { edge: entry.color });
-      canvas.save(); canvas.globalAlpha = 0.08; canvas.fillStyle = entry.color; canvas.fillRect(box.x, box.y, box.w, box.h);
-      canvas.globalAlpha = 1; canvas.textAlign = "left"; canvas.textBaseline = "alphabetic";
-      canvas.fillStyle = ui.readable(entry.color, 3); canvas.font = ui.font(box.numberSize, true);
-      canvas.fillText(String(entry.rank), box.x + 18, box.y + box.h / 2 + box.numberSize * 0.36);
-      const textX = box.x + 24 + canvas.measureText(String(entry.rank)).width + 14, textWidth = box.x + box.w - 64 - textX;
-      const name = ui.fitText(canvas, entry.name + (entry.mine ? " (you)" : ""), textWidth, { size: ui.t.type.body, floor: ui.t.type.micro, bold: true });
-      canvas.fillStyle = entry.mine ? ui.readable(ui.t.color.accent) : ui.ink; canvas.font = ui.font(name.size, true);
-      canvas.fillText(name.lines[0] ?? entry.name, textX, box.y + box.h / 2 - 8); canvas.restore();
-      ui.textBox(canvas, entry.detail, textX, box.y + box.h / 2 + 14, textWidth + 50, { size: ui.t.type.micro, alpha: ui.t.alpha.muted, maxLines: 1 });
-      if (entry.replayId) context.enqueue({ x: box.x + box.w - 58, y: box.y + box.h - 40, w: 48, h: 30,
-        label: "▶", size: ui.t.type.caption, action: { type: "leaderboards.watchReplay", id: entry.replayId } });
-    });
-
-    if (view.legacyGhostId) context.enqueue({ x: width / 2 - 140, y: top + 140, w: 280, h: 30,
-      label: view.message?.length ? view.message : "▶  WATCH THE #1 RUN", size: ui.t.type.micro,
-      action: { type: "leaderboards.watchReplay", id: view.legacyGhostId } });
-    else if (view.message) ui.text(canvas, view.message, width / 2, top + 158, ui.t.type.micro, "center", ui.t.alpha.muted);
-
-    const headerY = top + 194;
-    canvas.save(); canvas.textAlign = "left"; canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.micro, true); canvas.globalAlpha = ui.t.alpha.muted;
-    canvas.fillText("#", listX + 14, headerY); canvas.fillText("PLAYER", listX + 70, headerY);
-    canvas.textAlign = "right"; canvas.fillText("WAVE", listX + listWidth - 320, headerY);
-    canvas.fillText("TIME", listX + listWidth - 180, headerY); canvas.fillText("SCORE", listX + listWidth - 20, headerY); canvas.restore();
-    ui.divider(canvas, listX, headerY + 8, listWidth, 0.16);
-    const bodyTop = headerY + 34, listBottom = bodyBottom - (view.ownRank ? 24 : 0);
-    clipBody(context, bodyTop - 22, listBottom, () => {
-      view.rows.forEach((row, index) => {
-        const y = bodyTop + index * 34 - context.scroll;
-        if (y < bodyTop - 28 || y > listBottom + 12) return;
-        if (row.mine) { canvas.save(); canvas.globalAlpha = 0.1; canvas.fillStyle = ui.t.color.accent; canvas.fillRect(listX, y - 20, listWidth, 30); canvas.restore(); }
-        canvas.textAlign = "left"; canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.label, true); canvas.fillText(String(row.rank ?? index + 4), listX + 14, y);
-        canvas.fillStyle = row.mine ? ui.readable(ui.t.color.accent) : ui.ink; canvas.font = ui.font(ui.t.type.label, row.mine === true); canvas.fillText(row.title, listX + 70, y);
-        if (row.available && y - 18 >= bodyTop - 22 && y + 8 <= listBottom) context.enqueue({ x: listX + listWidth - 470, y: y - 18, w: 54, h: 26, label: "▶", size: ui.t.type.micro,
-          action: { type: "leaderboards.watchReplay", id: row.id } });
-        canvas.textAlign = "right"; canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.label, false);
-        canvas.fillText(row.wave ?? "0", listX + listWidth - 320, y); canvas.fillText(row.time ?? "0:00", listX + listWidth - 180, y);
-        canvas.font = ui.font(ui.t.type.label, true); canvas.fillText(row.score ?? "0", listX + listWidth - 20, y);
-        ui.divider(canvas, listX, y + 8, listWidth, 0.08);
-      });
-    });
-    canvas.textAlign = "left";
-    if (view.ownRank) ui.text(canvas, view.ownRank, width / 2, bodyBottom - 4, ui.t.type.micro, "center", ui.t.alpha.muted);
-  }
-
-  function replayFeed(view: LeaderboardsScreenView, bodyBottom: number): void {
-    const { canvas } = context;
-    ui.text(canvas, "published runs from every blade — share yours from PROFILE ▸ REPLAYS",
-      width / 2, 184, ui.t.type.caption, "center", ui.t.alpha.muted);
-    const listX = width / 2 - 560, listWidth = 1120, top = 210, rowHeight = 96;
-    if (boardState(view, top + 170, true)) return;
-    clipBody(context, top - 8, bodyBottom, () => {
-      view.rows.forEach((row, index) => {
-        const y = top + index * rowHeight - context.scroll;
-        if (y + rowHeight < top - 8 || y > bodyBottom + 8) return;
-        replayRow(context, row, listX, y, listWidth, row.badge ? LEADERBOARD_HUE : ui.t.color.accent, 170);
-        if (y + 20 >= top - 8 && y + 60 <= bodyBottom) context.enqueue({ x: listX + listWidth - 140, y: y + 20, w: 120, h: 40, label: "▶  WATCH",
-          enabled: row.available, action: { type: "leaderboards.watchReplay", id: row.id } });
-      });
-    });
-  }
-
-  function replay(view: ReplayScreenView): void {
+  /** The dark top bar: mode label, title and detail (ellipsized to the room left), and the score. */
+  function replayTopBar(view: ReplayScreenView): void {
     const { canvas, safeInsets: safe, screenRectangle: screen } = context;
-    canvas.save(); canvas.globalAlpha = 0.85; canvas.fillStyle = REPLAY_DARK;
-    canvas.fillRect(screen.x, screen.y, screen.w, 54 + safe.t); canvas.globalAlpha = 1;
-    canvas.fillStyle = REPLAY_CYAN; canvas.fillRect(screen.x, screen.y, screen.w, 3);
-    canvas.textAlign = "left"; canvas.fillStyle = REPLAY_PAPER; canvas.font = ui.font(ui.t.type.lead, true);
+    canvas.save();
+    canvas.globalAlpha = 0.85;
+    canvas.fillStyle = REPLAY_DARK;
+    canvas.fillRect(screen.x, screen.y, screen.w, 54 + safe.t);
+    canvas.globalAlpha = 1;
+    canvas.fillStyle = REPLAY_CYAN;
+    canvas.fillRect(screen.x, screen.y, screen.w, 3);
+    canvas.textAlign = "left";
+    canvas.fillStyle = REPLAY_PAPER;
+    canvas.font = ui.font(ui.t.type.lead, true);
     canvas.fillText(view.theater ? "◆ THEATER" : "▶ REPLAY", 40 + safe.l, 36 + safe.t);
-    canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
+    canvas.fillStyle = REPLAY_MUTED;
+    canvas.font = ui.font(ui.t.type.body, false);
     if (view.comparison) {
-      canvas.fillStyle = REPLAY_DARK; canvas.fillRect(36 + safe.l, 4 + safe.t, 150, 42);
-      canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.lead, true); canvas.fillText("COMPARE", 40 + safe.l, 36 + safe.t);
-      canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.body, false);
+      canvas.fillStyle = REPLAY_DARK;
+      canvas.fillRect(36 + safe.l, 4 + safe.t, 150, 42);
+      canvas.fillStyle = REPLAY_CYAN;
+      canvas.font = ui.font(ui.t.type.lead, true);
+      canvas.fillText("COMPARE", 40 + safe.l, 36 + safe.t);
+      canvas.fillStyle = REPLAY_MUTED;
+      canvas.font = ui.font(ui.t.type.body, false);
     }
     const header = view.title + "   ·   " + view.detail;
     const headerWidth = Math.max(0, width - safe.l - safe.r - 280 - REPLAY_TOP_RESERVE - canvas.measureText(view.score ?? "").width
@@ -144,28 +46,62 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     const disclosure = "   ·   " + view.detail;
     const memoryHeader = ellipsize(canvas, view.title, Math.max(0, headerWidth - canvas.measureText(disclosure).width)) + disclosure;
     canvas.fillText(ellipsize(canvas, view.bossMemory?.title === undefined ? header : memoryHeader, headerWidth), 200 + safe.l, 36 + safe.t);
-    canvas.textAlign = "right"; canvas.fillStyle = REPLAY_CYAN; canvas.font = ui.font(ui.t.type.label, true);
+    canvas.textAlign = "right";
+    canvas.fillStyle = REPLAY_CYAN;
+    canvas.font = ui.font(ui.t.type.label, true);
     // The browser's FULLSCREEN control sits over the top-right corner: keep clear of it.
-    canvas.fillText(view.score ?? "", width - REPLAY_TOP_RESERVE - safe.r, 36 + safe.t); canvas.restore();
+    canvas.fillText(view.score ?? "", width - REPLAY_TOP_RESERVE - safe.r, 36 + safe.t);
+    canvas.restore();
+  }
 
-    if (view.comparison) comparisonState(view); else if (view.theater) theaterState(view);
-
-    const barY = height - 96 - safe.b, barX = 220 + safe.l, barWidth = width - 440 - safe.l - safe.r;
-    canvas.save(); canvas.globalAlpha = 0.85; canvas.fillStyle = REPLAY_DARK;
+  /** The dark transport strip: progress track, chapter ticks (bosses in red), playhead and clock. */
+  function replayProgressBar(view: ReplayScreenView, barX: number, barY: number, barWidth: number): void {
+    const { canvas, screenRectangle: screen } = context;
+    canvas.save();
+    canvas.globalAlpha = 0.85;
+    canvas.fillStyle = REPLAY_DARK;
     canvas.fillRect(screen.x, barY - 18, screen.w, height - (barY - 18) + Math.max(0, -screen.y));
-    canvas.globalAlpha = 0.25; canvas.fillStyle = REPLAY_PAPER; canvas.fillRect(barX, barY, barWidth, 5);
-    canvas.globalAlpha = 1; canvas.fillStyle = REPLAY_CYAN; canvas.fillRect(barX, barY, barWidth * view.progress, 5);
+    canvas.globalAlpha = 0.25;
+    canvas.fillStyle = REPLAY_PAPER;
+    canvas.fillRect(barX, barY, barWidth, 5);
+    canvas.globalAlpha = 1;
+    canvas.fillStyle = REPLAY_CYAN;
+    canvas.fillRect(barX, barY, barWidth * view.progress, 5);
     view.chapters?.forEach((chapter) => {
-      canvas.fillStyle = chapter.boss ? ui.t.color.danger : REPLAY_PAPER; canvas.globalAlpha = chapter.boss ? 0.95 : 0.55;
+      canvas.fillStyle = chapter.boss ? ui.t.color.danger : REPLAY_PAPER;
+      canvas.globalAlpha = chapter.boss ? 0.95 : 0.55;
       canvas.fillRect(barX + barWidth * chapter.fraction - 1, barY - 4, 2, 13);
     });
-    canvas.globalAlpha = 1; canvas.fillStyle = REPLAY_PAPER; canvas.beginPath();
-    canvas.arc(barX + barWidth * view.progress, barY + 2.5, 7, 0, Math.PI * 2); canvas.fill();
-    canvas.textAlign = "right"; canvas.fillStyle = REPLAY_MUTED; canvas.font = ui.font(ui.t.type.caption, true);
-    canvas.fillText(`${view.elapsed} / ${view.duration}`, barX + barWidth, barY - 10); canvas.restore();
+    canvas.globalAlpha = 1;
+    canvas.fillStyle = REPLAY_PAPER;
+    canvas.beginPath();
+    canvas.arc(barX + barWidth * view.progress, barY + 2.5, 7, 0, Math.PI * 2);
+    canvas.fill();
+    canvas.textAlign = "right";
+    canvas.fillStyle = REPLAY_MUTED;
+    canvas.font = ui.font(ui.t.type.caption, true);
+    canvas.fillText(`${view.elapsed} / ${view.duration}`, barX + barWidth, barY - 10);
+    canvas.restore();
+  }
 
-    if (view.challenge) { challengeState(view); return; }
-    if (view.coach) { coachState(view); return; }
+  function replay(view: ReplayScreenView): void {
+    const { canvas, safeInsets: safe } = context;
+    replayTopBar(view);
+
+    if (view.comparison) comparisonState(view);
+    else if (view.theater) theaterState(view);
+
+    const barY = height - 96 - safe.b, barX = 220 + safe.l, barWidth = width - 440 - safe.l - safe.r;
+    replayProgressBar(view, barX, barY, barWidth);
+
+    if (view.challenge) {
+      challengeState(view);
+      return;
+    }
+    if (view.coach) {
+      coachState(view);
+      return;
+    }
     // The transport bar is a dark surface: its controls use the rail (ghost) style so they
     // read the same as every other dark-surface control, on any biome.
     const controlY = height - 66 - safe.b;
@@ -184,8 +120,19 @@ export function createLeaderboardReplayRenderers(context: ScreenRenderContext) {
     }else if(view.bossMemory?.available)context.enqueue({x:30+safe.l,y:136+safe.t,w:220,h:32,label:"SAVE BOSS MEMORY",action:{type:"replay.challenge.start",id:"boss-memory-save"}});
     // Theater extras live in the dark top bar, right-aligned, never over the world.
     let topRight = width - REPLAY_TOP_RESERVE - safe.r;
-    if (view.theater) { context.enqueue({ x: topRight - 230, y: 8 + safe.t, w: 230, h: 38, label: "LOCAL CHALLENGE", ghost: true, size: ui.t.type.label, action: { type: "replay.challenge.open" } }); topRight -= 242; }
-    if (view.finaleNavigation) context.enqueue({ x: topRight - 260, y: 8 + safe.t, w: 260, h: 38, label: view.finaleNavigation, ghost: true, size: ui.t.type.label, action: { type: "replay.finale" } });
+    if (view.theater) {
+      context.enqueue({
+        x: topRight - 230, y: 8 + safe.t, w: 230, h: 38, label: "LOCAL CHALLENGE", ghost: true, size: ui.t.type.label,
+        action: { type: "replay.challenge.open" },
+      });
+      topRight -= 242;
+    }
+    if (view.finaleNavigation) {
+      context.enqueue({
+        x: topRight - 260, y: 8 + safe.t, w: 260, h: 38, label: view.finaleNavigation, ghost: true, size: ui.t.type.label,
+        action: { type: "replay.finale" },
+      });
+    }
     if (view.theater) context.enqueue({ x: 832 + safe.l, y: controlY, w: 120, h: 44, label: "COACH", ghost: true,
       action: { type: "replay.coach.open" } });
     if (view.theater) context.enqueue({ x: 960 + safe.l, y: controlY, w: 120, h: 44, label: "RUN DNA", ghost: true,

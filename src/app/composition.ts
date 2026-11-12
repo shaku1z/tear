@@ -238,7 +238,9 @@ export async function composeTearApplication(options: TearCompositionOptions): P
 
   const gameRuntimeDependencies = {
     A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, biomeProgressPersistence, Bomber, Boss, achievementToastPersistence,
-    surfaces, engineeringQuery, ...(engineeringSurfaces === undefined ? {} : { engineeringSurfaces }), browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window, CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
+    surfaces, engineeringQuery, ...(engineeringSurfaces === undefined ? {} : { engineeringSurfaces }),
+    browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window,
+    CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
     FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
     MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, tutorialCompletionPersistence, practiceEncounterPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
     Ranged, ReflectionEnemy, Rimehound, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, PLAYGROUND_STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,

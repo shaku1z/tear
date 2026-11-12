@@ -54,6 +54,12 @@ const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>
   tutorial: { glyph: "➔", sub: "learn the blade" },
 });
 
+/** The personal-best line under the BEGIN button for the selected board. */
+function setupBestSummary(best: BestSetupSource, formatTime: (seconds: number) => string): string {
+  if (!best.wave && !best.score) return "YOUR BEST · no record on this board yet";
+  return "YOUR BEST · wave " + String(best.wave) + " · " + best.score.toLocaleString("en-US") + " pts · " + formatTime(best.time ?? 0);
+}
+
 export function buildSetupSnapshot(input: {
   readonly tutorialDone?: number;
   readonly firstRun?: boolean;
@@ -90,8 +96,7 @@ export function buildSetupSnapshot(input: {
     showDifficulty, startGlyph: input.startGlyph,
     ...(input.firstRun === true && input.selectedMode === "tutorial" ? { guidance: FIRST_RUN_SETUP_GUIDANCE } : {}),
     startSummary: ((mode?.label ?? "") + " · " + (showDifficulty && difficulty !== undefined ? difficulty.label + " · " : "") + (weapon?.name ?? "")).toUpperCase(),
-    ...(showDifficulty ? { bestSummary: input.best.wave || input.best.score ? "YOUR BEST · wave " + String(input.best.wave) + " · " + input.best.score.toLocaleString("en-US") + " pts · " + input.formatTime(input.best.time ?? 0)
-      : "YOUR BEST · no record on this board yet" } : {}),
+    ...(showDifficulty ? { bestSummary: setupBestSummary(input.best, input.formatTime) } : {}),
     ...(bossChoices === undefined ? {} : { bossChoices }),
     ...(mode !== undefined && RACE_MODE_IDS.includes(mode.id) && input.surfaces.allows("feature:seed-race") ? { raceAvailable: true } : {}),
     // Training modes (tutorial, playground) award no bounties: they are not shown there.

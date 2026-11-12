@@ -30,7 +30,11 @@ export function shippingTutorialGold(): TutorialGoldCorpus | undefined {
 /** Fetches the corpus once. Never rejects: a failed load leaves the coach without demonstrations. */
 export function loadShippingTutorialGold(): Promise<TutorialGoldCorpus | undefined> {
   loading ??= import("./tutorial-gold-reference-data.json").then((module) => {
-    source = module.default; return shippingTutorialGold();
-  }, () => { loading = undefined; return undefined; });
+    source = module.default;
+    return shippingTutorialGold();
+  }, () => {
+    loading = undefined;
+    return undefined;
+  });
   return loading;
 }

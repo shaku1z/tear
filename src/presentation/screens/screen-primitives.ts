@@ -49,32 +49,50 @@ export function page(context: ScreenRenderContext, header: PageHeader): PageLayo
   const layout = pageLayout(context), titleY = ui.t.metric.pageTitleY;
   ui.title(canvas, header.title, width / 2, titleY, ui.t.type.h1);
   const sweep = 130 * context.enterAmount;
-  canvas.save(); canvas.globalAlpha = context.enterAmount; canvas.fillStyle = header.hue ?? ui.t.color.accent;
-  canvas.fillRect(width / 2 - sweep / 2, titleY + 16, sweep, 3); canvas.restore();
+  canvas.save();
+  canvas.globalAlpha = context.enterAmount;
+  canvas.fillStyle = header.hue ?? ui.t.color.accent;
+  canvas.fillRect(width / 2 - sweep / 2, titleY + 16, sweep, 3);
+  canvas.restore();
   let bodyTop = titleY + 36;
   if (header.subtitle) {
     ui.text(canvas, header.subtitle, width / 2, titleY + 46, ui.t.type.caption, "center", ui.t.alpha.muted);
     bodyTop = titleY + 64;
   }
-  if (header.stat) {
-    const statX = layout.sheet.x + layout.sheet.w - 48;
-    canvas.save(); canvas.textAlign = "right"; canvas.textBaseline = "alphabetic";
-    canvas.fillStyle = header.stat.color ?? ui.ink; canvas.font = ui.font(ui.t.type.h2, true);
-    const valueWidth = canvas.measureText(header.stat.value).width;
-    canvas.fillText(header.stat.value, statX, titleY - 4);
-    if (header.stat.glyph) { canvas.font = ui.font(ui.t.type.title, true); canvas.fillText(header.stat.glyph, statX - valueWidth - 12, titleY - 4); }
-    canvas.restore();
-    ui.tag(canvas, header.stat.label, statX, titleY + 18, ui.t.color.muted, "right", ui.t.type.micro);
-  }
+  if (header.stat) headerStat(context, header.stat, layout.sheet.x + layout.sheet.w - 48, titleY);
   return Object.freeze({ ...layout, bodyTop: Math.max(layout.bodyTop, bodyTop) });
+}
+
+/** The right-aligned header figure: optional glyph, value, and a small label under it. */
+function headerStat(context: ScreenRenderContext, stat: NonNullable<PageHeader["stat"]>, statX: number, titleY: number): void {
+  const { canvas, ui } = context;
+  canvas.save();
+  canvas.textAlign = "right";
+  canvas.textBaseline = "alphabetic";
+  canvas.fillStyle = stat.color ?? ui.ink;
+  canvas.font = ui.font(ui.t.type.h2, true);
+  const valueWidth = canvas.measureText(stat.value).width;
+  canvas.fillText(stat.value, statX, titleY - 4);
+  if (stat.glyph) {
+    canvas.font = ui.font(ui.t.type.title, true);
+    canvas.fillText(stat.glyph, statX - valueWidth - 12, titleY - 4);
+  }
+  canvas.restore();
+  ui.tag(canvas, stat.label, statX, titleY + 18, ui.t.color.muted, "right", ui.t.type.micro);
 }
 
 /** Clips drawing to the page body so rows never paint over the header or footer. */
 export function clipBody(context: ScreenRenderContext, top: number, bottom: number, draw: () => void): void {
   const sheet = context.ui.sheetRect();
-  context.canvas.save(); context.canvas.beginPath();
-  context.canvas.rect(sheet.x + 2, top, sheet.w - 4, Math.max(0, bottom - top)); context.canvas.clip();
-  try { draw(); } finally { context.canvas.restore(); }
+  context.canvas.save();
+  context.canvas.beginPath();
+  context.canvas.rect(sheet.x + 2, top, sheet.w - 4, Math.max(0, bottom - top));
+  context.canvas.clip();
+  try {
+    draw();
+  } finally {
+    context.canvas.restore();
+  }
 }
 
 /** Footer: BACK centred in the sheet footer row; the scroll hint sits to its right, never over rows. */
@@ -125,14 +143,23 @@ export function replayRow(context: ScreenRenderContext, replay: ReplayView,
   if (spineColor) ui.spine(canvas, x, y, 84, spineColor);
   canvas.save();
   // Without a captured thumbnail the slot shows a designed dark tile, never an empty box.
-  canvas.fillStyle = "#0e1017"; canvas.globalAlpha = replay.thumbnailId ? 0.15 : 0.88; canvas.fillRect(x + 12, y + 6, 128, 72);
+  canvas.fillStyle = "#0e1017";
+  canvas.globalAlpha = replay.thumbnailId ? 0.15 : 0.88;
+  canvas.fillRect(x + 12, y + 6, 128, 72);
   canvas.globalAlpha = 1;
   if (replay.thumbnailId) context.renderPreview?.(replay.thumbnailId, { x: x + 12, y: y + 6, w: 128, h: 72 });
   else {
-    canvas.fillStyle = ui.t.color.accent; canvas.font = ui.font(ui.t.type.h2, true); canvas.textAlign = "center"; canvas.textBaseline = "middle";
-    canvas.fillText("▶", x + 76, y + 40); canvas.textBaseline = "alphabetic";
+    canvas.fillStyle = ui.t.color.accent;
+    canvas.font = ui.font(ui.t.type.h2, true);
+    canvas.textAlign = "center";
+    canvas.textBaseline = "middle";
+    canvas.fillText("▶", x + 76, y + 40);
+    canvas.textBaseline = "alphabetic";
   }
-  canvas.strokeStyle = ui.ink; canvas.globalAlpha = 0.35; canvas.lineWidth = 1; canvas.strokeRect(x + 12, y + 6, 128, 72);
+  canvas.strokeStyle = ui.ink;
+  canvas.globalAlpha = 0.35;
+  canvas.lineWidth = 1;
+  canvas.strokeRect(x + 12, y + 6, 128, 72);
   canvas.restore();
   const textWidth = Math.max(120, width - 156 - (textRightReserve ?? 400));
   const title = ui.fitText(canvas, replay.title, textWidth, { size: ui.t.type.lead, floor: ui.t.type.label, bold: true });
@@ -206,7 +233,10 @@ export function cardGrid(
 export function scrollHint(context: ScreenRenderContext, canUp = false, canDown = false, legacyCentreY?: number): void {
   if (!canUp && !canDown) return;
   // Overlay screens without a sheet (draft, playground) keep their centred hint.
-  if (legacyCentreY !== undefined) { context.ui.scrollHint(context.canvas, context.width / 2, legacyCentreY, canUp, canDown); return; }
+  if (legacyCentreY !== undefined) {
+    context.ui.scrollHint(context.canvas, context.width / 2, legacyCentreY, canUp, canDown);
+    return;
+  }
   const layout = pageLayout(context);
   context.ui.scrollHint(context.canvas, layout.sheet.x + layout.sheet.w - 48, layout.footerY + context.ui.t.metric.btnH / 2 + 5, canUp, canDown, "right");
 }

@@ -45,8 +45,10 @@ export function wrapWords(measure: MeasureText, text: string, maxWidth: number, 
     let line = "";
     for (const word of words) {
       const candidate = line ? `${line} ${word}` : word;
-      if (line && measure(candidate, size) > maxWidth) { lines.push(line); line = word; }
-      else line = candidate;
+      if (line && measure(candidate, size) > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else line = candidate;
     }
     lines.push(line);
   }
@@ -77,10 +79,7 @@ export function fitTextLayout(measure: MeasureText, text: string, maxWidth: numb
     const wrapped = lines === 1 && !text.includes("\n") ? [text] : wrapWords(measure, text, maxWidth, size);
     return wrapped.length <= lines && widest(measure, wrapped, size) <= maxWidth ? wrapped : null;
   };
-  const order: readonly (readonly [number, number])[] = options.wrapFirst === true
-    ? [...lineCounts(maxLines).flatMap((lines) => [[options.size, lines] as const]), ...sizes(options.size, floor).slice(1).flatMap((size) => lineCounts(maxLines).map((lines) => [size, lines] as const))]
-    : [...sizes(options.size, floor).map((size) => [size, 1] as const), ...lineCounts(maxLines).slice(1).flatMap((lines) => [[floor, lines] as const])];
-  for (const [size, lines] of order) {
+  for (const [size, lines] of attemptOrder(options.size, floor, maxLines, options.wrapFirst === true)) {
     const fitted = fitsAt(size, lines);
     if (fitted !== null) return Object.freeze({ size, lines: Object.freeze([...fitted]), truncated: false, overflow: false });
   }
@@ -95,6 +94,24 @@ export function fitTextLayout(measure: MeasureText, text: string, maxWidth: numb
   const last = ellipsizeLine(measure, rest, maxWidth, floor);
   const lines = [...kept.slice(0, -1), last];
   return Object.freeze({ size: floor, lines: Object.freeze(lines), truncated: last !== rest, overflow: false });
+}
+
+/**
+ * The [size, lines] layouts to try, in order. Wrap-first keeps the requested size
+ * across every line count before stepping down; otherwise every size is tried on
+ * one line before wrapping at the floor size.
+ */
+function attemptOrder(size: number, floor: number, maxLines: number, wrapFirst: boolean): readonly (readonly [number, number])[] {
+  if (wrapFirst) {
+    return [
+      ...lineCounts(maxLines).flatMap((lines) => [[size, lines] as const]),
+      ...sizes(size, floor).slice(1).flatMap((candidate) => lineCounts(maxLines).map((lines) => [candidate, lines] as const)),
+    ];
+  }
+  return [
+    ...sizes(size, floor).map((candidate) => [candidate, 1] as const),
+    ...lineCounts(maxLines).slice(1).flatMap((lines) => [[floor, lines] as const]),
+  ];
 }
 
 function sizes(from: number, floor: number): number[] {

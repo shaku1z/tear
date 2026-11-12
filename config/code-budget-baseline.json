@@ -465,7 +465,7 @@
       "multiStatementLines": 14
     },
     "src/app/browser-ghost-career-search.ts": {
-      "maxLineLength": 269,
+      "maxLineLength": 179,
       "multiStatementLines": 17
     },
     "src/app/browser-ghost-career.ts": {
@@ -491,8 +491,8 @@
       "multiStatementLines": 6
     },
     "src/app/composition.ts": {
-      "maxLineLength": 299,
-      "multiStatementLines": 3
+      "maxLineLength": 274,
+      "multiStatementLines": 1
     },
     "src/app/game-runtime-dependencies.ts": {
       "maxLineLength": 231
@@ -596,7 +596,7 @@
       "multiStatementLines": 5
     },
     "src/app/live-game-runtime.ts": {
-      "chars": 85561,
+      "chars": 85473,
       "maxLineLength": 3969,
       "multiStatementLines": 132,
       "largestFunctionStatements": 143
@@ -668,7 +668,7 @@
     },
     "src/app/live-library-screen-adapters-runtime.ts": {
       "maxLineLength": 1017,
-      "multiStatementLines": 31
+      "multiStatementLines": 29
     },
     "src/app/live-library-screen-adapters.ts": {
       "maxLineLength": 256,
@@ -1615,7 +1615,7 @@
       "multiStatementLines": 1
     },
     "src/presentation/codex-snapshots.ts": {
-      "maxLineLength": 175
+      "maxLineLength": 161
     },
     "src/presentation/combat/attack-presentation-director.ts": {
       "multiStatementLines": 7,
@@ -1697,9 +1697,6 @@
     "src/presentation/leaderboard-snapshots.ts": {
       "maxLineLength": 167
     },
-    "src/presentation/menu-setup-snapshots.ts": {
-      "maxLineLength": 165
-    },
     "src/presentation/mirror-lock-feedback.ts": {
       "maxLineLength": 166
     },
@@ -1742,12 +1739,11 @@
       "multiStatementLines": 1
     },
     "src/presentation/screens/career-archive.ts": {
-      "maxLineLength": 275,
-      "multiStatementLines": 12
+      "maxLineLength": 204
     },
     "src/presentation/screens/codex-shop.ts": {
-      "maxLineLength": 183,
-      "multiStatementLines": 34
+      "maxLineLength": 175,
+      "multiStatementLines": 14
     },
     "src/presentation/screens/contracts.ts": {
       "maxLineLength": 648
@@ -1764,13 +1760,11 @@
       "multiStatementLines": 5
     },
     "src/presentation/screens/leaderboards-replays.ts": {
-      "chars": 29486,
       "maxLineLength": 261,
-      "multiStatementLines": 64,
-      "largestFunctionStatements": 97
+      "multiStatementLines": 23
     },
     "src/presentation/screens/menu-setup.ts": {
-      "multiStatementLines": 5
+      "multiStatementLines": 4
     },
     "src/presentation/screens/pause-results.ts": {
       "maxLineLength": 547,
@@ -1780,17 +1774,12 @@
       "multiStatementLines": 11
     },
     "src/presentation/screens/profile-achievements.ts": {
-      "maxLineLength": 273,
-      "multiStatementLines": 17,
-      "largestFunctionStatements": 81
+      "maxLineLength": 201,
+      "multiStatementLines": 13
     },
     "src/presentation/screens/screen-primitives.ts": {
       "maxLineLength": 187,
-      "multiStatementLines": 7
-    },
-    "src/presentation/screens/settings-rename.ts": {
-      "maxLineLength": 172,
-      "multiStatementLines": 2
+      "multiStatementLines": 5
     },
     "src/presentation/tear-wipe.ts": {
       "multiStatementLines": 22,
@@ -1809,8 +1798,7 @@
       "largestFunctionStatements": 104
     },
     "src/presentation/ui-foundation.ts": {
-      "maxLineLength": 179,
-      "largestFunctionStatements": 124
+      "maxLineLength": 179
     },
     "src/presentation/ui-ledger.ts": {
       "multiStatementLines": 4

@@ -21,8 +21,10 @@ export function buildShopSnapshot(input: {
   displayedCoins += (input.realCoins - displayedCoins) * 0.18;
   if (Math.abs(displayedCoins - input.realCoins) < 0.6) displayedCoins = input.realCoins;
   const groups = [SHOP_CATEGORIES.slice(0, 2), SHOP_CATEGORIES.slice(2)];
-  const columnHeight = (categories: readonly (readonly [string, string])[]): number => 18 + categories.reduce((height, [id]) =>
-    height + SHOP_SECTION_HEAD + input.items.filter((item) => item.cat === id).length * SHOP_ROW_PITCH, 0) + Math.max(0, categories.length - 1) * SHOP_SECTION_GAP;
+  const sectionHeight = (id: string): number => SHOP_SECTION_HEAD + input.items.filter((item) => item.cat === id).length * SHOP_ROW_PITCH;
+  const columnHeight = (categories: readonly (readonly [string, string])[]): number => 18
+    + categories.reduce((height, [id]) => height + sectionHeight(id), 0)
+    + Math.max(0, categories.length - 1) * SHOP_SECTION_GAP;
   const maximumScroll = Math.max(0, Math.max(...groups.map(columnHeight)) - shopVisibleHeight(input.height));
   const scroll = Math.max(0, Math.min(maximumScroll, input.scroll));
   const ownedLevels = input.items.reduce((total, item) => total + input.level(item.id), 0);

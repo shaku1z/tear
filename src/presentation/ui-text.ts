@@ -1,6 +1,6 @@
 import type { Align, UiRuntime } from "./ui-contracts";
 import { darkenToContrast, inkIsLight } from "./ui-color";
-import { fitTextLayout, type TextFitLayout, type TextFitOptions } from "./ui-text-fit";
+import { fitTextLayout, type MeasureText, type TextFitLayout, type TextFitOptions } from "./ui-text-fit";
 
 export interface TextBoxOptions extends Partial<TextFitOptions> {
   readonly bold?: boolean;
@@ -21,6 +21,14 @@ export interface TextBoxResult extends TextFitLayout {
   readonly lineHeight: number;
 }
 
+/** Measures with the live canvas: sets the font for each candidate size, then reads its width. */
+function canvasMeasure(ui: UiRuntime, ctx: CanvasRenderingContext2D, bold: boolean): MeasureText {
+  return (value, size) => {
+    ctx.font = ui.font(size, bold);
+    return ctx.measureText(value).width;
+  };
+}
+
 /** Wrapped / fitted text helpers shared by every screen (see ui-text-fit.ts for the rule). */
 export function createUiText() {
   return {
@@ -32,10 +40,14 @@ export function createUiText() {
       return inkIsLight(this.ink) ? color : darkenToContrast(color, this.t.color.paper, ratio);
     },
     /** Lay out `text` inside `maxWidth` with the shared fitting rule, using the live canvas metrics. */
-    fitText(this: UiRuntime, ctx: CanvasRenderingContext2D, text: string, maxWidth: number, options: TextFitOptions & { readonly bold?: boolean }): TextFitLayout {
-      const bold = options.bold === true;
-      return fitTextLayout((value, size) => { ctx.font = this.font(size, bold); return ctx.measureText(value).width; },
-        text, maxWidth, options);
+    fitText(
+      this: UiRuntime,
+      ctx: CanvasRenderingContext2D,
+      text: string,
+      maxWidth: number,
+      options: TextFitOptions & { readonly bold?: boolean },
+    ): TextFitLayout {
+      return fitTextLayout(canvasMeasure(this, ctx, options.bold === true), text, maxWidth, options);
     },
     /**
      * Wrapped text in a box. `y` is the first baseline. Returns the height it used so
@@ -45,9 +57,13 @@ export function createUiText() {
      */
     textBox(this: UiRuntime, ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, options: TextBoxOptions = {}): TextBoxResult {
       const size = options.size ?? this.t.type.body;
-      const layout = fitTextLayout((value, candidate) => { ctx.font = this.font(candidate, options.bold === true); return ctx.measureText(value).width; },
-        text, maxWidth, { size, floor: options.floor ?? Math.min(size, this.t.type.micro), maxLines: options.maxLines ?? 99,
-          wrapFirst: options.wrapFirst ?? true, ...(options.ellipsis === undefined ? {} : { ellipsis: options.ellipsis }) });
+      const layout = fitTextLayout(canvasMeasure(this, ctx, options.bold === true), text, maxWidth, {
+        size,
+        floor: options.floor ?? Math.min(size, this.t.type.micro),
+        maxLines: options.maxLines ?? 99,
+        wrapFirst: options.wrapFirst ?? true,
+        ...(options.ellipsis === undefined ? {} : { ellipsis: options.ellipsis }),
+      });
       const lineHeight = options.lineHeight ?? Math.round(layout.size * this.t.lineH.body);
       if (options.measureOnly !== true) {
         ctx.save();
@@ -56,7 +72,9 @@ export function createUiText() {
         ctx.font = this.font(layout.size, options.bold === true);
         ctx.textAlign = options.align ?? "left";
         ctx.textBaseline = "alphabetic";
-        layout.lines.forEach((line, index) => { ctx.fillText(line, x, y + index * lineHeight); });
+        layout.lines.forEach((line, index) => {
+          ctx.fillText(line, x, y + index * lineHeight);
+        });
         ctx.restore();
       }
       return Object.freeze({ ...layout, height: layout.lines.length * lineHeight,

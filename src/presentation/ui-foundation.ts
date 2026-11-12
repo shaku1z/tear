@@ -224,86 +224,14 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         },
         _drawLines(this: UiRuntime, ctx: CanvasRenderingContext2D, lines: readonly string[], x: number, centerY: number, size: number) {
             const lineHeight = Math.round(size * 1.12), first = centerY - ((lines.length - 1) * lineHeight) / 2;
-            lines.forEach((line, index) => { ctx.fillText(line, x, first + index * lineHeight); });
+            lines.forEach((line, index) => {
+                ctx.fillText(line, x, first + index * lineHeight);
+            });
         },
         button(this: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, active?: boolean) {
             const t = this.t;
             if (b.ghost) {
-                // main-menu rail button: drawn over the rail's solid dark backing, a soft light
-                // edge, and a hot accent bar + label slide driven by the hover progress (b._a).
-                // Optional trimmings: b.glyph (left icon), b.dot (status pip), b.sub (subline),
-                // b.hero (accent-filled call-to-action).
-                const a = b._a ?? (active ? 1 : 0);
-                const on = b.enabled !== false, cy = b.y + b.h / 2;
-                if (b.hero) {
-                    ctx.fillStyle = t.color.accent;
-                    ctx.globalAlpha = on ? 0.9 + 0.1 * a : 0.5;
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
-                    ctx.globalAlpha = 0.22 + 0.35 * a;
-                    ctx.fillStyle = "#ffffff";
-                    ctx.fillRect(b.x, b.y, b.w, 2);
-                    ctx.globalAlpha = 1;
-                    ctx.fillStyle = "#08131a";
-                    ctx.textAlign = "left";
-                    ctx.textBaseline = "middle";
-                    if (b.glyph) {
-                        ctx.font = this.font(30, true);
-                        ctx.fillText(b.glyph, b.x + 22, cy + 1);
-                    }
-                    const hx = b.x + (b.glyph ? 70 : 24) + a * 6, room = b.x + b.w - hx - 18;
-                    const fit = this.fitText(ctx, b.label, room, { size: truthyOr(b.size, () => 34), floor: t.type.lead, ellipsis: false, bold: true });
-                    ctx.font = this.font(fit.size, true);
-                    ctx.fillText(fit.lines[0] ?? b.label, hx, cy - (b.sub ? 12 : 0) + 1);
-                    if (b.sub) {
-                        const sub = this.fitText(ctx, b.sub, room, { size: t.type.caption, floor: t.type.micro, bold: true });
-                        ctx.globalAlpha = 0.82;
-                        ctx.font = this.font(sub.size, true);
-                        ctx.fillText(sub.lines[0] ?? "", hx, cy + 16);
-                        ctx.globalAlpha = 1;
-                    }
-                    ctx.textBaseline = "alphabetic";
-                    return;
-                }
-                ctx.fillStyle = "rgba(241,239,249," + (0.06 + a * 0.10).toFixed(3) + ")";
-                ctx.fillRect(b.x, b.y, b.w, b.h);
-                ctx.lineWidth = 1.5;
-                ctx.strokeStyle = "rgba(241,239,249," + (on ? 0.32 + a * 0.5 : 0.18).toFixed(3) + ")";
-                ctx.strokeRect(b.x + 0.75, b.y + 0.75, b.w - 1.5, b.h - 1.5);
-                ctx.globalAlpha = a;
-                ctx.fillStyle = t.color.accent;
-                ctx.fillRect(b.x, b.y, 4, b.h);
-                ctx.globalAlpha = 1;
-                ctx.textAlign = "left";
-                ctx.textBaseline = "middle";
-                let labelX = b.x + 18 + a * 8;
-                if (b.dot) { // status pip (player card sync state)
-                    ctx.beginPath();
-                    ctx.arc(b.x + 22, cy, 5, 0, 6.2832);
-                    ctx.fillStyle = b.dot;
-                    ctx.fill();
-                    labelX = b.x + 42 + a * 8;
-                }
-                else if (b.glyph) { // left glyph slot, warms on hover
-                    ctx.globalAlpha = on ? 0.6 + 0.4 * a : 0.35;
-                    ctx.fillStyle = t.color.accent;
-                    ctx.font = this.font(18, true);
-                    ctx.fillText(b.glyph, b.x + 16 + a * 8, cy + 1);
-                    ctx.globalAlpha = 1;
-                    labelX = b.x + 50 + a * 8;
-                }
-                const room = b.x + b.w - labelX - 16;
-                const fit = this._fitLabel(ctx, b.label, room, truthyOr(b.size, () => t.type.lead), b.sub ? 0 : b.h, true);
-                ctx.fillStyle = on ? t.color.railInk : "rgba(241,239,249,0.5)";
-                ctx.font = this.font(fit.size, true);
-                this._drawLines(ctx, fit.lines, labelX, (b.sub ? cy - 10 : cy) + 1, fit.size);
-                if (b.sub) {
-                    const sub = this.fitText(ctx, b.sub, room, { size: t.type.caption, floor: t.type.micro });
-                    ctx.globalAlpha = t.alpha.soft;
-                    ctx.font = this.font(sub.size, false);
-                    ctx.fillText(sub.lines[0] ?? "", labelX, cy + 13);
-                    ctx.globalAlpha = 1;
-                }
-                ctx.textBaseline = "alphabetic";
+                drawRailButton(this, ctx, b, active);
                 return;
             }
             // default buttons share the menu's ghost language, adapted to light content zones:
@@ -396,11 +324,21 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             ctx.globalAlpha = on ? 1 : 0.94;
             ctx.fillRect(b.x, b.y, b.w, b.h);
             ctx.globalAlpha = 1;
-            if (hover) { ctx.globalAlpha = 0.08 * (b._a ?? 0); ctx.fillStyle = this.ink; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.globalAlpha = 1; }
+            if (hover) {
+                ctx.globalAlpha = 0.08 * (b._a ?? 0);
+                ctx.fillStyle = this.ink;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.globalAlpha = 1;
+            }
             ctx.lineWidth = 1.5;
             ctx.strokeStyle = on ? this.ink : "rgba(40,42,54,0.55)";
             ctx.strokeRect(b.x + 0.75, b.y + 0.75, b.w - 1.5, b.h - 1.5);
-            if (hover) { ctx.globalAlpha = b._a ?? 0; ctx.fillStyle = t.color.accent; ctx.fillRect(b.x, b.y + b.h - 3, b.w, 3); ctx.globalAlpha = 1; }
+            if (hover) {
+                ctx.globalAlpha = b._a ?? 0;
+                ctx.fillStyle = t.color.accent;
+                ctx.fillRect(b.x, b.y + b.h - 3, b.w, 3);
+                ctx.globalAlpha = 1;
+            }
             const fit = this._fitLabel(ctx, b.label, b.w - 14, truthyOr(b.size, () => t.type.micro), b.h, false);
             ctx.fillStyle = on ? t.color.paper : this.ink;
             ctx.font = this.font(fit.size, true);
@@ -509,4 +447,91 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // a bordered key-cap chip ("W", "SHIFT", "RMB") for control listings.
         // Returns the width consumed so callers can lay a row of caps.
   };
+}
+
+/**
+ * Main-menu rail button: drawn over the rail's solid dark backing, a soft light
+ * edge, and a hot accent bar + label slide driven by the hover progress (b._a).
+ * Optional trimmings: b.glyph (left icon), b.dot (status pip), b.sub (subline),
+ * b.hero (accent-filled call-to-action).
+ */
+function drawRailButton(ui: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, active?: boolean): void {
+    const t = ui.t;
+    const a = b._a ?? (active ? 1 : 0);
+    const on = b.enabled !== false, cy = b.y + b.h / 2;
+    if (b.hero) {
+        drawHeroButton(ui, ctx, b, a, on, cy);
+        return;
+    }
+    ctx.fillStyle = "rgba(241,239,249," + (0.06 + a * 0.10).toFixed(3) + ")";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(241,239,249," + (on ? 0.32 + a * 0.5 : 0.18).toFixed(3) + ")";
+    ctx.strokeRect(b.x + 0.75, b.y + 0.75, b.w - 1.5, b.h - 1.5);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = t.color.accent;
+    ctx.fillRect(b.x, b.y, 4, b.h);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    let labelX = b.x + 18 + a * 8;
+    if (b.dot) { // status pip (player card sync state)
+        ctx.beginPath();
+        ctx.arc(b.x + 22, cy, 5, 0, 6.2832);
+        ctx.fillStyle = b.dot;
+        ctx.fill();
+        labelX = b.x + 42 + a * 8;
+    }
+    else if (b.glyph) { // left glyph slot, warms on hover
+        ctx.globalAlpha = on ? 0.6 + 0.4 * a : 0.35;
+        ctx.fillStyle = t.color.accent;
+        ctx.font = ui.font(18, true);
+        ctx.fillText(b.glyph, b.x + 16 + a * 8, cy + 1);
+        ctx.globalAlpha = 1;
+        labelX = b.x + 50 + a * 8;
+    }
+    const room = b.x + b.w - labelX - 16;
+    const fit = ui._fitLabel(ctx, b.label, room, truthyOr(b.size, () => t.type.lead), b.sub ? 0 : b.h, true);
+    ctx.fillStyle = on ? t.color.railInk : "rgba(241,239,249,0.5)";
+    ctx.font = ui.font(fit.size, true);
+    ui._drawLines(ctx, fit.lines, labelX, (b.sub ? cy - 10 : cy) + 1, fit.size);
+    if (b.sub) {
+        const sub = ui.fitText(ctx, b.sub, room, { size: t.type.caption, floor: t.type.micro });
+        ctx.globalAlpha = t.alpha.soft;
+        ctx.font = ui.font(sub.size, false);
+        ctx.fillText(sub.lines[0] ?? "", labelX, cy + 13);
+        ctx.globalAlpha = 1;
+    }
+    ctx.textBaseline = "alphabetic";
+}
+
+/** The accent-filled call-to-action variant of the rail button (PLAY). */
+function drawHeroButton(ui: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, a: number, on: boolean, cy: number): void {
+    const t = ui.t;
+    ctx.fillStyle = t.color.accent;
+    ctx.globalAlpha = on ? 0.9 + 0.1 * a : 0.5;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 0.22 + 0.35 * a;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(b.x, b.y, b.w, 2);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#08131a";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    if (b.glyph) {
+        ctx.font = ui.font(30, true);
+        ctx.fillText(b.glyph, b.x + 22, cy + 1);
+    }
+    const hx = b.x + (b.glyph ? 70 : 24) + a * 6, room = b.x + b.w - hx - 18;
+    const fit = ui.fitText(ctx, b.label, room, { size: truthyOr(b.size, () => 34), floor: t.type.lead, ellipsis: false, bold: true });
+    ctx.font = ui.font(fit.size, true);
+    ctx.fillText(fit.lines[0] ?? b.label, hx, cy - (b.sub ? 12 : 0) + 1);
+    if (b.sub) {
+        const sub = ui.fitText(ctx, b.sub, room, { size: t.type.caption, floor: t.type.micro, bold: true });
+        ctx.globalAlpha = 0.82;
+        ctx.font = ui.font(sub.size, true);
+        ctx.fillText(sub.lines[0] ?? "", hx, cy + 16);
+        ctx.globalAlpha = 1;
+    }
+    ctx.textBaseline = "alphabetic";
 }

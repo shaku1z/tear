@@ -21,9 +21,11 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     canvas.save();
     canvas.globalAlpha = ui.t.alpha.rail;
     const gradient = canvas.createLinearGradient(viewport.x, 0, solidRight + feather, 0);
-    gradient.addColorStop(0, ui.t.color.rail); gradient.addColorStop((solidRight - viewport.x) / span, ui.t.color.rail);
+    gradient.addColorStop(0, ui.t.color.rail);
+    gradient.addColorStop((solidRight - viewport.x) / span, ui.t.color.rail);
     gradient.addColorStop(1, "rgba(8,10,16,0)");
-    canvas.fillStyle = gradient; canvas.fillRect(viewport.x, viewport.y, span, viewport.h);
+    canvas.fillStyle = gradient;
+    canvas.fillRect(viewport.x, viewport.y, span, viewport.h);
     canvas.restore();
     ui.wordmark(canvas, railX, wordmarkY, context.time, context.reducedMotion);
     ui.text(canvas, "a momentum-blade survival game", railX, wordmarkY + 34, ui.t.type.caption, "left", ui.t.alpha.soft);

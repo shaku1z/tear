@@ -4,6 +4,10 @@ import { page, pageFooter } from "./screen-primitives";
 
 const labels: Readonly<Record<string, string>> = { history: "ALL RUNS", "personal-best": "PERSONAL BESTS", "first-clear": "FIRST CLEARS", "best-weapon": "BEST BY WEAPON", "boss-change": "BOSS CLEAR TIMES", "favorite-builds": "FAVORITE BUILDS", "near-miss": "BOSS NEAR MISSES", "style-milestones": "STYLE MILESTONES", "longest-survival": "LONGEST SURVIVAL", "dna-evolution": "RUN DNA HISTORY" };
 const PROFILE_HUE = "#b06cff";
+const SOURCE_COMMANDS = Object.freeze([
+  ["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"],
+  ["PUBLISH", "publish"], ["CHASE BEST", "chase"], ["RACE THIS REFERENCE", "race"],
+] as const);
 const unknown = (value: string | number | null | undefined, fallback = "—"): string => value === null || value === undefined || value === "" ? fallback : String(value);
 const clock = (seconds: number): string => `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 const percent = (value: number): string => `${String(Math.round(value * 100))}%`;
@@ -40,9 +44,27 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
       context.enqueue({ x, y, w, h, label, size: ui.t.type.label, enabled, action: { type: "career.control", command, ...(id ? { id } : {}) } });
     };
     const toolbarY = layout.bodyTop;
+    /** Ways to use the run's recording; commands whose surface this build does not offer are omitted and the row closes up. */
+    const sourceActions = (e: CareerEntry, y: number, eligible: (command: string) => boolean): void => {
+      const sources = SOURCE_COMMANDS.filter(([, command]) => context.available?.({ type: "career.control", command }) !== false);
+      const slots = sources.length, slotWidth = (available - (slots - 1) * 8) / slots;
+      sources.forEach(([label, command], i) => {
+        const enabled = e.present && (e.kind === "capsule" || command === "watch") && eligible(command);
+        button(label, command, left + i * (available + 8) / slots, y, slotWidth, enabled);
+      });
+    };
+    /** Tagging and retention for the run on this device. */
+    const keepActions = (e: CareerEntry, retention: string, y: number): void => {
+      const commands = [["TAGS", "tags"], [retention === "pinned" ? "UNPIN" : "PIN", "pin"], ["KEEP…", "retention"], ["DELETE LOCAL", "delete"]] as const;
+      commands.forEach(([label, command], i) => {
+        button(label, command, left + i * (available + 8) / 4, y, (available - 24) / 4, e.kind === "capsule" || command === "pin" || command === "delete");
+      });
+    };
     if (!view.selected) {
-      button("SEARCH / FILTERS", "search", left, toolbarY, 220); button(labels[view.query.view] ?? title(view.query.view), "view", left + 232, toolbarY, 250);
-      button(`SORT: ${view.query.sort.toUpperCase()}`, "sort", left + 494, toolbarY, 190); button("CLEAR", "clear", left + 696, toolbarY, 120);
+      button("SEARCH / FILTERS", "search", left, toolbarY, 220);
+      button(labels[view.query.view] ?? title(view.query.view), "view", left + 232, toolbarY, 250);
+      button(`SORT: ${view.query.sort.toUpperCase()}`, "sort", left + 494, toolbarY, 190);
+      button("CLEAR", "clear", left + 696, toolbarY, 120);
       button("RECEIVE BEAT CODE", "beat-receive", left + available - 230, toolbarY, 230);
       line(`${view.total.toLocaleString("en-US")} ${view.total === 1 ? "run" : "runs"} found · ${view.retained.toLocaleString("en-US")} kept on this device${view.indexing ? " · still reading older runs…" : ""}`, toolbarY + 66, { muted: true });
       const listTop = toolbarY + 84, listBottom = layout.bodyBottom - 26;
@@ -72,7 +94,10 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
     const chaseEligible = !e.beatAttempt && !e.assisted && e.verified === "receipts" && detail?.startsWith("Recorded category best") === true;
     button("BACK TO RESULTS", "back", left, toolbarY, 230);
     button(e.beatAttempt ? "BEAT RESULT" : "BEAT THIS RUN", e.beatAttempt ? "beat-review" : "beat", left + 242, toolbarY, 190, e.present && e.kind === "capsule");
-    if (e.beatAttempt) { button("SAVE RESULT", "beat-save", left + 444, toolbarY, 170); button("RETRY BEAT", "beat-retry", left + 626, toolbarY, 170); }
+    if (e.beatAttempt) {
+      button("SAVE RESULT", "beat-save", left + 444, toolbarY, 170);
+      button("RETRY BEAT", "beat-retry", left + 626, toolbarY, 170);
+    }
     const actionsY = layout.bodyBottom - 82;
     let y = toolbarY + 74;
     for (const [index, fact] of runFacts(e, detail, notes, chaseEligible).entries()) {
@@ -82,13 +107,11 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
     if (e.unavailable.length > 0 && y <= actionsY - 56) line(`Not recorded for this run: ${e.unavailable.join(", ")}`, y, { muted: true, maxLines: 2 });
     if (view.confirming) {
       line("Delete this run from this device? Its tags go too. Copies you shared elsewhere stay.", actionsY - 18);
-      button("DELETE LOCAL", "confirm-delete", left, actionsY, 240); button("KEEP", "cancel-delete", left + 252, actionsY, 150);
+      button("DELETE LOCAL", "confirm-delete", left, actionsY, 240);
+      button("KEEP", "cancel-delete", left + 252, actionsY, 150);
     } else {
-      // Commands whose surface this build does not offer are omitted and the row closes up.
-      const sources = [["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"], ["PUBLISH", "publish"], ["CHASE BEST", "chase"], ["RACE THIS REFERENCE", "race"]]
-        .filter(([, command]) => context.available?.({ type: "career.control", command: command ?? "" }) !== false), slots = sources.length;
-      sources.forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / slots, actionsY, (available - (slots - 1) * 8) / slots, e.present && (e.kind === "capsule" || command === "watch") && (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible)); });
-      [["TAGS", "tags"], [notes.retention === "pinned" ? "UNPIN" : "PIN", "pin"], ["KEEP…", "retention"], ["DELETE LOCAL", "delete"]].forEach(([label, command], i) => { button(label ?? "", command ?? "", left + i * (available + 8) / 4, actionsY + 44, (available - 24) / 4, e.kind === "capsule" || command === "pin" || command === "delete"); });
+      sourceActions(e, actionsY, (command) => (command !== "chase" || chaseEligible) && (command !== "race" || raceEligible));
+      keepActions(e, notes.retention, actionsY + 44);
     }
     if (view.message && !view.confirming) line(view.message, actionsY - 18, { muted: true });
     pageFooter(context, { back });

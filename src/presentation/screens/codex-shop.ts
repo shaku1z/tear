@@ -3,6 +3,9 @@ import { clipBody, page, pageFooter, tabs } from "./screen-primitives";
 import { BESTIARY_CARD_HEIGHT, BESTIARY_ROW_PITCH } from "../codex-snapshots";
 import { SHOP_LIST_TOP, SHOP_ROW_PITCH, SHOP_SECTION_GAP, SHOP_SECTION_HEAD } from "../shop-snapshot";
 
+type ShopItemView = ShopScreenView["sections"][number]["items"][number];
+const SHOP_GOLD = "#e0a326", SHOP_COLUMN_WIDTH = 550, SHOP_BUY_WIDTH = 96, SHOP_BUY_HEIGHT = 40;
+
 export function createCodexShopRenderers(context: ScreenRenderContext) {
   const { ui, width } = context;
 
@@ -47,19 +50,8 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
       const prized = special || card.badge?.includes("UNIQUE") === true;
       ui.card(canvas, x, y, cardWidth, cardHeight, context.focus === offset * columns + localIndex);
       ui.accentStrip(canvas, x, y, cardWidth, accent);
-      if (special) {
-        canvas.fillStyle = "#e8a32e"; canvas.globalAlpha = 0.9; canvas.fillRect(x, y + 6, cardWidth, 3);
-        const gleamX = x + ((context.time * 80 + x % 200) % (cardWidth + 60)) - 30;
-        const gradient = canvas.createLinearGradient(gleamX - 30, 0, gleamX + 30, 0);
-        gradient.addColorStop(0, "rgba(255,255,255,0)"); gradient.addColorStop(0.5, "rgba(255,255,255,0.85)");
-        gradient.addColorStop(1, "rgba(255,255,255,0)"); canvas.fillStyle = gradient; canvas.fillRect(x, y + 6, cardWidth, 3);
-        canvas.globalAlpha = 1;
-      }
-      let badgeWidth = 0;
-      if (card.badge) {
-        if (prized) badgeWidth = ui.badge(canvas, card.badge, x + 12, y + 30, special ? "#a86a0c" : ui.readable(ui.t.color.unique), "left");
-        else { ui.tag(canvas, card.badge, x + 12, y + 28, ui.t.color.muted, "left", ui.t.type.micro); canvas.font = ui.font(ui.t.type.micro, true); badgeWidth = canvas.measureText(card.badge).width; }
-      }
+      if (special) specialGleam(x, y, cardWidth);
+      const badgeWidth = card.badge ? cardBadge(card.badge, x, y, prized, special) : 0;
       if (card.category) {
         const category = ui.fitText(canvas, card.category, cardWidth - 36 - badgeWidth, { size: ui.t.type.micro, floor: ui.t.type.micro, bold: true });
         ui.tag(canvas, category.lines[0] ?? card.category, x + cardWidth - 12, y + 28, accentInk, "right", ui.t.type.micro);
@@ -82,6 +74,31 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
       context.enqueue({ x, y, w: cardWidth, h: cardHeight, label: "", hiddenBox: true,
         action: { type: "codex.inspect", id: card.id } });
     });
+  }
+
+  /** The gold edge on a SPECIAL card, with a white gleam travelling along it. */
+  function specialGleam(x: number, y: number, cardWidth: number): void {
+    const { canvas } = context;
+    canvas.fillStyle = "#e8a32e";
+    canvas.globalAlpha = 0.9;
+    canvas.fillRect(x, y + 6, cardWidth, 3);
+    const gleamX = x + ((context.time * 80 + x % 200) % (cardWidth + 60)) - 30;
+    const gradient = canvas.createLinearGradient(gleamX - 30, 0, gleamX + 30, 0);
+    gradient.addColorStop(0, "rgba(255,255,255,0)");
+    gradient.addColorStop(0.5, "rgba(255,255,255,0.85)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    canvas.fillStyle = gradient;
+    canvas.fillRect(x, y + 6, cardWidth, 3);
+    canvas.globalAlpha = 1;
+  }
+
+  /** SPECIAL / UNIQUE cards get a filled badge, others a plain tag; returns the width it took. */
+  function cardBadge(badge: string, x: number, y: number, prized: boolean, special: boolean): number {
+    const { canvas } = context;
+    if (prized) return ui.badge(canvas, badge, x + 12, y + 30, special ? "#a86a0c" : ui.readable(ui.t.color.unique), "left");
+    ui.tag(canvas, badge, x + 12, y + 28, ui.t.color.muted, "left", ui.t.type.micro);
+    canvas.font = ui.font(ui.t.type.micro, true);
+    return canvas.measureText(badge).width;
   }
 
   // ---- bestiary (source codexTabBestiary + drawBestiaryEntry) ----
@@ -199,9 +216,53 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     ui.textBox(canvas, view.variety, right, trickY + 8, rightWidth, { size: ui.t.type.micro, alpha: ui.t.alpha.muted, maxLines: 2 });
   }
 
+  /** One upgrade card: icon tile, name and level, pips, description and the BUY button (hidden while scrolled out). */
+  function shopItemRow(item: ShopItemView, x: number, y: number, goldInk: string, viewTop: number, viewBottom: number): void {
+    const { canvas } = context;
+    const gold = SHOP_GOLD, columnWidth = SHOP_COLUMN_WIDTH;
+    const buttonWidth = SHOP_BUY_WIDTH, buttonHeight = SHOP_BUY_HEIGHT, textRight = columnWidth - buttonWidth - 24;
+    const level = item.level ?? 0, maximumLevel = item.maxLevel ?? 0;
+    const maxed = maximumLevel > 0 && level >= maximumLevel;
+    const cardHeight = SHOP_ROW_PITCH - 10;
+    ui.card(canvas, x, y, columnWidth, cardHeight, false);
+    canvas.globalAlpha = level > 0 ? 0.16 : 0.055;
+    canvas.fillStyle = level > 0 ? gold : ui.ink;
+    canvas.fillRect(x + 10, y + 10, 44, 44);
+    canvas.globalAlpha = 1;
+    if (item.flash && item.flash > 0) {
+      canvas.globalAlpha = item.flash * 0.3;
+      canvas.fillStyle = gold;
+      canvas.fillRect(x, y, columnWidth, cardHeight);
+      canvas.globalAlpha = 1;
+    }
+    ui.tag(canvas, item.glyph ?? "◆", x + 32, y + 41, level > 0 ? goldInk : ui.t.color.muted, "center", 22);
+    canvas.font = ui.font(ui.t.type.body, true);
+    const name = ui.fitText(canvas, item.label, textRight - 66 - 150, { size: ui.t.type.body, floor: ui.t.type.label, bold: true });
+    ui.displayText(canvas, name.lines[0] ?? item.label, x + 66, y + 26, name.size);
+    canvas.font = ui.font(name.size, true);
+    const nameWidth = canvas.measureText(name.lines[0] ?? item.label).width;
+    if (maximumLevel > 0) {
+      const levelInk = level > 0 ? goldInk : ui.t.color.muted;
+      ui.tag(canvas, `LV ${String(level)}/${String(maximumLevel)}`, x + 78 + nameWidth, y + 26, levelInk, "left", ui.t.type.micro);
+      ui.pips(canvas, x + textRight, y + 21, maximumLevel, level, gold);
+    }
+    if (item.description) {
+      ui.textBox(canvas, item.description, x + 66, y + 47, textRight - 66,
+        { size: ui.t.type.micro, lineHeight: 17, alpha: ui.t.alpha.soft, maxLines: 2 });
+    }
+    const buttonY = y + (cardHeight - buttonHeight) / 2;
+    const visible = buttonY >= viewTop && buttonY + buttonHeight <= viewBottom;
+    const canBuy = !maxed && item.enabled !== false;
+    context.enqueue({
+      x: x + columnWidth - buttonWidth - 10, y: buttonY, w: buttonWidth, h: buttonHeight, label: maxed ? "MAX" : (item.cost ?? "BUY"),
+      selected: maxed, enabled: visible && canBuy, hiddenBox: !visible, accent: canBuy ? gold : undefined,
+      action: { type: "shop.buy", id: item.id }, size: ui.t.type.caption,
+    });
+  }
+
   function shop(view: ShopScreenView): void {
     const { canvas } = context;
-    const gold = "#e0a326", goldInk = ui.readable(gold);
+    const gold = SHOP_GOLD, goldInk = ui.readable(gold);
     const layout = page(context, { title: "SHOP", subtitle: "permanent upgrades — applied at the start of every run", hue: gold,
       stat: { value: view.coins.toLocaleString("en-US"), label: "COINS", color: goldInk, glyph: "◆" } });
     // One status row under the header: the first-run hint replaces the ledger totals.
@@ -209,11 +270,10 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     if (view.onboarding) ui.text(canvas, view.onboarding, width / 2, statusY, ui.t.type.caption, "center", ui.t.alpha.soft);
     else ui.tag(canvas, `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString("en-US")}`,
       width / 2, statusY, ui.t.color.muted, "center", ui.t.type.micro);
-    const columnX = [layout.left, layout.left + 570] as const, columnWidth = 550;
+    const columnX = [layout.left, layout.left + 570] as const, columnWidth = SHOP_COLUMN_WIDTH;
     const viewTop = SHOP_LIST_TOP, viewBottom = layout.bodyBottom;
     const split = Math.ceil(view.sections.length / 2);
     const columns = [view.sections.slice(0, split), view.sections.slice(split)] as const;
-    const buttonWidth = 96, buttonHeight = 40, textRight = columnWidth - buttonWidth - 24;
     clipBody(context, viewTop - 4, viewBottom, () => {
       columns.forEach((sections, column) => {
         const x = columnX[column] ?? columnX[0];
@@ -221,33 +281,7 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
         sections.forEach((section, localSection) => {
           y = ui.sectionLabel(canvas, `${section.label}  ·  ${String(section.items.length)}`, x, y, columnWidth, gold) + SHOP_SECTION_HEAD - 18;
           section.items.forEach((item) => {
-            const level = item.level ?? 0, maximumLevel = item.maxLevel ?? 0;
-            const maxed = maximumLevel > 0 && level >= maximumLevel;
-            const cardHeight = SHOP_ROW_PITCH - 10;
-            ui.card(canvas, x, y, columnWidth, cardHeight, false);
-            canvas.globalAlpha = level > 0 ? 0.16 : 0.055; canvas.fillStyle = level > 0 ? gold : ui.ink;
-            canvas.fillRect(x + 10, y + 10, 44, 44); canvas.globalAlpha = 1;
-            if (item.flash && item.flash > 0) { canvas.globalAlpha = item.flash * 0.3; canvas.fillStyle = gold; canvas.fillRect(x, y, columnWidth, cardHeight); canvas.globalAlpha = 1; }
-            ui.tag(canvas, item.glyph ?? "◆", x + 32, y + 41, level > 0 ? goldInk : ui.t.color.muted, "center", 22);
-            canvas.font = ui.font(ui.t.type.body, true);
-            const name = ui.fitText(canvas, item.label, textRight - 66 - 150, { size: ui.t.type.body, floor: ui.t.type.label, bold: true });
-            ui.displayText(canvas, name.lines[0] ?? item.label, x + 66, y + 26, name.size);
-            canvas.font = ui.font(name.size, true);
-            const nameWidth = canvas.measureText(name.lines[0] ?? item.label).width;
-            if (maximumLevel > 0) {
-              ui.tag(canvas, `LV ${String(level)}/${String(maximumLevel)}`, x + 78 + nameWidth, y + 26, level > 0 ? goldInk : ui.t.color.muted, "left", ui.t.type.micro);
-              ui.pips(canvas, x + textRight, y + 21, maximumLevel, level, gold);
-            }
-            if (item.description) ui.textBox(canvas, item.description, x + 66, y + 47, textRight - 66,
-              { size: ui.t.type.micro, lineHeight: 17, alpha: ui.t.alpha.soft, maxLines: 2 });
-            const buttonY = y + (cardHeight - buttonHeight) / 2;
-            const visible = buttonY >= viewTop && buttonY + buttonHeight <= viewBottom;
-            const canBuy = !maxed && item.enabled !== false;
-            context.enqueue({
-              x: x + columnWidth - buttonWidth - 10, y: buttonY, w: buttonWidth, h: buttonHeight, label: maxed ? "MAX" : (item.cost ?? "BUY"),
-              selected: maxed, enabled: visible && canBuy, hiddenBox: !visible, accent: canBuy ? gold : undefined,
-              action: { type: "shop.buy", id: item.id }, size: ui.t.type.caption,
-            });
+            shopItemRow(item, x, y, goldInk, viewTop, viewBottom);
             y += SHOP_ROW_PITCH;
           });
           if (localSection < sections.length - 1) y += SHOP_SECTION_GAP;

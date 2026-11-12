@@ -130,8 +130,13 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
             let bottom = cy + 40;
             if (detail) {
                 const box = this.fitText(ctx, detail, width, { size: this.t.type.body, floor: this.t.type.caption, maxLines: 3 });
-                ctx.save(); ctx.globalAlpha = this.t.alpha.muted; ctx.fillStyle = this.ink; ctx.font = this.font(box.size, false);
-                box.lines.forEach((text, index) => { ctx.fillText(text, cx, cy + 70 + index * 22); });
+                ctx.save();
+                ctx.globalAlpha = this.t.alpha.muted;
+                ctx.fillStyle = this.ink;
+                ctx.font = this.font(box.size, false);
+                box.lines.forEach((text, index) => {
+                    ctx.fillText(text, cx, cy + 70 + index * 22);
+                });
                 ctx.restore();
                 bottom = cy + 70 + (box.lines.length - 1) * 22;
             }

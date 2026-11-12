@@ -36,7 +36,11 @@ export function createVerdantCalibrationComposition(selection: VerdantSceneNativ
   const material = createPreparedVerdantMaterial(new URL("../presentation/assets/verdant-calibration/moss-stone.webp", import.meta.url).href);
   void calibration.prepare();
   void material.prepare();
-  target.addEventListener("pagehide", (event) => { if (!event.persisted) calibration.dispose(); });
-  target.addEventListener("pagehide", (event) => { if (!event.persisted) material.dispose(); });
+  target.addEventListener("pagehide", (event) => {
+    if (!event.persisted) calibration.dispose();
+  });
+  target.addEventListener("pagehide", (event) => {
+    if (!event.persisted) material.dispose();
+  });
   return Object.freeze({ calibration, material });
 }
