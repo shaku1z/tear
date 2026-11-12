@@ -596,7 +596,7 @@
       "multiStatementLines": 5
     },
     "src/app/live-game-runtime.ts": {
-      "chars": 85473,
+      "chars": 85310,
       "maxLineLength": 3969,
       "multiStatementLines": 132,
       "largestFunctionStatements": 143
@@ -1291,7 +1291,7 @@
       "multiStatementLines": 1
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 55278,
+      "chars": 55252,
       "maxLineLength": 387,
       "multiStatementLines": 74,
       "largestFunctionStatements": 170
@@ -1319,7 +1319,7 @@
       "multiStatementLines": 8
     },
     "src/gameplay/upgrades.ts": {
-      "chars": 34023,
+      "chars": 34021,
       "maxLineLength": 169,
       "multiStatementLines": 58
     },
@@ -1546,7 +1546,7 @@
       "largestFunctionStatements": 124
     },
     "src/input/legacy-input.ts": {
-      "multiStatementLines": 46
+      "multiStatementLines": 45
     },
     "src/input/semantic-buffer.ts": {
       "multiStatementLines": 1
@@ -1606,7 +1606,7 @@
       "largestFunctionStatements": 106
     },
     "src/presentation/backdrop.ts": {
-      "chars": 31557,
+      "chars": 31391,
       "maxLineLength": 207,
       "multiStatementLines": 93,
       "largestFunctionStatements": 140
@@ -1749,8 +1749,7 @@
       "maxLineLength": 648
     },
     "src/presentation/screens/draft-reserve-tierup.ts": {
-      "maxLineLength": 222,
-      "multiStatementLines": 2
+      "multiStatementLines": 1
     },
     "src/presentation/screens/foundry.ts": {
       "maxLineLength": 226
@@ -1768,10 +1767,10 @@
     },
     "src/presentation/screens/pause-results.ts": {
       "maxLineLength": 547,
-      "multiStatementLines": 32
+      "multiStatementLines": 6
     },
     "src/presentation/screens/playground.ts": {
-      "multiStatementLines": 11
+      "multiStatementLines": 9
     },
     "src/presentation/screens/profile-achievements.ts": {
       "maxLineLength": 201,
@@ -1819,16 +1818,11 @@
       "maxLineLength": 166
     },
     "src/presentation/world/entity-layer.ts": {
-      "multiStatementLines": 21
+      "multiStatementLines": 20
     },
     "src/presentation/world/finale.ts": {
       "multiStatementLines": 12,
       "largestFunctionStatements": 89
-    },
-    "src/presentation/world/hud.ts": {
-      "maxLineLength": 169,
-      "multiStatementLines": 21,
-      "largestFunctionStatements": 126
     },
     "src/presentation/world/legacy-world-frame.ts": {
       "multiStatementLines": 2
@@ -1839,9 +1833,6 @@
     },
     "src/presentation/world/overlay-snapshots.ts": {
       "multiStatementLines": 1
-    },
-    "src/presentation/world/overlays.ts": {
-      "multiStatementLines": 21
     },
     "src/presentation/world/production-replay-frame.ts": {
       "multiStatementLines": 3
@@ -1859,8 +1850,7 @@
       "largestFunctionStatements": 86
     },
     "src/presentation/world/training-touch.ts": {
-      "maxLineLength": 190,
-      "multiStatementLines": 45
+      "maxLineLength": 166
     },
     "src/presentation/world/tutorial-input-prompts.ts": {
       "maxLineLength": 222
