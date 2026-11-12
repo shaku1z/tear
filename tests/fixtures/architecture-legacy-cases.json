@@ -1,0 +1,1516 @@
+{
+ "note": "Planted cases from the pre-role architecture gate (legacy = the old rule rows that rejected it) plus deliberate strengthenings. tests/source-architecture.test.mjs requires the same verdict from the role-based gate. Paths are repository paths; update them when a listed module moves.",
+ "cases": [
+  {
+   "legacy": [
+    "R05"
+   ],
+   "file": "src/tearbench/__planted-violation.ts",
+   "text": "import type { LiveGhostEngineEvent } from \"../replay/legacy-compat\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R06"
+   ],
+   "file": "src/tearbench/__planted-world-violation.ts",
+   "text": "import type { GameEnemy } from \"../app/game-runtime-state\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R01"
+   ],
+   "file": "src/gameplay/environment/pale-environment-feature.ts",
+   "text": "import { installGraftAnchor } from \"./graft-anchor\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R02"
+   ],
+   "file": "src/gameplay/environment/verdant-environment-feature.ts",
+   "text": "import { advanceAuroraTrack } from \"./aurora-track-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R03"
+   ],
+   "file": "src/gameplay/environment/environment-runtime.ts",
+   "text": "import { createPaleEnvironmentFeature } from \"./pale-environment-feature\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R03"
+   ],
+   "file": "src/tearbench/environment-codec.ts",
+   "text": "import { assertAuroraTrackFieldState } from \"../gameplay/environment/aurora-track\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R03"
+   ],
+   "file": "src/gameplay/environment/presentation-snapshot.ts",
+   "text": "import { isGraftAnchorState } from \"./graft-anchor\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "S1"
+   ],
+   "file": "src/tearbench/environment-codec.ts",
+   "text": "interface AuroraTrackCarryState {}",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/tearbench/environment-codec.ts",
+   "text": "interface EnvironmentExtensionState {}",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from '../remote/config';",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-simulation-runtime.ts",
+   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-simulation-runtime.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-combat-simulation.ts",
+   "text": "import { LiveFrameRuntime } from \"../../app/live-frame-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-combat-simulation.ts",
+   "text": "const context: CanvasRenderingContext2D | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/gameplay-event-publishers.ts",
+   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/gameplay-event-publishers.ts",
+   "text": "document.dispatchEvent(new Event(\"run\"));",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-entity-construction.ts",
+   "text": "import type { GameRuntimeDependencies } from \"../../app/game-runtime-dependencies\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+   "text": "import type { GameRuntimeDependencies } from \"../../app/game-runtime-dependencies\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R18"
+   ],
+   "file": "src/config/game-config.ts",
+   "text": "export { A11Y, CLOCK, CONFIG };",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/weapons.ts",
+   "text": "import { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/upgrades.ts",
+   "text": "import { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/stages.ts",
+   "text": "import { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/combat/live-opening-phase.ts",
+   "text": "import { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/combat/live-collision-phase.ts",
+   "text": "import { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/combat/live-kill-runtime.ts",
+   "text": "import { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/runtime/cinematic-director.ts",
+   "text": "import { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R75"
+   ],
+   "file": "src/gameplay/training/tutorial-production-ghost.ts",
+   "text": "import { GFX, CONFIG as worldConfig } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/gameplay/weapons.ts",
+   "text": "import type { CONFIG } from \"../config/game-config\";",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R18"
+   ],
+   "file": "src/simulation/run-random.ts",
+   "text": "export const GAME_RANDOM_STREAMS = new RunRandomStreams();",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/particles.ts",
+   "text": "export { createParticleSystem };",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R19"
+   ],
+   "file": "src/presentation/particles.ts",
+   "text": "import { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R19"
+   ],
+   "file": "src/presentation/particles.ts",
+   "text": "import { GFX, A11Y as accessibility } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R19"
+   ],
+   "file": "src/presentation/particles.ts",
+   "text": "import type { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R19"
+   ],
+   "file": "src/presentation/particles.ts",
+   "text": "import { cosmeticRandom } from \"./cosmetic-random\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R20"
+   ],
+   "file": "src/presentation/backdrop.ts",
+   "text": "import { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R20"
+   ],
+   "file": "src/presentation/backdrop-biomes.ts",
+   "text": "import type { GFX } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R21"
+   ],
+   "file": "src/presentation/backdrop.ts",
+   "text": "export const Backdrop = {};",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R21"
+   ],
+   "file": "src/presentation/backdrop.ts",
+   "text": "let CLOCK = createTearWorldClock();",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/backdrop.ts",
+   "text": "export function createBackdrop() { return {}; }",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R22"
+   ],
+   "file": "src/presentation/cinematics.ts",
+   "text": "import { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R22"
+   ],
+   "file": "src/presentation/cinematics.ts",
+   "text": "import type { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R23"
+   ],
+   "file": "src/presentation/cinematics.ts",
+   "text": "export const Cinematics = {};",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/cinematics.ts",
+   "text": "export function createCinematics() { return {}; }",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R24"
+   ],
+   "file": "src/presentation/ui-contracts.ts",
+   "text": "import type { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R24"
+   ],
+   "file": "src/presentation/ui-tokens.ts",
+   "text": "import type { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/ui-contracts.ts",
+   "text": "export interface UiPresentationPolicy {}",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R25"
+   ],
+   "file": "src/presentation/attract-runtime.ts",
+   "text": "import type { CONFIG } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R26"
+   ],
+   "file": "src/presentation/attract-runtime.ts",
+   "text": "import { cosmeticRandom } from \"./cosmetic-random\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/attract-runtime.ts",
+   "text": "export interface AttractVisualPolicy {}",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R27"
+   ],
+   "file": "src/audio/legacy-synth.ts",
+   "text": "export const SFX = Object.freeze({});",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/audio/legacy-synth.ts",
+   "text": "export function createLegacySynthFacade() { return {}; }",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R28"
+   ],
+   "file": "src/audio/legacy-synth-runtime.ts",
+   "text": "export const SFX = Object.freeze({});",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/audio/legacy-synth-runtime.ts",
+   "text": "export function createLegacySynthRuntime() { return {}; }",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R29"
+   ],
+   "file": "src/audio/audio-context-handoff.ts",
+   "text": "let captured = null;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/audio/audio-context-handoff.ts",
+   "text": "export function createBrowserAudioContextHandoff() { let captured = null; return {}; }",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R30"
+   ],
+   "file": "src/audio/legacy-live-audio.ts",
+   "text": "import { capturedAudioContext } from \"./audio-context-handoff\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/audio/legacy-live-audio.ts",
+   "text": "export function createLegacyAudioCompatibility(_synth, _window, _capturedContext) { return {}; }",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R31"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const gamepad = navigator.getGamepads()[0];",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R31"
+   ],
+   "file": "src/app/live-session-services-composition.ts",
+   "text": "const cores = navigator.hardwareConcurrency;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const context = { navigator: dependencies.browserNavigator };",
+   "reject": false
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-session-services-composition.ts",
+   "text": "const options = { navigator: dependencies.browserNavigator };",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R32"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "document.exitPointerLock();",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R32"
+   ],
+   "file": "src/app/live-browser-runtime.ts",
+   "text": "const canvas = document.getElementById(\"game\");",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const context = { document: dependencies.browserDocument };",
+   "reject": false
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-browser-runtime.ts",
+   "text": "const canvas = dependencies.browserDocument.getElementById(\"game\");",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R33"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const database = window.indexedDB;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const database = dependencies.browserIndexedDb;",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R34"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const search = window.location.search;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const search = dependencies.browserWindow.location.search;",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R35",
+    "R36"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "Object.defineProperty(window, \"__TEAR_GHOST_V3__\", {});",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R36"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "Object.defineProperty(dependencies.browserWindow, \"__TEAR_GHOST_V3__\", {});",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R36"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const inspectorName = \"__TEAR_GHOST_V3__\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/tearbench/browser/live-runtime-bridge.ts",
+   "text": "Object.defineProperty(target, \"__TEAR_GHOST_V3__\", {});",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R37"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const hook = (window as Window & { __TEAR_PARITY_TICK__: {} }).__TEAR_PARITY_TICK__;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const hook = (dependencies.browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R38"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const driver = new RuntimeFrameDriver(window);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const driver = new RuntimeFrameDriver(dependencies.browserWindow);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R39"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "emitLiveTearBenchPhysicalInput(input, { window, canvas });",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "emitLiveTearBenchPhysicalInput(input, { window: dependencies.browserWindow, canvas });",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R40"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "installLiveTearRuntimeBridge({\n  source,\n}, window);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "installLiveTearRuntimeBridge({\n  source,\n}, dependencies.browserWindow);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R41"
+   ],
+   "file": "src/app/live-cinematic-host.ts",
+   "text": "localStorage.setItem(\"tear.cinematic.seen\", \"1\");",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-cinematic-host.ts",
+   "text": "dependencies.browserStorage.setItem(\"tear.cinematic.seen\", \"1\");",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R42"
+   ],
+   "file": "src/app/live-world-presentation-adapters.ts",
+   "text": "d.PROFILE.data.seen[id] = true;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-world-presentation-adapters.ts",
+   "text": "d.achievementToastPersistence.markSeen(id);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R43"
+   ],
+   "file": "src/app/live-world-presentation-adapters.ts",
+   "text": "d.PROFILE.save();",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-world-presentation-adapters.ts",
+   "text": "d.achievementToastPersistence.save();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R44"
+   ],
+   "file": "src/app/live-world-presentation-adapters.ts",
+   "text": "d.PROFILE.addStat(\"touchOnboarded\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-world-presentation-adapters.ts",
+   "text": "d.profileStatsPersistence.add(\"touchOnboarded\", 1);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R45"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let lastGhost = null;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const production = createLiveProductionWorld(options);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R46"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let floaters = [];",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const floaters = hostState.floaters();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R47"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let bossIntro = null;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const intro = hostState.bossIntro();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R48"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let enemies = [];",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const actors = hostState.enemies();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R49"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let run = {}; ",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const run = hostState.run();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R50"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let blade = {}; ",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const blade = hostState.blade();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R51"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let player = {}; ",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const player = hostState.player();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R52"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let shopCoinShow = null;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const shopFeedback = createLiveShopFeedbackState();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R53"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let hudHpLag = 1;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const hudFeedback = createLiveHudFeedbackState();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R54"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let uiButtons = [];",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const interfaceInteraction = createLiveInterfaceInteractionState();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R55"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let uiT = 0;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const interfaceFrame = createLiveInterfaceFrameState(state);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R56"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let continueT = 0;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const reviveCountdown = createLiveReviveCountdownState();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R57"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const music = new MusicDirector(SFX);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const world = createLiveProductionWorld({});",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R58"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let tearBenchRunSeed = 27;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const seed = session.takeRunSeed();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R59"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let ghostV3EventSequence = 0; createBrowserGhostLiveRecorder(factory);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const session = createLiveGhostRecordingSessionState(factory, {});",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R60"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "let semanticInputAuthority = true;",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const authority = createLiveInputAuthorityState(requestLock);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R61"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "const session = createLiveWorldSessionState();",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R62"
+   ],
+   "file": "src/app/live-style-host.ts",
+   "text": "d.ACH.check(); d.PROFILE.save();",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-style-host.ts",
+   "text": "d.styleAchievementPersistence.checkAndSave();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R63"
+   ],
+   "file": "src/app/live-platform-bootstrap.ts",
+   "text": "d.PROFILE.maxStat(\"shopMaxed\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-platform-bootstrap.ts",
+   "text": "d.platformBootstrapPersistence.backfillShopProgress();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R64"
+   ],
+   "file": "src/app/live-platform-bootstrap.ts",
+   "text": "d.ACH.check(); d.PROFILE.save();",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R65"
+   ],
+   "file": "src/app/live-outcome-composition.ts",
+   "text": "d.PROFILE.setPendingFinale({});",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-outcome-composition.ts",
+   "text": "d.pendingFinalePersistence.persist({});",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R66"
+   ],
+   "file": "src/app/live-campaign-training-composition.ts",
+   "text": "d.PROFILE.maxStat(\"biomesSeen\", d.PROFILE.markBiome(name));",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-campaign-training-composition.ts",
+   "text": "d.biomeProgressPersistence.remember(name);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R67"
+   ],
+   "file": "src/app/live-victory-progression-host.ts",
+   "text": "d.PROFILE.maxStat(\"distinctWeaponsWon\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-victory-progression-host.ts",
+   "text": "d.profileStatsPersistence.max(\"distinctWeaponsWon\", 1);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R68"
+   ],
+   "file": "src/app/live-victory-progression-host.ts",
+   "text": "d.PROFILE.data.weaponsWon = {};",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-victory-progression-host.ts",
+   "text": "d.victoryProfileProgressPersistence.markWeaponWin(weaponId);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R69"
+   ],
+   "file": "src/app/live-outcome-composition.ts",
+   "text": "d.PROFILE.addStat(\"runs\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-outcome-composition.ts",
+   "text": "d.outcomeDefeatProgressPersistence.record(run);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R70"
+   ],
+   "file": "src/app/live-setup-shop-renderers.ts",
+   "text": "d.PROFILE.addStat(\"shopBuys\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-setup-shop-renderers.ts",
+   "text": "d.shopPurchaseProgressPersistence.recordPurchase();",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R71"
+   ],
+   "file": "src/app/live-wave-composition.ts",
+   "text": "d.PROFILE.maxStat(\"waves\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-wave-composition.ts",
+   "text": "d.profileStatsPersistence.max(\"waves\", 1);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R71"
+   ],
+   "file": "src/app/live-style-host.ts",
+   "text": "d.PROFILE.addStat(\"tricks\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-style-host.ts",
+   "text": "d.profileStatsPersistence.add(\"tricks\", 1);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R71"
+   ],
+   "file": "src/app/live-training-host-runtime.ts",
+   "text": "d.PROFILE.addStat(\"tutorials\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-training-host-runtime.ts",
+   "text": "d.profileStatsPersistence.add(\"tutorials\", 1);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R71"
+   ],
+   "file": "src/app/live-combat-actions.ts",
+   "text": "d.PROFILE.maxStat(\"armorBypassKills\", 1);",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-combat-actions.ts",
+   "text": "d.profileStatsPersistence.max(\"armorBypassKills\", 1);",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R73"
+   ],
+   "file": "src/presentation/enemies/renderers/enemy-renderer-types.ts",
+   "text": "import type { GameConfig } from \"../../../gameplay/entities/enemy-contracts\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/enemies/renderers/enemy-renderer-types.ts",
+   "text": "export interface EnemyPresentationPolicy {}",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R74"
+   ],
+   "file": "src/gameplay/runtime/tear-world-bootstrap.ts",
+   "text": "import { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R74"
+   ],
+   "file": "src/gameplay/runtime/tear-world-bootstrap.ts",
+   "text": "import type { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-bootstrap.ts",
+   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-world-bootstrap.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-world-entity-construction.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+   "text": "import { createLiveWorldEntityFactory } from \"../../app/live-world-entity-factory\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-context.ts",
+   "text": "import type { GameRuntimeDependencies } from \"../../app/game-runtime-dependencies\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-world-context.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-composition.ts",
+   "text": "import { createLiveWorldComposition } from \"../../app/live-world-composition\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-world-composition.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-simulation-factories.ts",
+   "text": "import { createLiveWorldSimulationPresentationAdapter } from \"../../app/live-world-simulation-factories\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/runtime/tear-world-simulation-factories.ts",
+   "text": "import { createPlayerRenderer } from \"../../presentation/entities/player-renderer\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/runtime/tear-world-simulation-factories.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/run/reward-runtime.ts",
+   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/run/reward-runtime.ts",
+   "text": "import { routeLiveTearBenchAction } from \"../../tearbench/live-runtime-action-routing\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/run/reward-runtime.ts",
+   "text": "document.exitPointerLock();",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R07"
+   ],
+   "file": "src/gameplay/campaign/finale-runtime.ts",
+   "text": "import { createLiveCampaignRuntime } from \"../../app/live-campaign-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R08"
+   ],
+   "file": "src/gameplay/campaign/finale-runtime.ts",
+   "text": "window.requestAnimationFrame(() => document.exitPointerLock());",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/gameplay/campaign/finale-runtime.ts",
+   "text": "import { FinaleController } from \"./finale-controller\";",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R09"
+   ],
+   "file": "src/tearbench/detached-world-hydrator.ts",
+   "text": "import type { GameRuntimeDependencies } from \"../app/game-runtime-dependencies\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R10"
+   ],
+   "file": "src/tearbench/detached-world-hydrator.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R09"
+   ],
+   "file": "src/tearbench/detached-world-runtime.ts",
+   "text": "import type { GameRuntimeDependencies } from \"../app/game-runtime-dependencies\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R10"
+   ],
+   "file": "src/tearbench/detached-world-runtime.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R11"
+   ],
+   "file": "src/tearbench/production-headless-environment.ts",
+   "text": "import { startLiveGame } from \"../app/live-game-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R12"
+   ],
+   "file": "src/tearbench/production-headless-environment.ts",
+   "text": "const canvas: HTMLCanvasElement | null = null;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R13"
+   ],
+   "file": "src/tearbench/live-runtime-environment.ts",
+   "text": "import { installGhostLabPanel } from \"./browser/ghost-lab-panel\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R14"
+   ],
+   "file": "src/tearbench/live-runtime-action-routing.ts",
+   "text": "const pointer = new PointerEvent(\"pointerdown\");",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R15"
+   ],
+   "file": "src/tearbench/browser/live-runtime-bridge.ts",
+   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R16"
+   ],
+   "file": "src/tearbench/index.ts",
+   "text": "export * from \"./state-forge-studio\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R17"
+   ],
+   "file": "src/app/live-game-runtime.ts",
+   "text": "player.aiInput = input;",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from \"../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from \"../app/live-game-runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from \"../platform/browser\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from \"../presentation/canvas\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from \"../entrypoints/standalone\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from \"../browser/runtime\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R04"
+   ],
+   "file": "src/game-reference/__planted-runtime-violation.ts",
+   "text": "import type { RuntimeValue } from \"../remote/config\";",
+   "reject": true
+  },
+  {
+   "legacy": [
+    "R72"
+   ],
+   "file": "src/presentation/entities/blade-renderer.ts",
+   "text": "import type { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/entities/blade-renderer.ts",
+   "text": "export interface RendererPolicy {}",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R72"
+   ],
+   "file": "src/presentation/entities/mirror-renderer.ts",
+   "text": "import type { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/entities/mirror-renderer.ts",
+   "text": "export interface RendererPolicy {}",
+   "reject": false
+  },
+  {
+   "legacy": [
+    "R72"
+   ],
+   "file": "src/presentation/entities/projectile-renderer.ts",
+   "text": "import type { CONFIG } from \"../../config/game-config\";",
+   "reject": true
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/entities/projectile-renderer.ts",
+   "text": "export interface RendererPolicy {}",
+   "reject": false
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-run-start-host.ts",
+   "text": "document.exitPointerLock();",
+   "reject": true,
+   "note": "R32 generalised from 2 files to all src/app minus declared document owners"
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-stage-controller.ts",
+   "text": "const lock = window.location.search;",
+   "reject": true,
+   "note": "R33-R40 generalised to all src/app minus window owners"
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-wave-host.ts",
+   "text": "d.PROFILE.addStat(\"waves\", 1);",
+   "reject": true,
+   "note": "R42-R44/R62-R71 generalised to all src minus direct-writer role"
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/screens/menu-setup.ts",
+   "text": "import type { CONFIG } from \"../../config/game-config\";",
+   "reject": true,
+   "note": "R19/R20/R22/R24/R25/R72 generalised to all src/presentation"
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/world/primitives.ts",
+   "text": "import { cosmeticRandom } from \"../cosmetic-random\";",
+   "reject": true,
+   "note": "R19/R26 generalised to all src/presentation"
+  },
+  {
+   "legacy": [],
+   "file": "src/gameplay/stages.ts",
+   "text": "import { GFX } from \"./../config/game-config\";",
+   "reject": true,
+   "note": "R75 generalised to any value import of game-config from gameplay/simulation/domain"
+  },
+  {
+   "legacy": [],
+   "file": "src/ghost/capsule-vault.ts",
+   "text": "const inspector = \"__TEAR_GHOST_V3__\";",
+   "reject": true,
+   "note": "R36 generalised to all src minus the inspector adapter"
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-campaign-host.ts",
+   "text": "const music = new MusicDirector(sfx);",
+   "reject": true,
+   "note": "R57 generalised to all src minus the world composition"
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-content-host.ts",
+   "text": "import { LIVE_ENGINEERING_SURFACES } from \"./live-engineering-surfaces\";",
+   "reject": true,
+   "note": "new N1: engineering channel only via dynamic import"
+  },
+  {
+   "legacy": [],
+   "file": "src/app/live-content-host.ts",
+   "text": "const surfaces = import(\"./live-engineering-surfaces\");",
+   "reject": false,
+   "note": "N1 allows the guarded dynamic import"
+  },
+  {
+   "legacy": [],
+   "file": "src/tearbench/index.ts",
+   "text": "import { installGhostLabPanel } from \"./browser/ghost-lab-panel\";",
+   "reject": true,
+   "note": "R16 now covers any edge from the barrel, not only export *"
+  },
+  {
+   "legacy": [],
+   "file": "src/presentation/attract-runtime.ts",
+   "text": "let Backdrop = null;",
+   "reject": true,
+   "note": "R21 generalised to all src/presentation"
+  }
+ ]
+}

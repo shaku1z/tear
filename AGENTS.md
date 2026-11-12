@@ -13,8 +13,11 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
 - Game code is in `src/`. Dependencies point inward: entrypoints, then app,
   then gameplay, then simulation and domain. Read
   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before structural changes;
-  `pnpm check:architecture` enforces it, including a 700-line limit per module
-  (two data tables are exempt; see `scripts/check-source-architecture.mjs`).
+  `pnpm check:architecture` enforces it: rules over module roles
+  (`config/architecture-roles.json`), allowed directory edges
+  (`config/architecture-layers.json`), a ratcheted allowlist of today's
+  violating edges and import cycles (`config/architecture-baseline.json`) and a
+  700-line limit per module (two data tables are exempt).
 - `src/agents/` (AI player research) and `src/tearbench/` (TearBench, the
   verification system) are tooling, not game features. `src/ghost/` mixes the
   player's replay system with unfinished replay features.
@@ -95,6 +98,11 @@ while iterating; `pnpm check:quick` for cheap static confidence;
 ([docs/RELEASE_AUTHORITY.md](docs/RELEASE_AUTHORITY.md)). Never weaken a gate to
 make it pass. `pnpm check:code-budget` ratchets file size, line length, packed lines
 and function size (see docs/ARCHITECTURE.md); never raise its baseline to pass.
+`pnpm check:architecture` fails closed: moving or renaming a module that the role
+map names fails until the map is updated in the same change, and the layer
+allowlist and cycle baseline may only shrink (`--update` lowers them; growth needs
+a reviewed `--allow-increase <file>`). `--explain <file>` lists the rules, roles
+and allowlisted edges that apply to a file; `pnpm test:architecture` covers the gate.
 `pnpm test:determinism` must stay green for any refactor that claims no behaviour change.
 Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 `pnpm check:terminology`. Use the product names in

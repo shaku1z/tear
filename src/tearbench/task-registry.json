@@ -641,6 +641,28 @@
       "intentionalReplica": "none"
     },
     {
+      "taskId": "unit.test-architecture",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/source-architecture.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:architecture"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
       "taskId": "unit.test-tutorial-gold-fingerprint",
       "version": 1,
       "runner": {
@@ -3866,6 +3888,7 @@
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
+      "unit.test-architecture",
       "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
@@ -3956,6 +3979,7 @@
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
+      "unit.test-architecture",
       "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
@@ -4044,6 +4068,7 @@
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
+      "unit.test-architecture",
       "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
@@ -4148,6 +4173,7 @@
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
+      "unit.test-architecture",
       "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
@@ -4236,6 +4262,7 @@
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
+      "unit.test-architecture",
       "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",

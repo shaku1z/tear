@@ -40,6 +40,7 @@
     "test:tearbench-selection": "node --test tests/tearbench-evidence-selection.test.mjs",
     "test:terminology": "node --test tests/terminology-checkers.test.mjs",
     "test:code-budget": "node --test tests/code-budget.test.mjs",
+    "test:architecture": "node --test tests/source-architecture.test.mjs",
     "test:tutorial-gold-fingerprint": "node --test tests/tutorial-gold-fingerprint.test.mjs",
     "test:docs": "node --test tests/docs-authority-checker.test.mjs",
     "test:workspace": "node --test tests/workspace-check.test.mjs",

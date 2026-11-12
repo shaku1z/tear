@@ -1,0 +1,476 @@
+{
+  "format": "tear-architecture-baseline.v1",
+  "note": "Recorded by `node scripts/check-source-architecture.mjs --update`. Both lists may only shrink; see docs/ARCHITECTURE.md.",
+  "layerViolations": [
+    {
+      "from": "src/audio/legacy-synth.ts",
+      "to": "src/replay/envelope.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/config/game-config.ts",
+      "to": "src/gameplay/run/boss-definitions.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/config/game-config.ts",
+      "to": "src/gameplay/run/difficulty-catalog.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/config/game-config.ts",
+      "to": "src/gameplay/run/mode-catalog.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/config/game-config.ts",
+      "to": "src/gameplay/weapon-tuning.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/config/game-config.ts",
+      "to": "src/input/legacy-input-contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/game-reference/game-reference.ts",
+      "to": "src/replay/hash.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/campaign/chapter-cinematic-binding.ts",
+      "to": "src/replay/hash.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/run/seed-locked-draft.ts",
+      "to": "src/replay/hash.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/runtime/authoritative-input.ts",
+      "to": "src/input/game-action.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/runtime/authoritative-step.ts",
+      "to": "src/replay/hash.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/runtime/canonical-state.ts",
+      "to": "src/tearbench/environment-codec.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/training/boss-practice-source-restore.ts",
+      "to": "src/replay/hash.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/training/live-tutorial-runtime.ts",
+      "to": "src/replay/hash.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/gameplay/training/tutorial-gold-reference.ts",
+      "to": "src/replay/hash.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/application-frame-events.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/boss-memory-origin.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/boss-memory.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/boss-memory.ts",
+      "to": "src/tearbench/gameplay-causal-events.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/boss-memory.ts",
+      "to": "src/tearbench/production-replay-composition.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/boss-memory.ts",
+      "to": "src/tearbench/state-codecs.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/capsule-replay-envelope.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/capsule-replay-envelope.ts",
+      "to": "src/tearbench/state-codecs.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/capsule-replay-envelope.ts",
+      "to": "src/tearbench/validation.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/coach-history.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/coach.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/coach.ts",
+      "to": "src/tearbench/tearsdl.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/finale-companion.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/finale-playback.ts",
+      "to": "src/tearbench/production-replay-composition.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/fork-origin.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/fork-origin.ts",
+      "to": "src/tearbench/environment-codec.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/knowledge-libraries.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/knowledge-libraries.ts",
+      "to": "src/tearbench/tearsdl.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/live-causal-events.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/live-causal-events.ts",
+      "to": "src/tearbench/gameplay-causal-events.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/live-ghost-reference.ts",
+      "to": "src/tearbench/live-runtime-snapshots.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/live-ghost-reference.ts",
+      "to": "src/tearbench/production-replay-composition.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/live-ghost-reference.ts",
+      "to": "src/tearbench/registries.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/player-experiences.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/production-replay-comparison.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/production-replay-session.ts",
+      "to": "src/tearbench/production-replay-composition.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/production-replay-verification.ts",
+      "to": "src/tearbench/production-replay-composition.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/recorded-challenge.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/recorded-challenge.ts",
+      "to": "src/tearbench/gameplay-causal-events.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/recorded-challenge.ts",
+      "to": "src/tearbench/production-replay-composition.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/replay-admission.ts",
+      "to": "src/app/legacy-state-controller.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/replay-admission.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/replay-admission.ts",
+      "to": "src/tearbench/validation.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/replay-world.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/replay-world.ts",
+      "to": "src/tearbench/state-codecs.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/ghost/seed-race-decisions.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/theater.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/truth-kernel.ts",
+      "to": "src/tearbench/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/ghost/truth-kernel.ts",
+      "to": "src/tearbench/registries.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/input/legacy-input-contracts.ts",
+      "to": "src/app/messages.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/input/semantic-buffer.ts",
+      "to": "src/app/messages.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/persistence/audio-settings.ts",
+      "to": "src/audio/mixer.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/persistence/legacy-profile.ts",
+      "to": "src/platform/contracts.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/presentation/screens/academy.ts",
+      "to": "src/agents/training-archive.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/presentation/screens/career-archive.ts",
+      "to": "src/ghost/career-archive.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/presentation/screens/foundry.ts",
+      "to": "src/agents/training-operations.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/presentation/screens/ghost-lab.ts",
+      "to": "src/agents/surface-route.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/presentation/screens/ghost-lab.ts",
+      "to": "src/replay/surface-route.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/presentation/screens/leaderboards-replays.ts",
+      "to": "src/replay/surface-route.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/presentation/screens/pause-results.ts",
+      "to": "src/agents/surface-route.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/replay/envelope.ts",
+      "to": "src/app/messages.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/browser/live-runtime-bridge.ts",
+      "to": "src/agents/browser-active-policy-runtime.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/browser/live-runtime-bridge.ts",
+      "to": "src/agents/live-watch-agent-host.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/browser/live-runtime-bridge.ts",
+      "to": "src/agents/run-monitor.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/browser/live-runtime-bridge.ts",
+      "to": "src/agents/surface-route.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-combat-simulation.ts",
+      "to": "src/app/live-aurora-track-wiring.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-combat-simulation.ts",
+      "to": "src/app/live-rootbound-wiring.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-combat-simulation.ts",
+      "to": "src/app/live-tutorial-coach-frame.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-combat-simulation.ts",
+      "to": "src/app/live-white-hart-wiring.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-finale-runtime.ts",
+      "to": "src/app/live-game-host-state.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/tearbench/production-replay-composition.ts",
+      "to": "src/app/campaign-controller-factory.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-replay-composition.ts",
+      "to": "src/app/live-campaign-sequences.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-replay-composition.ts",
+      "to": "src/app/live-frame-runtime.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-replay-composition.ts",
+      "to": "src/app/live-particle-presentation-state.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-replay-composition.ts",
+      "to": "src/app/live-state-forge-adapter.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-replay-composition.ts",
+      "to": "src/app/live-state-forge-runtime-bridge.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/game-runtime-dependencies.ts",
+      "kind": "type"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/live-authoritative-input-adapter.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/live-boss-phase-practice.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/live-cinematic-host.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/live-source-void-controller.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/live-world-composition.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/live-world-context.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/live-world-entity-factory.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/scripted-agent-hierarchy.ts",
+      "to": "src/agents/contracts.ts",
+      "kind": "type"
+    }
+  ],
+  "cycles": [
+    [
+      "src/ghost/application-frame-events.ts",
+      "src/ghost/authoritative-receipt.ts",
+      "src/ghost/boss-memory-origin.ts",
+      "src/ghost/boss-memory.ts",
+      "src/ghost/capsule-archive.ts",
+      "src/ghost/capsule-paired-archive.ts",
+      "src/ghost/capsule-vault.ts",
+      "src/ghost/cold-restore-job.ts",
+      "src/ghost/cold-restore.ts",
+      "src/ghost/finale-companion.ts",
+      "src/ghost/fork-origin.ts",
+      "src/ghost/live-causal-events.ts",
+      "src/ghost/production-replay-session.ts",
+      "src/ghost/production-replay-verification.ts",
+      "src/ghost/replay-admission.ts",
+      "src/tearbench/production-replay-composition.ts"
+    ]
+  ]
+}
