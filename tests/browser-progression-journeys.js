@@ -3,7 +3,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 
-withJourney({ name: "progression journeys", port: 8142 }, async ({ page, boot, waitScreen, clickAndWait }) => {
+withJourney({ name: "progression journeys", port: 8142, recordFrames: true }, async ({ page, boot, waitScreen, clickAndWait,
+  waitArmed, labelPoint, clickLabel, clickCard }) => {
   function requireHook(hooks, name) {
     assert.ok(hooks.includes(name), `built artifact is missing required PANTHEON_DEBUG hook: ${name}`);
   }
@@ -47,31 +48,29 @@ withJourney({ name: "progression journeys", port: 8142 }, async ({ page, boot, w
   }
 
   await page.evaluate(() => window.__PANTHEON_TEST.openDraft({ expanded: true, rerolls: 2, reserve: true }));
-  await waitScreen("draft");
+  await waitArmed("draft");
   const hooks = await page.evaluate(() => Object.keys(window.__PANTHEON_TEST));
   const initialDraft = await page.evaluate(() => window.__PANTHEON_TEST.state().draft || null);
   assert.ok(initialDraft && initialDraft.choiceCount >= 3, "draft hook prepares real choices");
   await page.keyboard.press("r");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().draft?.rerolls === 1, undefined, { timeout: 5000 });
   assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.state().draft.rerolls)), 1, "real R input consumes one reroll");
-  await page.mouse.click(314, 300);
-  await waitScreen("reserve");
+  await clickCard(1, "reserve");
   assert.ok((await page.evaluate(() => window.__PANTHEON_TEST.state().draft.reserveCount)) >= 1, "draft selection produces reserve choices");
-  await page.mouse.click(314, 300);
-  await waitScreen("playing");
+  await waitArmed("reserve");
+  await clickCard(1, "playing");
   assert.ok(await page.evaluate(() => window.__PANTHEON_TEST.state().draft.reservedId), "real reserve selection is retained");
 
   await page.evaluate(() => window.__PANTHEON_TEST.openDraft({ expanded: true, rerolls: 1, reserve: true }));
-  await waitScreen("draft");
-  await page.mouse.click(314, 300);
-  await waitScreen("reserve");
-  await clickAndWait(800, 706, "playing");
+  await waitArmed("draft");
+  await clickCard(1, "reserve");
+  await waitArmed("reserve");
+  await clickLabel("SKIP RESERVE", "playing");
 
   requireHook(hooks, "openTierUp");
   await page.evaluate(() => window.__PANTHEON_TEST.openTierUp());
-  await waitScreen("tierup");
-  await page.mouse.click(314, 300);
-  await waitScreen("playing");
+  await waitArmed("tierup");
+  await clickCard(1, "playing");
 
   await boot();
   await clickAndWait(260, 452, "shop");
@@ -90,7 +89,13 @@ withJourney({ name: "progression journeys", port: 8142 }, async ({ page, boot, w
   await clickAndWait(800, 850, "menu");
 
   await clickAndWait(260, 266, "profile");
-  for (const x of [612, 800, 988, 612]) { await page.mouse.click(x, 271); await settleInput(); }
+  // Every profile tab that stays on the profile page, by its drawn label (CAREER opens its own archive page).
+  for (const tab of ["REPLAYS", "VAULT", "STATS", "BESTS"]) {
+    const point = await labelPoint(tab);
+    await page.mouse.click(point.x, point.y);
+    await settleInput();
+    assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "profile", `${tab} tab keeps the profile open`);
+  }
   await clickAndWait(800, 850, "menu");
 
   await clickAndWait(260, 513, "achievements");

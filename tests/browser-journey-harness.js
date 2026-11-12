@@ -14,6 +14,36 @@ function contentType(file) {
   return "application/octet-stream";
 }
 
+/** Page init script for `recordFrames`: the last drawn frame's text and stroked rectangles, in CSS pixels. */
+function recordCanvasFrames() {
+  const frame = { texts: [], rects: [] };
+  let pending = { texts: [], rects: [] };
+  const toCss = (context, x, y) => {
+    const m = context.getTransform(), bounds = context.canvas.getBoundingClientRect(), k = bounds.width / context.canvas.width;
+    return { x: bounds.left + (m.a * x + m.c * y + m.e) * k, y: bounds.top + (m.b * x + m.d * y + m.f) * k, k: k * Math.hypot(m.a, m.b) };
+  };
+  const fillText = CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText = function recordText(value, x, y, ...rest) {
+    if (this.canvas.id === "game") pending.texts.push({ text: String(value), baseline: this.textBaseline, ...toCss(this, x, y) });
+    return fillText.call(this, value, x, y, ...rest);
+  };
+  const strokeRect = CanvasRenderingContext2D.prototype.strokeRect;
+  CanvasRenderingContext2D.prototype.strokeRect = function recordRect(x, y, w, h) {
+    if (this.canvas.id === "game") {
+      const origin = toCss(this, x, y);
+      pending.rects.push({ x: origin.x, y: origin.y, w: w * origin.k, h: h * origin.k });
+    }
+    return strokeRect.call(this, x, y, w, h);
+  };
+  const raf = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (callback) => raf((time) => {
+    if (pending.texts.length > 0) { frame.texts = pending.texts; frame.rects = pending.rects; }
+    pending = { texts: [], rects: [] };
+    callback(time);
+  });
+  window.__TEAR_JOURNEY_FRAME__ = frame;
+}
+
 async function withJourney(options, run) {
   const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
   const root = path.resolve(__dirname, "..", "dist", buildDirectory);
@@ -116,6 +146,51 @@ async function withJourney(options, run) {
       await page.mouse.click(x, y);
       await waitScreen(screen);
     }
+    // Canvas screens have no DOM controls, so `recordFrames` journeys find them the way a
+    // player does: from what the last frame drew. Each frame's text and stroked rectangles
+    // are kept in CSS pixels; a reward card is the outlined frame around its number badge.
+    if (options.recordFrames) await page.addInitScript(recordCanvasFrames);
+    /** Choice and results screens ignore input for UI_CONFIRM_SETTLE_SECONDS (0.35 s) after they open. */
+    async function waitArmed(screen) {
+      await waitScreen(screen);
+      await page.evaluate(() => new Promise((resolve) => {
+        const start = performance.now();
+        const tick = () => { if (performance.now() - start >= 450) resolve(); else requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+      }));
+    }
+    /** The middle of a drawn control label (RETRY, SKIP RESERVE, a tab name). */
+    async function labelPoint(label) {
+      assert.ok(options.recordFrames, "labelPoint needs the recordFrames journey option");
+      const handle = await page.waitForFunction((text) => {
+        const entry = window.__TEAR_JOURNEY_FRAME__.texts.find((candidate) => candidate.text === text);
+        return entry ? { x: entry.x, y: entry.y - 4 } : null;
+      }, label, { timeout: 5000 });
+      return handle.jsonValue();
+    }
+    async function clickLabel(label, screen) {
+      const point = await labelPoint(label);
+      await clickAndWait(point.x, point.y, screen);
+    }
+    /** Centre of the drawn card whose key badge reads `number`: the smallest outlined frame around the badge. */
+    async function cardCentre(number) {
+      assert.ok(options.recordFrames, "cardCentre needs the recordFrames journey option");
+      const handle = await page.waitForFunction((label) => {
+        const frame = window.__TEAR_JOURNEY_FRAME__;
+        const badge = frame.texts.find((entry) => entry.text === label && entry.baseline === "middle");
+        if (!badge) return null;
+        const cards = frame.rects.filter((rect) => rect.h > 150 && rect.w > 150
+          && badge.x > rect.x && badge.x < rect.x + rect.w && badge.y > rect.y && badge.y < rect.y + rect.h);
+        if (cards.length === 0) return null;
+        const card = cards.reduce((best, rect) => rect.w * rect.h < best.w * best.h ? rect : best);
+        return { x: card.x + card.w / 2, y: card.y + card.h / 2 };
+      }, String(number), { timeout: 5000 });
+      return handle.jsonValue();
+    }
+    async function clickCard(number, screen) {
+      const centre = await cardCentre(number);
+      await clickAndWait(centre.x, centre.y, screen);
+    }
     // Migration tests need to create a legacy IndexedDB schema at this exact
     // HTTP origin before the application opens it. Ordinary journeys retain
     // their existing eager boot behavior.
@@ -123,7 +198,8 @@ async function withJourney(options, run) {
     const served = await page.request.get(`${baseUrl}/build-info.json`);
     assert.ok(served.ok(), "served build-info.json is unavailable");
     assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
-    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait, buildInfo });
+    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait, buildInfo,
+      waitArmed, labelPoint, clickLabel, cardCentre, clickCard });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser && options.browserCloseTimeoutMs) {
