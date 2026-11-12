@@ -29,7 +29,7 @@
     },
     {
       "from": "src/config/game-config.ts",
-      "to": "src/input/legacy-input-contracts.ts",
+      "to": "src/input/browser-input-contracts.ts",
       "kind": "type"
     },
     {
@@ -229,7 +229,7 @@
     },
     {
       "from": "src/ghost/replay-admission.ts",
-      "to": "src/app/interface/legacy-state-controller.ts",
+      "to": "src/app/interface/app-state-controller.ts",
       "kind": "value"
     },
     {
@@ -273,7 +273,7 @@
       "kind": "value"
     },
     {
-      "from": "src/input/legacy-input-contracts.ts",
+      "from": "src/input/browser-input-contracts.ts",
       "to": "src/app/messages.ts",
       "kind": "type"
     },
@@ -288,7 +288,7 @@
       "kind": "value"
     },
     {
-      "from": "src/persistence/legacy-profile.ts",
+      "from": "src/persistence/profile-store.ts",
       "to": "src/platform/contracts.ts",
       "kind": "type"
     },

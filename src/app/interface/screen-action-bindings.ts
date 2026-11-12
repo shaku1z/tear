@@ -1,5 +1,5 @@
 import { createScreenActionRouter } from "./screen-action-router";
-import type { LegacyAppScreen } from "./legacy-state-controller";
+import type { AppScreen } from "./app-state-controller";
 import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
 import type { ReplayScreenAdapter } from "../replay/replay-screen-adapter";
 import type { SettingsRenameAdapters } from "../screens/settings-rename-adapters";
@@ -11,7 +11,7 @@ import type { ScreenAction } from "../../presentation/screens/contracts";
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
   readonly ghostFiles: Pick<GhostVaultLibraryPort, "pickArchive" | "restoreArchive" | "cancelArchive" | "downloadArchive">;
-  readonly setScreen: (screen: LegacyAppScreen) => void; readonly resetScroll: () => void;
+  readonly setScreen: (screen: AppScreen) => void; readonly resetScroll: () => void;
   readonly setSetupSelection: (kind: "mode" | "difficulty" | "weapon" | "boss", id: string) => void;
   readonly startSelectedRace?: () => void; readonly startSelectedRun: () => void; readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
   readonly currentRun: () => Readonly<{ mode: RunMode; diff: RunDifficulty }>;

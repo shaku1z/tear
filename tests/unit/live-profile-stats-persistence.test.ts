@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createLiveProfileStatsPersistence } from "../../src/app/progress/profile-stats-persistence";
 import { createLivePracticeEncounterPersistence } from "../../src/app/progress/practice-encounter-persistence";
-import { createLegacyProfile } from "../../src/persistence/legacy-profile";
+import { createProfileStore } from "../../src/persistence/profile-store";
 import { createLegacyPlatformCompatibility } from "../../src/platform/legacy-compat";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 
@@ -13,7 +13,7 @@ function encounterBacking() {
     getItem: (key) => values.get(key) ?? null, removeItem: (key) => { values.delete(key); },
     setItem(key, value) { if (key === "tear_profile_v2") { if (blocked) throw new Error("quota"); writes++; } values.set(key, value); },
   } });
-  const load = () => { const profile = createLegacyProfile({ store: CG.store, writerId: () => "encounter-test", getAchievements: () => undefined, getMeta: () => undefined }); profile.load(); return profile; };
+  const load = () => { const profile = createProfileStore({ store: CG.store, writerId: () => "encounter-test", getAchievements: () => undefined, getMeta: () => undefined }); profile.load(); return profile; };
   const profile = load(), authority = createLivePracticeEncounterPersistence(profile);
   const replay = createProductionReplayWorld({ seed: "ordinary-exposure", enemies: [{ id: "charger", x: 400, y: 700 }] });
   const run = replay.world.state.run(); if (!run) throw new Error("ordinary exposure run missing");

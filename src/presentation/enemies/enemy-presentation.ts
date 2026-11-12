@@ -12,7 +12,7 @@ import { installWardenColossusRenderers } from "./renderers/warden-colossus-rend
 
 export type { EnemyPresentationDependencies } from "./renderers/enemy-renderer-types";
 
-export function createLegacyEnemyPresentation(dependencies: EnemyPresentationDependencies) {
+export function createEnemyPresentation(dependencies: EnemyPresentationDependencies) {
   const runtime = createEnemyRendererRuntime(dependencies);
   function install(types: EnemyTypes): void {
     installBaseEnemyRenderers(types, runtime);

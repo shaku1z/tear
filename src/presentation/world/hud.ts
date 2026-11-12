@@ -1,4 +1,4 @@
-import type { BossHudSnapshot, HudSnapshot, LegacyWorldRenderContext, RunHudSnapshot } from "./contracts";
+import type { BossHudSnapshot, HudSnapshot, WorldRenderContext, RunHudSnapshot } from "./contracts";
 import { clamp } from "./primitives";
 
 /**
@@ -14,7 +14,7 @@ export interface HudFrame {
   readonly centerX: number;
 }
 
-export function hudFrame(context: LegacyWorldRenderContext): HudFrame {
+export function hudFrame(context: WorldRenderContext): HudFrame {
   const inset = context.ui.t.space.lg, screen = context.screen;
   return {
     left: screen.x + context.safe.left + inset,
@@ -25,7 +25,7 @@ export function hudFrame(context: LegacyWorldRenderContext): HudFrame {
 }
 
 /** Vertical rhythm of the centred run group (wave, stats) and the multiplier slot below it. */
-function runGroupMetrics(context: LegacyWorldRenderContext) {
+function runGroupMetrics(context: WorldRenderContext) {
   const t = context.ui.t, pad = t.metric.hudPad, top = hudFrame(context).top;
   const titleY = top + pad + Math.round(t.type.h2 * 0.8);
   const valueY = titleY + t.space.sm + t.type.body;
@@ -37,11 +37,11 @@ function runGroupMetrics(context: LegacyWorldRenderContext) {
 }
 
 /** Shared lower lane for the boss header and adjacent teaching cards (top of the boss plate). */
-export function bossHudTop(context: LegacyWorldRenderContext): number {
+export function bossHudTop(context: WorldRenderContext): number {
   return runGroupMetrics(context).slotBottom + context.ui.t.space.sm;
 }
 
-export function createHudRenderer(context: LegacyWorldRenderContext) {
+export function createHudRenderer(context: WorldRenderContext) {
   const canvas = context.canvas;
   const ui = context.ui;
 

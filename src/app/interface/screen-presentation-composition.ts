@@ -9,7 +9,7 @@ import { createLiveScreenActionBindings, gateScreenActions, type ScreenActionBin
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import { createLiveSettingsRenameAdapters, type SettingsRenameAdapters,
   type SettingsRenameServices } from "../screens/settings-rename-adapters";
-import type { LegacyAppScreen } from "./legacy-state-controller";
+import type { AppScreen } from "./app-state-controller";
 import type { AcademyScreenView } from "../../presentation/screens/contracts";
 import type { FoundryScreenView } from "../../presentation/screens/contracts";
 import type { GhostLabScreenView } from "../../presentation/screens/contracts";
@@ -50,7 +50,7 @@ export interface LiveScreenPresentationComposition {
   readonly library: LibraryScreenAdapters;
   readonly replay: ReplayScreenAdapter;
   readonly settings: SettingsRenameAdapters;
-  readonly renderers: Readonly<Record<LegacyAppScreen, () => void>>;
+  readonly renderers: Readonly<Record<AppScreen, () => void>>;
   readonly modelRenderers: ReturnType<typeof createLiveScreenRenderers>;
   readonly chooseUpgrade: (index: number) => void;
   readonly chooseReserve: (index: number) => void;
@@ -59,7 +59,7 @@ export interface LiveScreenPresentationComposition {
   readonly dispatch: ReturnType<typeof createLiveScreenActionBindings>;
 }
 
-function isLegacyScreen(value: string): value is LegacyAppScreen {
+function isAppScreen(value: string): value is AppScreen {
   return ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings",
     "continue", "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile",
     "achievements", "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence", "ghostpublication", "ghostsupport"].includes(value);
@@ -88,7 +88,7 @@ export function createLiveScreenPresentationComposition(
   });
   const library: LibraryScreenAdapters = createLiveLibraryScreenAdapters({
     ...options.library, renderers: renderer,
-    enterReplay: (record, from) => replay.enter(record, isLegacyScreen(from) ? from : "profile"),
+    enterReplay: (record, from) => replay.enter(record, isAppScreen(from) ? from : "profile"),
     enterGhostTheater: (id) => replay.enterGhostCapsule(id, "profile"),
     enterCareerSource: async (id, command, expectedManifestHash) => {
       if (command === "race") { await options.library.chase?.chooseRace?.(id, expectedManifestHash); return; }

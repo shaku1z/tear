@@ -31,7 +31,7 @@ import { createProductionReplayWorld } from "../../src/tearbench/production-worl
 import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench/state-codecs";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
-import { LegacyAppStateController } from "../../src/app/interface/legacy-state-controller";
+import { AppStateController } from "../../src/app/interface/app-state-controller";
 import { createLiveGhostReferenceController } from "../../src/app/replay/ghost-reference-controller";
 import type { GhostLiveReference } from "../../src/ghost/live-ghost-reference-data";
 import type { GameRun } from "../../src/app/shell/game-runtime-state";
@@ -104,7 +104,7 @@ function openingDestinationEvidence(target: ReturnType<typeof createProductionRe
 }
 
 function actualOpeningHost(previousScreen = "setup", failStarted = false, injectedHeldInput = false,
-  observer?: Readonly<{ captured: (capture: ReturnType<typeof captureProductionReplayCheckpoint>, boundary: { runId: string; seed: number }) => void; event: (event: TearCausalEventV1) => void; installed?: (run: GameRun) => void }>, baselinePractice = false, application?: LegacyAppStateController) {
+  observer?: Readonly<{ captured: (capture: ReturnType<typeof captureProductionReplayCheckpoint>, boundary: { runId: string; seed: number }) => void; event: (event: TearCausalEventV1) => void; installed?: (run: GameRun) => void }>, baselinePractice = false, application?: AppStateController) {
   const source = createProductionGhostReplayComposition({ seed: "actual-opening-source" }).create(undefined);
   const { replay } = source, noop = () => undefined, order: string[] = [];
   let screen = previousScreen, captured: ReturnType<typeof captureProductionReplayCheckpoint> | undefined;
@@ -241,7 +241,7 @@ async function sealedActualOpening(previousScreen = "menu", legacy = false, cont
 
 describe("LiveRunStartController", () => {
   it("launches admitted Chase from Profile through the real setup opening boundary", async () => {
-    const application = new LegacyAppStateController(createSurfaceAvailability("engineering")); application.transition("profile");
+    const application = new AppStateController(createSurfaceAvailability("engineering")); application.transition("profile");
     expect(() => application.transition("playing", { runId: "unscoped" })).toThrow(/Illegal legacy application transition/);
     const reference: GhostLiveReference = { version: 1, mode: "endless", difficulty: "normal", weapon: "sword", seed: "reference", frames: [], splits: [],
       build: { version: "1", revision: "r", target: "test", rulesetVersion: "v", contentHash: "c", configHash: "config" },

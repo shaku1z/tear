@@ -1,34 +1,34 @@
 import { screenSurface, type SurfaceAvailability } from "../../domain/surface-availability";
 
-export type LegacyAppScreen =
+export type AppScreen =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
   | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication" | "ghostsupport";
 
-export interface LegacyAppSnapshot {
-  readonly screen: LegacyAppScreen;
-  readonly previous: LegacyAppScreen | null;
+export interface AppStateSnapshot {
+  readonly screen: AppScreen;
+  readonly previous: AppScreen | null;
   readonly runId: string | null;
-  readonly settingsReturn: LegacyAppScreen;
-  readonly replayReturn: LegacyAppScreen;
+  readonly settingsReturn: AppScreen;
+  readonly replayReturn: AppScreen;
   readonly revision: number;
 }
 
-export interface LegacyTransitionContext {
+export interface AppTransitionContext {
   readonly runId?: string;
-  readonly returnTo?: LegacyAppScreen;
+  readonly returnTo?: AppScreen;
   /** A verified Ghost Theater checkpoint may enter its explicitly unranked child. */
   readonly practiceLaunch?: boolean;
 }
 
-export const LEGACY_APP_SCREENS = Object.freeze([
+export const APP_SCREENS = Object.freeze([
   "menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
   "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
   "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence", "ghostpublication", "ghostsupport",
-] as const satisfies readonly LegacyAppScreen[]);
+] as const satisfies readonly AppScreen[]);
 
-export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly LegacyAppScreen[]>> = Object.freeze({
+export const LEGAL_TRANSITIONS: Readonly<Record<AppScreen, readonly AppScreen[]>> = Object.freeze({
   menu: ["setup", "playing", "profile", "shop", "achievements", "leaderboards", "codex", "settings", "rename", "replay", "academy", "foundry", "ghostlab"],
   setup: ["menu", "playing", "rename"],
   playing: ["menu", "paused", "draft", "reserve", "tierup", "continue", "gameover", "win", "pgmenu", "pglab", "rename"],
@@ -47,7 +47,7 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
   profile: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication", "ghostsupport"],
   achievements: ["menu", "rename"],
   leaderboards: ["menu", "profile", "replay", "rename"],
-  rename: LEGACY_APP_SCREENS.filter((screen) => screen !== "rename"),
+  rename: APP_SCREENS.filter((screen) => screen !== "rename"),
   pgmenu: ["playing", "pglab", "rename"],
   pglab: ["playing", "pgmenu", "rename"],
   academy: ["menu", "rename"],
@@ -62,7 +62,7 @@ export const LEGAL_LEGACY_TRANSITIONS: Readonly<Record<LegacyAppScreen, readonly
 });
 
 export class IllegalLegacyAppTransitionError extends Error {
-  constructor(readonly from: LegacyAppScreen, readonly to: LegacyAppScreen) {
+  constructor(readonly from: AppScreen, readonly to: AppScreen) {
     super(`Illegal legacy application transition: ${from} -> ${to}`);
     this.name = "IllegalLegacyAppTransitionError";
   }
@@ -70,22 +70,22 @@ export class IllegalLegacyAppTransitionError extends Error {
 
 /** Refusal for an engineering screen requested in a build whose surface policy does not admit it. */
 export class UnavailableLegacyAppScreenError extends IllegalLegacyAppTransitionError {
-  constructor(from: LegacyAppScreen, to: LegacyAppScreen) {
+  constructor(from: AppScreen, to: AppScreen) {
     super(from, to);
     this.message = `Unavailable application screen in this build: ${from} -> ${to}`;
     this.name = "UnavailableLegacyAppScreenError";
   }
 }
 
-function ensureScreen(value: LegacyAppScreen, label: string): LegacyAppScreen {
-  if (!LEGACY_APP_SCREENS.includes(value)) throw new TypeError(`${label} is not a recognized application screen`);
+function ensureScreen(value: AppScreen, label: string): AppScreen {
+  if (!APP_SCREENS.includes(value)) throw new TypeError(`${label} is not a recognized application screen`);
   return value;
 }
 
 /** Authoritative owner for the classic shell while its render functions remain string-oriented. */
-export class LegacyAppStateController {
+export class AppStateController {
   readonly #surfaces: SurfaceAvailability;
-  #snapshot: LegacyAppSnapshot = Object.freeze({
+  #snapshot: AppStateSnapshot = Object.freeze({
     screen: "menu",
     previous: null,
     runId: null,
@@ -99,17 +99,17 @@ export class LegacyAppStateController {
     this.#surfaces = surfaces;
   }
 
-  get screen(): LegacyAppScreen { return this.#snapshot.screen; }
-  get settingsReturn(): LegacyAppScreen { return this.#snapshot.settingsReturn; }
-  get replayReturn(): LegacyAppScreen { return this.#snapshot.replayReturn; }
-  snapshot(): LegacyAppSnapshot { return this.#snapshot; }
+  get screen(): AppScreen { return this.#snapshot.screen; }
+  get settingsReturn(): AppScreen { return this.#snapshot.settingsReturn; }
+  get replayReturn(): AppScreen { return this.#snapshot.replayReturn; }
+  snapshot(): AppStateSnapshot { return this.#snapshot; }
 
-  transition(to: LegacyAppScreen, context: LegacyTransitionContext = {}): LegacyAppScreen {
+  transition(to: AppScreen, context: AppTransitionContext = {}): AppScreen {
     ensureScreen(to, "to");
     const current = this.#snapshot;
     if (to === current.screen) return current.screen;
     if (!this.canEnter(to)) throw new UnavailableLegacyAppScreenError(current.screen, to);
-    if (!LEGAL_LEGACY_TRANSITIONS[current.screen].includes(to)) {
+    if (!LEGAL_TRANSITIONS[current.screen].includes(to)) {
       throw new IllegalLegacyAppTransitionError(current.screen, to);
     }
     let settingsReturn = current.settingsReturn;
@@ -140,12 +140,12 @@ export class LegacyAppStateController {
     return to;
   }
 
-  canTransition(to: LegacyAppScreen): boolean {
-    return to === this.screen || (this.canEnter(to) && LEGAL_LEGACY_TRANSITIONS[this.screen].includes(to));
+  canTransition(to: AppScreen): boolean {
+    return to === this.screen || (this.canEnter(to) && LEGAL_TRANSITIONS[this.screen].includes(to));
   }
 
   /** False for an engineering screen that this build's surface policy does not admit. */
-  canEnter(screen: LegacyAppScreen): boolean {
+  canEnter(screen: AppScreen): boolean {
     const surface = screenSurface(screen);
     return surface === undefined || this.#surfaces.allows(surface);
   }

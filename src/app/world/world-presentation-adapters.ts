@@ -5,9 +5,9 @@ import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { AchievementToastController } from "../interface/achievement-toast-controller";
 import type { TouchOnboardingController } from "../training/touch-onboarding-controller";
-import type { LegacyWorldRendererRegistry } from "../../presentation/world";
+import type { WorldRendererRegistry } from "../../presentation/world";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
-import { renderLegacyWorldFrame, type WorldBounds, type WorldCamera } from "../../presentation/world/legacy-world-frame";
+import { renderWorldFrame, type WorldBounds, type WorldCamera } from "../../presentation/world/world-frame";
 import { buildHudSnapshot } from "../../presentation/world/hud-snapshot";
 import { buildBossIntroSnapshot, buildPlaygroundHelpSnapshot, buildReticleSnapshot,
   buildStageBannerSnapshot, buildTouchControlsSnapshot, buildTutorialCardSnapshot,
@@ -73,7 +73,7 @@ export interface WorldPresentationServices {
     readonly actors: "include" | "exclude";
   }>;
   readonly screenRectangle: () => ScreenRectangle;
-  readonly world: LegacyWorldRendererRegistry;
+  readonly world: WorldRendererRegistry;
   readonly stage: { index: number; current: Stage; platforms: Platforms; bannerSeconds: number; name: string };
   readonly tutorial: LiveTutorialRuntime;
   readonly finale: () => Finale | null;
@@ -205,7 +205,7 @@ export function createLiveWorldPresentationAdapters(
     const blade = actorsIncluded ? state.blade() : undefined;
     const biome = ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(run.mode);
     const voidActive = !!run.voidScroll && (run.voidScroll.active || run.voidScroll.frozen);
-    return renderLegacyWorldFrame({ canvas, width, height, screen: services.screenRectangle(),
+    return renderWorldFrame({ canvas, width, height, screen: services.screenRectangle(),
       zoom: state.zoom(), shake: state.shake(), playing: state.screen() === "playing", random: d.cosmeticRandom,
       biome, debug: services.debug && services.capturePolicy().debug === "include", timeSeconds: d.CLOCK.sim, reducedMotion: d.A11Y.reducedMotion,
       stage: stage.current, playerX: physicalPlayer?.x ?? width / 2, sceneEffects: sceneEffects(voidActive), enemies: entityLayer(),

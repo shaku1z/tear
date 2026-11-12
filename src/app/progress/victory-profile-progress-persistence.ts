@@ -1,7 +1,7 @@
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 import type { ProfileStatsPersistence } from "./profile-stats-persistence";
 
-type Profile = Pick<ReturnType<typeof createLegacyProfile>, "data">;
+type Profile = Pick<ReturnType<typeof createProfileStore>, "data">;
 
 /** Composition-owned victory profile-data operations; outcome owns the later save request. */
 export interface VictoryProfileProgressPersistence {

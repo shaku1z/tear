@@ -1,7 +1,7 @@
 import type { OutcomeRunState } from "../../gameplay/run/outcome-planner";
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 
-type Profile = Pick<ReturnType<typeof createLegacyProfile>, "addStat" | "maxStat">;
+type Profile = Pick<ReturnType<typeof createProfileStore>, "addStat" | "maxStat">;
 type DefeatRun = Pick<OutcomeRunState, "runTime">;
 
 /** Composition-owned profile-stat update for a completed defeat outcome. */

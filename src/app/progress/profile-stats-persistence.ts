@@ -1,6 +1,6 @@
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 
-type Profile = Pick<ReturnType<typeof createLegacyProfile>, "addStat" | "maxStat">;
+type Profile = Pick<ReturnType<typeof createProfileStore>, "addStat" | "maxStat">;
 
 /** Shared composition-owned profile-stat port for generic gameplay callers. */
 export interface ProfileStatsPersistence {

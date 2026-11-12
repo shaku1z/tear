@@ -1,4 +1,4 @@
-import type { GamepadSettings } from "../input/legacy-input-contracts";
+import type { GamepadSettings } from "../input/browser-input-contracts";
 import { MODE_CATALOG } from "../gameplay/run/mode-catalog";
 import { bossPhaseMark } from "../gameplay/run/boss-definitions";
 import { createLegacyDifficulties } from "../gameplay/run/difficulty-catalog";

@@ -1,11 +1,11 @@
 import type { TearWorldEntityPresentationPorts } from "../../gameplay/runtime/tear-world-simulation-factories";
-import { createLegacyEnemyPresentation } from "../../presentation/enemies/legacy-enemy-renderers";
+import { createEnemyPresentation } from "../../presentation/enemies/enemy-presentation";
 import { createBladeRenderer } from "../../presentation/entities/blade-renderer";
 import { createMirrorRenderer } from "../../presentation/entities/mirror-renderer";
 import { createPlayerRenderer } from "../../presentation/entities/player-renderer";
 import { createProjectileRenderer } from "../../presentation/entities/projectile-renderer";
 
-type EnemyPresentationOptions = Parameters<typeof createLegacyEnemyPresentation>[0];
+type EnemyPresentationOptions = Parameters<typeof createEnemyPresentation>[0];
 
 /**
  * The application-facing renderer adapter for one world. It binds Canvas
@@ -60,7 +60,7 @@ export function createLiveWorldSimulationPresentationAdapter(
   const mirrorPresentation = createMirrorRenderer({
     clock, policy: { colors, world }, effects, graphics, theme, clamp: geometry.clamp, cosmeticRandom,
   });
-  const enemyPresentation = createLegacyEnemyPresentation({
+  const enemyPresentation = createEnemyPresentation({
     A11Y: accessibility, CLOCK: clock, policy: { aldric, bossTheater, chargedShot, colors, exotic, source, warden, world, view }, GFX: graphics, THEME: theme, UI: ui,
     clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
   });

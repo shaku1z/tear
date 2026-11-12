@@ -1,12 +1,12 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { LegacyGamepad } from "../../input/legacy-input-contracts";
+import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { buildMenuSnapshot } from "../../presentation/menu-setup-snapshots";
 import { firstRunProfileFacts, isFirstRunProfile } from "../../gameplay/progression/first-run-guidance";
 import type { createLiveSetupShopRenderers } from "../run/setup-shop-renderers";
 
 type Dependencies = Pick<GameRuntimeDependencies, "Attract" | "CG" | "Cloud" | "CONFIG" | "DAILY" | "Input" | "META" |
-  "PROFILE" | "SFX" | "SHOP" | "shopPurchaseProgressPersistence" | "surfaces" | "UI" | "WEAPONS"> & Readonly<{ PAD: LegacyGamepad }>;
+  "PROFILE" | "SFX" | "SHOP" | "shopPurchaseProgressPersistence" | "surfaces" | "UI" | "WEAPONS"> & Readonly<{ PAD: BrowserGamepad }>;
 type ScreenRenderers = ReturnType<typeof createLiveScreenRenderers>;
 type BestScore = Readonly<{ wave: number; score: number; time?: number }>;
 

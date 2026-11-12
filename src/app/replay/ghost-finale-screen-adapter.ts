@@ -3,12 +3,12 @@ import { createGhostFinalePlayback } from "../../ghost/finale-playback";
 import type { GhostFinalePermit } from "../../ghost/finale-companion";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import type { GhostTheaterScreenServices } from "../library/ghost-theater-screen-adapter";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 
 /** Source-time transport uses recorded frames, including multiple positions at the same canonical tick. */
 export function createGhostFinaleScreenAdapter(services: GhostTheaterScreenServices) {
   let active: { source: ReturnType<typeof createGhostFinalePlayback>; index: number; elapsed: number;
-    playing: boolean; speed: number; info: boolean; from: LegacyAppScreen; notice?: string } | undefined;
+    playing: boolean; speed: number; info: boolean; from: AppScreen; notice?: string } | undefined;
   const seek = (index: number) => { if (active === undefined) return; active.index = Math.max(0, Math.min(active.source.positions.length - 1, Math.floor(index))); active.elapsed = active.source.positions[active.index]?.seconds ?? 0; };
   const seekSeconds = (target: number) => {
     if (active === undefined) return;
@@ -16,7 +16,7 @@ export function createGhostFinaleScreenAdapter(services: GhostTheaterScreenServi
     seek(index < 0 ? active.source.positions.length - 1 : index);
   };
   return Object.freeze({
-    open(capsule: GhostReadCapsule, permit: GhostFinalePermit, from: LegacyAppScreen) {
+    open(capsule: GhostReadCapsule, permit: GhostFinalePermit, from: AppScreen) {
       const source = createGhostFinalePlayback(capsule, permit, services.presentation);
       active = { source, from, index: 0, elapsed: 0, playing: false, speed: 1, info: false };
     },

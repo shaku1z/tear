@@ -8,7 +8,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 import type { LiveRunControllerRegistry } from "../run/run-controller-api";
 import { createLiveCampaignHost } from "./campaign-host";
 import { createLiveCinematicHost } from "./cinematic-host";
@@ -50,7 +50,7 @@ export interface LiveCampaignTrainingOptions {
   readonly projectiles: () => GameProjectile[];
   readonly spawn: (kind: LiveWaveSpawnSpec["type"], hpScale: number) => GameEnemy | undefined;
   readonly resolveKill: (enemy: GameEnemy, cause: string) => void;
-  readonly setScreen: (screen: LegacyAppScreen) => void;
+  readonly setScreen: (screen: AppScreen) => void;
   readonly resetScroll: () => void;
   readonly scroll: () => number;
   readonly setScroll: (value: number) => void;

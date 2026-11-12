@@ -18,7 +18,7 @@ import { createLiveShopFeedbackState } from "../run/shop-feedback-state";
 import { createLiveCombatWorldState } from "../combat/combat-world-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
-import type { LegacyAppScreen, LegacyTransitionContext } from "../interface/legacy-state-controller";
+import type { AppScreen, AppTransitionContext } from "../interface/app-state-controller";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session"; import { modeSurface } from "../../gameplay/run/mode-catalog";
 import { trainingRunRequiresPreflight } from "../training/training-host";
 import { createLiveTutorialSessionActions } from "../training/tutorial-session-actions";
@@ -145,9 +145,9 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const { awardCoins, telemetry: economyTelemetry } = economyRuntime;
   const { openDraft: openRewardDraft, openTier: openRewardTier } = rewardRuntime;
   const { read: getBest, record: saveBest } = bestScores.api;
-  let state: LegacyAppScreen = APP.screen, canonicalTickStartedAt: number | null = null;
+  let state: AppScreen = APP.screen, canonicalTickStartedAt: number | null = null;
   const interfaceFrame = createLiveInterfaceFrameState(state);
-  let cancelPendingReplayOpen = () => { /* Replay is loaded later. */ }; let leaveCareer = () => { /* Lazy library not loaded yet. */ }; let interruptTutorialCoaching = () => { /* Training is loaded later. */ }; function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
+  let cancelPendingReplayOpen = () => { /* Replay is loaded later. */ }; let leaveCareer = () => { /* Lazy library not loaded yet. */ }; let interruptTutorialCoaching = () => { /* Training is loaded later. */ }; function setState(next: AppScreen, context?: AppTransitionContext): AppScreen {
     beat.screenChanged(next); cancelChaseForScreen(next); const prior = state;
     state = APP.transition(next, context); cancelPendingReplayOpen(); if (prior === "profile" && state !== "profile") leaveCareer(); Input.allowLock = state === "playing";
     if (prior === "playing" && state !== "playing") { interruptTutorialCoaching(); Input.discardSemanticInput(); }
@@ -294,7 +294,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     bossIntro: () => hostState.bossIntro(), stageName: () => stageRuntime.current.name, stageIndex: () => stageRuntime.index,
     totalWaves: modeWaves, waveActive: () => RUN_LIFECYCLE.isWaveActive, runPhase: () => RUN_LIFECYCLE.phase,
     topComboThreshold: () => CONFIG.trick.tiers.at(-1)?.at ?? 1 });
-  const isLegacyScreen = (screen: string): screen is LegacyAppScreen =>
+  const isAppScreen = (screen: string): screen is AppScreen =>
     ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
       "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
       "leaderboards", "rename", "pgmenu", "pglab"].includes(screen);
@@ -495,7 +495,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const coordinatorContext = {
     applicationFrameRecording: ghostFrames,
     now: () => performance.now(), state: () => state,
-    setState: (screen) => { if (isLegacyScreen(screen)) setState(screen); },
+    setState: (screen) => { if (isAppScreen(screen)) setState(screen); },
     input: Input, pad: typeof PAD === "undefined" ? null : PAD, navigator: browserNavigator, document: browserDocument, canvas,
     cinema: CINEMA, clipper: dependencies.Clipper ?? null,
     autoPauseDisconnect: () => settings.autoPauseDisconnect, requestPointerLock: requestOwnedPointerLock,
@@ -510,7 +510,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
     updateAttract: (dt, menu) => {
       if (menu) { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;
     },
-    isMenuScreen: (screen) => isLegacyScreen(screen) && isMenuScreen(screen),
+    isMenuScreen: (screen) => isAppScreen(screen) && isMenuScreen(screen),
     gameplayStart: () => { CG.gameplayStart(); }, gameplayStop: () => { CG.gameplayStop(); },
     cssPerLogicalPixel: () => viewport.cssPerLogicalPixel, setUiDensity: (density) => { UI.setDensity(density); },
     render: () => { interfaceComposition.renderPresentationFrame(interfaceFrame.deltaSeconds()); }, handleUi: () => { presentationHost.handleUi(); }, diagnostics: DIAG,
@@ -555,7 +555,7 @@ type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick:
   const liveStateForge = createLiveStateForgeAdapter({
     dependencies, entities: worldEntities, worldServices: worldContext.services, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
     platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(), environment: () => environment, clearEnvironmentRestore: () => { environment.clear("restore"); }, restoreEnvironment: (snapshot) => { environment.setStage(snapshot.stageId, "restore"); environment.replace(snapshot); },
-    screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); if (screen === "playing" && ghostPracticeSession.active() !== null) return; setState(screen); }, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
+    screen: () => state, setScreen: (screen) => { if (!isAppScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); if (screen === "playing" && ghostPracticeSession.active() !== null) return; setState(screen); }, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
     tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
     reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
     runtimeState: stateForgeRuntime.capture, restoreRuntimeState: stateForgeRuntime.restore, hudPresentation: hudFeedback, tutorialPresentation: { capture: () => TUT.capturePresentation(), restore: (value) => { TUT.restorePresentation(value); } },

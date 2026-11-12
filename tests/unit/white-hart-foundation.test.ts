@@ -17,7 +17,7 @@ import {
 } from "../../src/gameplay/run/boss-encounter";
 import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
 import { createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
-import { createLegacyEnemyPresentation } from "../../src/presentation/enemies/legacy-enemy-renderers";
+import { createEnemyPresentation } from "../../src/presentation/enemies/enemy-presentation";
 import { buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 import { projectLiveBossObservation } from "../../src/tearbench/live-observation-actors";
@@ -108,7 +108,7 @@ describe("White Hart production foundation", () => {
       { highContrast: true, reducedMotion: true, low: true },
     ]) {
       const harness = createEnemyHarness();
-      createLegacyEnemyPresentation({
+      createEnemyPresentation({
         A11Y: { highContrast: profile.highContrast, reducedMotion: profile.reducedMotion },
         CLOCK: { sim: 2 }, policy: CONFIG, GFX: { low: profile.low },
         THEME: { dark: false, ink: "#171219", rim: "#fff" },

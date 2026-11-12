@@ -1,5 +1,5 @@
 import type {
-  AchievementToastSnapshot, BossIntroSnapshot, LegacyWorldRenderContext, ReticleSnapshot,
+  AchievementToastSnapshot, BossIntroSnapshot, WorldRenderContext, ReticleSnapshot,
   StageBannerSnapshot, WaveBannerSnapshot,
 } from "./contracts";
 import { clamp } from "./primitives";
@@ -8,7 +8,7 @@ import { bossHudTop, hudFrame } from "./hud";
 /** Widest an achievement toast may grow; it never spans a title or a control column. */
 const TOAST_MAX_WIDTH = 360;
 
-export function createOverlayRenderers(context: LegacyWorldRenderContext) {
+export function createOverlayRenderers(context: WorldRenderContext) {
   const canvas = context.canvas;
   const ui = context.ui;
 

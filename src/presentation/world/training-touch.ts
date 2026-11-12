@@ -1,5 +1,5 @@
 import type {
-  LegacyWorldRenderContext, PlaygroundHelpSnapshot, TouchControlsSnapshot, TutorialCardSnapshot,
+  WorldRenderContext, PlaygroundHelpSnapshot, TouchControlsSnapshot, TutorialCardSnapshot,
 } from "./contracts";
 import { clamp } from "./primitives";
 import { bossHudTop, hudFrame } from "./hud";
@@ -25,7 +25,7 @@ export function tutorialCardLayout(frame: Readonly<{ left: number; right: number
   return { x: frame.centerX - width / 2, y: Math.max(laneBottom, minimumTop), width };
 }
 
-export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) {
+export function createTrainingTouchRenderers(context: WorldRenderContext) {
   const canvas = context.canvas;
   const ui = context.ui;
 

@@ -69,7 +69,7 @@ export interface WorldUiPort {
   }): void;
 }
 
-export interface LegacyWorldRenderContext {
+export interface WorldRenderContext {
   readonly canvas: CanvasRenderingContext2D;
   readonly ui: WorldUiPort;
   readonly width: number;
@@ -229,7 +229,7 @@ export interface ReticleSnapshot {
   readonly slamColor: string; readonly updraftColor: string;
 }
 
-export interface LegacyWorldRendererRegistry {
+export interface WorldRendererRegistry {
   enemyStatus(snapshot: EnemyStatusSnapshot): void;
   pantheonDebug(snapshot: PantheonDebugSnapshot): void;
   finaleWorld(layer: "rear" | "front", snapshot: FinaleWorldSnapshot): void;

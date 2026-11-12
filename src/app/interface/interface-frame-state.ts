@@ -1,8 +1,8 @@
-import type { LegacyAppScreen } from "./legacy-state-controller";
+import type { AppScreen } from "./app-state-controller";
 
 export interface LiveInterfaceFrameState {
-  readonly previousScreen: () => LegacyAppScreen;
-  readonly setPreviousScreen: (value: LegacyAppScreen) => void;
+  readonly previousScreen: () => AppScreen;
+  readonly setPreviousScreen: (value: AppScreen) => void;
   readonly seconds: () => number;
   readonly deltaSeconds: () => number;
   readonly advance: (deltaSeconds: number) => void;
@@ -13,15 +13,15 @@ export interface LiveInterfaceFrameState {
 }
 
 /** Owns menu-frame timing, previous-screen state, and entrance state. */
-export function createLiveInterfaceFrameState(initialScreen: LegacyAppScreen): LiveInterfaceFrameState {
+export function createLiveInterfaceFrameState(initialScreen: AppScreen): LiveInterfaceFrameState {
   let previousScreen = initialScreen;
   let seconds = 0;
   let deltaSeconds = 1 / 60;
   let enterSeconds = 0;
   let enterAmount = 1;
   return Object.freeze({
-    previousScreen: (): LegacyAppScreen => previousScreen,
-    setPreviousScreen: (value: LegacyAppScreen): void => { previousScreen = value; },
+    previousScreen: (): AppScreen => previousScreen,
+    setPreviousScreen: (value: AppScreen): void => { previousScreen = value; },
     seconds: (): number => seconds,
     deltaSeconds: (): number => deltaSeconds,
     advance: (value: number): void => { seconds += value; enterSeconds += value; deltaSeconds = value; },

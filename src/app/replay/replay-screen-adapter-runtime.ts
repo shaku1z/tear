@@ -1,6 +1,6 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 import type { VisualRecordingV2, VisualSpawnEvent } from "../../replay/visual-replay";
 import type { ReplayPuppet } from "../../presentation/replay-world-frame";
 import type { ReplayPuppetSource } from "../../presentation/replay-puppet-factory";
@@ -20,22 +20,22 @@ type Platform = ReturnType<GameRuntimeDependencies["stagePlatforms"]>[number];
 type VariantPuppet = ReplayPuppetSource & VariantEnemy;
 
 interface ReplayContext {
-  readonly data: VisualRecordingV2; readonly from: LegacyAppScreen;
+  readonly data: VisualRecordingV2; readonly from: AppScreen;
   stage: number; platforms: readonly Platform[]; readonly puppets: Record<string, ReplayPuppet | null | undefined>; info: boolean;
 }
 export interface ReplayStatus { readonly paused: boolean; readonly speed: number; readonly infoVisible: boolean;
-  readonly progress: number; readonly from: LegacyAppScreen }
+  readonly progress: number; readonly from: AppScreen }
 export interface ReplayScreenServices {
   readonly dependencies: Dependencies; readonly renderers: Renderers; readonly canvas: CanvasRenderingContext2D;
   readonly width: number; readonly height: number; readonly screenRectangle: () => Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly time: () => number; readonly deltaSeconds: () => number; readonly fallbackPlayer: () => unknown;
-  readonly bossById: (id: string) => unknown; readonly setScreen: (screen: LegacyAppScreen, context?: Readonly<{ returnTo: LegacyAppScreen }>) => void;
+  readonly bossById: (id: string) => unknown; readonly setScreen: (screen: AppScreen, context?: Readonly<{ returnTo: AppScreen }>) => void;
   readonly categories: () => Readonly<Record<string, Readonly<{ name: string; color: string }>>>;
   readonly fallbackCategory: () => Readonly<{ name: string; color: string }>;
   readonly specialColor: () => string; readonly formatTime: (seconds: number) => string; readonly document: Document;
 }
 export interface ReplayScreenAdapter {
-  readonly enter: (data: unknown, from?: LegacyAppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
+  readonly enter: (data: unknown, from?: AppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
   readonly togglePause: () => void; readonly seekBy: (delta: number) => void; readonly seekToFraction: (fraction: number) => void;
   readonly jumpChapter: (direction: number) => void; readonly restart: () => void; readonly toggleInfo: () => void;
   readonly setSpeed: (value: number) => void; readonly status: () => ReplayStatus | null;
@@ -73,7 +73,7 @@ export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServi
     flyer: () => new d.Flyer(0, 200), bomber: () => new d.Bomber(0, 0), armored: () => new d.Armored(0, 0),
     support: (kind) => kind === "rootbinder" ? new d.Rootbinder(0, 0) : new d.Support(0, 0, supportKind(kind)), wraith: () => new d.Wraith(0, 220), chimera: () => new d.Chimera(0, 0),
   }, d.VARIANTS, d.applyVariant);
-  const enter = (data: unknown, from: LegacyAppScreen = "menu"): boolean => {
+  const enter = (data: unknown, from: AppScreen = "menu"): boolean => {
     const playback = d.GHOST.begin(data); if (playback === null) return false;
     context = { data: playback.d, from, stage: -1, platforms: [], puppets: {}, info: false };
     services.setScreen("replay", { returnTo: from }); services.document.exitPointerLock(); return true;

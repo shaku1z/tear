@@ -1,8 +1,8 @@
 import type { createMetaProgression, ShopItem } from "../../gameplay/progression/meta";
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 
 type Meta = Pick<ReturnType<typeof createMetaProgression>["META"], "level">;
-type Profile = Pick<ReturnType<typeof createLegacyProfile>, "addStat" | "maxStat">;
+type Profile = Pick<ReturnType<typeof createProfileStore>, "addStat" | "maxStat">;
 type Shop = readonly Pick<ShopItem, "id" | "maxLevel">[];
 
 /** Composition-owned profile-stat update performed after a successful shop purchase. */

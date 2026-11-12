@@ -1,6 +1,6 @@
 import type { TearWipe } from "../../presentation/tear-wipe";
-import type { LegacyWorldRendererRegistry } from "../../presentation/world";
-import type { LegacyAppScreen } from "./legacy-state-controller";
+import type { WorldRendererRegistry } from "../../presentation/world";
+import type { AppScreen } from "./app-state-controller";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import { createLivePresentationFrameHost, createLivePresentationSurface,
   type LivePresentationFrameServices, type LivePresentationFrameState } from "./presentation-composition";
@@ -24,14 +24,14 @@ type ScreenOptions = Omit<LiveScreenPresentationOptions, "library" | "settings">
   library: Omit<LiveScreenPresentationOptions["library"], "stepTab">;
   settings: Omit<LiveScreenPresentationOptions["settings"], "stepTab">;
 }>;
-type FrameServices = Omit<LivePresentationFrameServices<LegacyAppScreen,
+type FrameServices = Omit<LivePresentationFrameServices<AppScreen,
   WorldPresentationServices["stage"]["current"]>, "wipe" | "renderWorld" | "drawHud" |
   "drawBossIntro" | "drawTouchControls" | "drawWaveBanner" | "drawStageBanner" |
   "drawReticle" | "drawAchievementToast" | "chooseUpgrade" | "chooseReserve" | "chooseTier" | "rerollDraft" | "screenHue" | "capturePolicy">;
 type WorldServices = Omit<WorldPresentationServices, "screenRectangle" | "world" |
   "achievementToast" | "touchOnboarding" | "capturePolicy">;
 
-const SCREEN_HUES: Partial<Record<LegacyAppScreen, string>> = Object.freeze({
+const SCREEN_HUES: Partial<Record<AppScreen, string>> = Object.freeze({
   shop: "#e0a326", achievements: "#13c4d6", leaderboards: "#e0a326",
   profile: "#2f9e6b", codex: "#3a3d4d", settings: "#3a3d4d",
 });
@@ -45,7 +45,7 @@ export interface LiveInterfaceCompositionOptions {
   readonly wipe: SurfaceOptions["wipe"];
   readonly worldSurface: SurfaceWorld;
   readonly screens: ScreenOptions;
-  readonly frameState: LivePresentationFrameState<LegacyAppScreen>;
+  readonly frameState: LivePresentationFrameState<AppScreen>;
   readonly frameServices: FrameServices;
   readonly worldState: WorldPresentationState;
   readonly worldServices: WorldServices;
@@ -56,7 +56,7 @@ export interface LiveInterfaceComposition {
   readonly renderPresentationFrame: (deltaSeconds: number) => void;
   readonly capture: ReturnType<typeof createLiveInterfacePresentationCapture>;
   readonly wipe: TearWipe;
-  readonly world: LegacyWorldRendererRegistry;
+  readonly world: WorldRendererRegistry;
   readonly screens: LiveScreenPresentationComposition;
   readonly frame: LivePresentationHost;
   readonly worldAdapters: LiveWorldPresentationAdapters;

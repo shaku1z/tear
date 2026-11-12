@@ -4,7 +4,7 @@
  * dependency, so automation contracts can refer to a control without importing
  * the presentation layer that drew it.
  */
-export type LegacyScreenId =
+export type ScreenId =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
@@ -12,7 +12,7 @@ export type LegacyScreenId =
 
 export type ScreenAction =
   | { readonly type: "chase.control"; readonly command: "toggle" | "stop" }
-  | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
+  | { readonly type: "navigate"; readonly to: ScreenId; readonly resetScroll?: boolean; readonly tab?: string }
   | { readonly type: "menu.resumeFinale" }
   | { readonly type: "menu.claimFinale" }
   | { readonly type: "setup.selectMode"; readonly id: string }

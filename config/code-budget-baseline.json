@@ -503,7 +503,7 @@
       "multiStatementLines": 1
     },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 35785,
+      "chars": 35776,
       "maxLineLength": 227,
       "multiStatementLines": 34
     },
@@ -536,6 +536,9 @@
     "src/app/interface/achievement-toast-controller.ts": {
       "multiStatementLines": 3
     },
+    "src/app/interface/app-state-controller.ts": {
+      "multiStatementLines": 4
+    },
     "src/app/interface/hud-feedback-state.ts": {
       "multiStatementLines": 2
     },
@@ -544,9 +547,6 @@
     },
     "src/app/interface/interface-frame-state.ts": {
       "multiStatementLines": 1
-    },
-    "src/app/interface/legacy-state-controller.ts": {
-      "multiStatementLines": 4
     },
     "src/app/interface/presentation-capture.ts": {
       "multiStatementLines": 2
@@ -769,7 +769,7 @@
       "maxLineLength": 231
     },
     "src/app/shell/game-runtime.ts": {
-      "chars": 77626,
+      "chars": 77587,
       "maxLineLength": 3969,
       "multiStatementLines": 132,
       "largestFunctionStatements": 143
@@ -1508,7 +1508,7 @@
       "multiStatementLines": 4
     },
     "src/ghost/replay-admission.ts": {
-      "chars": 29434,
+      "chars": 29414,
       "maxLineLength": 192,
       "multiStatementLines": 8
     },
@@ -1537,11 +1537,11 @@
     "src/ghost/truth-kernel.ts": {
       "multiStatementLines": 5
     },
-    "src/input/legacy-gamepad.ts": {
+    "src/input/browser-gamepad.ts": {
       "multiStatementLines": 30,
       "largestFunctionStatements": 124
     },
-    "src/input/legacy-input.ts": {
+    "src/input/browser-input.ts": {
       "multiStatementLines": 45
     },
     "src/input/semantic-buffer.ts": {
@@ -1550,13 +1550,13 @@
     "src/persistence/json.ts": {
       "multiStatementLines": 3
     },
-    "src/persistence/legacy-profile.ts": {
-      "maxLineLength": 305,
-      "multiStatementLines": 33
-    },
     "src/persistence/profile-envelope.ts": {
       "maxLineLength": 242,
       "multiStatementLines": 1
+    },
+    "src/persistence/profile-store.ts": {
+      "maxLineLength": 305,
+      "multiStatementLines": 33
     },
     "src/platform/browser-pointer-lock.ts": {
       "multiStatementLines": 1
@@ -1820,9 +1820,6 @@
       "multiStatementLines": 12,
       "largestFunctionStatements": 89
     },
-    "src/presentation/world/legacy-world-frame.ts": {
-      "multiStatementLines": 2
-    },
     "src/presentation/world/live-ghost-reference.ts": {
       "maxLineLength": 224,
       "multiStatementLines": 9
@@ -1850,6 +1847,9 @@
     },
     "src/presentation/world/tutorial-input-prompts.ts": {
       "maxLineLength": 222
+    },
+    "src/presentation/world/world-frame.ts": {
+      "multiStatementLines": 2
     },
     "src/replay/envelope.ts": {
       "maxLineLength": 161

@@ -7,8 +7,8 @@ import type { ScreenAction } from "../../src/domain/screen-actions";
 import { createEngineeringQuery } from "../../src/app/shell/engineering-query";
 import { gateScreenActions } from "../../src/app/interface/screen-action-bindings";
 import {
-  IllegalLegacyAppTransitionError, LEGACY_APP_SCREENS, LegacyAppStateController, UnavailableLegacyAppScreenError,
-} from "../../src/app/interface/legacy-state-controller";
+  IllegalLegacyAppTransitionError, APP_SCREENS, AppStateController, UnavailableLegacyAppScreenError,
+} from "../../src/app/interface/app-state-controller";
 import { MODE_CATALOG, RELEASE_FALLBACK_MODE, admittedRunMode, modeSurface } from "../../src/gameplay/run/mode-catalog";
 
 const RELEASE = createSurfaceAvailability("release");
@@ -114,24 +114,24 @@ describe("run-mode admission", () => {
 describe("application state controller surface guard", () => {
   it("refuses every engineering screen in release by any path, including rename", () => {
     for (const screen of ENGINEERING_SCREENS) {
-      const fromMenu = new LegacyAppStateController(RELEASE);
+      const fromMenu = new AppStateController(RELEASE);
       expect(fromMenu.canEnter(screen), screen).toBe(false);
       expect(fromMenu.canTransition(screen), screen).toBe(false);
       expect(() => fromMenu.transition(screen), screen).toThrow(UnavailableLegacyAppScreenError);
       expect(fromMenu.screen).toBe("menu");
-      const fromRename = new LegacyAppStateController(RELEASE);
+      const fromRename = new AppStateController(RELEASE);
       fromRename.transition("rename");
       expect(() => fromRename.transition(screen), screen).toThrow(IllegalLegacyAppTransitionError);
       expect(fromRename.screen).toBe("rename");
     }
-    const release = new LegacyAppStateController(RELEASE);
+    const release = new AppStateController(RELEASE);
     expect(release.transition("setup")).toBe("setup");
-    for (const screen of LEGACY_APP_SCREENS) {
+    for (const screen of APP_SCREENS) {
       if (!(ENGINEERING_SCREENS as readonly string[]).includes(screen)) expect(release.canEnter(screen), screen).toBe(true);
     }
   });
   it("keeps every engineering screen enterable in engineering builds", () => {
-    const controller = new LegacyAppStateController(ENGINEERING);
+    const controller = new AppStateController(ENGINEERING);
     expect(controller.transition("ghostlab")).toBe("ghostlab");
     expect(controller.transition("botevidence")).toBe("botevidence");
     expect(controller.transition("menu")).toBe("menu");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
-import { createLegacyProfile } from "../../src/persistence/legacy-profile";
+import { createProfileStore } from "../../src/persistence/profile-store";
 import { createMetaProgression } from "../../src/gameplay/progression/meta";
 import { createAchievements } from "../../src/gameplay/progression/achievements";
 import { createLegacyPlatformCompatibility, type LegacyCrazyGamesFacade } from "../../src/platform/legacy-compat";
@@ -25,7 +25,7 @@ function runtime(storage: SyncStringStorage, ids = [idA, idB]) {
   return owners(CG.store, ids);
 }
 function owners(store: LegacyCrazyGamesFacade["store"], ids = [idA, idB]) {
-  const profile = createLegacyProfile({ store, writerId: () => "unit", now: () => 1,
+  const profile = createProfileStore({ store, writerId: () => "unit", now: () => 1,
     getAchievements: () => achievements, getMeta: () => meta,
     onCommitted: () => { if (profile.pendingRewards().length > 0) void authority.retry(); },
     onLoaded: () => { void authority.retry(); } });

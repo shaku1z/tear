@@ -9,7 +9,7 @@ import type { RunDifficulty } from "../../gameplay/run/session";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 
 interface TrainingLifecycle { terminate(reason: string): void }
 interface TrainingStage { platforms: ArenaPlatform[]; readonly current: { readonly accent: string } }
@@ -22,7 +22,7 @@ export interface LiveTrainingHostContext {
   readonly lifecycle: TrainingLifecycle;
   readonly stage: TrainingStage;
   readonly spawn: (kind: LiveWaveSpawnSpec["type"], hpScale: number) => GameEnemy | undefined;
-  readonly navigate: (screen: LegacyAppScreen) => void;
+  readonly navigate: (screen: AppScreen) => void;
   readonly resetScroll: () => void;
   readonly releasePointer: () => void;
   readonly requestPointer: () => void;

@@ -1,18 +1,18 @@
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 import { RENAME_FIELD } from "../../presentation/rename-field";
 
 export interface RenameSnapshot { readonly active: boolean; readonly error: string; readonly firstRun: boolean;
-  readonly previous: LegacyAppScreen; readonly value: string }
+  readonly previous: AppScreen; readonly value: string }
 export interface RenameControllerPorts {
   readonly document: Document; readonly canvas: HTMLCanvasElement; readonly logicalWidth: number;
   readonly overscan: () => Readonly<{ x: number; y: number }>;
-  readonly screen: () => LegacyAppScreen; readonly replayReturn: () => LegacyAppScreen;
-  readonly setScreen: (screen: LegacyAppScreen, context?: Readonly<{ returnTo: LegacyAppScreen }>) => void;
+  readonly screen: () => AppScreen; readonly replayReturn: () => AppScreen;
+  readonly setScreen: (screen: AppScreen, context?: Readonly<{ returnTo: AppScreen }>) => void;
   readonly input: { textEntryMode: boolean };
   readonly profile: { username(): string; usernameSetAt(): number };
   readonly cloud: { loggedIn(): boolean; canRename(): boolean; setCustomUsername(name: string): void };
 }
-interface ActiveRename { error: string; readonly firstRun: boolean; previous: LegacyAppScreen }
+interface ActiveRename { error: string; readonly firstRun: boolean; previous: AppScreen }
 const restrictedWords = Object.freeze(["fuck", "shit", "bitch", "nigg", "asshole", "cunt", "faggot", "dick"]);
 
 export class RenameController {

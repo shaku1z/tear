@@ -8,7 +8,7 @@ import type {
   GhostSupportScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
-  LegacyScreenRendererRegistry,
+  ScreenRendererTable,
   PlaygroundScreenView,
   ProfileScreenView,
   ReplayScreenView,
@@ -118,7 +118,7 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
 }
 
 /** Composes every typed canvas screen renderer against one live context. */
-export function createLiveScreenRenderers(options: LiveScreenRendererOptions): LegacyScreenRendererRegistry {
+export function createLiveScreenRenderers(options: LiveScreenRendererOptions): ScreenRendererTable {
   const context: ScreenRenderContext = {
     canvas: options.canvas, ui: options.ui, width: options.width, height: options.height,
     get time() { return options.time(); },

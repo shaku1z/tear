@@ -1,7 +1,7 @@
 import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { LegacyGamepad } from "../../input/legacy-input-contracts";
+import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../../presentation/codex-snapshots";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
@@ -11,7 +11,7 @@ import type { CareerPort } from "./ghost-career-controller";
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Rootbinder" | "Rootbound" | "Source" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
   "Cloud" | "CONFIG" | "DAILY" | "FirebaseProvider" |
-  "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT"> & Readonly<{ PAD: LegacyGamepad }>;
+  "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT"> & Readonly<{ PAD: BrowserGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 

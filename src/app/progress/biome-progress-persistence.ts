@@ -1,6 +1,6 @@
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 
-type Profile = Pick<ReturnType<typeof createLegacyProfile>, "markBiome" | "maxStat">;
+type Profile = Pick<ReturnType<typeof createProfileStore>, "markBiome" | "maxStat">;
 
 /** Composition-owned operation for campaign biome discovery progress. */
 export interface BiomeProgressPersistence {

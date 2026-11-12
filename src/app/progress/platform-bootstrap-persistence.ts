@@ -1,10 +1,10 @@
 import type { createAchievements } from "../../gameplay/progression/achievements";
 import type { createMetaProgression, ShopItem } from "../../gameplay/progression/meta";
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 
 type Achievements = Pick<ReturnType<typeof createAchievements>, "check">;
 type Meta = Pick<ReturnType<typeof createMetaProgression>["META"], "level">;
-type Profile = Pick<ReturnType<typeof createLegacyProfile>, "maxStat" | "save">;
+type Profile = Pick<ReturnType<typeof createProfileStore>, "maxStat" | "save">;
 type Shop = readonly Pick<ShopItem, "id" | "maxLevel">[];
 
 /** Ordered persistence adapter for platform-bootstrap progression backfill. */

@@ -9,7 +9,7 @@ import { stableVerificationHash } from "../../replay/hash";
 import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-history";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 import { readBrowserGhostCapsule, listBrowserGhostCapsuleManifests } from "../../ghost/browser-capsule-vault";
 import { createGhostComparisonScreenAdapter } from "./ghost-comparison-screen-adapter";
 import { createGhostTheaterScreenAdapter } from "../library/ghost-theater-screen-adapter";
@@ -23,12 +23,12 @@ type Dependencies = Pick<GameRuntimeDependencies, "A11Y" | "APP" | "Armored" | "
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 
 export interface ReplayStatus { readonly paused: boolean; readonly speed: number; readonly infoVisible: boolean;
-  readonly progress: number; readonly from: LegacyAppScreen }
+  readonly progress: number; readonly from: AppScreen }
 export interface ReplayScreenServices {
   readonly dependencies: Dependencies; readonly renderers: Renderers; readonly canvas: CanvasRenderingContext2D;
   readonly width: number; readonly height: number; readonly screenRectangle: () => Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly time: () => number; readonly deltaSeconds: () => number; readonly fallbackPlayer: () => unknown;
-  readonly bossById: (id: string) => unknown; readonly setScreen: (screen: LegacyAppScreen, context?: Readonly<{ returnTo: LegacyAppScreen }>) => void;
+  readonly bossById: (id: string) => unknown; readonly setScreen: (screen: AppScreen, context?: Readonly<{ returnTo: AppScreen }>) => void;
   readonly categories: () => Readonly<Record<string, Readonly<{ name: string; color: string }>>>;
   readonly fallbackCategory: () => Readonly<{ name: string; color: string }>;
   readonly specialColor: () => string; readonly formatTime: (seconds: number) => string; readonly document: Document;
@@ -38,9 +38,9 @@ export interface ReplayScreenServices {
 export interface ReplayScreenAdapter {
   readonly cancelPendingOpen: () => void;
   readonly openFinale?: () => void;
-  readonly enter: (data: unknown, from?: LegacyAppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
-  readonly enterGhostCapsule: (id: string, from?: LegacyAppScreen) => Promise<GhostTheaterOpenResult>;
-  readonly enterGhostComparison: (ids: readonly string[], from?: LegacyAppScreen) => Promise<boolean>;
+  readonly enter: (data: unknown, from?: AppScreen) => boolean; readonly exit: () => void; readonly render: () => void;
+  readonly enterGhostCapsule: (id: string, from?: AppScreen) => Promise<GhostTheaterOpenResult>;
+  readonly enterGhostComparison: (ids: readonly string[], from?: AppScreen) => Promise<boolean>;
   readonly togglePause: () => void; readonly seekBy: (delta: number) => void; readonly seekToFraction: (fraction: number) => void;
   readonly jumpChapter: (direction: number) => void; readonly restart: () => void; readonly toggleInfo: () => void;
   readonly practice: () => void;
@@ -79,7 +79,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
   let finalLink: string | undefined;
   let sourceRequest = 0;
   let loading: Promise<void> | undefined;
-  let pending: Readonly<{ data: unknown; from: LegacyAppScreen }> | undefined;
+  let pending: Readonly<{ data: unknown; from: AppScreen }> | undefined;
   const deferred: DeferredAction[] = [];
 
   function ensureLoaded(): void {
@@ -96,7 +96,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     if (runtime) action(runtime);
     else { deferred.push(action); ensureLoaded(); }
   }
-  function enter(data: unknown, from: LegacyAppScreen = "menu"): boolean {
+  function enter(data: unknown, from: AppScreen = "menu"): boolean {
     sourceRequest++;
     if (active === "finale") { finale.exit(); active = undefined; }
     if (active === "theater") theater.exit();
@@ -140,7 +140,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     services.setScreen(destination);
   }
 
-  async function enterGhostCapsule(id: string, from: LegacyAppScreen = "profile"): Promise<GhostTheaterOpenResult> {
+  async function enterGhostCapsule(id: string, from: AppScreen = "profile"): Promise<GhostTheaterOpenResult> {
     const request = ++sourceRequest;
     const capsule = await readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined);
     if (request !== sourceRequest) return refuseGhostTheater("source-invalid");
@@ -184,7 +184,7 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     return opened;
   }
 
-  async function enterGhostComparison(ids: readonly string[], from: LegacyAppScreen = "profile"): Promise<boolean> {
+  async function enterGhostComparison(ids: readonly string[], from: AppScreen = "profile"): Promise<boolean> {
     const request = ++sourceRequest;
     if (ids.length < 2 || new Set(ids).size !== ids.length) return false;
     const capsules = await Promise.all(ids.map((id) => readBrowserGhostCapsule(services.browserIndexedDb, id).catch(() => undefined)));

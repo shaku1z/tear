@@ -11,7 +11,7 @@ import { validateTearContract } from "../tearbench/validation";
 import { mapGhostCapsuleToReplayEnvelope, preflightGhostRecordedCanonicalSnapshot } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
-import { LEGACY_APP_SCREENS, LEGAL_LEGACY_TRANSITIONS, type LegacyAppScreen } from "../app/interface/legacy-state-controller";
+import { APP_SCREENS, LEGAL_TRANSITIONS, type AppScreen } from "../app/interface/app-state-controller";
 import { GHOST_APPLICATION_FRAMES_V1 } from "./application-frame-events";
 import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
 
@@ -217,11 +217,11 @@ export function createGhostReplayRunContext(input: GhostReplayRunContextInput): 
   }, "replay context");
 }
 
-function openingPredecessor(value: unknown): LegacyAppScreen {
-  const screen = LEGACY_APP_SCREENS.find((candidate) => candidate === value);
+function openingPredecessor(value: unknown): AppScreen {
+  const screen = APP_SCREENS.find((candidate) => candidate === value);
   // APP.transition returns early for self-playing; other predecessors require
   // its canonical playing edge. Completion evidence still attests actual exposure.
-  if (screen === undefined || (screen !== "playing" && !LEGAL_LEGACY_TRANSITIONS[screen].includes("playing"))) {
+  if (screen === undefined || (screen !== "playing" && !LEGAL_TRANSITIONS[screen].includes("playing"))) {
     throw new TypeError("recorded opening predecessor is unknown or has no legal playing transition");
   }
   return screen;

@@ -27,7 +27,7 @@ interface MetaPort {
 
 type Tracker = Record<string, unknown>;
 
-export interface LegacyProfileData extends Record<string, unknown> {
+export interface ProfileData extends Record<string, unknown> {
   v: number;
   shards: number;
   ach: Record<string, number>;
@@ -44,11 +44,11 @@ export interface LegacyProfileData extends Record<string, unknown> {
   advDiffs?: Record<string, number>;
 }
 
-export interface LegacyProfile {
+export interface ProfileStore {
   readonly KEY: "tear_profile";
   readonly ENVELOPE_KEY: "tear_profile_v2";
-  data: LegacyProfileData;
-  load(): LegacyProfileData;
+  data: ProfileData;
+  load(): ProfileData;
   flushAcknowledged(): Promise<CompletionStatus>;
   issueTutorial(id: string): Promise<CompletionStatus>;
   completeTutorial(id: string): Promise<CompletionStatus>;
@@ -76,7 +76,7 @@ export interface LegacyProfile {
   merge(remote: unknown): void;
 }
 
-export interface LegacyProfileOptions {
+export interface ProfileStoreOptions {
   readonly store: SyncStore;
   readonly now?: () => number;
   readonly getAchievements: () => AchievementsPort | undefined;
@@ -123,19 +123,19 @@ function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Track
   }
 }
 
-export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfile {
+export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
   const countedBiomeNames = options.countedBiomeNames === undefined ? null : new Set(options.countedBiomeNames);
   const countBiomes = (value: unknown): number => Object.keys(record(value) ?? {})
     .filter((name) => countedBiomeNames === null || countedBiomeNames.has(name)).length;
   const now = options.now ?? Date.now;
   let envelope: ProfileEnvelopeV2 | null = null;
   let envelopeWritable = true;
-  const fresh = (): LegacyProfileData => ({
+  const fresh = (): ProfileData => ({
     v: 1, shards: 0, ach: {}, stats: {}, seen: {}, modes: {}, created: now(), achCoinsRetrofit: false,
   });
 
   let knownProfile = fresh();
-  const mergeData = (target: LegacyProfileData, remote: unknown): void => {
+  const mergeData = (target: ProfileData, remote: unknown): void => {
       const source = record(remote);
       if (!source) return;
       target.shards = Math.max(target.shards, finite(source.shards));
@@ -189,7 +189,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
       }
       for (const [key, value] of Object.entries(source)) if (!(key in target)) target[key] = structuredClone(value);
   };
-  const unlockInto = (target: LegacyProfileData, achievement: AchievementDefinition): boolean => {
+  const unlockInto = (target: ProfileData, achievement: AchievementDefinition): boolean => {
     if (target.ach[achievement.id] !== undefined) return false;
     const outbox = achievementOutbox(target.achievementOutbox, finite(target.stats.coinsEarned), target.shards);
     const grant: AchievementGrant = { coins: achievement.coins ?? options.getAchievements()?.coinsFor(achievement) ?? 0,
@@ -200,7 +200,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
     target.ach[achievement.id] = now(); target.achievementOutbox = outbox;
     target.shards = outboxShards(outbox); target.stats.coinsEarned = outboxCoins(outbox); return true;
   };
-  const commit = async (change: (target: LegacyProfileData) => void = () => undefined): Promise<CompletionStatus> => {
+  const commit = async (change: (target: ProfileData) => void = () => undefined): Promise<CompletionStatus> => {
     if (!options.store.acknowledged) return "unavailable";
     let atWrite = structuredClone(profile.data);
     const result = await options.store.acknowledged.update("tear_profile_v2", (text) => {
@@ -221,7 +221,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
     const migrated = migrateProfileEnvelope(JSON.parse(result.value) as unknown, now());
     if (!migrated.ok) return "unknown";
     envelope = migrated.value;
-    const committed: LegacyProfileData = Object.assign(fresh(), mutableProfileWorkingCopy(migrated.value)), current = profile.data;
+    const committed: ProfileData = Object.assign(fresh(), mutableProfileWorkingCopy(migrated.value)), current = profile.data;
     const merged = structuredClone(committed);
     if (merged.achievementOutbox !== undefined && current.achievementOutbox === undefined) {
       const ledger = achievementOutbox(merged.achievementOutbox);
@@ -234,7 +234,7 @@ export function createLegacyProfile(options: LegacyProfileOptions): LegacyProfil
     try { options.store.set("tear_profile", JSON.stringify(profile.data)); } catch { /* mirror is not authority */ }
     options.onCommitted?.(); return "committed";
   };
-  const profile: LegacyProfile = {
+  const profile: ProfileStore = {
     KEY: "tear_profile",
     ENVELOPE_KEY: "tear_profile_v2",
     data: fresh(),

@@ -1,4 +1,4 @@
-import type { LegacyWorldRenderContext, LegacyWorldRendererRegistry } from "./contracts";
+import type { WorldRenderContext, WorldRendererRegistry } from "./contracts";
 import { createFinaleRenderer } from "./finale";
 import { createHudRenderer } from "./hud";
 import { createOverlayRenderers } from "./overlays";
@@ -8,7 +8,7 @@ import { createTrainingTouchRenderers } from "./training-touch";
 export type * from "./contracts";
 
 /** Presentation-only façade. The legacy adapter owns snapshot creation and every state mutation. */
-export function createLegacyWorldRenderers(context: LegacyWorldRenderContext): LegacyWorldRendererRegistry {
+export function createWorldRenderers(context: WorldRenderContext): WorldRendererRegistry {
   const statusDebug = createStatusDebugRenderers(context);
   const finaleWorld = createFinaleRenderer(context);
   const hud = createHudRenderer(context);

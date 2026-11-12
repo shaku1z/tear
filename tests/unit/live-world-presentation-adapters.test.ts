@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveWorldPresentationAdapters, type WorldPresentationServices,
   type WorldPresentationState } from "../../src/app/world/world-presentation-adapters";
-import { renderLegacyWorldFrame } from "../../src/presentation/world/legacy-world-frame";
+import { renderWorldFrame } from "../../src/presentation/world/world-frame";
 import { createLiveHudFeedbackState } from "../../src/app/interface/hud-feedback-state";
 
-vi.mock("../../src/presentation/world/legacy-world-frame", () => ({ renderLegacyWorldFrame: vi.fn() }));
+vi.mock("../../src/presentation/world/world-frame", () => ({ renderWorldFrame: vi.fn() }));
 
 describe("live world capture layers", () => {
   it("does not advance lag, pop, boss flash or pulse on repeated fixed-frame HUD draws", () => {
@@ -60,13 +60,13 @@ describe("live world capture layers", () => {
       stage: { current: { id: "verdant-sanctum" }, platforms: [] },
       capturePolicy: () => ({ actors, debug: "exclude" }), tutorial: { active: true, drawGhost },
     } as unknown as WorldPresentationServices;
-    vi.mocked(renderLegacyWorldFrame).mockImplementation((ports) => {
+    vi.mocked(renderWorldFrame).mockImplementation((ports) => {
       expect(ports.playerX).toBe(137);
       expect(ports.player).toEqual(actors === "include" ? { x: 137, y: 500, halfWidth: 10, halfHeight: 20 } : undefined);
       ports.drawBackdrop(ports.stage, ports.timeSeconds, ports.playerX, { left: 0, top: 0, right: 1600, bottom: 900 });
       if (ports.tutorialActive) ports.drawTutorialGhost();
       ports.drawPlayer(); ports.drawBlade(); ports.drawEffects();
-      return {} as ReturnType<typeof renderLegacyWorldFrame>;
+      return {} as ReturnType<typeof renderWorldFrame>;
     });
 
     createLiveWorldPresentationAdapters(state, services).renderWorld();

@@ -22,7 +22,7 @@ export interface WorldPlatform {
   readonly floor?: boolean;
 }
 
-export interface LegacyWorldFramePorts<Platform extends WorldPlatform = WorldPlatform> {
+export interface WorldFramePorts<Platform extends WorldPlatform = WorldPlatform> {
   readonly canvas: CanvasRenderingContext2D;
   readonly width: number;
   readonly height: number;
@@ -61,7 +61,7 @@ export interface LegacyWorldFramePorts<Platform extends WorldPlatform = WorldPla
 }
 
 /** Draws one complete world frame from immutable visual snapshots and narrow draw ports. */
-export function renderLegacyWorldFrame<Platform extends WorldPlatform>(ports: LegacyWorldFramePorts<Platform>): WorldCamera {
+export function renderWorldFrame<Platform extends WorldPlatform>(ports: WorldFramePorts<Platform>): WorldCamera {
   const { canvas } = ports;
   canvas.save();
   const cx = ports.width / 2, cy = ports.height / 2;

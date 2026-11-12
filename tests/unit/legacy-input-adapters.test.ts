@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { createLegacyGamepad } from "../../src/input/legacy-gamepad";
-import { createLegacyInput } from "../../src/input/legacy-input";
-import type { LegacyInputConfig } from "../../src/input/legacy-input-contracts";
+import { createBrowserGamepad } from "../../src/input/browser-gamepad";
+import { createBrowserInput } from "../../src/input/browser-input";
+import type { BrowserInputConfig } from "../../src/input/browser-input-contracts";
 import { SemanticInputBuffer } from "../../src/input/semantic-buffer";
 
-const CONFIG: LegacyInputConfig = { view: { w: 1_600, h: 900 }, touch: {} };
+const CONFIG: BrowserInputConfig = { view: { w: 1_600, h: 900 }, touch: {} };
 
 function createInput(semantic = new SemanticInputBuffer(), windowTarget = new EventTarget(), config = CONFIG) {
-  return createLegacyInput({
+  return createBrowserInput({
     config,
     safeArea: { l: 0, r: 0, t: 0, b: 0 },
     overscan: { x: 0, y: 0 },
@@ -46,14 +46,14 @@ function controllerEvent(type: string, activeGamepad: Gamepad): Event {
 }
 
 function controllerFixture() {
-  const config: LegacyInputConfig = { view: { w: 1_600, h: 900 }, touch: {} };
+  const config: BrowserInputConfig = { view: { w: 1_600, h: 900 }, touch: {} };
   const windowTarget = new EventTarget();
   const input = createInput(new SemanticInputBuffer(), windowTarget, config);
   input.init(new EventTarget() as HTMLCanvasElement, () => undefined);
   const buttons = Array.from({ length: 16 }, () => button());
   const axes = [0, 0, 0, 0];
   const activeGamepad = gamepad(buttons, axes);
-  const { PAD } = createLegacyGamepad({ config, input, window: windowTarget as Window,
+  const { PAD } = createBrowserGamepad({ config, input, window: windowTarget as Window,
     navigator: { getGamepads: () => [activeGamepad] }, semantic: input.semantic });
   windowTarget.dispatchEvent(controllerEvent("gamepadconnected", activeGamepad));
   const settings = config.pad;
@@ -66,7 +66,7 @@ describe("legacy input adapter", () => {
     const windowTarget = new EventTarget();
     const documentTarget = new EventTarget() as Document;
     const semantic = new SemanticInputBuffer();
-    const input = createLegacyInput({ config: CONFIG, safeArea: { l: 0, r: 0, t: 0, b: 0 },
+    const input = createBrowserInput({ config: CONFIG, safeArea: { l: 0, r: 0, t: 0, b: 0 },
       overscan: { x: 0, y: 0 }, window: windowTarget as Window, document: documentTarget,
       navigator: { vibrate: () => true }, performance, semantic });
     let lockRequests = 0;
@@ -237,7 +237,7 @@ describe("legacy gamepad adapter", () => {
   it("keeps the five shipped presets and safely falls back to default", () => {
     const input = createInput();
     const windowTarget = new EventTarget();
-    const { PAD, PAD_PRESETS } = createLegacyGamepad({
+    const { PAD, PAD_PRESETS } = createBrowserGamepad({
       config: CONFIG,
       input,
       window: windowTarget as Window,
@@ -254,7 +254,7 @@ describe("legacy gamepad adapter", () => {
   it("honors an explicit non-default glyph family independently of detected hardware", () => {
     const input = createInput();
     const activeGamepad = gamepad(Array.from({ length: 16 }, () => button()));
-    const { PAD } = createLegacyGamepad({
+    const { PAD } = createBrowserGamepad({
       config: CONFIG,
       input,
       window: new EventTarget() as Window,
@@ -288,7 +288,7 @@ describe("legacy gamepad adapter", () => {
     buttons[0] = button(true);
     const activeGamepad = gamepad(buttons, [0.8, 0, 0.7, 0]);
     const navigatorPort = { getGamepads: () => [activeGamepad] };
-    const { PAD } = createLegacyGamepad({ config: CONFIG, input, window: windowPort, navigator: navigatorPort, semantic });
+    const { PAD } = createBrowserGamepad({ config: CONFIG, input, window: windowPort, navigator: navigatorPort, semantic });
 
     listeners.get("gamepadconnected")?.(controllerEvent("gamepadconnected", activeGamepad));
     PAD.poll(1 / 60, false);
@@ -318,7 +318,7 @@ describe("legacy gamepad adapter", () => {
     const buttons = Array.from({ length: 16 }, () => button());
     buttons[2] = button(true);
     const activeGamepad = gamepad(buttons);
-    const { PAD } = createLegacyGamepad({
+    const { PAD } = createBrowserGamepad({
       config: CONFIG, input, window: windowPort,
       navigator: { getGamepads: () => [activeGamepad] }, semantic: input.semantic,
     });

@@ -1,4 +1,4 @@
-import type { InputMode, Point } from "../../input/legacy-input-contracts";
+import type { InputMode, Point } from "../../input/browser-input-contracts";
 import { UI_CONFIRM_SETTLE_SECONDS } from "../interface/ui-action-coordinator";
 
 export interface RuntimeFrameInputPort {

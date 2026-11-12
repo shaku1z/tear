@@ -1,4 +1,4 @@
-import type { LegacyInput, LegacyInputDependencies, Point, TouchZoneName } from "./legacy-input-contracts";
+import type { BrowserInput, BrowserInputDependencies, Point, TouchZoneName } from "./browser-input-contracts";
 import { mapClientPointerToLogical } from "./pointer-coordinate";
 import { touchControlAt, touchControlLayout } from "./touch-control-layout";
 
@@ -16,7 +16,7 @@ interface TapTrack extends Point {
 
 // Temporary ESM browser adapter for the classic game shell. All formerly ambient
 // dependencies are explicit so the adapter can be characterized independently.
-export function createLegacyInput(dependencies: LegacyInputDependencies): LegacyInput {
+export function createBrowserInput(dependencies: BrowserInputDependencies): BrowserInput {
 const {
   config: CONFIG,
   safeArea: SAFE,
@@ -31,7 +31,7 @@ const {
 // physical scale of the on-screen controls.
 let layoutCanvas: HTMLCanvasElement | null = null;
 
-const Input: LegacyInput = {
+const Input: BrowserInput = {
   semantic,
   held: new Set(),
   pressed: new Set(),     // edge: pressed this frame (consume + clear each frame)

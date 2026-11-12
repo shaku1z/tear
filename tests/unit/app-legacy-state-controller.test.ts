@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   IllegalLegacyAppTransitionError,
-  LEGACY_APP_SCREENS,
-  LEGAL_LEGACY_TRANSITIONS,
-  LegacyAppStateController,
-  type LegacyAppScreen,
-} from "../../src/app/interface/legacy-state-controller";
+  APP_SCREENS,
+  LEGAL_TRANSITIONS,
+  AppStateController,
+  type AppScreen,
+} from "../../src/app/interface/app-state-controller";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 
 const ENGINEERING = createSurfaceAvailability("engineering");
 
-function controllerAt(screen: LegacyAppScreen): LegacyAppStateController {
-  const controller = new LegacyAppStateController(ENGINEERING);
+function controllerAt(screen: AppScreen): AppStateController {
+  const controller = new AppStateController(ENGINEERING);
   if (screen !== "menu") {
-    const path: Partial<Record<LegacyAppScreen, readonly LegacyAppScreen[]>> = {
+    const path: Partial<Record<AppScreen, readonly AppScreen[]>> = {
       playing: ["playing"], paused: ["playing", "paused"], draft: ["playing", "draft"],
       reserve: ["playing", "draft", "reserve"], tierup: ["playing", "tierup"], continue: ["playing", "continue"],
       gameover: ["playing", "gameover"], win: ["playing", "win"], confirmquit: ["playing", "paused", "confirmquit"],
@@ -29,17 +29,17 @@ function controllerAt(screen: LegacyAppScreen): LegacyAppStateController {
   return controller;
 }
 
-describe("LegacyAppStateController transition matrix", () => {
+describe("AppStateController transition matrix", () => {
   it("keeps Bot Evidence behind the normal Ghost Lab route", () => {
-    const controller = new LegacyAppStateController(ENGINEERING);
+    const controller = new AppStateController(ENGINEERING);
     expect(() => controller.transition("botevidence")).toThrow(IllegalLegacyAppTransitionError);
     controller.transition("ghostlab");
     expect(controller.transition("botevidence")).toBe("botevidence");
   });
 
   it("accepts every declared legal edge", () => {
-    for (const from of LEGACY_APP_SCREENS) {
-      for (const to of LEGAL_LEGACY_TRANSITIONS[from]) {
+    for (const from of APP_SCREENS) {
+      for (const to of LEGAL_TRANSITIONS[from]) {
         const controller = from === "replay" && to === "playing" ? controllerAt("menu")
           : from === "replay" ? controllerAt(to) : controllerAt(from);
         if (from === "replay") controller.transition("replay", { returnTo: to });
@@ -51,9 +51,9 @@ describe("LegacyAppStateController transition matrix", () => {
   });
 
   it("rejects every undeclared edge", () => {
-    for (const from of LEGACY_APP_SCREENS) {
-      for (const to of LEGACY_APP_SCREENS) {
-        if (to === from || LEGAL_LEGACY_TRANSITIONS[from].includes(to)) continue;
+    for (const from of APP_SCREENS) {
+      for (const to of APP_SCREENS) {
+        if (to === from || LEGAL_TRANSITIONS[from].includes(to)) continue;
         const controller = from === "replay" ? controllerAt("menu") : controllerAt(from);
         if (from === "replay") controller.transition("replay", { returnTo: "menu" });
         expect(() => controller.transition(to), `${from} -/-> ${to}`).toThrow(IllegalLegacyAppTransitionError);
@@ -62,7 +62,7 @@ describe("LegacyAppStateController transition matrix", () => {
   });
 
   it("restores pause after settings and then resumes the same run", () => {
-    const controller = new LegacyAppStateController(ENGINEERING);
+    const controller = new AppStateController(ENGINEERING);
     controller.transition("setup");
     controller.transition("playing", { runId: "run-1" });
     controller.transition("paused");
@@ -75,7 +75,7 @@ describe("LegacyAppStateController transition matrix", () => {
   });
 
   it("only exits replay to its captured viewer origin", () => {
-    const controller = new LegacyAppStateController(ENGINEERING);
+    const controller = new AppStateController(ENGINEERING);
     controller.transition("profile");
     controller.transition("replay", { returnTo: "profile" });
     expect(() => controller.transition("menu")).toThrow(IllegalLegacyAppTransitionError);
@@ -83,7 +83,7 @@ describe("LegacyAppStateController transition matrix", () => {
   });
 
   it("admits a replay-to-playing transition only for a verified practice launch", () => {
-    const controller = new LegacyAppStateController(ENGINEERING);
+    const controller = new AppStateController(ENGINEERING);
     controller.transition("profile"); controller.transition("replay", { returnTo: "profile" });
     expect(() => controller.transition("playing")).toThrow(IllegalLegacyAppTransitionError);
     expect(controller.transition("playing", { practiceLaunch: true, runId: "practice-child" })).toBe("playing");

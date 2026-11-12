@@ -1,10 +1,10 @@
-import { renderLegacyWorldFrame, type LegacyWorldFramePorts } from "./legacy-world-frame";
+import { renderWorldFrame, type WorldFramePorts } from "./world-frame";
 
 /** Settled scene owned by an isolated replay seek; only draw capabilities escape. */
 export function createProductionReplayFrame(input: Readonly<{
   tick: number; clockSeconds: number; screen: string; clockBlocked: boolean;
   cameraX: number; cameraY: number;
-  ports: Omit<LegacyWorldFramePorts, "canvas" | "screen">;
+  ports: Omit<WorldFramePorts, "canvas" | "screen">;
 }>) {
   const { width, height, zoom } = input.ports;
   const camera = Object.freeze({ policy: "player-follow" as const, x: input.cameraX, y: input.cameraY, scale: zoom, reconstructed: true as const });
@@ -23,7 +23,7 @@ export function createProductionReplayFrame(input: Readonly<{
         canvas.beginPath(); canvas.rect(0, 0, width, height); canvas.clip();
         const dx = (width / 2 - camera.x) * zoom, dy = (height / 2 - camera.y) * zoom;
         canvas.translate(dx, dy);
-        renderLegacyWorldFrame({ ...input.ports, canvas, screen: { x: -dx, y: -dy, w: width, h: height } });
+        renderWorldFrame({ ...input.ports, canvas, screen: { x: -dx, y: -dy, w: width, h: height } });
       } finally { canvas.restore(); }
     },
   });

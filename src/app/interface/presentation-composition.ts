@@ -1,8 +1,8 @@
 import { TearWipe, type TearWipeOptions } from "../../presentation/tear-wipe";
-import { createLegacyWorldRenderers, type LegacyWorldRenderContext,
-  type LegacyWorldRendererRegistry } from "../../presentation/world";
+import { createWorldRenderers, type WorldRenderContext,
+  type WorldRendererRegistry } from "../../presentation/world";
 import type { ScreenRectangle } from "../../presentation/render-pipeline";
-import type { WorldCamera } from "../../presentation/world/legacy-world-frame";
+import type { WorldCamera } from "../../presentation/world/world-frame";
 import type { CinematicUiPort } from "../../presentation/cinematics";
 import type { ButtonLayerUiPort, CanvasUiButton } from "../../presentation/screens/button-layer";
 import { createUiConfirmArming, type InteractiveUiButton, type UiRuntimeInput } from "./ui-runtime-controller";
@@ -13,17 +13,17 @@ import { createLivePresentationHost, type LivePresentationHost } from "./present
 
 export interface LivePresentationSurface {
   readonly wipe: TearWipe;
-  readonly world: LegacyWorldRendererRegistry;
+  readonly world: WorldRendererRegistry;
 }
 
 /** Owns device-space transition effects and the legacy draw-only renderer registry. */
 export function createLivePresentationSurface(options: Readonly<{
   wipe: TearWipeOptions;
-  world: LegacyWorldRenderContext;
+  world: WorldRenderContext;
 }>): LivePresentationSurface {
   return Object.freeze({
     wipe: new TearWipe(options.wipe),
-    world: createLegacyWorldRenderers(options.world),
+    world: createWorldRenderers(options.world),
   });
 }
 

@@ -5,7 +5,7 @@ import { legacyCareerRow } from "../../ghost/career-archive";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import { createGhostCareerController } from "./ghost-career-controller";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { LegacyGamepad } from "../../input/legacy-input-contracts";
+import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { BOSS_ROSTER } from "../../gameplay/run/content-director";
 import {
   ABILITY_CATEGORY_ORDER, CODEX_TABS, SPECIAL_ABILITY_COLOR, abilityBadge,
@@ -26,7 +26,7 @@ import { createLiveBestiaryPreview } from "./bestiary-preview";
 type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
   "Chimera" | "Cloud" | "Colossus" | "CONFIG" | "DAILY" | "Echo" | "FirebaseProvider" | "Flyer" |
   "META" | "PROFILE" | "Ranged" | "Rootbinder" | "Rootbound" | "Source" | "STAGES" | "Support" | "UI" | "UPGRADES" | "VARIANTS" | "VAULT" |
-  "Warden" | "Wraith" | "applyVariant"> & Readonly<{ PAD: LegacyGamepad }>;
+  "Warden" | "Wraith" | "applyVariant"> & Readonly<{ PAD: BrowserGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 

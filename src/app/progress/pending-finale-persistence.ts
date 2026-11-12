@@ -1,8 +1,8 @@
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 
 import type { PendingFinaleRecord } from "../campaign/pending-finale-controller";
 
-type Profile = Pick<ReturnType<typeof createLegacyProfile>,
+type Profile = Pick<ReturnType<typeof createProfileStore>,
   "clearPendingFinale" | "pendingFinale" | "save" | "setPendingFinale">;
 
 /** Composition-owned profile operations used by the live outcome and recovery host. */

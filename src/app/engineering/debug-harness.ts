@@ -7,7 +7,7 @@ import type { BossId } from "../../gameplay/run/content-director";
 import type { RunPhase } from "../../gameplay/run/lifecycle";
 import { eligibleTierChoices } from "../../gameplay/run/reward-selection";
 import type { UpgradeDefinition } from "../../gameplay/upgrades";
-import type { LegacyAppScreen, LegacyTransitionContext } from "../interface/legacy-state-controller";
+import type { AppScreen, AppTransitionContext } from "../interface/app-state-controller";
 import { WHITE_HART_PHASE_ATTACKS, type WhiteHartAttackId } from "../../gameplay/entities/enemy-types/white-hart";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
 
@@ -36,7 +36,7 @@ export interface LiveDebugHarnessContext {
   readonly spawnExplicitVariant?: (kind: ExplicitVariantKind, variantId: string) => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
   readonly selectBoss: (boss: BossId) => void;
-  readonly setScreen: (screen: LegacyAppScreen, detail?: LegacyTransitionContext) => void;
+  readonly setScreen: (screen: AppScreen, detail?: AppTransitionContext) => void;
   readonly setContinueSeconds: (value: number) => void;
   readonly screen: () => string;
   readonly openDraft: () => void;

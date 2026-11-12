@@ -1,7 +1,7 @@
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import { createGhostProductionReplayComparison, type GhostProductionReplayComparison } from "../../ghost/production-replay-comparison";
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 
 export interface GhostComparisonScreenServices {
   readonly render: (view: ReplayScreenView) => void;
@@ -9,7 +9,7 @@ export interface GhostComparisonScreenServices {
 
 interface GhostComparisonContext {
   readonly comparison: GhostProductionReplayComparison;
-  readonly from: LegacyAppScreen;
+  readonly from: AppScreen;
   occurrenceIndex: number;
 }
 
@@ -48,7 +48,7 @@ export function createGhostComparisonScreenAdapter(services: GhostComparisonScre
   };
 
   return Object.freeze({
-    open(capsules: readonly GhostReadCapsule[], from: LegacyAppScreen): boolean {
+    open(capsules: readonly GhostReadCapsule[], from: AppScreen): boolean {
       try {
         context = { comparison: createGhostProductionReplayComparison(capsules), from, occurrenceIndex: 0 };
         return true;
@@ -58,13 +58,13 @@ export function createGhostComparisonScreenAdapter(services: GhostComparisonScre
       }
     },
     render(): void { const snapshot = view(); if (snapshot !== undefined) services.render(snapshot); },
-    exit(): LegacyAppScreen | undefined { const from = context?.from; context = undefined; return from; },
+    exit(): AppScreen | undefined { const from = context?.from; context = undefined; return from; },
     stepOccurrence(direction: -1 | 1): void {
       if (context === undefined) return;
       context.occurrenceIndex = Math.max(0, Math.min(context.comparison.occurrences.length - 1, context.occurrenceIndex + direction));
     },
     restart(): void { if (context !== undefined) context.occurrenceIndex = 0; },
-    status(): Readonly<{ paused: boolean; speed: number; infoVisible: boolean; progress: number; from: LegacyAppScreen }> | null {
+    status(): Readonly<{ paused: boolean; speed: number; infoVisible: boolean; progress: number; from: AppScreen }> | null {
       if (context === undefined) return null;
       const total = context.comparison.occurrences.length;
       return Object.freeze({ paused: true, speed: 1, infoVisible: false,

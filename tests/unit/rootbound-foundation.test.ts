@@ -12,7 +12,7 @@ import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { BossArenaRules, createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
 import { createEnemyHarness } from "./enemy-test-harness";
-import { createLegacyEnemyPresentation } from "../../src/presentation/enemies/legacy-enemy-renderers";
+import { createEnemyPresentation } from "../../src/presentation/enemies/enemy-presentation";
 import { clamp, len, lerp } from "../../src/domain/geometry";
 
 function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
@@ -64,7 +64,7 @@ describe("Rootbound production foundation", () => {
 
   it("installs a distinct root-throne silhouette with an authored intro pose", () => {
     const harness = createEnemyHarness();
-    createLegacyEnemyPresentation({
+    createEnemyPresentation({
       A11Y: { highContrast: false, reducedMotion: false }, CLOCK: { sim: 0 }, policy: CONFIG,
       GFX: { low: false }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
       UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
@@ -89,7 +89,7 @@ describe("Rootbound production foundation", () => {
       { highContrast: true, reducedMotion: true, low: true },
     ]) {
       const harness = createEnemyHarness();
-      createLegacyEnemyPresentation({
+      createEnemyPresentation({
         A11Y: { highContrast: profile.highContrast, reducedMotion: profile.reducedMotion }, CLOCK: { sim: 2 }, policy: CONFIG,
         GFX: { low: profile.low }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
         UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
@@ -108,7 +108,7 @@ describe("Rootbound production foundation", () => {
 
   it("keeps Memory Choir warning geometry visible in low-graphics reduced-motion rendering", () => {
     const harness = createEnemyHarness();
-    createLegacyEnemyPresentation({
+    createEnemyPresentation({
       A11Y: { highContrast: true, reducedMotion: true }, CLOCK: { sim: 2 }, policy: CONFIG,
       GFX: { low: true }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
       UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },

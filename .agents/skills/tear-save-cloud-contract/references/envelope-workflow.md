@@ -6,7 +6,7 @@ Use `src/persistence/settings-envelope.ts` and typed settings consumers. Keep de
 
 ## Profile and progression
 
-Use `src/persistence/profile-envelope.ts`, legacy-profile conversion, progression/meta systems, and currency/achievement contracts. Test nested and unknown data preservation, immutable canonical envelopes, mutable legacy copies only at compatibility boundaries, full progression round trip, and one-time migration/retrofit behavior.
+Use `src/persistence/profile-envelope.ts`, `src/persistence/profile-store.ts` conversion, progression/meta systems, and currency/achievement contracts. Test nested and unknown data preservation, immutable canonical envelopes, mutable legacy copies only at compatibility boundaries, full progression round trip, and one-time migration/retrofit behavior.
 
 ## Replay
 

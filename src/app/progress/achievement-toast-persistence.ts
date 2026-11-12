@@ -1,6 +1,6 @@
-import type { createLegacyProfile } from "../../persistence/legacy-profile";
+import type { createProfileStore } from "../../persistence/profile-store";
 
-type Profile = Pick<ReturnType<typeof createLegacyProfile>, "data" | "save">;
+type Profile = Pick<ReturnType<typeof createProfileStore>, "data" | "save">;
 
 /** Narrow live adapter for achievement-toast profile persistence. */
 export interface AchievementToastPersistence {

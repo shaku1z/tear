@@ -1,6 +1,6 @@
 import { bossEncounterStat, practiceBossCatalog, practiceBossIdentity, type PracticeBossEntry } from "../../gameplay/training/practice-boss-catalog";
 import type { BossPracticeActorEntry } from "../../gameplay/training/boss-phase-practice-runtime";
-import type { LegacyProfile } from "../../persistence/legacy-profile";
+import type { ProfileStore } from "../../persistence/profile-store";
 import type { CompletionStatus } from "../../domain/reward-receipts";
 import { encounterStat, practiceEnemyIdentity, practiceEnemyCatalog, type PracticeEnemyEntry } from "../../gameplay/training/practice-enemy-catalog";
 
@@ -25,7 +25,7 @@ const ordinary = (mode: string) => ["campaign", "endless", "bossonly", "gauntlet
 
 /** Live natural-install provenance is not a receipt: the acknowledged profile owns discovery. */
 export function createLivePracticeEncounterPersistence(
-  profile: Pick<LegacyProfile, "stat" | "maxStat" | "flushAcknowledged">,
+  profile: Pick<ProfileStore, "stat" | "maxStat" | "flushAcknowledged">,
 ): PracticeEncounterPersistence {
   const phases = new WeakMap<object, Set<number>>();
   const natural = new WeakMap<object, object>(), consumed = new WeakSet();

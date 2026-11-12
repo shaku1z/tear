@@ -3,10 +3,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { createUi } from "../../src/presentation/ui";
 import {
-  createLegacyWorldRenderers,
+  createWorldRenderers,
   type EnemyStatusSnapshot,
   type HudSnapshot,
-  type LegacyWorldRenderContext,
+  type WorldRenderContext,
   type WorldRect,
   type WorldUiPort,
 } from "../../src/presentation/world";
@@ -77,7 +77,7 @@ class TestUi implements WorldUiPort {
   private record(name: string, ...values: readonly unknown[]): void { this.calls.push({ name, arguments: values }); }
 }
 
-function renderContext(canvasCalls: CanvasCall[], ui = new TestUi()): LegacyWorldRenderContext {
+function renderContext(canvasCalls: CanvasCall[], ui = new TestUi()): WorldRenderContext {
   return {
     canvas: canvasRecorder(canvasCalls), ui, width: 1600, height: 900,
     safe: { top: 0, right: 0, bottom: 0, left: 0 },
@@ -116,7 +116,7 @@ describe("legacy world presentation renderers", () => {
     const canonicalUi = null as unknown as ReturnType<typeof createUi>;
     const compatibleUi: WorldUiPort = canonicalUi;
     expectTypeOf(compatibleUi).toExtend<WorldUiPort>();
-    const registry = createLegacyWorldRenderers(renderContext([]));
+    const registry = createWorldRenderers(renderContext([]));
     expect(Object.keys(registry).sort()).toEqual([
       "achievementToast", "bossIntro", "enemyStatus", "finaleWorld", "hud", "pantheonDebug",
       "playgroundHelp", "reticle", "stageBanner", "touchControls", "tutorialCard", "waveBanner",
@@ -126,7 +126,7 @@ describe("legacy world presentation renderers", () => {
   it("characterizes bleed, burn and mark status geometry without mutating the snapshot", () => {
     const calls: CanvasCall[] = [];
     const before = JSON.stringify(enemyStatus);
-    createLegacyWorldRenderers(renderContext(calls)).enemyStatus(enemyStatus);
+    createWorldRenderers(renderContext(calls)).enemyStatus(enemyStatus);
     expect(JSON.stringify(enemyStatus)).toBe(before);
     expect(calls.filter((call) => call.name === "ellipse")).toHaveLength(2);
     expect(calls.filter((call) => call.name === "quadraticCurveTo")).toHaveLength(5);
@@ -138,7 +138,7 @@ describe("legacy world presentation renderers", () => {
     const ui = new TestUi();
     const snapshot = hudSnapshot();
     const before = JSON.stringify(snapshot);
-    createLegacyWorldRenderers(renderContext(canvasCalls, ui)).hud(snapshot);
+    createWorldRenderers(renderContext(canvasCalls, ui)).hud(snapshot);
     expect(JSON.stringify(snapshot)).toBe(before);
     const labels = ui.calls.flatMap((call) => call.arguments.filter((value): value is string => typeof value === "string"));
     expect(labels).toEqual(expect.arrayContaining([
@@ -153,7 +153,7 @@ describe("legacy world presentation renderers", () => {
 
   it("backs every HUD group with one plate and keeps the boss header below the multiplier", () => {
     const ui = new TestUi();
-    createLegacyWorldRenderers(renderContext([], ui)).hud(hudSnapshot());
+    createWorldRenderers(renderContext([], ui)).hud(hudSnapshot());
     const plates = ui.calls.filter((call) => call.name === "hudPlate").map((call) => call.arguments[0] as { x: number; y: number; w: number; h: number });
     expect(plates).toHaveLength(4);
     const [vitals, run, multiplier, boss] = plates;
@@ -169,7 +169,7 @@ describe("legacy world presentation renderers", () => {
   it("anchors the HUD to the visible screen corner and the safe area, not the 16:9 frame", () => {
     const ui = new TestUi();
     const base = renderContext([], ui);
-    createLegacyWorldRenderers({ ...base, screen: { x: -267, y: -150, w: 2134, h: 1200 }, safe: { top: 12, right: 0, bottom: 0, left: 30 } }).hud(hudSnapshot());
+    createWorldRenderers({ ...base, screen: { x: -267, y: -150, w: 2134, h: 1200 }, safe: { top: 12, right: 0, bottom: 0, left: 30 } }).hud(hudSnapshot());
     const vitals = ui.calls.find((call) => call.name === "hudPlate")?.arguments[0] as { x: number; y: number };
     expect(vitals).toMatchObject({ x: -267 + 30 + 24, y: -150 + 12 + 24 });
   });
@@ -177,18 +177,18 @@ describe("legacy world presentation renderers", () => {
   it("collapses a long ability list into one summary line (the full list lives on the pause screen)", () => {
     const ui = new TestUi(), snapshot = hudSnapshot();
     const abilities = Array.from({ length: 32 }, (_, index) => `ABILITY ${String(index)}`);
-    createLegacyWorldRenderers(renderContext([], ui)).hud({ ...snapshot, player: { ...snapshot.player, abilities } });
+    createWorldRenderers(renderContext([], ui)).hud({ ...snapshot, player: { ...snapshot.player, abilities } });
     const text = ui.calls.filter((call) => call.name === "text").map((call) => call.arguments[0]);
     expect(text).toContain("32 ABILITIES · PAUSE: ARSENAL");
     expect(text.some((value) => String(value).startsWith("ABILITY "))).toBe(false);
     const short = new TestUi();
-    createLegacyWorldRenderers(renderContext([], short)).hud({ ...snapshot, player: { ...snapshot.player, abilities: abilities.slice(0, 4) } });
+    createWorldRenderers(renderContext([], short)).hud({ ...snapshot, player: { ...snapshot.player, abilities: abilities.slice(0, 4) } });
     expect(short.calls.filter((call) => call.name === "text" && String(call.arguments[0]).startsWith("ABILITY "))).toHaveLength(4);
   });
 
   it("draws HUD text only at type tokens", () => {
     const ui = new TestUi();
-    createLegacyWorldRenderers(renderContext([], ui)).hud(hudSnapshot());
+    createWorldRenderers(renderContext([], ui)).hud(hudSnapshot());
     const tokens = new Set(Object.values(ui.t.type));
     for (const call of ui.calls.filter((entry) => entry.name === "text" || entry.name === "tag" || entry.name === "title")) {
       expect(tokens.has((call.arguments[1] as { size: number }).size)).toBe(true);
@@ -198,7 +198,7 @@ describe("legacy world presentation renderers", () => {
   it("keeps tutorial, playground, touch and transient overlay copy intact", () => {
     const canvasCalls: CanvasCall[] = [];
     const ui = new TestUi();
-    const renderers = createLegacyWorldRenderers(renderContext(canvasCalls, ui));
+    const renderers = createWorldRenderers(renderContext(canvasCalls, ui));
     renderers.tutorialCard({ lessonIndex: 1, lessonCount: 5, title: "DASH THROUGH", description: "Avoid damage.",
       keys: ["SHIFT", "SPACE"], final: false, completedBeat: 0.9, progress: { current: 2, goal: 3 } });
     renderers.playgroundHelp({ weaponId: "scythe", heldHits: 2, throws: 4, throwHits: 3, perfectParries: 1, breakTriggers: 2 });
@@ -217,7 +217,7 @@ describe("legacy world presentation renderers", () => {
 
   it("stacks the tutorial card so keys, dots and the progress bar never share a row", () => {
     const ui = new TestUi(), calls: CanvasCall[] = [];
-    createLegacyWorldRenderers(renderContext(calls, ui)).tutorialCard({ lessonIndex: 2, lessonCount: 14, title: "JUMP",
+    createWorldRenderers(renderContext(calls, ui)).tutorialCard({ lessonIndex: 2, lessonCount: 14, title: "JUMP",
       description: "Jump three times. Use the ledges to climb.", keys: ["W", "SPACE"], final: false, completedBeat: 0, progress: { current: 1, goal: 3 } });
     const keyY = Math.min(...ui.calls.filter((call) => call.name === "keycap").map((call) => (call.arguments[1] as { y: number }).y));
     const description = ui.calls.find((call) => call.name === "textBox")?.arguments[1] as { y: number };
@@ -244,7 +244,7 @@ describe("legacy world presentation renderers", () => {
     for (const top of [0, 20, 44]) {
       const calls: CanvasCall[] = [], ui = new TestUi(), base = renderContext(calls, ui);
       const context = { ...base, safe: { ...base.safe, top } };
-      createLegacyWorldRenderers(context).tutorialCard({ bossPractice: true, lessonIndex: 0, lessonCount: 1,
+      createWorldRenderers(context).tutorialCard({ bossPractice: true, lessonIndex: 0, lessonCount: 1,
         title: "ROOTBOUND · PHASE 2", description: "Read the boss recovery.", keys: [], final: false, completedBeat: 0 });
       const card = ui.calls.find((call) => call.name === "hudPlate")?.arguments[0] as { x: number; y: number; w: number };
       expect(card.y).toBeGreaterThanOrEqual(bossHudTop(context) + 3 * ui.t.metric.bossHudH);
@@ -255,7 +255,7 @@ describe("legacy world presentation renderers", () => {
   it("places achievement toasts by context and never wider than the cap", () => {
     for (const placement of ["hud", "corner", "sheet-footer"] as const) {
       const calls: CanvasCall[] = [], ui = new TestUi();
-      createLegacyWorldRenderers(renderContext(calls, ui)).achievementToast({ name: "A SHARP BEGINNING", description: "Land the first perfect cut",
+      createWorldRenderers(renderContext(calls, ui)).achievementToast({ name: "A SHARP BEGINNING", description: "Land the first perfect cut",
         rarityName: "RARE", rarityColor: "#b06cff", categoryIcon: "◆", shards: 5, coins: 20, reveal: 1, placement, clearTop: 120 });
       const surface = calls.find((call) => call.name === "fillRect");
       const [x, y, w, h] = (surface?.arguments ?? []).map(Number);
@@ -272,7 +272,7 @@ describe("legacy world presentation renderers", () => {
   it("renders Source/finale depth and every banner/reticle state through snapshots", () => {
     const canvasCalls: CanvasCall[] = [];
     const ui = new TestUi();
-    const renderers = createLegacyWorldRenderers(renderContext(canvasCalls, ui));
+    const renderers = createWorldRenderers(renderContext(canvasCalls, ui));
     renderers.finaleWorld("rear", {
       phase: "cut", origin: { x: 800, y: 400 }, anchors: [{ x: 700, y: 300, radius: 40, depth: 0.5, cut: false }],
       severedIndex: 0, restoredColor: true, restoring: true, restoredGravity: true, tearClosed: false,

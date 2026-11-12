@@ -6,7 +6,7 @@ import type { createUi } from "../../src/presentation/ui";
 import type {
   ScreenControl, ScreenRenderContext, ScreenUiPort,
 } from "../../src/presentation/screens";
-import { createLegacyScreenRenderers } from "../../src/presentation/screens";
+import { createScreenRenderers } from "../../src/presentation/screens";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
@@ -112,7 +112,7 @@ describe("legacy screen renderer registry", () => {
       const controls: ScreenControl[] = [], context = createRenderContext(controls);
       const ui = new TestUi();
       Object.assign(ui, { density: { touch: true, compact: true } });
-      const renderer = createLegacyScreenRenderers({ ...context, ui, width: 800, height: 360, scroll });
+      const renderer = createScreenRenderers({ ...context, ui, width: 800, height: 360, scroll });
       renderer.paused({ id: "paused", tutorial: { ...controller.session(), bossSelector: true, bossCatalog: practiceBossCatalog(() => 1) } } as Parameters<typeof renderer.paused>[0]);
       expect(controls.every((control) => control.y >= 0 && control.y + control.h <= 360 && control.h >= 24)).toBe(true);
       found.push(...controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-boss").map((control) => control.label));
@@ -121,7 +121,7 @@ describe("legacy screen renderer registry", () => {
   });
 
   it("keeps local Vault controls stable and renders an explicit separate owner recovery catalog", () => {
-    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createControlContext(controls));
+    const controls: ScreenControl[] = [], renderer = createScreenRenderers(createControlContext(controls));
     const local = { id: "profile" as const, tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],
       archive: { status: "idle" as const, detail: "Local files", canPick: true },
       replays: [{ id: "local-source", title: "Local capsule", detail: "Local bytes", canDownloadArchive: true, available: true }] };
@@ -140,7 +140,7 @@ describe("legacy screen renderer registry", () => {
   it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
     const controls: ScreenControl[] = [], context = createRenderContext(controls), title = vi.spyOn(context.ui, "title"), copy = vi.fn<CanvasRenderingContext2D["fillText"]>();
     context.canvas.fillText = copy;
-    const renderer = createLegacyScreenRenderers(context), controller = new TutorialController(CONFIG);
+    const renderer = createScreenRenderers(context), controller = new TutorialController(CONFIG);
     controller.openPractice(1600, 1);
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(title).toHaveBeenCalledWith(expect.anything(), "PRACTICE LAB", expect.anything(), expect.anything(), expect.anything());
@@ -192,7 +192,7 @@ describe("legacy screen renderer registry", () => {
       };
       const hints: { text: string; y: number; size: number | undefined }[] = [];
       ui.text = (...args: Parameters<ScreenUiPort["text"]>) => { hints.push({ text: args[1], y: args[3], size: args[4] }); };
-      const renderer = createLegacyScreenRenderers({ ...base, width, height, ui, canvas });
+      const renderer = createScreenRenderers({ ...base, width, height, ui, canvas });
       const draft = { id: "draft" as const, wave: 1, rerolls: 0, cards: [{ id: "speed", label: "SPEED" }] };
       renderer.draft(draft); const draftControls = [...controls]; controls.length = 0; lines.length = 0;
       renderer.draft({ ...draft, onboarding: campaignDraftGuidance("campaign", 1, 0, 0) ?? "" });
@@ -218,7 +218,7 @@ describe("legacy screen renderer registry", () => {
   });
   it("is exhaustive for every canonical application screen", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
-    const registry = createLegacyScreenRenderers(createControlContext([]));
+    const registry = createScreenRenderers(createControlContext([]));
     expect(Object.keys(registry).sort()).toEqual([
       "academy", "achievements", "botevidence", "codex", "confirmquit", "continue", "draft", "foundry", "gameover", "ghostlab", "ghostpublication", "ghostsupport", "leaderboards",
       "menu", "paused", "pglab", "pgmenu", "playing", "profile", "rename", "replay", "reserve",
@@ -253,7 +253,7 @@ describe("legacy screen renderer registry", () => {
     const rectangles: number[][] = [];
     const controls: ScreenControl[] = [];
     const base = createRenderContext(controls);
-    const renderer = createLegacyScreenRenderers({ ...base, canvas: canvasStub(rectangles),
+    const renderer = createScreenRenderers({ ...base, canvas: canvasStub(rectangles),
       screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } });
     renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Endless", difficultyLabel: "Normal", biome: "The Grounds" });
@@ -264,7 +264,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup"))
       .toMatchObject({ x: -20, y: 318, w: 320, h: 86 });
     controls.length = 0;
-    createLegacyScreenRenderers({ ...base, touch: true, screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } }).menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
+    createScreenRenderers({ ...base, touch: true, screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } }).menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Endless", difficultyLabel: "Normal" });
     // Touch anchors to the same true left edge (the old centre zoom is gone; density scales the type instead).
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup")).toMatchObject({ x: -20 });
@@ -291,7 +291,7 @@ describe("legacy screen renderer registry", () => {
 
   it("preserves setup hit geometry, Boss Test selection, bounties, and the legacy start target", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.setup({ id: "setup",
       modes: ["endless", "rush", "daily", "boss"].map((id) => ({ id, label: id })),
       difficulties: ["easy", "normal", "hard", "tear"].map((id) => ({ id, label: id })),
@@ -310,7 +310,7 @@ describe("legacy screen renderer registry", () => {
 
   it("flows shop categories by their real contents instead of fixed-height slots", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     const item = (id: string) => ({ id, label: id.toUpperCase(), level: 0, maxLevel: 3, cost: "10c", enabled: true });
     renderer.shop({ id: "shop", coins: 100, ownedLevels: 0, totalLevels: 18, lifetimeEarned: 100,
       sections: [
@@ -329,7 +329,7 @@ describe("legacy screen renderer registry", () => {
 
   it("models Codex guide details and rich profile/achievement surfaces without gameplay callbacks", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.codex({ id: "codex", tab: "guide", tabs: [{ id: "guide", label: "GUIDE", selected: true }], cards: [],
       guide: { controls: [{ keys: ["A", "D"], description: "move" }], controller: ["left stick move"],
         tricks: [{ glyph: "✦", name: "PARRY", points: 15, description: "swing fast" }],
@@ -346,7 +346,7 @@ describe("legacy screen renderer registry", () => {
 
   it("preserves leaderboard podium/replay theatre controls and settings cycle rows", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.leaderboards({ id: "leaderboards", tab: "global", tabs: [{ id: "global", label: "GLOBAL" }],
       modes: [{ id: "endless", label: "ENDLESS" }], difficulties: [{ id: "hard", label: "HARD" }], rows: [],
       podium: [{ rank: 1, name: "Player", detail: "wave 20", color: "#e0a326", replayId: "r1" }], ownRank: "#12 YOU" });
@@ -375,7 +375,7 @@ describe("legacy screen renderer registry", () => {
 
   it("renders durable Academy custody through a typed view with a semantic return", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [
       { label: "HELD", value: "3" }, { label: "REVIEWED", value: "2" },
       { label: "CURATED", value: "1" }, { label: "TRAINING SPLIT", value: "1" },
@@ -387,7 +387,7 @@ describe("legacy screen renderer registry", () => {
 
   it("renders Ghost Lab as safe local routes and explicit unavailable operations", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.ghostlab({ id: "ghostlab", subtitle: "local routes", routes: [
       { id: "academy", label: "ACADEMY", detail: "local custody" },
       { id: "training-operations", label: "TRAINING OPERATIONS", detail: "local recovery" },
@@ -419,20 +419,20 @@ describe("legacy screen renderer registry", () => {
     const view = new LiveGhostLabHomeController({ snapshot: () => ({ status: "unavailable", detail: "no policy", decisions: 0 }) } as unknown as LivePlayerWatchController).snapshot();
     expect(view.routes.map((route) => route.label)).not.toContain("RUN MONITOR");
     expect(view.unavailable.filter((entry) => entry.label === "RUN MONITOR")).toHaveLength(1);
-    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const controls: ScreenControl[] = [], renderer = createScreenRenderers(createRenderContext(controls));
     renderer.ghostlab(view);
     expect(controls.some((control) => control.action.type === "run-monitor.control")).toBe(false);
   });
 
   it("renders Bot Evidence as a read-only unavailable or exact-report projection", () => {
-    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const controls: ScreenControl[] = [], renderer = createScreenRenderers(createRenderContext(controls));
     expect(() => { renderer.botevidence({ id: "botevidence", status: "unavailable", subtitle: "exact local evidence", detail: "missing or stale" }); }).not.toThrow();
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "menu")).toMatchObject({ label: "‹  BACK" });
   });
 
   it("projects a running Run Monitor into the paused screen with semantic pause and stop controls", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.paused({ id: "paused", abilities: [], progress: [],
       playerWatch: { status: "running", decisions: 7 } });
     expect(controls.filter((control) => control.action.type === "run-monitor.control").map((control) => control.action))
@@ -449,7 +449,7 @@ describe("legacy screen renderer registry", () => {
 
   it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.academy({ id: "academy", status: "unavailable", subtitle: "Academy storage is unavailable", rows: [], records: [], manifests: [] });
     expect(controls.find((control) => control.action.type === "training-archive.retry"))
       .toMatchObject({ label: "TRY AGAIN", x: 690, w: 220, h: 46 });
@@ -457,7 +457,7 @@ describe("legacy screen renderer registry", () => {
 
   it("renders opaque Foundry launch eligibility and only an eligible semantic bootstrap", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.foundry({ id: "foundry", status: "ready", subtitle: "local recovery", automation: "unavailable", launchProfiles: [
       { profileId: "eligible-local-cycle", disposition: "eligible" }, { profileId: "blocked-local-cycle", disposition: "blocked" },
     ], jobs: [{
@@ -474,7 +474,7 @@ describe("legacy screen renderer registry", () => {
 
   it("renders durable DAgger status and exposes only a persisted-plan advance action", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [{ id: "A1", state: "HELD", detail: "anonymous improvement", candidateHash: "a".repeat(16), canWithdrawModelTraining: true }], manifests: [],
       daggerPrograms: [
         { id: "DAGGER ALPHA", state: "REVIEW REQUIRED", detail: "round 1 · awaiting an authorized review" },
@@ -492,7 +492,7 @@ describe("legacy screen renderer registry", () => {
 
   it("projects only an explicit human-calibration consent control", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [], records: [], manifests: [],
       humanCalibrationConsent: { state: "not-enrolled", detail: "no recorded consent", canOptIn: true, canRevoke: false } });
     expect(controls.find((control) => control.action.type === "training-archive.humanCalibration.optIn"))
@@ -503,7 +503,7 @@ describe("legacy screen renderer registry", () => {
   it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {
     const controls: ScreenControl[] = [];
     const context = createRenderContext(controls);
-    const renderer = createLegacyScreenRenderers({ ...context, scroll: 52 });
+    const renderer = createScreenRenderers({ ...context, scroll: 52 });
     expect(() => { renderer.academy({ id: "academy", status: "ready", subtitle: "durable training custody", rows: [],
       records: Array.from({ length: 5 }, (_, index) => ({ id: `RECORD-${String(index + 1)}`, state: "held", detail: "anonymous" })),
       manifests: Array.from({ length: 4 }, (_, index) => ({ id: `MANIFEST V${String(index + 1)}`, detail: "governed" })),
@@ -513,7 +513,7 @@ describe("legacy screen renderer registry", () => {
 
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({ id: "profile", tab: "replays", tabs: [{ id: "replays", label: "REPLAYS", selected: true }],
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "local-1", title: "You — Endless · normal",
         detail: "wave 4 · 900 pts", available: true, local: true, pinned: false, shared: false }] });
@@ -525,7 +525,7 @@ describe("legacy screen renderer registry", () => {
 
   it("renders Ghost Vault custody rows without exposing legacy replay mutations", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "capsule:run-1", title: "Ghost V3 - COACHING",
         detail: "COMPLETE - 3 CHUNKS", available: false, badge: "DURABLE CAPSULE" }] });
@@ -537,7 +537,7 @@ describe("legacy screen renderer registry", () => {
 
   it("keeps archive selection and exact restore controls outside the empty/populated Vault row clip", () => {
     for (const populated of [false, true]) {
-      const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+      const controls: ScreenControl[] = [], renderer = createScreenRenderers(createRenderContext(controls));
       renderer.profile({ id: "profile", tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],
         replays: populated ? [{ id: "healthy", title: "Ghost", detail: "Complete", available: true, canDownloadArchive: true }] : [],
         archive: { status: "ready", detail: "Preview only", canPick: true, jobId: "intent", revision: 7, canReselect: true, canRestore: true, canCancel: true } });
@@ -548,7 +548,7 @@ describe("legacy screen renderer registry", () => {
     }
   });
   it("offers a separate linked-pair download and named RESTORE BOTH while keeping the single download", () => {
-    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const controls: ScreenControl[] = [], renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({ id: "profile", tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],
       replays: [{ id: "parent", title: "Scored run", detail: "Complete", available: true, canDownloadArchive: true, canDownloadLinkedPair: true }],
       archive: { status: "ready", detail: "Validated pair", canPick: true, jobId: "pair", revision: 0, canRestore: true, pairedCapsuleIds: ["parent", "finale"] } });
@@ -561,7 +561,7 @@ describe("legacy screen renderer registry", () => {
   });
   it("C39 review: clips scrolled row hit/focus rectangles while fixed archive controls remain reachable", () => {
     for (const tab of ["vault", "replays"]) {
-      const controls: ScreenControl[] = [], context = createRenderContext(controls), renderer = createLegacyScreenRenderers({ ...context, scroll: 96 });
+      const controls: ScreenControl[] = [], context = createRenderContext(controls), renderer = createScreenRenderers({ ...context, scroll: 96 });
       renderer.profile({ id: "profile", tab, tabs: [], name: "Guest", signedIn: false, stats: [],
         replays: Array.from({ length: 8 }, (_, index) => ({ id: `row-${String(index)}`, title: "Ghost", detail: "Complete", available: true, canDownloadArchive: true, local: tab === "replays" })),
         ...(tab === "vault" ? { archive: { status: "ready" as const, detail: "Preview", canPick: true, jobId: "intent", revision: 7, canReselect: true, canRestore: true, canCancel: true } } : {}) });
@@ -574,7 +574,7 @@ describe("legacy screen renderer registry", () => {
   });
 
   it("offers healthy complete archive download despite Theater refusal and shows unsupported file capability", () => {
-    const controls: ScreenControl[] = [], renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const controls: ScreenControl[] = [], renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({ id: "profile", tab: "vault", tabs: [], name: "Guest", signedIn: false, stats: [],
       replays: [{ id: "historical", title: "Ghost", detail: "Healthy complete", available: false, theaterUnavailable: true, canDownloadArchive: true }],
       archive: { status: "unavailable", detail: "Local storage unavailable", canPick: false } });
@@ -586,7 +586,7 @@ describe("legacy screen renderer registry", () => {
 
   it("routes a healthy Ghost Vault capsule to Theater through a distinct semantic action", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "verified-capsule", title: "Ghost V3 - COACHING",
         detail: "COMPLETE - 3 CHUNKS - HEALTHY", available: true, badge: "DURABLE CAPSULE" }] });
@@ -596,7 +596,7 @@ describe("legacy screen renderer registry", () => {
 
   it("renders a refused Ghost Theater route as disabled without exposing decoder detail", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "refused-capsule", title: "Ghost V3 - COACHING",
         detail: "COMPLETE - 3 CHUNKS - HEALTHY", available: false, theaterUnavailable: true, badge: "DURABLE CAPSULE" }] });
@@ -607,7 +607,7 @@ describe("legacy screen renderer registry", () => {
 
   it("offers a semantic repair action only for an unhealthy Vault capsule", () => {
     const controls: ScreenControl[] = [];
-    const renderer = createLegacyScreenRenderers(createRenderContext(controls));
+    const renderer = createScreenRenderers(createRenderContext(controls));
     renderer.profile({ id: "profile", tab: "vault", tabs: [{ id: "vault", label: "VAULT", selected: true }],
       name: "Guest", signedIn: false, stats: [], replays: [{ id: "damaged-capsule", title: "Ghost V3 - COACHING",
         detail: "COMPLETE - 3 CHUNKS - NEEDS REPAIR", available: false, repairable: true, badge: "DURABLE CAPSULE" }] });
@@ -631,7 +631,7 @@ describe("release and engineering surface rendering", () => {
   const engineeringLabels = ["TRAINING ARCHIVE", "TRAINING OPERATIONS", "REPLAY HUB"];
   it("omits the engineering menu routes in release and seats the music row directly under SETTINGS", () => {
     const controls: ScreenControl[] = [];
-    createLegacyScreenRenderers(createRenderContext(controls)).menu(menuView);
+    createScreenRenderers(createRenderContext(controls)).menu(menuView);
     expect(controls.some((control) => engineeringLabels.includes(control.label))).toBe(false);
     const settings = controls.find((control) => control.label === "SETTINGS"), music = controls.find((control) => control.glyph === "♪");
     expect(settings).toMatchObject({ y: 670, h: 52 });
@@ -641,7 +641,7 @@ describe("release and engineering surface rendering", () => {
   });
   it("keeps the engineering menu routes at their established coordinates", () => {
     const controls: ScreenControl[] = [];
-    createLegacyScreenRenderers(createRenderContext(controls)).menu({ ...menuView, engineeringRoutes: true });
+    createScreenRenderers(createRenderContext(controls)).menu({ ...menuView, engineeringRoutes: true });
     expect(controls.filter((control) => engineeringLabels.includes(control.label)).map(({ label, x, y }) => ({ label, x, y }))).toEqual([
       { label: "TRAINING ARCHIVE", x: 100, y: 731 }, { label: "TRAINING OPERATIONS", x: 438, y: 731 }, { label: "REPLAY HUB", x: 670, y: 731 },
     ]);
@@ -654,13 +654,13 @@ describe("release and engineering surface rendering", () => {
     ui.sectionLabel = (...values: Parameters<ScreenUiPort["sectionLabel"]>) => { sectionLabels.push(values[1]); return values[3] + 24; };
     const base = { id: "setup" as const, modes: [{ id: "endless", label: "Endless", selected: true }], difficulties: [{ id: "normal", label: "Normal", selected: true }],
       weapons: [{ id: "sword", label: "Sword", selected: true }], showDifficulty: true, startGlyph: "▢", startSummary: "ENDLESS · NORMAL · SWORD" };
-    createLegacyScreenRenderers({ ...context, ui }).setup(base);
+    createScreenRenderers({ ...context, ui }).setup(base);
     expect(sectionLabels).toEqual(["MODE", "DIFFICULTY", "WEAPON"]);
     expect(controls.some((control) => control.action.type === "setup.start" && control.action.race === true)).toBe(false);
     const start = controls.find((control) => control.action.type === "setup.start");
     expect((start?.x ?? 0) + (start?.w ?? 0) / 2).toBe(800);
     controls.length = 0; sectionLabels.length = 0;
-    createLegacyScreenRenderers({ ...context, ui }).setup({ ...base, raceAvailable: true,
+    createScreenRenderers({ ...context, ui }).setup({ ...base, raceAvailable: true,
       modes: [...base.modes, { id: "bossonly", label: "Boss Test", debug: true }] });
     expect(sectionLabels).toContain("DEV");
     expect(controls.find((control) => control.action.type === "setup.start" && control.action.race === true)).toMatchObject({ label: "CREATE SEED-LOCKED RACE" });
@@ -673,7 +673,7 @@ describe("release and engineering surface rendering", () => {
     const entry = { kind: "capsule", present: true, mode: "endless", weapon: "sword", result: "defeat", wave: 3, score: 10, date: "2026-11-11",
       dna: {}, actor: "human", verified: "receipts", seconds: 1, damage: 1, categories: [], composition: {}, loadout: [], abilities: [], bosses: [],
       style: null, nearMiss: [], sharing: "private", gameVersion: "0.1.0", unavailable: [], beatAttempt: false, assisted: false };
-    createLegacyScreenRenderers(context).profile({ id: "profile", tab: "career", tabs: [], name: "Guest", signedIn: false, stats: [],
+    createScreenRenderers(context).profile({ id: "profile", tab: "career", tabs: [], name: "Guest", signedIn: false, stats: [],
       career: { status: "ready", indexing: false, message: "", query: { view: "history", sort: "newest" }, rows: [], confirming: false,
         selected: { entry, notes: { tags: [], retention: "normal" }, detail: "Recorded" }, retained: 1, known: 1, total: 1, page: 0, pages: 1 } } as never);
     const row = controls.filter((control) => control.action.type === "career.control" && ["watch", "challenge", "download", "chase", "coach", "publish", "race"].includes(control.action.command));

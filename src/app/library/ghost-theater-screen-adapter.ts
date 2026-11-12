@@ -14,7 +14,7 @@ import { createGhostProductionReplaySession, type GhostVerifiedProductionReplayS
 import { GhostTheaterTransport, type GhostTheaterState } from "../../ghost/theater";
 import type { GhostPracticeChild, GhostSeekResult } from "../../ghost/replay-world";
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 import type { GhostPracticeLaunchResult } from "../replay/ghost-practice-launch";
 import { ghostCoachCandidate } from "../../ghost/coach-history";
 import { createGhostCoachHistoryController, type GhostCoachHistoryPort } from "./ghost-coach-history-controller";
@@ -41,14 +41,14 @@ export interface GhostTheaterScreenStatus {
   readonly speed: number;
   readonly infoVisible: boolean;
   readonly progress: number;
-  readonly from: LegacyAppScreen;
+  readonly from: AppScreen;
 }
 
 interface GhostTheaterContext {
   readonly capsule: GhostReadCapsule;
   readonly session: GhostVerifiedProductionReplaySession;
   readonly transport: GhostTheaterTransport;
-  readonly from: LegacyAppScreen;
+  readonly from: AppScreen;
   readonly checkpoints: readonly number[];
   result: GhostSeekResult;
   infoVisible: boolean;
@@ -184,7 +184,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
   return Object.freeze({
     finaleLink(available: boolean) { if (context !== undefined) context.finaleAvailable = available; },
     sourceId: () => context?.capsule.manifest.id,
-    open(capsule: GhostReadCapsule, from: LegacyAppScreen, evidence?: Readonly<{ permit: GhostForkPermit; result: RecordedGhostChallengeResult }>): GhostTheaterOpenResult {
+    open(capsule: GhostReadCapsule, from: AppScreen, evidence?: Readonly<{ permit: GhostForkPermit; result: RecordedGhostChallengeResult }>): GhostTheaterOpenResult {
       invalidateStudio();
       history.close();
       let mapped: ReturnType<typeof mapGhostCapsuleToReplayEnvelope>;
@@ -237,7 +237,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       if (context?.frame !== undefined) services.drawWorld?.(context.frame);
       if (snapshot !== undefined) services.render(snapshot);
     },
-    exit(): LegacyAppScreen | undefined {
+    exit(): AppScreen | undefined {
       const from = context?.from;
       invalidateStudio(); context = undefined;
       history.close();

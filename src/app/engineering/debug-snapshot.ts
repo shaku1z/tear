@@ -1,6 +1,6 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveGameHostState } from "../world/game-host-state";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 
 interface DebugCinemaSnapshot {
   readonly id: string | undefined;
@@ -35,7 +35,7 @@ export interface LiveDebugSnapshotOptions {
   readonly state: LiveGameHostState;
   readonly width: number;
   readonly height: number;
-  readonly screen: LegacyAppScreen;
+  readonly screen: AppScreen;
   readonly cinema: DebugCinemaSnapshot;
   readonly settings: DebugSettingsSnapshot;
   readonly selected: Readonly<{ mode: string; difficulty: string; weapon: string; boss: string }>;

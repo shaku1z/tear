@@ -1,6 +1,6 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 import type { RenameSnapshot } from "./rename-controller";
 import type { SettingsController, GameSettings } from "./settings-controller";
 
@@ -10,7 +10,7 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 export interface SettingsRenameServices {
   readonly dependencies: Dependencies; readonly document: Document; readonly window: Window;
   readonly canvas: HTMLCanvasElement; readonly width: number; readonly overscan: () => Readonly<{ x: number; y: number }>;
-  readonly screen: () => LegacyAppScreen; readonly setScreen: (screen: LegacyAppScreen, context?: Readonly<{ returnTo: LegacyAppScreen }>) => void;
+  readonly screen: () => AppScreen; readonly setScreen: (screen: AppScreen, context?: Readonly<{ returnTo: AppScreen }>) => void;
   readonly settingsController: SettingsController; readonly settings: GameSettings; readonly renderers: Renderers;
   readonly scroll: () => number; readonly setScroll: (value: number) => void;
   readonly stepTab: (tabs: readonly (readonly [string, string])[], current: string, changed: () => void) => string;

@@ -1,4 +1,4 @@
-import type { LegacyProfile } from "../../persistence/legacy-profile";
+import type { ProfileStore } from "../../persistence/profile-store";
 import type { MetaProgression } from "../../gameplay/progression/meta";
 import type { CompletionStatus } from "../../domain/reward-receipts";
 
@@ -10,7 +10,7 @@ export interface TutorialCompletionPersistence {
 
 /** The durable owners, rather than the rewound simulation, decide whether an effect is new. */
 export function createLiveTutorialCompletionPersistence(
-  profile: Pick<LegacyProfile, "issueTutorial" | "completeTutorial" | "flushAcknowledged" | "pendingRewards" | "acknowledgeReward">,
+  profile: Pick<ProfileStore, "issueTutorial" | "completeTutorial" | "flushAcknowledged" | "pendingRewards" | "acknowledgeReward">,
   meta: Pick<MetaProgression, "grantReward" | "flushAcknowledged">,
   achievements: Readonly<{ check(): void }>,
   uuid: () => string = () => crypto.randomUUID(),

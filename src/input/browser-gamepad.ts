@@ -1,10 +1,10 @@
 import type {
   GamepadSettings,
-  LegacyGamepad,
-  LegacyGamepadDependencies,
+  BrowserGamepad,
+  BrowserGamepadDependencies,
   PadPresetName,
   PadPresets,
-} from "./legacy-input-contracts";
+} from "./browser-input-contracts";
 
 type GlyphStyle = Exclude<GamepadSettings["glyphStyle"], "auto">;
 
@@ -22,7 +22,7 @@ function isPadPresetName(name: string): name is PadPresetName {
   return name === "default" || name === "standard" || name === "tear" || name === "classic" || name === "split";
 }
 
-interface LegacyGamepadInternal extends LegacyGamepad {
+interface BrowserGamepadInternal extends BrowserGamepad {
   _activeT: number;
   _prev: Record<number, boolean | undefined>;
   _navT: number;
@@ -49,8 +49,8 @@ interface LegacyGamepadInternal extends LegacyGamepad {
 }
 
 // Temporary ESM Gamepad adapter for the classic game shell.
-export function createLegacyGamepad(dependencies: LegacyGamepadDependencies): Readonly<{
-  PAD: LegacyGamepad;
+export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): Readonly<{
+  PAD: BrowserGamepad;
   PAD_PRESETS: PadPresets;
 }> {
 const { config: CONFIG, input: Input, window, navigator, semantic } = dependencies;
@@ -93,7 +93,7 @@ const PAD_PRESETS: PadPresets = {
   split:    { jump: [0, 5], dash: [1, 7], throw: [2, 4],    tether: [6] },   // blade utility on the left hand
 };
 
-const PAD: LegacyGamepadInternal = {
+const PAD: BrowserGamepadInternal = {
   connected: false,
   index: -1,
   toastT: 0,          // "CONTROLLER CONNECTED" toast clock (game draws it)

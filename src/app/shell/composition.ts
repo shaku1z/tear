@@ -19,9 +19,9 @@ import { VARIANTS, applyVariant, rollVariant } from "../../gameplay/variants";
 import { VoidGen } from "../../gameplay/voidgen";
 import { WEAPONS, applyWeapon, getWeapon } from "../../gameplay/weapons";
 import { createLegacyInputCompatibility } from "../../input/legacy-compat";
-import { createLegacyGamepad } from "../../input/legacy-gamepad";
-import { createLegacyInput } from "../../input/legacy-input";
-import { createLegacyProfile } from "../../persistence/legacy-profile";
+import { createBrowserGamepad } from "../../input/browser-gamepad";
+import { createBrowserInput } from "../../input/browser-input";
+import { createProfileStore } from "../../persistence/profile-store";
 import type { CloudFactory } from "../../platform/cloud-factory";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
@@ -40,7 +40,7 @@ import { createLegacyReplayCompatibility } from "../../replay/legacy-compat";
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import { PerformanceMonitor } from "../../diagnostics/performance-monitor";
 import { createTearTestEnvironment } from "../../tearbench/test-support";
-import { LegacyAppStateController } from "../interface/legacy-state-controller";
+import { AppStateController } from "../interface/app-state-controller";
 import { createLiveAchievementToastPersistence } from "../progress/achievement-toast-persistence";
 import { createLiveBiomeProgressPersistence } from "../progress/biome-progress-persistence";
 import { createLivePendingFinalePersistence } from "../progress/pending-finale-persistence";
@@ -140,7 +140,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = random;
   const { Input, PAD } = createLegacyInputCompatibility(
     { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
-    { createInput: createLegacyInput, createGamepad: createLegacyGamepad },
+    { createInput: createBrowserInput, createGamepad: createBrowserGamepad },
   );
   const UI = createUi({ CLOCK, presentation: { view: worldConfig.view, colors: worldConfig.colors, overscan: OVERSCAN }, Input, clamp,
     controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
@@ -180,7 +180,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   });
   const CG = platform.CG;
 
-  const PROFILE = createLegacyProfile({
+  const PROFILE = createProfileStore({
     store: CG.store,
     onCommitted: () => { if (PROFILE.pendingRewards().length > 0) void tutorialCompletionPersistence.retry(); },
     onLoaded: () => { void tutorialCompletionPersistence.retry(); },
@@ -224,7 +224,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   const tutorialCompletionPersistence = createLiveTutorialCompletionPersistence(PROFILE, META, ACH);
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
-  const APP = new LegacyAppStateController(surfaces);
+  const APP = new AppStateController(surfaces);
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);

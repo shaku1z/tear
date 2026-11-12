@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createDailyChallenges } from "../../src/gameplay/progression/challenges";
 import { createMetaProgression, type ProgressionApplyContext } from "../../src/gameplay/progression/meta";
-import { createLegacyProfile } from "../../src/persistence/legacy-profile";
+import { createProfileStore } from "../../src/persistence/profile-store";
 
 function memoryStore() {
   const values = new Map<string, string>();
@@ -37,7 +37,7 @@ describe("progression persistence contract", () => {
     expect(firstMeta.META.buy(toughness)).toBe(true);
 
     const achievement = { id: "round_trip", shards: 7, coins: 125 };
-    const firstProfile = createLegacyProfile({
+    const firstProfile = createProfileStore({
       store,
       now: () => 1_725_000_000_000,
       getAchievements: () => undefined,
@@ -66,7 +66,7 @@ describe("progression persistence contract", () => {
 
     const secondMeta = metaFor(store);
     secondMeta.META.load();
-    const secondProfile = createLegacyProfile({
+    const secondProfile = createProfileStore({
       store,
       now: () => 1_725_000_100_000,
       getAchievements: () => undefined,

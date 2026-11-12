@@ -41,7 +41,7 @@ export interface GamepadSettings {
   glyphStyle: "auto" | "playstation" | "xbox" | "generic";
 }
 
-export interface LegacyInputConfig {
+export interface BrowserInputConfig {
   readonly view: ViewConfig;
   readonly touch?: TouchConfig;
   pad?: GamepadSettings;
@@ -59,8 +59,8 @@ export interface Overscan {
   readonly y: number;
 }
 
-export interface LegacyInputDependencies {
-  readonly config: LegacyInputConfig;
+export interface BrowserInputDependencies {
+  readonly config: BrowserInputConfig;
   readonly safeArea: Insets;
   readonly overscan: Overscan;
   readonly window: Window;
@@ -109,7 +109,7 @@ export interface UiScroll {
   readonly source: "mouse" | "touch" | "gamepad" | null;
 }
 
-export interface LegacyInput {
+export interface BrowserInput {
   readonly semantic: SemanticInputBuffer;
   readonly held: Set<string>;
   readonly pressed: Set<string>;
@@ -209,9 +209,9 @@ export type PadPresetName = "default" | "standard" | "tear" | "classic" | "split
 export type PadPreset = Readonly<Record<PadAction, readonly number[]>>;
 export type PadPresets = Readonly<Record<PadPresetName, PadPreset>>;
 
-export interface LegacyGamepadDependencies {
-  readonly config: LegacyInputConfig;
-  readonly input: LegacyInput;
+export interface BrowserGamepadDependencies {
+  readonly config: BrowserInputConfig;
+  readonly input: BrowserInput;
   readonly window: Window;
   readonly navigator: GamepadNavigatorPort;
   readonly semantic: SemanticInputBuffer;
@@ -221,7 +221,7 @@ export interface GamepadNavigatorPort {
   getGamepads(): readonly (Gamepad | null)[];
 }
 
-export interface LegacyGamepad {
+export interface BrowserGamepad {
   connected: boolean;
   index: number;
   toastT: number;

@@ -2,7 +2,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
-import type { LegacyAppScreen, LegacyTransitionContext } from "../interface/legacy-state-controller";
+import type { AppScreen, AppTransitionContext } from "../interface/app-state-controller";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { BossId } from "../../gameplay/run/content-director";
 import type { UpgradeDefinition } from "../../gameplay/upgrades";
@@ -25,8 +25,8 @@ export interface LiveDebugCompositionOptions {
   readonly spawnExplicitVariant?: Parameters<typeof installLiveDebugHarness>[0]["spawnExplicitVariant"];
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
   readonly selectBoss: (boss: BossId) => void;
-  readonly setScreen: (screen: LegacyAppScreen, detail?: LegacyTransitionContext) => void;
-  readonly screen: () => LegacyAppScreen;
+  readonly setScreen: (screen: AppScreen, detail?: AppTransitionContext) => void;
+  readonly screen: () => AppScreen;
   readonly setContinueSeconds: (value: number) => void;
   readonly openDraft: () => void;
   readonly openTier: (choices: readonly UpgradeDefinition[]) => void;

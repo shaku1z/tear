@@ -8,7 +8,7 @@ import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { LiveWorldServices } from "../world/world-context";
-import type { LegacyAppScreen, LegacyTransitionContext } from "../interface/legacy-state-controller";
+import type { AppScreen, AppTransitionContext } from "../interface/app-state-controller";
 import type { LiveRunControllerRegistry } from "./run-controller-api";
 import type { createLiveCampaignHost } from "../campaign/campaign-host";
 import type { LiveTrainingHost } from "../training/training-host";
@@ -73,7 +73,7 @@ export interface LiveRunOrchestrationOptions {
   readonly openingExposed?: (runId: string) => void;
   readonly discardOpeningCapture?: () => void;
   readonly authoritativeResult: () => Readonly<{ tick: number; stateHash: string }> | null;
-  readonly setScreen: (screen: LegacyAppScreen, context?: LegacyTransitionContext) => void;
+  readonly setScreen: (screen: AppScreen, context?: AppTransitionContext) => void;
   readonly requestPointerLock: () => void;
   readonly beginWipe: () => void;
   readonly wipeRemainingSeconds: () => number;

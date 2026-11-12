@@ -8,7 +8,7 @@ import { createLivePlaygroundPresentation } from "../../gameplay/training/live-p
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import { createTutorialArena } from "../../gameplay/training/tutorial-arenas";
-import type { LegacyAppScreen } from "../interface/legacy-state-controller";
+import type { AppScreen } from "../interface/app-state-controller";
 import type { TutorialGhostSnapshot } from "../../gameplay/training/tutorial-controller";
 import { AUTHORED_BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
@@ -26,7 +26,7 @@ export interface LiveTrainingHostContext {
   readonly lifecycle: TrainingLifecycle;
   readonly stage: TrainingStage;
   readonly spawn: (kind: LiveWaveSpawnSpec["type"], hpScale: number) => GameEnemy | undefined;
-  readonly navigate: (screen: LegacyAppScreen) => void;
+  readonly navigate: (screen: AppScreen) => void;
   readonly resetScroll: () => void;
   readonly releasePointer: () => void;
   readonly requestPointer: () => void;

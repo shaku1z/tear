@@ -1,7 +1,7 @@
-import type { FinaleWorldSnapshot, LegacyWorldRenderContext } from "./contracts";
+import type { FinaleWorldSnapshot, WorldRenderContext } from "./contracts";
 import { clamp } from "./primitives";
 
-export function createFinaleRenderer(context: LegacyWorldRenderContext) {
+export function createFinaleRenderer(context: WorldRenderContext) {
   const canvas = context.canvas;
 
   return function finaleWorld(layer: "rear" | "front", snapshot: FinaleWorldSnapshot): void {
