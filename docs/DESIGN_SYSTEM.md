@@ -69,7 +69,6 @@ Vertical rhythm and paddings.
 | `focusRing` / `focusGap` | 2 / 3 | Keyboard/controller focus ring stroke and gap outside the control |
 | `minTarget` | 32 | Smallest interactive control; touch raises it to the 44 CSS px floor |
 | `hudBarW` / `hudPad` | 320 / 10 | HUD health bar width and HUD group padding |
-| `hudTextOutline` | 3 | Width of the HUD text halo (`UI.text` / `UI.tag` with `protectContrast`) |
 | `railFadeW` / `railFadeMid` | 800 / 0.56 | Main-menu rail fade: its width from the screen's left edge for the desktop rail, and where its mid stop sits |
 | `hudAbilityRows` | 4 | Abilities listed on the HUD before it collapses to "N ABILITIES · PAUSE: ARSENAL" (the full list is on the pause screen) |
 | `pageTitleY` | 92 | Page title baseline (the shared page pattern) |
@@ -91,7 +90,6 @@ Opacity for de-emphasised text and for the content surfaces. Text roles are meas
 | `railControl` | 0.42 | Each dark-surface ghost control's own dark fill (rail rows, replay controls), so its label holds ≥ 4.5:1 over the open scene without a solid slab |
 | `modalDim` | 0.9 | Modal dim (Rename) |
 | `hudPlate` | 0.8 | In-run teaching card surface only (tutorial lesson, playground help); the HUD has no plates |
-| `hudHalo` | 0.85 | Opacity of the HUD text halo |
 
 ### Colour roles — `UI.t.color`
 Semantic roles. `accent`, `danger`, and `unique` pull from `CONFIG.colors` so the system and the game palette never drift apart.
@@ -160,7 +158,7 @@ Draft, reserve and tier-up keep the established card composition on desktop and 
 ### HUD and in-run surfaces
 
 - HUD groups anchor to the **visible screen rectangle plus safe insets** (`hudFrame`), not to the 16:9 frame, so ultrawide and 4:3 windows keep the HUD in the corners. Vitals sit top-left, wave and stats top-centre, the multiplier in a fixed slot under them, the boss header under that (`bossHudTop`), with the boss phase banner below the header.
-- The HUD has **no backing plates or boxes**. Its text uses the per-biome ink (`UI.ink`, flipped light on dark biomes) and a thin halo in the contrasting surface colour (`UI.text` / `UI.tag` with `protectContrast`: the scrim behind light ink, paper behind dark ink, at `alpha.hudHalo`, `metric.hudTextOutline` wide). Bars keep their own frame and fill; the boss bar keeps its dark cinematic frame. Wave and stage banners and the first-touch coaching use the same halo, also without plates.
+- The HUD is **plain text directly on the scene**: no backing plate, box, outline, halo or shadow behind it. Legibility comes from the per-biome ink alone (`UI.ink`, set each frame from the stage background's luminance: near-black on the light biomes, light on the dark Tear stage), values at full opacity and secondary labels at `alpha.soft`. Bars keep their own frame and fill; the boss bar keeps its dark cinematic frame. Wave and stage banners and the first-touch coaching follow the same rule. If a biome's HUD band reads poorly, fix that biome's ink selection, never add decoration behind the text.
 
 ### Main-menu rail
 

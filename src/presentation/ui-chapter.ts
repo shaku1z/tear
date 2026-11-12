@@ -278,7 +278,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
         },
         // In-run teaching card surface (tutorial lesson, playground help): the contrasting
         // surface for the live ink (paper under dark ink, scrim under light ink) at
-        // `alpha.hudPlate`. HUD groups and banners never use it; their text carries the halo.
+        // `alpha.hudPlate`. HUD groups and banners never use it; their text sits on the scene.
         hudPlate(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
             ctx.save();
             ctx.globalAlpha = this.t.alpha.hudPlate;

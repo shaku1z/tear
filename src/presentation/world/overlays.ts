@@ -82,11 +82,11 @@ export function createOverlayRenderers(context: WorldRenderContext) {
     const title = snapshot.bossWave ? "BOSS" : `WAVE ${String(snapshot.wave)}`;
     canvas.save();
     canvas.globalAlpha = alpha;
-    // No plate: the banner reads over the scene through the HUD halo.
-    ui.tag(canvas, title, context.width / 2, titleY, ui.ink, "center", size, true);
+    // Plain text over the scene in the biome ink, like the HUD.
+    ui.tag(canvas, title, context.width / 2, titleY, ui.ink, "center", size);
     if (snapshot.waveTag) {
       ui.tag(canvas, snapshot.waveTag, context.width / 2, titleY + t.space.sm + t.type.lead,
-        ui.readable(snapshot.horde ? snapshot.hordeColor : snapshot.normalColor), "center", t.type.lead, true);
+        ui.readable(snapshot.horde ? snapshot.hordeColor : snapshot.normalColor), "center", t.type.lead);
     }
     canvas.restore();
   }
@@ -105,10 +105,10 @@ export function createOverlayRenderers(context: WorldRenderContext) {
     const nameY = labelY + t.space.sm + Math.round(t.type.display * 0.8), blurbY = nameY + t.space.sm + t.type.body;
     canvas.save();
     canvas.globalAlpha = alpha;
-    // No plate: the banner reads over the scene through the HUD halo.
-    ui.tag(canvas, label, context.width / 2, labelY, ui.readable(snapshot.accent), "center", t.type.body, true);
-    ui.tag(canvas, snapshot.stageName, context.width / 2, nameY, ui.ink, "center", t.type.display, true);
-    if (!bossTest) ui.text(canvas, snapshot.blurb, context.width / 2, blurbY, t.type.body, "center", t.alpha.soft * alpha, true);
+    // Plain text over the scene in the biome ink, like the HUD.
+    ui.tag(canvas, label, context.width / 2, labelY, ui.readable(snapshot.accent), "center", t.type.body);
+    ui.tag(canvas, snapshot.stageName, context.width / 2, nameY, ui.ink, "center", t.type.display);
+    if (!bossTest) ui.text(canvas, snapshot.blurb, context.width / 2, blurbY, t.type.body, "center", t.alpha.soft * alpha);
     canvas.restore();
   }
 

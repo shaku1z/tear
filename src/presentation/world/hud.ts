@@ -4,9 +4,8 @@ import { clamp } from "./primitives";
 /**
  * HUD layout. Groups anchor to the visible screen rectangle plus the device safe
  * area (not the 16:9 logical frame), so an ultrawide or 4:3 window keeps the HUD in
- * its corners and out of the arena. There are no backing plates: HUD text uses the
- * per-biome ink with the contrasting halo (`protectContrast`, see `UI.text`), so the
- * world reads right up to every number.
+ * its corners and out of the arena. HUD text sits directly on the scene in the
+ * per-biome ink (`ui.ink`): no plate, outline or shadow behind it.
  */
 export interface HudFrame {
   readonly left: number;
@@ -76,13 +75,13 @@ export function createHudRenderer(context: WorldRenderContext) {
     const x = frame.left + pad, barY = frame.top + pad, resourceY = barY + barH + t.space.sm;
     const abilityY = resourceY + pip.h + t.space.sm + t.type.micro;
     hpBar(x, barY, barW, barH, lowHealth, pulse, snapshot);
-    ui.text(canvas, hpText, x + barW + t.space.sm, barY + barH - 2, t.type.body, "left", t.alpha.full, true);
-    if (player.oneHit) ui.tag(canvas, "ONE-HIT", x + barW + t.space.sm * 2 + valueW, barY + barH - 2, ui.readable(t.color.danger), "left", t.type.micro, true);
+    ui.text(canvas, hpText, x + barW + t.space.sm, barY + barH - 2, t.type.body, "left", t.alpha.full);
+    if (player.oneHit) ui.tag(canvas, "ONE-HIT", x + barW + t.space.sm * 2 + valueW, barY + barH - 2, ui.readable(t.color.danger), "left", t.type.micro);
     const dashRight = pips(x, resourceY, maxDash, player.dashCharges, player.dashRechargeFraction, player.dashColor, pip);
-    ui.text(canvas, "DASH", dashRight + t.space.xs, resourceY + pip.h, t.type.micro, "left", t.alpha.soft, true);
+    ui.text(canvas, "DASH", dashRight + t.space.xs, resourceY + pip.h, t.type.micro, "left", t.alpha.soft);
     const shieldX = dashRight + t.space.sm + measure("DASH", t.type.micro, false) + t.space.sm;
     for (let index = 0; index < player.maxShield; index++) shieldPip(shieldX + index * 20, resourceY, pip.h, index < player.shield, player.shieldColor);
-    for (const [index, line] of abilityLines.entries()) ui.text(canvas, line, x, abilityY + index * lineH, t.type.micro, "left", t.alpha.soft, true);
+    for (const [index, line] of abilityLines.entries()) ui.text(canvas, line, x, abilityY + index * lineH, t.type.micro, "left", t.alpha.soft);
   }
 
   /** HUD marks use the interface ink (`ui.ink`), the colour the per-biome theme contrasts with. */
@@ -162,11 +161,11 @@ export function createHudRenderer(context: WorldRenderContext) {
     const column = Math.max(...stats.map(([name, value]) => Math.max(measure(name, t.type.micro, false), measure(value, t.type.body, false))))
       + t.space.xl;
     const title = run.bossWave ? "BOSS" : `WAVE ${String(run.wave)}`;
-    ui.tag(canvas, title, cx, m.titleY, ui.ink, "center", t.type.h2, true);
+    ui.tag(canvas, title, cx, m.titleY, ui.ink, "center", t.type.h2);
     stats.forEach(([name, value], index) => {
       const x = cx + (index - 1) * column;
-      ui.text(canvas, value, x, m.valueY, t.type.body, "center", t.alpha.full, true);
-      ui.text(canvas, name, x, m.labelY, t.type.micro, "center", t.alpha.soft, true);
+      ui.text(canvas, value, x, m.valueY, t.type.body, "center", t.alpha.full);
+      ui.text(canvas, name, x, m.labelY, t.type.micro, "center", t.alpha.soft);
     });
   }
 
@@ -182,7 +181,7 @@ export function createHudRenderer(context: WorldRenderContext) {
       canvas.shadowColor = run.trickColor;
       canvas.shadowBlur = 10;
     }
-    ui.tag(canvas, label, 0, 0, ui.readable(run.trickColor), "center", t.type.lead, true);
+    ui.tag(canvas, label, 0, 0, ui.readable(run.trickColor), "center", t.type.lead);
     canvas.restore();
     canvas.globalAlpha = 0.14;
     canvas.fillStyle = ui.ink;
@@ -200,12 +199,12 @@ export function createHudRenderer(context: WorldRenderContext) {
     const nameY = top + pad + Math.round(t.type.label * 0.8);
     const epithetY = nameY + (epithet ? t.space.xs + t.type.micro : 0);
     const barY = epithetY + t.space.sm;
-    ui.tag(canvas, boss.name.toUpperCase(), cx, nameY, ui.ink, "center", t.type.label, true);
+    ui.tag(canvas, boss.name.toUpperCase(), cx, nameY, ui.ink, "center", t.type.label);
     const nameHalf = measure(boss.name.toUpperCase(), t.type.label, true) / 2;
     canvas.fillStyle = boss.color;
     canvas.fillRect(cx - nameHalf - t.space.sm - 8, nameY - t.type.label * 0.42, 8, 8);
     canvas.fillRect(cx + nameHalf + t.space.sm, nameY - t.type.label * 0.42, 8, 8);
-    if (epithet) ui.text(canvas, epithet, cx, epithetY, t.type.micro, "center", t.alpha.soft, true);
+    if (epithet) ui.text(canvas, epithet, cx, epithetY, t.type.micro, "center", t.alpha.soft);
     ui.bossHud(canvas, { x: cx - width / 2, y: barY, w: width, h: t.metric.bossHudH,
       frac: clamp(boss.hpFraction * (boss.introSweep ?? 1)), fill: boss.color, phaseFlash: boss.phaseFlash,
       time: context.timeSeconds, lowGraphics: context.lowGraphics,

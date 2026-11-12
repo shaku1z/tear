@@ -34,7 +34,7 @@ export interface WorldUiPort {
   };
   /** Live density: `compact` marks a phone-sized touch screen. */
   readonly density: Readonly<{ touch: boolean; compact: boolean }>;
-  /** The live interface ink (flipped per biome); HUD marks use it, with the halo on text. */
+  /** The live interface ink (flipped per biome); HUD marks and text use it directly. */
   readonly ink: string;
   /** A palette hue made readable as text on the current HUD surface. */
   readable(color: string, ratio?: number): string;
@@ -54,9 +54,9 @@ export interface WorldUiPort {
   /** The sheet's footer row: its top, height, and the BACK control's left edge. */
   sheetFooter(): Readonly<{ y: number; h: number; backX: number }>;
   font(size: number, bold?: boolean): string;
-  text(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number, protectContrast?: boolean): void;
+  text(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
   title(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
-  tag(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number, protectContrast?: boolean): void;
+  tag(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
   bossHud(canvas: CanvasRenderingContext2D, options: {
     readonly x: number; readonly y: number; readonly w: number; readonly h: number;
     readonly frac: number; readonly fill: string; readonly phaseMarks?: number[];

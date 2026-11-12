@@ -49,19 +49,19 @@ class TestUi implements WorldUiPort {
   readonly ink = "#101218";
   readonly t = {
     type: { display: 52, h2: 30, title: 24, lead: 20, body: 16, label: 15, caption: 14, micro: 13 },
-    alpha: { soft: 0.78, muted: 0.66, faint: 0.52 },
+    alpha: { full: 1, soft: 0.78, muted: 0.66, faint: 0.52 },
     color: { accent: "#13c4d6", muted: "#62646f", paper: "#fff", danger: "#e23b3b", scrim: "#06070c", scrimInk: "#f1eff9" },
     metric: { bossHudH: 16, bossNotchH: 6, bossGuardGap: 10, bossGuardH: 6, barH: 14, hudPad: 10, hudBarW: 320, hudAbilityRows: 4 },
     space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
   };
   font(size: number, bold?: boolean): string { return `${bold ? "bold " : ""}${String(size)}px monospace`; }
-  text(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number, align?: CanvasTextAlign, _alpha?: number, halo?: boolean): void {
-    this.record("text", text, { x, y, size, align, halo: halo === true });
+  text(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number, align?: CanvasTextAlign, alpha?: number): void {
+    this.record("text", text, { x, y, size, align, alpha });
   }
   displayText(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number): void { this.record("displayText", text, { x, y, size }); }
   title(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number): void { this.record("title", text, { x, y, size }); }
-  tag(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, color?: string, align?: CanvasTextAlign, size?: number, halo?: boolean): void {
-    this.record("tag", text, { x, y, color, align, size, halo: halo === true });
+  tag(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, color?: string, align?: CanvasTextAlign, size?: number): void {
+    this.record("tag", text, { x, y, color, align, size });
   }
   bossHud(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossHud"]>[1]): void { this.record("bossHud", options); }
   bossIntro(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossIntro"]>[1]): void { this.record("bossIntro", options); }
@@ -155,13 +155,17 @@ describe("legacy world presentation renderers", () => {
     expect(canvasCalls.some((call) => call.name === "createRadialGradient")).toBe(true);
   });
 
-  it("draws the HUD without backing plates, halos every HUD word, and keeps the boss header below the multiplier", () => {
-    const ui = new TestUi();
-    createWorldRenderers(renderContext([], ui)).hud(hudSnapshot());
+  it("draws the HUD as plain text on the scene (no plate, outline or box) and keeps the boss header below the multiplier", () => {
+    const ui = new TestUi(), canvasCalls: CanvasCall[] = [];
+    createWorldRenderers(renderContext(canvasCalls, ui)).hud(hudSnapshot());
     expect(ui.calls.filter((call) => call.name === "hudPlate")).toHaveLength(0);
+    expect(canvasCalls.filter((call) => call.name === "strokeText")).toHaveLength(0);
     const words = ui.calls.filter((call) => call.name === "text" || call.name === "tag");
     expect(words.length).toBeGreaterThan(0);
-    for (const call of words) expect(call.arguments[1]).toMatchObject({ halo: true });
+    // Values read at full opacity; only secondary labels step down, and never below the soft role.
+    for (const call of words.filter((word) => word.name === "text")) {
+      expect((call.arguments[1] as { alpha: number }).alpha).toBeGreaterThanOrEqual(ui.t.alpha.soft);
+    }
     const at = (label: string) => ui.calls.find((call) => call.arguments[0] === label)?.arguments[1] as { x: number; y: number };
     expect(at("BOSS")).toMatchObject({ x: 800 });
     const bar = ui.calls.find((call) => call.name === "bossHud")?.arguments[0] as { y: number };

@@ -115,7 +115,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 ### Playground and HUD
 
 - Playground groups spawn, boss, arena/weapon, modifier, action, and ability-lab controls rather than presenting one control wall.
-- HUD anchors to the visible screen corners and device insets while the world bleeds outward. The HUD has no plates or boxes: its text uses the per-biome ink with a thin contrasting halo, so the world reads right up to every number.
+- HUD anchors to the visible screen corners and device insets while the world bleeds outward. The HUD has no plates, boxes, outlines or halos: its text is plain per-biome ink drawn directly on the scene, so the world reads right up to every number.
 - Health, boss state, wave, score, multiplier, weapon state, and transient alerts each keep one visual authority.
 
 ## Motion and accessibility

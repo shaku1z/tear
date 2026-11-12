@@ -48,8 +48,6 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
             },
             // component metrics
             metric: {
-                // HUD text halo: the contrasting outline width (see `UI.hudText`)
-                hudTextOutline: 3,
                 // HUD: the vitals bar width, group padding, and how many abilities list
                 // before the HUD collapses them into one summary line (full list: pause)
                 hudBarW: 320, hudPad: 10, hudAbilityRows: 4,
@@ -100,8 +98,8 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 finalRewardDim: 0.78, finalRewardPanel: 0.96, finalRewardGhost: 0.18,
                 rallyBase: 0.72, rallyPulse: 0.18,
                 // In-run teaching card surface (tutorial lesson, playground help); the HUD
-                // itself has no plates, its text carries a halo at hudHalo instead
-                hudPlate: 0.8, hudHalo: 0.85,
+                // itself has no plates: its text sits directly on the scene in the biome ink
+                hudPlate: 0.8,
             },
             // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
             // from the game palette so the system and the game never drift apart.
