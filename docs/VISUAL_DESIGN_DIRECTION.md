@@ -60,7 +60,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 
 - The established logical anchors are `x=100` measured from the **true left edge of the window** (`screenRectangle.x + 100`, plus the safe-area inset), wordmark baseline `y=150`, identity `y=240`, PLAY `y=318`, and navigation beginning `y=426` with a 61 px rhythm. Extra rows (Practice Lab after the tutorial, then the music row) continue that rhythm under SETTINGS.
 - On wider windows the rail stays anchored to the left edge and the extra width goes to the living scene on the right; an empty band never opens left of the rail. Touch uses the same anchor; the compact density flows the navigation into two columns.
-- The rail sits on one solid dark backing (`color.rail` at `alpha.rail`) from the physical left edge to just past the rail, feathering out over 260 px, so every rail control reads at 4.5:1 or better whatever biome is showing.
+- The rail sits on the established soft dark fade from the physical left edge into the scene (`color.rail` from `alpha.rail` through `alpha.railMid` to clear over `metric.railFadeW`), never a solid slab. Each rail control carries its own dark fill (`alpha.railControl`), so every label reads at 4.5:1 or better whatever biome is showing.
 - The attract scene carries the spectacle: silhouette clarity, biome palette, and readable combat motion matter more than adding menu ornament.
 - Pending-finale recovery remains the sole justified secondary content block because it exposes otherwise unavailable actions.
 
@@ -115,7 +115,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 ### Playground and HUD
 
 - Playground groups spawn, boss, arena/weapon, modifier, action, and ability-lab controls rather than presenting one control wall.
-- HUD anchors to the visible screen corners and device insets while the world bleeds outward; every HUD group sits on one contrasting plate.
+- HUD anchors to the visible screen corners and device insets while the world bleeds outward. The HUD has no plates or boxes: its text uses the per-biome ink with a thin contrasting halo, so the world reads right up to every number.
 - Health, boss state, wave, score, multiplier, weapon state, and transient alerts each keep one visual authority.
 
 ## Motion and accessibility

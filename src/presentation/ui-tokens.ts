@@ -48,10 +48,14 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
             },
             // component metrics
             metric: {
+                // HUD text halo: the contrasting outline width (see `UI.hudText`)
                 hudTextOutline: 3,
-                // HUD: the vitals bar width, plate padding, and how many abilities list
+                // HUD: the vitals bar width, group padding, and how many abilities list
                 // before the HUD collapses them into one summary line (full list: pause)
                 hudBarW: 320, hudPad: 10, hudAbilityRows: 4,
+                // main-menu rail fade: its width from the screen's left edge (desktop rail)
+                // and where the mid stop sits along it (fraction of the width)
+                railFadeW: 800, railFadeMid: 0.56,
                 btnH: 48, btnW: 300, btnGap: 12, btnRound: 0,
                 panelPad: 14, chipH: 28, chipW: 96, barH: 14, cardRound: 0,
                 // boss theater: shared HUD + cinematic proportions. Ratios remain tokens so
@@ -62,7 +66,8 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 bossIntroBarH: 96, bossIntroAccentHalfW: 150, bossIntroAccentH: 3,
                 bossIntroTitleBottom: 34, bossIntroAccentBottom: 22, bossIntroEpithetBottom: 2, bossIntroOpeningBottom: 76,
                 bossVignetteFocusY: 0.46, bossVignetteInner: 0.18, bossVignetteOuter: 0.72,
-                bossPhaseBannerW: 760, bossPhaseBannerH: 72, bossPhaseBannerY: 0.24,
+                // phase banner centre (fraction of the view height): below the boss header, never over its bar
+                bossPhaseBannerW: 760, bossPhaseBannerH: 72, bossPhaseBannerY: 0.34,
                 bossPhaseAccentH: 3,
                 cinemaBarH: 74, cinemaDialogueW: 780, cinemaDialogueH: 104,
                 cinemaDialogueBottom: 96, cinemaDialoguePad: 18, cinemaProgressH: 3,
@@ -84,16 +89,19 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 // Text roles are measured on their real surfaces: muted (secondary) ≥ 4.5:1
                 // and faint (tertiary) ≥ 3:1 on the solid sheet and on the dark rail.
                 full: 1, soft: 0.78, muted: 0.66, faint: 0.52, ghost: 0.25,
-                // content surfaces: the sheet and the main-menu rail are effectively solid
-                sheet: 0.96, rail: 0.92, modalDim: 0.9,
+                // content surfaces: the sheet is effectively solid; the main-menu rail is a
+                // soft fade (rail at the screen edge, railMid at the mid stop, then clear)
+                // and each dark-surface ghost control adds its own fill (railControl)
+                sheet: 0.96, rail: 0.90, railMid: 0.60, railControl: 0.42, modalDim: 0.9,
                 bossTrack: 0.20, bossGuardTrack: 0.16, bossNotch: 0.90, bossFlash: 0.85,
                 cinemaBar: 0.88, cinemaVignette: 0.30, cinemaSubtitle: 0.75,
                 bossPhasePanel: 0.82,
                 cinemaPanel: 0.90, cinemaHint: 0.58,
                 finalRewardDim: 0.78, finalRewardPanel: 0.96, finalRewardGhost: 0.18,
                 rallyBase: 0.72, rallyPulse: 0.18,
-                // HUD backing plate: keeps values ≥ 4.5:1 and labels ≥ 3:1 over any biome
-                hudPlate: 0.8,
+                // In-run teaching card surface (tutorial lesson, playground help); the HUD
+                // itself has no plates, its text carries a halo at hudHalo instead
+                hudPlate: 0.8, hudHalo: 0.85,
             },
             // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
             // from the game palette so the system and the game never drift apart.
@@ -106,8 +114,8 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 cinemaMuted: "#c9ccd6",
                 // guaranteed-contrast modal pair: a dark scrim and the light ink drawn on it
                 scrim: "#06070c", scrimInk: "#f1eff9",
-                // main-menu rail backing and its foreground
-                rail: "#080a10", railInk: "#f1eff9",
+                // main-menu rail fade colour and its foreground
+                rail: "#06070c", railInk: "#f1eff9",
                 guard: "#e0a326", // posture / guard-break meter
                 get rally() { return colors.bomber; },
                 get accent() { return colors.perfect; },

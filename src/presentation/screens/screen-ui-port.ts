@@ -30,6 +30,7 @@ export interface ScreenUiTokens {
     readonly muted: number;
     readonly faint: number;
     readonly rail: number;
+    readonly railMid: number;
     readonly sheet: number;
   };
   readonly color: Record<string, string> & {
@@ -54,6 +55,8 @@ export interface ScreenUiTokens {
     readonly settingsControlH: number;
     readonly settingsStepperW: number;
     readonly minTarget: number;
+    readonly railFadeW: number;
+    readonly railFadeMid: number;
   };
 }
 

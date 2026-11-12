@@ -68,7 +68,9 @@ Vertical rhythm and paddings.
 | `barH` | 14 | Progress/HP bar height |
 | `focusRing` / `focusGap` | 2 / 3 | Keyboard/controller focus ring stroke and gap outside the control |
 | `minTarget` | 32 | Smallest interactive control; touch raises it to the 44 CSS px floor |
-| `hudBarW` / `hudPad` | 320 / 10 | HUD health bar width and HUD plate padding |
+| `hudBarW` / `hudPad` | 320 / 10 | HUD health bar width and HUD group padding |
+| `hudTextOutline` | 3 | Width of the HUD text halo (`UI.text` / `UI.tag` with `protectContrast`) |
+| `railFadeW` / `railFadeMid` | 800 / 0.56 | Main-menu rail fade: its width from the screen's left edge for the desktop rail, and where its mid stop sits |
 | `hudAbilityRows` | 4 | Abilities listed on the HUD before it collapses to "N ABILITIES · PAUSE: ARSENAL" (the full list is on the pause screen) |
 | `pageTitleY` | 92 | Page title baseline (the shared page pattern) |
 | `pageBodyTop` | 156 | First body y under a page header |
@@ -85,9 +87,11 @@ Opacity for de-emphasised text and for the content surfaces. Text roles are meas
 | `faint` | 0.52 | Hints, 3:1 or better (was 0.4) |
 | `ghost` | 0.25 | Barely-there / placeholder (never for text a player must read) |
 | `sheet` | 0.96 | Paper sheet surface, effectively solid so scene art never shows through text (was a hard-coded 0.70) |
-| `rail` | 0.92 | Main-menu rail backing |
+| `rail` / `railMid` | 0.90 / 0.60 | Main-menu rail fade: opacity at the screen edge and at the mid stop (then clear at `railFadeW`) |
+| `railControl` | 0.42 | Each dark-surface ghost control's own dark fill (rail rows, replay controls), so its label holds ≥ 4.5:1 over the open scene without a solid slab |
 | `modalDim` | 0.9 | Modal dim (Rename) |
-| `hudPlate` | 0.8 | HUD backing plate: keeps HUD values ≥ 4.5:1 and labels ≥ 3:1 over every biome |
+| `hudPlate` | 0.8 | In-run teaching card surface only (tutorial lesson, playground help); the HUD has no plates |
+| `hudHalo` | 0.85 | Opacity of the HUD text halo |
 
 ### Colour roles — `UI.t.color`
 Semantic roles. `accent`, `danger`, and `unique` pull from `CONFIG.colors` so the system and the game palette never drift apart.
@@ -97,7 +101,7 @@ Semantic roles. `accent`, `danger`, and `unique` pull from `CONFIG.colors` so th
 | `paper` | `"#fff"` | Background / overlay fade target |
 | `muted` | `"#62646f"` | De-emphasised text / hairlines, 5.9:1 on paper (was `#9a9a9a`, 2.8:1) |
 | `scrim` / `scrimInk` | `"#06070c"` / `"#f1eff9"` | Guaranteed-contrast modal pair (`UI.dim` with a light ink) |
-| `rail` / `railInk` | `"#080a10"` / `"#f1eff9"` | Main-menu rail backing and its foreground (also every dark-surface ghost control) |
+| `rail` / `railInk` | `"#06070c"` / `"#f1eff9"` | Main-menu rail fade colour and its foreground (also every dark-surface ghost control's fill and label) |
 | `disabled` | `"#bbb"` | Disabled controls |
 | `accent` | from `CONFIG.colors` | Highlight / positive cue |
 | `danger` | from `CONFIG.colors` | Warning / hostile cue |
@@ -130,7 +134,7 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | `UI.textBox` | `UI.textBox(ctx, text, x, y, maxW, opts?)` | Wrapped text in a box; `y` is the first baseline; **returns the height it used** so callers lay out below it |
 | `UI.readable` | `UI.readable(color, ratio?)` | A palette hue darkened to 4.5:1 when drawn on paper (passes through on dark surfaces) |
 | `UI.focusRing` | `UI.focusRing(ctx, box)` | Keyboard/controller focus ring outside a control (drawn by the button layer) |
-| `UI.hudPlate` | `UI.hudPlate(ctx, x, y, w, h)` | The one HUD contrast strategy: the surface that contrasts with the live ink (paper under dark ink, scrim under light ink) at `alpha.hudPlate`, behind each HUD group, banner and in-run card |
+| `UI.hudPlate` | `UI.hudPlate(ctx, x, y, w, h)` | The in-run teaching card surface (tutorial lesson, playground help): the surface that contrasts with the live ink at `alpha.hudPlate`. Never behind HUD groups, banners or the boss header |
 | `UI.sheetFooter` | `UI.sheetFooter()` | The sheet's footer row `{ y, h, backX }`: single owner of the BACK row geometry (used by `pageLayout` and the toast) |
 | `UI.keycap` | `UI.keycap(ctx, key, x, y)` | Bordered key cap sized from `type.micro`; returns its width |
 | `UI.finalReward` | `UI.finalReward(ctx, { …, actions? })` | Campaign reward panel; with `actions: true` it reserves a footer row and returns `actionsY`, so buttons always sit inside the panel |
@@ -149,11 +153,18 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 
 ### The overlay pattern (run overlays)
 
-Pause, confirm-quit, continue, defeat, victory, draft, reserve and tier-up share `overlayLayout` / `overlayHeader(context, { title, subtitle?, hue?, reveal? })` and `actionRow` from `screen-primitives.ts`: a `display` title under the safe top, an accent rule, subtitle lines, a body from `bodyTop` to `bodyBottom`, and a footer action row at `footerY`. All of it derives from the live tokens and safe insets, so a title cannot clip at any density. Panels (arsenal, run progress, run log) live in `run-overlay-panels.ts` and scroll inside their rect. Draft, reserve and tier-up use one choice card whose height comes from its copy; the key badge 1–4 shows whenever a keyboard or mouse owns input.
+Pause, confirm-quit, continue, defeat, victory, draft, reserve and tier-up share `overlayLayout` / `overlayHeader(context, { title, subtitle?, hue?, reveal? })` and `actionRow` from `screen-primitives.ts`: a `display` title under the safe top, an accent rule, subtitle lines, a body from `bodyTop` to `bodyBottom`, and a footer action row at `footerY`. All of it derives from the live tokens and safe insets, so a title cannot clip at any density. Panels (arsenal, run progress, run log) live in `run-overlay-panels.ts` and scroll inside their rect.
+
+Draft, reserve and tier-up keep the established card composition on desktop and tablet (`CLASSIC` in `draft-reserve-tierup.ts`): a display title at 122 with its accent rule, the instruction line(s) under it, and one centred row of tall cards (322 × 384, or 300 × 384 for four) for a draft or reserve, or rows of four 300 × 262 cards for tier-up that scroll by pixels. A card reads top to bottom: accent strip, tag (badge · category) with the key badge 1–4 at the top right whenever a keyboard or mouse owns input, the name fitted to width, an accent rule, tier pips, a centred description that wraps inside the card at the live body (or label) size, then the confirmation hint and ownership. Cards deal in from below and lift and scale on hover. A single tier-up row grows taller when the live type needs it, so no description is cut. Only the compact density (a phone in landscape) switches to the overlay pattern above, with a deck sized from its copy.
 
 ### HUD and in-run surfaces
 
-- HUD groups anchor to the **visible screen rectangle plus safe insets** (`hudFrame`), not to the 16:9 frame, so ultrawide and 4:3 windows keep the HUD in the corners. Vitals sit top-left, wave and stats top-centre, the multiplier in a fixed slot under them, the boss header under that (`bossHudTop`). Each group sits on one `UI.hudPlate`.
+- HUD groups anchor to the **visible screen rectangle plus safe insets** (`hudFrame`), not to the 16:9 frame, so ultrawide and 4:3 windows keep the HUD in the corners. Vitals sit top-left, wave and stats top-centre, the multiplier in a fixed slot under them, the boss header under that (`bossHudTop`), with the boss phase banner below the header.
+- The HUD has **no backing plates or boxes**. Its text uses the per-biome ink (`UI.ink`, flipped light on dark biomes) and a thin halo in the contrasting surface colour (`UI.text` / `UI.tag` with `protectContrast`: the scrim behind light ink, paper behind dark ink, at `alpha.hudHalo`, `metric.hudTextOutline` wide). Bars keep their own frame and fill; the boss bar keeps its dark cinematic frame. Wave and stage banners and the first-touch coaching use the same halo, also without plates.
+
+### Main-menu rail
+
+The rail sits on a soft dark fade from the screen's left edge into the scene, not on a solid panel: `color.rail` at `alpha.rail` at the edge, `alpha.railMid` at `metric.railFadeMid`, clear at `metric.railFadeW`. On an ultrawide window the fade starts at the true left edge, where the rail is anchored, and keeps the same falloff relative to the rail; a wider (two-column touch) rail stretches it. Each rail control carries its own dark fill (`alpha.railControl`) under its light glass wash and hairline, which keeps labels at ≥ 10:1 and sublines at ≥ 4.5:1 over the brightest attract biomes.
 - The HUD is drawn only while playing; run overlays carry their own summary.
 - Announcements (stage and wave banners) share one band under the HUD lane, never over the spawn floor; the wave banner waits while the stage banner shows.
 - On-screen touch controls come from `src/input/touch-control-layout.ts`, the single owner of their geometry: input hit-tests exactly the circles the renderer draws, anchored to the real screen edges and safe area and sized in CSS pixels.

@@ -55,10 +55,14 @@ class TestUi implements WorldUiPort {
     space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
   };
   font(size: number, bold?: boolean): string { return `${bold ? "bold " : ""}${String(size)}px monospace`; }
-  text(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number, align?: CanvasTextAlign): void { this.record("text", text, { x, y, size, align }); }
+  text(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number, align?: CanvasTextAlign, _alpha?: number, halo?: boolean): void {
+    this.record("text", text, { x, y, size, align, halo: halo === true });
+  }
   displayText(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number): void { this.record("displayText", text, { x, y, size }); }
   title(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, size?: number): void { this.record("title", text, { x, y, size }); }
-  tag(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, color?: string, align?: CanvasTextAlign, size?: number): void { this.record("tag", text, { x, y, color, align, size }); }
+  tag(_canvas: CanvasRenderingContext2D, text: string, x?: number, y?: number, color?: string, align?: CanvasTextAlign, size?: number, halo?: boolean): void {
+    this.record("tag", text, { x, y, color, align, size, halo: halo === true });
+  }
   bossHud(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossHud"]>[1]): void { this.record("bossHud", options); }
   bossIntro(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossIntro"]>[1]): void { this.record("bossIntro", options); }
   hudPlate(_canvas: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void { this.record("hudPlate", { x, y, w, h }); }
@@ -151,27 +155,28 @@ describe("legacy world presentation renderers", () => {
     expect(canvasCalls.some((call) => call.name === "createRadialGradient")).toBe(true);
   });
 
-  it("backs every HUD group with one plate and keeps the boss header below the multiplier", () => {
+  it("draws the HUD without backing plates, halos every HUD word, and keeps the boss header below the multiplier", () => {
     const ui = new TestUi();
     createWorldRenderers(renderContext([], ui)).hud(hudSnapshot());
-    const plates = ui.calls.filter((call) => call.name === "hudPlate").map((call) => call.arguments[0] as { x: number; y: number; w: number; h: number });
-    expect(plates).toHaveLength(4);
-    const [vitals, run, multiplier, boss] = plates;
-    expect(vitals).toMatchObject({ x: 24, y: 24 });
-    expect((run?.x ?? 0) + (run?.w ?? 0) / 2).toBeCloseTo(800);
-    expect(multiplier?.y).toBeGreaterThanOrEqual((run?.y ?? 0) + (run?.h ?? 0));
-    expect(boss?.y).toBeGreaterThanOrEqual((multiplier?.y ?? 0) + (multiplier?.h ?? 0));
+    expect(ui.calls.filter((call) => call.name === "hudPlate")).toHaveLength(0);
+    const words = ui.calls.filter((call) => call.name === "text" || call.name === "tag");
+    expect(words.length).toBeGreaterThan(0);
+    for (const call of words) expect(call.arguments[1]).toMatchObject({ halo: true });
+    const at = (label: string) => ui.calls.find((call) => call.arguments[0] === label)?.arguments[1] as { x: number; y: number };
+    expect(at("BOSS")).toMatchObject({ x: 800 });
     const bar = ui.calls.find((call) => call.name === "bossHud")?.arguments[0] as { y: number };
-    expect(bar.y).toBeGreaterThan(boss?.y ?? 0);
     expect(bar.y).toBe(bossHudTop(renderContext([], ui)) + 10 + 12 + 6 + 13 + 10);
+    const bossName = ui.calls.find((call) => call.name === "tag" && (call.arguments[1] as { size: number }).size === ui.t.type.label);
+    expect((bossName?.arguments[1] as { y: number }).y).toBeGreaterThan(at("SCORE").y);
   });
 
   it("anchors the HUD to the visible screen corner and the safe area, not the 16:9 frame", () => {
-    const ui = new TestUi();
-    const base = renderContext([], ui);
+    const ui = new TestUi(), canvasCalls: CanvasCall[] = [];
+    const base = renderContext(canvasCalls, ui);
     createWorldRenderers({ ...base, screen: { x: -267, y: -150, w: 2134, h: 1200 }, safe: { top: 12, right: 0, bottom: 0, left: 30 } }).hud(hudSnapshot());
-    const vitals = ui.calls.find((call) => call.name === "hudPlate")?.arguments[0] as { x: number; y: number };
-    expect(vitals).toMatchObject({ x: -267 + 30 + 24, y: -150 + 12 + 24 });
+    // The HP bar frame (and so the vitals group) starts at the safe corner plus the HUD inset and padding.
+    const frame = canvasCalls.find((call) => call.name === "strokeRect" && call.arguments[2] === ui.t.metric.hudBarW);
+    expect(frame?.arguments.slice(0, 2)).toEqual([-267 + 30 + 24 + 10, -150 + 12 + 24 + 10]);
   });
 
   it("collapses a long ability list into one summary line (the full list lives on the pause screen)", () => {

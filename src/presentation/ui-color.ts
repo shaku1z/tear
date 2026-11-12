@@ -23,6 +23,12 @@ export function contrastRatio(foreground: string, background: string): number {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
+/** A #rgb/#rrggbb colour at `alpha` as an rgba() string (for gradient stops); black when unparsable. */
+export function withAlpha(color: string, alpha: number): string {
+  const [r, g, b] = parseHex(color) ?? [0, 0, 0];
+  return `rgba(${String(r)},${String(g)},${String(b)},${String(alpha)})`;
+}
+
 /** True for a light ink (dark surface); anything unparsable counts as dark ink. */
 export function inkIsLight(color: string): boolean {
   return (luminance(color) ?? 0) > 0.5;

@@ -34,11 +34,11 @@ export interface WorldUiPort {
   };
   /** Live density: `compact` marks a phone-sized touch screen. */
   readonly density: Readonly<{ touch: boolean; compact: boolean }>;
-  /** The live interface ink; HUD plates are chosen to contrast with it, so HUD marks use it too. */
+  /** The live interface ink (flipped per biome); HUD marks use it, with the halo on text. */
   readonly ink: string;
   /** A palette hue made readable as text on the current HUD surface. */
   readable(color: string, ratio?: number): string;
-  /** The contrasting backing plate behind every HUD group. */
+  /** The contrasting surface behind an in-run teaching card (tutorial lesson, playground help); never behind HUD groups. */
   hudPlate(canvas: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void;
   displayText(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
   fitText(canvas: CanvasRenderingContext2D, text: string, maxWidth: number, options: Readonly<{

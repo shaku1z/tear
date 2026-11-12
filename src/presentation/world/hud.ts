@@ -4,8 +4,9 @@ import { clamp } from "./primitives";
 /**
  * HUD layout. Groups anchor to the visible screen rectangle plus the device safe
  * area (not the 16:9 logical frame), so an ultrawide or 4:3 window keeps the HUD in
- * its corners and out of the arena. Every group sits on one backing plate
- * (`UI.hudPlate`), the single contrast strategy for HUD text on every biome.
+ * its corners and out of the arena. There are no backing plates: HUD text uses the
+ * per-biome ink with the contrasting halo (`protectContrast`, see `UI.text`), so the
+ * world reads right up to every number.
  */
 export interface HudFrame {
   readonly left: number;
@@ -68,28 +69,23 @@ export function createHudRenderer(context: WorldRenderContext) {
     const hpText = `${String(Math.ceil(player.hp))} / ${String(player.maxHp)}`;
     const barW = t.metric.hudBarW, barH = Math.max(t.metric.barH, Math.round(t.type.micro * 1.1));
     const valueW = measure(hpText, t.type.body, true);
-    const oneHitW = player.oneHit ? measure("ONE-HIT", t.type.micro, true) + t.space.sm : 0;
     const maxDash = Math.max(1, player.maxDashCharges), pip = { w: 34, h: Math.max(11, Math.round(t.type.micro * 0.8)), gap: 6 };
     const abilityLines = player.abilities.length > t.metric.hudAbilityRows
       ? [`${String(player.abilities.length)} ABILITIES · PAUSE: ARSENAL`] : player.abilities;
     const lineH = t.type.micro + t.space.xs;
-    const abilityW = Math.max(0, ...abilityLines.map((line) => measure(line, t.type.micro, false)));
     const x = frame.left + pad, barY = frame.top + pad, resourceY = barY + barH + t.space.sm;
     const abilityY = resourceY + pip.h + t.space.sm + t.type.micro;
-    const contentW = Math.max(barW + t.space.sm + valueW + oneHitW, abilityW);
-    const bottom = (abilityLines.length > 0 ? abilityY + (abilityLines.length - 1) * lineH : resourceY + pip.h) + pad;
-    ui.hudPlate(canvas, frame.left, frame.top, contentW + pad * 2, bottom - frame.top);
     hpBar(x, barY, barW, barH, lowHealth, pulse, snapshot);
-    ui.text(canvas, hpText, x + barW + t.space.sm, barY + barH - 2, t.type.body, "left");
-    if (player.oneHit) ui.tag(canvas, "ONE-HIT", x + barW + t.space.sm * 2 + valueW, barY + barH - 2, ui.readable(t.color.danger), "left", t.type.micro);
+    ui.text(canvas, hpText, x + barW + t.space.sm, barY + barH - 2, t.type.body, "left", t.alpha.full, true);
+    if (player.oneHit) ui.tag(canvas, "ONE-HIT", x + barW + t.space.sm * 2 + valueW, barY + barH - 2, ui.readable(t.color.danger), "left", t.type.micro, true);
     const dashRight = pips(x, resourceY, maxDash, player.dashCharges, player.dashRechargeFraction, player.dashColor, pip);
-    ui.text(canvas, "DASH", dashRight + t.space.xs, resourceY + pip.h, t.type.micro, "left", t.alpha.muted);
+    ui.text(canvas, "DASH", dashRight + t.space.xs, resourceY + pip.h, t.type.micro, "left", t.alpha.soft, true);
     const shieldX = dashRight + t.space.sm + measure("DASH", t.type.micro, false) + t.space.sm;
     for (let index = 0; index < player.maxShield; index++) shieldPip(shieldX + index * 20, resourceY, pip.h, index < player.shield, player.shieldColor);
-    for (const [index, line] of abilityLines.entries()) ui.text(canvas, line, x, abilityY + index * lineH, t.type.micro, "left", t.alpha.soft);
+    for (const [index, line] of abilityLines.entries()) ui.text(canvas, line, x, abilityY + index * lineH, t.type.micro, "left", t.alpha.soft, true);
   }
 
-  /** HUD marks use the interface ink (`ui.ink`), the colour the plates contrast with. */
+  /** HUD marks use the interface ink (`ui.ink`), the colour the per-biome theme contrasts with. */
   function hpBar(x: number, y: number, w: number, h: number, lowHealth: boolean, pulse: number, snapshot: HudSnapshot): void {
     const player = snapshot.player;
     canvas.save();
@@ -166,13 +162,11 @@ export function createHudRenderer(context: WorldRenderContext) {
     const column = Math.max(...stats.map(([name, value]) => Math.max(measure(name, t.type.micro, false), measure(value, t.type.body, false))))
       + t.space.xl;
     const title = run.bossWave ? "BOSS" : `WAVE ${String(run.wave)}`;
-    const width = Math.max(column * 3, measure(title, t.type.h2, true)) + t.metric.hudPad * 2;
-    ui.hudPlate(canvas, cx - width / 2, m.top, width, m.bottom - m.top);
-    ui.title(canvas, title, cx, m.titleY, t.type.h2);
+    ui.tag(canvas, title, cx, m.titleY, ui.ink, "center", t.type.h2, true);
     stats.forEach(([name, value], index) => {
       const x = cx + (index - 1) * column;
-      ui.text(canvas, value, x, m.valueY, t.type.body, "center");
-      ui.text(canvas, name, x, m.labelY, t.type.micro, "center", t.alpha.muted);
+      ui.text(canvas, value, x, m.valueY, t.type.body, "center", t.alpha.full, true);
+      ui.text(canvas, name, x, m.labelY, t.type.micro, "center", t.alpha.soft, true);
     });
   }
 
@@ -180,8 +174,6 @@ export function createHudRenderer(context: WorldRenderContext) {
   function multiplier(run: RunHudSnapshot): void {
     const t = ui.t, m = runGroupMetrics(context), cx = hudFrame(context).centerX;
     const label = `×${String(run.multiplier)}${run.rank ? `  ${run.rank}` : ""}`, comboW = 240;
-    const width = Math.max(comboW, measure(label, t.type.lead, true)) + t.metric.hudPad * 2;
-    ui.hudPlate(canvas, cx - width / 2, m.bottom + t.space.xs, width, m.slotBottom - m.bottom - t.space.xs);
     canvas.save();
     canvas.translate(cx, m.multiplierY);
     const pop = 1 + run.multiplierPop * 0.4;
@@ -190,7 +182,7 @@ export function createHudRenderer(context: WorldRenderContext) {
       canvas.shadowColor = run.trickColor;
       canvas.shadowBlur = 10;
     }
-    ui.tag(canvas, label, 0, 0, ui.readable(run.trickColor), "center", t.type.lead);
+    ui.tag(canvas, label, 0, 0, ui.readable(run.trickColor), "center", t.type.lead, true);
     canvas.restore();
     canvas.globalAlpha = 0.14;
     canvas.fillStyle = ui.ink;
@@ -200,7 +192,7 @@ export function createHudRenderer(context: WorldRenderContext) {
     canvas.fillRect(cx - comboW / 2, m.comboY, comboW * clamp(run.comboFraction), 5);
   }
 
-  /** Boss header: name, epithet and phase, health and guard bars, on one plate. */
+  /** Boss header: name, epithet and phase over the boss bar's own dark cinematic frame; no plate. */
   function bossHeader(boss: BossHudSnapshot): void {
     const t = ui.t, pad = t.metric.hudPad, cx = hudFrame(context).centerX, width = 620;
     const top = bossHudTop(context);
@@ -208,14 +200,12 @@ export function createHudRenderer(context: WorldRenderContext) {
     const nameY = top + pad + Math.round(t.type.label * 0.8);
     const epithetY = nameY + (epithet ? t.space.xs + t.type.micro : 0);
     const barY = epithetY + t.space.sm;
-    const below = boss.guard !== undefined ? t.metric.bossGuardGap + t.metric.bossGuardH : t.metric.bossNotchH;
-    ui.hudPlate(canvas, cx - width / 2 - pad, top, width + pad * 2, barY + t.metric.bossHudH + below + pad - top);
-    ui.tag(canvas, boss.name.toUpperCase(), cx, nameY, ui.ink, "center", t.type.label);
+    ui.tag(canvas, boss.name.toUpperCase(), cx, nameY, ui.ink, "center", t.type.label, true);
     const nameHalf = measure(boss.name.toUpperCase(), t.type.label, true) / 2;
     canvas.fillStyle = boss.color;
     canvas.fillRect(cx - nameHalf - t.space.sm - 8, nameY - t.type.label * 0.42, 8, 8);
     canvas.fillRect(cx + nameHalf + t.space.sm, nameY - t.type.label * 0.42, 8, 8);
-    if (epithet) ui.text(canvas, epithet, cx, epithetY, t.type.micro, "center", t.alpha.muted);
+    if (epithet) ui.text(canvas, epithet, cx, epithetY, t.type.micro, "center", t.alpha.soft, true);
     ui.bossHud(canvas, { x: cx - width / 2, y: barY, w: width, h: t.metric.bossHudH,
       frac: clamp(boss.hpFraction * (boss.introSweep ?? 1)), fill: boss.color, phaseFlash: boss.phaseFlash,
       time: context.timeSeconds, lowGraphics: context.lowGraphics,

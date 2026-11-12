@@ -21,10 +21,10 @@ class TestUi implements ScreenUiPort {
   readonly t = {
     type: { wordmark: 80, display: 52, h1: 40, h2: 30, title: 24, lead: 20, body: 16, label: 15, caption: 14, micro: 13 },
     font: { brand: "'Courier New', monospace", display: "sans-serif", body: "monospace", displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500 },
-    alpha: { full: 1, soft: 0.78, muted: 0.66, faint: 0.52, rail: 0.92, sheet: 0.96 },
-    color: { accent: "#13c4d6", muted: "#62646f", danger: "#e23b3b", paper: "#fff", rail: "#080a10", railInk: "#f1eff9", unique: "#13c4d6" },
+    alpha: { full: 1, soft: 0.78, muted: 0.66, faint: 0.52, rail: 0.9, railMid: 0.6, sheet: 0.96 },
+    color: { accent: "#13c4d6", muted: "#62646f", danger: "#e23b3b", paper: "#fff", rail: "#06070c", railInk: "#f1eff9", unique: "#13c4d6" },
     metric: { btnH: 48, btnW: 300, panelPad: 14, btnGap: 12, pageTitleY: 92, pageBodyTop: 156, backW: 220,
-      settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54, minTarget: 32 },
+      settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54, minTarget: 32, railFadeW: 800, railFadeMid: 0.56 },
     space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
   };
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }> { return { x: 180, y: 44, w: 1240, h: 820 }; }
@@ -257,9 +257,9 @@ describe("legacy screen renderer registry", () => {
       screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } });
     renderer.menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Endless", difficultyLabel: "Normal", biome: "The Grounds" });
-    // The rail anchors to the true left edge (x = viewport.x + 100) and its solid backing
-    // reaches the physical edge, feathering out to the open scene on the right.
-    expect(rectangles[0]).toEqual([-120, -40, 728, 980]);
+    // The rail anchors to the true left edge (x = viewport.x + 100); its soft fade starts at
+    // the physical edge and runs `railFadeW` (800) into the scene, the same falloff as at 16:9.
+    expect(rectangles[0]).toEqual([-120, -40, 800, 980]);
     expect(rectangles).toHaveLength(1);
     expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup"))
       .toMatchObject({ x: -20, y: 318, w: 320, h: 86 });

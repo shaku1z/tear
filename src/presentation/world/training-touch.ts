@@ -183,7 +183,7 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
   }
 
   /**
-   * First-touch coaching on plates: beside the joystick (clear of THROW above it) and
+   * First-touch coaching (haloed text, no plates): beside the joystick (clear of THROW above it) and
    * above the aim pad (right-aligned to it), so neither line can leave the screen.
    */
   function onboarding(snapshot: TouchControlsSnapshot): void {
@@ -193,15 +193,13 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
         bottom: joystick.homeY + (t.type.lead + t.type.label + t.space.sm * 3) / 2, align: "left" as const },
       { title: "DRAG TO AIM & SWING ↷", hint: "fast flicks = fast cuts · second finger = throw", x: pad.x + pad.r, bottom: pad.y - pad.r - t.space.md, align: "right" as const },
     ];
-    canvas.globalAlpha = alpha;
     for (const line of lines) {
-      canvas.font = ui.font(t.type.label, false);
-      const width = Math.max(canvas.measureText(line.hint).width, canvas.measureText(line.title).width * 1.2) + t.space.md * 2;
-      const height = t.type.lead + t.type.label + t.space.sm * 3, x = line.align === "left" ? line.x : line.x - width;
-      ui.hudPlate(canvas, x, line.bottom - height, width, height);
-      const textX = line.align === "left" ? x + t.space.md : x + width - t.space.md;
-      ui.tag(canvas, line.title, textX, line.bottom - height + t.space.sm + t.type.lead, ui.ink, line.align, t.type.lead);
-      ui.text(canvas, line.hint, textX, line.bottom - t.space.sm, t.type.label, line.align, t.alpha.soft);
+      // No plate: the coaching reads over the scene through the HUD halo.
+      const height = t.type.lead + t.type.label + t.space.sm * 3;
+      const textX = line.align === "left" ? line.x + t.space.md : line.x - t.space.md;
+      canvas.globalAlpha = alpha;
+      ui.tag(canvas, line.title, textX, line.bottom - height + t.space.sm + t.type.lead, ui.ink, line.align, t.type.lead, true);
+      ui.text(canvas, line.hint, textX, line.bottom - t.space.sm, t.type.label, line.align, t.alpha.soft * alpha, true);
     }
     canvas.globalAlpha = 1;
   }

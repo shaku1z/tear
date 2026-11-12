@@ -1,11 +1,33 @@
 import type { MenuScreenView, ScreenRenderContext, SetupScreenView } from "./contracts";
 import { backControl, page, pageLayout } from "./screen-primitives";
+import { withAlpha } from "../ui-color";
 
 /** Run-select column grid (logical px), shared by the desktop and compact compositions. */
 const SETUP_COLUMNS = Object.freeze({ modeX: 240, modeWidth: 380, difficultyX: 640, difficultyWidth: 360, weaponX: 1020, weaponWidth: 340 });
 
 export function createMenuSetupRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
+
+  /**
+   * The rail backing: a soft dark fade from the screen's left edge into the scene
+   * (`alpha.rail` at the edge, `alpha.railMid` at `metric.railFadeMid`, clear at
+   * `metric.railFadeW`). It starts at the edge the rail is anchored to (the true left
+   * edge on an ultrawide window) and stretches by `stretch` when the rail reaches
+   * further than one desktop column, so the falloff stays the same relative to the rail.
+   * There is no solid slab: each rail control carries its own dark fill (`alpha.railControl`).
+   */
+  function railFade(stretch: number): void {
+    const { canvas } = context, viewport = context.screenRectangle, t = ui.t;
+    const edge = Math.min(0, viewport.x), end = edge + t.metric.railFadeW + stretch;
+    const gradient = canvas.createLinearGradient(edge, 0, end, 0);
+    gradient.addColorStop(0, withAlpha(t.color.rail, t.alpha.rail));
+    gradient.addColorStop(t.metric.railFadeMid, withAlpha(t.color.rail, t.alpha.railMid));
+    gradient.addColorStop(1, withAlpha(t.color.rail, 0));
+    canvas.save();
+    canvas.fillStyle = gradient;
+    canvas.fillRect(viewport.x, viewport.y, end - viewport.x, viewport.h);
+    canvas.restore();
+  }
 
   function menu(view: MenuScreenView): void {
     const { canvas } = context;
@@ -29,19 +51,9 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const navSlot = (index: number) => compact
       ? { x: railX + (index % columns) * (columnWidth + metric.btnGap), y: navTop + Math.floor(index / columns) * pitch, w: columnWidth, h: rowH }
       : { x: railX, y: navTop + index * pitch, w: railWidth, h: rowH };
-    // Rail backing: one solid dark field behind every rail control (contrast does not
-    // depend on the biome), feathering out to the open scene on the right.
-    // One gradient fill (no seam): solid to the rail's right edge, then a soft feather.
-    const solidRight = railX + railWidth + 48, feather = 260, span = solidRight + feather - viewport.x;
-    canvas.save();
-    canvas.globalAlpha = ui.t.alpha.rail;
-    const gradient = canvas.createLinearGradient(viewport.x, 0, solidRight + feather, 0);
-    gradient.addColorStop(0, ui.t.color.rail);
-    gradient.addColorStop((solidRight - viewport.x) / span, ui.t.color.rail);
-    gradient.addColorStop(1, "rgba(8,10,16,0)");
-    canvas.fillStyle = gradient;
-    canvas.fillRect(viewport.x, viewport.y, span, viewport.h);
-    canvas.restore();
+    // The desktop rail ends 420 px from the edge (100 inset + one column); reach past it stretches the fade.
+    railFade(Math.max(0, railX + railWidth - Math.min(0, viewport.x) - 100 - columnWidth));
+    const solidRight = railX + railWidth + 48;
     ui.wordmark(canvas, railX, wordmarkY, context.time, context.reducedMotion);
     ui.text(canvas, "a momentum-blade survival game", railX, wordmarkY + 34, ui.t.type.caption, "left", ui.t.alpha.soft);
     if (view.biome && !compact) {

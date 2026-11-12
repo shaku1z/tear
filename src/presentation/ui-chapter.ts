@@ -276,9 +276,9 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
             ctx.fillRect(-ox, -oy, w + ox * 2, h + oy * 2); // reach the true screen edges in fullscreen
             ctx.globalAlpha = 1;
         },
-        // HUD backing plate: the contrasting surface for the live ink (paper under dark
-        // ink, scrim under light ink) at `alpha.hudPlate`, so HUD text keeps its contrast
-        // floor over every biome while the world still reads through the plate.
+        // In-run teaching card surface (tutorial lesson, playground help): the contrasting
+        // surface for the live ink (paper under dark ink, scrim under light ink) at
+        // `alpha.hudPlate`. HUD groups and banners never use it; their text carries the halo.
         hudPlate(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
             ctx.save();
             ctx.globalAlpha = this.t.alpha.hudPlate;

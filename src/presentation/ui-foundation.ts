@@ -1,5 +1,6 @@
 import type { Align, ButtonSpec, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
+import { inkIsLight } from "./ui-color";
 import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-density";
 
 export function createUiFoundation(dependencies: UiDependencies) {
@@ -62,20 +63,14 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         },
         // ---- TEXT ---------------------------------------------------------------
         // body / inline copy. size defaults to the `body` token.
+        // `protectContrast` adds the HUD halo (see `drawHalo`): legible over any scene, no plate.
         text(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number, align?: Align, alpha?: number, protectContrast = false) {
-            ctx.globalAlpha = protectContrast ? this.t.alpha.full : alpha ?? this.t.alpha.full;
             ctx.fillStyle = this.ink;
             ctx.font = this.font(truthyOr(size, () => this.t.type.body), false);
             ctx.textAlign = truthyOr(align, () => "left");
             ctx.textBaseline = "alphabetic";
-            if (protectContrast) {
-                ctx.save();
-                ctx.strokeStyle = this.t.color.paper;
-                ctx.lineWidth = this.t.metric.hudTextOutline;
-                ctx.lineJoin = "round";
-                ctx.strokeText(str, x, y);
-                ctx.restore();
-            }
+            if (protectContrast) drawHalo(this, ctx, str, x, y);
+            ctx.globalAlpha = alpha ?? this.t.alpha.full;
             ctx.fillText(str, x, y);
             ctx.globalAlpha = 1;
         },
@@ -167,16 +162,8 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             ctx.font = this.font(truthyOr(size, () => this.t.type.micro), true);
             ctx.textAlign = truthyOr(align, () => "left");
             ctx.textBaseline = "alphabetic";
-            if (protectContrast) {
-                ctx.save();
-                ctx.globalAlpha = this.t.alpha.full;
-                ctx.strokeStyle = this.t.color.paper;
-                ctx.lineWidth = this.t.metric.hudTextOutline;
-                ctx.lineJoin = "round";
-                ctx.strokeText(str, x, y);
-                ctx.fillText(str, x, y);
-                ctx.restore();
-            } else ctx.fillText(str, x, y);
+            if (protectContrast) drawHalo(this, ctx, str, x, y);
+            ctx.fillText(str, x, y);
         },
         // standard screen header: an h1/h2 title + an optional muted tagline beneath it.
         // Returns the y just below the header so callers can flow content under it.
@@ -467,6 +454,22 @@ font(this: UiRuntime, size: number, bold?: boolean) {
  * Optional trimmings: b.glyph (left icon), b.dot (status pip), b.sub (subline),
  * b.hero (accent-filled call-to-action).
  */
+/**
+ * The HUD halo: a thin round-joined outline in the surface colour that contrasts with
+ * the live ink (the dark scrim behind light ink, paper behind dark ink) at
+ * `alpha.hudHalo`, `metric.hudTextOutline` wide. It separates HUD text from whatever
+ * passes behind it without a backing plate; the caller's font and alignment apply.
+ */
+function drawHalo(ui: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number): void {
+    ctx.save();
+    ctx.globalAlpha *= ui.t.alpha.hudHalo;   // relative, so a fading banner fades its halo too
+    ctx.strokeStyle = inkIsLight(ui.ink) ? ui.t.color.scrim : ui.t.color.paper;
+    ctx.lineWidth = ui.t.metric.hudTextOutline;
+    ctx.lineJoin = "round";
+    ctx.strokeText(str, x, y);
+    ctx.restore();
+}
+
 function drawRailButton(ui: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, active?: boolean): void {
     const t = ui.t;
     const a = b._a ?? (active ? 1 : 0);
@@ -475,6 +478,12 @@ function drawRailButton(ui: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonS
         drawHeroButton(ui, ctx, b, a, on, cy);
         return;
     }
+    // Its own dark fill (the rail colour at `alpha.railControl`) keeps the label's contrast
+    // over the open scene the rail fade lets through; then the light glass wash and edge.
+    ctx.globalAlpha = t.alpha.railControl;
+    ctx.fillStyle = t.color.rail;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 1;
     ctx.fillStyle = "rgba(241,239,249," + (0.06 + a * 0.10).toFixed(3) + ")";
     ctx.fillRect(b.x, b.y, b.w, b.h);
     ctx.lineWidth = 1.5;
