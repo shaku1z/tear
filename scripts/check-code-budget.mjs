@@ -12,6 +12,9 @@ export const BUDGET_METRICS = Object.freeze(["chars", "maxLineLength", "multiSta
  * Absolute ceilings for every file without a baseline entry. Units:
  * - chars: characters excluding indentation and line breaks, so splitting or
  *   re-indenting a line never counts as growth (28,000 ~ 700 lines x 40).
+ *   Import and re-export declarations and the module specifier of a dynamic
+ *   `import()` or an `import("...")` type do not count: they are wiring, not
+ *   code, and moving a module must not register as growth in its importers.
  * - maxLineLength: longest line, not counting string/template/regex literal
  *   text, and ignoring import and re-export declarations.
  * - multiStatementLines: lines where two or more statements or class members
@@ -46,6 +49,28 @@ function isImportLike(node) {
   return ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) || (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined);
 }
 
+/** The string literal naming a module in `import("x")` or an `import("x")` type, if node is one. */
+function dynamicModuleSpecifier(node) {
+  if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+    const [first] = node.arguments;
+    return first !== undefined && ts.isStringLiteralLike(first) ? first : undefined;
+  }
+  if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument) && ts.isStringLiteralLike(node.argument.literal)) return node.argument.literal;
+  return undefined;
+}
+
+/** Text with the given [start, end) ranges removed; line breaks inside a range are kept. */
+function withoutRanges(text, ranges) {
+  let result = "", cursor = 0;
+  for (const [start, end] of [...ranges].sort((left, right) => left[0] - right[0])) {
+    if (end <= cursor) continue;
+    const from = Math.max(start, cursor);
+    result += text.slice(cursor, from) + text.slice(from, end).replace(/[^\n]/gu, "");
+    cursor = end;
+  }
+  return result + text.slice(cursor);
+}
+
 /** Statements in a statement list plus class members: the units a formatter puts on their own lines. */
 function lineUnits(node) {
   if (ts.isSourceFile(node) || ts.isBlock(node) || ts.isModuleBlock(node) || ts.isCaseClause(node) || ts.isDefaultClause(node)) {
@@ -58,7 +83,7 @@ function lineUnits(node) {
 }
 
 function collectSyntax(source) {
-  const unitLines = new Map(), literalRanges = [], importLines = new Set();
+  const unitLines = new Map(), literalRanges = [], importLines = new Set(), wiringRanges = [];
   let largestFunctionStatements = 0;
   const lineOf = (position) => source.getLineAndCharacterOfPosition(position).line;
   const visit = (node, owner) => {
@@ -68,7 +93,12 @@ function collectSyntax(source) {
       unitLines.set(line, (unitLines.get(line) ?? 0) + 1);
     }
     if (LITERAL_KINDS.has(node.kind)) literalRanges.push([node.getStart(source), node.end]);
-    if (isImportLike(node)) for (let line = lineOf(node.getStart(source)); line <= lineOf(node.end); line += 1) importLines.add(line);
+    if (isImportLike(node)) {
+      for (let line = lineOf(node.getStart(source)); line <= lineOf(node.end); line += 1) importLines.add(line);
+      wiringRanges.push([node.getStart(source), node.end]);
+    }
+    const specifier = dynamicModuleSpecifier(node);
+    if (specifier !== undefined) wiringRanges.push([specifier.getStart(source), specifier.end]);
     if (FUNCTION_KINDS.has(node.kind)) {
       const own = { statements: 0 };
       ts.forEachChild(node, (child) => { visit(child, own); });
@@ -79,7 +109,7 @@ function collectSyntax(source) {
   };
   visit(source, undefined);
   literalRanges.sort((left, right) => left[0] - right[0]);
-  return { unitLines, literalRanges, importLines, largestFunctionStatements };
+  return { unitLines, literalRanges, importLines, wiringRanges, largestFunctionStatements };
 }
 
 /** Longest line once literal text and import declarations are disregarded. */
@@ -101,11 +131,11 @@ function effectiveMaxLineLength(lines, lineStarts, literalRanges, importLines) {
 export function measureSource(fileName, rawText) {
   const text = rawText.replaceAll("\r\n", "\n");
   const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
-  const { unitLines, literalRanges, importLines, largestFunctionStatements } = collectSyntax(source);
+  const { unitLines, literalRanges, importLines, wiringRanges, largestFunctionStatements } = collectSyntax(source);
   const lines = text.split("\n");
   return Object.freeze({
     lines: text.endsWith("\n") ? lines.length - 1 : lines.length,
-    chars: lines.reduce((sum, line) => sum + line.trim().length, 0),
+    chars: withoutRanges(text, wiringRanges).split("\n").reduce((sum, line) => sum + line.trim().length, 0),
     maxLineLength: effectiveMaxLineLength(lines, source.getLineStarts(), literalRanges, importLines),
     multiStatementLines: [...unitLines.values()].filter((count) => count > 1).length,
     largestFunctionStatements,

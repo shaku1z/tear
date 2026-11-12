@@ -54,6 +54,35 @@ test("character size ignores indentation, line splitting and line endings", () =
   assert.equal(split.lines, 4);
 });
 
+test("character size does not count import and re-export declarations or dynamic module specifiers", () => {
+  const code = "export const value = load();\n";
+  const bare = measureSource("a.ts", code).chars;
+  const wired = [
+    'import { a, b } from "./near";\n',
+    'import type {\n  C,\n  D,\n} from "../far/away/module";\n',
+    'import * as ns from "./ns";\nimport "./side-effect";\nimport legacy = require("./cjs");\n',
+    'export { e } from "./e";\nexport * from "./star";\nexport type { F } from "./f";\n',
+    code,
+  ].join("");
+  assert.equal(measureSource("a.ts", wired).chars, bare);
+  const dynamic = (specifier) => measureSource("a.ts", `type M = typeof import("${specifier}");\nconst m = await import("${specifier}");\n`).chars;
+  assert.equal(dynamic("./x"), dynamic("../../deeper/folder/x"));
+  assert.equal(dynamic("./x"), measureSource("a.ts", "type M = typeof import();\nconst m = await import();\n").chars);
+});
+
+test("character size still counts local export lists, code beside an import and non-module strings", () => {
+  assert.equal(measureSource("a.ts", "const a = 1;\nexport { a };\n").chars, "const a = 1;".length + "export { a };".length);
+  assert.equal(measureSource("a.ts", 'import { a } from "./a"; run(a);\n').chars, "run(a);".length);
+  assert.equal(measureSource("a.ts", 'const url = new URL("./asset.png", import.meta.url);\n').chars,
+    'const url = new URL("./asset.png", import.meta.url);'.length);
+  assert.equal(measureSource("a.ts", 'call("./looks-like-a-path");\n').chars, 'call("./looks-like-a-path");'.length);
+});
+
+test("moving a module leaves the character size of its importers unchanged", () => {
+  const importer = (specifier) => `import { run } from "${specifier}";\nexport { helper } from "${specifier}";\nexport function go() { return run(); }\n`;
+  assert.equal(measureSource("a.ts", importer("./live-thing")).chars, measureSource("a.ts", importer("./area/thing")).chars);
+});
+
 test("new files must meet every absolute ceiling", () => {
   const measurements = new Map([["src/new.ts", metrics({ multiStatementLines: 1, maxLineLength: 200 })], ["src/ok.ts", metrics()]]);
   const { violations } = evaluateBudget(measurements, {});

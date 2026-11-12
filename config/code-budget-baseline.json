@@ -10,7 +10,7 @@
       "multiStatementLines": 2
     },
     "src/agents/academy-candidate-custody.ts": {
-      "chars": 30033,
+      "chars": 29273,
       "maxLineLength": 167,
       "multiStatementLines": 5
     },
@@ -129,7 +129,7 @@
       "multiStatementLines": 5
     },
     "src/agents/foundry-job-due-dispatcher.ts": {
-      "chars": 30130,
+      "chars": 28800,
       "maxLineLength": 961,
       "multiStatementLines": 52
     },
@@ -276,7 +276,7 @@
       "multiStatementLines": 2
     },
     "src/agents/live-watch-agent-host.ts": {
-      "chars": 31187,
+      "chars": 29545,
       "maxLineLength": 270,
       "multiStatementLines": 26,
       "largestFunctionStatements": 150
@@ -289,7 +289,7 @@
       "multiStatementLines": 1
     },
     "src/agents/offline-rl-training.ts": {
-      "chars": 45314,
+      "chars": 44825,
       "maxLineLength": 208,
       "multiStatementLines": 27
     },
@@ -428,7 +428,6 @@
       "multiStatementLines": 1
     },
     "src/agents/training-operations-v3-evaluation.ts": {
-      "chars": 28718,
       "maxLineLength": 178,
       "multiStatementLines": 1
     },
@@ -444,7 +443,7 @@
       "multiStatementLines": 1
     },
     "src/agents/training-operations-v3-scheduled-cycle.ts": {
-      "chars": 57219,
+      "chars": 54997,
       "maxLineLength": 237,
       "multiStatementLines": 8
     },
@@ -577,7 +576,7 @@
       "multiStatementLines": 1
     },
     "src/app/live-debug-harness.ts": {
-      "chars": 36688,
+      "chars": 35785,
       "maxLineLength": 227,
       "multiStatementLines": 34
     },
@@ -596,7 +595,7 @@
       "multiStatementLines": 5
     },
     "src/app/live-game-runtime.ts": {
-      "chars": 85310,
+      "chars": 77626,
       "maxLineLength": 3969,
       "multiStatementLines": 132,
       "largestFunctionStatements": 143
@@ -862,7 +861,6 @@
       "multiStatementLines": 9
     },
     "src/audio/legacy-synth-runtime.ts": {
-      "chars": 28411,
       "maxLineLength": 258,
       "multiStatementLines": 64
     },
@@ -892,7 +890,7 @@
       "multiStatementLines": 1
     },
     "src/config/game-config.ts": {
-      "chars": 33591,
+      "chars": 33245,
       "maxLineLength": 163
     },
     "src/domain/cosmetic-emission-random.ts": {
@@ -909,7 +907,7 @@
       "maxLineLength": 220
     },
     "src/game-reference/game-reference.ts": {
-      "chars": 35605
+      "chars": 33245
     },
     "src/game-reference/stage-mode-reference.ts": {
       "maxLineLength": 409
@@ -1036,7 +1034,7 @@
       "multiStatementLines": 34
     },
     "src/gameplay/entities/blade.ts": {
-      "chars": 29066,
+      "chars": 28455,
       "multiStatementLines": 47
     },
     "src/gameplay/entities/boss-ritual-controller.ts": {
@@ -1082,7 +1080,6 @@
       "multiStatementLines": 1
     },
     "src/gameplay/entities/enemy-types/rootbound.ts": {
-      "chars": 28852,
       "maxLineLength": 233,
       "multiStatementLines": 19
     },
@@ -1247,7 +1244,7 @@
       "multiStatementLines": 15
     },
     "src/gameplay/training/arena-rules.ts": {
-      "chars": 29901,
+      "chars": 29753,
       "maxLineLength": 478,
       "multiStatementLines": 35
     },
@@ -1291,7 +1288,7 @@
       "multiStatementLines": 1
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 55252,
+      "chars": 54378,
       "maxLineLength": 387,
       "multiStatementLines": 74,
       "largestFunctionStatements": 170
@@ -1319,7 +1316,7 @@
       "multiStatementLines": 8
     },
     "src/gameplay/upgrades.ts": {
-      "chars": 34021,
+      "chars": 33904,
       "maxLineLength": 169,
       "multiStatementLines": 58
     },
@@ -1405,7 +1402,6 @@
       "multiStatementLines": 5
     },
     "src/ghost/capsule-vault.ts": {
-      "chars": 28953,
       "maxLineLength": 198,
       "multiStatementLines": 3
     },
@@ -1512,7 +1508,7 @@
       "multiStatementLines": 4
     },
     "src/ghost/replay-admission.ts": {
-      "chars": 30608,
+      "chars": 29434,
       "maxLineLength": 192,
       "multiStatementLines": 8
     },
@@ -1606,7 +1602,7 @@
       "largestFunctionStatements": 106
     },
     "src/presentation/backdrop.ts": {
-      "chars": 31391,
+      "chars": 30656,
       "maxLineLength": 207,
       "multiStatementLines": 93,
       "largestFunctionStatements": 140
@@ -1904,7 +1900,7 @@
       "largestFunctionStatements": 93
     },
     "src/tearbench/live-runtime-environment.ts": {
-      "chars": 35031,
+      "chars": 32029,
       "maxLineLength": 213,
       "multiStatementLines": 7
     },
@@ -1918,7 +1914,7 @@
       "multiStatementLines": 1
     },
     "src/tearbench/production-combat-phases.ts": {
-      "chars": 35466,
+      "chars": 33439,
       "maxLineLength": 228,
       "multiStatementLines": 54
     },
@@ -1934,12 +1930,12 @@
       "multiStatementLines": 1
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 36779,
+      "chars": 34782,
       "maxLineLength": 193,
       "multiStatementLines": 8
     },
     "src/tearbench/production-replay-composition.ts": {
-      "chars": 42621,
+      "chars": 38261,
       "maxLineLength": 268,
       "multiStatementLines": 11
     },
