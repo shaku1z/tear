@@ -12,7 +12,8 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
     ui.header(canvas, view.title, view.subtitle, context.enterAmount);
     if (view.id === "pgmenu") renderBuildMenu(view);
     else renderAbilityLab(view);
-    scrollHint(context, view.canScrollUp, view.canScrollDown, context.height - 88);
+    // The hint shares the footer row with BACK (to its right), never the last row.
+    scrollHint(context, view.canScrollUp, view.canScrollDown);
     // The build menu resumes through its own RESUME button (and Tab / Esc); only
     // the lab carries a back control, which returns to the build menu.
     if (view.id === "pglab") backControl(context, { type: "navigate", to: "pgmenu" });
@@ -81,23 +82,40 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
     context.enqueue({ x: width / 2 - 160, y: actionY + bh + 16, w: 320, h: 50, label: "RESUME", action: { type: "run.resume" } });
   }
 
+  /**
+   * Ability Lab rows (92 px pitch, matching the lab's scroll owner): name, one fitted
+   * line of effect copy that stops before the action button, and the ownership tag.
+   * Rows clip above the footer row, and a row's button is offered only while it is
+   * fully inside the clip, so nothing reaches BACK or the scroll hint.
+   */
   function renderAbilityLab(view: PlaygroundScreenView): void {
+    const { canvas } = context, t = ui.t;
     const filters = view.sections.find((section) => section.label === "FILTERS");
     filters?.choices.forEach((choice, index) => { enqueueChoice(choice, width / 2 - 546 + index * 156, 168, 148, 34); });
     const abilities = view.sections.find((section) => section.label === "ABILITIES");
-    const cardWidth = 588, rowHeight = 92, top = 232, left = width / 2 - cardWidth - 12;
-    context.canvas.save(); context.canvas.beginPath(); context.canvas.rect(0, top - 10, width, height - top - 98); context.canvas.clip();
+    const cardWidth = 588, cardHeight = 80, rowHeight = 92, top = 232, left = width / 2 - cardWidth - 12;
+    const bottom = ui.sheetFooter().y - t.space.md, buttonW = 102, buttonH = 40;
+    const textW = cardWidth - 16 - buttonW - 32;
+    canvas.save();
+    canvas.beginPath();
+    canvas.rect(0, top - 10, width, bottom - (top - 10));
+    canvas.clip();
     abilities?.choices.forEach((choice, index) => {
       const x = left + (index % 2) * (cardWidth + 24), y = top + Math.floor(index / 2) * rowHeight - context.scroll;
-      if (y + 80 < top - 10 || y > height - 108) return;
-      ui.card(context.canvas, x, y, cardWidth, 80, false); ui.accentStrip(context.canvas, x, y, cardWidth, choice.accent);
-      ui.displayText(context.canvas, choice.label, x + 16, y + 28, ui.t.type.lead);
-      if (choice.description) ui.text(context.canvas, choice.description, x + 16, y + 50, ui.t.type.micro, "left", ui.t.alpha.soft);
-      if (choice.sub) ui.tag(context.canvas, choice.sub, x + 16, y + 69, choice.accent, "left", ui.t.type.micro);
-      context.enqueue({ x: x + cardWidth - 118, y: y + 20, w: 102, h: 40, label: choice.glyph ?? "TAKE", enabled: choice.enabled,
-        action: { type: "playground.action", id: choice.id } });
+      if (y + cardHeight < top - 10 || y > bottom) return;
+      ui.card(canvas, x, y, cardWidth, cardHeight, false);
+      ui.accentStrip(canvas, x, y, cardWidth, choice.accent);
+      const name = ui.fitText(canvas, choice.label, textW, { size: t.type.lead, floor: t.type.label, bold: true });
+      ui.displayText(canvas, name.lines[0] ?? choice.label, x + 16, y + 28, name.size);
+      if (choice.description) ui.textBox(canvas, choice.description, x + 16, y + 50, textW, { size: t.type.micro, alpha: t.alpha.soft, maxLines: 1 });
+      if (choice.sub) ui.tag(canvas, choice.sub, x + 16, y + 69, ui.readable(choice.accent ?? t.color.accent), "left", t.type.micro);
+      const buttonY = y + (cardHeight - buttonH) / 2;
+      if (buttonY >= top - 10 && buttonY + buttonH <= bottom) {
+        context.enqueue({ x: x + cardWidth - buttonW - 16, y: buttonY, w: buttonW, h: buttonH, label: choice.glyph ?? "TAKE", enabled: choice.enabled,
+          action: { type: "playground.action", id: choice.id } });
+      }
     });
-    context.canvas.restore();
+    canvas.restore();
   }
 
   return { pgmenu: render, pglab: render };

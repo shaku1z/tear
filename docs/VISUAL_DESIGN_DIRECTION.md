@@ -30,10 +30,10 @@ The interface must remain immediately usable on a 16:9 browser canvas, an ultraw
 The authored safe composition remains 1600×900. `screenRectangle` is the true physical viewport expressed in logical coordinates and includes aspect-ratio overscan.
 
 - World layers, ambient scenery, full-screen clears, dims, washes, vignettes, transitions, and the menu's dark wash paint through `screenRectangle` or the shared overscan contract.
-- Titles, buttons, cards, HUD telemetry, and pointer targets remain inside the authored safe composition.
+- Titles, buttons, cards and pointer targets remain inside the authored safe composition. HUD groups and on-screen touch controls anchor to the visible screen corners plus device safe-area insets, so they stay out of the arena on every aspect ratio.
 - Wider browser shapes—including the reported 2048×1024 laptop capture—reveal more world but never reveal an unpainted strip, draw a false safe-area boundary, or shift the interaction rail.
 - 4:3 windows reveal vertical bleed without cropping the safe composition.
-- Touch portrait is an explicit orientation gate; touch landscape uses the same composition with a density increase and safe-area insets.
+- Touch portrait is an explicit orientation gate; touch landscape uses the same logical frame with a derived density (text ≥ 11 CSS px, targets ≥ 44 CSS px) and safe-area insets. Phone-sized screens switch to their compact composition (see DESIGN_SYSTEM.md, Density).
 - DOM overlays use the bundled body family and stay subordinate to canvas UI.
 
 ## Shared surface grammar
@@ -59,7 +59,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 ### Main-menu composition contract
 
 - The established logical anchors are `x=100` measured from the **true left edge of the window** (`screenRectangle.x + 100`, plus the safe-area inset), wordmark baseline `y=150`, identity `y=240`, PLAY `y=318`, and navigation beginning `y=426` with a 61 px rhythm. Extra rows (Practice Lab after the tutorial, then the music row) continue that rhythm under SETTINGS.
-- On wider windows the rail stays anchored to the left edge and the extra width goes to the living scene on the right; an empty band never opens left of the rail. Touch keeps the authored `x=100` because its overlay zoom scales around the centre.
+- On wider windows the rail stays anchored to the left edge and the extra width goes to the living scene on the right; an empty band never opens left of the rail. Touch uses the same anchor; the compact density flows the navigation into two columns.
 - The rail sits on one solid dark backing (`color.rail` at `alpha.rail`) from the physical left edge to just past the rail, feathering out over 260 px, so every rail control reads at 4.5:1 or better whatever biome is showing.
 - The attract scene carries the spectacle: silhouette clarity, biome palette, and readable combat motion matter more than adding menu ornament.
 - Pending-finale recovery remains the sole justified secondary content block because it exposes otherwise unavailable actions.
@@ -115,7 +115,7 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 ### Playground and HUD
 
 - Playground groups spawn, boss, arena/weapon, modifier, action, and ability-lab controls rather than presenting one control wall.
-- HUD stays inside safe composition and device insets while the world bleeds outward.
+- HUD anchors to the visible screen corners and device insets while the world bleeds outward; every HUD group sits on one contrasting plate.
 - Health, boss state, wave, score, multiplier, weapon state, and transient alerts each keep one visual authority.
 
 ## Motion and accessibility

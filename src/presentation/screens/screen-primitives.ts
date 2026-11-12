@@ -31,10 +31,87 @@ export interface PageLayout {
 
 export function pageLayout(context: ScreenRenderContext): PageLayout {
   const sheet = context.ui.sheetRect(), metric = context.ui.t.metric;
-  const footerY = sheet.y + sheet.h - metric.btnH - 12;
+  const footerY = context.ui.sheetFooter().y;
   const left = context.width / 2 - 560;
   return Object.freeze({ sheet, left, right: left + 1120, contentWidth: 1120,
     bodyTop: metric.pageBodyTop, bodyBottom: footerY - 14, footerY });
+}
+
+/**
+ * THE OVERLAY PATTERN shared by run overlays (pause, results, draft, reserve, tier-up):
+ * a display title under the safe top, an accent rule, an optional subtitle, a body,
+ * and a footer action row. Every y derives from the live tokens and safe insets, so
+ * no title can clip and no row can collide at any density (desktop, tablet, phone).
+ */
+export interface OverlayLayout {
+  readonly left: number; readonly right: number; readonly width: number; readonly centerX: number;
+  readonly top: number; readonly titleY: number; readonly ruleY: number; readonly subtitleY: number;
+  /** First y under the header (and the subtitle when there is one). */
+  readonly bodyTop: number;
+  /** Last y body content may use. */
+  readonly bodyBottom: number;
+  /** Top of the footer action row. */
+  readonly footerY: number;
+}
+
+export function overlayLayout(context: ScreenRenderContext, options: Readonly<{ subtitleLines?: number }> = {}): OverlayLayout {
+  const t = context.ui.t, inset = context.safeInsets;
+  const top = inset.t + t.space.lg, bottom = context.height - inset.b - t.space.lg;
+  const left = inset.l + t.space.xl, right = context.width - inset.r - t.space.xl;
+  const titleY = top + Math.round(t.type.display * 0.8), ruleY = titleY + t.space.sm;
+  const subtitleY = ruleY + 3 + t.space.sm + t.type.caption;
+  const lines = options.subtitleLines ?? 0;
+  const bodyTop = (lines > 0 ? subtitleY + (lines - 1) * Math.round(t.type.caption * 1.4) : ruleY + 3) + t.space.lg;
+  const footerY = bottom - t.metric.btnH;
+  return Object.freeze({ left, right, width: right - left, centerX: context.width / 2, top, titleY, ruleY, subtitleY,
+    bodyTop, bodyBottom: footerY - t.space.md, footerY });
+}
+
+export interface OverlayHeader {
+  readonly title: string;
+  /** One or more short lines under the title (run summary, instructions). */
+  readonly subtitle?: readonly string[] | undefined;
+  readonly hue?: string | undefined;
+  /** 0..1 reveal of the accent rule. */
+  readonly reveal?: number | undefined;
+}
+
+/** Draws the overlay title, rule and subtitle lines; returns the layout for the body. */
+export function overlayHeader(context: ScreenRenderContext, header: OverlayHeader): OverlayLayout {
+  const { canvas, ui } = context, t = ui.t;
+  const subtitle = header.subtitle ?? [];
+  const layout = overlayLayout(context, { subtitleLines: subtitle.length });
+  const title = ui.fitText(canvas, header.title, layout.width, { size: t.type.display, floor: t.type.h2, bold: true, ellipsis: false });
+  ui.title(canvas, title.lines[0] ?? header.title, layout.centerX, layout.titleY, title.size);
+  const rule = 160 * (header.reveal ?? 1);
+  canvas.save();
+  canvas.globalAlpha = header.reveal ?? 1;
+  canvas.fillStyle = header.hue ?? t.color.accent;
+  canvas.fillRect(layout.centerX - rule / 2, layout.ruleY, rule, 3);
+  canvas.restore();
+  subtitle.forEach((line, index) => {
+    const fit = ui.fitText(canvas, line, layout.width, { size: t.type.caption, floor: t.type.micro });
+    ui.text(canvas, fit.lines[0] ?? line, layout.centerX, layout.subtitleY + index * Math.round(t.type.caption * 1.4), fit.size, "center", t.alpha.muted);
+  });
+  return layout;
+}
+
+/** A centred row of equal buttons in the overlay footer (or at `y`). */
+export function actionRow(context: ScreenRenderContext, items: readonly Readonly<{ label: string; action: ScreenAction; enabled?: boolean }>[],
+  y: number, maxWidth: number): void {
+  const t = context.ui.t, gap = t.metric.btnGap;
+  const width = Math.min(t.metric.btnW, (maxWidth - gap * (items.length - 1)) / Math.max(1, items.length));
+  const start = context.width / 2 - (width * items.length + gap * (items.length - 1)) / 2;
+  items.forEach((item, index) => {
+    context.enqueue({ x: start + index * (width + gap), y, w: width, h: t.metric.btnH, label: item.label, action: item.action,
+      ...(item.enabled === undefined ? {} : { enabled: item.enabled }) });
+  });
+}
+
+/** Height of a vertical menu of `count` buttons at the live metrics. */
+export function menuHeight(context: ScreenRenderContext, count: number): number {
+  const m = context.ui.t.metric;
+  return count * m.btnH + Math.max(0, count - 1) * m.btnGap;
 }
 
 export interface PageHeader {

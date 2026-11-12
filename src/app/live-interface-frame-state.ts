@@ -10,18 +10,15 @@ export interface LiveInterfaceFrameState {
   readonly setEnterSeconds: (value: number) => void;
   readonly enterAmount: () => number;
   readonly setEnterAmount: (value: number) => void;
-  readonly uiZoom: () => number;
-  readonly setUiZoom: (value: number) => void;
 }
 
-/** Owns menu-frame timing, previous-screen state, entrance state, and UI zoom. */
+/** Owns menu-frame timing, previous-screen state, and entrance state. */
 export function createLiveInterfaceFrameState(initialScreen: LegacyAppScreen): LiveInterfaceFrameState {
   let previousScreen = initialScreen;
   let seconds = 0;
   let deltaSeconds = 1 / 60;
   let enterSeconds = 0;
   let enterAmount = 1;
-  let uiZoom = 1;
   return Object.freeze({
     previousScreen: (): LegacyAppScreen => previousScreen,
     setPreviousScreen: (value: LegacyAppScreen): void => { previousScreen = value; },
@@ -32,7 +29,5 @@ export function createLiveInterfaceFrameState(initialScreen: LegacyAppScreen): L
     setEnterSeconds: (value: number): void => { enterSeconds = value; },
     enterAmount: (): number => enterAmount,
     setEnterAmount: (value: number): void => { enterAmount = value; },
-    uiZoom: (): number => uiZoom,
-    setUiZoom: (value: number): void => { uiZoom = value; },
   });
 }

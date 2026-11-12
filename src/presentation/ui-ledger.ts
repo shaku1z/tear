@@ -6,7 +6,8 @@ export function createUiLedger(dependencies: UiDependencies) {
   return {
 keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y: number) {
             ctx.font = this.font(this.t.type.micro, true);
-            const w = Math.max(26, ctx.measureText(key).width + 14), h = 22;
+            // The cap grows with the type token, so touch density never overfills it.
+            const h = Math.max(22, Math.round(this.t.type.micro * 1.7)), w = Math.max(h + 4, ctx.measureText(key).width + 14);
             ctx.globalAlpha = 0.9;
             ctx.fillStyle = this.t.color.paper;
             ctx.fillRect(x, y - h + 5, w, h);
@@ -150,6 +151,11 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
         sheetRect(this: UiRuntime) {
             const vw = view.w, vh = view.h;
             return { x: vw / 2 - 620, y: 44, w: 1240, h: vh - 80 };
+        },
+        // The sheet's footer row (BACK sits centred in it): the single owner of its geometry.
+        sheetFooter(this: UiRuntime) {
+            const sheet = this.sheetRect(), m = this.t.metric;
+            return { y: sheet.y + sheet.h - m.btnH - 12, h: m.btnH, backX: view.w / 2 - m.backW / 2 };
         },
         sheet(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, hue?: string) {
             ctx.save();

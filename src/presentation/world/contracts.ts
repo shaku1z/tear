@@ -18,13 +18,41 @@ export interface WorldSegment { readonly a: WorldPoint; readonly b: WorldPoint; 
 export interface WorldUiPort {
   readonly t: {
     readonly type: Record<string, number> & {
-      readonly display: number; readonly h2: number; readonly lead: number;
+      readonly display: number; readonly h2: number; readonly title: number; readonly lead: number;
       readonly body: number; readonly label: number; readonly caption: number; readonly micro: number;
     };
-    readonly alpha: Record<string, number> & { readonly soft: number; readonly faint: number };
-    readonly color: Record<string, string> & { readonly accent: string; readonly muted: string; readonly paper: string };
-    readonly metric: Record<string, number> & { readonly bossHudH: number };
+    readonly alpha: Record<string, number> & { readonly soft: number; readonly muted: number; readonly faint: number };
+    readonly color: Record<string, string> & {
+      readonly accent: string; readonly muted: string; readonly paper: string; readonly danger: string;
+      readonly scrim: string; readonly scrimInk: string;
+    };
+    readonly metric: Record<string, number> & {
+      readonly bossHudH: number; readonly bossNotchH: number; readonly bossGuardGap: number; readonly bossGuardH: number;
+      readonly barH: number; readonly hudPad: number; readonly hudBarW: number; readonly hudAbilityRows: number;
+    };
+    readonly space: Readonly<{ xs: number; sm: number; md: number; lg: number; xl: number }>;
   };
+  /** Live density: `compact` marks a phone-sized touch screen. */
+  readonly density: Readonly<{ touch: boolean; compact: boolean }>;
+  /** The live interface ink; HUD plates are chosen to contrast with it, so HUD marks use it too. */
+  readonly ink: string;
+  /** A palette hue made readable as text on the current HUD surface. */
+  readable(color: string, ratio?: number): string;
+  /** The contrasting backing plate behind every HUD group. */
+  hudPlate(canvas: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void;
+  displayText(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
+  fitText(canvas: CanvasRenderingContext2D, text: string, maxWidth: number, options: Readonly<{
+    size: number; floor?: number; maxLines?: number; ellipsis?: boolean; wrapFirst?: boolean; bold?: boolean;
+  }>): Readonly<{ size: number; lines: readonly string[]; truncated: boolean }>;
+  textBox(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, options?: Readonly<{
+    size?: number; floor?: number; maxLines?: number; bold?: boolean; align?: CanvasTextAlign; alpha?: number;
+    color?: string; lineHeight?: number; measureOnly?: boolean;
+  }>): Readonly<{ size: number; lines: readonly string[]; height: number; lineHeight: number }>;
+  /** A bordered key cap; returns its width. */
+  keycap(canvas: CanvasRenderingContext2D, key: string, x: number, y: number): number;
+  sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
+  /** The sheet's footer row: its top, height, and the BACK control's left edge. */
+  sheetFooter(): Readonly<{ y: number; h: number; backX: number }>;
   font(size: number, bold?: boolean): string;
   text(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number, protectContrast?: boolean): void;
   title(canvas: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
@@ -130,7 +158,6 @@ export interface BossHudSnapshot {
 }
 
 export interface HudSnapshot {
-  readonly protectTextContrast?: boolean;
   readonly player: PlayerHudSnapshot;
   readonly run: RunHudSnapshot;
   readonly boss?: BossHudSnapshot | undefined;
@@ -143,18 +170,27 @@ export interface TutorialCardSnapshot {
   readonly keys: readonly string[]; readonly final: boolean; readonly completedBeat: number;
   readonly arenaLabel?: string; readonly teachingFocus?: string;
   readonly progress?: { readonly current: number; readonly goal: number } | undefined;
+  /** Lowest edge of an on-screen control in the top-right corner (touch pause) the card must clear. */
+  readonly clearTop?: number | undefined;
 }
 
 export interface PlaygroundHelpSnapshot {
   readonly weaponId: string; readonly heldHits: number; readonly throws: number; readonly throwHits: number;
   readonly perfectParries: number; readonly breakTriggers: number;
+  /** Lowest edge of an on-screen control in the top-right corner (touch pause) the panel must clear. */
+  readonly clearTop?: number | undefined;
 }
 
 export interface AchievementToastSnapshot {
   readonly name: string; readonly description: string; readonly rarityName: string; readonly rarityColor: string;
   readonly categoryIcon: string; readonly shards: number; readonly coins: number; readonly reveal: number;
-  /** Where the toast rests: in-run top-right, main-menu bottom-right, sheet screens in the empty header-left. */
-  readonly placement?: "top-right" | "bottom-right" | "header-left";
+  /**
+   * Where the toast rests: "hud" in a run (top-right of the HUD frame), "corner" on menus
+   * and run overlays (bottom-right), "sheet-footer" on sheet screens (left of BACK).
+   */
+  readonly placement?: "hud" | "corner" | "sheet-footer";
+  /** In a run, the lowest on-screen control the toast must stay below (the touch pause button). */
+  readonly clearTop?: number;
 }
 
 export interface TouchButtonSnapshot extends WorldPoint {
@@ -162,8 +198,13 @@ export interface TouchButtonSnapshot extends WorldPoint {
 }
 
 export interface TouchControlsSnapshot {
-  readonly joystick: { readonly active: boolean; readonly anchorX: number; readonly anchorY: number; readonly dx: number; readonly dy: number };
+  readonly joystick: {
+    readonly active: boolean; readonly anchorX: number; readonly anchorY: number; readonly dx: number; readonly dy: number;
+    /** Ring radius and resting position, from the input layer's touch layout. */
+    readonly radius: number; readonly homeX: number; readonly homeY: number;
+  };
   readonly aim?: { readonly x: number; readonly y: number } | undefined;
+  readonly aimPad: { readonly x: number; readonly y: number; readonly r: number };
   readonly buttons: readonly TouchButtonSnapshot[];
   readonly onboardingAlpha: number;
 }

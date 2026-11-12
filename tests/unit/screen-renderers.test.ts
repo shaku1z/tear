@@ -7,7 +7,6 @@ import type {
   ScreenControl, ScreenRenderContext, ScreenUiPort,
 } from "../../src/presentation/screens";
 import { createLegacyScreenRenderers } from "../../src/presentation/screens";
-import { createUiFoundation } from "../../src/presentation/ui-foundation";
 import { campaignDraftGuidance } from "../../src/app/live-run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
@@ -18,15 +17,18 @@ import type { LivePlayerWatchController } from "../../src/app/live-player-watch-
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
+  readonly density = { touch: false, compact: false };
   readonly t = {
     type: { wordmark: 80, display: 52, h1: 40, h2: 30, title: 24, lead: 20, body: 16, label: 15, caption: 14, micro: 13 },
     font: { brand: "'Courier New', monospace", display: "sans-serif", body: "monospace", displayWeight: 600, bodyWeight: 400, bodyMediumWeight: 500 },
     alpha: { full: 1, soft: 0.78, muted: 0.66, faint: 0.52, rail: 0.92, sheet: 0.96 },
     color: { accent: "#13c4d6", muted: "#62646f", danger: "#e23b3b", paper: "#fff", rail: "#080a10", railInk: "#f1eff9", unique: "#13c4d6" },
-    metric: { btnH: 48, btnGap: 12, pageTitleY: 92, pageBodyTop: 156, backW: 220,
-      settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54 },
+    metric: { btnH: 48, btnW: 300, panelPad: 14, btnGap: 12, pageTitleY: 92, pageBodyTop: 156, backW: 220,
+      settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54, minTarget: 32 },
+    space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 },
   };
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }> { return { x: 180, y: 44, w: 1240, h: 820 }; }
+  sheetFooter(): Readonly<{ y: number; h: number; backX: number }> { return { y: 44 + 820 - 48 - 12, h: 48, backX: 690 }; }
   readable(color: string): string { return color; }
   textBox(...values: Parameters<ScreenUiPort["textBox"]>): ReturnType<ScreenUiPort["textBox"]> {
     const size = values[5]?.size ?? 16, lineHeight = values[5]?.lineHeight ?? Math.round(size * 1.5);
@@ -64,7 +66,7 @@ class TestUi implements ScreenUiPort {
   keyBadge(): void { return; }
   tierPips(): void { return; }
   scrollHint(): void { return; }
-  finalReward(): void { return; }
+  finalReward(): ReturnType<ScreenUiPort["finalReward"]> { return { x: 420, y: 241, w: 760, h: 418, actionsY: 577 }; }
 }
 
 function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
@@ -106,8 +108,11 @@ describe("legacy screen renderer registry", () => {
     const controller = new TutorialController(CONFIG); controller.openPractice(800, 1);
     const found: string[] = [];
     for (const scroll of [0, 144]) {
+      // A small landscape touch screen runs the compact density (tutorial pause uses its tight composition).
       const controls: ScreenControl[] = [], context = createRenderContext(controls);
-      const renderer = createLegacyScreenRenderers({ ...context, width: 800, height: 360, scroll });
+      const ui = new TestUi();
+      Object.assign(ui, { density: { touch: true, compact: true } });
+      const renderer = createLegacyScreenRenderers({ ...context, ui, width: 800, height: 360, scroll });
       renderer.paused({ id: "paused", tutorial: { ...controller.session(), bossSelector: true, bossCatalog: practiceBossCatalog(() => 1) } } as Parameters<typeof renderer.paused>[0]);
       expect(controls.every((control) => control.y >= 0 && control.y + control.h <= 360 && control.h >= 24)).toBe(true);
       found.push(...controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-boss").map((control) => control.label));
@@ -178,20 +183,25 @@ describe("legacy screen renderer registry", () => {
     for (const [width, height] of [[1600, 900], [844, 414]] as const) {
       const controls: ScreenControl[] = [], lines: { text: string; x: number; y: number; width: number; font: string }[] = [];
       const base = createRenderContext(controls), ui: ScreenUiPort = new TestUi(), canvas = base.canvas;
-      let wrapping = false;
       canvas.measureText = (text) => ({ width: text.length * 9.6 } as TextMetrics);
-      canvas.fillText = (text, x, y) => { if (wrapping) lines.push({ text, x, y, width: canvas.measureText(text).width, font: canvas.font }); };
-      const wrapped = createUiFoundation({ presentation: { overscan: {}, view: {} } } as never).wrappedText.bind(ui as never);
-      ui.wrappedText = (...args: Parameters<ScreenUiPort["wrappedText"]>) => { wrapping = true; try { wrapped(...args); } finally { wrapping = false; } };
+      const measuredBox = ui.textBox.bind(ui);
+      ui.textBox = (...args: Parameters<ScreenUiPort["textBox"]>) => {
+        const box = measuredBox(...args);
+        if (args[5]?.measureOnly !== true) lines.push({ text: args[1], x: args[2], y: args[3], width: canvas.measureText(args[1]).width, font: ui.font(box.size) });
+        return box;
+      };
       const hints: { text: string; y: number; size: number | undefined }[] = [];
       ui.text = (...args: Parameters<ScreenUiPort["text"]>) => { hints.push({ text: args[1], y: args[3], size: args[4] }); };
       const renderer = createLegacyScreenRenderers({ ...base, width, height, ui, canvas });
       const draft = { id: "draft" as const, wave: 1, rerolls: 0, cards: [{ id: "speed", label: "SPEED" }] };
-      renderer.draft(draft); const draftControls = [...controls]; controls.length = 0;
+      renderer.draft(draft); const draftControls = [...controls]; controls.length = 0; lines.length = 0;
       renderer.draft({ ...draft, onboarding: campaignDraftGuidance("campaign", 1, 0, 0) ?? "" });
-      expect(controls).toEqual(draftControls);
-      expect(lines.map((line) => line.text).join(" ")).toContain("this run only");
-      expect(lines.every((line) => line.font.startsWith("16px") && line.y > 176 && line.y < 248 && line.x - line.width / 2 >= 32)).toBe(true);
+      // The guidance adds no control: the action row stays put and the deck starts under the wrapped copy.
+      expect(controls.map((control) => control.action)).toEqual(draftControls.map((control) => control.action));
+      expect(controls.filter((control) => !control.hiddenBox)).toEqual(draftControls.filter((control) => !control.hiddenBox));
+      const guidance = lines.find((line) => line.text.includes("this run only"));
+      expect(guidance?.font.startsWith("16px")).toBe(true);
+      expect(controls.filter((control) => control.hiddenBox).every((card) => card.y > (guidance?.y ?? 0))).toBe(true);
       controls.length = 0; lines.length = 0;
       const shop = buildShopSnapshot({ items: [{ id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" }],
         realCoins: 0, displayedCoins: 0, lifetimeEarned: 0, shopBuys: 0, lifetimeSpent: 0,
@@ -256,8 +266,8 @@ describe("legacy screen renderer registry", () => {
     controls.length = 0;
     createLegacyScreenRenderers({ ...base, touch: true, screenRectangle: { x: -120, y: -40, w: 1840, h: 980 } }).menu({ id: "menu", playerName: "Guest", signedIn: false, coins: 0, shards: 0, unlocked: 0,
       modeLabel: "Endless", difficultyLabel: "Normal" });
-    // Touch keeps the authored anchor: its overlay zoom scales around the centre.
-    expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup")).toMatchObject({ x: 100 });
+    // Touch anchors to the same true left edge (the old centre zoom is gone; density scales the type instead).
+    expect(controls.find((control) => control.action.type === "navigate" && control.action.to === "setup")).toMatchObject({ x: -20 });
     expect(controls[0]).toMatchObject({ dot: "#8a93a6", ghost: true });
   });
 
@@ -430,8 +440,11 @@ describe("legacy screen renderer registry", () => {
         { type: "run-monitor.control", command: "pause" },
         { type: "run-monitor.control", command: "stop" },
       ]);
+    // Run Monitor controls continue the pause action rail at the shared button metrics.
+    const rail = controls.filter((control) => control.x === controls[0]?.x);
+    expect(rail.map((control) => control.label)).toEqual(["RESUME", "RESTART", "SETTINGS", "MAIN MENU", "PAUSE RUN MONITOR", "STOP RUN MONITOR"]);
     expect(controls.find((control) => control.action.type === "run-monitor.control" && control.action.command === "pause"))
-      .toMatchObject({ label: "PAUSE RUN MONITOR", x: 80, y: 426, w: 280, h: 42 });
+      .toMatchObject({ label: "PAUSE RUN MONITOR", x: 40, w: 300, h: 48 });
   });
 
   it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {

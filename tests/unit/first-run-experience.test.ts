@@ -133,5 +133,11 @@ describe("device-correct cinematic prompts", () => {
     expect(cinematicPromptForDevice("TAP TO REVEAL  ·  TAP AGAIN TO CONTINUE", "mouse"))
       .toBe("CLICK TO REVEAL  ·  CLICK AGAIN TO CONTINUE");
     expect(cinematicPromptForDevice("", "mouse")).toBe("");
+    // The finale assist names the real key and is dropped where touch cannot hold it.
+    const assist = "SWING THROUGH EACH ANCHOR  ·  HOLD CONFIRM OR WAIT FOR ASSIST";
+    expect(cinematicPromptForDevice(assist, "keyboard")).toBe("SWING THROUGH EACH ANCHOR  ·  HOLD SPACE OR WAIT FOR ASSIST");
+    expect(cinematicPromptForDevice(assist, "gamepad", "✕")).toBe("SWING THROUGH EACH ANCHOR  ·  HOLD ✕ OR WAIT FOR ASSIST");
+    expect(cinematicPromptForDevice(assist, "touch")).toBe("SWING THROUGH EACH ANCHOR  ·  WAIT FOR ASSIST");
+    expect(cinematicPromptForDevice("MOVE THE BLADE  ·  CUT THE TEAR ANCHORS  ·  HOLD CONFIRM TO ASSIST", "touch")).toBe("MOVE THE BLADE  ·  CUT THE TEAR ANCHORS");
   });
 });

@@ -1,5 +1,6 @@
 import type { LegacyInput, LegacyInputDependencies, Point, TouchZoneName } from "./legacy-input-contracts";
 import { mapClientPointerToLogical } from "./pointer-coordinate";
+import { touchControlAt, touchControlLayout } from "./touch-control-layout";
 
 interface ClientPoint {
   readonly clientX: number;
@@ -12,8 +13,6 @@ interface TapTrack extends Point {
   readonly t: number;
   moved: boolean;
 }
-
-const TOUCH_ZONE_NAMES: readonly TouchZoneName[] = ["jump", "dash", "throwB", "pause"];
 
 // Temporary ESM browser adapter for the classic game shell. All formerly ambient
 // dependencies are explicit so the adapter can be characterized independently.
@@ -28,6 +27,9 @@ const {
   performance,
   semantic,
 } = dependencies;
+// The canvas the layout is measured against (bound by init); its CSS size sets the
+// physical scale of the on-screen controls.
+let layoutCanvas: HTMLCanvasElement | null = null;
 
 const Input: LegacyInput = {
   semantic,
@@ -118,7 +120,6 @@ const Input: LegacyInput = {
   touchAimMode: "stick",  // "stick" (radial virtual stick) | "drag" (relative, mouse-like)
   stickAim: null,         // stick mode: {x,y} deflection vector, each -1..1 (null = inactive)
   uiMode: false,          // set by the game each frame: menus/overlays (taps + drag-scroll)
-  uiZoom: 1,
   tJump: false, tDash: false, tPause: false,   // touch-button edges (cleared each frame)
   btnHeld: {},            // zone key -> true while a finger holds that on-screen button
   joy: { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 },
@@ -126,22 +127,19 @@ const Input: LegacyInput = {
   _scrollV: 0, scrollFlick: 0,
   // haptic tap — the tactile arm of the juice system (no-op where unsupported, e.g. iOS)
   buzz(p) { if (this.touchActive()) { try { navigator.vibrate(p); } catch { /* Haptics are optional. */ } } },
-  // on-screen control layout (logical px, inside the hardware safe area).
-  // THROW lives on the LEFT above the joystick: the right thumb must never leave the
-  // aim zone, or the blade's tip speed (and the throw's momentum bonus) dies mid-gesture.
+  // on-screen control layout: anchored to the real screen edges + safe area, sized in
+  // physical pixels. touch-control-layout.ts owns the geometry; input hit-tests and the
+  // renderer draws the same circles.
   touchLayout() {
-    const vw = CONFIG.view.w, vh = CONFIG.view.h;
-    const sl = SAFE.l, sr = SAFE.r, sb = SAFE.b, st = SAFE.t;
-    return {
-      jump: { x: vw - 150 - sr, y: vh - 150 - sb, r: 82, label: "JUMP" },
-      dash: { x: vw - 330 - sr, y: vh - 118 - sb, r: 64, label: "DASH" },
-      throwB: { x: 150 + sl, y: vh - 370 - sb, r: 60, label: "THROW" },
-      pause: { x: vw - 54 - sr, y: 52 + st, r: 34, label: "▮▮" },
-    };
+    const span = CONFIG.view.h + OVERSCAN.y * 2;
+    const cssPerLogicalPixel = layoutCanvas && layoutCanvas.clientHeight > 0 ? layoutCanvas.clientHeight / span : 1;
+    return touchControlLayout({ width: CONFIG.view.w, height: CONFIG.view.h, overscanX: OVERSCAN.x, overscanY: OVERSCAN.y,
+      safe: SAFE, cssPerLogicalPixel });
   },
   textEntryMode: false,
 
   init(canvas, requestPointerLock = () => undefined) {
+    layoutCanvas = canvas;
     window.addEventListener("keydown", (e) => {
       if (this.textEntryMode) return;
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
@@ -164,12 +162,9 @@ const Input: LegacyInput = {
     });
 
     // element px -> logical px. The element spans the arena PLUS the fullscreen
-    // overscan bleed, so subtract the overscan offset after scaling. When the
-    // overlay zoom is up (small touch screens), invert it around the view center
-    // so taps land where the zoomed pixels actually are.
+    // overscan bleed, so subtract the overscan offset after scaling.
     const toLogical = (e: ClientPoint, r: DOMRect): Point => mapClientPointerToLogical(e, r, {
-      width: CONFIG.view.w, height: CONFIG.view.h,
-      overscanX: OVERSCAN.x, overscanY: OVERSCAN.y, uiZoom: this.uiZoom,
+      width: CONFIG.view.w, height: CONFIG.view.h, overscanX: OVERSCAN.x, overscanY: OVERSCAN.y,
     });
     const updateMouse = (e: MouseEvent): void => {
       if (this.locked) {
@@ -213,12 +208,7 @@ const Input: LegacyInput = {
     // on-screen buttons = jump/dash/throw/pause, menus = taps + vertical drag-scroll.
     // preventDefault kills the browser's synthetic click, so TAPS ARE SYNTHESIZED here:
     // a short, still touch becomes Input.clicked at its point — this is what makes every
-    // menu work on mobile. Fat-finger forgiveness: hit zones are ~1.6x their visual size.
-    const hitZone = (p: Point): TouchZoneName | null => {
-      const L = this.touchLayout();
-      for (const k of TOUCH_ZONE_NAMES) { const z = L[k]; if (Math.hypot(p.x - z.x, p.y - z.y) <= z.r * 1.6) return k; }
-      return null;
-    };
+    // menu work on mobile. Hit zones are exactly the drawn controls (touch-control-layout.ts).
     const btnTouches: Record<number, TouchZoneName | undefined> = {};   // touch id -> zone key (fingers on buttons never aim)
     const tapTrack: Record<number, TapTrack | undefined> = {};     // touch id -> { x, y, cx, cy, t, moved } for tap->click synthesis
     canvas.addEventListener("touchstart", (e) => {
@@ -232,7 +222,8 @@ const Input: LegacyInput = {
           if (this._scrollId === -1) { this._scrollId = t.identifier; this._scrollLY = t.clientY; this._scrollV = 0; this.scrollFlick = 0; }
           continue;
         }
-        const z = hitZone(p);
+        const layout = this.touchLayout();
+        const z = touchControlAt(layout, p.x, p.y);
         if (z) {
           btnTouches[t.identifier] = z;
           this.btnHeld[z] = true;
@@ -242,7 +233,7 @@ const Input: LegacyInput = {
           else if (z === "throwB") { this.rmb = true; this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" }); }
           else { this.tPause = true; this.semantic.push({ type: "pause" }); }
           if (z === "jump") this.semantic.push({ type: "jump", phase: "pressed" });
-        } else if (p.x < CONFIG.view.w * 0.42 && this.joy.id === -1) {
+        } else if (p.x < layout.joystickZoneRight && this.joy.id === -1) {
           this.joy = { active: true, id: t.identifier, ax: p.x, ay: p.y, dx: 0, dy: 0 };
         } else if (this._aimId === -1) {
           this._aimId = t.identifier; this._aimLX = t.clientX; this._aimLY = t.clientY;

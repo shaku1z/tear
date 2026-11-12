@@ -92,9 +92,15 @@ describe("Ghost production replay world", () => {
       text: noDraw, title: noDraw, bossHud: noDraw, bossIntro: noDraw,
       chapterHeader: noDraw, chapterProgress: noDraw, loreFragment: noDraw, chapterPrompt: noDraw, biomeReveal: noDraw,
       cinematicFrame: noDraw, finaleFracture: noDraw, finalReward: noDraw, cinematicPrompt: noDraw, bossDeclaration: noDraw, dialogueCard: noDraw,
-      t: { type: { display: 40, h2: 28, lead: 20, body: 16, label: 14, caption: 12, micro: 10 },
-        alpha: { soft: 0.5, faint: 0.2 }, color: { accent: "#f00", muted: "#888", paper: "#fff" },
-        metric: { bossHudH: 40 }, motion: { finalRewardIn: 0.4 } } });
+      ink: "#000", density: { touch: false, compact: false }, readable: (color: string) => color, hudPlate: noDraw, displayText: noDraw,
+      fitText: (_canvas: unknown, text: string, _width: number, options: { size: number }) => ({ size: options.size, lines: [text], truncated: false }),
+      textBox: (_canvas: unknown, text: string) => ({ size: 16, lines: [text], height: 24, lineHeight: 24 }), keycap: () => 30,
+      sheetRect: () => ({ x: 180, y: 44, w: 1240, h: 820 }), sheetFooter: () => ({ y: 804, h: 48, backX: 690 }),
+      t: { type: { display: 40, h2: 28, title: 24, lead: 20, body: 16, label: 14, caption: 12, micro: 10 },
+        alpha: { soft: 0.5, muted: 0.66, faint: 0.2 },
+        color: { accent: "#f00", muted: "#888", paper: "#fff", danger: "#e44", scrim: "#06070c", scrimInk: "#f1eff9" },
+        metric: { bossHudH: 40, bossNotchH: 6, bossGuardGap: 10, bossGuardH: 6, barH: 14, hudPad: 10, hudBarW: 320, hudAbilityRows: 4 },
+        space: { xs: 6, sm: 10, md: 16, lg: 24, xl: 40 }, motion: { finalRewardIn: 0.4 } } });
     const ghost = createGhostV3({ id: "draw-source", rulesetVersion: "test", sourceClassification: "native-v3", trident,
       actions: [{ kind: "command", id: 1, tick: 1, command: { type: "move", x: 1000, y: 0 } }], snapshots: [], events: [] });
     const headless = new GhostProductionReplayWorld(ghost, createProductionGhostReplayComposition({ seed: "draw-seed" }));

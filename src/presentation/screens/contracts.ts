@@ -241,6 +241,8 @@ export interface ResultLogView { readonly wave: string; readonly time: string; r
 export interface GameoverScreenView {
   readonly id: "gameover"; readonly summary: string; readonly isNew: boolean; readonly best?: string;
   readonly earned: number; readonly coins: number; readonly replayAvailable: boolean;
+  /** The run scored: rewards get the celebration styling (a 0-point run keeps its coins quietly). */
+  readonly celebrate: boolean;
   readonly abilities: readonly CardView[]; readonly progress: readonly ProgressView[]; readonly log: readonly ResultLogView[];
 }
 export interface WinScreenView {

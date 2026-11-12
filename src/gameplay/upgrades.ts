@@ -323,11 +323,11 @@ const UPGRADES: readonly UpgradeDefinition[] = [
   // ===== unique abilities =====
   // ---- resilience: the healing rework's "earned survivability" set ----
   { id: "bloodrite", name: "Bloodrite", unique: true, rare: true, cat: "resilience",
-    desc: "Skill kills (slam, spike, perfect-parry) restore HP.",
+    desc: "Slam, spike (airborne foe into the floor) and perfect-parry kills restore HP.",
     apply: ({ mods, config }) => { mods.bloodrite = true; bindUpgradeHook("bloodrite", { mods, config }); },
     tiers: [
-      { desc: "Skill kills (slam, spike, perfect-parry) restore much more HP and grant 1s of invincibility.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 16; mods.bloodGuard = true; } },
-      { desc: "Skill kills (slam, spike, perfect-parry) restore massive HP and grant 1s of invincibility. Plus, EVERY normal kill now trickles HP back.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 22; mods.killHeal = 4; } },
+      { desc: "Slam, spike and perfect-parry kills restore much more HP and grant 1s of invincibility.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 16; mods.bloodGuard = true; } },
+      { desc: "Slam, spike and perfect-parry kills restore massive HP and grant 1s of invincibility; other kills trickle HP.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 22; mods.killHeal = 4; } },
     ] },
   { id: "riposte", name: "Riposte", unique: true, cat: "parry",
     desc: "After a perfect parry, take 60% less damage for 1.2s.",
@@ -337,11 +337,11 @@ const UPGRADES: readonly UpgradeDefinition[] = [
       { desc: "After a perfect parry, restore HP and become completely INVINCIBLE for 2.3s.", apply: ({ config }) => { config.resilience.parryGuardTime = 2.3; config.resilience.parryGuardMult = 0.0; } },
     ] },
   { id: "flow_guard", name: "Flow Guard", unique: true, cat: "resilience",
-    desc: "Take 30% less damage while your trick rank is BRUTAL (x3) or higher.",
+    desc: "Take 30% less damage while your multiplier is ×3 or higher.",
     apply: ({ mods }) => { mods.flowGuard = true; },
     tiers: [
-      { desc: "Take 50% less damage while your trick rank is BRUTAL (x3) or higher.", apply: ({ config }) => { config.resilience.flowGuardMult = 0.5; } },
-      { desc: "Take 50% less damage starting at STYLISH (x2). At BRUTAL (x3) or higher, you also rapidly REGENERATE HP.", apply: ({ mods, config }) => { config.resilience.flowGuardMult = 0.5; config.resilience.flowGuardTier = 2; mods.flowRegen = true; } },
+      { desc: "Take 50% less damage while your multiplier is ×3 or higher.", apply: ({ config }) => { config.resilience.flowGuardMult = 0.5; } },
+      { desc: "Take 50% less damage from a ×2 multiplier. At ×3 or higher you also regenerate HP fast.", apply: ({ mods, config }) => { config.resilience.flowGuardMult = 0.5; config.resilience.flowGuardTier = 2; mods.flowRegen = true; } },
     ] },
   { id: "aegis", name: "Aegis", unique: true, cat: "resilience",
     desc: "Slam kills grant a shield that blocks the next hit (max 2 shields).",
@@ -358,7 +358,7 @@ const UPGRADES: readonly UpgradeDefinition[] = [
   { id: "backfire", name: "Backfire", unique: true, cat: "parry", desc: "Your reflected shots STUN the enemies they strike.",
     apply: ({ mods }) => { mods.parryStun = true; } },
   { id: "crater", name: "Crater", unique: true, cat: "offense",
-    desc: "Power Slams erupt in a shockwave that grows with your descent speed.",
+    desc: "Power Slams (slams from a fast fall) erupt in a shockwave that grows with fall speed.",
     apply: ({ mods }) => { mods.crater = true; } },
   { id: "aerial_rave", name: "Aerial Rave", unique: true, cat: "offense",
     desc: "Staying airborne ramps up your swing damage over time (up to +50%).",
@@ -397,11 +397,11 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     desc: "Rising updrafts also launch all nearby enemies skyward.",
     apply: ({ mods }) => { mods.tempest = true; } },
   { id: "storm_recall", name: "Second Pass", unique: true, cat: "throw",
-    desc: "Your weapon’s secondary throw action deals significantly more damage.",
+    desc: "Your throw follow-up (throw again while it is out) deals much more damage.",
     apply: ({ mods }) => { mods.secondPass = 1.85; mods.stormRecall = true; },
     tiers: [
-      { desc: "Your secondary throw action deals +140% damage and gains force.", apply: ({ mods }) => { mods.secondPass = 2.4; mods.stormMult = 2.4; } },
-      { desc: "Your secondary throw action deals +200% damage. Catching the weapon unleashes a shockwave.", apply: ({ mods }) => { mods.secondPass = 3.0; mods.stormMult = 3.0; mods.stormBurst = true; } },
+      { desc: "Your throw follow-up deals +140% damage and hits with more force.", apply: ({ mods }) => { mods.secondPass = 2.4; mods.stormMult = 2.4; } },
+      { desc: "Your throw follow-up deals +200% damage. Catching the weapon unleashes a shockwave.", apply: ({ mods }) => { mods.secondPass = 3.0; mods.stormMult = 3.0; mods.stormBurst = true; } },
     ] },
   { id: "phantom_dash", name: "Phantom Dash", unique: true, cat: "mobility",
     desc: "Dashing directly through enemies unleashes a damaging phase-slice.",
@@ -430,7 +430,7 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     apply: ({ player }) => { player.abilityRevives += 1; } },
 
   // ===== more stackable upgrades — keep every category at 4+ =====
-  { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "Your weapon’s secondary throw action hits +25% harder.",
+  { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "Your throw follow-up (throw again while it is out) hits +25% harder.",
     apply: ({ blade }) => { blade.channelMods.secondaryPower *= 1.25; } },
   { id: "gyroblade", name: "Gyroblade", unique: false, cat: "throw", desc: "The thrown blade flies and returns 12% faster.",
     apply: ({ blade }) => { blade.channelMods.throwSpeed *= 1.12; blade.channelMods.returnSpeed *= 1.12; } },
@@ -478,7 +478,7 @@ const UPGRADES: readonly UpgradeDefinition[] = [
       { desc: "Direct hits apply maximum control and BLEED; secondary hits rupture captured wounds.", apply: ({ mods }) => { mods.capture = 3; mods.impale = 5; mods.impaleRecall = true; } },
     ] },
   { id: "stormbank", name: "Stormbank", unique: true, cat: "throw",
-    desc: "Skill kills bank electrical charge. Your next successful throw releases chain lightning.",
+    desc: "Slam, spike and perfect-parry kills bank charge; your next landed throw releases chain lightning.",
     apply: ({ mods, config }) => {
       mods.stormbank = 1;
       bindUpgradeHook("stormbank:charge", { mods, config });

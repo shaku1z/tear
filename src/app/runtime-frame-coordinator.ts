@@ -75,7 +75,8 @@ export interface RuntimeFrameCoordinatorOptions {
   readonly gameplayStart: () => void;
   readonly gameplayStop: () => void;
   readonly cssPerLogicalPixel: () => number;
-  readonly setUiDensity: (density: "desktop" | "touch") => void;
+  /** Re-derives interface tokens when the input owner or the CSS scale changes. */
+  readonly setUiDensity: (density: Readonly<{ touch: boolean; cssPerLogicalPixel: number }>) => void;
   readonly syncMusic: () => void;
   readonly render: () => void;
   readonly handleUi: () => void;
@@ -96,7 +97,7 @@ export class RuntimeFrameCoordinator {
   #lastInputMode = "";
   #wasPointerLocked = false;
   #gameplayActive = false;
-  #uiDensity: "desktop" | "touch" = "desktop";
+  #uiDensityKey = "desktop";
   #previousFrameWorkMilliseconds = 0;
   #frameStartedMilliseconds = 0;
   /** When the pause screen was first seen; a resume key needs the shared settle window first. */
@@ -232,10 +233,11 @@ export class RuntimeFrameCoordinator {
     this.#options.updateAttract(deltaSeconds, this.#options.isMenuScreen(state));
     this.#options.input.uiMode = !playing
       || (this.#options.cinema.active && this.#options.cinema.playerMode !== "finalBlade");
-    const density = this.#options.input.touchActive() && this.#options.cssPerLogicalPixel() < 0.6
-      ? "touch" : "desktop";
-    if (density !== this.#uiDensity) {
-      this.#uiDensity = density;
+    const density = { touch: this.#options.input.touchActive(), cssPerLogicalPixel: this.#options.cssPerLogicalPixel() };
+    // Desktop tokens do not depend on the scale; touch tokens are derived from it.
+    const key = density.touch ? `touch:${density.cssPerLogicalPixel.toFixed(3)}` : "desktop";
+    if (key !== this.#uiDensityKey) {
+      this.#uiDensityKey = key;
       this.#options.setUiDensity(density);
     }
     this.#options.syncMusic();

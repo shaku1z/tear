@@ -42,6 +42,8 @@ export interface LegacyWorldFramePorts<Platform extends WorldPlatform = WorldPla
   readonly player?: PlayerVisualSnapshot | undefined;
   readonly entityOptions: EntityLayerOptions;
   readonly floaters: readonly FloaterVisualSnapshot[];
+  /** Interface text scale (touch density), so world callouts meet the same reading floor. */
+  readonly floaterTextScale?: number;
   readonly brokenPlatforms: readonly Platform[];
   readonly platforms: readonly Platform[];
   readonly projectiles: readonly Readonly<{ draw: (canvas: CanvasRenderingContext2D) => void }>[];
@@ -100,7 +102,7 @@ export function renderLegacyWorldFrame<Platform extends WorldPlatform>(ports: Le
   ports.drawTutorialGhost(); // The coach owns visibility, including optional completed Practice Lab comparison.
   ports.drawPlayer(); ports.drawBlade(); ports.drawEffects();
   ports.drawDebug(visible, painted);
-  renderFloaters(canvas, ports.floaters);
+  renderFloaters(canvas, ports.floaters, ports.floaterTextScale ?? 1);
   canvas.restore();
   return camera;
 }

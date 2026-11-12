@@ -136,7 +136,7 @@ export function buildGameoverSnapshot(input: {
   return Object.freeze({ id: "gameover", summary: `wave ${String(input.wave)}   ·   ${String(input.score)} pts   ·   ${input.formatTime(input.time)}`,
     // A first scoreless run is technically a record but celebrating 0 points reads as broken.
     isNew: input.isNew && input.score > 0, ...(input.best === undefined ? {} : { best: `best: wave ${String(input.best.wave)} · ${String(input.best.score)} pts` }),
-    earned: input.earned, coins: input.coins, replayAvailable: input.replayAvailable,
+    earned: input.earned, coins: input.coins, replayAvailable: input.replayAvailable, celebrate: input.score > 0,
     abilities: input.abilities, progress: input.progress, log: input.log });
 }
 

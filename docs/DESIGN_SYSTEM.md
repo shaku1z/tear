@@ -33,7 +33,16 @@ The ordinary game interface preserves Tear's established **Courier New** identit
 | `caption` | 14 | Taglines, hints |
 | `micro` | 13 | Tags, pips, fine print — **the legibility floor** |
 
-**Legibility floor.** A 1280×720 window scales the 1600×900 layout by 0.8, so `micro` (13) renders at 10.4 CSS px. Nothing a player must read is drawn below `micro`; screens pass tokens, never literal sizes below it. When bigger text no longer fits, change the layout (wrap, rebalance, reduce chrome) instead of shrinking the text. The touch density profile adds its bump on top of these values.
+**Legibility floor.** A 1280×720 window scales the 1600×900 layout by 0.8, so `micro` (13) renders at 10.4 CSS px. Nothing a player must read is drawn below `micro`; screens pass tokens, never literal sizes below it. When bigger text no longer fits, change the layout (wrap, rebalance, reduce chrome) instead of shrinking the text. On touch, the density profile (below) raises these values.
+
+### Density — `src/presentation/ui-density.ts`
+
+The table values are the authored (desktop) tokens. `UI.setDensity({ touch, cssPerLogicalPixel })` derives the live tokens from them with one rule for every size:
+
+- **Desktop** keeps the authored values.
+- **Touch** adds the comfortable touch bump (`micro` 16, `btnH` 60, …), then guarantees the physical floors from `src/domain/interface-accessibility.ts` at the live scale: every text role at least **11 CSS px** (`minTouchTextCssPx`) and every interactive metric (`btnH`, `chipH`, `settingsControlH`, `settingsStepperW`, `minTarget`) at least **44 CSS px** (`minTouchTargetCssPx`). Above the floor the type ramp keeps half of its authored steps, so hierarchy survives. A 1180×820 tablet resolves to the plain touch profile; an 844×390 phone (0.43 CSS px per logical px) to **compact**: `micro` 26, `btnH` 102.
+- `UI.density = { touch, compact }` tells a screen which composition to use. Compact means phone landscape: fewer columns, scrolling panels, actions in the footer row. The canvas keeps its single 1600×900 logical frame; there is no zoom or crop.
+- **Adoption is per screen.** The render pipeline calls `UI.useCompactLayout(ready)` every frame from `COMPACT_LAYOUT_SCREENS` (`src/app/live-presentation-composition.ts`). Screens in that set get the compact floors; the others keep the plain touch profile until their composition adopts it. Today: the HUD and touch controls, pause, confirm-quit, continue, draft, reserve, tier-up, defeat and victory, the main menu, run select and settings.
 
 ### Spacing — `UI.t.space` (px)
 Vertical rhythm and paddings.
@@ -58,6 +67,9 @@ Vertical rhythm and paddings.
 | `chipW` | 96 | Chip width |
 | `barH` | 14 | Progress/HP bar height |
 | `focusRing` / `focusGap` | 2 / 3 | Keyboard/controller focus ring stroke and gap outside the control |
+| `minTarget` | 32 | Smallest interactive control; touch raises it to the 44 CSS px floor |
+| `hudBarW` / `hudPad` | 320 / 10 | HUD health bar width and HUD plate padding |
+| `hudAbilityRows` | 4 | Abilities listed on the HUD before it collapses to "N ABILITIES · PAUSE: ARSENAL" (the full list is on the pause screen) |
 | `pageTitleY` | 92 | Page title baseline (the shared page pattern) |
 | `pageBodyTop` | 156 | First body y under a page header |
 | `backW` | 220 | Width of the footer BACK control |
@@ -75,6 +87,7 @@ Opacity for de-emphasised text and for the content surfaces. Text roles are meas
 | `sheet` | 0.96 | Paper sheet surface, effectively solid so scene art never shows through text (was a hard-coded 0.70) |
 | `rail` | 0.92 | Main-menu rail backing |
 | `modalDim` | 0.9 | Modal dim (Rename) |
+| `hudPlate` | 0.8 | HUD backing plate: keeps HUD values ≥ 4.5:1 and labels ≥ 3:1 over every biome |
 
 ### Colour roles — `UI.t.color`
 Semantic roles. `accent`, `danger`, and `unique` pull from `CONFIG.colors` so the system and the game palette never drift apart.
@@ -117,6 +130,10 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | `UI.textBox` | `UI.textBox(ctx, text, x, y, maxW, opts?)` | Wrapped text in a box; `y` is the first baseline; **returns the height it used** so callers lay out below it |
 | `UI.readable` | `UI.readable(color, ratio?)` | A palette hue darkened to 4.5:1 when drawn on paper (passes through on dark surfaces) |
 | `UI.focusRing` | `UI.focusRing(ctx, box)` | Keyboard/controller focus ring outside a control (drawn by the button layer) |
+| `UI.hudPlate` | `UI.hudPlate(ctx, x, y, w, h)` | The one HUD contrast strategy: the surface that contrasts with the live ink (paper under dark ink, scrim under light ink) at `alpha.hudPlate`, behind each HUD group, banner and in-run card |
+| `UI.sheetFooter` | `UI.sheetFooter()` | The sheet's footer row `{ y, h, backX }`: single owner of the BACK row geometry (used by `pageLayout` and the toast) |
+| `UI.keycap` | `UI.keycap(ctx, key, x, y)` | Bordered key cap sized from `type.micro`; returns its width |
+| `UI.finalReward` | `UI.finalReward(ctx, { …, actions? })` | Campaign reward panel; with `actions: true` it reserves a footer row and returns `actionsY`, so buttons always sit inside the panel |
 | `UI.emptyState` | `UI.emptyState(ctx, glyph, line, cx, cy, detail?, width?)` | Designed empty / loading / offline state; returns the y for an optional CTA |
 | `UI.cursor` | `UI.cursor(ctx, x, y)` | Pointer/cursor glyph |
 | `UI.pointIn` | `UI.pointIn(b, x, y)` | Hit-test: is point `(x,y)` inside box `b`? |
@@ -129,6 +146,18 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 ### The page pattern (sheet screens)
 
 `screen-primitives.ts` provides `page(context, { title, subtitle?, hue?, stat? })` for the header (with an optional right-aligned stat), `clipBody(context, top, bottom, draw)` to clip content to the body, and `pageFooter(context, { back?, canScrollUp?, canScrollDown? })` for BACK centred inside the sheet's footer row with the scroll hint to its right. `pageLayout(context)` exposes `left/right/contentWidth/bodyTop/bodyBottom/footerY`. Use these instead of hard-coding title, BACK or scroll-hint positions.
+
+### The overlay pattern (run overlays)
+
+Pause, confirm-quit, continue, defeat, victory, draft, reserve and tier-up share `overlayLayout` / `overlayHeader(context, { title, subtitle?, hue?, reveal? })` and `actionRow` from `screen-primitives.ts`: a `display` title under the safe top, an accent rule, subtitle lines, a body from `bodyTop` to `bodyBottom`, and a footer action row at `footerY`. All of it derives from the live tokens and safe insets, so a title cannot clip at any density. Panels (arsenal, run progress, run log) live in `run-overlay-panels.ts` and scroll inside their rect. Draft, reserve and tier-up use one choice card whose height comes from its copy; the key badge 1–4 shows whenever a keyboard or mouse owns input.
+
+### HUD and in-run surfaces
+
+- HUD groups anchor to the **visible screen rectangle plus safe insets** (`hudFrame`), not to the 16:9 frame, so ultrawide and 4:3 windows keep the HUD in the corners. Vitals sit top-left, wave and stats top-centre, the multiplier in a fixed slot under them, the boss header under that (`bossHudTop`). Each group sits on one `UI.hudPlate`.
+- The HUD is drawn only while playing; run overlays carry their own summary.
+- Announcements (stage and wave banners) share one band under the HUD lane, never over the spawn floor; the wave banner waits while the stage banner shows.
+- On-screen touch controls come from `src/input/touch-control-layout.ts`, the single owner of their geometry: input hit-tests exactly the circles the renderer draws, anchored to the real screen edges and safe area and sized in CSS pixels.
+- Achievement toasts have one placement per context (`hud` in a run, below the touch pause control; `corner` bottom-right on menus and overlays; `sheet-footer` left of BACK on sheet screens), are at most 360 wide, and are queued one at a time by the controller.
 
 ### Usage examples
 

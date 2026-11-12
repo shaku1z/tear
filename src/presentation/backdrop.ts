@@ -65,7 +65,6 @@ export interface BackdropController {
   highContrast(): boolean;
   reducedMotion(): boolean;
   flashScale(): number;
-  needsHudTextContrast(stage: Stage): boolean;
   metrics(): BackdropPresentationMetrics;
   _cache: Partial<Record<Stage["id"], BackdropCache>>; _fx: BackdropEffect[];
   fillFull(context: CanvasRenderingContext2D, view?: ViewRect): void; resetFx(): void;
@@ -142,7 +141,6 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
   highContrast() { return accessibility.highContrast; },
   reducedMotion() { return accessibility.reducedMotion; },
   flashScale() { return accessibility.flashScale; },
-  needsHudTextContrast(stage) { return stage.id === "verdant-sanctum" && policy.verdantCalibration?.status() === "ready"; },
   metrics() {
     const caches = Object.values(this._cache);
     return Object.freeze({

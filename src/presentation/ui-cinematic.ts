@@ -31,7 +31,10 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             const x = Number(o.x) || 0, y = Number(o.y) || 0;
             const w = Math.max(0, Number(o.w) || 0), h = Math.max(1, Number(o.h) || m.bossHudH);
             const frac = Math.max(0, Math.min(Number(o.frac) || 0, 1));
-            const fill = truthyOr(o.fill, () => t.color.danger), fillW = w * frac;
+            // The fill sits inset from the frame so a boss hue close to the ink (Colossus)
+            // still separates from the border through a strip of track.
+            const inset = h > (m.bossBorderW + 1) * 2 + 2 ? m.bossBorderW + 1 : 0, fill = truthyOr(o.fill, () => t.color.danger),
+                fillW = (w - inset * 2) * frac, fx = x + inset, fy = y + inset, fh = h - inset * 2;
             const now = Number.isFinite(Number(o.time)) ? Number(o.time) : 0;
             const low = !!o.lowGraphics;
             ctx.save();
@@ -45,25 +48,25 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
                 ctx.shadowBlur = m.bossGlow;
             }
             ctx.fillStyle = fill;
-            ctx.fillRect(x, y, fillW, h);
+            ctx.fillRect(fx, fy, fillW, fh);
             ctx.shadowBlur = 0;
             // A restrained light sweep keeps the bar alive without competing with combat.
             if (!low && fillW > 0 && m.bossShimmerW > 0) {
                 const cycle = t.motion.bossShimmerCycle;
                 const phase = cycle > 0 ? ((now % cycle) + cycle) % cycle / cycle : 0;
                 const sw = Math.min(m.bossShimmerW, Math.max(fillW, 1));
-                const sx = x - sw + (fillW + sw * 2) * phase;
+                const sx = fx - sw + (fillW + sw * 2) * phase;
                 const sheen = ctx.createLinearGradient(sx, 0, sx + sw, 0);
                 sheen.addColorStop(0, "transparent");
                 sheen.addColorStop(0.5, t.color.paper);
                 sheen.addColorStop(1, "transparent");
                 ctx.save();
                 ctx.beginPath();
-                ctx.rect(x, y, fillW, h);
+                ctx.rect(fx, fy, fillW, fh);
                 ctx.clip();
                 ctx.globalAlpha = a.ghost;
                 ctx.fillStyle = sheen;
-                ctx.fillRect(sx, y, sw, h);
+                ctx.fillRect(sx, fy, sw, fh);
                 ctx.restore();
             }
             // Phase change: a brief white strike through the remaining health edge.
@@ -72,9 +75,9 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             if (flashK > 0) {
                 ctx.globalAlpha = flashK * a.bossFlash;
                 ctx.fillStyle = t.color.paper;
-                ctx.fillRect(x, y, fillW, h);
+                ctx.fillRect(fx, fy, fillW, fh);
                 const j = m.bossCrackJut;
-                const crackX = Math.max(x + j, Math.min(x + w - j, x + fillW));
+                const crackX = Math.max(x + j, Math.min(x + w - j, fx + fillW));
                 ctx.globalAlpha = flashK;
                 ctx.strokeStyle = t.color.paper;
                 ctx.lineWidth = m.bossBorderW;

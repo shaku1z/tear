@@ -174,7 +174,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
             ctx.save();
             ctx.fillStyle = truthyOr(o.color, () => t.color.cinemaMuted);
             ctx.globalAlpha = k * t.alpha.cinemaHint;
-            ctx.font = this.font(t.type.micro, true);
+            ctx.font = this.font(t.type.label, true);
             ctx.textBaseline = "middle";
             ctx.textAlign = truthyOr(o.align, () => "center");
             const x = o.x ?? view.w / 2, y = o.y ?? view.h - t.metric.cinematicPromptBottom;
@@ -184,10 +184,13 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
         // The reward is deliberately its own celebration, after the world and lore
         // have resolved. Callers provide copy and values; this component owns all
         // screen-space geometry, type, color and hierarchy.
+        // `actions: true` reserves a footer row inside the panel; the returned `actionsY`
+        // is where the caller lays its buttons, so they always sit inside the panel.
         finalReward(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, a = t.alpha, vw = view.w, vh = view.h;
             const k0 = Math.max(0, Math.min(Number(o.amount) || 0, 1)), k = 1 - (1 - k0) * (1 - k0);
-            const w = Math.min(m.finalRewardW, vw - t.space.xl * 2), h = Math.min(m.finalRewardH, vh - t.space.xl * 2);
+            const actionsAt = 312 + t.type.caption + t.space.lg, needed = o.actions ? actionsAt + m.btnH + t.space.lg : 0;
+            const w = Math.min(m.finalRewardW, vw - t.space.xl * 2), h = Math.min(Math.max(m.finalRewardH, needed), vh - t.space.xl * 2);
             const x = (vw - w) / 2, y = (vh - h) / 2 + (1 - k) * t.space.lg, color = truthyOr(o.color, () => t.color.accent);
             const savedInk = this.ink;
             ctx.save();
@@ -221,6 +224,7 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
                 align: "center", amount: k, color });
             this.ink = savedInk;
             ctx.restore();
+            return { x, y, w, h, actionsY: y + actionsAt };
         },
         finaleFracture(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             const o = truthyOr<UiOptions>(opts, () => ({})), t = this.t, m = t.metric, vw = view.w;
@@ -271,6 +275,16 @@ _chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
             ctx.fillStyle = inkIsLight(this.ink) ? this.t.color.scrim : this.t.color.paper;
             ctx.fillRect(-ox, -oy, w + ox * 2, h + oy * 2); // reach the true screen edges in fullscreen
             ctx.globalAlpha = 1;
+        },
+        // HUD backing plate: the contrasting surface for the live ink (paper under dark
+        // ink, scrim under light ink) at `alpha.hudPlate`, so HUD text keeps its contrast
+        // floor over every biome while the world still reads through the plate.
+        hudPlate(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+            ctx.save();
+            ctx.globalAlpha = this.t.alpha.hudPlate;
+            ctx.fillStyle = inkIsLight(this.ink) ? this.t.color.scrim : this.t.color.paper;
+            ctx.fillRect(x, y, w, h);
+            ctx.restore();
         },
         // scroll affordance ("▲ scroll ▼") for long lists
         scrollHint(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean, align: CanvasTextAlign = "center") {

@@ -54,7 +54,7 @@ function createHarness(initialState = "playing") {
     gameplayStart: () => { events.push("gameplay-start"); },
     gameplayStop: () => { events.push("gameplay-stop"); },
     cssPerLogicalPixel: () => cssPerLogicalPixel,
-    setUiDensity: (density) => { events.push(`density:${density}`); },
+    setUiDensity: (density) => { events.push(`density:${density.touch ? "touch" : "desktop"}@${String(density.cssPerLogicalPixel)}`); },
     syncMusic: () => { events.push("music"); },
     render: () => { events.push("render"); },
     handleUi: () => { events.push("ui"); },
@@ -192,7 +192,7 @@ describe("RuntimeFrameCoordinator", () => {
     harness.coordinator.run(1 / 30);
 
     expect(harness.events).toContain("cinema");
-    expect(harness.events).toContain("density:touch");
+    expect(harness.events).toContain("density:touch@0.5");
     expect(harness.input.uiMode).toBe(true);
     expect(harness.events.filter((event) => event === "simulation")).toHaveLength(1);
   });

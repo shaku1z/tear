@@ -116,15 +116,24 @@ export function renderEntityLayer(
   }
 }
 
-export function renderFloaters(canvas: CanvasRenderingContext2D, floaters: readonly FloaterVisualSnapshot[]): void {
+export function renderFloaters(canvas: CanvasRenderingContext2D, floaters: readonly FloaterVisualSnapshot[], textScale = 1): void {
   canvas.textAlign = "center";
+  // Presentation-only de-overlap: a busy fight spawns many numbers at one point, so
+  // each floater rises past earlier ones it would cover. Snapshots are not mutated.
+  const placed: { x: number; y: number; w: number; h: number }[] = [];
   for (const floater of floaters) {
-    canvas.globalAlpha = clamp(floater.life / 0.8, 0, 1); canvas.fillStyle = floater.color;
+    canvas.globalAlpha = clamp(floater.life / 0.8, 0, 1);
+    canvas.fillStyle = floater.color;
     const damage = /^[+-]?\d+(?:[▼⇊!⇈↑])?$/.test(floater.text);
     const age = 0.8 - floater.life, pop = damage ? 1 : age < 0.12 ? 1.2 - 0.2 * (age / 0.12) : 1;
-    const base = damage ? 16 : floater.big ? 22 : 16;
-    canvas.font = `${!damage && floater.big ? "bold " : ""}${String(Math.round(base * pop))}px 'Courier New', monospace`;
-    canvas.fillText(floater.text, floater.x, floater.y);
+    const size = Math.round((damage ? 16 : floater.big ? 22 : 16) * pop * textScale);
+    canvas.font = `${!damage && floater.big ? "bold " : ""}${String(size)}px 'Courier New', monospace`;
+    const box = { x: floater.x, y: floater.y, w: canvas.measureText(floater.text).width + 4, h: size + 2 };
+    for (let step = 0; step < 6 && placed.some((other) => Math.abs(other.x - box.x) * 2 < other.w + box.w && Math.abs(other.y - box.y) < box.h); step++) {
+      box.y -= box.h;
+    }
+    placed.push(box);
+    canvas.fillText(floater.text, box.x, box.y);
   }
   canvas.globalAlpha = 1;
 }

@@ -49,6 +49,9 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
             // component metrics
             metric: {
                 hudTextOutline: 3,
+                // HUD: the vitals bar width, plate padding, and how many abilities list
+                // before the HUD collapses them into one summary line (full list: pause)
+                hudBarW: 320, hudPad: 10, hudAbilityRows: 4,
                 btnH: 48, btnW: 300, btnGap: 12, btnRound: 0,
                 panelPad: 14, chipH: 28, chipW: 96, barH: 14, cardRound: 0,
                 // boss theater: shared HUD + cinematic proportions. Ratios remain tokens so
@@ -71,6 +74,8 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 settingsRowH: 58, settingsControlW: 252, settingsControlH: 42, settingsStepperW: 54,
                 // keyboard/controller focus ring: stroke width and gap outside the control
                 focusRing: 2, focusGap: 3,
+                // smallest interactive control; touch raises it to the 44 CSS px floor
+                minTarget: 32,
                 // the shared page pattern (sheet-relative, see screen-primitives `page`)
                 pageTitleY: 92, pageBodyTop: 156, pageFooterH: 84, backW: 220,
             },
@@ -87,6 +92,8 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 cinemaPanel: 0.90, cinemaHint: 0.58,
                 finalRewardDim: 0.78, finalRewardPanel: 0.96, finalRewardGhost: 0.18,
                 rallyBase: 0.72, rallyPulse: 0.18,
+                // HUD backing plate: keeps values ≥ 4.5:1 and labels ≥ 3:1 over any biome
+                hudPlate: 0.8,
             },
             // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
             // from the game palette so the system and the game never drift apart.

@@ -100,7 +100,7 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
   // Select the actual rendered completed LAUNCH control in this same course.
   // Class A stopped the browser loop; advance its application frame to consume
   // the physical click through the normal UI owner.
-  await page.mouse.click(830, 328);
+  await page.mouse.click(830, 285); // LAUNCH: third row, left column of the reached-lessons panel
   await page.evaluate(() => window.__tutorialJourneyEnvironment.advanceApplicationFrame(1 / 120));
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "tutorial"
     && window.__PANTHEON_TEST.tutorial().active && window.__PANTHEON_TEST.tutorial().lessonIndex === 4);

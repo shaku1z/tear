@@ -10,11 +10,14 @@ export type CinematicPromptDevice = "mouse" | "keyboard" | "gamepad" | "touch";
 const HOLD_TO_SKIP = /HOLD TO SKIP/gu;
 const TAP = /\bTAP\b/gu;
 const TOUCH_HOLD_CLAUSE = /\s*·\s*HOLD TO SKIP(?: CHAPTER)?/gu;
+// The finale's assist is also a held confirm; name the real key, and drop it on touch.
+const HOLD_CONFIRM = /HOLD CONFIRM/gu;
+const TOUCH_ASSIST_CLAUSE = /\s*·\s*HOLD CONFIRM TO ASSIST|HOLD CONFIRM OR /gu;
 
 export function cinematicPromptForDevice(text: string, device: CinematicPromptDevice, confirmGlyph = "A"): string {
   if (text === "") return text;
-  if (device === "touch") return text.replace(TOUCH_HOLD_CLAUSE, "");
+  if (device === "touch") return text.replace(TOUCH_HOLD_CLAUSE, "").replace(TOUCH_ASSIST_CLAUSE, "");
   const press = device === "mouse" ? "CLICK" : device === "keyboard" ? "SPACE" : confirmGlyph;
-  const hold = device === "gamepad" ? `HOLD ${confirmGlyph} TO SKIP` : "HOLD SPACE TO SKIP";
-  return text.replace(HOLD_TO_SKIP, hold).replace(TAP, press);
+  const key = device === "gamepad" ? confirmGlyph : "SPACE";
+  return text.replace(HOLD_TO_SKIP, `HOLD ${key} TO SKIP`).replace(HOLD_CONFIRM, `HOLD ${key}`).replace(TAP, press);
 }

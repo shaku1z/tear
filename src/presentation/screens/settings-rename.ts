@@ -73,7 +73,10 @@ export function createSettingsRenameRenderers(context: ScreenRenderContext) {
       });
     });
     // Enqueued after the rows so keyboard focus starts on the first setting, not on RESET.
-    context.enqueue({ x: layout.sheet.x + layout.sheet.w - 48 - 210, y: 66, w: 210, h: 40, label: "RESET DEFAULTS", size: ui.t.type.label,
+    // RESET sits in the header, away from BACK; it keeps the shared minimum target and fits its label.
+    context.canvas.font = ui.font(ui.t.type.label, true);
+    const resetW = Math.max(210, Math.ceil(context.canvas.measureText("RESET DEFAULTS").width) + 32), resetH = Math.max(40, ui.t.metric.minTarget);
+    context.enqueue({ x: layout.sheet.x + layout.sheet.w - 48 - resetW, y: layout.sheet.y + 14, w: resetW, h: resetH, label: "RESET DEFAULTS", size: ui.t.type.label,
       action: { type: "settings.reset" } });
     pageFooter(context, {
       back: { type: "navigate", to: view.returnTo },

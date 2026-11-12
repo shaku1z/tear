@@ -56,6 +56,8 @@ export interface GuardOptions {
     color?: string;
 }
 export interface UiOptions {
+    /** finalReward: reserve a footer row for action buttons inside the panel. */
+    actions?: boolean;
     align?: Align;
     alpha?: number;
     amount?: number;
@@ -131,6 +133,12 @@ export interface UiRuntime {
   ink: string;
   t: UiTokens;
   _baseTokens: TokenSnapshot | null;
+  /** Live density: touch input owns the UI; compact = phone-sized touch composition. */
+  density: { touch: boolean; compact: boolean; cssPerLogicalPixel: number; textScale: number };
+  _densityProfile: { readonly touch: boolean; readonly cssPerLogicalPixel: number };
+  _compactLayout: boolean;
+  _applyDensity(): void;
+  useCompactLayout(ready: boolean): void;
   _togAnim: Record<string, number>;
   _tabAnim: Record<string, number>;
   font(size: number, bold?: boolean): string;
@@ -152,6 +160,7 @@ export interface UiRuntime {
   _fitLabel(context: CanvasRenderingContext2D, label: string, maxWidth: number, size: number, height: number, nav: boolean): TextFitLayout;
   _drawLines(context: CanvasRenderingContext2D, lines: readonly string[], x: number, centerY: number, size: number): void;
   readable(color: string, ratio?: number): string;
+  sheetRect(): Rect;
   fitText(context: CanvasRenderingContext2D, text: string, maxWidth: number, options: TextFitOptions & { readonly bold?: boolean }): TextFitLayout;
 }
 import type { TearWorldClock } from "../gameplay/runtime/tear-world-clock";

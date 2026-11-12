@@ -91,7 +91,6 @@ describe("presentation runtime boundaries", () => {
     type Screen = "menu" | "playing";
     const events: string[] = [];
     let previous: Screen = "playing";
-    let zoom = 1;
     let focus = 9;
     const context = {
       setTransform: () => { events.push("transform"); }, translate: () => { events.push("translate"); }, scale: () => { events.push("scale"); },
@@ -104,8 +103,7 @@ describe("presentation runtime boundaries", () => {
       screen: () => "menu", previousScreen: () => previous, setPreviousScreen: (value) => { previous = value; },
       resizeIfNeeded: () => { events.push("resize-check"); },
       screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
-      touchActive: () => false, cssPerLogicalPixel: () => 1, uiZoom: () => zoom, setUiZoom: (value) => { zoom = value; },
-      deltaSeconds: () => 1 / 60, clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+      touchActive: () => false, applyScreenDensity: () => events.push("density"),
       resetControls: () => events.push("controls"), background: () => "#fff", setTheme: () => events.push("theme"),
       renderWorldLayers: () => events.push("world"), renderReticle: () => events.push("reticle"), isMenuScreen: () => true,
       enterSeconds: () => 1, setEnterSeconds: () => events.push("enter-reset"), enterAmount: () => 1, setEnterAmount: () => { events.push("enter-amount"); },

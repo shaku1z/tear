@@ -20,8 +20,7 @@ describe("live world capture layers", () => {
       screen: () => screen, hudClockSeconds: feedback.clockSeconds, lastUiDelta: () => 1 / 60,
     } as unknown as WorldPresentationState;
     const services = {
-      dependencies: { CONFIG, A11Y: { flashScale: 1 }, UPGRADES: [], UI: { t: { color: { accent: "#abc" } } },
-        Backdrop: { needsHudTextContrast: () => true } },
+      dependencies: { CONFIG, A11Y: { flashScale: 1 }, UPGRADES: [], UI: { t: { color: { accent: "#abc" } } } },
       chase: { hud: chaseHud }, world: { hud: worldHud }, stage: { current: { accent: "#abc" } }, formatTime: String,
       trickColor: () => "#fff", ease: (value: number) => value,
     } as unknown as WorldPresentationServices;
@@ -55,7 +54,7 @@ describe("live world capture layers", () => {
     } as unknown as WorldPresentationState;
     const services = {
       dependencies: { CONFIG, CLOCK: { sim: 1 }, A11Y: { reducedMotion: false, highContrast: false, flashScale: 1 },
-        GFX: { low: false }, THEME: { dark: false, ink: "#000" }, UI: { font: () => "12px monospace" },
+        GFX: { low: false }, THEME: { dark: false, ink: "#000" }, UI: { font: () => "12px monospace", density: { textScale: 1 } },
         FX: { draw: drawEffects, setViewRect: vi.fn() }, Backdrop: { draw: drawBackdrop }, cosmeticRandom: () => 0.5 },
       canvas: {}, width: 1600, height: 900, screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
       stage: { current: { id: "verdant-sanctum" }, platforms: [] },

@@ -97,7 +97,7 @@ export interface LiveWorldPresentationAdapters {
   readonly drawReticle: () => void;
 }
 
-/** Menu screens drawn on the paper sheet (their header-left is empty). */
+/** Menu screens drawn on the paper sheet (the toast rests left of BACK in their footer row). */
 const SHEET_SCREENS: ReadonlySet<string> = new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings"]);
 
 export function createLiveWorldPresentationAdapters(
@@ -212,6 +212,7 @@ export function createLiveWorldPresentationAdapters(
       player: player ? { x: player.x, y: player.y, halfWidth: player.hw, halfHeight: player.hh } : undefined,
       entityOptions: { darkTheme: d.THEME.dark, sandbox: run.mode === "sandbox", buffColors: d.CONFIG.colors,
         font: (size, bold) => d.UI.font(size, bold) },
+      floaterTextScale: d.UI.density.textScale,
       floaters: actorsIncluded ? state.floaters().map((item) => ({ x: item.x, y: item.y, text: item.text,
         color: item.col || "#000", life: item.life, big: item.big })) : [],
       brokenPlatforms: run._arenaBroken ?? [], platforms: stage.platforms, projectiles: actorsIncluded ? state.projectiles() : [],
@@ -224,6 +225,12 @@ export function createLiveWorldPresentationAdapters(
       drawEffects: () => { if (actorsIncluded) d.FX.draw(canvas); }, drawEnvironment, drawDebug: drawPantheonDebug });
   };
 
+  /** On touch, top-right HUD cards and toasts rest below the on-screen pause control. */
+  const touchClearTop = (): number | undefined => {
+    if (!d.Input.touchActive()) return undefined;
+    const pause = d.Input.touchLayout().pause;
+    return pause.y + pause.r + d.UI.t.space.sm;
+  };
   const drawTutorialCard = (): void => {
     const lesson = tutorial.step();
     const prompt = tutorialInputPrompt(lesson.t, lesson.d, lesson.keys, d.Input.mode, d.PAD);
@@ -231,11 +238,11 @@ export function createLiveWorldPresentationAdapters(
       t: lesson.t, d: prompt.description, keys: prompt.keys, prog: lesson.prog,
       arenaLabel: lesson.arenaLabel, teachingFocus: lesson.teachingFocus,
       ...(lesson.final === undefined ? {} : { final: lesson.final }),
-    }, tutorial.doneT));
+    }, tutorial.doneT, touchClearTop()));
   };
   const drawPlaygroundHelp = (): void => {
     const run = state.run();
-    world.playgroundHelp(buildPlaygroundHelpSnapshot(run.weaponId, run.weaponStats));
+    world.playgroundHelp(buildPlaygroundHelpSnapshot(run.weaponId, run.weaponStats, touchClearTop()));
   };
   const drawHud = (): void => {
     const run = state.run();
@@ -255,7 +262,7 @@ export function createLiveWorldPresentationAdapters(
       dashCooldown: d.CONFIG.dash.cooldown, dashColor: d.CONFIG.colors.perfect,
       shieldColor: d.CONFIG.colors.armoredShield, trickDecay: d.CONFIG.trick.decay,
       formatTime: services.formatTime, trickColor: services.trickColor, ease: services.ease });
-    world.hud({ ...result.snapshot, protectTextContrast: d.Backdrop.needsHudTextContrast(stage.current) });
+    world.hud(result.snapshot);
     if (state.screen() === "playing") services.chase?.hud(canvas, width);
     if (run.mode === "tutorial") drawTutorialCard();
     else if (run.mode === "playground") drawPlaygroundHelp();
@@ -280,8 +287,9 @@ export function createLiveWorldPresentationAdapters(
         coinsFor: (achievement) => { const source = d.ACH.byId(achievement.id); return source ? d.ACH.coinsFor(source) : 0; } });
       if (snapshot) {
         const screen = state.screen();
-        const placement = screen === "menu" ? "bottom-right" : SHEET_SCREENS.has(screen) ? "header-left" : "top-right";
-        world.achievementToast({ ...snapshot, placement });
+        const placement = screen === "playing" ? "hud" : SHEET_SCREENS.has(screen) ? "sheet-footer" : "corner";
+        const clearTop = touchClearTop();
+        world.achievementToast({ ...snapshot, placement, ...(clearTop === undefined ? {} : { clearTop }) });
       }
     },
     drawTouchControls(): void {
@@ -290,7 +298,7 @@ export function createLiveWorldPresentationAdapters(
       world.touchControls(buildTouchControlsSnapshot({ layout: d.Input.touchLayout(), joystick: d.Input.joy,
         held: Object.fromEntries(Object.entries(d.Input.btnHeld).filter((entry): entry is [string, boolean] => entry[1] !== undefined)),
         ...(d.Input.touchAim && d.Input.stickAim ? { aim: d.Input.stickAim } : {}),
-        onboardingAlpha: onboarding.alpha, safeLeft: d.SAFE.l, safeBottom: d.SAFE.b, height }));
+        onboardingAlpha: onboarding.alpha }));
     },
     drawWaveBanner(): void {
       const run = state.run();

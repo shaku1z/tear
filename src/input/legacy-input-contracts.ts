@@ -1,6 +1,7 @@
 import type { CommandEnvelope } from "../app/messages";
 import type { GameAction } from "./game-action";
 import type { SemanticInputBuffer } from "./semantic-buffer";
+import type { TouchControlLayout } from "./touch-control-layout";
 
 export type InputMode = "mouse" | "keyboard" | "gamepad" | "touch";
 export type ForcedInputMode = "auto" | "touch" | "desktop";
@@ -73,13 +74,8 @@ export interface InputNavigatorPort {
   vibrate(pattern: VibratePattern): boolean;
 }
 
-export interface TouchZone extends Point {
-  readonly r: number;
-  readonly label: string;
-}
-
 export type TouchZoneName = "jump" | "dash" | "throwB" | "pause";
-export type TouchLayout = Readonly<Record<TouchZoneName, TouchZone>>;
+export type TouchLayout = TouchControlLayout;
 
 export interface TouchJoystick {
   active: boolean;
@@ -155,7 +151,6 @@ export interface LegacyInput {
   touchAimMode: TouchAimMode;
   stickAim: Point | null;
   uiMode: boolean;
-  uiZoom: number;
   tJump: boolean;
   tDash: boolean;
   tPause: boolean;

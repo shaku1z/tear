@@ -1,5 +1,6 @@
 import type { Align, ButtonSpec, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
+import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-density";
 
 export function createUiFoundation(dependencies: UiDependencies) {
   const { Input, presentation: { overscan, view } } = dependencies;
@@ -192,25 +193,34 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             return x >= b.x - p && x <= b.x + b.w + p && y >= b.y - p && y <= b.y + b.h + p;
         },
         // ---- DENSITY (responsive profile) ----------------------------------------
-        // "touch" bumps the type scale + interactive metrics so menus stay readable
-        // and tappable on small screens; "desktop" restores the design defaults.
-        // Token-driven screens inherit automatically; layouts keep their geometry.
+        // Derives live tokens from the authored ones (ui-density.ts): desktop keeps
+        // them; touch guarantees the physical text and target floors at the current
+        // scale. `density.compact` marks a phone-sized touch screen, where screens
+        // switch to their compact (fewer columns, scrolling) composition.
         _baseTokens: null as TokenSnapshot | null,
-        setDensity(this: UiRuntime, mode: string) {
+        _densityProfile: { touch: false, cssPerLogicalPixel: 1 } as DensityProfile,
+        _compactLayout: true,
+        density: { touch: false, compact: false, cssPerLogicalPixel: 1, textScale: 1 },
+        setDensity(this: UiRuntime, profile: DensityProfile) {
+            this._densityProfile = profile;
+            this._applyDensity();
+        },
+        // Each frame the render pipeline says whether the current screen has a compact
+        // composition; screens that have not adopted it keep the plain touch profile.
+        useCompactLayout(this: UiRuntime, ready: boolean) {
+            if (ready === this._compactLayout) return;
+            this._compactLayout = ready;
+            this._applyDensity();
+        },
+        _applyDensity(this: UiRuntime) {
             this._baseTokens ??= { type: Object.assign({}, this.t.type), metric: Object.assign({}, this.t.metric) };
-            const b = this._baseTokens;
-            if (mode === "touch") {
-                const bump = { micro: 3, caption: 3, label: 3, body: 3, lead: 3, title: 2, h2: 2, h1: 2 };
-                const typeTokens = this.t.type as Record<string, number>;
-                for (const key in b.type)
-                    typeTokens[key] = (b.type[key] ?? 0) + ((bump as Record<string, number | undefined>)[key] ?? 0);
-                Object.assign(this.t.metric, { btnH: 60, btnW: 320, chipH: 38, chipW: 116,
-                    settingsRowH: 66, settingsControlW: 272, settingsControlH: 54, settingsStepperW: 60 });
-            }
-            else {
-                Object.assign(this.t.type, b.type);
-                Object.assign(this.t.metric, b.metric);
-            }
+            const profile = this._densityProfile, compact = this._compactLayout && isCompactDensity(profile);
+            const live = densityTokens(this._baseTokens, profile, this._compactLayout);
+            Object.assign(this.t.type, live.type);
+            Object.assign(this.t.metric, live.metric);
+            // textScale: live micro over authored micro, for text drawn outside the UI (world callouts).
+            this.density = { touch: profile.touch, compact, cssPerLogicalPixel: profile.cssPerLogicalPixel,
+                textScale: (live.type.micro ?? 1) / (this._baseTokens.type.micro ?? 1) };
         },
         // ---- BUTTON -------------------------------------------------------------
         // b: {x,y,w,h,label,enabled,size,sel} ; active = hovered | focused | selected
@@ -284,13 +294,15 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             if (b.glyph || b.sub) {
                 let lx2 = b.x + 16;
                 if (b.glyph) {
+                    // the icon slot grows with the type token (touch density) like the label
+                    const glyphSize = Math.max(17, t.type.label);
                     ctx.globalAlpha = selected ? 1 : 0.6 + 0.4 * a;
                     ctx.fillStyle = selected ? t.color.paper : (truthyOr(b.accent, () => t.color.accent));
-                    ctx.font = this.font(17, true);
+                    ctx.font = this.font(glyphSize, true);
                     ctx.textAlign = "left";
                     ctx.fillText(b.glyph, lx2, cy2 + 1);
                     ctx.globalAlpha = 1;
-                    lx2 += 30;
+                    lx2 += glyphSize + 13;
                 }
                 const rightReserve = b.pips ? b.pips.n * 14 + 24 : 14;
                 const room = b.x + b.w - lx2 - rightReserve;
@@ -483,12 +495,13 @@ function drawRailButton(ui: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonS
         labelX = b.x + 42 + a * 8;
     }
     else if (b.glyph) { // left glyph slot, warms on hover
+        const glyphSize = Math.max(18, t.type.label);
         ctx.globalAlpha = on ? 0.6 + 0.4 * a : 0.35;
         ctx.fillStyle = t.color.accent;
-        ctx.font = ui.font(18, true);
+        ctx.font = ui.font(glyphSize, true);
         ctx.fillText(b.glyph, b.x + 16 + a * 8, cy + 1);
         ctx.globalAlpha = 1;
-        labelX = b.x + 50 + a * 8;
+        labelX = b.x + glyphSize + 32 + a * 8;
     }
     const room = b.x + b.w - labelX - 16;
     const fit = ui._fitLabel(ctx, b.label, room, truthyOr(b.size, () => t.type.lead), b.sub ? 0 : b.h, true);

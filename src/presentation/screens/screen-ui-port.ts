@@ -23,6 +23,7 @@ export interface ScreenUiTokens {
     readonly bodyWeight: number;
     readonly bodyMediumWeight: number;
   }>;
+  readonly space: Readonly<{ readonly xs: number; readonly sm: number; readonly md: number; readonly lg: number; readonly xl: number }>;
   readonly alpha: Record<string, number> & {
     readonly full: number;
     readonly soft: number;
@@ -42,6 +43,8 @@ export interface ScreenUiTokens {
   };
   readonly metric: Record<string, number> & {
     readonly btnH: number;
+    readonly btnW: number;
+    readonly panelPad: number;
     readonly btnGap: number;
     readonly pageTitleY: number;
     readonly pageBodyTop: number;
@@ -50,12 +53,15 @@ export interface ScreenUiTokens {
     readonly settingsControlW: number;
     readonly settingsControlH: number;
     readonly settingsStepperW: number;
+    readonly minTarget: number;
   };
 }
 
 /** The drawing components screen renderers use; the live UI runtime satisfies it structurally. */
 export interface ScreenUiPort {
   readonly ink: string;
+  /** Live density: `compact` marks a phone-sized touch screen (fewer columns, scrolling pages). */
+  readonly density: Readonly<{ touch: boolean; compact: boolean }>;
   font(size: number, bold?: boolean): string;
   readonly t: ScreenUiTokens;
   text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
@@ -86,11 +92,12 @@ export interface ScreenUiPort {
   tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
   scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean, align?: CanvasTextAlign): void;
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
+  sheetFooter(): Readonly<{ y: number; h: number; backX: number }>;
   readable(color: string, ratio?: number): string;
   textBox(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, options?: TextBoxOptions): TextBoxResult;
   fitText(context: CanvasRenderingContext2D, text: string, maxWidth: number, options: TextFitOptions & { readonly bold?: boolean }): TextFitLayout;
   emptyState(context: CanvasRenderingContext2D, glyph: string, line: string, cx: number, cy: number, detail?: string, width?: number): number;
   finalReward(context: CanvasRenderingContext2D, options: {
-    amount: number; label: string; title: string; sigil: string; color: string; reward: string; detail: string;
-  }): void;
+    amount: number; label: string; title: string; sigil: string; color: string; reward: string; detail: string; actions?: boolean;
+  }): Readonly<{ x: number; y: number; w: number; h: number; actionsY: number }>;
 }

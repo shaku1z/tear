@@ -40,8 +40,19 @@ interface CinematicPresentationState {
   draw(context: CanvasRenderingContext2D, ui: PresentationUi, rectangle: ScreenRectangle, reducedMotion: boolean,
     prompt?: (text: string) => string): void;
 }
+/**
+ * Screens whose composition is built for the compact (phone landscape) density. The
+ * others keep the plain touch profile until they adopt it (see docs/DESIGN_SYSTEM.md).
+ */
+const COMPACT_LAYOUT_SCREENS: ReadonlySet<string> = new Set([
+  "playing", "paused", "draft", "reserve", "tierup", "confirmquit", "continue", "gameover", "win",
+  "menu", "setup", "settings",
+]);
+
 interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
   ink: string;
+  /** Applies the phone density floors only to screens with a compact composition. */
+  useCompactLayout(ready: boolean): void;
   readonly t: CinematicUiPort["t"] & Readonly<{ color: Readonly<{ paper: string; accent: string }> }>;
   font(size: number, bold?: boolean): string;
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
@@ -66,8 +77,6 @@ export interface LivePresentationFrameState<Screen extends string> {
   readonly screen: () => Screen;
   readonly previousScreen: () => Screen;
   readonly setPreviousScreen: (screen: Screen) => void;
-  readonly uiZoom: () => number;
-  readonly setUiZoom: (value: number) => void;
   readonly deltaSeconds: () => number;
   readonly enterSeconds: () => number;
   readonly setEnterSeconds: (value: number) => void;
@@ -97,7 +106,6 @@ export interface LivePresentationFrameServices<Screen extends string,
   readonly height: number;
   readonly overscan: () => Readonly<{ x: number; y: number }>;
   readonly safeTop: () => number;
-  readonly viewportScale: () => number;
   readonly resizeIfNeeded: () => void;
   readonly input: UiRuntimeInput;
   readonly ui: PresentationUi;
@@ -158,9 +166,8 @@ export function createLivePresentationFrameHost<Screen extends string,
       canvas: services.canvas, context, logicalWidth: services.width, logicalHeight: services.height,
       overscan: services.overscan, screen: state.screen, previousScreen: state.previousScreen,
       setPreviousScreen: state.setPreviousScreen, resizeIfNeeded: services.resizeIfNeeded,
-      screenRectangle: host.screenRectangle, touchActive: services.touchActive,
-      cssPerLogicalPixel: services.viewportScale, uiZoom: state.uiZoom, setUiZoom: state.setUiZoom,
-      deltaSeconds: state.deltaSeconds, clamp: services.clamp, resetControls: state.resetControls,
+      screenRectangle: host.screenRectangle, touchActive: services.touchActive, resetControls: state.resetControls,
+      applyScreenDensity: (screen) => { ui.useCompactLayout(COMPACT_LAYOUT_SCREENS.has(screen)); },
       background: (playLike) => {
         let color = playLike && state.biomeMode() ? services.stage.current.bg : "#fff";
         const flashing = playLike ? state.enemies().find((enemy) => (enemy.whiteFlash ?? 0) > 0) : undefined;
@@ -176,7 +183,8 @@ export function createLivePresentationFrameHost<Screen extends string,
           context.globalAlpha = services.clamp(state.flash(), 0, 1); context.fillStyle = "#fff";
           context.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h); context.restore();
         }
-        if (services.capturePolicy().ui === "include" && !services.cinema.hideHud) services.drawHud();
+        // The HUD belongs to live play; run overlays (pause, draft, results) carry their own summary.
+        if (services.capturePolicy().ui === "include" && !services.cinema.hideHud && state.screen() === "playing") services.drawHud();
         const beat = state.bossBeat();
         if (services.capturePolicy().ui === "include" && beat !== null && state.screen() === "playing" && !state.bossIntroActive() && !services.cinema.active) {
           const progress = services.clamp(beat.t / beat.dur, 0, 1);
@@ -190,7 +198,9 @@ export function createLivePresentationFrameHost<Screen extends string,
           (!services.cinema.active || services.cinema.playerMode === "finalBlade") && !services.controller()?.active) {
           services.drawTouchControls();
         }
-        if (services.capturePolicy().ui === "include" && state.screen() === "playing" && state.bannerSeconds() > 0 && !services.cinema.active) services.drawWaveBanner();
+        // The stage banner owns the announcement band while it shows (no duplicate WAVE title).
+        if (services.capturePolicy().ui === "include" && state.screen() === "playing" && state.bannerSeconds() > 0
+          && services.stage.bannerSeconds <= 0 && !services.cinema.active) services.drawWaveBanner();
         if (services.capturePolicy().ui === "include" && state.screen() === "playing" && services.stage.bannerSeconds > 0 && !services.cinema.active) services.drawStageBanner();
         const rank = state.rankPopup();
         if (services.capturePolicy().ui === "include" && state.screen() === "playing" && rank.seconds > 0) {
