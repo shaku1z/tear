@@ -16,9 +16,10 @@ export function cinematicLaunchPolicy(value: unknown): CinematicLaunchPolicy {
 
 /**
  * Adventure chapter launch. The first viewing follows the preference unchanged;
- * a chapter the player has already sat through (a retry, or a stage this profile
- * entered in an earlier session) goes straight to the stage banner, exactly as
- * the "off" preference does, so a retry is back in the fight at once.
+ * a chapter already played in this session (a retry) is skipped exactly as the
+ * "off" preference skips it, so a retry is back in the fight at once. Biome
+ * memory is not "seen": entering a stage in Endless, Gauntlet or the tutorial
+ * never showed its chapter.
  */
 export function chapterLaunchPolicy(value: unknown, seenBefore: boolean): CinematicLaunchPolicy {
   const policy = cinematicLaunchPolicy(value);

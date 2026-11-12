@@ -103,6 +103,7 @@
     "test:browser:scripted-agent-repeatability": "node tests/browser-scripted-agent-repeatability.js",
     "test:browser:c32-active-policy": "node tests/browser-c32-active-policy.js",
     "test:browser:production-isolation": "node tests/browser-production-runtime-isolation.js",
+    "test:browser:release-adventure": "node tests/browser-release-adventure-journey.js",
     "test:browser:class-c-production-smoke": "node tests/browser-class-c-production-smoke.js",
     "test:browser:class-c-touch-smoke": "node tests/browser-class-c-touch-smoke.js",
     "test:browser:class-c-crazygames-iframe-smoke": "node tests/browser-class-c-crazygames-iframe-smoke.js",

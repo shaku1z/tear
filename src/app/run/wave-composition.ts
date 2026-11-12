@@ -43,6 +43,8 @@ export interface LiveWaveCompositionOptions {
   readonly beginWipe: () => void;
   readonly loadStage: (index: number) => void;
   readonly beginCampaignChapter: WavePlanIntentPort["beginCampaignChapter"];
+  /** The chapter about to begin for this stage plays a cinematic that will activate its wave. */
+  readonly campaignChapterGatesWave: (stageIndex: number) => boolean;
   readonly setBannerSeconds: (value: number) => void;
   readonly startAdventureFinale: () => void;
   readonly winRun: () => void;
@@ -66,7 +68,9 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     random: options.worldServices.random.stream("world"),
     modeDefinition: (mode) => d.CONFIG.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: options.stage.index, accent: options.stage.current.accent }),
-    stageHasChapter: () => true,
+    // Defer a stage's first wave only behind a chapter cinematic that will play and later
+    // release it; a skipped chapter (retry, "off") would otherwise strand the wave unactivated.
+    stageHasChapter: options.campaignChapterGatesWave,
     chapterFlowActive: () => options.story.chapterFlow !== null,
     lifecycle: {
       hasPreparedWave: () => options.lifecycle.hasPreparedWave,

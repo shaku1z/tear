@@ -1004,6 +1004,34 @@
       "intentionalReplica": "none"
     },
     {
+      "taskId": "browser.test-browser-release-adventure",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-release-adventure-journey.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:release-adventure"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 600000,
+      "intentionalReplica": "none"
+    },
+    {
       "taskId": "build.check-bundles",
       "version": 1,
       "runner": {
@@ -3903,6 +3931,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -3994,6 +4023,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -4083,6 +4113,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -4188,6 +4219,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -4277,6 +4309,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",

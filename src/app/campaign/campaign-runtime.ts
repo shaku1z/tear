@@ -2,7 +2,7 @@ import type { CampaignStage, ChapterPage } from "../../gameplay/campaign/chapter
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import type { CampaignCinematicChannel } from "./campaign-sequences";
 import { launchCampaignChapter } from "./campaign-sequences";
-import { chapterLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
+import { chapterLaunchPolicy, type CinematicLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
 import {
   dispatchChapterIntents,
   type ChapterIntentPorts,
@@ -52,8 +52,6 @@ export interface LiveCampaignRuntimePort {
   readonly blade: () => LiveCampaignBlade;
   readonly stageAt: (index: number) => CampaignStage | null;
   readonly preference: () => CinematicPreference;
-  /** Durable memory: this profile entered the stage before the current session began. */
-  readonly chapterSeenBefore?: (stageIndex: number, stage: CampaignStage) => boolean;
   readonly preparedWave: () => boolean;
   readonly activationDeferred: () => boolean;
   readonly chapterIntents: ChapterIntentPorts;
@@ -75,6 +73,12 @@ export interface LiveCampaignRuntimeApi {
   readonly stageFinaleBinding: ReturnType<typeof createFinaleRuntime>["stageBinding"];
   readonly loreBusy: () => boolean;
   readonly beginChapter: (index: number, priorOutro?: ChapterPage | null) => void;
+  /**
+   * Whether `beginChapter(index)` will play a cinematic. Only such a chapter may hold its
+   * first wave prepared-but-inactive: a skipped chapter completes before that wave is
+   * prepared, so nothing would ever release a deferred wave.
+   */
+  readonly chapterGatesWave: (index: number) => boolean;
   readonly severFinaleAnchor: (assisted: boolean) => boolean;
   readonly beginFinaleRestoration: () => void;
   readonly tryFinaleBladeCut: (segment: LiveFinaleBladeSegment) => void;
@@ -93,6 +97,8 @@ export interface StagedLiveChapterBinding {
 export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCampaignRuntimeApi {
   // Chapters played in this session; a retry of one of them skips its cinematic.
   const playedChapters = new Set<number>();
+  const chapterPolicy = (index: number): CinematicLaunchPolicy =>
+    chapterLaunchPolicy(port.preference(), playedChapters.has(index));
   const dispatchChapter = (intents: Parameters<typeof dispatchChapterIntents>[0]): void => {
     dispatchChapterIntents(intents, port.chapterIntents);
   };
@@ -137,8 +143,7 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
         run.chapterState = "WAVE_LIVE";
         return;
       }
-      const seenBefore = playedChapters.has(index) || port.chapterSeenBefore?.(index, stage) === true;
-      const policy = chapterLaunchPolicy(port.preference(), seenBefore);
+      const policy = chapterPolicy(index);
       if (policy.play) playedChapters.add(index);
       launchCampaignChapter({
         runtime: port.runtime, cinema: port.cinema, stageIndex: index, stage,
@@ -149,6 +154,8 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
         clearBossBeat: port.clearBossBeat,
       });
     },
+    chapterGatesWave: (index) => port.run()?.mode === "campaign"
+      && port.stageAt(index)?.chapter !== undefined && chapterPolicy(index).play,
     severFinaleAnchor: finale.severAnchor,
     beginFinaleRestoration: finale.beginRestoration,
     tryFinaleBladeCut: finale.tryBladeCut,
