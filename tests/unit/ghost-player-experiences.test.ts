@@ -1,5 +1,5 @@
 import { checkGhostCoachSelection, projectGhostCoachHistory, type GhostCoachCandidate, type GhostCoachHistory, type GhostCoachHistorySource } from "../../src/ghost/coach-history";
-import { createGhostCoachHistoryController, type GhostCoachHistoryPort } from "../../src/app/ghost-coach-history-controller";
+import { createGhostCoachHistoryController, type GhostCoachHistoryPort } from "../../src/app/library/ghost-coach-history-controller";
 import { describe, expect, it } from "vitest";
 
 import {

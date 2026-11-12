@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dispatchVictoryProgressionIntents } from "../../src/app/live-outcome-intent-coordinator";
+import { dispatchVictoryProgressionIntents } from "../../src/app/run/outcome-intent-coordinator";
 import type { VictoryProgressionIntent } from "../../src/gameplay/run/outcome-planner";
 
 describe("live outcome intent coordinator", () => {

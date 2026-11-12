@@ -1,4 +1,4 @@
-import { createBrowserGhostReplayPresentation } from "../../src/app/browser-ghost-studio-media";
+import { createBrowserGhostReplayPresentation } from "../../src/app/replay/browser-ghost-studio-media";
 import { createProductionGhostReplayComposition, projectProductionReplayCanonicalState } from "../../src/tearbench/production-replay-composition";
 import { describe, expect, it } from "vitest";
 

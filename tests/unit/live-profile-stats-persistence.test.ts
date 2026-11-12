@@ -1,8 +1,8 @@
 import { practiceBossCatalog } from "../../src/gameplay/training/practice-boss-catalog";
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveProfileStatsPersistence } from "../../src/app/live-profile-stats-persistence";
-import { createLivePracticeEncounterPersistence } from "../../src/app/live-practice-encounter-persistence";
+import { createLiveProfileStatsPersistence } from "../../src/app/progress/profile-stats-persistence";
+import { createLivePracticeEncounterPersistence } from "../../src/app/progress/practice-encounter-persistence";
 import { createLegacyProfile } from "../../src/persistence/legacy-profile";
 import { createLegacyPlatformCompatibility } from "../../src/platform/legacy-compat";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";

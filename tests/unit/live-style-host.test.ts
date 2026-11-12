@@ -11,7 +11,7 @@ vi.mock("../../src/gameplay/scoring/live-style-achievement-runtime", () => ({
   },
 }));
 
-import { createLiveStyleHost } from "../../src/app/live-style-host";
+import { createLiveStyleHost } from "../../src/app/combat/style-host";
 
 describe("live style host persistence adapter", () => {
   it("uses the composition-owned achievement check/save operation", () => {

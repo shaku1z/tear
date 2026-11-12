@@ -9,7 +9,7 @@ import {
   uiConfirmGate,
   uiScrollDelta,
   type UiFrameInput,
-} from "../../src/app/ui-action-coordinator";
+} from "../../src/app/interface/ui-action-coordinator";
 
 const buttons = [
   { x: 0, y: 0, w: 100, h: 40, label: "ONE" },

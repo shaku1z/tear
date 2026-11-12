@@ -11,7 +11,7 @@ import { validateTearContract } from "../tearbench/validation";
 import { mapGhostCapsuleToReplayEnvelope, preflightGhostRecordedCanonicalSnapshot } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
-import { LEGACY_APP_SCREENS, LEGAL_LEGACY_TRANSITIONS, type LegacyAppScreen } from "../app/legacy-state-controller";
+import { LEGACY_APP_SCREENS, LEGAL_LEGACY_TRANSITIONS, type LegacyAppScreen } from "../app/interface/legacy-state-controller";
 import { GHOST_APPLICATION_FRAMES_V1 } from "./application-frame-events";
 import { isBossDefinitionId } from "../gameplay/run/boss-definitions";
 

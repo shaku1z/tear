@@ -181,7 +181,7 @@ test("argument parsing keeps escape hatches explicit", () => {
 });
 
 test("--explain names the roles, rules, permissions and allowlist entries of a file", () => {
-  const text = explainFile("src/app/live-game-runtime.ts", analyzeTree(realTree, configuration));
+  const text = explainFile("src/app/shell/game-runtime.ts", analyzeTree(realTree, configuration));
   assert.match(text, /layer: app; may import/u);
   assert.match(text, /roles \(1\):\n {4}- app\.live-runtime-root/u);
   assert.match(text, /app\.live-root-player \[text\]/u);
@@ -210,11 +210,11 @@ test("the CLI fails closed on a move, rejects new edges and cycles, and ratchets
   const run = (...argumentsList) => spawnSync(process.execPath, [script, "--root", root, ...argumentsList], { encoding: "utf8" });
   try {
     assert.equal(run().status, 0);
-    const runtime = path.join(root, "src", "app", "live-game-runtime.ts"), moved = path.join(root, "src", "app", "game-runtime.ts");
+    const runtime = path.join(root, "src", "app", "shell", "game-runtime.ts"), moved = path.join(root, "src", "app", "shell", "moved-game-runtime.ts");
     fs.renameSync(runtime, moved);
     const failedMove = run();
     assert.equal(failedMove.status, 1);
-    assert.match(failedMove.stderr, /role app\.live-runtime-root\.include: "src\/app\/live-game-runtime\.ts" matches no file/u);
+    assert.match(failedMove.stderr, /role app\.live-runtime-root\.include: "src\/app\/shell\/game-runtime\.ts" matches no file/u);
     fs.renameSync(moved, runtime);
     const geometry = path.join(root, "src", "domain", "geometry.ts"), original = fs.readFileSync(geometry, "utf8");
     fs.appendFileSync(geometry, '\nimport { CONFIG as plantedConfig } from "../config/game-config";\nvoid plantedConfig;\n');

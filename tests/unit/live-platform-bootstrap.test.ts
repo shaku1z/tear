@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/app/runtime-initialization", () => ({
+vi.mock("../../src/app/shell/runtime-initialization", () => ({
   initializePlatformServices: (options: { readonly backfillProgress: () => void }) => { options.backfillProgress(); },
   shouldPromptForUsername: () => false,
 }));
 
-import { initializeLivePlatformBootstrap } from "../../src/app/live-platform-bootstrap";
+import { initializeLivePlatformBootstrap } from "../../src/app/shell/platform-bootstrap";
 
 describe("live platform bootstrap persistence adapter", () => {
   it("delegates backfill persistence through the composition-owned operation", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LivePendingFinaleController, type PendingFinalePort } from "../../src/app/live-pending-finale-controller";
+import { LivePendingFinaleController, type PendingFinalePort } from "../../src/app/campaign/pending-finale-controller";
 
 function harness() {
   const record = { weapon: "hammer", diff: "hard" as const, wave: 50, score: 900, time: 125,

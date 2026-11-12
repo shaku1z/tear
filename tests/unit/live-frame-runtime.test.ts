@@ -3,7 +3,7 @@ import type { CommandEnvelope } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import type { TearSimulationAdvanceLifecycle } from "../../src/gameplay/runtime/tear-simulation-runtime";
 import { advanceFixedSimulation, advanceFramePrelude, commitBossIntroSnapshot, emitLiveMusicEvent, syncMusicTheme,
-  type MutableFramePreludeState } from "../../src/app/live-frame-runtime";
+  type MutableFramePreludeState } from "../../src/app/shell/frame-runtime";
 
 describe("live frame runtime", () => {
   it.each([

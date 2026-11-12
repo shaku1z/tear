@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
-import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
+import { createLiveWorldComposition, type LiveWorldSessionPort } from "../../src/app/world/world-composition";
+import type { GameRuntimeDependencies } from "../../src/app/shell/game-runtime-dependencies";
 import { createParticleSystem } from "../../src/presentation/particles";
 import { createRunRandom } from "../../src/simulation/run-random";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";

@@ -2,7 +2,7 @@ import { preflightGhostRecordedCanonicalSnapshot } from "../../src/ghost/capsule
 import { declareSeedRace, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
 import { seedRaceCatalogHash } from "../../src/gameplay/run/seed-locked-draft";
 import { describe, expect, it, vi } from "vitest";
-import { createLiveStateForgeAdapter } from "../../src/app/live-state-forge-adapter";
+import { createLiveStateForgeAdapter } from "../../src/app/engineering/state-forge-adapter";
 import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
 import { captureLiveStateForgeSnapshot, createLiveStateForgeRestoreFactory } from "../../src/tearbench/live-runtime-snapshots";
 import { restoreSnapshotIntoLiveWorld } from "../../src/tearbench/live-state-snapshot";
@@ -12,8 +12,8 @@ import type { RootboundGraftEffects } from "../../src/gameplay/environment/graft
 import { STAGES, PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 import { applyWeapon } from "../../src/gameplay/weapons";
-import { createLiveHudFeedbackState } from "../../src/app/live-hud-feedback-state";
-import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
+import { createLiveHudFeedbackState } from "../../src/app/interface/hud-feedback-state";
+import { createLiveParticlePresentationState } from "../../src/app/world/particle-presentation-state";
 
 import { TutorialController, parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
 

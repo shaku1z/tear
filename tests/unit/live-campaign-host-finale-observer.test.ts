@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 
 import { CONFIG } from "../../src/config/game-config";
-import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
-import type { LiveGameHostState } from "../../src/app/live-game-host-state";
+import type { GameRuntimeDependencies } from "../../src/app/shell/game-runtime-dependencies";
+import type { LiveGameHostState } from "../../src/app/world/game-host-state";
 import type { FinaleIntentPorts } from "../../src/gameplay/campaign/finale-runtime";
 import type {
   FinaleOutwardCall,
@@ -12,14 +12,14 @@ import type {
 
 const forwarding = vi.hoisted((): { port: unknown } => ({ port: undefined }));
 
-vi.mock("../../src/app/live-campaign-runtime", () => ({
+vi.mock("../../src/app/campaign/campaign-runtime", () => ({
   createLiveCampaignRuntime: (port: unknown) => {
     forwarding.port = port;
     return Object.freeze({});
   },
 }));
 
-import { createLiveCampaignHost } from "../../src/app/live-campaign-host";
+import { createLiveCampaignHost } from "../../src/app/campaign/campaign-host";
 
 describe("live campaign host finale observation", () => {
   it("passes the observer callback directly to the campaign runtime port", () => {
@@ -177,7 +177,7 @@ describe("live campaign host finale observation", () => {
   });
 
   it("installs the live collector only inside the test-build composition branch", () => {
-    const source = readFileSync("src/app/live-game-runtime.ts", "utf8");
+    const source = readFileSync("src/app/shell/game-runtime.ts", "utf8");
     const collectorLine = source.split(/\r?\n/u).find((line) => line.includes("observeFinaleOutwardCall:"));
     expect(collectorLine).toContain("__TEAR_TEST_BUILD__ ?");
     expect(source.match(/observeFinaleOutwardCall:/gu)).toHaveLength(1);

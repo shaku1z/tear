@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveProductionWorld } from "../../src/app/live-production-world";
-import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
+import { createLiveProductionWorld } from "../../src/app/shell/production-world";
+import type { GameRuntimeDependencies } from "../../src/app/shell/game-runtime-dependencies";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
 import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
 import { createRunRandom } from "../../src/simulation/run-random";

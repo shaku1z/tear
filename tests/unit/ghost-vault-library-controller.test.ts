@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { createGhostVaultLibraryController } from "../../src/app/ghost-vault-library-controller";
+import { createGhostVaultLibraryController } from "../../src/app/library/ghost-vault-library-controller";
 import type { GhostVaultBackend, TearGhostManifest } from "../../src/ghost/capsule-vault";
 import { refuseGhostTheater } from "../../src/ghost/theater-open-result";
 import { createMemoryGhostVaultBackend, GhostLocalVault, GhostStreamingRecorder } from "../../src/ghost/capsule-vault";
 import { createGhostColdRestoreBrowserPort } from "../../src/ghost/browser-cold-restore";
-import type { GhostArchiveFile } from "../../src/app/browser-ghost-archive-files";
+import type { GhostArchiveFile } from "../../src/app/library/browser-ghost-archive-files";
 import { NORMAL_GHOST_ARCHIVE_LIMITS } from "../../src/ghost/capsule-archive";
 import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
 import { inspectBrowserGhostVaultReadOnly, repairBrowserGhostCapsule } from "../../src/ghost/browser-capsule-vault";

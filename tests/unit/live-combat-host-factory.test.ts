@@ -4,10 +4,10 @@ import type { CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-
 import type { LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
 import type { LiveKillHost } from "../../src/gameplay/combat/live-kill-runtime";
 import type { LiveOpeningPhaseHost } from "../../src/gameplay/combat/live-opening-phase";
-import { createLiveCombatHost } from "../../src/app/live-combat-host-factory";
-import type { LiveFrameRuntimeOptions } from "../../src/app/live-frame-runtime";
-import type { RuntimeFrameCoordinatorOptions } from "../../src/app/runtime-frame-coordinator";
-import type { RuntimeFrameDriver } from "../../src/app/runtime-frame-driver";
+import { createLiveCombatHost } from "../../src/app/combat/combat-host-factory";
+import type { LiveFrameRuntimeOptions } from "../../src/app/shell/frame-runtime";
+import type { RuntimeFrameCoordinatorOptions } from "../../src/app/shell/runtime-frame-coordinator";
+import type { RuntimeFrameDriver } from "../../src/app/shell/runtime-frame-driver";
 
 describe("live combat host factory", () => {
   it("wraps the portable combat core and starts only one browser frame loop", () => {

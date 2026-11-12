@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveInputAuthorityState } from "../../src/app/live-input-authority-state";
+import { createLiveInputAuthorityState } from "../../src/app/world/input-authority-state";
 
 describe("live input authority state", () => {
   it("keeps automated semantic input from acquiring pointer lock or device aim", () => {

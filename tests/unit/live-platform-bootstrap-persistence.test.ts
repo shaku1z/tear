@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLivePlatformBootstrapPersistence } from "../../src/app/live-platform-bootstrap-persistence";
+import { createLivePlatformBootstrapPersistence } from "../../src/app/progress/platform-bootstrap-persistence";
 
 describe("live platform-bootstrap persistence adapter", () => {
   it("backfills shop progress before checking achievements and saving", () => {

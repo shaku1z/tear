@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { createParticleSystem } from "../../src/presentation/particles";
-import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/app/world/particle-presentation-state";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
 import { createMirrorRenderer } from "../../src/presentation/entities/mirror-renderer";
 import { clamp } from "../../src/domain/geometry";
-import { createLiveCombatActions } from "../../src/app/live-combat-actions";
+import { createLiveCombatActions } from "../../src/app/combat/combat-actions";
 import { STAGES } from "../../src/gameplay/stages";
 import { stepEnemyStatuses } from "../../src/gameplay/combat/enemy-step-runtime";
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";

@@ -14,7 +14,7 @@ vi.mock("../../src/ghost", async () => {
 
 import { GhostLocalPublicationConsentLedger, GhostLocalPublicationJobs, GhostLocalVault, GhostStreamingRecorder, createMemoryGhostVaultBackend, classifyRunEligibility, parseGhostLocalPublicationJob } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { LiveGhostPublicationController } from "../../src/app/live-ghost-publication-controller";
+import { LiveGhostPublicationController } from "../../src/app/replay/ghost-publication-controller";
 import type { GhostPublicationRuntime } from "../../src/platform/ghost-publication-runtime";
 
 const capsuleId = "controller-capsule";

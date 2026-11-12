@@ -1,0 +1,696 @@
+import { createTearRunScreenFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
+import { dismissBootScreen } from "../../platform/browser-boot-screen";
+import { createLiveGhostChase } from "../replay/ghost-chase-composition"; import { FinaleController } from "../../gameplay/campaign/finale-controller"; import { createLiveGhostFinaleCompanion } from "../replay/ghost-finale-companion"; import { createBrowserGhostCareer } from "../replay/browser-ghost-career"; import { createLiveGhostRunDnaRecording } from "../replay/ghost-run-dna-recording"; import { createLiveGhostChallengeComposition } from "../replay/ghost-challenge-composition"; import { createLiveTrainingHandoff } from "../training/training-handoff"; import { liveTutorialCoachFrame } from "../training/tutorial-coach-frame"; import { createLiveBossPhasePractice } from "../campaign/boss-phase-practice"; import type { AudioDispatchReceipt } from "../../audio/audio-dispatch-receipts"; import type { FinaleIntent } from "../../gameplay/campaign/finale-controller"; import type { FinaleOutwardCall } from "../../gameplay/campaign/finale-outward-call"; import { createOutcomeChronologyJournal } from "../../gameplay/run/outcome-chronology-journal"; import { BOSS_ROSTER } from "../../gameplay/run/content-director"; import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
+import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "../replay/ghost-frame-recording"; import { createBrowserLiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
+import { projectCanonicalGameplayState } from "../../gameplay/runtime/canonical-state"; import { blendHex as blendCol, easeOut as ez } from "../../presentation/world/primitives";
+import { createLiveBrowserRuntime } from "./browser-runtime"; import { createLiveCampaignTrainingComposition } from "../campaign/campaign-training-composition"; import { createLiveCombatActions } from "../combat/combat-actions"; import { bindLiveRootbinderActors } from "../world/biomes/rootbinder-wiring"; import { bindLiveRootboundActors } from "../world/biomes/rootbound-wiring";
+import { createLiveCombatComposition } from "../combat/combat-composition"; import { createLiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter"; import { createLiveInterfaceComposition, isRunDifficultySelection, isRunModeSelection } from "../interface/interface-composition";
+import { createLiveRunOrchestration } from "../run/run-orchestration-composition"; import { createLiveSessionServices } from "./session-services-composition";
+import { replayLiveStateForgeProgression } from "../engineering/state-forge-progression"; import { createLiveStateForgeCinematicAdvance } from "../engineering/state-forge-cinematic-advance";
+import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration"; import { commitBossIntroSnapshot } from "./frame-runtime";
+import { RuntimeFrameDriver } from "./runtime-frame-driver"; import { createLiveMusicObservation, projectLiveMusicRun } from "../interface/music-observation-adapter";
+import { isMenuScreen, renderRegisteredScreen } from "../interface/screen-registry"; import { createLiveProductionWorld } from "./production-world";
+import { createLiveHudFeedbackState } from "../interface/hud-feedback-state"; import { createLiveParticlePresentationState } from "../world/particle-presentation-state";
+import { createLiveInterfaceFrameState } from "../interface/interface-frame-state";
+import { createLiveInterfaceInteractionState } from "../interface/interface-interaction-state";
+import { createLiveReviveCountdownState } from "../run/revive-countdown-state";
+import { createLiveShopFeedbackState } from "../run/shop-feedback-state";
+import { createLiveCombatWorldState } from "../combat/combat-world-state";
+import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
+import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "./game-runtime-state";
+import type { LegacyAppScreen, LegacyTransitionContext } from "../interface/legacy-state-controller";
+import type { RunDifficulty, RunMode } from "../../gameplay/run/session"; import { modeSurface } from "../../gameplay/run/mode-catalog";
+import { trainingRunRequiresPreflight } from "../training/training-host";
+import { createLiveTutorialSessionActions } from "../training/tutorial-session-actions";
+import type { CommandEnvelope } from "../../domain/envelopes";
+import type { GameAction } from "../../input/game-action";
+import { liveRewardChoiceIds, routeLiveTearBenchAction } from "../../tearbench/live-runtime-action-routing";
+import { emitLiveTearBenchPhysicalInput } from "../../tearbench/browser/live-physical-input";
+import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect } from "./runtime-type-guards";
+import { createLiveStateForgeAdapter } from "../engineering/state-forge-adapter";
+import { createLiveStateForgeRuntimeBridge } from "../engineering/state-forge-runtime-bridge";
+import { forkBrowserGhostCapsulePractice, listBrowserGhostCapsuleManifests, readBrowserGhostCapsule, readBrowserGhostCapsuleReplay, readBrowserGhostCapsuleReplayAdmission, seekBrowserGhostCapsuleProductionReplay, verifyBrowserGhostCapsuleProductionReplay } from "../../ghost/browser-capsule-vault";
+import { createLiveGhostCausalEvent, ghostLiveBootstrapEventId } from "../../ghost/live-causal-events"; import { verdantTelemetryIntents } from "../../gameplay/progression/verdant-telemetry"; import { executeEnvironmentTelemetryIntents } from "../../gameplay/progression/environment-telemetry"; import { paleTelemetryIntents } from "../../gameplay/progression/pale-telemetry"; import { tracksAchievements } from "../../gameplay/progression/achievement-runtime";
+import { createGhostV3BrowserTestOptions } from "../engineering/ghost-v3-browser-test-options";
+import { GHOST_REPLAY_CONTEXT_PROVENANCE_KEY, type GhostReplayRunContextV1 } from "../../ghost/replay-admission";
+import { createGhostAuthoritativeReceipt } from "../../ghost/authoritative-receipt";
+import { captureLiveStateForgeSnapshot } from "../../tearbench/live-runtime-snapshots"; import { createDefaultStateCodecRegistry } from "../../tearbench/state-codecs"; import type { TearSnapshotV1 } from "../../tearbench/contracts";
+import { stableVerificationHash } from "../../replay/hash"; import { createLiveCanonicalWatchComposition } from "../world/canonical-watch-composition";
+import { createLiveGhostRecordingSessionState } from "../replay/ghost-recording-session-state";
+import { createLiveGhostOpeningCapture } from "../replay/ghost-opening-capture";
+import { verifyGhostCapsuleOpeningContinuation } from "../../ghost/production-replay-verification";
+import { RELEASE_ENGINEERING_SURFACES, type LivePlayerWatchSurface } from "../engineering/engineering-surfaces-contract";
+import { createBrowserGhostVaultLibrary } from "../library/ghost-vault-library-controller"; import { bindGhostArchiveFileLifecycle } from "../library/browser-ghost-archive-files";
+import { createLiveInputAuthorityState } from "../world/input-authority-state"; import { createLiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state"; import { launchGhostPracticeChild } from "../replay/ghost-practice-launch"; import { bindLiveBloomWellActors } from "../world/biomes/bloom-well-wiring"; import { bindLiveAuroraTrackActors } from "../world/biomes/aurora-track-wiring";
+import { bindLiveWhiteHartActors } from "../world/biomes/white-hart-wiring"; import { projectLiveCanonicalEnemy } from "../world/canonical-enemy-projection";
+import { LiveGhostPublicationController } from "../replay/ghost-publication-controller"; import { LiveGhostSupportController } from "../replay/ghost-support-controller";
+import { createLiveAttackPresentation } from "../combat/attack-presentation"; import { createLiveCollisionStateView } from "../combat/combat-adapter-context";
+type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } }; export function startLiveGame(dependencies: GameRuntimeDependencies, configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>): void {
+  const { A11Y, APP, Attract, Backdrop, browserDocument, browserIndexedDb, browserNavigator, browserWindow, CG, CLOCK, CONFIG, Cloud, DIAG, FX, GAMEPLAY_EVENTS, GFX, GHOST, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, VAULT, applyUpgrade, clamp, cosmeticRandom, ghostPublication, lerp, weaponCapsuleIntersectsSegment } = dependencies;
+(function () {
+  const browserRuntime = createLiveBrowserRuntime(dependencies);
+  const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, requestPointerLock: requestLock, installPrompt, lockHint, hint: hintEl, fullscreenButton,
+    pantheonDebug: PANTHEON_DEBUG, testMode: TEST_MODE } = browserRuntime;
+  const inputAuthority = createLiveInputAuthorityState(requestLock), requestOwnedPointerLock = inputAuthority.requestPointerLock, engineering = dependencies.engineeringSurfaces ?? RELEASE_ENGINEERING_SURFACES;
+  const currentSignedInActor = (): string | undefined => Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined, humanCalibration = engineering.humanCalibration(browserIndexedDb, browserWindow, currentSignedInActor);
+  const ghostV3Options = createGhostV3BrowserTestOptions(TEST_MODE, dependencies.engineeringQuery.search) ?? {}, ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb); bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
+  const ownerRecovery = createBrowserLiveGhostOwnerRecoveryController(browserIndexedDb, ghostPublication, currentSignedInActor, () => { ghostVault.refresh(); }, (input, init) => browserWindow.fetch(input, init)); Cloud.onChange(() => { ownerRecovery.accountChanged(); });
+  const ghostV3Session = createLiveGhostRecordingSessionState(browserIndexedDb, { ...ghostV3Options, onFinalized: async (manifest, vault) => { await ghostV3Options.onFinalized?.(manifest, vault); if (manifest.provenance?.beatThisRun !== undefined) beat.finalized(manifest.id); if (manifest.provenance?.forkOrigin === undefined && manifest.provenance?.finaleCompanion === undefined) await humanCalibration.capture?.finalized(manifest, vault); } }); const ghostV3 = ghostV3Session.recorder(); const career = createBrowserGhostCareer(browserIndexedDb, browserDocument, { session: ghostV3Session, run: liveRun, tick: () => simulationRuntime.scheduler.tick, enemies: () => hostState.enemies(), actorId: (actor) => combatRuntime.id(actor, "enemy") });
+  const ghostDna = createLiveGhostRunDnaRecording({ session: ghostV3Session, player: livePlayer, blade: liveBlade, run: liveRun, tick: () => simulationRuntime.scheduler.tick, practice: () => ghostPracticeSession.active() !== null }); const ghostFrames = createLiveGhostFrameRecording({ session: ghostV3Session, tick: () => simulationRuntime.scheduler.tick, introActive: () => hostState.bossIntro() !== null, afterFrame: () => { ghostDna.frameEnded(); }, closedFrame: () => { finaleCapture.frameEnded(); }, interceptFinish: (result) => finaleCapture.interceptFinish(result) });
+  const openingCapture = createLiveGhostOpeningCapture({ screen: () => state, tick: () => simulationRuntime.scheduler.tick,
+    replayRunId: () => ghostV3Session.replayContext()?.run.id, nextSequence: ghostV3Session.nextEventSequence,
+    record: (event) => { ghostV3?.record("events", event.tick, event); }, failed: (error) => { console.warn("Ghost opening completion capture failed; live play continues", error); } });
+  const academyScreen = engineering.academy(browserIndexedDb, currentSignedInActor), foundryScreen = engineering.foundry(browserIndexedDb), ghostPublicationScreen = new LiveGhostPublicationController(browserIndexedDb, ghostPublication, currentSignedInActor), ghostSupportScreen = new LiveGhostSupportController(browserIndexedDb);
+  // Keyframes attest the immutable bootstrap identity saved at recording boundary; never rebuild a divergent fingerprint later in the live loop.
+  GHOST.setRecordingObserver(ghostV3 === null ? null : {
+    started(context) {
+      openingCapture.discard();
+      finaleCapture.reset(); ghostFrames.reset();
+      ghostV3Session.reset();
+      humanCalibration.input.reset();
+      humanCalibration.capture?.started();
+      let provenance: Readonly<Record<string, unknown>>;
+      let replayContext: GhostReplayRunContextV1 | undefined;
+      try {
+        // Context and tick-zero keyframe share the settled opening-initialized boundary.
+        replayContext = declareGhostApplicationFrames(openingCapture.createContext(context, liveRun(), liveStateForge.capture().components.get("tear.configuration.v1"), worldContext.services.random.snapshot()));
+        chase.configuration(replayContext.build.configHash); provenance = Object.freeze({ ...context, ...(liveRun().ghostAssistance ? { ghostAssistance: liveRun().ghostAssistance } : {}), ...(liveRun().seedRace ? { seedRace: liveRun().seedRace } : {}), ...(liveRun().beatThisRun ? { beatThisRun: liveRun().beatThisRun, beatCode: beat.declaration() } : {}), [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: replayContext });
+      } catch (error) {
+        // Ghost V3 is an observational sidecar. A malformed optional replay
+        // bootstrap must leave both Ghost 2 and the active live run untouched;
+        // admission will reject this explicitly incomplete provenance later.
+        provenance = Object.freeze({ ...context,
+          replayContextFailure: error instanceof Error ? error.message : String(error) });
+      }
+      try {
+        ghostV3.start({ sessionId: `ghost-v3-${context.runId}-${browserWindow.crypto.randomUUID()}`,
+          createdAt: new Date().toISOString(), provenance });
+        ghostV3Session.setReplayContext(replayContext); ghostDna.start(replayContext); career.start();
+        if (replayContext !== undefined) {
+          // The sealed bootstrap event is queued first by GhostLiveRecorder.
+          // Capture its matching state/RNG anchor before any opening-content
+          // randomness or legal upgrade can mutate the live configuration.
+          ghostV3.record("rng", 0, worldContext.services.random.snapshot());
+          captureGhostAuthoritativeReceipt(0);
+          openingCapture.captured(context.runId);
+        }
+      } catch (error) {
+        console.warn("Ghost V3 recorder failed to start; live play continues", error);
+      }
+    },
+    // Run lifecycle owns canonical recording; an open intro frame closes before finalization.
+    stopped(meta) {
+      openingCapture.discard();
+      ghostDna.finish(() => { ghostFrames.finish(meta); });
+    },
+  });
+  let observeChaseEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let cancelChaseForScreen: (screen: string) => void = () => undefined; let observeChallengeEvent: (event: Parameters<typeof createLiveGhostCausalEvent>[0]) => void = () => undefined; let stopChallengeRun: () => boolean = () => false; let observePlayerWatchEvent: LivePlayerWatchSurface["observeRunEvent"] = () => undefined;
+  GAMEPLAY_EVENTS.subscribe((event) => {
+    observePlayerWatchEvent(event); observeChallengeEvent(event); observeChaseEvent(event); career.observe(event);
+    ghostV3?.record("events", event.tick, createLiveGhostCausalEvent(event, ghostV3Session.nextEventSequence()));
+    if (ghostPracticeSession.active() === null && !seedRace.active() && !beat.active() && tracksAchievements(hostState.run())) executeEnvironmentTelemetryIntents([...verdantTelemetryIntents(event),
+      ...paleTelemetryIntents(event)], dependencies.profileStatsPersistence);
+  });
+  function liveRun(): GameRun {
+    // Menu services intentionally ask before a run exists and treat the absent
+    // value as the menu state. Keep that lazy contract while reading the world
+    // state owner rather than reviving a host closure.
+    return hostState.run() as GameRun;
+  }
+  const preserveLazyValue = <T>(value: T | undefined): T => value as T;
+  function liveBlade(): GameBlade {
+    return preserveLazyValue(hostState.blade());
+  }
+  function livePlayer(): GamePlayer {
+    return preserveLazyValue(hostState.player());
+  }
+  const interfaceInteraction = createLiveInterfaceInteractionState();
+  const sessionServices = createLiveSessionServices({
+    beat: { screen: () => state, capture: () => liveStateForge.capture().components, tick: () => simulationRuntime.scheduler.tick, recording: ghostV3Session, nativeStart: { session: () => session, prepare: () => { chase.stop(); setState("setup"); }, start: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
+      refuse: () => { try { abandonLiveRun("beat-start-refused"); } finally { setState("menu"); setState("profile"); } } } },
+    dependencies, run: liveRun, player: livePlayer, blade: liveBlade, seedRace: { recording: { runId: () => ghostV3Session.replayContext()?.run.id, active: () => ghostV3?.active === true, nextSequence: ghostV3Session.nextEventSequence, tick: () => simulationRuntime.scheduler.tick, record: (event) => { ghostV3?.record("events", event.tick, event); } }, baseline: () => configuration.baseSnapshot(), capture: () => liveStateForge.capture().components, setup: () => ({ mode: session.selectedMode() as "endless", difficulty: session.selectedDifficulty(), weapon: session.selectedWeapon(), boss: session.selectedMode() === "bossonly" ? session.selectedBoss() : "shuffle" }) },
+    screen: () => state, setScreen: (screen) => { setState(screen); },
+    achievementTracking: () => achTracks(),
+    resetUi: (intent) => { if (intent.enter) interfaceFrame.setEnterSeconds(0); if (intent.focus) interfaceInteraction.setFocus(0); if (intent.scroll) interfaceInteraction.setScroll(0); },
+    requestPointerLock: requestOwnedPointerLock, renamePrompted: () => settingsRenameAdapters.renamePrompted(),
+    renameActive: () => settingsRenameAdapters.renameActive(),
+    markRenamePrompted: () => { settingsRenameAdapters.markRenamePrompted(); },
+    beginRename: (firstRun) => { settingsRenameAdapters.beginRename(firstRun); },
+  });
+  const { settingsController, settings, applySettings, controllers: runControllers,
+    economy: economyRuntime, reward: rewardRuntime, bestScores, seedRace, beat } = sessionServices;
+  const {
+    claimSavedFinale, endRun, loadStage, resumeSavedFinale, retryRun, startRun: startRunImmediate, updateWave,
+  } = runControllers.api;
+  const { awardCoins, telemetry: economyTelemetry } = economyRuntime;
+  const { openDraft: openRewardDraft, openTier: openRewardTier } = rewardRuntime;
+  const { read: getBest, record: saveBest } = bestScores.api;
+  let state: LegacyAppScreen = APP.screen, canonicalTickStartedAt: number | null = null;
+  const interfaceFrame = createLiveInterfaceFrameState(state);
+  let cancelPendingReplayOpen = () => { /* Replay is loaded later. */ }; let leaveCareer = () => { /* Lazy library not loaded yet. */ }; let interruptTutorialCoaching = () => { /* Training is loaded later. */ }; function setState(next: LegacyAppScreen, context?: LegacyTransitionContext): LegacyAppScreen {
+    beat.screenChanged(next); cancelChaseForScreen(next); const prior = state;
+    state = APP.transition(next, context); cancelPendingReplayOpen(); if (prior === "profile" && state !== "profile") leaveCareer(); Input.allowLock = state === "playing";
+    if (prior === "playing" && state !== "playing") { interruptTutorialCoaching(); Input.discardSemanticInput(); }
+    else if (prior !== "playing" && state === "playing") Input.discardSemanticInput();
+    if (prior === "playing" && state === "paused") emitRunScreenTransition("paused");
+    else if (prior === "paused" && state === "playing") emitRunScreenTransition("resumed");
+    return state;
+  }
+  // Time dilation, camera framing (the void run pulls world zoom OUT), banner
+  // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
+  // dash ghosting, and the opening audio cadence are per-world transient
+  // records owned by the world context below, not live-host closures.
+  const emitRunScreenTransition = createTearRunScreenFactPublisher(GAMEPLAY_EVENTS, () => RUN_LIFECYCLE.snapshot(), liveRun);
+  const abandonLiveRun = (reason: string, metadata: Readonly<Record<string, unknown>> = {}): void => {
+    if (stopChallengeRun()) return;
+    const lifecycle = RUN_LIFECYCLE.snapshot();
+    if (lifecycle.sessionId === null || lifecycle.phase === "terminated") return;
+    cleanupBossEncounterActors(hostState.enemies(), "exit"); environment.clear("abandon"); RUN_LIFECYCLE.terminate("quit");
+    try {
+      const run = liveRun();
+      GAMEPLAY_EVENTS.emit({
+        kind: "run", transition: "abandoned", runId: lifecycle.sessionId,
+        mode: run.mode, difficulty: run.diff, weaponId: run.weaponId, wave: run.wave, score: run.score,
+        runTimeSeconds: run.runTime, reason,
+      });
+      if (GHOST.recording()) GHOST.stopRec({ ...metadata, abandoned: reason });
+    } finally {
+      Input.stopSemanticRecording();
+    }
+  };
+  const currentOutcome = () => {
+    const outcome = session.outcome();
+    if (outcome === null) throw new Error("Outcome screen requires a completed run");
+    return outcome;
+  };
+  const reviveCountdown = createLiveReviveCountdownState();
+  const hudFeedback = createLiveHudFeedbackState();
+  // One call builds this world: replaceable state, entity construction, run
+  // lifecycle, services, and transient records. World state owns the active
+  // player, blade, actors, and run while the session retains menu-time state.
+  const productionWorld = createLiveProductionWorld({ dependencies, configuration, worldId: "live-production" });
+  const { session, world } = productionWorld;
+  const { state: hostState, context: worldContext, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector, environment } = world; browserWindow.addEventListener("pagehide", (event) => { if (!event.persisted) world.dispose(); }); bindLiveBloomWellActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveAuroraTrackActors(environment, livePlayer, liveBlade, () => hostState.enemies(), () => hostState.projectiles(), (enemy) => combatRuntime.id(enemy, "enemy"), (projectile) => combatRuntime.id(projectile, "projectile"), { playerAcceleration: CONFIG.player.groundAccel, playerMaximumSpeed: CONFIG.player.moveSpeed, bladeAcceleration: CONFIG.blade.throw.speed, bladeMaximumSpeed: CONFIG.blade.throw.maxSpeed, projectileAcceleration: CONFIG.proj.speed, projectileMaximumSpeed: CONFIG.chargedShot.speed }); bindLiveRootbinderActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveRootboundActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy")); bindLiveWhiteHartActors(environment, livePlayer, () => hostState.enemies(), (enemy) => combatRuntime.id(enemy, "enemy"));
+  // One world owns the transient records read by combat, State Forge, and diagnostics.
+  const { transient } = worldContext; const impact = transient.impact; const openingCarry = transient.opening; const ghostPracticeSession = createLiveGhostPracticeSessionState();
+  const feel = transient.feel; const finaleIntentBatches: (readonly FinaleIntent[])[] = []; const finaleOutwardCalls: FinaleOutwardCall[] = [];
+  const audioDispatchReceipts: AudioDispatchReceipt[] = []; if (__TEAR_TEST_BUILD__) SFX.observeDispatchReceipts((receipt) => { audioDispatchReceipts.push(receipt); }); const outcomeChronology = __TEAR_TEST_BUILD__ ? createOutcomeChronologyJournal() : null;
+  let tutorialPracticeStart = false; const trainingHandoff = createLiveTrainingHandoff({ run: () => hostState.run(), phase: () => TUT.session().phase, pause: () => { setState("paused"); }, releasePointer: () => { browserDocument.exitPointerLock(); }, defer: (commit) => { browserWindow.queueMicrotask(commit); }, startPractice: () => { tutorialPracticeStart = true; try { startRunImmediate("playground", "normal"); } finally { tutorialPracticeStart = false; } } }); const campaignTraining = createLiveCampaignTrainingComposition({
+    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, observeStyle: career.style, persistentEffects: () => ghostPracticeSession.active() === null && !seedRace.active() && !beat.active(),
+    cinema: worldContext.cinema, controllers: runControllers,
+    width: W, height: H, canvas, context: ctx,
+    run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(),
+    projectiles: () => hostState.projectiles(),
+    spawn: (kind, hpScale) => { spawnOne({ type: kind, hpScale }); const spawned = hostState.enemies(); return spawned[spawned.length - 1]; },
+    resolveKill: (enemy, cause) => { liveKillRuntime.resolve(enemy, cause); },
+    setScreen: (screen) => { setState(screen); }, resetScroll: () => { interfaceInteraction.setScroll(0); },
+    scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll,
+    requestPointerLock: requestOwnedPointerLock, selectStage: loadStage, beginWipe: () => { Wipe.begin(); },
+    resetRun: (difficulty) => { startRunWithPreflight("playground", difficulty); },
+    startPractice: (origin) => { trainingHandoff.request(origin); }, resetTrainingCarry: () => { transient.resetOpening(); impact.hitStop = 0; },
+    applySettingsCinematicPreference: () => settings.cinematics, shakeScale: () => settingsController.shakeScale,
+    getShake: () => impact.shake, setShake: (value) => { impact.shake = value; },
+    getZoom: () => feel.zoom, setZoom: (value) => { feel.zoom = value; },
+    getFlash: () => feel.flash, setFlash: (value) => { feel.flash = value; },
+    setSlowMotion: (value) => { impact.slowMotion = value; }, setHitStop: (value) => { impact.hitStop = value; },
+    setWorldZoom: (value, immediate) => { const before = Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }); feel.worldZoomTarget = value; if (immediate) feel.worldZoom = value; return Object.freeze({ requested: value, immediate, before, after: Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }) }); },
+    renderMenu: (model) => { presentationScreenRenderers.pgmenu(model); },
+    renderLab: (model) => { presentationScreenRenderers.pglab(model); },
+    abilityColors: () => libraryAdapters.categories,
+    emitMusicEvent: (name, detail) => { liveFrameRuntime.emitMusicEvent(name, detail); },
+    ...(__TEAR_TEST_BUILD__ ? { observeFinaleIntents: (intents: readonly FinaleIntent[]) => { finaleIntentBatches.push(intents); }, observeFinaleOutwardCall: (call: FinaleOutwardCall) => { finaleOutwardCalls.push(call); outcomeChronology?.record({ type: "finale-outward", call }); } } : {}),
+    showRank: (rank) => { feel.rankPopupSeconds = 1; feel.rankPopupText = rank; },
+  });
+  const { campaign: campaignHost, training: trainingHost, cinematic: cinematicHost,
+    style: styleAchievementRuntime, weapon: weaponRuntime, addFloater } = campaignTraining;
+  const CINEMA = worldContext.cinema; const { stage: stageRuntime, story, runtime: campaignRuntime } = campaignHost; const startRunWithPreflight = (mode: RunMode, difficulty: RunDifficulty): void => {
+    if (mode === "tutorial") { void trainingHost.startTutorial(() => { startRunImmediate(mode, difficulty); }).catch((error: unknown) => { console.warn("Tear training runtime failed to load", error); }); return; }
+    if (!trainingRunRequiresPreflight(mode)) { startRunImmediate(mode, difficulty); return; }
+    void trainingHost.ensureLoaded().then(() => { startRunImmediate(mode, difficulty); }).catch((error: unknown) => {
+      console.warn("Tear training runtime failed to load", error); });
+  };
+  const { severFinaleAnchor, startAdventureFinale } = campaignRuntime;
+  const { addShake, addZoom, addFlash, triggerSlowmo, nearestEnemy, damageMultiplier: runDamageMult,
+    log: logWeaponEvent, noteFirstDamage: noteFirstPlayerDamage, applySever, addOverrun: addOverrunStack,
+    updateAbilities: updateWeaponAbilities, emitThrowResolve,
+    activateThrowSecondary, hook: weaponHook, shieldAbsorb: onShieldAbsorb, dealArea: dealAoE,
+    addKillScore, fire, makeEvent: makeEv } = weaponRuntime;
+  const { tutorial: TUT, runtime: playgroundRuntime, presentation: playgroundPresentation } = trainingHost; interruptTutorialCoaching = () => { TUT.interruptCoaching(); }; browserWindow.addEventListener("blur", interruptTutorialCoaching); const { sourceRuntime: sourceVoidRuntime, runtime: cinematicRuntime } = cinematicHost;
+  const tutorialSessionActions = createLiveTutorialSessionActions({ training: trainingHost, tutorial: TUT, screen: () => state, mode: () => liveRun().mode,
+    selectPracticeWeapon: (id) => { hostState.setSelectedWeapon(id); }, startLessonRun: () => { tutorialPracticeStart = TUT.session().practiceOnly === true || TUT.session().unfinished === true; try { startRunImmediate("tutorial", "normal"); } finally { tutorialPracticeStart = false; } },
+    resetFocus: () => { interfaceInteraction.setFocus(0); }, resume: () => { setState("playing"); requestOwnedPointerLock(); } });
+  const syncVoidPlayerSupport = (...args: Parameters<typeof sourceVoidRuntime.syncPlayer>) => TUT.session().bossPractice?.defeated ? undefined : sourceVoidRuntime.syncPlayer(...args); const updateVoidScroll = (...args: Parameters<typeof sourceVoidRuntime.update>) => { if (!TUT.session().bossPractice?.defeated) sourceVoidRuntime.update(...args); };
+  const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = cinematicRuntime; const chase = createLiveGhostChase({ beat: beat.snapshot, factory: browserIndexedDb, ui: UI, run: liveRun, player: livePlayer, stage: () => stageRuntime.index, platforms: () => stageRuntime.platforms, blocked: () => state !== "playing" || CINEMA.active || hostState.bossIntro() !== null, prepareStart: (reference) => { if (state !== "profile" || !isRunModeSelection(reference.mode) || !isRunDifficultySelection(reference.difficulty)) throw new Error("Chase launch is no longer owned by Profile."); setState("setup"); }, start: (reference, racing) => { if (!isRunModeSelection(reference.mode) || !isRunDifficultySelection(reference.difficulty)) throw new Error("Reference category unsupported."); session.takeRunSeed(); session.setSelectedWeapon(reference.weapon); session.setSelectedMode(reference.mode); session.setSelectedDifficulty(reference.difficulty); if (racing) { session.setSelectedBoss(reference.seedRace?.shared.boss ?? "shuffle"); seedRace.challenge(reference, () => { startRunImmediate(reference.mode as RunMode, reference.difficulty as RunDifficulty); }); } else startRunImmediate(reference.mode, reference.difficulty); } }); observeChaseEvent = chase.event; cancelChaseForScreen = (screen) => { if (screen === "setup" && chase.takeSetupLaunch()) return; if (!["profile", "playing", "paused", "draft", "reserve", "tierup", "settings", "confirmquit", "continue", "gameover", "win"].includes(screen)) chase.stop(); else if (screen !== "profile") chase.cancelPreparation(); }; browserWindow.addEventListener("pagehide", () => { chase.stop(); });
+  const dispatchPlaygroundAction = (...args: Parameters<typeof playgroundRuntime.dispatchAction>) => { playgroundRuntime.dispatchAction(...args); }; const stepPlayground = (...args: Parameters<typeof playgroundRuntime.step>) => { playgroundRuntime.step(...args); };
+  const { renderMenu: renderPgMenu, renderLab: renderPgLab } = playgroundPresentation; const { achievements: AT, addStyle, tracks: achTracks, check: achCheck, loseStyle, update: updateTrick, color: trickColor, splitProjectile: spawnSplitShards, formatTime: fmtTime } = styleAchievementRuntime;
+  const attackPresentation = createLiveAttackPresentation({ scope: liveBlade,
+    tick: () => Math.max(0, Math.round(CLOCK.sim * 120)), lowGraphics: () => GFX.low, reducedMotion: () => A11Y.reducedMotion,
+    highContrast: () => A11Y.highContrast, contrastColor: () => THEME.ink,
+    edgeTrace: (...args) => { FX.edgeTrace(...args); }, contactMark: (...args) => { FX.contactMark(...args); }, groundPulse: (...args) => { FX.groundPulse(...args); }, muzzleWedge: (...args) => { FX.muzzleWedge(...args); },
+    burst: (...args) => { FX.burst(...args); },
+    shouldRecord: () => GHOST.recording(),
+    recordEffect: (effect, x, y) => { GHOST.presentationEvent(effect, x, y); } });
+  const { modeWaves, bossById, spawn: spawnOne,
+    updateBossArenaPlatforms, lobExplode, loadTransitionStage } = createLiveRunOrchestration({
+    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
+    campaign: campaignHost, training: trainingHost, baselinePractice: () => tutorialPracticeStart, weapon: weaponRuntime, music: musicDirector,
+    width: W, height: H, canvas, testMode: TEST_MODE,
+    run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(),
+    actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
+    observeTerminal: career.terminal, observeBossIntro: (actorId, duration, delay) => { ghostFrames.installed(actorId, duration, delay); },
+    setEnemies: (value) => { hostState.setEnemies(value); }, setProjectiles: (value) => { hostState.setProjectiles(value); },
+    runInstalled: (run) => { chase.installed(run); beat.installed(run); }, selectedBoss: () => session.selectedBoss(), worldServices: worldContext.services, applySettings,
+    attackPresentation,
+    environment, prepareWorld: () => { if (!tutorialPracticeStart) { TUT.restoreSession(undefined); TUT.restorePresentation(undefined); } if (CINEMA.active) CINEMA.cancel("new-run"); story.resetFinale(); hostState.setBossIntro(null); hostState.setBossBeat(null); },
+    resetTransientWorld: () => { impact.hitStop = 0; impact.shake = 0; hudFeedback.restore(undefined); },
+    finishWorldReset: () => { transient.resetFeel(); impact.slowMotion = 0;
+      transient.resetOpening(); },
+    resetAuthoritativeClocks: () => { simulationRuntime.reset(0); }, resetCombatIdentity: () => { combatRuntime.resetIdentity(); },
+    race: { ...seedRace, active: () => seedRace.active() || beat.active(), finalize: () => { seedRace.finalize(); beat.finalize(); } }, createRunSeed: () => beat.seed() ?? seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
+    withOpeningCapture: openingCapture.withCapture, openingExposed: openingCapture.exposed, discardOpeningCapture: openingCapture.discard,
+    authoritativeResult: () => authoritativeStep.lastResult,
+    setScreen: (screen, detail) => { setState(screen, detail); }, requestPointerLock: requestOwnedPointerLock,
+    beginWipe: () => { Wipe.begin(); }, wipeRemainingSeconds: () => Wipe.remainingSeconds,
+    setBannerSeconds: (value) => { feel.bannerSeconds = value; }, openTier: openRewardTier, openDraft: openRewardDraft,
+    resetRewards: () => { rewardRuntime.reset(); }, saveBest, getBest, awardCoins, economyTelemetry,
+    setLastRecording: (value) => { session.setLastRecording(value); },
+    setLastVaultId: (value) => { session.setLastVaultId(value); },
+    setOutcome: (value) => { session.setOutcome(value); }, resetWinSeconds: () => { session.setWinSeconds(0); },
+    achievementTracking: () => achTracks(), achievementCheck: achCheck, achievementTracker: AT, practiceSession: ghostPracticeSession,
+    emitMusicOutcome: (outcome) => { liveFrameRuntime.emitMusicEvent(outcome); },
+    startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); },
+    ...(outcomeChronology === null ? {} : { observeOutcomeChronology: outcomeChronology.record }),
+  });
+  TUT.bindBossPractice(createLiveBossPhasePractice({ config: CONFIG, state: hostState, stage: { get index() { return stageRuntime.index; }, set index(value) { stageRuntime.restoreIndex(value); }, get platforms() { return stageRuntime.platforms; }, set platforms(value) { stageRuntime.platforms = value; } }, selectStage: (index) => { stageRuntime.load(index); environment.setStage(stageRuntime.current.id, "stage-transition"); }, resetEnvironment: () => { environment.clear("new-run"); }, createEnemy: (id, x, y, run) => worldEntities.createEnemy(id, x, y, run), cinematicActive: () => CINEMA.active, cancelCinema: () => { if (CINEMA.active) CINEMA.cancel("practice-reset"); } }));
+  const frameDriver = new RuntimeFrameDriver(browserWindow); type CombatSnapshot = ReturnType<typeof projectCanonicalGameplayState>; type CombatHost = ReturnType<typeof createLiveCombatComposition<CombatSnapshot>>; type CombatCompositionInput = Parameters<typeof createLiveCombatComposition<CombatSnapshot>>[0];
+  const isGameProjectile = (value: unknown): value is GameProjectile => value instanceof dependencies.Projectile;
+  const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>
+    isGameEnemy(value);   // the descent derives its actor id from presentationId/bossId
+  const isRitualOwner = (value: unknown): value is GameEnemy & NonNullable<Parameters<typeof startBossTransformation>[0]> =>
+    isGameEnemy(value) && "bossName" in value && typeof value.bossName === "string" &&
+    "cinematicT" in value && typeof value.cinematicT === "number";
+  const musicObservation = createLiveMusicObservation({ director: musicDirector, appState: () => state,
+    run: () => hostState.run(), player: () => hostState.player(), enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(),
+    bossIntro: () => hostState.bossIntro(), stageName: () => stageRuntime.current.name, stageIndex: () => stageRuntime.index,
+    totalWaves: modeWaves, waveActive: () => RUN_LIFECYCLE.isWaveActive, runPhase: () => RUN_LIFECYCLE.phase,
+    topComboThreshold: () => CONFIG.trick.tiers.at(-1)?.at ?? 1 });
+  const isLegacyScreen = (screen: string): screen is LegacyAppScreen =>
+    ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
+      "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
+      "leaderboards", "rename", "pgmenu", "pglab"].includes(screen);
+  const combatWorldState = createLiveCombatWorldState({
+    player: livePlayer, blade: liveBlade, run: liveRun,
+    enemies: () => hostState.enemies(), setEnemies: (value) => { hostState.setEnemies(value); },
+    projectiles: () => hostState.projectiles(), setProjectiles: (value) => { hostState.setProjectiles(value); },
+    floaters: () => hostState.floaters(), setFloaters: (value) => { hostState.setFloaters(value); },
+    slowZones: () => hostState.slowZones(), setSlowZones: (value) => { hostState.setSlowZones(value); },
+    temporaryWalls: () => hostState.temporaryWalls(), setTemporaryWalls: (value) => { hostState.setTemporaryWalls(value); },
+  }, transient);
+  const combatActions: ReturnType<typeof createLiveCombatActions> = createLiveCombatActions({
+    dependencies, canvas, width: W, bossRosterSize: BOSS_ROSTER.length, environment, attackPresentation,
+    live: combatWorldState,
+    ports: {
+      stage: stageRuntime, story, cinema: CINEMA, tutorial: TUT,
+      achievement: {
+        dashDodge: (projectile) => { if (isDodgeProjectile(projectile)) AT.dashDodge(projectile); },
+        bossHit: (enemy, kind) => { if (isGameEnemy(enemy)) AT.bossHit(enemy, kind); },
+        bossKill: (enemy) => { if (isGameEnemy(enemy)) AT.bossKill(enemy); },
+        onKill: () => { AT.onKill(); },
+        swung: () => { AT.swung(); }, thrown: () => { AT.thrown(); }, parry: () => { AT.parry(); },
+        breakStreak: () => { AT.breakStreak(); }, jumped: () => { AT.jumped(); },
+        revived: () => { AT.revived(); }, tick: (seconds) => { AT.tick(seconds); },
+      },
+      functions: {
+        addFloater, addShake, addZoom, addFlash, addStyle, loseStyle, onShieldAbsorb,
+        noteFirstDamage: (enemy, first) => { if (isGameEnemy(enemy)) noteFirstPlayerDamage(enemy, first); },
+        entityNoteFirstDamage: (enemy, first) => { if (isGameEnemy(enemy)) noteFirstPlayerDamage(enemy, first); },
+        entityBossHit: (enemy) => { if (isGameEnemy(enemy)) AT.bossHit(enemy, "deflect"); },
+        entityResolveKill: (enemy, cause) => { if (isGameEnemy(enemy)) liveKillRuntime.resolve(enemy, cause); },
+        runDamageMultiplier: runDamageMult,
+        updateWeaponAbilities, stepCinematic: stepCinematicPlaying, syncVoidSupport: syncVoidPlayerSupport,
+        activateThrowSecondary, updateWave, updateBossArenaPlatforms, updateVoidScroll,
+        startVoidDescent: (boss) => isSourceOwner(boss) && startVoidDescent(boss),
+        nearestEnemy: (x, y) => { const enemy = nearestEnemy(x, y); return isGameEnemy(enemy) ? enemy : null; },
+        openingNearestEnemy: () => { const blade = liveBlade(); const enemy = nearestEnemy(blade.x, blade.y); return isGameEnemy(enemy) ? enemy : null; },
+        areaDamage: (x, y, radius, damage, playerOwned) =>
+          playerOwned === undefined ? dealAoE(x, y, radius, damage) : dealAoE(x, y, radius, damage, { playerOwned }),
+        lobExplode, splitProjectile: (projectile) => { if (isGameProjectile(projectile)) spawnSplitShards(projectile); },
+        triggerSlowMotion: triggerSlowmo,
+        logWeapon: logWeaponEvent, observeTutorialAttempt: (fact) => { TUT.observeAttemptFact(fact); },
+        emitThrowResolve: (enemy, damage) => { const activeBlade = liveBlade(); GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "throw-resolved", weaponId: liveRun().weaponId, throwId: activeBlade.throwId, x: activeBlade.x, y: activeBlade.y, damage }); emitThrowResolve(isGameEnemy(enemy) ? enemy : null, damage); },
+        updateTrick, updatePlayground: stepPlayground,
+        endRun, checkAchievements: achCheck, addKillScore,
+        applySever: (enemy, tier) => { if (isGameEnemy(enemy)) applySever(enemy, tier); }, fire,
+        makeEvent: (x, y, enemy, cause, detail) => makeEv(x, y, isGameEnemy(enemy) ? enemy : null, cause, detail),
+        weaponHook: (name, detail) => { const effect = weaponHook(name, { config: CONFIG, ...detail }); return isWeaponEffect(effect) ? effect : null; },
+        modHook: (name) => liveRun().mods[name], fireMod: fire,
+        logWeaponEvent, weaponWorldImpact: () => { const effect = weaponHook("onWorldImpact",
+          { config: CONFIG, blade: liveBlade(), player: livePlayer(), platforms: stageRuntime.platforms, x: liveBlade().x, y: liveBlade().y });
+          return isWeaponEffect(effect) ? effect : null; },
+        startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) && !CINEMA.active && startBossTransformation(enemy, request),
+        achievementsEnabled: achTracks,
+        setBossBanner: (text, color) => { hostState.setBossBeat({ text, color, t: 1.15, dur: 1.15 }); },
+        // Raw device edge in every live run (recording is passive; the authoritative
+        // input only replays sealed envelopes during verification).
+        consumeThrow: () => liveInputAdapter.consumeThrow(() => Input.consumeThrow()),
+        weaponSegmentContact: weaponCapsuleIntersectsSegment,
+        createCharger: (x, y) => worldEntities.createEnemy("charger", x, y, liveRun()), createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, liveRun()),
+        recordBossSupportSpawn: (enemy, bossId) => { const variant: unknown = Reflect.get(enemy, "variantName"); GAMEPLAY_EVENTS.emit({ kind: "spawn",
+          actorId: combatRuntime.id(enemy, "enemy"), actorKind: enemy.kind, x: enemy.x, y: enemy.y, variantName: typeof variant === "string" ? variant : "", bossId }); },
+        enemyDefeated: (enemy) => {
+          if (isGameEnemy(enemy) && isEnemySample(enemy)) {
+            GAMEPLAY_EVENTS.emit({ kind: "death", actorId: combatRuntime.id(enemy, "enemy"), cause: "combat" });
+          }
+        },
+        ghostSample: (seconds, living) => { GHOST.sample(seconds, livePlayer(), liveBlade(),
+          living.filter(isGameEnemy).filter(isEnemySample).map((enemy) => ({
+            x: enemy.x, y: enemy.y, dead: enemy.dead,
+            stableId: combatRuntime.id(enemy, "enemy"),
+            ...(enemy._gid === undefined ? {} : { _gid: enemy._gid }),
+          }))); },
+        restorePlatforms: (platforms) => { stageRuntime.platforms = platforms.filter(isCombatPlatform); },
+        addOverrunStack: () => { addOverrunStack(liveRun().mods); },
+        playSound: (name, argument) => {
+          if (name === "swing") SFX.swing(typeof argument === "number" ? argument : 1);
+          else if (name === "throwBlade") SFX.throwBlade(); else if (name === "dash") SFX.dash();
+          else if (name === "slam") SFX.slam(); else if (name === "land") SFX.land();
+          else if (name === "hurt") SFX.hurt(); else if (name === "deflect") SFX.deflect();
+          else if (name === "boom") SFX.boom(); else if (name === "death") SFX.death();
+        },
+      },
+    },
+    resolveKill: (enemy, cause) => { if (isGameEnemy(enemy)) liveKillRuntime.resolve(enemy, cause); },
+    combatRuntime: () => combatRuntime,
+    emitMusicEvent: (type, detail) => { liveFrameRuntime.emitMusicEvent(type, detail); },
+    releaseCamera: () => { feel.worldZoomTarget = 1; },
+    requestContinue: () => { setState("continue"); reviveCountdown.setSeconds(8); browserDocument.exitPointerLock(); },
+  });
+  const collisionPhaseState = createLiveCollisionStateView({
+    hitStop: () => impact.hitStop, setHitStop: (value) => { impact.hitStop = value; },
+    slowMotion: () => impact.slowMotion, setSlowMotion: (value) => { impact.slowMotion = value; },
+    shake: () => impact.shake, setShake: (value) => { impact.shake = value; },
+    enemies: () => combatWorldState.enemies(), setEnemies: (value) => { combatWorldState.setEnemies(value.filter(isGameEnemy)); },
+    projectiles: () => combatWorldState.projectiles(), setProjectiles: (value) => { combatWorldState.setProjectiles(value.filter(isGameProjectile)); },
+    floaters: () => combatWorldState.floaters(), setFloaters: (value) => { combatWorldState.setFloaters(value.filter(isGameFloater)); },
+  });
+  const combatAdapterContext: CombatCompositionInput["adapters"] = {
+    entities: combatActions.entities,
+    opening: {
+      values: { player: () => combatWorldState.player(), blade: () => combatWorldState.blade(), run: () => combatWorldState.run(),
+        enemies: () => combatWorldState.enemies(), projectiles: () => combatWorldState.projectiles(), platforms: () => stageRuntime.platforms, width: () => W,
+        blocking: () => CINEMA.active && CINEMA.blocksCombat, playerMode: () => CINEMA.playerMode,
+        protection: () => combatWorldState.openingProtection(), lowGraphics: () => GFX.low, transformationBlocked: () => CINEMA.active && CINEMA.blocksCombat },
+      actions: combatActions.opening,
+      state: openingCarry,
+    },
+    collision: {
+      values: { player: () => combatWorldState.player(), blade: () => combatWorldState.blade(), run: () => combatWorldState.run(), width: () => W },
+      actions: combatActions.collision,
+      state: collisionPhaseState,
+    },
+    kill: combatActions.kill,
+  };
+  const liveInputAdapter = createLiveAuthoritativeInputAdapter({
+    player: livePlayer,
+    blade: liveBlade,
+    aimRadius: () => CONFIG.blade.aimRadius,
+  });
+  // TearScore updates are snapshot-driven at 8 Hz; semantic events are emitted immediately.
+  const frameContext = {
+    director: musicDirector, getRun: () => projectLiveMusicRun(hostState.run()),
+    readPreludeState: () => {
+      const bossIntro = hostState.bossIntro(), bossBeat = hostState.bossBeat();
+      return { slowMotion: impact.slowMotion, timeScale: feel.timeScale, worldZoom: feel.worldZoom,
+        worldZoomTarget: feel.worldZoomTarget, zoom: feel.zoom, flash: feel.flash,
+        bannerTime: feel.bannerSeconds, stageBannerSeconds: stageRuntime.bannerSeconds, rankPopTime: feel.rankPopupSeconds,
+        bossIntro: bossIntro === null ? null : { delay: bossIntro.delay, t: bossIntro.t, dur: bossIntro.dur,
+          boss: { introT: bossIntro.boss.introT ?? 0, dead: bossIntro.boss.dead, dying: bossIntro.boss.dying,
+            hp: bossIntro.boss.hp, maxHp: bossIntro.boss.maxHp,
+            ...(bossIntro.boss.isBoss === undefined ? {} : { isBoss: bossIntro.boss.isBoss }),
+            ...(typeof bossIntro.boss.bossId === "string" ? { bossId: bossIntro.boss.bossId } : {}),
+            phaseMarks: bossIntro.boss.phaseMarks } },
+        bossBeat: bossBeat === null ? null : { t: bossBeat.t } };
+    },
+    writePreludeState(frameState) {
+      impact.slowMotion = frameState.slowMotion; feel.timeScale = frameState.timeScale; feel.worldZoom = frameState.worldZoom;
+      feel.zoom = frameState.zoom; feel.flash = frameState.flash; feel.bannerSeconds = frameState.bannerTime;
+      stageRuntime.bannerSeconds = frameState.stageBannerSeconds; feel.rankPopupSeconds = frameState.rankPopTime;
+      const bossIntro = hostState.bossIntro(), bossBeat = hostState.bossBeat();
+      hostState.setBossIntro(commitBossIntroSnapshot(bossIntro, frameState.bossIntro));
+      if (frameState.bossBeat === null) hostState.setBossBeat(null);
+      else if (bossBeat !== null) hostState.setBossBeat({ ...bossBeat, t: frameState.bossBeat.t });
+    },
+    parrySlowScale: CONFIG.juice.parrySlowScale, cinemaActive: () => CINEMA.active,
+    playgroundSlow: () => liveRun().pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
+    timeScale: () => feel.timeScale, hitStop: () => impact.hitStop, setHitStop: (value) => { impact.hitStop = value; },
+    state: () => state,
+    drainActions: (tick) => {
+      // Physical pointer input is sampled exactly once before being quantized
+      // into the same sealed action stream used by automation and future
+      // detached replay hosts.  The canonical action adapter owns the actual
+      // player/blade overrides during the resulting simulation tick.
+      if (inputAuthority.allowsDeviceAimCapture()) {
+        const blade = liveBlade(); const hand = blade.handPos(livePlayer());
+        const aim = blade.captureDeviceAim(hand);
+        const radius = Math.max(1, CONFIG.blade.aimRadius);
+        Input.semantic.setAimVector(aim.x / radius, aim.y / radius);
+      }
+      return Input.drainSemanticActions(tick);
+    },
+    recordSealedActions: (_tick, actions) => { ghostDna.beforeTick(_tick); for (const action of actions) ghostV3?.record("commands", action.tick, action); if (__TEAR_TEST_BUILD__) canonicalTickStartedAt = performance.now(); },
+    ...(__TEAR_TEST_BUILD__ ? {
+      beforeSimulationStep: (tick: number) => { const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__; hook?.before?.(tick); },
+    } : {}),
+    afterSimulationStep: (tick: number) => { if (__TEAR_TEST_BUILD__ && canonicalTickStartedAt !== null) {
+      DIAG.record("canonicalTick", performance.now() - canonicalTickStartedAt); canonicalTickStartedAt = null;
+    }
+      ghostDna.afterTick(tick); challenge.afterStep(tick); chase.observe();
+      void dependencies.practiceEncounterPersistence?.observe({ run: liveRun(), actors: hostState.enemies(), tick, playing: state === "playing", waveActive: RUN_LIFECYCLE.isWaveActive, blockingCinema: CINEMA.active && CINEMA.blocksCombat, ghostPractice: ghostPracticeSession.active() !== null, width: W, height: H })?.then((status) => { if (status !== "committed") addFloater(livePlayer().x, livePlayer().y - 70, "ENCOUNTER SAVE NOT CONFIRMED", true, "#e0a326"); });
+      if (ghostV3?.active === true && tick % ghostV3.keyframeIntervalTicks === 0) {
+        const random = worldContext.services.random.snapshot();
+        ghostV3.record("presentation", tick, {
+          player: { x: livePlayer().x, y: livePlayer().y, vx: livePlayer().vx, vy: livePlayer().vy, hp: livePlayer().hp, facing: livePlayer().facing },
+          blade: { x: liveBlade().x, y: liveBlade().y, vx: liveBlade().vx, vy: liveBlade().vy, state: liveBlade().state },
+          enemies: hostState.enemies().filter((enemy) => !enemy.dead).map((enemy) => ({
+            ...(typeof enemy._gid === "number" ? { id: enemy._gid } : {}), kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp,
+          })),
+          random,
+        });
+        ghostV3.record("rng", tick, random);
+        captureGhostAuthoritativeReceipt(tick);
+      }
+      finaleCapture.afterTick(); if (__TEAR_TEST_BUILD__) {
+        const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
+        hook?.after?.(tick);
+      }
+    },
+    clearSimulationInput: () => { liveInputAdapter.clear(); },
+    gauge: (name, value) => { DIAG.gauge(name, value); },
+    musicObservation,
+    musicThemePort: () => SFX,
+    musicThemeInput: () => ({ menu: isMenuScreen(state), attractReady: Attract.ready,
+      attractStage: Attract.ready ? Attract.stage().name : "menu", runMode: hostState.run()?.mode ?? "endless",
+      stageName: stageRuntime.current.name, bossWave: hostState.run()?.isBossWave === true, appState: state }),
+  } satisfies CombatCompositionInput["frame"];
+  const coordinatorContext = {
+    applicationFrameRecording: ghostFrames,
+    now: () => performance.now(), state: () => state,
+    setState: (screen) => { if (isLegacyScreen(screen)) setState(screen); },
+    input: Input, pad: typeof PAD === "undefined" ? null : PAD, navigator: browserNavigator, document: browserDocument, canvas,
+    cinema: CINEMA, clipper: dependencies.Clipper ?? null,
+    autoPauseDisconnect: () => settings.autoPauseDisconnect, requestPointerLock: requestOwnedPointerLock,
+    exitReplay: () => { replayAdapters.exit(); },
+    advanceClocks: (dt, currentState) => {
+      interfaceFrame.advance(dt);
+      session.setWinSeconds(currentState === "win" ? session.winSeconds() + dt : 0);
+    },
+    advanceContinue: (dt) => {
+      if (state === "continue" && reviveCountdown.seconds() > 0 && reviveCountdown.elapse(dt) <= 0) endRun();
+    },
+    updateAttract: (dt, menu) => {
+      if (menu) { if (!Attract.ready) Attract.reset(); Attract.update(dt); } else Attract.ready = false;
+    },
+    isMenuScreen: (screen) => isLegacyScreen(screen) && isMenuScreen(screen),
+    gameplayStart: () => { CG.gameplayStart(); }, gameplayStop: () => { CG.gameplayStop(); },
+    cssPerLogicalPixel: () => viewport.cssPerLogicalPixel, setUiDensity: (density) => { UI.setDensity(density); },
+    render: () => { interfaceComposition.renderPresentationFrame(interfaceFrame.deltaSeconds()); }, handleUi: () => { presentationHost.handleUi(); }, diagnostics: DIAG,
+    entityCounts: () => ({ enemies: hostState.enemies().length, projectiles: hostState.projectiles().length, effects: FX.list.length }),
+  } satisfies CombatCompositionInput["coordinator"];
+  const combatHost: CombatHost = createLiveCombatComposition({
+    frameDriver, gameplayEvents: GAMEPLAY_EVENTS, environment, adapters: combatAdapterContext,
+    lifecycle: {
+      advanceClock: (dt) => { worldContext.services.clock.advance(dt); },
+      captureProtection: () => { transient.assignProtection(story.protection()); },
+      applyProtection: () => { story.applyProtection(transient.protection); },
+    },
+    frame: frameContext, coordinator: coordinatorContext,
+    authoritative: {
+      actionPort: { apply(input, tick, actions) { TUT.captureCoachCommands(actions.map((entry) => entry.command)); liveInputAdapter.actionPort.apply(input, tick, actions); } },
+      snapshot: (tick, input) => { TUT.afterWorldStep(liveTutorialCoachFrame(TUT, tick, hostState, combatRuntime, stageRuntime.index), input.snapshot()); return projectCanonicalGameplayState(tick, input.snapshot(), liveRun(), livePlayer(), liveBlade(),
+        hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()); },
+    },
+  });
+  const { simulationRuntime, simulation, combatEntityRuntime: combatRuntime,
+    killRuntime: liveKillRuntime, frameRuntime: liveFrameRuntime, authoritativeStep } = combatHost;
+  const playerWatch = engineering.playerWatch(browserIndexedDb, { bindRunEvents: true, canonicalState: () => authoritativeStep.lastResult?.state ?? null, availableActions: () => createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }).availableGameActions(), pushAction: (action) => { Input.semantic.push(action); }, setSemanticAuthority: inputAuthority.setSemanticInputAuthority, startNormalRun: () => { startRunWithPreflight("endless", "normal"); } });
+  observePlayerWatchEvent = playerWatch.observeRunEvent; void playerWatch.refresh(); const replayHub = engineering.replayHub(playerWatch), botEvidence = engineering.botEvidence(browserIndexedDb);
+  const captureGhostAuthoritativeReceipt = (tick: number): TearSnapshotV1 | undefined => {
+    if (ghostV3?.active !== true) return;
+    const result = authoritativeStep.lastResult;
+    const stateHash = result?.tick === tick ? result.stateHash : stableVerificationHash(projectCanonicalGameplayState(
+      tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(),
+      hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()));
+    const snapshot = captureGhostStateSnapshot(tick);
+    const receipt = createGhostAuthoritativeReceipt(tick, stateHash, simulationRuntime.input.snapshot(), ghostFrames.receipt(snapshot === undefined ? undefined : { id: snapshot.id, exactHash: snapshot.hashes.exact })); ghostV3.record("results", tick, receipt); finaleCapture.observed(snapshot, receipt); return snapshot;
+  };
+  GAMEPLAY_EVENTS.setTickSource(() => simulationRuntime.scheduler.tick); environment.setAvailableActorIdsSource(() => new Set([stageRuntime.current.id, "player", "blade", ...hostState.enemies().map((enemy) => combatRuntime.id(enemy, "enemy")), ...hostState.projectiles().map((projectile) => combatRuntime.id(projectile, "projectile"))]));
+  const stateForgeRuntime = createLiveStateForgeRuntimeBridge({ tutorial: TUT, practiceCinema: cinematicRuntime, practiceWorld: () => ({ run: liveRun(), actors: hostState.enemies(), platforms: stageRuntime.platforms }), captureBossIntro: () => hostState.bossIntro(), restoreBossIntro: (intro) => { hostState.setBossIntro(intro); },
+    captureTransient: () => ({ hitStop: impact.hitStop, shake: impact.shake, timeScale: feel.timeScale, slowmo: impact.slowMotion, zoom: feel.zoom, flash: feel.flash, bannerT: feel.bannerSeconds, dashGhostT: openingCarry.dashGhostTime, landingV: openingCarry.landingVelocity, wasDashing: openingCarry.wasDashing, wasSwinging: openingCarry.wasSwinging, wasOnGround: openingCarry.wasOnGround, worldZoom: feel.worldZoom, worldZoomTarget: feel.worldZoomTarget, throwCd: openingCarry.throwCooldown, rankPopT: feel.rankPopupSeconds, rankPopText: feel.rankPopupText }),
+    restoreTransient: (snapshot) => { transient.assignImpact({ hitStop: Number(snapshot.hitStop), slowMotion: Number(snapshot.slowmo), shake: Number(snapshot.shake) }); transient.assignOpening({ throwCooldown: Number(snapshot.throwCd), dashGhostTime: Number(snapshot.dashGhostT), landingVelocity: Number(snapshot.landingV), wasDashing: Boolean(snapshot.wasDashing), wasSwinging: Boolean(snapshot.wasSwinging), wasOnGround: Boolean(snapshot.wasOnGround) }); feel.timeScale = Number(snapshot.timeScale); feel.zoom = Number(snapshot.zoom); feel.flash = Number(snapshot.flash); feel.bannerSeconds = Number(snapshot.bannerT); feel.worldZoom = Number(snapshot.worldZoom); feel.worldZoomTarget = Number(snapshot.worldZoomTarget); feel.rankPopupSeconds = Number(snapshot.rankPopT); feel.rankPopupText = String(snapshot.rankPopText); },
+    captureLifecycle: RUN_LIFECYCLE.snapshot.bind(RUN_LIFECYCLE), restoreLifecycle: RUN_LIFECYCLE.restore.bind(RUN_LIFECYCLE),
+    finale: { capture: campaignRuntime.captureFinaleBinding, clear: campaignRuntime.clearFinaleBinding, stage: (value, config) => campaignRuntime.stageFinaleBinding(value, new FinaleController(config ?? CONFIG.finale)) }, captureChapterBinding: story.captureChapterBinding.bind(story), stageChapterBinding: campaignRuntime.stageChapterBinding, installChapterBinding: campaignRuntime.installChapterBinding,
+    captureCinemaProtection: story.protection.bind(story), restoreCinemaProtection: story.applyProtection.bind(story),
+    captureStageBanner: () => ({ name: stageRuntime.name, seconds: stageRuntime.bannerSeconds }), restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime), cinema: CINEMA, clearEnvironmentRestore: () => { environment.clear("restore"); },
+  });
+  const liveStateForge = createLiveStateForgeAdapter({
+    dependencies, entities: worldEntities, worldServices: worldContext.services, state: hostState, actorId: (entity, prefix) => combatRuntime.id(entity, prefix), bindActorId: (entity, id) => { combatRuntime.bindId(entity, id); },
+    platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index, restoreStageIndex: (index) => { stageRuntime.restoreIndex(index); }, replacePlatforms: (values) => { stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values); }, slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(), environment: () => environment, clearEnvironmentRestore: () => { environment.clear("restore"); }, restoreEnvironment: (snapshot) => { environment.setStage(snapshot.stageId, "restore"); environment.replace(snapshot); },
+    screen: () => state, setScreen: (screen) => { if (!isLegacyScreen(screen)) throw new RangeError(`invalid restored screen: ${screen}`); if (screen === "playing" && ghostPracticeSession.active() !== null) return; setState(screen); }, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
+    tick: () => simulation.tick, setTick: (tick) => { simulationRuntime.reset(tick); }, clearInputProjection: () => { liveInputAdapter.clear(); },
+    reward: rewardRuntime.snapshot, restoreReward: rewardRuntime.restore, captureGhost: () => GHOST.captureRuntimeState(), restoreGhost: (snapshot) => { GHOST.restoreRuntimeState(snapshot); }, captureIdentityState: () => combatRuntime.captureIdentityState(), restoreIdentityState: (snapshot) => { combatRuntime.restoreIdentityState(snapshot); },
+    runtimeState: stateForgeRuntime.capture, restoreRuntimeState: stateForgeRuntime.restore, hudPresentation: hudFeedback, tutorialPresentation: { capture: () => TUT.capturePresentation(), restore: (value) => { TUT.restorePresentation(value); } },
+    particlesPresentation: createLiveParticlePresentationState(FX, () => ({ effects: CONFIG.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }), dependencies.cosmeticEmissionRandom),
+    captureCinema: () => CINEMA.captureState(),
+    validateCinema: stateForgeRuntime.validate,
+  });
+  const ghostSnapshotRegistry = createDefaultStateCodecRegistry(); const restoreGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) => launchGhostPracticeChild(child, { registry: ghostSnapshotRegistry, stateForge: liveStateForge, hasLiveWorld: () => hostState.run() !== null, practice: ghostPracticeSession, clearRestoredRecording: () => { GHOST.restoreRuntimeState({ recording: null }); Input.stopSemanticRecording(); }, setPlaying: () => { setState("playing", { practiceLaunch: true }); }, requestPointer: requestLock }); const launchGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]): ReturnType<typeof launchGhostPracticeChild> => challenge.request(child);
+  const captureGhostStateSnapshot = (tick: number): TearSnapshotV1 | undefined => {
+    const recorder = ghostV3;
+    if (recorder?.active !== true) return;
+    const replayContext = ghostV3Session.replayContext();
+    if (replayContext === undefined) {
+      // Missing bootstrap identity is explicit degradation, never a replayable keyframe.
+      recorder.record("events", tick, {
+        type: "ghost.snapshot-degraded",
+        reason: "immutable Ghost V3 replay bootstrap context is unavailable",
+      });
+      return;
+    }
+    try {
+      const snapshot = captureLiveStateForgeSnapshot({
+        id: `ghost-v3-${String(liveRun().runSeed)}-keyframe-${String(tick)}`, tick, stateClass: "recorded-canonical",
+        seed: String(liveRun().runSeed), stateForge: liveStateForge, rng: worldContext.services.random.snapshot(), registry: ghostSnapshotRegistry,
+        observationClass: "structured-state", producer: "ghost-v3-live-recorder", target: replayContext.build.target,
+        contentHash: replayContext.build.contentHash, staticBuild: replayContext.build,
+        sourceId: ghostLiveBootstrapEventId(recorder.activeSessionId),
+        visualHash: stableVerificationHash({ tick, player: { x: livePlayer().x, y: livePlayer().y, facing: livePlayer().facing }, blade: { x: liveBlade().x, y: liveBlade().y, state: liveBlade().state } }),
+        actor: "human", executionClass: "engineering", trainingConsent: "no-training",
+      }); recorder.record("keyframes", tick, snapshot); return snapshot;
+    } catch (error) {
+      recorder.record("events", tick, { type: "ghost.snapshot-degraded", reason: error instanceof Error ? error.message : String(error) }); return undefined;
+    }
+  };
+  const finaleCapture = createLiveGhostFinaleCompanion({ session: ghostV3Session, frames: ghostFrames, tick: () => simulationRuntime.scheduler.tick, run: liveRun, finaleActive: () => story.finale !== null && RUN_LIFECYCLE.snapshot().phase === "finale", completed: () => state === "win" && RUN_LIFECYCLE.snapshot().phase === "terminated", captureReceipt: captureGhostAuthoritativeReceipt, witness: () => ({ canonical: projectCanonicalGameplayState(simulationRuntime.scheduler.tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()), finale: campaignRuntime.captureFinaleBinding(), cinema: CINEMA.captureState(), cinemaInput: CINEMA.captureRecordedInput(), lifecycle: RUN_LIFECYCLE.snapshot(), rng: worldContext.services.random.snapshot(), seconds: worldContext.services.clock.seconds(), stage: stageRuntime.index }) }); const challenge = createLiveGhostChallengeComposition({ factory: browserIndexedDb, recording: ghostV3Session, frames: ghostFrames, stateForge: liveStateForge, registry: ghostSnapshotRegistry, launch: restoreGhostPractice, rng: () => worldContext.services.random.snapshot(), input: () => simulationRuntime.input.snapshot(), releaseInput: (tick) => { simulationRuntime.input.restore({ ...simulationRuntime.input.snapshot(), tick, moveX: 0, moveY: 0, primaryHeld: false }); }, startInput: () => { Input.startSemanticRecording(); setState("playing", { practiceLaunch: true }); requestLock(); }, stopInput: () => { Input.stopSemanticRecording(); },
+    stateHash: () => stableVerificationHash(projectCanonicalGameplayState(simulationRuntime.scheduler.tick, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession())), tick: () => simulationRuntime.scheduler.tick, pause: () => { if (state === "playing") setState("paused"); }, abandon: abandonLiveRun, notice: (message) => { addFloater(livePlayer().x, livePlayer().y - 70, message, true, "#13c4d6"); }, captureReceipt: captureGhostAuthoritativeReceipt }); observeChallengeEvent = challenge.observe; stopChallengeRun = challenge.stop; ghostPracticeSession.beforeClear?.(challenge.reset);
+  const screenRect = () => presentationHost.screenRectangle();
+  const biomeMode = () => ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(liveRun().mode);
+  const shopFeedback = createLiveShopFeedbackState();
+  const interfaceComposition = createLiveInterfaceComposition({
+    wipe: { canvas, context: ctx, createCanvas: () => browserDocument.createElement("canvas"), reducedEffects: () => GFX.low, flashScale: () => A11Y.flashScale, random: cosmeticRandom, ease: ez },
+    worldSurface: { canvas: ctx, ui: UI, width: W, height: H, get cssPerLogicalPixel() { return viewport.cssPerLogicalPixel; }, get safe() { return { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l }; }, get ink() { return THEME.ink; }, get darkTheme() { return THEME.dark; }, get timeSeconds() { return worldContext.services.clock.seconds(); }, get lowGraphics() { return GFX.low; }, get reducedMotion() { return A11Y.reducedMotion; }, get highContrast() { return A11Y.highContrast; } },
+    screens: { surfaces: dependencies.surfaces,
+      renderer: { canvas: ctx, ui: UI, width: W, height: H, screenRectangle: screenRect, safeInsets: () => SAFE, time: interfaceFrame.seconds, enterAmount: interfaceFrame.enterAmount, enterSeconds: interfaceFrame.enterSeconds, deltaSeconds: interfaceFrame.deltaSeconds, mouse: () => ({ x: Input.mouseX, y: Input.mouseY }), scroll: interfaceInteraction.scroll, focus: interfaceInteraction.focus, touch: () => Input.touchActive(), reducedMotion: () => A11Y.reducedMotion, enqueue: interfaceInteraction.enqueue },
+      replay: { dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: interfaceFrame.seconds, deltaSeconds: interfaceFrame.deltaSeconds, fallbackPlayer: livePlayer, bossById, setScreen: (screen, context) => setState(screen, context), formatTime: fmtTime, document: browserDocument, browserIndexedDb, launchGhostPractice },
+      library: { beat, chase, dependencies, canvas: ctx, height: H, time: interfaceFrame.seconds, enterSeconds: interfaceFrame.enterSeconds, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, ease: ez, formatTime: fmtTime, getBest, ghostVault, ownerRecovery, career: career.port },
+      settings: { dependencies, document: browserDocument, window: browserWindow, canvas, width: W, overscan: () => OVERSCAN, screen: () => state, setScreen: (screen, context) => setState(screen, context), settingsController, settings, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, installPrompt },
+      actions: { controlChase: (command) => { if (command === "toggle") chase.toggle(); else chase.stop(); }, ghostFiles: ghostVault, loadOwnGhostCapsules: () => { void ownerRecovery.loadOwn().then(() => { presentationHost.render(); }); }, recoverOwnGhostCapsule: (id) => { void ownerRecovery.recover(id).then(() => { presentationHost.render(); }); }, closeOwnGhostCatalog: () => { ownerRecovery.close(); }, setScreen: (screen) => { if (screen !== "profile") ownerRecovery.close(); if (screen === "academy") academyScreen.refresh(); if (screen === "foundry") foundryScreen.refresh(); if (screen === "ghostlab") void playerWatch.refresh(); setState(screen); }, openGhostPublication: (id) => { void ghostPublicationScreen.open(id).then(() => { setState("ghostpublication"); presentationHost.render(); }); }, grantGhostPublication: () => { void ghostPublicationScreen.grant().then(() => { presentationHost.render(); }); }, runGhostPublicationOnce: () => { void ghostPublicationScreen.runOnce().then(() => { presentationHost.render(); }); }, cancelGhostPublication: () => { void ghostPublicationScreen.cancel().then(() => { presentationHost.render(); }); }, openGhostSupport: (id) => { void ghostSupportScreen.open(id).then(() => { setState("ghostsupport"); presentationHost.render(); }); }, createGhostSupport: () => { void ghostSupportScreen.create().then(() => { presentationHost.render(); }); }, openGhostLab: (destination) => { if (destination === "academy" || destination === "training-archive") { academyScreen.refresh(); setState("academy"); } else if (destination === "foundry" || destination === "training-operations") { foundryScreen.refresh(); setState("foundry"); } else if (destination === "watch") { void playerWatch.refresh(); setState("ghostlab"); } else if (destination === "botevidence") { void botEvidence.refresh().then(() => { presentationHost.render(); }); setState("botevidence"); } else { setState("profile"); libraryAdapters.selectProfileTab(destination === "career" ? "career" : "vault"); } }, controlGhostLabWatch: (command) => { void playerWatch[command](); if (command === "resume" && state === "paused") { setState("playing"); requestLock(); } presentationHost.render(); }, resetScroll: () => { interfaceInteraction.setScroll(0); }, setSetupSelection: (kind, id) => { if (kind === "mode" && isRunModeSelection(id) && dependencies.surfaces.admits(modeSurface(id))) { session.setSelectedMode(id); if (trainingRunRequiresPreflight(id)) void trainingHost.ensureLoaded(); } else if (kind === "difficulty" && isRunDifficultySelection(id)) session.setSelectedDifficulty(id); else if (kind === "weapon") session.setSelectedWeapon(id); else if (kind === "boss") session.setSelectedBoss(id); }, startSelectedRun: () => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }, startSelectedRace: () => { seedRace.reference(() => { startRunWithPreflight(session.selectedMode(), session.selectedDifficulty()); }); }, startRun: (mode, difficulty) => { if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty); }, currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun, lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal", resetSettings: () => { settingsController.reset(); }, refreshAcademy: academyScreen.refresh, advanceAcademyDagger: academyScreen.advance, reviewAcademyDagger: academyScreen.review, withdrawAcademyModelTraining: academyScreen.withdrawModelTraining, optInHumanCalibration: (consent) => { academyScreen.setHumanCalibrationConsent(consent); }, revokeHumanCalibration: () => { academyScreen.setHumanCalibrationConsent("revoked"); }, refreshFoundry: foundryScreen.refresh, promoteFoundry: foundryScreen.promote, restoreFoundryBaseline: foundryScreen.restoreBaseline, bootstrapFoundry: foundryScreen.bootstrap, setFoundryScheduleEnabled: foundryScreen.setScheduleEnabled, signIn: () => { void Cloud.signIn(); }, signOut: () => { void Cloud.signOut(); }, pinReplay: (id, pinned) => VAULT.pin(id, pinned), deleteReplay: (id) => { VAULT.remove(id); }, dispatchPlayground: dispatchPlaygroundAction, tutorialAction: (command, lessonId) => {
+        tutorialSessionActions.dispatch(command, lessonId); } },
+      runState: { screen: () => state, setScreen: (screen) => { setState(screen); }, run: liveRun, player: livePlayer, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, continueSeconds: reviveCountdown.seconds, setContinueSeconds: reviveCountdown.setSeconds, replayAvailable: () => session.lastRecording() !== null, outcome: currentOutcome },
+      runServices: { ghostChase: chase.snapshot, dependencies, reward: rewardRuntime, formatTime: fmtTime, clamp, trickColor, saveBest, awardCoins, cinema: CINEMA, clearFinale: () => { story.finale = null; }, terminateRun: (reason) => { abandonLiveRun(reason); }, addFloater, addShake, addFlash, requestPointer: requestLock, playerWatch: playerWatch.snapshot, persistentEffects: () => ghostPracticeSession.active() === null && !seedRace.active() && !beat.active(), tutorialSession: () => (liveRun().mode === "tutorial" || (liveRun().mode === "playground" && TUT.session().phase === "free-practice")) && TUT.session().phase !== "inactive" ? TUT.session() : undefined },
+      menuState: { selection: () => session.selection(), scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, time: interfaceFrame.seconds, shop: () => shopFeedback.snapshot(), setShop: (value) => { shopFeedback.set(value); } },
+      menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck }, playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
+      academy: academyScreen.snapshot,
+      foundry: foundryScreen.snapshot,
+      ghostLab: replayHub.snapshot,
+      botEvidence: botEvidence.snapshot,
+      ghostPublication: ghostPublicationScreen.snapshot,
+      ghostSupport: ghostSupportScreen.snapshot,
+    },
+    frameState: { screen: () => state, previousScreen: interfaceFrame.previousScreen, setPreviousScreen: interfaceFrame.setPreviousScreen, deltaSeconds: interfaceFrame.deltaSeconds, enterSeconds: interfaceFrame.enterSeconds, setEnterSeconds: interfaceFrame.setEnterSeconds, enterAmount: interfaceFrame.enterAmount, setEnterAmount: interfaceFrame.setEnterAmount, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus, controls: interfaceInteraction.buttons, resetControls: interfaceInteraction.resetButtons, biomeMode, enemies: () => hostState.enemies(), flash: () => feel.flash, bossBeat: () => hostState.bossBeat(), bossIntroActive: () => { const intro = hostState.bossIntro(); return intro !== null && intro.delay <= 0; }, bannerSeconds: () => feel.bannerSeconds, rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }), timeSeconds: interfaceFrame.seconds },
+    frameServices: { canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, resizeIfNeeded: resizeCanvas, input: Input, ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale, touchActive: () => Input.touchActive(), controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), confirmGlyph: () => PAD.glyph(0), pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, fullscreenButton, controlHintContext: () => ({ runSeconds: state === "playing" ? liveRun().runTime : 0, completedRuns: dependencies.PROFILE.stat("runs") }), clamp, ease: ez, blendColor: blendCol, setTheme: (background, playLike) => { THEME.set(playLike && biomeMode() ? background : "#ffffff"); UI.ink = THEME.ink; }, themeInk: () => THEME.ink, backdropPost: (context, stage, camera) => { Backdrop.post(context, stage, camera); }, drawMenuAttract: () => { Attract.draw(ctx); }, renderScreen: (screen) => { renderRegisteredScreen(screen, interfaceComposition.screens.renderers); }, isMenuScreen, playInterfaceSound: () => { SFX.ui(); }, hoverAnimation: interfaceInteraction.hoverAnimations(), trickColor },
+    worldState: { run: liveRun, player: livePlayer, blade: liveBlade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(), floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(), environment: () => environment.snapshot(), screen: () => state, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: interfaceFrame.deltaSeconds, bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: hudFeedback.snapshot, hudClockSeconds: hudFeedback.clockSeconds, advanceHud: hudFeedback.advance },
+    worldServices: { chase, dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT, finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez }, onBiomeTransition: (begin) => { Attract.onBiomeChange = begin; },
+  }, { simulationTick: () => simulation.tick, browserWindow, gfx: () => settings.gfx, debugAvailable: PANTHEON_DEBUG }); const { wipe: Wipe, frame: presentationHost, screens: screenComposition } = interfaceComposition;
+  const { library: libraryAdapters, replay: replayAdapters, settings: settingsRenameAdapters, modelRenderers: presentationScreenRenderers } = screenComposition; cancelPendingReplayOpen = replayAdapters.cancelPendingOpen; leaveCareer = () => { libraryAdapters.careerAction("suspend"); }; browserWindow.addEventListener("pagehide", leaveCareer);
+  if (__TEAR_TEST_BUILD__ && (TEST_MODE || dependencies.engineeringQuery.get("watchagent") === "1")) void import("../../tearbench/browser/live-runtime-bridge").then(({ installGhostV3BrowserInspector, installGhostVaultConditionalCommitInspector, installLiveTearRuntimeBridge }) => {
+    installGhostV3BrowserInspector(browserWindow, {
+      manifest: () => ghostV3?.lastManifest ?? null,
+      manifests: () => listBrowserGhostCapsuleManifests(browserIndexedDb),
+      read: (id: string) => readBrowserGhostCapsule(browserIndexedDb, id),
+      replay: (id: string) => readBrowserGhostCapsuleReplay(browserIndexedDb, id),
+      admission: (id: string) => readBrowserGhostCapsuleReplayAdmission(browserIndexedDb, id),
+      // Test-only observation seam; an unknown mode must never fall back to weaker verification.
+      verify: (id: string, mode?: string) => {
+        if (mode !== undefined && mode !== "opening-continuation") return Promise.reject(new RangeError("unsupported Ghost verification mode"));
+        return mode === "opening-continuation" ? readBrowserGhostCapsule(browserIndexedDb, id).then((capsule) => capsule === undefined ? undefined : verifyGhostCapsuleOpeningContinuation(capsule))
+          : verifyBrowserGhostCapsuleProductionReplay(browserIndexedDb, id);
+      },
+      seek: (id: string, tick: number) => seekBrowserGhostCapsuleProductionReplay(browserIndexedDb, id, tick),
+      practice: (id: string, tick: number, mode) => forkBrowserGhostCapsulePractice(browserIndexedDb, id, tick, mode),
+      active: () => ghostV3?.active === true, activePractice: ghostPracticeSession.active,
+      failure: () => ghostV3?.failure ?? null,
+    });
+    installGhostVaultConditionalCommitInspector(browserWindow);
+    const consumedActions: CommandEnvelope<GameAction>[] = [];
+    Input.semantic.subscribe((entry) => { consumedActions.push(entry); });
+    const actionRouting = { screen: () => state, setScreen: (screen: "playing" | "paused") => { setState(screen); },
+      runMode: () => liveRun().mode, reward: rewardRuntime.snapshot, chooseUpgrade: screenComposition.chooseUpgrade, chooseReserve: screenComposition.chooseReserve,
+      chooseTier: screenComposition.chooseTier, dispatchPlayground: dispatchPlaygroundAction, renderControls: () => { presentationHost.render(); }, controls: interfaceInteraction.buttons, focus: interfaceInteraction.focus,
+    };
+    installLiveTearRuntimeBridge({
+      width: W, height: H, state: hostState, actorId: (enemy) => combatRuntime.id(enemy, "enemy"),
+      environment: () => environment, resetEntityIdentities: () => { combatRuntime.restoreIdentityState({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] }); },
+      platforms: () => stageRuntime.platforms,
+      platformsForStage: (index) => dependencies.stagePlatforms(index, CONFIG),
+      stage: () => ({ ...stageRuntime.current, index: stageRuntime.index }), lifecycle: () => RUN_LIFECYCLE.snapshot(), bossIntroActive: () => hostState.bossIntro() !== null,
+      choiceIds: () => liveRewardChoiceIds(actionRouting), focusedControlId: () => liveRewardChoiceIds(actionRouting)[interfaceInteraction.focus()], progression: () => ({ wallet: dependencies.META.coins(), lifetimeEarned: dependencies.META.data.lifetimeEarned, levels: Object.fromEntries(dependencies.SHOP.map((item) => [item.id, dependencies.META.level(item.id)])), shop: dependencies.SHOP.map((item) => ({ id: item.id, level: dependencies.META.level(item.id), maxLevel: item.maxLevel, cost: dependencies.META.cost(item), enabled: dependencies.META.canBuy(item) })) }), outcome: () => session.outcome(), screen: () => state,
+      setScreen: (screen) => { setState(screen); }, selectBoss: (bossId) => { session.setSelectedBoss(bossId); },
+      selectWeapon: (weaponId) => { hostState.setSelectedWeapon(weaponId); },
+      setRunSeed: (seed) => { session.setRunSeed(seed); }, startRun: (mode, difficulty) => { startRunImmediate(mode, difficulty); },
+      drainRecording: () => ghostV3?.drain() ?? Promise.resolve(), stopFrameLoop: () => { frameDriver.stop(); }, startFrameLoop: () => { frameDriver.start(({ deltaSeconds, intervalSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds); }); }, pushAction: (action) => { Input.semantic.push(action); },
+      setSemanticInputAuthority: inputAuthority.setSemanticInputAuthority, routeAction: (action) => routeLiveTearBenchAction(actionRouting, action), skipCinematic: () => { CINEMA.requestSkip(); },
+      activateControl: (action) => { presentationHost.render(); const encoded = JSON.stringify(action); const control = interfaceInteraction.buttons().find((entry) => entry.enabled !== false && JSON.stringify(entry.semanticAction) === encoded); if (control === undefined) return false; screenComposition.dispatch(action); return true; },
+      terminateRun: () => { abandonLiveRun("tearbench-terminated", { tearBenchTerminated: true }); setState("paused"); },
+      resetSemanticInput: () => { Input.startSemanticRecording(); }, advanceFixedTick: () => liveFrameRuntime.advanceExactSimulation(),
+      advanceRenderFrame: (deltaSeconds) => liveFrameRuntime.advanceSimulation(deltaSeconds), advanceApplicationFrame: (deltaSeconds) => { combatHost.frameCoordinator.run(deltaSeconds); },
+      advanceStateForgeCinematicBeat: createLiveStateForgeCinematicAdvance(CINEMA),
+      authoritative: () => authoritativeStep.lastResult, ...createLiveCanonicalWatchComposition({ state: hostState, screen: () => state, canonicalGameplayState: () => authoritativeStep.lastResult?.state ?? null }), canonicalOriginState: () => simulationRuntime.scheduler.tick === 0 && state === "playing" ? projectCanonicalGameplayState(0, simulationRuntime.input.snapshot(), liveRun(), livePlayer(), liveBlade(), hostState.enemies().map(projectLiveCanonicalEnemy), environment.snapshot(), TUT.captureSession()) : null,
+      random: () => worldContext.services.random.snapshot(),
+      ...interfaceComposition.capture.ports(() => { presentationHost.render(); }, () => canvas.toDataURL("image/png")), setCameraEffectsForTest: (effects) => { feel.zoom = effects.zoom; impact.shake = effects.shake; },
+      subscribeEngineEvent: (listener) => GAMEPLAY_EVENTS.subscribe(listener),
+      drainConsumedActions: () => consumedActions.splice(0, consumedActions.length),
+      emitPhysicalInput: (input) => { emitLiveTearBenchPhysicalInput(input, { window: browserWindow, canvas, width: W, height: H }); },
+      setTimeEffectsForTest: (effects) => { if (effects.hitStop !== undefined) impact.hitStop = effects.hitStop; if (effects.slowMotion !== undefined) impact.slowMotion = effects.slowMotion; if (effects.timeScale !== undefined) feel.timeScale = effects.timeScale; },
+      stateForge: liveStateForge, replayProgression: (ledger) => replayLiveStateForgeProgression({ dependencies, state: hostState, configuration }, ledger), loadStage: loadTransitionStage, startNextWave: runControllers.api.startNextWave, applyBossFinisher: (bossId, remainingHp) => { const matches = hostState.enemies().filter((enemy) => enemy.isBoss && enemy.bossId === bossId && !enemy.dead && !enemy.dying); if (matches.length !== 1 || matches[0] === undefined) throw new Error(`boss-finisher requires exactly one live ${bossId}`); matches[0].hp = remainingHp; matches[0].hpDisplay = remainingHp; }, captureProgressionRuntime: () => liveRun().mods, restoreProgressionRuntime: (runtime) => { const run = liveRun(); run.mods = runtime as typeof run.mods; }, finaleIntents: () => finaleIntentBatches, finaleOutwardCalls: () => finaleOutwardCalls, audioDispatchReceipts: () => audioDispatchReceipts, outcomeChronology: () => outcomeChronology?.entries() ?? [],
+    }, browserWindow);
+  });
+  if (__TEAR_TEST_BUILD__ && PANTHEON_DEBUG) void import("../engineering/debug-composition").then(({ installLiveGameDebug }) => {
+    installLiveGameDebug({
+      enabled: PANTHEON_DEBUG, dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE,
+      cinema: CINEMA, stage: stageRuntime, environment, width: W, height: H,
+      spawnExplicitVariant: (kind, variantId) => { spawnOne({ type: kind, variantId }); },
+      startRun: (mode, difficulty) => { startRunWithPreflight(mode, difficulty); }, setScreen: setState, screen: () => state, setContinueSeconds: reviveCountdown.setSeconds,
+      openDraft: openRewardDraft, openTier: openRewardTier, run: liveRun, player: livePlayer, blade: liveBlade, applyUpgrade, enterReplay: (record, from) => { replayAdapters.enter(record, from); },
+      beginRename: () => { settingsRenameAdapters.beginRename(false, true); }, renameSnapshot: settingsRenameAdapters.renameSnapshot, selectSettingsTab: settingsRenameAdapters.selectSettingsTab,
+      replayStatus: replayAdapters.status, applyOptions: (options) => { Object.assign(settings, options); applySettings(); }, settings, selected: () => session.selection(),
+      tutorialSnapshot: () => ({ session: TUT.session(), active: TUT.active, lessonIndex: TUT.idx, lessonCount: TUT.steps.length, lesson: TUT.step().t, description: TUT.step().d,
+        arena: TUT.step().arena, arenaLabel: TUT.step().arenaLabel, teachingFocus: TUT.step().teachingFocus,
+        completionDelay: TUT.doneT, endingTime: TUT.endT, counters: { ...TUT.n } }),
+      selectBoss: (boss) => { session.setSelectedBoss(boss); }, chapterBrief: () => Boolean(story.chapterFlow?.brief), finale: () => story.finale, rewardSnapshot: rewardRuntime.snapshot,
+      authoritative: () => authoritativeStep.lastResult, startFinale: startAdventureFinale, severFinale: () => severFinaleAnchor(false),
+    });
+  });
+  let firstFrameDrawn = false;
+  frameDriver.start(({ deltaSeconds, intervalSeconds }) => { if (state === "playing") playerWatch.advance(); combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds);
+    if (!firstFrameDrawn) { firstFrameDrawn = true; dismissBootScreen(browserDocument); } });
+})(); }

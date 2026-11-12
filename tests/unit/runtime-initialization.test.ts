@@ -5,7 +5,7 @@ import {
   createConfigRestorer,
   initializePlatformServices,
   shouldPromptForUsername,
-} from "../../src/app/runtime-initialization";
+} from "../../src/app/shell/runtime-initialization";
 
 describe("runtime initialization", () => {
   it("captures and consumes the browser install prompt once", () => {

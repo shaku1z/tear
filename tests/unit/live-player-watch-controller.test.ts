@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LivePlayerWatchController, type PlayerWatchPort } from "../../src/app/live-player-watch-controller";
+import { LivePlayerWatchController, type PlayerWatchPort } from "../../src/app/engineering/player-watch-controller";
 
 const state = Object.freeze({ tick: 1 } as never);
 function port(): PlayerWatchPort & { readonly pushed: ReturnType<typeof vi.fn>; readonly authority: ReturnType<typeof vi.fn>; readonly started: ReturnType<typeof vi.fn> } {

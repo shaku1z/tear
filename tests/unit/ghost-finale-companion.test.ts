@@ -1,4 +1,4 @@
-import { createGhostFinaleScreenAdapter } from "../../src/app/ghost-finale-screen-adapter";
+import { createGhostFinaleScreenAdapter } from "../../src/app/replay/ghost-finale-screen-adapter";
 import type { ReplayScreenView } from "../../src/presentation/screens/contracts";
 import { describe, it, expect } from "vitest";
 import { createProductionGhostReplayComposition, captureProductionReplayCheckpoint, restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
@@ -6,8 +6,8 @@ import { stableVerificationHash } from "../../src/replay/hash";
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
-import { createLiveGhostFrameRecording } from "../../src/app/live-ghost-frame-recording";
-import { createLiveGhostFinaleCompanion } from "../../src/app/live-ghost-finale-companion";
+import { createLiveGhostFrameRecording } from "../../src/app/replay/ghost-frame-recording";
+import { createLiveGhostFinaleCompanion } from "../../src/app/replay/ghost-finale-companion";
 import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
 import { GHOST_APPLICATION_FRAMES_V1 } from "../../src/ghost/application-frame-events";
 import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-receipt";

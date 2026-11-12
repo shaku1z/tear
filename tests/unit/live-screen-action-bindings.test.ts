@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveScreenActionBindings, type ScreenActionBindingPorts } from "../../src/app/live-screen-action-bindings";
+import { createLiveScreenActionBindings, type ScreenActionBindingPorts } from "../../src/app/interface/screen-action-bindings";
 
 describe("live screen action bindings", () => {
   it("starts a declared Race only through its explicit setup action", () => {

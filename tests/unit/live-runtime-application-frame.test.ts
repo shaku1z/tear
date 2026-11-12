@@ -8,7 +8,7 @@ import type { LiveTearRuntimeEnvironmentContext } from "../../src/tearbench/live
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
 import type { AudioDispatchReceipt } from "../../src/audio/audio-dispatch-receipts";
-import { createLivePresentationCaptureController } from "../../src/app/live-presentation-capture";
+import { createLivePresentationCaptureController } from "../../src/app/interface/presentation-capture";
 
 const SCENARIO = Object.freeze({
   format: "tear-contract",

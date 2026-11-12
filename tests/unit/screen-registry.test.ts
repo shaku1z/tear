@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { LEGACY_APP_SCREENS, type LegacyAppScreen } from "../../src/app/legacy-state-controller";
-import { isMenuScreen, isWorldScreen, renderRegisteredScreen, type ScreenRendererRegistry } from "../../src/app/screen-registry";
+import { LEGACY_APP_SCREENS, type LegacyAppScreen } from "../../src/app/interface/legacy-state-controller";
+import { isMenuScreen, isWorldScreen, renderRegisteredScreen, type ScreenRendererRegistry } from "../../src/app/interface/screen-registry";
 
 describe("screen registry", () => {
   it("dispatches every application screen through its exact renderer", () => {

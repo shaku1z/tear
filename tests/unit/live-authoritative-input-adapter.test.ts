@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
 import type { PlayerInputPort } from "../../src/gameplay/entities/player";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
 import { CONFIG } from "../../src/config/game-config";
 import { clamp, len, lerp, lerpAngle } from "../../src/domain/geometry";
 import { createBlade } from "../../src/gameplay/entities/blade";

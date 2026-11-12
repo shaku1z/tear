@@ -1,7 +1,7 @@
 import { driveTutorialLesson, type TutorialDriverPort } from "../../src/tearbench/tutorial-course-driver";
 import type { TutorialGoldProof } from "../../src/tearbench/tutorial-gold-generation";
 import type { GameAction } from "../../src/input/game-action";
-import { isPracticeBossActor } from "../../src/app/live-boss-phase-practice";
+import { isPracticeBossActor } from "../../src/app/campaign/boss-phase-practice";
 import type { PracticeBossState } from "../../src/gameplay/training/practice-boss-catalog";
 import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";

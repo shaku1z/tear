@@ -10,7 +10,7 @@ import { reviseGhostCapsuleManifest, ghostRootIntegrity, type TearGhostManifest 
 import { stableVerificationHash } from "../../src/replay/hash";
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
 import { createGhostColdRestoreBrowserPort } from "../../src/ghost/browser-cold-restore";
-import { createGhostVaultLibraryController } from "../../src/app/ghost-vault-library-controller";
+import { createGhostVaultLibraryController } from "../../src/app/library/ghost-vault-library-controller";
 import { prepareGhostCapsuleProtection } from "../../src/ghost/capsule-protection";
 
 const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));

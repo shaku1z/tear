@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveInterfaceFrameState } from "../../src/app/live-interface-frame-state";
+import { createLiveInterfaceFrameState } from "../../src/app/interface/interface-frame-state";
 
 describe("live interface frame state", () => {
   it("owns screen navigation, timing, and entrance state", () => {

@@ -8,7 +8,7 @@ import { createSourceVoidRuntimeBridge } from "../../src/gameplay/campaign/sourc
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
 import { stepBossRuntime } from "../../src/gameplay/combat/boss-step-runtime";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { bindLiveRootboundActors } from "../../src/app/live-rootbound-wiring";
+import { bindLiveRootboundActors } from "../../src/app/world/biomes/rootbound-wiring";
 import { clamp, lerp } from "../../src/domain/geometry";
 import { describe, expect, it } from "vitest";
 

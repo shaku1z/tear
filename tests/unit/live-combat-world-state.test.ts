@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveCombatWorldState } from "../../src/app/live-combat-world-state";
+import { createLiveCombatWorldState } from "../../src/app/combat/combat-world-state";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 
 describe("live combat world state", () => {

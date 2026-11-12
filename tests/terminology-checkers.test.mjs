@@ -105,7 +105,7 @@ test("terminology checker accepts only the existing exact compatibility path", (
 test("Run Monitor vocabulary owners are scanned with only their exact historical panel exception", () => {
   const registry = baseRegistry();
   assert.ok(registry.userFacingCopyScan.pathPatterns.includes("src/agents/panel-surface.ts"));
-  assert.ok(registry.userFacingCopyScan.pathPatterns.includes("src/app/live-player-watch-controller.ts"));
+  assert.ok(registry.userFacingCopyScan.pathPatterns.includes("src/app/engineering/player-watch-controller.ts"));
 
   withFixture((root) => {
     writeRegistry(root, registry);
@@ -121,7 +121,7 @@ test("Run Monitor vocabulary owners are scanned with only their exact historical
 
   withFixture((root) => {
     writeRegistry(root, registry);
-    writeFixture(root, "src/app/live-player-watch-controller.ts", 'export const label = "Watch Agent";\n');
+    writeFixture(root, "src/app/engineering/player-watch-controller.ts", 'export const label = "Watch Agent";\n');
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
     assert.equal(result.ok, false);
     assert.ok(result.findings.some((finding) => finding.alias === "Watch Agent"

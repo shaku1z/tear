@@ -7,13 +7,13 @@ import type {
   ScreenControl, ScreenRenderContext, ScreenUiPort,
 } from "../../src/presentation/screens";
 import { createLegacyScreenRenderers } from "../../src/presentation/screens";
-import { campaignDraftGuidance } from "../../src/app/live-run-screen-adapters";
+import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
-import { LiveGhostLabHomeController } from "../../src/app/live-ghost-lab-home";
-import type { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
+import { LiveGhostLabHomeController } from "../../src/app/replay/ghost-lab-home";
+import type { LivePlayerWatchController } from "../../src/app/engineering/player-watch-controller";
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";

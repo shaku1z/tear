@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLiveGhostOpeningCapture } from "../../src/app/live-ghost-opening-capture";
+import { createLiveGhostOpeningCapture } from "../../src/app/replay/ghost-opening-capture";
 import type { TearCausalEventV1 } from "../../src/tearbench/contracts";
 
 function fixture() {

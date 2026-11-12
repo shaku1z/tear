@@ -1,4 +1,4 @@
-import { encodeStudioVp8Webm } from "../../src/app/browser-ghost-studio-webm";
+import { encodeStudioVp8Webm } from "../../src/app/replay/browser-ghost-studio-webm";
 import { describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted((): { sessionCalls: number; mapped: unknown; session?: unknown } => ({
@@ -13,7 +13,7 @@ vi.mock("../../src/ghost/production-replay-session", () => ({
   createGhostProductionReplaySession: () => { fixture.sessionCalls += 1; if (fixture.session !== undefined) return fixture.session; throw new Error("must not create a session"); },
 }));
 
-import { createGhostTheaterScreenAdapter } from "../../src/app/ghost-theater-screen-adapter";
+import { createGhostTheaterScreenAdapter } from "../../src/app/library/ghost-theater-screen-adapter";
 import { createGhostCapsuleManifestV2 } from "../../src/ghost/capsule-contract";
 import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
 import { ghostCoachCandidate, projectGhostCoachHistory } from "../../src/ghost/coach-history";

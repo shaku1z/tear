@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 const captured = vi.hoisted(() => ({ context: null as Record<string, unknown> | null }));
 
-vi.mock("../../src/app/live-run-outcome-host", () => ({
+vi.mock("../../src/app/run/run-outcome-host", () => ({
   createLiveRunOutcomeHost: (context: Record<string, unknown>) => { captured.context = context; },
 }));
 vi.mock("../../src/gameplay/runtime/gameplay-event-publishers", () => ({
   createTearTerminalRunFactPublisher: () => vi.fn(),
 }));
 
-import { createLiveOutcomeComposition } from "../../src/app/live-outcome-composition";
+import { createLiveOutcomeComposition } from "../../src/app/run/outcome-composition";
 
 describe("live outcome composition pending-finale persistence", () => {
   it("keeps the same semantic input through scored Campaign closure and stops it at actual finale termination", () => {

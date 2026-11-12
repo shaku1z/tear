@@ -22,7 +22,7 @@ Build on Tear's Vitest suites, fixed-step simulation (120 Hz, per the ee5e931 or
 
 - Use `GameAction`/command envelopes for player intent; never test device key codes in simulation tests.
 - Use `SeededRandom` or an injected `RandomSource`; never monkey-patch global randomness.
-- Advance authoritative behavior in fixed ticks at the repository's current sim rate (120 Hz since the parity restoration — verify in `src/app/live-frame-runtime.ts`, don't assume). Render rate must not change the result.
+- Advance authoritative behavior in fixed ticks at the repository's current sim rate (120 Hz since the parity restoration — verify in `src/app/shell/frame-runtime.ts`, don't assume). Render rate must not change the result.
 - When expected behavior is "what the pre-redesign game did", derive expected values from oracle `ee5e931` via `$tear-oracle-parity` instead of guessing from the current build.
 - Assert semantic state, events, damage, timers, ownership, cleanup, or canonical hashes—not private call order unless it is the contract.
 - Keep fixtures deterministic, minimal, named after behavior, and diagnosable from their failure output.

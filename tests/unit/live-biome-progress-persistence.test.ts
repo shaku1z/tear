@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveBiomeProgressPersistence } from "../../src/app/live-biome-progress-persistence";
+import { createLiveBiomeProgressPersistence } from "../../src/app/progress/biome-progress-persistence";
 
 describe("live biome progress persistence adapter", () => {
   it("marks the biome before recording the resulting discovery maximum", () => {

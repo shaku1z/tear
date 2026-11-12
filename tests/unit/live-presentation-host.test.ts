@@ -2,17 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
-import { createLivePresentationHost } from "../../src/app/live-presentation-host";
-import { createUiConfirmArming } from "../../src/app/ui-runtime-controller";
-import * as hostModule from "../../src/app/live-presentation-host";
-import * as compositionModule from "../../src/app/live-presentation-composition";
-import * as screenModule from "../../src/app/live-screen-presentation-composition";
-import * as worldModule from "../../src/app/live-world-presentation-adapters";
-import { createLiveInterfaceComposition, type LiveInterfaceCompositionOptions } from "../../src/app/live-interface-composition";
+import { createLivePresentationHost } from "../../src/app/interface/presentation-host";
+import { createUiConfirmArming } from "../../src/app/interface/ui-runtime-controller";
+import * as hostModule from "../../src/app/interface/presentation-host";
+import * as compositionModule from "../../src/app/interface/presentation-composition";
+import * as screenModule from "../../src/app/interface/screen-presentation-composition";
+import * as worldModule from "../../src/app/world/world-presentation-adapters";
+import { createLiveInterfaceComposition, type LiveInterfaceCompositionOptions } from "../../src/app/interface/interface-composition";
 
 // Execute the actual coordinator callback without booting unrelated browser/storage owners.
 function coordinatorRender(composition: ReturnType<typeof createLiveInterfaceComposition>): () => void {
-  const source = ts.createSourceFile("live-game-runtime.ts", readFileSync("src/app/live-game-runtime.ts", "utf8"), ts.ScriptTarget.Latest, true);
+  const source = ts.createSourceFile("game-runtime.ts", readFileSync("src/app/shell/game-runtime.ts", "utf8"), ts.ScriptTarget.Latest, true);
   let callback: ts.ArrowFunction | undefined;
   let callbackCount = 0;
   const visit = (node: ts.Node): void => {

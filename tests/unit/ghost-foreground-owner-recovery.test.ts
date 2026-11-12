@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LiveGhostOwnerRecoveryController } from "../../src/app/live-ghost-owner-recovery-controller";
+import { LiveGhostOwnerRecoveryController } from "../../src/app/replay/ghost-owner-recovery-controller";
 import { createStandaloneGhostPublicationRuntime } from "../../src/platform/ghost-publication-runtime";
 import { GhostForegroundOwnerRecovery } from "../../src/ghost/foreground-owner-recovery";
 import { createMemoryGhostVaultBackend, GhostLocalVault, GhostStreamingRecorder, GHOST_VAULT_STORES,

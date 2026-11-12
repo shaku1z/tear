@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLiveAttractFeedback } from "../../src/app/live-attract-feedback";
+import { createLiveAttractFeedback } from "../../src/app/interface/attract-feedback";
 import { createAttract } from "../../src/presentation/attract-runtime";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { STAGES } from "../../src/gameplay/stages";

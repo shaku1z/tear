@@ -206,7 +206,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 
 **Purpose:** Replay/headless execution performs actual current weapon gameplay rather than simulating only Sword movement.
 
-**Primary files:** `src/tearbench/production-combat-phases.ts`, `src/tearbench/production-combat-simulation.ts`, `src/tearbench/production-replay-composition.ts`, `src/app/live-combat-actions.ts`, and existing current-weapon runtime tests/browser proofs.
+**Primary files:** `src/tearbench/production-combat-phases.ts`, `src/tearbench/production-combat-simulation.ts`, `src/tearbench/production-replay-composition.ts`, `src/app/combat/combat-actions.ts`, and existing current-weapon runtime tests/browser proofs.
 
 - [x] Replace gameplay no-ops with the existing source-owned weapon behavior; preserve legitimate presentation/audio/device-only no-ops.
 - [x] Wire weapon ability updates and semantic weapon-action flushing into detached execution.
@@ -224,7 +224,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 
 **Purpose:** Current non-weapon gameplay is not silently removed from detached execution.
 
-**Primary files:** `src/tearbench/production-combat-phases.ts`, `src/gameplay/combat/live-opening-phase.ts`, `src/gameplay/combat/live-collision-phase.ts`, `src/app/live-combat-actions.ts`, production enemy/boss modules, and the existing replay/headless tests.
+**Primary files:** `src/tearbench/production-combat-phases.ts`, `src/gameplay/combat/live-opening-phase.ts`, `src/gameplay/combat/live-collision-phase.ts`, `src/app/combat/combat-actions.ts`, production enemy/boss modules, and the existing replay/headless tests.
 
 - [x] Wire production world hazards and their authoritative damage or state transitions.
 - [x] Wire support auras/healing and canonical support subtype identity.
@@ -260,7 +260,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 
 **Purpose:** Normal players see current names and only capabilities that actually work.
 
-**Primary files:** `src/app/live-ghost-lab-home.ts`, `src/app/live-game-runtime.ts`, `src/app/live-bot-evidence-controller.ts`, `src/presentation/screens/ghost-lab.ts`, the current canonical screen facades, and existing player browser journeys.
+**Primary files:** `src/app/replay/ghost-lab-home.ts`, `src/app/shell/game-runtime.ts`, `src/app/engineering/bot-evidence-controller.ts`, `src/presentation/screens/ghost-lab.ts`, the current canonical screen facades, and existing player browser journeys.
 
 - [x] Keep Replay Hub, Training Archive, and Training Operations correctly named and truthful about their local-only limits.
 - [x] Bind Game Agent Evidence to a valid, trusted selected report hash or display an honest unavailable state with no dead route.
@@ -279,7 +279,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 
 **Purpose:** A test result can never silently claim the identity of a different game build.
 
-**Primary files:** `scripts/build-target.mjs`, `scripts/release-artifact.mjs`, `scripts/verify-release-artifact.mjs`, `src/app/composition.ts`, `src/tearbench/live-runtime-snapshots.ts`, `src/tearbench/production-replay-composition.ts`, and the browser journey/materialization harnesses.
+**Primary files:** `scripts/build-target.mjs`, `scripts/release-artifact.mjs`, `scripts/verify-release-artifact.mjs`, `src/app/shell/composition.ts`, `src/tearbench/live-runtime-snapshots.ts`, `src/tearbench/production-replay-composition.ts`, and the browser journey/materialization harnesses.
 
 - [x] Read the actual served build's `build-info.json` before accepting browser evidence.
 - [x] Carry artifact SHA, artifact hash, target, runtime/ruleset identity, seed, scenario ID, and execution class through emitted evidence.

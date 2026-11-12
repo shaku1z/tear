@@ -163397,7 +163397,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -163461,7 +163461,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -163525,7 +163525,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -163698,7 +163698,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -163762,7 +163762,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -163826,7 +163826,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -164550,7 +164550,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -165053,7 +165053,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -165116,7 +165116,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -165179,7 +165179,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -165242,7 +165242,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -165305,7 +165305,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -165468,7 +165468,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -165569,7 +165569,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -165716,7 +165716,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -166305,7 +166305,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -166499,7 +166499,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -167569,7 +167569,7 @@
       "auditNotes": "Fresh browser processes drive 30, 60, 144, and uncapped-jitter render schedules to the same fixed tick and compare canonical semantic hashes.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-frame-runtime.ts",
+        "src/app/shell/frame-runtime.ts",
         "src/simulation/fixed-step.ts"
       ]
     },
@@ -167677,7 +167677,7 @@
       "auditNotes": "Fresh browser processes drive 30, 60, 144, and uncapped-jitter render schedules to the same fixed tick and compare canonical semantic hashes.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-frame-runtime.ts",
+        "src/app/shell/frame-runtime.ts",
         "src/simulation/fixed-step.ts"
       ]
     },
@@ -168766,7 +168766,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -168825,7 +168825,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -168933,7 +168933,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -168991,7 +168991,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -169049,7 +169049,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -169107,7 +169107,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -169165,7 +169165,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -169223,7 +169223,7 @@
       "auditNotes": "Test composition uses memory-only persistence and unavailable external capabilities; tests prove unchanged localStorage and bridge absence from both production targets.",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ]
@@ -170535,7 +170535,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -170595,7 +170595,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -196811,7 +196811,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -287779,7 +287779,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -303332,7 +303332,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -305886,7 +305886,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -305950,7 +305950,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -306014,7 +306014,7 @@
       "auditNotes": "C22 wires TearBench to the actual live run, fixed-step, semantic-input, combat identity, replay-event, observation, lifecycle, RNG, screenshot, and test-only Ghost Lab surfaces.",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ]
@@ -332591,7 +332591,7 @@
       "auditRuleId": "EVID-C23-TRANSACTIONAL-RESTORE",
       "auditNotes": "Candidate state is rebuilt and validated off-world; both validation failure and an induced mid-commit failure leave the active world at its prior exact hash.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/state-codecs.ts"
       ]
     },
@@ -335573,7 +335573,7 @@
       "implementationRefs": [
         "src/tearbench/progression-ledger.ts",
         "src/tearbench/progression-replay.ts",
-        "src/app/live-state-forge-progression.ts"
+        "src/app/engineering/state-forge-progression.ts"
       ]
     },
     {
@@ -336360,7 +336360,7 @@
       "implementationRefs": [
         "src/tearbench/progression-ledger.ts",
         "src/tearbench/progression-replay.ts",
-        "src/app/live-state-forge-progression.ts"
+        "src/app/engineering/state-forge-progression.ts"
       ]
     },
     {
@@ -337000,7 +337000,7 @@
       "implementationRefs": [
         "src/tearbench/progression-ledger.ts",
         "src/tearbench/progression-replay.ts",
-        "src/app/live-state-forge-progression.ts"
+        "src/app/engineering/state-forge-progression.ts"
       ]
     },
     {
@@ -337056,7 +337056,7 @@
       "implementationRefs": [
         "src/tearbench/progression-ledger.ts",
         "src/tearbench/progression-replay.ts",
-        "src/app/live-state-forge-progression.ts"
+        "src/app/engineering/state-forge-progression.ts"
       ]
     },
     {
@@ -337161,7 +337161,7 @@
       "implementationRefs": [
         "src/tearbench/progression-ledger.ts",
         "src/tearbench/progression-replay.ts",
-        "src/app/live-state-forge-progression.ts"
+        "src/app/engineering/state-forge-progression.ts"
       ]
     },
     {
@@ -389984,7 +389984,7 @@
       "auditRuleId": "EVID-C23-LIVE-STATE-RESTORE",
       "auditNotes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ]
@@ -390127,7 +390127,7 @@
       "auditRuleId": "EVID-C23-TRANSACTIONAL-RESTORE",
       "auditNotes": "Candidate state is rebuilt and validated off-world; both validation failure and an induced mid-commit failure leave the active world at its prior exact hash.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/state-codecs.ts"
       ]
     },
@@ -390201,7 +390201,7 @@
       "auditRuleId": "EVID-C23-LIVE-STATE-RESTORE",
       "auditNotes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ]
@@ -390344,7 +390344,7 @@
       "auditRuleId": "EVID-C23-LIVE-STATE-RESTORE",
       "auditNotes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ]
@@ -390419,7 +390419,7 @@
       "auditRuleId": "EVID-C23-LIVE-STATE-RESTORE",
       "auditNotes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ]
@@ -390494,7 +390494,7 @@
       "auditRuleId": "EVID-C23-LIVE-STATE-RESTORE",
       "auditNotes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ]
@@ -390569,7 +390569,7 @@
       "auditRuleId": "EVID-C23-LIVE-STATE-RESTORE",
       "auditNotes": "C23 captures all registered live runtime domains, reloads the browser document, restores the snapshot, and matches the next 600 exact hashes under the same semantic actions.",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ]

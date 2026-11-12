@@ -229,7 +229,7 @@
     },
     {
       "from": "src/ghost/replay-admission.ts",
-      "to": "src/app/legacy-state-controller.ts",
+      "to": "src/app/interface/legacy-state-controller.ts",
       "kind": "value"
     },
     {
@@ -354,97 +354,97 @@
     },
     {
       "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/live-aurora-track-wiring.ts",
+      "to": "src/app/training/tutorial-coach-frame.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/live-rootbound-wiring.ts",
+      "to": "src/app/world/biomes/aurora-track-wiring.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/live-tutorial-coach-frame.ts",
+      "to": "src/app/world/biomes/rootbound-wiring.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/live-white-hart-wiring.ts",
+      "to": "src/app/world/biomes/white-hart-wiring.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-finale-runtime.ts",
-      "to": "src/app/live-game-host-state.ts",
+      "to": "src/app/world/game-host-state.ts",
       "kind": "type"
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/campaign-controller-factory.ts",
+      "to": "src/app/campaign/campaign-controller-factory.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/live-campaign-sequences.ts",
+      "to": "src/app/campaign/campaign-sequences.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/live-frame-runtime.ts",
+      "to": "src/app/engineering/state-forge-adapter.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/live-particle-presentation-state.ts",
+      "to": "src/app/engineering/state-forge-runtime-bridge.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/live-state-forge-adapter.ts",
+      "to": "src/app/shell/frame-runtime.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/live-state-forge-runtime-bridge.ts",
+      "to": "src/app/world/particle-presentation-state.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/game-runtime-dependencies.ts",
+      "to": "src/app/campaign/boss-phase-practice.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/campaign/cinematic-host.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/run/source-void-controller.ts",
+      "kind": "value"
+    },
+    {
+      "from": "src/tearbench/production-world-factory.ts",
+      "to": "src/app/shell/game-runtime-dependencies.ts",
       "kind": "type"
     },
     {
       "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/live-authoritative-input-adapter.ts",
+      "to": "src/app/world/authoritative-input-adapter.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/live-boss-phase-practice.ts",
+      "to": "src/app/world/world-composition.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/live-cinematic-host.ts",
+      "to": "src/app/world/world-context.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/live-source-void-controller.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/live-world-composition.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/live-world-context.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/live-world-entity-factory.ts",
+      "to": "src/app/world/world-entity-factory.ts",
       "kind": "value"
     },
     {

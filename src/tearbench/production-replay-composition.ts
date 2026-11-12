@@ -7,10 +7,10 @@ import type { GhostReplayRenderView } from "../ghost/replay-world";
 import type { ProductionReplayWorldOptions } from "./production-world-factory";
 import { applyWeapon } from "../gameplay/weapons";
 import { A11Y, GFX } from "../config/game-config";
-import { launchCampaignChapter } from "../app/live-campaign-sequences";
-import { createCampaignChapterController } from "../app/campaign-controller-factory";
+import { launchCampaignChapter } from "../app/campaign/campaign-sequences";
+import { createCampaignChapterController } from "../app/campaign/campaign-controller-factory";
 import { createUiState } from "../presentation/ui-tokens";
-import { createLiveParticlePresentationState } from "../app/live-particle-presentation-state";
+import { createLiveParticlePresentationState } from "../app/world/particle-presentation-state";
 import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
 import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
@@ -23,8 +23,8 @@ import { captureCampaignChapterBindingSpec, parseCampaignChapterBindingSpec, sta
 import type { ChapterIntent } from "../gameplay/campaign/chapter-controller";
 import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../gameplay/run/lifecycle";
 import { CinematicTimeline, type CinematicDirectorBinding, type CinematicDirectorPort } from "../gameplay/runtime/cinematic-director";
-import { createLiveStateForgeAdapter, captureLiveRewardSelection } from "../app/live-state-forge-adapter";
-import { createLiveStateForgeRuntimeBridge, resolveStateForgeBossIntro } from "../app/live-state-forge-runtime-bridge";
+import { createLiveStateForgeAdapter, captureLiveRewardSelection } from "../app/engineering/state-forge-adapter";
+import { createLiveStateForgeRuntimeBridge, resolveStateForgeBossIntro } from "../app/engineering/state-forge-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
@@ -49,7 +49,7 @@ import { createDefaultStateCodecRegistry, restoreSnapshotTransactionally } from 
 import { rebaseEnvironmentSnapshot } from "./environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "./authored-environment-codec-validation";
 import { readGhostRecordedOpeningPermit, type GhostRecordedOpeningPermit } from "../ghost/replay-admission";
-import { advanceFramePrelude, commitBossIntroSnapshot, type MutableFramePreludeState } from "../app/live-frame-runtime";
+import { advanceFramePrelude, commitBossIntroSnapshot, type MutableFramePreludeState } from "../app/shell/frame-runtime";
 import { clamp, lerp } from "../domain/geometry";
 import { createGhostApplicationClockPlayback, type GhostApplicationClockSchedule } from "../ghost/application-frame-events";
 

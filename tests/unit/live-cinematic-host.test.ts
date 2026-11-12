@@ -11,7 +11,7 @@ vi.mock("../../src/gameplay/campaign/live-cinematic-runtime", () => ({
   },
 }));
 
-import { createLiveCinematicHost } from "../../src/app/live-cinematic-host";
+import { createLiveCinematicHost } from "../../src/app/campaign/cinematic-host";
 
 describe("live cinematic persistence adapter", () => {
   it.each(["campaign", "tutorial", "playground"])("persists cinematic seen markers only outside practice (%s)", (mode) => {

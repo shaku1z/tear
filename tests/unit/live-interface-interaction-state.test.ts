@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveInterfaceInteractionState, type LiveInterfaceButton } from "../../src/app/live-interface-interaction-state";
+import { createLiveInterfaceInteractionState, type LiveInterfaceButton } from "../../src/app/interface/interface-interaction-state";
 
 describe("live interface interaction state", () => {
   it("owns controls, focus, scroll, and hover feedback for one UI frame", () => {

@@ -1,7 +1,7 @@
 import { createFinaleRuntime, type FinaleRuntimeState } from "../gameplay/campaign/finale-runtime";
 import { FinaleController } from "../gameplay/campaign/finale-controller";
 import type { PreparedVictory } from "../gameplay/run/outcome-planner";
-import type { LiveGameHostState } from "../app/live-game-host-state";
+import type { LiveGameHostState } from "../app/world/game-host-state";
 import type { RunLifecycleController } from "../gameplay/run/lifecycle";
 import type { CinematicDirectorPort, CinematicScript } from "../gameplay/runtime/cinematic-director";
 import type { CONFIG } from "../config/game-config";

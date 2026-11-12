@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLivePendingFinalePersistence } from "../../src/app/live-pending-finale-persistence";
+import { createLivePendingFinalePersistence } from "../../src/app/progress/pending-finale-persistence";
 
 describe("live pending-finale persistence adapter", () => {
   it("preserves the profile operation contract", () => {

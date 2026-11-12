@@ -50,7 +50,7 @@ verification checkpoints; the table above covers routine work. Do not run
 | Path | Contents |
 | --- | --- |
 | `src/entrypoints/` | The two small startup files, one per target. |
-| `src/app/` | Application composition, screens and their state, run flow, and the live runtime that ties everything together. |
+| `src/app/` | Application composition, screens and their state, run flow, and the live runtime that ties everything together, by folder: `shell/` (composition root, runtime, frame loop), `world/` (world composition, content and stage hosts; `world/biomes/` actor wiring), `combat/`, `run/` (run start, waves, outcomes, shop), `campaign/` (campaign, finale, cinematics, boss practice), `training/` (tutorial and training hosts), `interface/` (screen state, UI coordination, presentation hosts), `screens/` (menu, settings, rename), `library/` (Codex, Ghost Vault, Theater and Career screens), `progress/` (profile persistence ports), `replay/` (Ghost recording, practice, chase and publication), `engineering/` (research and diagnostic surfaces, the Scenario Console runtime, debug harness). |
 | `src/gameplay/` | Game rules and content: player, blade, weapons, enemies, bosses, stages, upgrades, tutorial. |
 | `src/simulation/`, `src/domain/` | The fixed-step clock, seeded randomness, and pure shared types and rules. |
 | `src/presentation/` | Canvas drawing: world, HUD, menus, screens, shared UI components (`ui.ts`). |

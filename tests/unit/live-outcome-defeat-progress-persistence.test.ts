@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveOutcomeDefeatProgressPersistence } from "../../src/app/live-outcome-defeat-progress-persistence";
+import { createLiveOutcomeDefeatProgressPersistence } from "../../src/app/progress/outcome-defeat-progress-persistence";
 
 describe("live outcome defeat-progress persistence adapter", () => {
   it("records the defeat count before the floored longest-run stat", () => {

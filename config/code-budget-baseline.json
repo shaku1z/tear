@@ -452,401 +452,401 @@
       "multiStatementLines": 4,
       "largestFunctionStatements": 87
     },
-    "src/app/achievement-toast-controller.ts": {
-      "multiStatementLines": 3
-    },
-    "src/app/browser-boss-memory.ts": {
-      "maxLineLength": 162,
-      "multiStatementLines": 4
-    },
-    "src/app/browser-ghost-archive-files.ts": {
-      "maxLineLength": 176,
-      "multiStatementLines": 14
-    },
-    "src/app/browser-ghost-career-search.ts": {
-      "maxLineLength": 179,
-      "multiStatementLines": 17
-    },
-    "src/app/browser-ghost-career.ts": {
-      "maxLineLength": 346,
-      "multiStatementLines": 16
-    },
-    "src/app/browser-ghost-coach-history.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/browser-ghost-studio-media.ts": {
-      "maxLineLength": 264,
-      "multiStatementLines": 33
-    },
-    "src/app/browser-ghost-studio-webm.ts": {
-      "maxLineLength": 280,
-      "multiStatementLines": 35
-    },
-    "src/app/browser-live-ghost-reference.ts": {
-      "maxLineLength": 240,
-      "multiStatementLines": 5
-    },
-    "src/app/campaign-intent-coordinator.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/composition.ts": {
-      "maxLineLength": 274,
-      "multiStatementLines": 1
-    },
-    "src/app/game-runtime-dependencies.ts": {
-      "maxLineLength": 231
-    },
-    "src/app/ghost-career-controller.ts": {
-      "maxLineLength": 345,
-      "multiStatementLines": 21
-    },
-    "src/app/ghost-coach-history-controller.ts": {
-      "multiStatementLines": 13
-    },
-    "src/app/ghost-comparison-screen-adapter.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/ghost-finale-screen-adapter.ts": {
-      "maxLineLength": 235,
-      "multiStatementLines": 2
-    },
-    "src/app/ghost-theater-screen-adapter.ts": {
-      "maxLineLength": 302,
-      "multiStatementLines": 38
-    },
-    "src/app/ghost-vault-library-controller.ts": {
-      "maxLineLength": 194,
-      "multiStatementLines": 18
-    },
-    "src/app/legacy-state-controller.ts": {
-      "multiStatementLines": 4
-    },
-    "src/app/live-academy-screen.ts": {
-      "maxLineLength": 424,
-      "multiStatementLines": 5
-    },
-    "src/app/live-aurora-track-wiring.ts": {
-      "multiStatementLines": 9
-    },
-    "src/app/live-beat-this-run-controller.ts": {
-      "maxLineLength": 211,
-      "multiStatementLines": 17
-    },
-    "src/app/live-bloom-well-wiring.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/live-boss-phase-practice.ts": {
+    "src/app/campaign/boss-phase-practice.ts": {
       "maxLineLength": 319,
       "multiStatementLines": 20
     },
-    "src/app/live-bot-evidence-controller.ts": {
-      "maxLineLength": 218,
-      "multiStatementLines": 2
-    },
-    "src/app/live-campaign-host.ts": {
+    "src/app/campaign/campaign-host.ts": {
       "multiStatementLines": 12
     },
-    "src/app/live-campaign-runtime.ts": {
+    "src/app/campaign/campaign-intent-coordinator.ts": {
+      "multiStatementLines": 6
+    },
+    "src/app/campaign/campaign-runtime.ts": {
       "multiStatementLines": 1
     },
-    "src/app/live-campaign-training-composition.ts": {
+    "src/app/campaign/campaign-training-composition.ts": {
       "maxLineLength": 210,
       "multiStatementLines": 10
     },
-    "src/app/live-cinematic-host.ts": {
+    "src/app/campaign/cinematic-host.ts": {
       "multiStatementLines": 6
     },
-    "src/app/live-combat-action-context.ts": {
+    "src/app/campaign/pending-finale-controller.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/combat/combat-action-context.ts": {
       "maxLineLength": 170
     },
-    "src/app/live-combat-actions.ts": {
+    "src/app/combat/combat-actions.ts": {
       "maxLineLength": 357,
       "multiStatementLines": 34
     },
-    "src/app/live-combat-frame-context.ts": {
+    "src/app/combat/combat-frame-context.ts": {
       "multiStatementLines": 1
     },
-    "src/app/live-combat-host-factory.ts": {
+    "src/app/combat/combat-host-factory.ts": {
       "multiStatementLines": 1
     },
-    "src/app/live-content-composition.ts": {
+    "src/app/combat/style-host.ts": {
+      "multiStatementLines": 3
+    },
+    "src/app/engineering/academy-screen.ts": {
+      "maxLineLength": 424,
+      "multiStatementLines": 5
+    },
+    "src/app/engineering/bot-evidence-controller.ts": {
+      "maxLineLength": 218,
       "multiStatementLines": 2
     },
-    "src/app/live-debug-composition.ts": {
+    "src/app/engineering/debug-composition.ts": {
       "multiStatementLines": 1
     },
-    "src/app/live-debug-harness.ts": {
+    "src/app/engineering/debug-harness.ts": {
       "chars": 35785,
       "maxLineLength": 227,
       "multiStatementLines": 34
     },
-    "src/app/live-debug-snapshot.ts": {
+    "src/app/engineering/debug-snapshot.ts": {
       "multiStatementLines": 3
     },
-    "src/app/live-foundry-scheduler.ts": {
+    "src/app/engineering/foundry-scheduler.ts": {
       "maxLineLength": 469,
       "multiStatementLines": 9
     },
-    "src/app/live-foundry-screen.ts": {
+    "src/app/engineering/foundry-screen.ts": {
       "maxLineLength": 500,
       "multiStatementLines": 11
     },
-    "src/app/live-frame-runtime.ts": {
+    "src/app/engineering/player-watch-controller.ts": {
+      "maxLineLength": 194,
+      "multiStatementLines": 19
+    },
+    "src/app/engineering/player-watch-observation.ts": {
+      "maxLineLength": 210,
+      "multiStatementLines": 2
+    },
+    "src/app/engineering/state-forge-adapter.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/engineering/state-forge-runtime-bridge.ts": {
+      "maxLineLength": 218,
+      "multiStatementLines": 3
+    },
+    "src/app/interface/achievement-toast-controller.ts": {
+      "multiStatementLines": 3
+    },
+    "src/app/interface/hud-feedback-state.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/interface/interface-composition.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/interface/interface-frame-state.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/interface/legacy-state-controller.ts": {
+      "multiStatementLines": 4
+    },
+    "src/app/interface/presentation-capture.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/interface/presentation-composition.ts": {
+      "maxLineLength": 169,
+      "multiStatementLines": 13
+    },
+    "src/app/interface/screen-action-bindings.ts": {
+      "maxLineLength": 250,
+      "multiStatementLines": 25
+    },
+    "src/app/interface/screen-presentation-composition.ts": {
       "multiStatementLines": 5
     },
-    "src/app/live-game-runtime.ts": {
+    "src/app/interface/ui-action-coordinator.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/interface/ui-runtime-controller.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/library/browser-ghost-archive-files.ts": {
+      "maxLineLength": 176,
+      "multiStatementLines": 14
+    },
+    "src/app/library/ghost-career-controller.ts": {
+      "maxLineLength": 345,
+      "multiStatementLines": 21
+    },
+    "src/app/library/ghost-coach-history-controller.ts": {
+      "multiStatementLines": 13
+    },
+    "src/app/library/ghost-theater-screen-adapter.ts": {
+      "maxLineLength": 302,
+      "multiStatementLines": 38
+    },
+    "src/app/library/ghost-vault-library-controller.ts": {
+      "maxLineLength": 194,
+      "multiStatementLines": 18
+    },
+    "src/app/library/library-screen-adapters-runtime.ts": {
+      "maxLineLength": 1017,
+      "multiStatementLines": 29
+    },
+    "src/app/library/library-screen-adapters.ts": {
+      "maxLineLength": 256,
+      "multiStatementLines": 23
+    },
+    "src/app/library/replay-library-controller.ts": {
+      "multiStatementLines": 6
+    },
+    "src/app/library/replay-transport-controller.ts": {
+      "maxLineLength": 165,
+      "multiStatementLines": 3
+    },
+    "src/app/progress/practice-encounter-persistence.ts": {
+      "maxLineLength": 255,
+      "multiStatementLines": 5
+    },
+    "src/app/progress/style-achievement-persistence.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/progress/tutorial-completion-persistence.ts": {
+      "multiStatementLines": 5
+    },
+    "src/app/replay/beat-this-run-controller.ts": {
+      "maxLineLength": 211,
+      "multiStatementLines": 17
+    },
+    "src/app/replay/browser-boss-memory.ts": {
+      "maxLineLength": 162,
+      "multiStatementLines": 4
+    },
+    "src/app/replay/browser-ghost-career-search.ts": {
+      "maxLineLength": 179,
+      "multiStatementLines": 17
+    },
+    "src/app/replay/browser-ghost-career.ts": {
+      "maxLineLength": 346,
+      "multiStatementLines": 16
+    },
+    "src/app/replay/browser-ghost-coach-history.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/replay/browser-ghost-studio-media.ts": {
+      "maxLineLength": 264,
+      "multiStatementLines": 33
+    },
+    "src/app/replay/browser-ghost-studio-webm.ts": {
+      "maxLineLength": 280,
+      "multiStatementLines": 35
+    },
+    "src/app/replay/browser-live-ghost-reference.ts": {
+      "maxLineLength": 240,
+      "multiStatementLines": 5
+    },
+    "src/app/replay/ghost-challenge-composition.ts": {
+      "maxLineLength": 267,
+      "multiStatementLines": 7
+    },
+    "src/app/replay/ghost-challenge-controller.ts": {
+      "maxLineLength": 233,
+      "multiStatementLines": 9
+    },
+    "src/app/replay/ghost-chase-composition.ts": {
+      "maxLineLength": 617,
+      "multiStatementLines": 4
+    },
+    "src/app/replay/ghost-comparison-screen-adapter.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/replay/ghost-finale-companion.ts": {
+      "maxLineLength": 179,
+      "multiStatementLines": 7
+    },
+    "src/app/replay/ghost-finale-screen-adapter.ts": {
+      "maxLineLength": 235,
+      "multiStatementLines": 2
+    },
+    "src/app/replay/ghost-frame-recording.ts": {
+      "maxLineLength": 173,
+      "multiStatementLines": 12
+    },
+    "src/app/replay/ghost-lab-home.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/replay/ghost-opening-capture.ts": {
+      "maxLineLength": 165,
+      "multiStatementLines": 2
+    },
+    "src/app/replay/ghost-owner-recovery-controller.ts": {
+      "maxLineLength": 228,
+      "multiStatementLines": 11
+    },
+    "src/app/replay/ghost-practice-session-state.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/replay/ghost-publication-controller.ts": {
+      "maxLineLength": 368,
+      "multiStatementLines": 18
+    },
+    "src/app/replay/ghost-recording-session-state.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/replay/ghost-reference-controller.ts": {
+      "maxLineLength": 299,
+      "multiStatementLines": 16
+    },
+    "src/app/replay/ghost-run-dna-recording.ts": {
+      "multiStatementLines": 6
+    },
+    "src/app/replay/ghost-support-controller.ts": {
+      "maxLineLength": 352,
+      "multiStatementLines": 4
+    },
+    "src/app/replay/replay-screen-adapter-runtime.ts": {
+      "maxLineLength": 171,
+      "multiStatementLines": 15
+    },
+    "src/app/replay/replay-screen-adapter.ts": {
+      "maxLineLength": 368,
+      "multiStatementLines": 23
+    },
+    "src/app/replay/seed-race-composition.ts": {
+      "multiStatementLines": 4
+    },
+    "src/app/run/outcome-composition.ts": {
+      "multiStatementLines": 6
+    },
+    "src/app/run/outcome-intent-coordinator.ts": {
+      "multiStatementLines": 10
+    },
+    "src/app/run/revive-countdown-state.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/run/run-controller-api.ts": {
+      "multiStatementLines": 6
+    },
+    "src/app/run/run-orchestration-composition.ts": {
+      "maxLineLength": 192,
+      "multiStatementLines": 9
+    },
+    "src/app/run/run-screen-adapters.ts": {
+      "maxLineLength": 366,
+      "multiStatementLines": 4
+    },
+    "src/app/run/run-start-host.ts": {
+      "maxLineLength": 219,
+      "multiStatementLines": 17
+    },
+    "src/app/run/setup-shop-renderers.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/run/shop-feedback-state.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/screens/menu-screen-adapters-runtime.ts": {
+      "multiStatementLines": 1
+    },
+    "src/app/screens/rename-controller.ts": {
+      "multiStatementLines": 13
+    },
+    "src/app/screens/settings-controller.ts": {
+      "multiStatementLines": 4
+    },
+    "src/app/screens/settings-rename-adapters-runtime.ts": {
+      "multiStatementLines": 6
+    },
+    "src/app/screens/settings-rename-adapters.ts": {
+      "multiStatementLines": 12
+    },
+    "src/app/shell/composition.ts": {
+      "maxLineLength": 274,
+      "multiStatementLines": 1
+    },
+    "src/app/shell/frame-runtime.ts": {
+      "multiStatementLines": 5
+    },
+    "src/app/shell/game-runtime-dependencies.ts": {
+      "maxLineLength": 231
+    },
+    "src/app/shell/game-runtime.ts": {
       "chars": 77626,
       "maxLineLength": 3969,
       "multiStatementLines": 132,
       "largestFunctionStatements": 143
     },
-    "src/app/live-ghost-challenge-composition.ts": {
-      "maxLineLength": 267,
-      "multiStatementLines": 7
-    },
-    "src/app/live-ghost-challenge-controller.ts": {
-      "maxLineLength": 233,
-      "multiStatementLines": 9
-    },
-    "src/app/live-ghost-chase-composition.ts": {
-      "maxLineLength": 617,
-      "multiStatementLines": 4
-    },
-    "src/app/live-ghost-finale-companion.ts": {
-      "maxLineLength": 179,
-      "multiStatementLines": 7
-    },
-    "src/app/live-ghost-frame-recording.ts": {
-      "maxLineLength": 173,
-      "multiStatementLines": 12
-    },
-    "src/app/live-ghost-lab-home.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-ghost-opening-capture.ts": {
-      "maxLineLength": 165,
+    "src/app/shell/platform-bootstrap.ts": {
       "multiStatementLines": 2
     },
-    "src/app/live-ghost-owner-recovery-controller.ts": {
-      "maxLineLength": 228,
-      "multiStatementLines": 11
-    },
-    "src/app/live-ghost-practice-session-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-ghost-publication-controller.ts": {
-      "maxLineLength": 368,
-      "multiStatementLines": 18
-    },
-    "src/app/live-ghost-recording-session-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-ghost-reference-controller.ts": {
-      "maxLineLength": 299,
-      "multiStatementLines": 16
-    },
-    "src/app/live-ghost-run-dna-recording.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/live-ghost-support-controller.ts": {
-      "maxLineLength": 352,
-      "multiStatementLines": 4
-    },
-    "src/app/live-hud-feedback-state.ts": {
+    "src/app/shell/runtime-frame-coordinator.ts": {
       "multiStatementLines": 2
     },
-    "src/app/live-human-input-provenance.ts": {
-      "maxLineLength": 241,
-      "multiStatementLines": 5
-    },
-    "src/app/live-interface-composition.ts": {
+    "src/app/shell/runtime-frame-driver.ts": {
       "multiStatementLines": 1
     },
-    "src/app/live-interface-frame-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-library-screen-adapters-runtime.ts": {
-      "maxLineLength": 1017,
-      "multiStatementLines": 29
-    },
-    "src/app/live-library-screen-adapters.ts": {
-      "maxLineLength": 256,
-      "multiStatementLines": 23
-    },
-    "src/app/live-menu-screen-adapters-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-outcome-composition.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/live-outcome-intent-coordinator.ts": {
-      "multiStatementLines": 10
-    },
-    "src/app/live-particle-presentation-state.ts": {
-      "maxLineLength": 179
-    },
-    "src/app/live-pending-finale-controller.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-platform-bootstrap.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/live-player-watch-controller.ts": {
-      "maxLineLength": 194,
-      "multiStatementLines": 19
-    },
-    "src/app/live-player-watch-observation.ts": {
-      "maxLineLength": 210,
-      "multiStatementLines": 2
-    },
-    "src/app/live-practice-encounter-persistence.ts": {
-      "maxLineLength": 255,
-      "multiStatementLines": 5
-    },
-    "src/app/live-presentation-capture.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/live-presentation-composition.ts": {
-      "maxLineLength": 169,
-      "multiStatementLines": 13
-    },
-    "src/app/live-replay-screen-adapter-runtime.ts": {
-      "maxLineLength": 171,
-      "multiStatementLines": 15
-    },
-    "src/app/live-replay-screen-adapter.ts": {
-      "maxLineLength": 368,
-      "multiStatementLines": 23
-    },
-    "src/app/live-revive-countdown-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-rootbinder-wiring.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/live-rootbound-wiring.ts": {
-      "maxLineLength": 179,
-      "multiStatementLines": 1
-    },
-    "src/app/live-run-controller-api.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/live-run-orchestration-composition.ts": {
-      "maxLineLength": 192,
-      "multiStatementLines": 9
-    },
-    "src/app/live-run-screen-adapters.ts": {
-      "maxLineLength": 366,
-      "multiStatementLines": 4
-    },
-    "src/app/live-run-start-host.ts": {
-      "maxLineLength": 219,
-      "multiStatementLines": 17
-    },
-    "src/app/live-screen-action-bindings.ts": {
-      "maxLineLength": 250,
-      "multiStatementLines": 25
-    },
-    "src/app/live-screen-presentation-composition.ts": {
-      "multiStatementLines": 5
-    },
-    "src/app/live-seed-race-composition.ts": {
-      "multiStatementLines": 4
-    },
-    "src/app/live-session-services-composition.ts": {
-      "maxLineLength": 368,
-      "multiStatementLines": 2
-    },
-    "src/app/live-settings-rename-adapters-runtime.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/live-settings-rename-adapters.ts": {
-      "multiStatementLines": 12
-    },
-    "src/app/live-setup-shop-renderers.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/live-shop-feedback-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-state-forge-adapter.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/live-state-forge-runtime-bridge.ts": {
-      "maxLineLength": 218,
+    "src/app/shell/runtime-initialization.ts": {
       "multiStatementLines": 3
     },
-    "src/app/live-style-achievement-persistence.ts": {
-      "multiStatementLines": 1
+    "src/app/shell/session-services-composition.ts": {
+      "maxLineLength": 368,
+      "multiStatementLines": 2
     },
-    "src/app/live-style-host.ts": {
-      "multiStatementLines": 3
-    },
-    "src/app/live-training-handoff.ts": {
+    "src/app/training/training-handoff.ts": {
       "multiStatementLines": 4
     },
-    "src/app/live-training-host-runtime.ts": {
+    "src/app/training/training-host-runtime.ts": {
       "maxLineLength": 191,
       "multiStatementLines": 13
     },
-    "src/app/live-training-host.ts": {
+    "src/app/training/training-host.ts": {
       "maxLineLength": 190,
       "multiStatementLines": 13
     },
-    "src/app/live-tutorial-completion-persistence.ts": {
-      "multiStatementLines": 5
-    },
-    "src/app/live-tutorial-session-actions.ts": {
+    "src/app/training/tutorial-session-actions.ts": {
       "maxLineLength": 329,
       "multiStatementLines": 10
     },
-    "src/app/live-world-composition.ts": {
+    "src/app/world/biomes/aurora-track-wiring.ts": {
+      "multiStatementLines": 9
+    },
+    "src/app/world/biomes/bloom-well-wiring.ts": {
+      "multiStatementLines": 6
+    },
+    "src/app/world/biomes/rootbinder-wiring.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/world/biomes/rootbound-wiring.ts": {
+      "maxLineLength": 179,
+      "multiStatementLines": 1
+    },
+    "src/app/world/content-composition.ts": {
+      "multiStatementLines": 2
+    },
+    "src/app/world/human-input-provenance.ts": {
+      "maxLineLength": 241,
+      "multiStatementLines": 5
+    },
+    "src/app/world/particle-presentation-state.ts": {
+      "maxLineLength": 179
+    },
+    "src/app/world/stage-runtime-state.ts": {
+      "multiStatementLines": 7
+    },
+    "src/app/world/world-composition.ts": {
       "maxLineLength": 175,
       "multiStatementLines": 10
     },
-    "src/app/live-world-context.ts": {
+    "src/app/world/world-context.ts": {
       "multiStatementLines": 3
     },
-    "src/app/live-world-presentation-adapters.ts": {
+    "src/app/world/world-presentation-adapters.ts": {
       "maxLineLength": 177,
       "multiStatementLines": 3
     },
-    "src/app/live-world-session-state.ts": {
+    "src/app/world/world-session-state.ts": {
       "multiStatementLines": 1
     },
-    "src/app/live-world-simulation-factories.ts": {
+    "src/app/world/world-simulation-factories.ts": {
       "maxLineLength": 166
-    },
-    "src/app/rename-controller.ts": {
-      "multiStatementLines": 13
-    },
-    "src/app/replay-library-controller.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/replay-transport-controller.ts": {
-      "maxLineLength": 165,
-      "multiStatementLines": 3
-    },
-    "src/app/runtime-frame-coordinator.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/runtime-frame-driver.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/runtime-initialization.ts": {
-      "multiStatementLines": 3
-    },
-    "src/app/settings-controller.ts": {
-      "multiStatementLines": 4
-    },
-    "src/app/stage-runtime-state.ts": {
-      "multiStatementLines": 7
-    },
-    "src/app/ui-action-coordinator.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/ui-runtime-controller.ts": {
-      "multiStatementLines": 1
     },
     "src/audio/audio-dispatch-receipts.ts": {
       "multiStatementLines": 2

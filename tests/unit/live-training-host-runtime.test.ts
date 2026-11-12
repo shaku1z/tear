@@ -19,7 +19,7 @@ vi.mock("../../src/gameplay/training/live-playground-presentation", () => ({
   createLivePlaygroundPresentation: () => Object.freeze({}),
 }));
 
-import { createLiveTrainingHostRuntime } from "../../src/app/live-training-host-runtime";
+import { createLiveTrainingHostRuntime } from "../../src/app/training/training-host-runtime";
 
 describe("live training host runtime", () => {
   it("supplies its tutorial profile-stat port from the shared adapter", () => {

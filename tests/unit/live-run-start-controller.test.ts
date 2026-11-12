@@ -1,12 +1,12 @@
 /// <reference types="vite/client" />
-import { createLiveSeedRace } from "../../src/app/live-seed-race-composition";
+import { createLiveSeedRace } from "../../src/app/replay/seed-race-composition";
 import { createMetaProgression } from "../../src/gameplay/progression/meta";
 import { seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
 import { describe, expect, it, vi } from "vitest";
 import { LiveRunStartController } from "../../src/gameplay/run/live-run-start-controller";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
-import { createLiveRunStartHost } from "../../src/app/live-run-start-host";
-import { createLiveGhostOpeningCapture } from "../../src/app/live-ghost-opening-capture";
+import { createLiveRunStartHost } from "../../src/app/run/run-start-host";
+import { createLiveGhostOpeningCapture } from "../../src/app/replay/ghost-opening-capture";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
 import * as productionReplayComposition from "../../src/tearbench/production-replay-composition";
 import { validateTearContract } from "../../src/tearbench/validation";
@@ -31,10 +31,10 @@ import { createProductionReplayWorld } from "../../src/tearbench/production-worl
 import { createDefaultStateCodecRegistry, type TearCodecWorld } from "../../src/tearbench/state-codecs";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../../src/tearbench/contracts";
-import { LegacyAppStateController } from "../../src/app/legacy-state-controller";
-import { createLiveGhostReferenceController } from "../../src/app/live-ghost-reference-controller";
+import { LegacyAppStateController } from "../../src/app/interface/legacy-state-controller";
+import { createLiveGhostReferenceController } from "../../src/app/replay/ghost-reference-controller";
 import type { GhostLiveReference } from "../../src/ghost/live-ghost-reference-data";
-import type { GameRun } from "../../src/app/game-runtime-state";
+import type { GameRun } from "../../src/app/shell/game-runtime-state";
 
 /** Disclosed legacy-format model, authored before sealing. No historical archive is rewritten. */
 async function sealedLegacyAim(magnitudes: readonly number[], options: Readonly<{ legacyOpening?: boolean; freshLater?: boolean;

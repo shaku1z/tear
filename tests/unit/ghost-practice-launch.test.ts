@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GhostPracticeChild } from "../../src/ghost/replay-world";
-import { createLiveGhostPracticeSessionState } from "../../src/app/live-ghost-practice-session-state";
+import { createLiveGhostPracticeSessionState } from "../../src/app/replay/ghost-practice-session-state";
 
 const captured = vi.hoisted(() => ({ restore: vi.fn() }));
 
@@ -11,7 +11,7 @@ vi.mock("../../src/tearbench/live-state-snapshot", () => ({
   restoreSnapshotIntoLiveWorld: captured.restore,
 }));
 
-import { launchGhostPracticeChild } from "../../src/app/ghost-practice-launch";
+import { launchGhostPracticeChild } from "../../src/app/replay/ghost-practice-launch";
 
 function child(): GhostPracticeChild {
   return Object.freeze({

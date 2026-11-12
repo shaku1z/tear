@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { LiveStageController } from "../../src/app/live-stage-controller";
-import { StageRuntimeState } from "../../src/app/stage-runtime-state";
+import { LiveStageController } from "../../src/app/world/stage-controller";
+import { StageRuntimeState } from "../../src/app/world/stage-runtime-state";
 
 describe("live stage controller", () => {
   it("atomically clears prior-stage state and records the new biome", () => {

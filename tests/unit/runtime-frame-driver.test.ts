@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RuntimeFrameDriver, type AnimationFrameSource } from "../../src/app/runtime-frame-driver";
+import { RuntimeFrameDriver, type AnimationFrameSource } from "../../src/app/shell/runtime-frame-driver";
 
 class ManualFrames implements AnimationFrameSource {
   readonly callbacks = new Map<number, FrameRequestCallback>();

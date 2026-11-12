@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFile, writeFile } from "node:fs/promises";
-import { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
-import { createPlayerWatchObservation, previousPlayerWatchObservation } from "../../src/app/live-player-watch-observation";
+import { LivePlayerWatchController } from "../../src/app/engineering/player-watch-controller";
+import { createPlayerWatchObservation, previousPlayerWatchObservation } from "../../src/app/engineering/player-watch-observation";
 import { TearC32CanonicalActivePolicyRuntime } from "../../src/agents/c32-canonical-active-policy-runtime";
 import { parseTearPolicyModelWeights, reduceTearPolicyWeightRow } from "../../src/agents/policy-model-weights";
 import { parseTearPolicyActivation } from "../../src/agents/policy-artifact-registry";

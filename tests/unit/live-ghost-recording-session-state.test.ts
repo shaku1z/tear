@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveGhostRecordingSessionState } from "../../src/app/live-ghost-recording-session-state";
-import { createLiveGhostRunDnaRecording } from "../../src/app/live-ghost-run-dna-recording";
-import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "../../src/app/live-ghost-frame-recording";
+import { createLiveGhostRecordingSessionState } from "../../src/app/replay/ghost-recording-session-state";
+import { createLiveGhostRunDnaRecording } from "../../src/app/replay/ghost-run-dna-recording";
+import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "../../src/app/replay/ghost-frame-recording";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { createProductionCombatSimulation } from "../../src/tearbench/production-combat-simulation";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";

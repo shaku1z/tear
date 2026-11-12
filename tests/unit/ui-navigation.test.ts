@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { enabledButtonIndexes, findDirectionalFocus } from "../../src/app/ui-navigation";
+import { enabledButtonIndexes, findDirectionalFocus } from "../../src/app/interface/ui-navigation";
 
 describe("canvas UI navigation", () => {
   const buttons = [

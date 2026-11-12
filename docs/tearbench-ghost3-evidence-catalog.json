@@ -172,7 +172,7 @@
       ],
       "textRegex": ".*",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/live-state-snapshot.ts",
         "src/tearbench/live-codec-validation.ts"
       ],
@@ -192,7 +192,7 @@
       ],
       "textRegex": ".*",
       "implementationRefs": [
-        "src/app/live-state-forge-adapter.ts",
+        "src/app/engineering/state-forge-adapter.ts",
         "src/tearbench/state-codecs.ts"
       ],
       "evidenceRefs": [
@@ -216,7 +216,7 @@
       "implementationRefs": [
         "src/tearbench/progression-ledger.ts",
         "src/tearbench/progression-replay.ts",
-        "src/app/live-state-forge-progression.ts"
+        "src/app/engineering/state-forge-progression.ts"
       ],
       "evidenceRefs": [
         "tests/unit/tearbench-progression-ledger.test.ts",
@@ -279,7 +279,7 @@
       "textRegex": ".*",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-game-runtime.ts",
+        "src/app/shell/game-runtime.ts",
         "src/gameplay/runtime/authoritative-input.ts",
         "src/replay/legacy-compat.ts"
       ],
@@ -301,7 +301,7 @@
       "textRegex": ".*",
       "implementationRefs": [
         "src/tearbench/live-runtime-environment.ts",
-        "src/app/live-frame-runtime.ts",
+        "src/app/shell/frame-runtime.ts",
         "src/simulation/fixed-step.ts"
       ],
       "evidenceRefs": ["tests/browser-tear-runtime-environment.js"],
@@ -328,7 +328,7 @@
       "textRegex": ".*",
       "implementationRefs": [
         "src/tearbench/test-support/test-environment.ts",
-        "src/app/composition.ts",
+        "src/app/shell/composition.ts",
         "src/platform/legacy-compat.ts",
         "scripts/check-production-test-isolation.mjs"
       ],

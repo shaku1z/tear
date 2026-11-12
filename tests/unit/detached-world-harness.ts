@@ -1,16 +1,16 @@
 import { A11Y, CONFIG, GFX } from "../../src/config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
 import { createTearWorldBootstrap } from "../../src/gameplay/runtime/tear-world-bootstrap";
-import { createLiveWorldState, type LiveWorldSessionPort } from "../../src/app/live-world-composition";
-import { createLiveWorldServices } from "../../src/app/live-world-context";
-import { createLiveWorldEntityFactory } from "../../src/app/live-world-entity-factory";
+import { createLiveWorldState, type LiveWorldSessionPort } from "../../src/app/world/world-composition";
+import { createLiveWorldServices } from "../../src/app/world/world-context";
+import { createLiveWorldEntityFactory } from "../../src/app/world/world-entity-factory";
 import { createTearWorldComposition } from "../../src/gameplay/runtime/tear-world-composition";
 import {
   createTearWorldSimulationFactories,
   type TearWorldEntityPresentationPorts,
   type TearWorldSimulationFactoryOptions,
 } from "../../src/gameplay/runtime/tear-world-simulation-factories";
-import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
+import type { GameRuntimeDependencies } from "../../src/app/shell/game-runtime-dependencies";
 import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../../src/domain/geometry";
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
 import type { LiveKillHost } from "../../src/gameplay/combat/live-kill-runtime";
@@ -33,7 +33,7 @@ import {
   type VictoryProgressionIntent,
 } from "../../src/gameplay/run/outcome-planner";
 import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
-import { createLiveWaveHost } from "../../src/app/live-wave-host";
+import { createLiveWaveHost } from "../../src/app/run/wave-host";
 import { STAGES, stageAt, stagePlatforms } from "../../src/gameplay/stages";
 import { applyVariant, rollVariant } from "../../src/gameplay/variants";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";

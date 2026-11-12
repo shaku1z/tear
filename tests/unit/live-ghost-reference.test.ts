@@ -1,9 +1,9 @@
-import * as browserReference from "../../src/app/browser-live-ghost-reference";
+import * as browserReference from "../../src/app/replay/browser-live-ghost-reference";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { drawLiveGhostSplits } from "../../src/presentation/world/live-ghost-reference";
-import { createLiveGhostChase } from "../../src/app/live-ghost-chase-composition";
+import { createLiveGhostChase } from "../../src/app/replay/ghost-chase-composition";
 import { describe, expect, it, vi } from "vitest";
-import { createLiveGhostReferenceController, type GhostChaseLiveState } from "../../src/app/live-ghost-reference-controller";
+import { createLiveGhostReferenceController, type GhostChaseLiveState } from "../../src/app/replay/ghost-reference-controller";
 import type { GhostLiveReference, GhostReferenceFrame } from "../../src/ghost/live-ghost-reference-data";
 import { readGhostRunAssistance } from "../../src/gameplay/run/ghost-assistance";
 

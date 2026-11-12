@@ -23,7 +23,7 @@ How oracle behavior enters the redesign: verbatim behavior, redesigned plumbing.
 | `js/game.js` state machine + transitions | `src/app/` state machine, screen controllers |
 | `js/game.js` screen drawing | `src/presentation/screens/` renderers (pure, snapshot-driven) |
 | `js/ui.js` UI.t + components | `src/presentation/ui*.ts` |
-| `js/input.js` pointer-lock / mode / delta | `src/input/` adapters + cursor-contract + live-frame-runtime |
+| `js/input.js` pointer-lock / mode / delta | `src/input/` adapters + cursor-contract + `src/app/shell/frame-runtime.ts` |
 | `js/config.js` tuning | `src/config/*` immutable definitions |
 | `js/player.js` / `js/enemy.js` / `js/mirror.js` | `src/gameplay/**` (deterministic, port-fed) |
 | oracle side effects at transitions | the ONE owning adapter/controller — enumerate oracle call sites and match 1:1 |

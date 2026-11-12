@@ -14,7 +14,7 @@
     "R06"
    ],
    "file": "src/tearbench/__planted-world-violation.ts",
-   "text": "import type { GameEnemy } from \"../app/game-runtime-state\";",
+   "text": "import type { GameEnemy } from \"../app/shell/game-runtime-state\";",
    "reject": true
   },
   {
@@ -84,7 +84,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-simulation-runtime.ts",
-   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "text": "import { startLiveGame } from \"../../app/shell/game-runtime\";",
    "reject": true
   },
   {
@@ -100,7 +100,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-combat-simulation.ts",
-   "text": "import { LiveFrameRuntime } from \"../../app/live-frame-runtime\";",
+   "text": "import { LiveFrameRuntime } from \"../../app/shell/frame-runtime\";",
    "reject": true
   },
   {
@@ -116,7 +116,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/gameplay-event-publishers.ts",
-   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "text": "import { startLiveGame } from \"../../app/shell/game-runtime\";",
    "reject": true
   },
   {
@@ -132,7 +132,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-world-entity-construction.ts",
-   "text": "import type { GameRuntimeDependencies } from \"../../app/game-runtime-dependencies\";",
+   "text": "import type { GameRuntimeDependencies } from \"../../app/shell/game-runtime-dependencies\";",
    "reject": true
   },
   {
@@ -140,7 +140,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
-   "text": "import type { GameRuntimeDependencies } from \"../../app/game-runtime-dependencies\";",
+   "text": "import type { GameRuntimeDependencies } from \"../../app/shell/game-runtime-dependencies\";",
    "reject": true
   },
   {
@@ -447,7 +447,7 @@
    "legacy": [
     "R31"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const gamepad = navigator.getGamepads()[0];",
    "reject": true
   },
@@ -455,19 +455,19 @@
    "legacy": [
     "R31"
    ],
-   "file": "src/app/live-session-services-composition.ts",
+   "file": "src/app/shell/session-services-composition.ts",
    "text": "const cores = navigator.hardwareConcurrency;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const context = { navigator: dependencies.browserNavigator };",
    "reject": false
   },
   {
    "legacy": [],
-   "file": "src/app/live-session-services-composition.ts",
+   "file": "src/app/shell/session-services-composition.ts",
    "text": "const options = { navigator: dependencies.browserNavigator };",
    "reject": false
   },
@@ -475,7 +475,7 @@
    "legacy": [
     "R32"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "document.exitPointerLock();",
    "reject": true
   },
@@ -483,19 +483,19 @@
    "legacy": [
     "R32"
    ],
-   "file": "src/app/live-browser-runtime.ts",
+   "file": "src/app/shell/browser-runtime.ts",
    "text": "const canvas = document.getElementById(\"game\");",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const context = { document: dependencies.browserDocument };",
    "reject": false
   },
   {
    "legacy": [],
-   "file": "src/app/live-browser-runtime.ts",
+   "file": "src/app/shell/browser-runtime.ts",
    "text": "const canvas = dependencies.browserDocument.getElementById(\"game\");",
    "reject": false
   },
@@ -503,13 +503,13 @@
    "legacy": [
     "R33"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const database = window.indexedDB;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const database = dependencies.browserIndexedDb;",
    "reject": false
   },
@@ -517,13 +517,13 @@
    "legacy": [
     "R34"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const search = window.location.search;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const search = dependencies.browserWindow.location.search;",
    "reject": false
   },
@@ -532,7 +532,7 @@
     "R35",
     "R36"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "Object.defineProperty(window, \"__TEAR_GHOST_V3__\", {});",
    "reject": true
   },
@@ -540,7 +540,7 @@
    "legacy": [
     "R36"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "Object.defineProperty(dependencies.browserWindow, \"__TEAR_GHOST_V3__\", {});",
    "reject": true
   },
@@ -548,7 +548,7 @@
    "legacy": [
     "R36"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const inspectorName = \"__TEAR_GHOST_V3__\";",
    "reject": true
   },
@@ -562,13 +562,13 @@
    "legacy": [
     "R37"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const hook = (window as Window & { __TEAR_PARITY_TICK__: {} }).__TEAR_PARITY_TICK__;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const hook = (dependencies.browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;",
    "reject": false
   },
@@ -576,13 +576,13 @@
    "legacy": [
     "R38"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const driver = new RuntimeFrameDriver(window);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const driver = new RuntimeFrameDriver(dependencies.browserWindow);",
    "reject": false
   },
@@ -590,13 +590,13 @@
    "legacy": [
     "R39"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "emitLiveTearBenchPhysicalInput(input, { window, canvas });",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "emitLiveTearBenchPhysicalInput(input, { window: dependencies.browserWindow, canvas });",
    "reject": false
   },
@@ -604,13 +604,13 @@
    "legacy": [
     "R40"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "installLiveTearRuntimeBridge({\n  source,\n}, window);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "installLiveTearRuntimeBridge({\n  source,\n}, dependencies.browserWindow);",
    "reject": false
   },
@@ -618,13 +618,13 @@
    "legacy": [
     "R41"
    ],
-   "file": "src/app/live-cinematic-host.ts",
+   "file": "src/app/campaign/cinematic-host.ts",
    "text": "localStorage.setItem(\"tear.cinematic.seen\", \"1\");",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-cinematic-host.ts",
+   "file": "src/app/campaign/cinematic-host.ts",
    "text": "dependencies.browserStorage.setItem(\"tear.cinematic.seen\", \"1\");",
    "reject": false
   },
@@ -632,13 +632,13 @@
    "legacy": [
     "R42"
    ],
-   "file": "src/app/live-world-presentation-adapters.ts",
+   "file": "src/app/world/world-presentation-adapters.ts",
    "text": "d.PROFILE.data.seen[id] = true;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-world-presentation-adapters.ts",
+   "file": "src/app/world/world-presentation-adapters.ts",
    "text": "d.achievementToastPersistence.markSeen(id);",
    "reject": false
   },
@@ -646,13 +646,13 @@
    "legacy": [
     "R43"
    ],
-   "file": "src/app/live-world-presentation-adapters.ts",
+   "file": "src/app/world/world-presentation-adapters.ts",
    "text": "d.PROFILE.save();",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-world-presentation-adapters.ts",
+   "file": "src/app/world/world-presentation-adapters.ts",
    "text": "d.achievementToastPersistence.save();",
    "reject": false
   },
@@ -660,13 +660,13 @@
    "legacy": [
     "R44"
    ],
-   "file": "src/app/live-world-presentation-adapters.ts",
+   "file": "src/app/world/world-presentation-adapters.ts",
    "text": "d.PROFILE.addStat(\"touchOnboarded\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-world-presentation-adapters.ts",
+   "file": "src/app/world/world-presentation-adapters.ts",
    "text": "d.profileStatsPersistence.add(\"touchOnboarded\", 1);",
    "reject": false
   },
@@ -674,13 +674,13 @@
    "legacy": [
     "R45"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let lastGhost = null;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const production = createLiveProductionWorld(options);",
    "reject": false
   },
@@ -688,13 +688,13 @@
    "legacy": [
     "R46"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let floaters = [];",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const floaters = hostState.floaters();",
    "reject": false
   },
@@ -702,13 +702,13 @@
    "legacy": [
     "R47"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let bossIntro = null;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const intro = hostState.bossIntro();",
    "reject": false
   },
@@ -716,13 +716,13 @@
    "legacy": [
     "R48"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let enemies = [];",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const actors = hostState.enemies();",
    "reject": false
   },
@@ -730,13 +730,13 @@
    "legacy": [
     "R49"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let run = {}; ",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const run = hostState.run();",
    "reject": false
   },
@@ -744,13 +744,13 @@
    "legacy": [
     "R50"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let blade = {}; ",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const blade = hostState.blade();",
    "reject": false
   },
@@ -758,13 +758,13 @@
    "legacy": [
     "R51"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let player = {}; ",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const player = hostState.player();",
    "reject": false
   },
@@ -772,13 +772,13 @@
    "legacy": [
     "R52"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let shopCoinShow = null;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const shopFeedback = createLiveShopFeedbackState();",
    "reject": false
   },
@@ -786,13 +786,13 @@
    "legacy": [
     "R53"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let hudHpLag = 1;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const hudFeedback = createLiveHudFeedbackState();",
    "reject": false
   },
@@ -800,13 +800,13 @@
    "legacy": [
     "R54"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let uiButtons = [];",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const interfaceInteraction = createLiveInterfaceInteractionState();",
    "reject": false
   },
@@ -814,13 +814,13 @@
    "legacy": [
     "R55"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let uiT = 0;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const interfaceFrame = createLiveInterfaceFrameState(state);",
    "reject": false
   },
@@ -828,13 +828,13 @@
    "legacy": [
     "R56"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let continueT = 0;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const reviveCountdown = createLiveReviveCountdownState();",
    "reject": false
   },
@@ -842,13 +842,13 @@
    "legacy": [
     "R57"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const music = new MusicDirector(SFX);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const world = createLiveProductionWorld({});",
    "reject": false
   },
@@ -856,13 +856,13 @@
    "legacy": [
     "R58"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let tearBenchRunSeed = 27;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const seed = session.takeRunSeed();",
    "reject": false
   },
@@ -870,13 +870,13 @@
    "legacy": [
     "R59"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let ghostV3EventSequence = 0; createBrowserGhostLiveRecorder(factory);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const session = createLiveGhostRecordingSessionState(factory, {});",
    "reject": false
   },
@@ -884,13 +884,13 @@
    "legacy": [
     "R60"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "let semanticInputAuthority = true;",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const authority = createLiveInputAuthorityState(requestLock);",
    "reject": false
   },
@@ -898,7 +898,7 @@
    "legacy": [
     "R61"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "const session = createLiveWorldSessionState();",
    "reject": true
   },
@@ -906,13 +906,13 @@
    "legacy": [
     "R62"
    ],
-   "file": "src/app/live-style-host.ts",
+   "file": "src/app/combat/style-host.ts",
    "text": "d.ACH.check(); d.PROFILE.save();",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-style-host.ts",
+   "file": "src/app/combat/style-host.ts",
    "text": "d.styleAchievementPersistence.checkAndSave();",
    "reject": false
   },
@@ -920,13 +920,13 @@
    "legacy": [
     "R63"
    ],
-   "file": "src/app/live-platform-bootstrap.ts",
+   "file": "src/app/shell/platform-bootstrap.ts",
    "text": "d.PROFILE.maxStat(\"shopMaxed\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-platform-bootstrap.ts",
+   "file": "src/app/shell/platform-bootstrap.ts",
    "text": "d.platformBootstrapPersistence.backfillShopProgress();",
    "reject": false
   },
@@ -934,7 +934,7 @@
    "legacy": [
     "R64"
    ],
-   "file": "src/app/live-platform-bootstrap.ts",
+   "file": "src/app/shell/platform-bootstrap.ts",
    "text": "d.ACH.check(); d.PROFILE.save();",
    "reject": true
   },
@@ -942,13 +942,13 @@
    "legacy": [
     "R65"
    ],
-   "file": "src/app/live-outcome-composition.ts",
+   "file": "src/app/run/outcome-composition.ts",
    "text": "d.PROFILE.setPendingFinale({});",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-outcome-composition.ts",
+   "file": "src/app/run/outcome-composition.ts",
    "text": "d.pendingFinalePersistence.persist({});",
    "reject": false
   },
@@ -956,13 +956,13 @@
    "legacy": [
     "R66"
    ],
-   "file": "src/app/live-campaign-training-composition.ts",
+   "file": "src/app/campaign/campaign-training-composition.ts",
    "text": "d.PROFILE.maxStat(\"biomesSeen\", d.PROFILE.markBiome(name));",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-campaign-training-composition.ts",
+   "file": "src/app/campaign/campaign-training-composition.ts",
    "text": "d.biomeProgressPersistence.remember(name);",
    "reject": false
   },
@@ -970,13 +970,13 @@
    "legacy": [
     "R67"
    ],
-   "file": "src/app/live-victory-progression-host.ts",
+   "file": "src/app/run/victory-progression-host.ts",
    "text": "d.PROFILE.maxStat(\"distinctWeaponsWon\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-victory-progression-host.ts",
+   "file": "src/app/run/victory-progression-host.ts",
    "text": "d.profileStatsPersistence.max(\"distinctWeaponsWon\", 1);",
    "reject": false
   },
@@ -984,13 +984,13 @@
    "legacy": [
     "R68"
    ],
-   "file": "src/app/live-victory-progression-host.ts",
+   "file": "src/app/run/victory-progression-host.ts",
    "text": "d.PROFILE.data.weaponsWon = {};",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-victory-progression-host.ts",
+   "file": "src/app/run/victory-progression-host.ts",
    "text": "d.victoryProfileProgressPersistence.markWeaponWin(weaponId);",
    "reject": false
   },
@@ -998,13 +998,13 @@
    "legacy": [
     "R69"
    ],
-   "file": "src/app/live-outcome-composition.ts",
+   "file": "src/app/run/outcome-composition.ts",
    "text": "d.PROFILE.addStat(\"runs\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-outcome-composition.ts",
+   "file": "src/app/run/outcome-composition.ts",
    "text": "d.outcomeDefeatProgressPersistence.record(run);",
    "reject": false
   },
@@ -1012,13 +1012,13 @@
    "legacy": [
     "R70"
    ],
-   "file": "src/app/live-setup-shop-renderers.ts",
+   "file": "src/app/run/setup-shop-renderers.ts",
    "text": "d.PROFILE.addStat(\"shopBuys\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-setup-shop-renderers.ts",
+   "file": "src/app/run/setup-shop-renderers.ts",
    "text": "d.shopPurchaseProgressPersistence.recordPurchase();",
    "reject": false
   },
@@ -1026,13 +1026,13 @@
    "legacy": [
     "R71"
    ],
-   "file": "src/app/live-wave-composition.ts",
+   "file": "src/app/run/wave-composition.ts",
    "text": "d.PROFILE.maxStat(\"waves\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-wave-composition.ts",
+   "file": "src/app/run/wave-composition.ts",
    "text": "d.profileStatsPersistence.max(\"waves\", 1);",
    "reject": false
   },
@@ -1040,13 +1040,13 @@
    "legacy": [
     "R71"
    ],
-   "file": "src/app/live-style-host.ts",
+   "file": "src/app/combat/style-host.ts",
    "text": "d.PROFILE.addStat(\"tricks\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-style-host.ts",
+   "file": "src/app/combat/style-host.ts",
    "text": "d.profileStatsPersistence.add(\"tricks\", 1);",
    "reject": false
   },
@@ -1054,13 +1054,13 @@
    "legacy": [
     "R71"
    ],
-   "file": "src/app/live-training-host-runtime.ts",
+   "file": "src/app/training/training-host-runtime.ts",
    "text": "d.PROFILE.addStat(\"tutorials\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-training-host-runtime.ts",
+   "file": "src/app/training/training-host-runtime.ts",
    "text": "d.profileStatsPersistence.add(\"tutorials\", 1);",
    "reject": false
   },
@@ -1068,13 +1068,13 @@
    "legacy": [
     "R71"
    ],
-   "file": "src/app/live-combat-actions.ts",
+   "file": "src/app/combat/combat-actions.ts",
    "text": "d.PROFILE.maxStat(\"armorBypassKills\", 1);",
    "reject": true
   },
   {
    "legacy": [],
-   "file": "src/app/live-combat-actions.ts",
+   "file": "src/app/combat/combat-actions.ts",
    "text": "d.profileStatsPersistence.max(\"armorBypassKills\", 1);",
    "reject": false
   },
@@ -1113,7 +1113,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-world-bootstrap.ts",
-   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "text": "import { startLiveGame } from \"../../app/shell/game-runtime\";",
    "reject": true
   },
   {
@@ -1137,7 +1137,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
-   "text": "import { createLiveWorldEntityFactory } from \"../../app/live-world-entity-factory\";",
+   "text": "import { createLiveWorldEntityFactory } from \"../../app/world/world-entity-factory\";",
    "reject": true
   },
   {
@@ -1145,7 +1145,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-world-context.ts",
-   "text": "import type { GameRuntimeDependencies } from \"../../app/game-runtime-dependencies\";",
+   "text": "import type { GameRuntimeDependencies } from \"../../app/shell/game-runtime-dependencies\";",
    "reject": true
   },
   {
@@ -1161,7 +1161,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-world-composition.ts",
-   "text": "import { createLiveWorldComposition } from \"../../app/live-world-composition\";",
+   "text": "import { createLiveWorldComposition } from \"../../app/world/world-composition\";",
    "reject": true
   },
   {
@@ -1177,7 +1177,7 @@
     "R07"
    ],
    "file": "src/gameplay/runtime/tear-world-simulation-factories.ts",
-   "text": "import { createLiveWorldSimulationPresentationAdapter } from \"../../app/live-world-simulation-factories\";",
+   "text": "import { createLiveWorldSimulationPresentationAdapter } from \"../../app/world/world-simulation-factories\";",
    "reject": true
   },
   {
@@ -1201,7 +1201,7 @@
     "R07"
    ],
    "file": "src/gameplay/run/reward-runtime.ts",
-   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "text": "import { startLiveGame } from \"../../app/shell/game-runtime\";",
    "reject": true
   },
   {
@@ -1225,7 +1225,7 @@
     "R07"
    ],
    "file": "src/gameplay/campaign/finale-runtime.ts",
-   "text": "import { createLiveCampaignRuntime } from \"../../app/live-campaign-runtime\";",
+   "text": "import { createLiveCampaignRuntime } from \"../../app/campaign/campaign-runtime\";",
    "reject": true
   },
   {
@@ -1247,7 +1247,7 @@
     "R09"
    ],
    "file": "src/tearbench/detached-world-hydrator.ts",
-   "text": "import type { GameRuntimeDependencies } from \"../app/game-runtime-dependencies\";",
+   "text": "import type { GameRuntimeDependencies } from \"../app/shell/game-runtime-dependencies\";",
    "reject": true
   },
   {
@@ -1263,7 +1263,7 @@
     "R09"
    ],
    "file": "src/tearbench/detached-world-runtime.ts",
-   "text": "import type { GameRuntimeDependencies } from \"../app/game-runtime-dependencies\";",
+   "text": "import type { GameRuntimeDependencies } from \"../app/shell/game-runtime-dependencies\";",
    "reject": true
   },
   {
@@ -1279,7 +1279,7 @@
     "R11"
    ],
    "file": "src/tearbench/production-headless-environment.ts",
-   "text": "import { startLiveGame } from \"../app/live-game-runtime\";",
+   "text": "import { startLiveGame } from \"../app/shell/game-runtime\";",
    "reject": true
   },
   {
@@ -1311,7 +1311,7 @@
     "R15"
    ],
    "file": "src/tearbench/browser/live-runtime-bridge.ts",
-   "text": "import { startLiveGame } from \"../../app/live-game-runtime\";",
+   "text": "import { startLiveGame } from \"../../app/shell/game-runtime\";",
    "reject": true
   },
   {
@@ -1326,7 +1326,7 @@
    "legacy": [
     "R17"
    ],
-   "file": "src/app/live-game-runtime.ts",
+   "file": "src/app/shell/game-runtime.ts",
    "text": "player.aiInput = input;",
    "reject": true
   },
@@ -1343,7 +1343,7 @@
     "R04"
    ],
    "file": "src/game-reference/__planted-runtime-violation.ts",
-   "text": "import type { RuntimeValue } from \"../app/live-game-runtime\";",
+   "text": "import type { RuntimeValue } from \"../app/shell/game-runtime\";",
    "reject": true
   },
   {
@@ -1430,21 +1430,21 @@
   },
   {
    "legacy": [],
-   "file": "src/app/live-run-start-host.ts",
+   "file": "src/app/run/run-start-host.ts",
    "text": "document.exitPointerLock();",
    "reject": true,
    "note": "R32 generalised from 2 files to all src/app minus declared document owners"
   },
   {
    "legacy": [],
-   "file": "src/app/live-stage-controller.ts",
+   "file": "src/app/world/stage-controller.ts",
    "text": "const lock = window.location.search;",
    "reject": true,
    "note": "R33-R40 generalised to all src/app minus window owners"
   },
   {
    "legacy": [],
-   "file": "src/app/live-wave-host.ts",
+   "file": "src/app/run/wave-host.ts",
    "text": "d.PROFILE.addStat(\"waves\", 1);",
    "reject": true,
    "note": "R42-R44/R62-R71 generalised to all src minus direct-writer role"
@@ -1479,22 +1479,22 @@
   },
   {
    "legacy": [],
-   "file": "src/app/live-campaign-host.ts",
+   "file": "src/app/campaign/campaign-host.ts",
    "text": "const music = new MusicDirector(sfx);",
    "reject": true,
    "note": "R57 generalised to all src minus the world composition"
   },
   {
    "legacy": [],
-   "file": "src/app/live-content-host.ts",
-   "text": "import { LIVE_ENGINEERING_SURFACES } from \"./live-engineering-surfaces\";",
+   "file": "src/app/world/content-host.ts",
+   "text": "import { LIVE_ENGINEERING_SURFACES } from \"../engineering/engineering-surfaces\";",
    "reject": true,
    "note": "new N1: engineering channel only via dynamic import"
   },
   {
    "legacy": [],
-   "file": "src/app/live-content-host.ts",
-   "text": "const surfaces = import(\"./live-engineering-surfaces\");",
+   "file": "src/app/world/content-host.ts",
+   "text": "const surfaces = import(\"../engineering/engineering-surfaces\");",
    "reject": false,
    "note": "N1 allows the guarded dynamic import"
   },

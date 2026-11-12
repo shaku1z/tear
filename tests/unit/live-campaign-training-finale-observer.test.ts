@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { LiveCampaignTrainingOptions } from "../../src/app/live-campaign-training-composition";
+import type { LiveCampaignTrainingOptions } from "../../src/app/campaign/campaign-training-composition";
 
 const forwarding: { services: unknown; styleCheck: ReturnType<typeof vi.fn> } = vi.hoisted(() => ({
   services: undefined,
   styleCheck: vi.fn(),
 }));
 
-vi.mock("../../src/app/live-campaign-host", () => ({
+vi.mock("../../src/app/campaign/campaign-host", () => ({
   createLiveCampaignHost: (services: unknown) => {
     forwarding.services = services;
     return {
@@ -23,12 +23,12 @@ vi.mock("../../src/app/live-campaign-host", () => ({
 vi.mock("../../src/gameplay/combat/live-weapon-runtime", () => ({
   createLiveWeaponRuntime: () => ({ addFlash: vi.fn(), addShake: vi.fn(), shieldAbsorb: vi.fn() }),
 }));
-vi.mock("../../src/app/live-training-host", () => ({ createLiveTrainingHost: () => ({ tutorial: {} }) }));
-vi.mock("../../src/app/live-cinematic-host", () => ({ createLiveCinematicHost: () => ({}) }));
-vi.mock("../../src/app/live-source-void-controller", () => ({ createLiveSourceVoidController: () => ({}) }));
-vi.mock("../../src/app/live-style-host", () => ({ createLiveStyleHost: () => ({ check: forwarding.styleCheck }) }));
+vi.mock("../../src/app/training/training-host", () => ({ createLiveTrainingHost: () => ({ tutorial: {} }) }));
+vi.mock("../../src/app/campaign/cinematic-host", () => ({ createLiveCinematicHost: () => ({}) }));
+vi.mock("../../src/app/run/source-void-controller", () => ({ createLiveSourceVoidController: () => ({}) }));
+vi.mock("../../src/app/combat/style-host", () => ({ createLiveStyleHost: () => ({ check: forwarding.styleCheck }) }));
 
-import { createLiveCampaignTrainingComposition } from "../../src/app/live-campaign-training-composition";
+import { createLiveCampaignTrainingComposition } from "../../src/app/campaign/campaign-training-composition";
 
 describe("live campaign/training composition finale observation", () => {
   it("passes the observer callback directly into the campaign host services", () => {

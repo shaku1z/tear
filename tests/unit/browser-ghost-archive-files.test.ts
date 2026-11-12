@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindGhostArchiveFileLifecycle, createBrowserGhostArchiveFiles } from "../../src/app/browser-ghost-archive-files";
+import { bindGhostArchiveFileLifecycle, createBrowserGhostArchiveFiles } from "../../src/app/library/browser-ghost-archive-files";
 
 class Element extends EventTarget {
   type = ""; accept = ""; hidden = false; value = "same-file"; href = ""; download = ""; removed = false;

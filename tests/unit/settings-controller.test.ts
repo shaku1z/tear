@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { LegacyAudioCompatibility } from "../../src/audio/legacy-live-audio";
-import { SettingsController } from "../../src/app/settings-controller";
+import { SettingsController } from "../../src/app/screens/settings-controller";
 
 function fixture(serialized: string | null = null) {
   const values = new Map<string, string>();

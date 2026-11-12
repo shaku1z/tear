@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { GameEnemy, GameRun } from "../../src/app/game-runtime-state";
-import { createLiveStateForgeRuntimeBridge } from "../../src/app/live-state-forge-runtime-bridge";
-import type { BossIntroState } from "../../src/app/live-game-host-state";
-import { advanceFramePrelude, commitBossIntroSnapshot, type MutableFramePreludeState } from "../../src/app/live-frame-runtime";
+import type { GameEnemy, GameRun } from "../../src/app/shell/game-runtime-state";
+import { createLiveStateForgeRuntimeBridge } from "../../src/app/engineering/state-forge-runtime-bridge";
+import type { BossIntroState } from "../../src/app/world/game-host-state";
+import { advanceFramePrelude, commitBossIntroSnapshot, type MutableFramePreludeState } from "../../src/app/shell/frame-runtime";
 import { decodeTearCodecValue } from "../../src/tearbench/detached-world-hydrator";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import { initialRunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";

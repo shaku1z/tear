@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createScreenActionRouter, type ScreenActionHandlers } from "../../src/app/screen-action-router";
-import { createUiConfirmArming, firstEnabledUiButton, handleUiRuntimeFrame } from "../../src/app/ui-runtime-controller";
+import { createScreenActionRouter, type ScreenActionHandlers } from "../../src/app/interface/screen-action-router";
+import { createUiConfirmArming, firstEnabledUiButton, handleUiRuntimeFrame } from "../../src/app/interface/ui-runtime-controller";
 import { renderPresentationFrame, type RenderPipelinePorts } from "../../src/presentation/render-pipeline";
 
 describe("presentation runtime boundaries", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveWorldSessionState } from "../../src/app/live-world-session-state";
+import { createLiveWorldSessionState } from "../../src/app/world/world-session-state";
 
 describe("live world session state", () => {
   it("owns setup selection independently from individual worlds", () => {

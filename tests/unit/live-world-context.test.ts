@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   createLiveWorldServices,
   type LiveWorldContextDependencies,
-} from "../../src/app/live-world-context";
+} from "../../src/app/world/world-context";
 import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
-import type { GameRuntimeDependencies } from "../../src/app/game-runtime-dependencies";
+import type { GameRuntimeDependencies } from "../../src/app/shell/game-runtime-dependencies";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 describe("live world context", () => {

@@ -21,9 +21,9 @@ import {
   writeReplaySurfaceSearch,
 } from "../../src/replay";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { createLiveReplayEditor } from "../../src/app/replay-editor";
-import { createLiveReplayScreenAdapter } from "../../src/app/live-replay-screen-adapter";
-import { createLiveReplayHub, createLiveGhostLabHome } from "../../src/app/replay-hub";
+import { createLiveReplayEditor } from "../../src/app/engineering/replay-editor";
+import { createLiveReplayScreenAdapter } from "../../src/app/replay/replay-screen-adapter";
+import { createLiveReplayHub, createLiveGhostLabHome } from "../../src/app/engineering/replay-hub";
 import {
   LEGACY_GHOST_LAB_DOM_SELECTORS,
   REPLAY_HUB_DOM_SELECTOR_ALIASES,

@@ -3,7 +3,7 @@ import {
   createLivePresentationCaptureController,
   normalizeLiveCapturePolicy,
   projectLivePresentationState,
-} from "../../src/app/live-presentation-capture";
+} from "../../src/app/interface/presentation-capture";
 
 describe("live presentation capture", () => {
   it("keeps raw snapshot readback free of rendering", () => {

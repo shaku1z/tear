@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveWorldPresentationAdapters, type WorldPresentationServices,
-  type WorldPresentationState } from "../../src/app/live-world-presentation-adapters";
+  type WorldPresentationState } from "../../src/app/world/world-presentation-adapters";
 import { renderLegacyWorldFrame } from "../../src/presentation/world/legacy-world-frame";
-import { createLiveHudFeedbackState } from "../../src/app/live-hud-feedback-state";
+import { createLiveHudFeedbackState } from "../../src/app/interface/hud-feedback-state";
 
 vi.mock("../../src/presentation/world/legacy-world-frame", () => ({ renderLegacyWorldFrame: vi.fn() }));
 

@@ -14,7 +14,7 @@ import {
   requestedStemsMode,
 } from "../audio/install-stem-cue";
 import { warmChapterFonts } from "../presentation/font-loader";
-import { createEngineeringQuery, type EngineeringQuery } from "../app/engineering-query";
+import { createEngineeringQuery, type EngineeringQuery } from "../app/shell/engineering-query";
 import { createSurfaceAvailability, type SurfaceAvailability } from "../domain/surface-availability";
 
 /** The build's surface policy, resolved once here and injected into composition. */

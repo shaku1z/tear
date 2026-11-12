@@ -2,12 +2,12 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveTutorialRuntime } from "../../src/gameplay/training/live-tutorial-runtime";
-import { createLiveTrainingHandoff } from "../../src/app/live-training-handoff";
+import { createLiveTrainingHandoff } from "../../src/app/training/training-handoff";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { createProductionCombatSimulation } from "../../src/tearbench/production-combat-simulation";
 import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
 import { projectProductionReplayCanonicalState } from "../../src/tearbench/production-replay-composition";
-import { createLiveTutorialSessionActions } from "../../src/app/live-tutorial-session-actions";
+import { createLiveTutorialSessionActions } from "../../src/app/training/tutorial-session-actions";
 import { loadShippingTutorialGold } from "../../src/gameplay/training/tutorial-gold-shipping";
 
 // The shipped corpus is an on-demand asset; training preflight loads it before any lesson.

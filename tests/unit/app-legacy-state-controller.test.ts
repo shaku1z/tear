@@ -5,7 +5,7 @@ import {
   LEGAL_LEGACY_TRANSITIONS,
   LegacyAppStateController,
   type LegacyAppScreen,
-} from "../../src/app/legacy-state-controller";
+} from "../../src/app/interface/legacy-state-controller";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 
 const ENGINEERING = createSurfaceAvailability("engineering");

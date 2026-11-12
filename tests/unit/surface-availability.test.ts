@@ -4,11 +4,11 @@ import {
   SURFACE_CHANNEL, createSurfaceAvailability, screenActionAvailable, screenActionSurface, screenSurface, type SurfaceId,
 } from "../../src/domain/surface-availability";
 import type { ScreenAction } from "../../src/domain/screen-actions";
-import { createEngineeringQuery } from "../../src/app/engineering-query";
-import { gateScreenActions } from "../../src/app/live-screen-action-bindings";
+import { createEngineeringQuery } from "../../src/app/shell/engineering-query";
+import { gateScreenActions } from "../../src/app/interface/screen-action-bindings";
 import {
   IllegalLegacyAppTransitionError, LEGACY_APP_SCREENS, LegacyAppStateController, UnavailableLegacyAppScreenError,
-} from "../../src/app/legacy-state-controller";
+} from "../../src/app/interface/legacy-state-controller";
 import { MODE_CATALOG, RELEASE_FALLBACK_MODE, admittedRunMode, modeSurface } from "../../src/gameplay/run/mode-catalog";
 
 const RELEASE = createSurfaceAvailability("release");

@@ -1,11 +1,11 @@
-import { liveTutorialCoachFrame } from "../app/live-tutorial-coach-frame";
+import { liveTutorialCoachFrame } from "../app/training/tutorial-coach-frame";
 import type { AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import { createTearCombatSimulation } from "../gameplay/runtime/tear-combat-simulation";
 import type { ProductionReplayWorld } from "./production-world-factory";
 import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
-import { bindLiveAuroraTrackActors } from "../app/live-aurora-track-wiring";
-import { bindLiveWhiteHartActors } from "../app/live-white-hart-wiring";
-import { bindLiveRootboundActors } from "../app/live-rootbound-wiring";
+import { bindLiveAuroraTrackActors } from "../app/world/biomes/aurora-track-wiring";
+import { bindLiveWhiteHartActors } from "../app/world/biomes/white-hart-wiring";
+import { bindLiveRootboundActors } from "../app/world/biomes/rootbound-wiring";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
   snapshot(tick: number, input: AuthoritativeInputState): State;

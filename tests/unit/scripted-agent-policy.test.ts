@@ -13,7 +13,7 @@ import { createBlade } from "../../src/gameplay/entities/blade";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
 import { clamp, len, lerp, lerpAngle } from "../../src/domain/geometry";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/live-authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
 import { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { projectLiveBladeMechanics } from "../../src/tearbench/live-observation-actors";

@@ -35,7 +35,7 @@ keys until the confirm input has been released since the screen opened and
 `UI_CONFIRM_SETTLE_SECONDS` (0.35 s) has passed. Mouse clicks and touch taps on the
 reward and results screens wait for the same settle window. Navigation (hover,
 arrows, stick) stays live. The decision is the pure `uiConfirmGate` in
-`src/app/ui-action-coordinator.ts`; the pause toggle (P, Escape, controller Start)
+`src/app/interface/ui-action-coordinator.ts`; the pause toggle (P, Escape, controller Start)
 uses the same window so the Escape that released pointer lock cannot also resume.
 Escape, Backspace (outside text entry) and controller back activate a screen's
 BACK control.

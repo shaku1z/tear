@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveStyleAchievementPersistence } from "../../src/app/live-style-achievement-persistence";
+import { createLiveStyleAchievementPersistence } from "../../src/app/progress/style-achievement-persistence";
 
 describe("live style achievement persistence adapter", () => {
   it("checks achievements before saving the profile through the explicit adapter", () => {

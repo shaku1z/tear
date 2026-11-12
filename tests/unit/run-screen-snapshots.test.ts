@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildAbilityCards, buildDraftCard, buildResultLog, buildRunProgressSnapshot, fortuneDraftDescription } from "../../src/presentation/run-screen-snapshots";
-import { campaignDraftGuidance } from "../../src/app/live-run-screen-adapters";
+import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 
 const categories = { utility: { name: "UTILITY", color: "#123" } };
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveAchievementToastPersistence } from "../../src/app/live-achievement-toast-persistence";
+import { createLiveAchievementToastPersistence } from "../../src/app/progress/achievement-toast-persistence";
 
 describe("live achievement-toast persistence adapter", () => {
   it("marks the profile entry and saves through the explicit adapter", () => {

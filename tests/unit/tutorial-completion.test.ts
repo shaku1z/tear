@@ -5,7 +5,7 @@ import { createMetaProgression } from "../../src/gameplay/progression/meta";
 import { createAchievements } from "../../src/gameplay/progression/achievements";
 import { createLegacyPlatformCompatibility, type LegacyCrazyGamesFacade } from "../../src/platform/legacy-compat";
 import { createCrazyGamesPlatformServices } from "../../src/platform/crazygames";
-import { createLiveTutorialCompletionPersistence } from "../../src/app/live-tutorial-completion-persistence";
+import { createLiveTutorialCompletionPersistence } from "../../src/app/progress/tutorial-completion-persistence";
 import type { SyncStringStorage } from "../../src/platform/storage";
 
 const idA = "00000000-0000-4000-8000-000000000001", idB = "00000000-0000-4000-8000-000000000002";

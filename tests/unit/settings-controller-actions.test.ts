@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { SettingsController } from "../../src/app/settings-controller";
+import { SettingsController } from "../../src/app/screens/settings-controller";
 
 function controller(): SettingsController {
   return new SettingsController({ config: { blade: { aimSensitivity: 1 }, pad: { deadL: 0, deadR: 0, aimSens: 0,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createParticleSystem } from "../../src/presentation/particles";
-import { createLiveParticlePresentationState } from "../../src/app/live-particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/app/world/particle-presentation-state";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 describe("live particle presentation owner", () => {

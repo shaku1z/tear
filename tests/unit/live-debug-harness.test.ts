@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { clearPreparedOrActiveDebugWave, installLiveDebugHarness, type DebugLifecycle, type LiveDebugHarnessContext } from "../../src/app/live-debug-harness";
+import { clearPreparedOrActiveDebugWave, installLiveDebugHarness, type DebugLifecycle, type LiveDebugHarnessContext } from "../../src/app/engineering/debug-harness";
 import { RunLifecycleController } from "../../src/gameplay/run/lifecycle";
 import { createParticleSystem, type ParticleSystem } from "../../src/presentation/particles";
 import { CONFIG } from "../../src/config/game-config";

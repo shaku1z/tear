@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createCampaignChapterController, createFinaleController } from "../../src/app/campaign-controller-factory";
+import { createCampaignChapterController, createFinaleController } from "../../src/app/campaign/campaign-controller-factory";
 
 const motion = { loreReveal: 1, chapterIn: 2, loreExit: 3, biomeRevealBrief: 4, biomeRevealFull: 5, readyBrief: 6, readyFull: 7 };
 const config = {

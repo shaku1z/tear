@@ -12,7 +12,7 @@ import { buildGameoverSnapshot, buildWinSnapshot } from "../../src/presentation/
 import { CONTROL_HINT_RUN_LIMIT, CONTROL_HINT_SECONDS, domChromeVisibility, type DomChromeInput } from "../../src/presentation/dom-chrome-policy";
 import { cinematicPromptForDevice } from "../../src/presentation/cinematic-prompts";
 import { shouldDrawCanvasCursor } from "../../src/presentation/cursor-contract";
-import { createLiveWorldSessionState } from "../../src/app/live-world-session-state";
+import { createLiveWorldSessionState } from "../../src/app/world/world-session-state";
 import { CONFIG } from "../../src/config/game-config";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 

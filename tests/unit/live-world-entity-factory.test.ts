@@ -4,8 +4,8 @@ import { TEAR_WORLD_ENTITY_FACTORY_IDS } from "../../src/gameplay/runtime/tear-w
 import {
   createLiveWorldEntityFactory,
   type LiveWorldEntityDependencies,
-} from "../../src/app/live-world-entity-factory";
-import type { GameRun } from "../../src/app/game-runtime-state";
+} from "../../src/app/world/world-entity-factory";
+import type { GameRun } from "../../src/app/shell/game-runtime-state";
 import { findVariant } from "../../src/gameplay/variants";
 
 interface ConstructorCall {

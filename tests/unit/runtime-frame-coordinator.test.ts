@@ -3,7 +3,7 @@ import {
   RuntimeFrameCoordinator,
   type RuntimeFrameCoordinatorOptions,
   type RuntimeFrameInputPort,
-} from "../../src/app/runtime-frame-coordinator";
+} from "../../src/app/shell/runtime-frame-coordinator";
 
 function createHarness(initialState = "playing") {
   let state = initialState;

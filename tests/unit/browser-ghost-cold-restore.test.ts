@@ -5,8 +5,8 @@ import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { inspectBrowserGhostVaultReadOnly } from "../../src/ghost/browser-capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "../../src/ghost/indexeddb-vault-backend";
 import { ghostColdRestoreJobKey } from "../../src/ghost/cold-restore-job";
-import { createGhostVaultLibraryController } from "../../src/app/ghost-vault-library-controller";
-import type { GhostArchiveFile } from "../../src/app/browser-ghost-archive-files";
+import { createGhostVaultLibraryController } from "../../src/app/library/ghost-vault-library-controller";
+import type { GhostArchiveFile } from "../../src/app/library/browser-ghost-archive-files";
 vi.mock("../../src/ghost/indexeddb-vault-backend", () => ({ createIndexedDbGhostVaultBackend: vi.fn() }));
 
 async function fixture(id = "browser-cold-source") {

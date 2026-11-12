@@ -24,11 +24,11 @@ const ENGINEERING_MARKERS = Object.freeze([
   ["foundry-job-due-lease:v1:", "src/agents/foundry-job-due-dispatcher.ts"],
   ["tear-temporal-dagger-program", "src/agents/temporal-dagger-program.ts"],
   ["tear-live-human-calibration-capture", "src/agents/tearbot-human-calibration-capture.ts"],
-  ["Training Operations storage is unavailable in this runtime", "src/app/live-foundry-screen.ts"],
-  ["Reading your local consent decision", "src/app/live-academy-screen.ts"],
-  ["Local Run Monitor: at most 256 decisions", "src/app/live-player-watch-controller.ts"],
-  ["No exact retained Game Agent evaluation report is selected locally", "src/app/live-bot-evidence-controller.ts"],
-  ["Scenario controls remain test and engineering evidence only", "src/app/live-ghost-lab-home.ts"],
+  ["Training Operations storage is unavailable in this runtime", "src/app/engineering/foundry-screen.ts"],
+  ["Reading your local consent decision", "src/app/engineering/academy-screen.ts"],
+  ["Local Run Monitor: at most 256 decisions", "src/app/engineering/player-watch-controller.ts"],
+  ["No exact retained Game Agent evaluation report is selected locally", "src/app/engineering/bot-evidence-controller.ts"],
+  ["Scenario controls remain test and engineering evidence only", "src/app/replay/ghost-lab-home.ts"],
   // Test-build-only Verdant calibration scene (`?sceneNative=`).
   ["tear-verdant-image-package", "src/presentation/assets/verdant-calibration/scene-package.json"],
 ]);

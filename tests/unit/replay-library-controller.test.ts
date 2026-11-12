@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ReplayLibraryController } from "../../src/app/replay-library-controller";
+import { ReplayLibraryController } from "../../src/app/library/replay-library-controller";
 
 describe("replay library controller", () => {
   it("plays local recordings without cloud work", () => {

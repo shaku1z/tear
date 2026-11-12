@@ -72,6 +72,18 @@ function targetDependencyBoundary(target: "standalone" | "crazygames"): Plugin {
 
 const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
 
+/**
+ * `src/app/<folder>/` -> chunk; other folders and the app root go to runtime-app-core.
+ * A group also takes the static dependencies of its modules that an earlier group
+ * (in name order) has not taken, so catalog and combat hold their folders' closures
+ * and core holds the rest of the application.
+ */
+const APPLICATION_FOLDER_CHUNKS: Readonly<Record<string, string>> = {
+  library: "runtime-app-catalog",
+  combat: "runtime-app-combat",
+  world: "runtime-app-combat",
+};
+
 /** Keep the async application composition below the release transfer budget. */
 function applicationChunk(id: string): string | undefined {
   const normalized = id.replaceAll("\\", "/");
@@ -79,14 +91,7 @@ function applicationChunk(id: string): string | undefined {
   if (source < 0) return undefined;
   const relative = normalized.slice(source + "/src/".length);
   const topLevel = relative.split("/")[0] ?? "";
-  if (topLevel === "app") {
-    const file = relative.split("/").at(-1) ?? "";
-    if (file === "live-game-runtime.ts" || file === "live-frame-runtime.ts" || file === "runtime-frame-coordinator.ts") return "runtime-app-loop";
-    if (file.includes("library") || file.includes("academy") || file.includes("foundry") || file.includes("ghost-theater")) return "runtime-app-catalog";
-    if (file.includes("combat") || file.includes("world-")) return "runtime-app-combat";
-    if (file.includes("run-") || file.includes("campaign") || file.includes("wave") || file.includes("outcome")) return "runtime-app-run";
-    return "runtime-app-core";
-  }
+  if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
   // The ~1.5 MB tutorial demonstration corpus is imported only by training
   // preflight; its own chunk keeps it out of the startup modulepreload set.
   if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";

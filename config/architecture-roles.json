@@ -34,7 +34,7 @@
         "src/gameplay/environment/white-hart-route-runtime.ts",
         "src/gameplay/entities/enemy-types/white-hart.ts",
         "src/gameplay/entities/enemy-types/rimehound.ts",
-        "src/app/live-aurora-track-wiring.ts"
+        "src/app/world/biomes/aurora-track-wiring.ts"
       ]
     },
     "biome.verdant.implementation": {
@@ -49,7 +49,7 @@
         "src/gameplay/entities/rootbinder-runtime.ts",
         "src/gameplay/entities/enemy-types/rootbound.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
-        "src/app/live-bloom-well-wiring.ts",
+        "src/app/world/biomes/bloom-well-wiring.ts",
         "src/tearbench/rootbound-graft-anchor-forge.ts"
       ]
     },
@@ -146,7 +146,7 @@
     },
     "replay.ghost-recorder-session-owners": {
       "purpose": "The Ghost V3 recorder and its typed live recording-session owner.",
-      "include": ["src/ghost/live-recorder.ts", "src/app/live-ghost-recording-session-state.ts"]
+      "include": ["src/ghost/live-recorder.ts", "src/app/replay/ghost-recording-session-state.ts"]
     },
     "remote.adapters": {
       "purpose": "Remote-service adapters; none exist yet, so game-reference purity guards their future paths.",
@@ -166,70 +166,70 @@
     },
     "audio.context-handoff-consumers": {
       "purpose": "The only modules that may import the handoff: the composition root and the first-gesture audio facade.",
-      "include": ["src/app/composition.ts", "src/audio/legacy-synth.ts"]
+      "include": ["src/app/shell/composition.ts", "src/audio/legacy-synth.ts"]
     },
     "app.world-runtime-types": {
       "purpose": "Concrete app world types that portable TearBench code must not consume.",
-      "include": ["src/app/game-runtime-state.ts"]
+      "include": ["src/app/shell/game-runtime-state.ts"]
     },
     "app.live-runtime-root": {
       "purpose": "The live runtime wiring root (startLiveGame); it composes typed owners and must not own world, interface or session state itself.",
-      "include": ["src/app/live-game-runtime.ts"]
+      "include": ["src/app/shell/game-runtime.ts"]
     },
     "app.navigator-owners": {
       "purpose": "App modules that may touch the browser navigator directly; everything else in src/app receives it through the composition port.",
       "include": [
-        "src/app/browser-ghost-archive-files.ts",
-        "src/app/composition.ts",
-        "src/app/runtime-frame-coordinator.ts",
-        "src/app/settings-controller.ts"
+        "src/app/library/browser-ghost-archive-files.ts",
+        "src/app/shell/composition.ts",
+        "src/app/shell/runtime-frame-coordinator.ts",
+        "src/app/screens/settings-controller.ts"
       ]
     },
     "app.document-owners": {
       "purpose": "App modules that may touch the browser document directly; everything else in src/app receives it through the composition port.",
       "include": [
-        "src/app/browser-boss-memory.ts",
-        "src/app/browser-ghost-archive-files.ts",
-        "src/app/browser-ghost-career-search.ts",
-        "src/app/browser-ghost-career.ts",
-        "src/app/browser-ghost-studio-media.ts",
-        "src/app/composition.ts",
-        "src/app/live-campaign-training-composition.ts",
-        "src/app/live-debug-harness.ts",
-        "src/app/live-debug-snapshot.ts",
-        "src/app/live-outcome-composition.ts",
-        "src/app/live-session-services-composition.ts",
-        "src/app/live-wave-composition.ts",
-        "src/app/runtime-frame-coordinator.ts"
+        "src/app/replay/browser-boss-memory.ts",
+        "src/app/library/browser-ghost-archive-files.ts",
+        "src/app/replay/browser-ghost-career-search.ts",
+        "src/app/replay/browser-ghost-career.ts",
+        "src/app/replay/browser-ghost-studio-media.ts",
+        "src/app/shell/composition.ts",
+        "src/app/campaign/campaign-training-composition.ts",
+        "src/app/engineering/debug-harness.ts",
+        "src/app/engineering/debug-snapshot.ts",
+        "src/app/run/outcome-composition.ts",
+        "src/app/shell/session-services-composition.ts",
+        "src/app/run/wave-composition.ts",
+        "src/app/shell/runtime-frame-coordinator.ts"
       ]
     },
     "app.window-owners": {
       "purpose": "App modules that may touch the browser window directly; everything else in src/app receives it through the composition port.",
       "include": [
-        "src/app/composition.ts",
-        "src/app/live-debug-composition.ts",
-        "src/app/live-run-orchestration-composition.ts",
-        "src/app/rename-controller.ts",
-        "src/app/runtime-frame-coordinator.ts",
-        "src/app/ui-action-coordinator.ts",
-        "src/app/ui-runtime-controller.ts"
+        "src/app/shell/composition.ts",
+        "src/app/engineering/debug-composition.ts",
+        "src/app/run/run-orchestration-composition.ts",
+        "src/app/screens/rename-controller.ts",
+        "src/app/shell/runtime-frame-coordinator.ts",
+        "src/app/interface/ui-action-coordinator.ts",
+        "src/app/interface/ui-runtime-controller.ts"
       ]
     },
     "app.music-direction-owner": {
       "purpose": "The world composition, the only constructor of the music director.",
-      "include": ["src/app/live-world-composition.ts"]
+      "include": ["src/app/world/world-composition.ts"]
     },
     "app.world-construction-owners": {
       "purpose": "The production-world root and the session/composition modules it constructs.",
-      "include": ["src/app/live-production-world.ts", "src/app/live-world-composition.ts", "src/app/live-world-session-state.ts"]
+      "include": ["src/app/shell/production-world.ts", "src/app/world/world-composition.ts", "src/app/world/world-session-state.ts"]
     },
     "progress.direct-profile-writers": {
       "purpose": "Modules that still write PROFILE directly instead of through a composition-owned persistence adapter. Ratchet target: empty (plan step 12).",
-      "include": ["src/app/live-menu-screen-adapters-runtime.ts", "src/app/live-run-start-host.ts"]
+      "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
     },
     "engineering.channel-entries": {
       "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import.",
-      "include": ["src/app/live-engineering-surfaces.ts", "src/app/verdant-calibration-composition.ts"]
+      "include": ["src/app/engineering/engineering-surfaces.ts", "src/app/engineering/verdant-calibration-composition.ts"]
     },
     "size.authored-data-exceptions": {
       "purpose": "Authored data tables exempt from the 700-line module limit.",
