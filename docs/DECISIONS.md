@@ -29,6 +29,7 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 | [D-012](#d-012) | 2026-11-13 | Program status is generated from one curated file | Active |
 | [D-013](#d-013) | 2026-11-13 | Production deploy of `84761549` after the owner played it | Active |
 | [D-014](#d-014) | 2026-11-13 | The game and wiki repositories are private | Active |
+| [D-015](#d-015) | 2026-11-13 | Remove the over-built developer systems; plain names for what stays | Active |
 
 <a id="d-001"></a>
 
@@ -250,3 +251,27 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   GitHub Actions minutes are now metered against the account's allowance, so the cost of the
   `check` job matters.
 - **Source:** the release lead's record of the owner's instruction.
+
+<a id="d-015"></a>
+
+## D-015 — Remove the over-built developer systems; plain names for what stays
+
+- **Date:** 2026-11-13.
+- **Trigger:** the owner: "I don't want anything like 'lab, foundry, studio, etc' all those types
+  of names, and tbh anything with those names could probably be simplified and removed completely
+  perhaps, just nonsense codex created that doesn't need to be, over complicating things. Want to
+  make sure all that's good and taken care of. Everything needs to be highly organized, optimized,
+  efficient and still with high quality now. and that's a standard." The earlier terminology work
+  (G4) had put new names on facades over the old modules instead of renaming or removing anything.
+- **Decision:** developer-only systems that nothing shipped or verified depends on are deleted, not
+  renamed: the agent training pipelines (Foundry, Academy), the replay hub and bot evidence screens,
+  clip export, and the G4 facades and alias vocabularies. What stays gets one plain name. Player
+  storage identifiers (the `tear-ghost-v3` database, `tear_vault_*` keys, replay file formats) are
+  identifiers, not names, and never change. In-world game writing that happens to use such a word
+  stays. Git history is the archive for deleted code and its documents.
+- **Alternatives:** rename everything in place (rejected: it keeps systems nobody uses); move the
+  code to an archive folder (rejected: git history already keeps it).
+- **Consequences:** each removal lands as its own pull request; names introduced from now on are
+  plain words for what a thing does. The cloud publication and support stack is the owner's call
+  and is not part of this decision.
+- **Source:** the owner's request relayed by the lead session on 2026-11-13.
