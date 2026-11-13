@@ -21,7 +21,7 @@ import { nextBoundaryTime, secondsPerBar } from "../music/quantize";
 import { resolveMusicRoute } from "../music/music-routing-resolver";
 import type { MusicRoutingManifest, RoutingScene } from "../music/music-routing-types";
 import { StemCuePlayer } from "./StemCuePlayer";
-import { loopSeconds } from "./tier";
+import { loopSeconds, planTierGains } from "./tier";
 import { tierFromSnapshot } from "./tier-from-snapshot";
 import { WebAudioStemBackend } from "./web-audio-backend";
 import type { StemCueManifest, Tier } from "./types";
@@ -122,7 +122,7 @@ export class BiomeStemBackend implements MusicBackend {
     });
     this.#stingers = new StingerPlayer(this.#context, this.#output);
     void this.#stingers.load();
-    await this.#activate(this.#shellCueId());
+    await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
   }
 
   beginRun(_metadata: MusicRunSessionMetadata): Promise<void> {
@@ -320,7 +320,12 @@ export class BiomeStemBackend implements MusicBackend {
     });
   }
 
-  async #activate(cueId: string, fadeSeconds: number = CROSSFADE_SECONDS, quantizeBars = 0): Promise<void> {
+  async #activate(
+    cueId: string,
+    fadeSeconds: number = CROSSFADE_SECONDS,
+    quantizeBars = 0,
+    fastStart = false,
+  ): Promise<void> {
     const context = this.#context;
     const output = this.#output;
     const loaded = this.#cues.get(cueId);
@@ -337,7 +342,15 @@ export class BiomeStemBackend implements MusicBackend {
     cueGain.connect(output);
     const backend = new WebAudioStemBackend(context, cueGain, loaded.baseUrl);
     const player = new StemCuePlayer();
-    await player.load(loaded.manifest, backend);
+    // The first cue of the session starts as soon as its calmest layer (the
+    // stems tier 0 plays) has arrived; the others fade in, in phase, as they
+    // land. Later swaps load everything while the outgoing cue keeps playing.
+    const first = fastStart
+      ? Object.entries(planTierGains(loaded.manifest, 0))
+          .filter(([, gain]) => gain > 0)
+          .map(([id]) => id)
+      : [];
+    await player.load(loaded.manifest, backend, first.length > 0 ? { first } : {});
     if (token !== this.#switchToken) {
       player.unload();
       cueGain.disconnect();

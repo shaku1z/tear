@@ -11,9 +11,11 @@ import {
   type MusicRights,
 } from "../../src/audio/music/catalog";
 
-const authoredCatalog = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),
-) as Record<string, unknown>;
+const authoredCatalog = (
+  JSON.parse(readFileSync(resolve(import.meta.dirname, "../../public/audio/music.json"), "utf8")) as {
+    catalog: unknown;
+  }
+).catalog as Record<string, unknown>;
 const catalog = parseMusicCatalog(authoredCatalog);
 
 const EXPECTED_WORK_IDS = [

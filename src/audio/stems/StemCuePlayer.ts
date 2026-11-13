@@ -48,10 +48,19 @@ export interface SetTierOptions {
   readonly transitionBars?: number;
 }
 
+export interface LoadOptions {
+  /**
+   * Stems to wait for before `load` resolves (default: all). Every stem is
+   * requested at once; the others join in phase as they arrive, so the stems
+   * the current tier plays can start sooner.
+   */
+  readonly first?: readonly string[];
+}
+
 /**
- * Plays one adaptive stem cue. All stems are decoded up front, share the loop
- * boundary, and start at one scheduled time so they stay phase-aligned forever.
- * Tier changes ramp bus gains; nothing is stopped or re-seeked.
+ * Plays one adaptive stem cue. Stems share the loop boundary and start at one
+ * scheduled time (a late stem joins at the matching loop position), so they stay
+ * phase-aligned. Tier changes ramp bus gains; nothing is stopped or re-seeked.
  */
 export class StemCuePlayer {
   #cue: StemCueManifest | null = null;
@@ -60,21 +69,77 @@ export class StemCuePlayer {
   #tier: Tier = 0;
   #preset: StemMixPreset | undefined;
   #started = false;
+  #generation = 0;
+  #startAt = 0;
+  #startOffset = 0;
+  #rest: Promise<void> = Promise.resolve();
 
   /** Set the player's mix preset (applies from the next start or tier change). */
   setMixPreset(preset: StemMixPreset | undefined): void {
     this.#preset = preset;
   }
 
-  async load(cue: StemCueManifest, backend: StemAudioBackend): Promise<void> {
+  async load(cue: StemCueManifest, backend: StemAudioBackend, options: LoadOptions = {}): Promise<void> {
     assertValidStemCue(cue);
     this.unload();
     this.#cue = cue;
     this.#backend = backend;
-    for (const asset of cue.stems) {
-      const voice = await backend.createVoice(asset);
-      this.#voices.set(asset.id, voice);
-    }
+    const generation = ++this.#generation;
+    const first = new Set(options.first ?? cue.stems.map((asset) => asset.id));
+    // Every request starts now; only the `first` stems gate the return.
+    const requests = cue.stems.map((asset) => ({ asset, voice: backend.createVoice(asset) }));
+    const join = async ({ asset, voice }: (typeof requests)[number]): Promise<void> => {
+      const ready = await voice;
+      if (generation !== this.#generation) {
+        ready.dispose();
+        return;
+      }
+      this.#voices.set(asset.id, ready);
+      if (this.#started) this.#joinLate(asset.id, ready);
+    };
+    this.#rest = Promise.all(
+      requests
+        .filter((request) => !first.has(request.asset.id))
+        .map((request) =>
+          join(request).catch((error: unknown) => {
+            console.warn(`stem ${request.asset.id} unavailable; it stays silent`, error);
+          }),
+        ),
+    ).then(() => undefined);
+    await Promise.all(requests.filter((request) => first.has(request.asset.id)).map(join));
+  }
+
+  /** Resolves once every stem of the loaded cue has arrived (or failed). */
+  get allLoaded(): Promise<void> {
+    return this.#rest;
+  }
+
+  #configure(id: string, voice: StemVoice): void {
+    const cue = this.#cue;
+    if (!cue) return;
+    const { startSeconds, endSeconds } = loopSeconds(cue);
+    const asset = cue.stems.find((candidate) => candidate.id === id);
+    const crossfadeFrames = asset?.crossfadeFrames ?? cue.loop.crossfadeFrames;
+    voice.configureLoop(startSeconds, endSeconds, {
+      mode: asset?.seamMode ?? cue.loop.mode,
+      ...(crossfadeFrames === undefined ? {} : { crossfadeSeconds: crossfadeFrames / cue.sourceSampleRate }),
+    });
+  }
+
+  /** A stem that arrives after start enters at the loop position the others are at. */
+  #joinLate(id: string, voice: StemVoice): void {
+    const cue = this.#cue;
+    const backend = this.#backend;
+    if (!cue || !backend) return;
+    this.#configure(id, voice);
+    const gain = planTierGains(cue, this.#tier, this.#preset)[id] ?? 0;
+    const at = Math.max(backend.now() + 0.05, this.#startAt);
+    const { startSeconds, endSeconds, lengthSeconds } = loopSeconds(cue);
+    let position = this.#startOffset + (at - this.#startAt);
+    if (position >= endSeconds) position = startSeconds + ((position - startSeconds) % lengthSeconds);
+    voice.setGain(0);
+    voice.start(at, position);
+    voice.rampGain(gain, at, secondsPerBar(cue));
   }
 
   /** Start every stem at one scheduled time; silent stems begin at gain 0. */
@@ -84,22 +149,15 @@ export class StemCuePlayer {
     if (!cue || !backend) throw new Error("StemCuePlayer.load must run before start");
     if (this.#started) return;
 
-    const { startSeconds, endSeconds } = loopSeconds(cue);
+    const { startSeconds } = loopSeconds(cue);
     const introOffset = options.fromIntro && cue.intro ? cue.intro.startFrame / cue.sourceSampleRate : startSeconds;
 
     const at = backend.now() + (options.leadSeconds ?? 0.15);
+    this.#startAt = at;
+    this.#startOffset = introOffset;
     const gains = planTierGains(cue, this.#tier, this.#preset);
     for (const [id, voice] of this.#voices) {
-      const asset = cue.stems.find((candidate) => candidate.id === id);
-      const crossfadeFrames = asset?.crossfadeFrames ?? cue.loop.crossfadeFrames;
-      voice.configureLoop(startSeconds, endSeconds, {
-        mode: asset?.seamMode ?? cue.loop.mode,
-        ...(crossfadeFrames === undefined
-          ? {}
-          : {
-              crossfadeSeconds: crossfadeFrames / cue.sourceSampleRate,
-            }),
-      });
+      this.#configure(id, voice);
       // Silent stems still start so their phase matches when they fade in later.
       voice.setGain(gains[id] ?? 0);
       voice.start(at, introOffset);
@@ -129,6 +187,7 @@ export class StemCuePlayer {
   }
 
   unload(): void {
+    this.#generation += 1;
     for (const voice of this.#voices.values()) voice.dispose();
     this.#voices.clear();
     this.#cue = null;

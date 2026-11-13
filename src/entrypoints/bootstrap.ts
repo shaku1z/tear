@@ -41,11 +41,8 @@ export async function bootstrapTear(
   // (`?stems=off`) or audition one cue (`?stemcue=<id>`); release builds read no
   // query. A failed stem install leaves AudioSystem's built-in music in place.
   const stems = requestedStemsMode(engineeringQuery.search);
-  if (stems.mode === "biome") await installBiomeStemBackend();
+  if (stems.mode === "biome") installBiomeStemBackend();
   else if (stems.mode === "single")
-    await installStemCueMusicBackend(
-      stems.cueId,
-      surfaces.allows("global:foundry-audio-preview") ? engineeringQuery.search : "",
-    );
+    await installStemCueMusicBackend(stems.cueId);
   await compose(Object.freeze({ surfaces, engineeringQuery }));
 }
