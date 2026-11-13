@@ -9,6 +9,7 @@
     4
   ],
   "sourceSampleRate": 48000,
+  "key": "C# major",
   "grid": {
     "downbeatFrame": 0,
     "beatsPerBar": 4,
@@ -110,76 +111,11 @@
     "license": "owned/licensed by owner",
     "sourceSha256": "0eef26bf8c402499b8b93ea99e0f6f11205504f05decc5473835777c70317b6f"
   },
-  "key": "C# major",
   "analysis": {
-    "tempoConfidence": 0.164,
-    "tempoAlternatives": [
-      56.1,
-      224.6
-    ],
-    "sourceDownbeatSeconds": 0.8884,
-    "secondsPerBar": 2.1371,
-    "keyConfidence": 0.094,
-    "keyAlternatives": [
-      "C# minor",
-      "E minor"
-    ],
-    "seam": {
-      "seamDbBelowPeak": -35.4,
-      "rmsRatio": 1.23,
-      "verdict": "pass"
-    },
-    "analysedBpm": 112.3,
-    "approvedBpm": 109.705927,
-    "metricalFactor": 0.9769,
-    "tempoDisagreementPercent": 2.31,
-    "phrasePlausibility": "typical",
-    "grid": {
-      "loopBars": 12,
-      "actualLoopFrames": 1260096,
-      "expectedLoopFrames": 1260096,
-      "barErrorFrames": 0,
-      "barErrorMs": 0,
-      "priorDriftMsPerCycle": 1,
-      "verdict": "review",
-      "consideredBpm": [
-        {
-          "bpm": 109.706,
-          "bars": 12,
-          "octaveDistancePercent": 2.31,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 127.99,
-          "bars": 14,
-          "octaveDistancePercent": 13.97,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 91.422,
-          "bars": 10,
-          "octaveDistancePercent": 18.59,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 182.843,
-          "bars": 20,
-          "octaveDistancePercent": 18.59,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 164.559,
-          "bars": 18,
-          "octaveDistancePercent": 26.73,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 73.137,
-          "bars": 8,
-          "octaveDistancePercent": 34.87,
-          "phrase": "typical"
-        }
-      ]
-    }
+    "seamExcessDb": -8,
+    "loopLufs": -16,
+    "loopTruePeakDb": -4,
+    "trimDb": -0.3,
+    "inputHash": "6bb10b7cbfeb888d"
   }
 }

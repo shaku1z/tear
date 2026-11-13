@@ -63,8 +63,7 @@
         "legacyRead": [
           "TearScoreReplayMetadata",
           "tear-score-stem-cue",
-          "tear-signal-catalog",
-          "public/vendor/tear-score/**"
+          "tear-signal-catalog"
         ],
         "canonicalWrite": "TEAR Music / tear-music naming for canonical vendor artifacts; retain old paths for compatibility reads",
         "preserve": [
@@ -636,24 +635,6 @@
         }
       },
       {
-        "id": "history-vendored-tear-score",
-        "pathPattern": "public/vendor/tear-score/**",
-        "termIds": [
-          "tear-music"
-        ],
-        "owner": "Audio vendor provenance owner",
-        "reason": "Vendored third-party artifact paths and manifests are provenance-bound and must stay readable during migration.",
-        "testEvidence": [
-          "check:tear-score",
-          "audio browser smoke",
-          "vendor manifest verification"
-        ],
-        "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Canonical provenance is now verified; retain this legacy path and its hashes until the hosted audio migration/removal gate is signed, then remove only through that audio migration PR."
-        }
-      },
-      {
         "id": "history-tearbench-evidence-routes",
         "pathPattern": "src/tearbench/evidence-routes.json",
         "termIds": [
@@ -675,78 +656,6 @@
       }
     ],
     "mutableCompatibility": [
-      {
-        "id": "compat-audio-canonical-manifest",
-        "pathPattern": "public/vendor/tear-music/adaptive-soundtrack.manifest.json",
-        "termIds": [
-          "tear-music",
-          "adaptive-soundtrack"
-        ],
-        "owner": "Audio vendor provenance owner",
-        "reason": "The canonical schema-v2 release manifest preserves the upstream legacy package compatibility record while the selected game entrypoint is TEAR Music.",
-        "testEvidence": [
-          "check:adaptive-soundtrack",
-          "tests/unit/adaptive-soundtrack-vendor.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
-          "condition": "Retain the manifest compatibility record until the legacy package/path migration gate is signed; never rewrite the accepted release manifest for terminology alone."
-        }
-      },
-      {
-        "id": "compat-audio-canonical-provenance",
-        "pathPattern": "public/vendor/tear-music/adaptive-soundtrack.provenance.json",
-        "termIds": [
-          "tear-music",
-          "adaptive-soundtrack"
-        ],
-        "owner": "Audio vendor provenance owner",
-        "reason": "Canonical provenance explicitly records the retained legacy fallback and trusted Tone source paths so the migration remains auditable.",
-        "testEvidence": [
-          "check:adaptive-soundtrack",
-          "tests/unit/adaptive-soundtrack-vendor.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
-          "condition": "Retain while the old TearScore fallback remains readable; remove only when its explicit migration/removal gate is signed."
-        }
-      },
-      {
-        "id": "compat-audio-source",
-        "pathPattern": "src/audio/tear-score-*.ts",
-        "termIds": [
-          "tear-music"
-        ],
-        "owner": "Audio platform owner",
-        "reason": "The canonical facade intentionally reuses the existing adapter/module implementation while the old TearScore vendor remains the explicit fallback.",
-        "testEvidence": [
-          "tests/unit/tear-score-module.test.ts",
-          "tests/contract/audio-tear-score.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Retain until a separate adapter/module rename slice replaces the compatibility imports and preserves the canonical and legacy provenance gates."
-        }
-      },
-      {
-        "id": "compat-audio-adaptive-facade",
-        "pathPattern": "src/audio/adaptive-soundtrack.ts",
-        "termIds": [
-          "tear-music",
-          "adaptive-soundtrack"
-        ],
-        "owner": "Audio platform owner",
-        "reason": "The canonical facade loads the shipped tear-music assets while explicitly retaining the current TearScore loader as a provenance-safe fallback.",
-        "testEvidence": [
-          "tests/unit/adaptive-soundtrack.test.ts",
-          "tests/unit/tear-score-module.test.ts",
-          "tests/browser-audio.js"
-        ],
-        "expiry": {
-          "checkpoint": "G4-E-ADAPTIVE-SOUNDTRACK",
-          "condition": "Remove only after the shipped canonical adaptive-soundtrack artifact, paired Tone host/license, verified provenance, replay metadata, shared-context lifecycle, and fallback gates remain green through the hosted migration window."
-        }
-      },
       {
         "id": "compat-audio-bootstrap",
         "pathPattern": "src/entrypoints/bootstrap.ts",
@@ -988,7 +897,7 @@
         "reason": "The authored catalog note preserves TearScore provenance while this slice changes only the player-facing Signal surface and catalog wire discriminator.",
         "testEvidence": [
           "tests/unit/music-catalog.test.ts",
-          "check:tear-score"
+          "check:music"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
@@ -1004,45 +913,11 @@
         "owner": "Audio cue owner",
         "reason": "Existing cue fixtures use the legacy stem format during dual-read.",
         "testEvidence": [
-          "tests/contract/audio-tear-score.test.ts",
           "tests/browser-audio.js"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
           "condition": "Remove after all cue fixtures are canonicalized and legacy reads remain tested."
-        }
-      },
-      {
-        "id": "compat-audio-vendor-scripts",
-        "pathPattern": "scripts/vendor-tear-score-esm.mjs",
-        "termIds": [
-          "tear-music"
-        ],
-        "owner": "Audio vendor provenance owner",
-        "reason": "Vendoring script name is a compatibility boundary until the provenance migration.",
-        "testEvidence": [
-          "check:tear-score",
-          "tests/contract/audio-tear-score.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Retain while the legacy vendor path remains readable; remove only after the canonical verifier and legacy-retirement migration gate are signed."
-        }
-      },
-      {
-        "id": "compat-audio-provenance-script",
-        "pathPattern": "scripts/verify-tear-score-provenance.mjs",
-        "termIds": [
-          "tear-music"
-        ],
-        "owner": "Audio vendor provenance owner",
-        "reason": "Provenance checker remains the current safety gate.",
-        "testEvidence": [
-          "check:tear-score"
-        ],
-        "expiry": {
-          "checkpoint": "G4-B-MUSIC",
-          "condition": "Retain as the independent legacy fallback gate; remove only after canonical provenance and legacy-retirement verification are signed."
         }
       },
       {
@@ -1086,7 +961,7 @@
         "owner": "Build/package owner",
         "reason": "Package scripts retain the legacy check and add the independent canonical provenance gate without weakening either validation path.",
         "testEvidence": [
-          "check:tear-score",
+          "check:music",
           "check:functional"
         ],
         "expiry": {
@@ -1787,7 +1662,7 @@
         "reason": "The integration document now records canonical-first TEAR Music/Adaptive Soundtrack vendoring while retaining the old TearScore fallback boundary.",
         "testEvidence": [
           "check:terminology",
-          "check:tear-score"
+          "check:music"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
@@ -1878,7 +1753,7 @@
         "reason": "Contributor documentation retains current vendor terminology until the audio migration.",
         "testEvidence": [
           "check:terminology",
-          "check:tear-score"
+          "check:music"
         ],
         "expiry": {
           "checkpoint": "G4-B-MUSIC",

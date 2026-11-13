@@ -5,38 +5,101 @@
   "rules": [
     {
       "id": "shell-fillet",
-      "match": { "scene": "menu" },
-      "selection": { "type": "primary", "workId": "fillet" }
-    },
-    {
-      "id": "grounds-gameplay",
-      "match": { "biome": "the-grounds", "scene": "gameplay" },
-      "selection": { "type": "primary", "workId": "slicing-life-1" }
-    },
-    {
-      "id": "undercroft-gameplay",
-      "match": { "biome": "the-undercroft", "scene": "gameplay" },
-      "selection": { "type": "primary", "workId": "slicing-life-2" }
-    },
-    {
-      "id": "crimson-gameplay",
-      "match": { "biome": "the-crimson-fields", "scene": "gameplay" },
-      "selection": { "type": "primary", "workId": "beserker" }
-    },
-    {
-      "id": "voidspire-gameplay",
-      "match": { "biome": "the-voidspire", "scene": "gameplay" },
-      "selection": { "type": "primary", "workId": "looking-out" }
+      "match": {
+        "scene": "menu"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "fillet"
+      }
     },
     {
       "id": "tear-gameplay",
-      "match": { "biome": "the-tear", "scene": "gameplay" },
-      "selection": { "type": "primary", "workId": "the-source" }
+      "match": {
+        "biome": "the-tear",
+        "scene": "gameplay"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "the-source"
+      }
+    },
+    {
+      "id": "crimson-gameplay",
+      "match": {
+        "biome": "the-crimson-fields",
+        "scene": "gameplay"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "beserker"
+      }
+    },
+    {
+      "id": "grounds-gameplay",
+      "match": {
+        "biome": "the-grounds",
+        "scene": "gameplay"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "slicing-life-1"
+      }
+    },
+    {
+      "id": "undercroft-gameplay",
+      "match": {
+        "biome": "the-undercroft",
+        "scene": "gameplay"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "slicing-life-2"
+      }
+    },
+    {
+      "id": "voidspire-gameplay",
+      "match": {
+        "biome": "the-voidspire",
+        "scene": "gameplay"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "looking-out"
+      }
     },
     {
       "id": "echo-boss",
-      "match": { "bossId": "echo", "scene": "boss" },
-      "selection": { "type": "primary", "workId": "reflection-of-the-bladeless" }
+      "match": {
+        "bossId": "echo",
+        "scene": "boss"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "reflection-of-the-bladeless"
+      }
+    },
+    {
+      "id": "verdant-gameplay",
+      "match": {
+        "biome": "the-verdant-sanctum",
+        "scene": "gameplay"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "once-at-a-time"
+      }
+    },
+    {
+      "id": "rootbound-boss",
+      "match": {
+        "bossId": "rootbound",
+        "scene": "boss"
+      },
+      "selection": {
+        "type": "primary",
+        "workId": "nocturnal-urgency"
+      }
     }
   ]
 }

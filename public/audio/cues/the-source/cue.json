@@ -112,74 +112,10 @@
     "sourceSha256": "a624995d1a8d5dbffef3a2c4bcc176d8dd1ee839ca48890ee266c9666025c855"
   },
   "analysis": {
-    "tempoConfidence": 0.064,
-    "tempoAlternatives": [
-      43.8,
-      175.2
-    ],
-    "sourceDownbeatSeconds": 0.5457,
-    "secondsPerBar": 2.7397,
-    "keyConfidence": 0.176,
-    "keyAlternatives": [
-      "G# minor",
-      "A# major"
-    ],
-    "seam": {
-      "seamDbBelowPeak": -22.4,
-      "rmsRatio": 0.97,
-      "verdict": "needs-listening"
-    },
-    "analysedBpm": 87.6,
-    "approvedBpm": 86.995922,
-    "metricalFactor": 0.9931,
-    "tempoDisagreementPercent": 0.69,
-    "phrasePlausibility": "typical",
-    "grid": {
-      "loopBars": 16,
-      "actualLoopFrames": 2118720,
-      "expectedLoopFrames": 2118720,
-      "barErrorFrames": 0,
-      "barErrorMs": 0,
-      "priorDriftMsPerCycle": 2,
-      "verdict": "pass",
-      "consideredBpm": [
-        {
-          "bpm": 86.996,
-          "bars": 16,
-          "octaveDistancePercent": 0.69,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 173.992,
-          "bars": 32,
-          "octaveDistancePercent": 0.69,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 184.866,
-          "bars": 34,
-          "octaveDistancePercent": 5.52,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 163.117,
-          "bars": 30,
-          "octaveDistancePercent": 6.9,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 97.87,
-          "bars": 18,
-          "octaveDistancePercent": 11.72,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 195.741,
-          "bars": 36,
-          "octaveDistancePercent": 11.72,
-          "phrase": "typical"
-        }
-      ]
-    }
+    "seamExcessDb": -4.4,
+    "loopLufs": -16,
+    "loopTruePeakDb": -1.8,
+    "trimDb": -0.5,
+    "inputHash": "38483cf6c33c952f"
   }
 }

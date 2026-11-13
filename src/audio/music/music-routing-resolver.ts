@@ -7,7 +7,6 @@ import type { MusicRoutingContext, MusicRoutingManifest, MusicRoutingRule } from
  * music assignments.
  */
 export const ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS: Readonly<Record<string, string>> = Object.freeze({
-  "the-verdant-sanctum": "fillet",
   "the-pale-traverse": "fillet",
 });
 

@@ -5,8 +5,5 @@
   "tutorialGoldGzipBytes": 475000,
   "startupScriptBytes": 2300000,
   "precacheEntries": 46,
-  "precacheBytes": 7400000,
-  "tearScoreGzipBytes": 180000,
-  "adaptiveSoundtrackGzipBytes": 180000,
-  "toneGzipBytes": 120000
+  "precacheBytes": 7400000
 }

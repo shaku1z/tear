@@ -2,7 +2,7 @@
   "format": "tear-score-stem-cue",
   "version": 1,
   "id": "shopkeeper",
-  "name": "Shopkeeper Keep Keeping",
+  "name": "Shopkeeper, Keep Keeping",
   "tempo": 82,
   "timeSignature": [
     4,
@@ -112,74 +112,10 @@
     "sourceSha256": "fad335ba4e4c903d67f5f5be3e0d8931a2dcfe7923755c68d844a42449de6e10"
   },
   "analysis": {
-    "tempoConfidence": 0.286,
-    "tempoAlternatives": [
-      41,
-      164
-    ],
-    "sourceDownbeatSeconds": 0.6908,
-    "secondsPerBar": 2.9268,
-    "keyConfidence": 0.145,
-    "keyAlternatives": [
-      "D major",
-      "G major"
-    ],
-    "seam": {
-      "seamDbBelowPeak": -56.3,
-      "rmsRatio": 0.97,
-      "verdict": "pass"
-    },
-    "analysedBpm": 82,
-    "approvedBpm": 82.026744,
-    "metricalFactor": 1.0003,
-    "tempoDisagreementPercent": 0.03,
-    "phrasePlausibility": "typical",
-    "grid": {
-      "loopBars": 8,
-      "actualLoopFrames": 1123536,
-      "expectedLoopFrames": 1123536,
-      "barErrorFrames": 0,
-      "barErrorMs": 0,
-      "priorDriftMsPerCycle": 8,
-      "verdict": "pass",
-      "consideredBpm": [
-        {
-          "bpm": 82.027,
-          "bars": 8,
-          "octaveDistancePercent": 0.03,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 164.053,
-          "bars": 16,
-          "octaveDistancePercent": 0.03,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 143.547,
-          "bars": 14,
-          "octaveDistancePercent": 12.47,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 184.56,
-          "bars": 18,
-          "octaveDistancePercent": 12.54,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 102.533,
-          "bars": 10,
-          "octaveDistancePercent": 25.04,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 123.04,
-          "bars": 12,
-          "octaveDistancePercent": 50.05,
-          "phrase": "typical"
-        }
-      ]
-    }
+    "seamExcessDb": -20.9,
+    "loopLufs": -16,
+    "loopTruePeakDb": -3,
+    "trimDb": -1.4,
+    "inputHash": "50c525589ac3e72e"
   }
 }

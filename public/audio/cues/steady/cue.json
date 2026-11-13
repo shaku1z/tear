@@ -9,6 +9,7 @@
     4
   ],
   "sourceSampleRate": 48000,
+  "key": "A minor",
   "grid": {
     "downbeatFrame": 0,
     "beatsPerBar": 4,
@@ -94,76 +95,11 @@
     "license": "owned/licensed by owner",
     "sourceSha256": "d0f578a64242292eaa5b44376c6ddaca8c7b15e5261e29cd19bf90037724b3d6"
   },
-  "key": "A minor",
   "analysis": {
-    "tempoConfidence": 0.046,
-    "tempoAlternatives": [
-      41,
-      164
-    ],
-    "sourceDownbeatSeconds": 1.4573,
-    "secondsPerBar": 2.9268,
-    "keyConfidence": 0.285,
-    "keyAlternatives": [
-      "E minor",
-      "F# major"
-    ],
-    "seam": {
-      "seamDbBelowPeak": -42.8,
-      "rmsRatio": 0.81,
-      "verdict": "pass"
-    },
-    "analysedBpm": 82,
-    "approvedBpm": 157.118833,
-    "metricalFactor": 1.9161,
-    "tempoDisagreementPercent": 4.2,
-    "phrasePlausibility": "unusual",
-    "grid": {
-      "loopBars": 10,
-      "actualLoopFrames": 733203,
-      "expectedLoopFrames": 733203,
-      "barErrorFrames": 0,
-      "barErrorMs": 0,
-      "priorDriftMsPerCycle": 3,
-      "verdict": "needs-approval",
-      "consideredBpm": [
-        {
-          "bpm": 157.119,
-          "bars": 10,
-          "octaveDistancePercent": 4.2,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 94.271,
-          "bars": 6,
-          "octaveDistancePercent": 14.97,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 188.543,
-          "bars": 12,
-          "octaveDistancePercent": 14.97,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 125.695,
-          "bars": 8,
-          "octaveDistancePercent": 53.29,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 62.848,
-          "bars": 4,
-          "octaveDistancePercent": 53.29,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 78.559,
-          "bars": 5,
-          "octaveDistancePercent": 4.2,
-          "phrase": "implausible"
-        }
-      ]
-    }
+    "seamExcessDb": -10.8,
+    "loopLufs": -16,
+    "loopTruePeakDb": -2.4,
+    "trimDb": 0.9,
+    "inputHash": "4924b676ade8c83f"
   }
 }

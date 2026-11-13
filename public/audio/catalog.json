@@ -72,6 +72,7 @@
             "gameplay",
             "shell"
           ],
+          "vocals": false,
           "roles": [
             "rhythm",
             "pulse",
@@ -448,9 +449,9 @@
           ],
           "vocals": false,
           "roles": [
-            "foundation",
-            "pulse",
             "rhythm",
+            "pulse",
+            "foundation",
             "melody"
           ],
           "loopSeconds": 43.76
@@ -964,6 +965,7 @@
           "contexts": [
             "gameplay"
           ],
+          "vocals": false,
           "roles": [
             "rhythm",
             "pulse",
@@ -981,6 +983,260 @@
             "replay"
           ],
           "master": "works/troubleshooting/renders/masters/troubleshooting-ost-main.wav"
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "once-at-a-time",
+      "title": "Once At A Time",
+      "category": "source-work",
+      "tempo": 110,
+      "key": "unknown",
+      "tags": [
+        "verdant",
+        "calm",
+        "melodic",
+        "groove"
+      ],
+      "stations": [
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "default"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#once-at-a-time-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/once-at-a-time",
+          "contexts": [
+            "gameplay"
+          ],
+          "vocals": false,
+          "roles": [
+            "rhythm",
+            "pulse",
+            "foundation",
+            "apex",
+            "melody"
+          ],
+          "loopSeconds": 34.91
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": false,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ]
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "nocturnal-urgency",
+      "title": "Nocturnal Urgency",
+      "category": "source-work",
+      "tempo": 167.9,
+      "key": "unknown",
+      "tags": [
+        "verdant",
+        "boss",
+        "kinetic",
+        "nocturnal"
+      ],
+      "stations": [
+        "cutline",
+        "descent",
+        "archive"
+      ],
+      "unlock": {
+        "type": "default"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#nocturnal-urgency-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/nocturnal-urgency",
+          "contexts": [
+            "gameplay",
+            "boss"
+          ],
+          "vocals": false,
+          "roles": [
+            "rhythm",
+            "pulse",
+            "melody",
+            "foundation",
+            "apex"
+          ],
+          "loopSeconds": 22.87
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": false,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ]
+        }
+      },
+      "barQuantized": true
+    },
+    {
+      "id": "spring",
+      "title": "Spring",
+      "category": "source-work",
+      "tempo": 166.7,
+      "key": "unknown",
+      "tags": [
+        "verdant",
+        "bright",
+        "melodic",
+        "calm"
+      ],
+      "stations": [
+        "still",
+        "archive"
+      ],
+      "unlock": {
+        "type": "default"
+      },
+      "rights": {
+        "gameUse": true,
+        "streamSafe": false,
+        "vodSafe": false,
+        "albumRelease": false,
+        "commercialDistribution": false,
+        "territories": [],
+        "claims": {
+          "gameUse": {
+            "status": "asserted",
+            "basis": "owner-assertion",
+            "evidenceRef": "docs/audio/RIGHTS_REGISTER.md#spring-game-use"
+          },
+          "streamSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "vodSafe": {
+            "status": "unknown",
+            "reason": "no-clearance-record"
+          },
+          "albumRelease": {
+            "status": "blocked",
+            "reason": "program-hold"
+          },
+          "commercialDistribution": {
+            "status": "blocked",
+            "reason": "program-hold"
+          }
+        }
+      },
+      "versions": {
+        "adaptive-game": {
+          "class": "A",
+          "available": true,
+          "adaptive": true,
+          "loopable": true,
+          "stemmed": true,
+          "cue": "audio/cues/spring",
+          "contexts": [
+            "gameplay"
+          ],
+          "vocals": false,
+          "roles": [
+            "rhythm",
+            "pulse",
+            "melody",
+            "foundation",
+            "apex"
+          ],
+          "loopSeconds": 23.03
+        },
+        "canonical-ost": {
+          "class": "C",
+          "available": false,
+          "linear": true,
+          "contexts": [
+            "archive",
+            "menu",
+            "replay"
+          ]
         }
       },
       "barQuantized": true
