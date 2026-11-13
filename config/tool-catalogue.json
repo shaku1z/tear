@@ -971,6 +971,13 @@
       ],
       "duration": "seconds"
     },
+    "merge:ready": {
+      "purpose": "Says whether a pull request may merge: main green and the check current against main; --refresh starts a fresh check",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds"
+    },
     "check:terminology": {
       "purpose": "Checks player-facing and doc text against the terminology registry",
       "effects": [
@@ -1507,6 +1514,16 @@
       "via": [],
       "runBy": [
         "config/checkpoints.json"
+      ]
+    },
+    "scripts/merge-ready.mjs": {
+      "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds",
+      "via": [
+        "merge:ready"
       ]
     },
     "scripts/package-crazygames.mjs": {

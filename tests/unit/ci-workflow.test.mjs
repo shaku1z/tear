@@ -39,7 +39,7 @@ describe("Validate workflow", () => {
 
   it("treats a pull request as docs-only exactly when every changed file is a document", { timeout: 30_000 }, () => {
     // Runs the workflow's own script, so a quoting or escaping mistake in the file fails here.
-    const script = /git diff --name-only "\$BASE" HEAD \| node -e '([^']+)'; then$/mu.exec(workflow)?.[1];
+    const script = /git diff --name-only origin\/main HEAD \| node -e '([^']+)'; then$/mu.exec(workflow)?.[1];
     expect(script, "the docs-only scope script").toBeDefined();
     const docsOnly = (files) =>
       spawnSync(process.execPath, ["-e", script ?? ""], { input: `${files.join("\n")}\n` }).status === 0;
@@ -53,6 +53,22 @@ describe("Validate workflow", () => {
     expect(docsOnly([])).toBe(false);
   });
 
+  it("checks a pull request as its head merged with current main, and records both", () => {
+    // GitHub's prepared merge ref is reused by a re-run and can be stale after a reopen.
+    expect(workflow).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
+    const merge = workflow.indexOf("- name: Merge current main into the change");
+    const record = workflow.indexOf("- name: Record what was checked");
+    const install = workflow.indexOf("- run: pnpm install --frozen-lockfile");
+    expect(merge).toBeGreaterThan(0);
+    expect(record).toBeGreaterThan(merge);
+    expect(install).toBeGreaterThan(record);
+    expect(workflow.slice(merge, record)).toMatch(
+      /git fetch --quiet origin main\n.*merge --quiet --no-edit origin\/main/u,
+    );
+    // scripts/merge-ready.mjs parses exactly this annotation.
+    expect(workflow).toContain('echo "::notice title=checked::head=$head main=$main"');
+  });
+
   it("gives no step a key twice (GitHub rejects such a file)", () => {
     for (const step of workflow.split(/\n(?= {6}- )/u)) {
       const keys = [...step.matchAll(/^ {6}(?:- | {2})([a-z-]+):/gmu)].map((match) => match[1]);
@@ -63,7 +79,7 @@ describe("Validate workflow", () => {
   it("uploads the release build once, under the name and layout the deploy workflows read", () => {
     const uploads =
       workflow.match(
-        /upload-artifact@v4\n(?: {8}if: .*\n)? {8}with:\n {10}name: tear-release-targets-\$\{\{ github\.sha \}\}/gu,
+        /upload-artifact@v4\n(?: {8}if: .*\n)? {8}with:\n(?: {10}#.*\n)* {10}name: tear-release-targets-\$\{\{ steps\.checked\.outputs\.commit \}\}/gu,
       ) ?? [];
     expect(uploads).toHaveLength(1);
     // Two paths keep the repository root as the archive root, so deploys find dist/standalone.

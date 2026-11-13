@@ -137,6 +137,7 @@
     "position:render": "node scripts/position.mjs render",
     "check:position": "node scripts/position.mjs check",
     "who": "node scripts/who.mjs",
+    "merge:ready": "node scripts/merge-ready.mjs",
     "check:terminology": "node scripts/check-terminology.mjs",
     "check:active-roster": "node scripts/check-active-roster.mjs",
     "check:game-reference": "node scripts/check-game-reference.mjs",
