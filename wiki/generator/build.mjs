@@ -6,7 +6,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { marked } from 'marked';
 import { loadGameData, sourceState } from './game-data.mjs';
-import { inputsHash, loadPictures, picturesDir } from './pictures.mjs';
+import { loadPictures, picturesDir, picturesStatus } from './pictures.mjs';
 import * as page from './render.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -145,7 +145,7 @@ export async function build() {
   const data = loadGameData(state);
   const pictures = loadPictures();
   if (pictures) data.media = pictures;
-  if (pictures && pictures.inputsHash !== inputsHash()) console.warn('wiki/pictures is stale: run pnpm build:test:standalone && pnpm wiki:media (wiki:test fails until then)');
+  if (pictures) { const status = picturesStatus(data); if (status.stale) console.warn(status.message); }
   const content = loadContent();
   const pages = buildPages(data, content);
   fs.rmSync(dist, { recursive: true, force: true, maxRetries: 5 });

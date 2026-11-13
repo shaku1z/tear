@@ -44,12 +44,19 @@ changes the footer says "with local changes".
 
 ## Pictures
 
-The pictures are generated from the game, then committed (about 340 KB), so a deploy needs no browser
-and no test build and builds in a minute or two. `wiki/pictures/manifest.json` records a hash of the game
-files that can change a picture (`INPUTS` in `wiki/generator/pictures.mjs`: the renderers, entity and boss
-code, stage data, world presentation, config and the capture code). `pnpm wiki:test` fails when that hash
-differs: run `pnpm build:test:standalone && pnpm wiki:media` and commit `wiki/pictures`. The check compares
-source, not image bytes, so it does not depend on the picture being byte-identical across machines.
+The pictures are generated from the game, then committed (about 330 KB), so a deploy needs no browser
+and no test build and builds in a minute or two. `wiki/pictures/manifest.json` records a hash of what draws
+them: the renderer, backdrop, material, stage and boss modules listed in `INPUTS` (`wiki/generator/pictures.mjs`,
+chosen from the import graph of the capture code) and the colours, themes and layouts the exporter reads.
+
+Staleness is information, never a failure. A game change never needs the pictures regenerated, and
+`pnpm wiki:test` does not look at it (it checks that every picture exists and fits the budget). Instead:
+
+- `pnpm wiki:pictures-status` prints whether the pictures are current (`--strict` exits 1 when they are not, for a report).
+- The deploy workflow prints the same, as a warning. Its `pictures` input is `existing` (default: deploy the
+  committed pictures and say which pages may be out of date) or `regenerate` (rebuild them in that run, which
+  adds about 30 minutes and is only for a release).
+- To refresh the committed pictures: `pnpm build:test:standalone && pnpm wiki:media`, then commit `wiki/pictures`.
 
 Boss wind-up times are measured by the same capture, so they are as old as the pictures. When boss
 telegraphs exist as data in the boss definitions, the exporter should read the lead times from there

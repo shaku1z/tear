@@ -1028,6 +1028,13 @@
       ],
       "duration": "long"
     },
+    "wiki:pictures-status": {
+      "purpose": "Prints whether the committed wiki pictures match the game source that draws them (--strict exits 1 when stale)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
     "wiki:dev": {
       "purpose": "Builds the player wiki and serves it on port 4321, rebuilding when wiki/ changes",
       "effects": [

@@ -140,7 +140,7 @@ async function captures(browser, data, dir, manifest) {
 export async function generate() {
   const data = loadGameData();
   const { chromium } = await dep('@playwright/test/index.mjs');
-  const manifest = { inputsHash: inputsHash(), figures: {}, arenas: {}, weapons: {}, bosses: {}, skipped: [] };
+  const manifest = { inputsHash: inputsHash(data), figures: {}, arenas: {}, weapons: {}, bosses: {}, skipped: [] };
   const dir = path.join(path.dirname(picturesDir), 'pictures.new');
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
