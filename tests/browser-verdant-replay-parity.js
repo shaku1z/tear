@@ -56,7 +56,7 @@ withJourney(
     let previous = null;
     for (const entry of CASES) {
       const id = entry.document.id;
-      const played = await page.evaluate((scenario) => {
+      const played = await page.evaluate(async (scenario) => {
         const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
         const launched = environment.forgeResolvedScenario(scenario);
         if (!launched.ok) return { launched };
@@ -66,6 +66,8 @@ withJourney(
         // Stop at the first natural end of the run (wave clear or defeat); the recording seals there.
         try {
           for (let frame = 0; frame < 900; frame += 1) {
+            // Yield like real frames do, so the recorder's asynchronous writes keep up.
+            if (frame % 30 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
             if (frame % 90 === 30) {
               last = environment.captureSnapshot(`${scenario.document.id}-${String(frame)}`);
               const x = frame % 180 === 30 ? 1000 : -1000;
