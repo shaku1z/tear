@@ -128,6 +128,8 @@
     "test:browser:crazygames-iframe": "node tests/browser-crazygames-iframe.js",
     "test:pwa": "node tests/pwa-offline.js",
     "check:bundles": "node scripts/check-bundle-budget.mjs",
+    "check:load-budgets": "node tests/browser-load-profile.js --check",
+    "report:load": "node tests/browser-load-profile.js",
     "check:architecture": "node scripts/check-source-architecture.mjs",
     "check:code-budget": "node scripts/check-code-budget.mjs",
     "check:test-isolation": "node scripts/check-production-test-isolation.mjs",
