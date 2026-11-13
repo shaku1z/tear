@@ -195,7 +195,7 @@ async function main() {
       if (!on && held.has(code)) { held.delete(code); await page.keyboard.up(code); }
     };
     const releaseAll = async () => { for (const code of [...held]) await hold(code, false); };
-    let sweep = 0, retries = 0, zeroLeftSince = null, lastLeft = null, lastText = 0, frameText = [];
+    let sweep = 0, retries = 0, zeroLeftSince = null, lastLeft = null, lastText = 0, frameText = [], lastSeen = null;
     // Real-time play depends on the runner: report the frame rate the game reached.
     const frameOf = () => page.evaluate(() => window.__RELEASE_JOURNEY__.frame);
     let fpsFrom = { at: Date.now(), frame: await frameOf() };
@@ -210,7 +210,8 @@ async function main() {
         lastText = Date.now(); frameText = await texts(1);
         if (has(frameText, /^TAKE ONE/u) || has(frameText, /^WAVE 1 CLEARED$/u)) break;
         if (has(frameText, /^DEFEATED$/u)) {
-          await releaseAll(); retries += 1; note("defeated; retrying", { leg, retries, fps: await fps() }); await shot(`${leg}-defeated-${String(retries)}`);
+          await releaseAll(); retries += 1; note("defeated; retrying", { leg, retries, fps: await fps(), seen: lastSeen,
+            pointerLocked: await page.evaluate(() => document.pointerLockElement !== null) }); await shot(`${leg}-defeated-${String(retries)}`);
           await sleep(1_200); await clickLabel(/^RETRY$/u, "RETRY");
           const back = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, `${leg}: the retried run`);
           assert.equal(back.t, "WAVE 1", "a retry skips the chapter intro already seen this session");
@@ -232,6 +233,8 @@ async function main() {
       const enemies = await page.evaluate(scanEnemies, player);
       let target = null, best = Infinity;
       for (const enemy of enemies) { const distance = Math.hypot(enemy.x - player.x, (enemy.y - player.y) * 1.3); if (distance < best) { best = distance; target = enemy; } }
+      const round = (point) => point && [Math.round(point.x), Math.round(point.y), ...(point.w ? [Math.round(point.w), Math.round(point.h)] : [])];
+      lastSeen = { eye: eye !== null, player: round(player), blobs: enemies.length, target: round(target) };
       sweep += 1.1;
       if (target === null) {
         await hold("KeyA", false); await hold("KeyD", false);
