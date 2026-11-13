@@ -22,6 +22,11 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
 - `src/agents/` (AI player research) and `src/tearbench/` (TearBench, the
   verification system) are tooling, not game features. `src/ghost/` mixes the
   player's replay system with unfinished replay features.
+- Every package script and every `scripts/` entry point is listed in
+  `config/tool-catalogue.json` with its purpose, side effects (read-only, writes
+  files, network, deploys, starts a server) and typical duration. Check it before
+  running a script you do not know; `tests/unit/tool-catalogue.test.mjs` fails
+  when a script is added without an entry.
 - Repository skills live in `.agents/skills/<name>/SKILL.md`. Use the smallest
   set whose description matches the task.
 - Where each workstream stands: [docs/POSITION.md](docs/POSITION.md), generated from
@@ -48,6 +53,10 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
    `pnpm test:related <changed src files>`; add `pnpm test:weapons` for weapon
    or ability changes.
 4. Add the smallest permanent test or scenario that fails without your change.
+   A new file under `src/` needs a TearBench evidence route in
+   `src/tearbench/evidence-routes.json` or a line in
+   `config/change-impact-defaults.json`; `tests/unit/change-impact.test.mjs`
+   fails otherwise ([docs/CHANGE_IMPACT.md](docs/CHANGE_IMPACT.md)).
 5. If you changed a file covered by the tutorial reference fingerprint, refresh
    it before any build (see "Known traps").
 6. `pnpm format` (Prettier), `pnpm typecheck` (about 2 minutes), then
@@ -198,3 +207,6 @@ results. Pull request descriptions follow
 run, checks that could not run, risks, and any position change. Remove your worktree (`git worktree remove`) and branch
 (`git branch -d`) only after the work is merged into `main` or the owner has
 archived it, and after checking the worktree for uncommitted work and junctions.
+`pnpm who` lists every worktree with its branch, dirty files, pull request and
+flags such as `dirty`, `node_modules-link` and `merged-or-empty`; it never
+changes anything.
