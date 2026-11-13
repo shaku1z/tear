@@ -1,13 +1,13 @@
-import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../../../gameplay/entities/enemy-types/rootbound";
-import type { EnvironmentRuntime } from "../../../gameplay/environment/environment-runtime";
+import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../../entities/enemy-types/rootbound";
+import type { EnvironmentRuntime } from "../environment-runtime";
 import {
   createVerdantEnvironmentFeature,
   type RootboundEnvironmentActor,
-} from "../../../gameplay/environment/verdant-environment-feature";
-import type { GameEnemy, GamePlayer } from "../../shell/game-runtime-state";
-import { CONFIG } from "../../../config/game-config";
-import { bindLiveBloomWellActors } from "./bloom-well-wiring";
-import { bindLiveRootbinderActors } from "./rootbinder-wiring";
+} from "../verdant-environment-feature";
+import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
+import type { CONFIG } from "../../../config/game-config";
+import { bindLiveBloomWellActors } from "./bloom-well-actors";
+import { bindLiveRootbinderActors } from "./rootbinder-actors";
 
 /**
  * Binds every Verdant actor source (Bloom Wells, Rootbinders, the Rootbound) in one place,
@@ -15,10 +15,10 @@ import { bindLiveRootbinderActors } from "./rootbinder-wiring";
  */
 export function bindLiveVerdantActors(
   environment: EnvironmentRuntime,
-  player: () => GamePlayer,
-  enemies: () => readonly GameEnemy[],
+  player: () => BiomeActorPlayer,
+  enemies: () => readonly BiomeActorEnemy[],
   actorId: (enemy: object) => string,
-  config: typeof CONFIG = CONFIG,
+  config: typeof CONFIG,
 ): void {
   bindLiveBloomWellActors(environment, player, enemies, actorId);
   bindLiveRootbinderActors(environment, player, enemies, actorId);
@@ -28,17 +28,17 @@ export function bindLiveVerdantActors(
 /** Projects Rootbound attack intent into the world-owned environment phase. */
 export function bindLiveRootboundActors(
   environment: EnvironmentRuntime,
-  player: () => GamePlayer | null,
-  enemies: () => readonly GameEnemy[],
-  actorId: (enemy: GameEnemy) => string,
-  config: typeof CONFIG = CONFIG,
+  player: () => BiomeActorPlayer | null,
+  enemies: () => readonly BiomeActorEnemy[],
+  actorId: (enemy: BiomeActorEnemy) => string,
+  config: typeof CONFIG,
 ): void {
   environment.addFeature(createVerdantEnvironmentFeature());
   environment.setFeatureActorSource("verdant", "rootbound", () =>
     enemies()
       .filter((enemy) => enemy.kind === "rootbound")
       .map((enemy): RootboundEnvironmentActor => {
-        const actor = enemy as GameEnemy & {
+        const actor = enemy as BiomeActorEnemy & {
           rootlineStage?: RootboundRootlineStage | null;
           rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
           rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
