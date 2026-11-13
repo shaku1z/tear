@@ -26,7 +26,12 @@ const sleep = (milliseconds) => new Promise((resolve) => { setTimeout(resolve, m
 
 /** Installed before the game boots: records drawn text and the player's eye per animation frame. */
 function installObserver() {
-  const observed = { frame: 0, text: [], eye: null };
+  const observed = { frame: 0, text: [], eye: null, lockRequests: 0, lockChanges: 0 };
+  document.addEventListener("pointerlockchange", () => { observed.lockChanges += 1; });
+  // The journey aims by absolute pointer position. Under pointer lock the game reads
+  // relative movement instead, which headless runners do not report alike (the Linux
+  // runner left the blade still), so the capture request is counted and not granted.
+  Element.prototype.requestPointerLock = function () { observed.lockRequests += 1; return Promise.resolve(); };
   Object.defineProperty(window, "__RELEASE_JOURNEY__", { value: observed });
   const proto = CanvasRenderingContext2D.prototype;
   const toCss = (context, x, y) => {
@@ -132,6 +137,9 @@ async function main() {
     args: ["--autoplay-policy=no-user-gesture-required"] });
   const context = await browser.newContext({ viewport: VIEW, deviceScaleFactor: 1, serviceWorkers: "block" });
   const page = await context.newPage();
+  // Diagnostic: slow the page down to imitate a weaker runner.
+  const throttle = Number(process.env.TEAR_RELEASE_ADVENTURE_CPU_THROTTLE || 1);
+  if (throttle > 1) await (await context.newCDPSession(page)).send("Emulation.setCPUThrottlingRate", { rate: throttle });
   const pageErrors = [], consoleErrors = [], log = [];
   const started = Date.now();
   const note = (step, detail = {}) => { const entry = { s: +((Date.now() - started) / 1000).toFixed(1), step, ...detail }; log.push(entry); console.log(JSON.stringify(entry)); };
@@ -231,7 +239,7 @@ async function main() {
         lastText = Date.now(); frameText = await texts(1);
         if (has(frameText, /^TAKE ONE/u) || has(frameText, /^WAVE 1 CLEARED$/u)) break;
         if (has(frameText, /^DEFEATED$/u)) {
-          await releaseAll(); retries += 1; note("defeated; retrying", { leg, retries, fps: await fps(), seen: lastSeen,
+          await releaseAll(); retries += 1; note("defeated; retrying", { leg, retries, fps: await fps(), loopHz: +(loops / ((Date.now() - loopsFrom) / 1000)).toFixed(1), seen: lastSeen,
             pointerLocked: await page.evaluate(() => document.pointerLockElement !== null) });
           if (retries === 1) for (const frame of evidenceFrames) console.log(`FRAME ${frame}`); await shot(`${leg}-defeated-${String(retries)}`);
           await sleep(1_200); await clickLabel(/^RETRY$/u, "RETRY");
@@ -273,7 +281,8 @@ async function main() {
       await sleep(12);
     }
     await releaseAll();
-    note("wave 1 cleared; draft open", { leg, retries, fps: await fps(), loopHz: +(loops / ((Date.now() - loopsFrom) / 1000)).toFixed(1) });
+    note("wave 1 cleared; draft open", { leg, retries, fps: await fps(), loopHz: +(loops / ((Date.now() - loopsFrom) / 1000)).toFixed(1),
+      lock: await page.evaluate(() => ({ requests: window.__RELEASE_JOURNEY__.lockRequests, changes: window.__RELEASE_JOURNEY__.lockChanges })) });
 
     // The draft opens and a mouse click on a card picks it after the settle window.
     await waitForText(/^TAKE ONE/u, 5_000, `${leg}: draft`);
