@@ -59,6 +59,17 @@ function installObserver() {
   window.requestAnimationFrame = (callback) => raf((time) => { observed.frame += 1; callback(time); });
 }
 
+/**
+ * Wave-one enemies are solid bodies about 32 px across. Thinner dark blobs are
+ * strokes the scan also sees: the held blade, words drawn in the scene's ink and
+ * edges at the ground line. The blade also shows as a broad blob inside its own
+ * reach above the hand.
+ */
+function looksLikeEnemy(blob, player) {
+  if (Math.min(blob.w, blob.h) < 22) return false;
+  return !(Math.hypot(blob.x - player.x, blob.y - player.y) < 220 * SCALE && blob.y < player.y - 20 * SCALE);
+}
+
 /** In-page pixel pass: dark blobs that are not HUD, ground, platforms or the player. */
 function scanEnemies(player) {
   const canvas = document.getElementById("game");
@@ -232,7 +243,7 @@ async function main() {
       const player = eye ? { x: eye.x, y: eye.y + 10.5 * eye.scale } : { x: VIEW.width / 2, y: VIEW.height * 0.8 };
       const enemies = await page.evaluate(scanEnemies, player);
       let target = null, best = Infinity;
-      for (const enemy of enemies) { const distance = Math.hypot(enemy.x - player.x, (enemy.y - player.y) * 1.3); if (distance < best) { best = distance; target = enemy; } }
+      for (const enemy of enemies.filter((blob) => looksLikeEnemy(blob, player))) { const distance = Math.hypot(enemy.x - player.x, (enemy.y - player.y) * 1.3); if (distance < best) { best = distance; target = enemy; } }
       const round = (point) => point && [Math.round(point.x), Math.round(point.y), ...(point.w ? [Math.round(point.w), Math.round(point.h)] : [])];
       lastSeen = { eye: eye !== null, player: round(player), blobs: enemies.length, target: round(target) };
       sweep += 1.1;
