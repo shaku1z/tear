@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "about": "Size cap for tracked files in document, plan, configuration and evidence folders. Large generated evidence belongs in the ignored artifacts/ folder with a small tracked digest (see scripts/tearbench-requirements.mjs). An exception needs a reason and its own ceiling; it may not grow past it. Checked by scripts/check-repository.mjs through check:docs.",
+  "maxBytes": 524288,
+  "folders": ["docs/", "plans/", "config/", "preservation/", "analysis/", "experiments/", ".agents/", "tests/fixtures/"],
+  "allow": [
+    {
+      "path": "tests/fixtures/tutorial-gold-reference-proof.json",
+      "maxBytes": 1048576,
+      "reason": "Generated tutorial gold proof checked by tests/unit/tutorial-production-ghost.test.ts; regenerated with TEAR_TUTORIAL_GOLD_WRITE=1."
+    }
+  ]
+}

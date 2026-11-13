@@ -27,6 +27,9 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
 - Where each workstream stands: [docs/POSITION.md](docs/POSITION.md), generated from
   `config/position.json` (`pnpm position:render`). Edit the JSON in the pull request that
   changes an area's state; `pnpm check:docs` fails on a stale or hand-edited render.
+- Every top-level folder and config file, what writes it and whether it is generated:
+  [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md). A new top-level entry needs a row there, and
+  tracked documents and evidence stay under the size cap in `config/size-caps.json`.
 - `docs/` holds authority documents (index: [docs/README.md](docs/README.md));
   `plans/` holds plans; the current one is
   [plans/active/RELEASE_READINESS_PLAN.md](plans/active/RELEASE_READINESS_PLAN.md).

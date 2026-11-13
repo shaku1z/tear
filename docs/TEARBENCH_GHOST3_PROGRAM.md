@@ -36,8 +36,8 @@ The original source is preserved in-repository at
 `docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md`.
 Atomic requirement truth and current evidence state live in:
 
-- `docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md`
-- `docs/tearbench-ghost3-requirements.json`
+- `docs/tearbench-ghost3-requirements.digest.json` (tracked digest; `pnpm requirements:generate`
+  writes the full annex and registry to `artifacts/tearbench/requirements/`)
 - `docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`
 - `docs/tearbench-ghost3-evidence-catalog.json`
 - `config/tearbench-current-program-state.json`

@@ -4,6 +4,7 @@ import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { checkPosition } from "./position.mjs";
+import { checkRepository } from "./check-repository.mjs";
 
 const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
   "AGENTS.md": "current authority",
@@ -72,8 +73,7 @@ const CURRENT_PROGRAM_RUN_ID = /^[0-9]+$/u;
 const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
-  "docs/tearbench-ghost3-requirements.json",
-  "docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md",
+  "docs/tearbench-ghost3-requirements.digest.json",
   "docs/tearbench-ghost3-evidence-catalog.json",
   "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
   "docs/tearbench-c40-weapon-roster-evidence-index.json",
@@ -752,6 +752,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
   const activePlans = checkActivePlanMetadata(absoluteRoot, plansIndex);
   const currentProgram = checkCurrentProgramState(absoluteRoot);
   const position = checkPosition(absoluteRoot);
+  const repository = checkRepository(absoluteRoot);
   const errors = [
     ...links.errors,
     ...policy.errors,
@@ -761,6 +762,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
     ...plansIndex.errors,
     ...currentProgram.errors,
     ...position.errors,
+    ...repository.errors,
   ];
   return {
     ok: errors.length === 0,

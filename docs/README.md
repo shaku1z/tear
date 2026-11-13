@@ -11,6 +11,7 @@ owning test/script references in one reviewable transaction.
 | Where each workstream stands (generated) | [POSITION.md](POSITION.md) | Rendered from `config/position.json` by `pnpm position:render`; `check:docs` fails when it is stale or edited by hand. `config/tearbench-current-program-state.json` records only the TearBench C25–C40 program state for the 2026-08-30 production build. |
 | Decisions and their triggers | [DECISIONS.md](DECISIONS.md) | Dated entries amended in place; inferred entries are marked |
 | Pitfalls and the guard behind each rule | [PITFALLS.md](PITFALLS.md) | `tests/unit/pitfall-guards.test.mjs`; [AGENTS.md](../AGENTS.md) "Known traps" |
+| Repository layout, generated files and size caps | [REPOSITORY_MAP.md](REPOSITORY_MAP.md) | `config/size-caps.json`; `scripts/check-repository.mjs` (run by `check:docs`) |
 | Developer orientation and routine commands | [README.md](../README.md) | [CONTRIBUTING.md](../CONTRIBUTING.md); `package.json` scripts |
 | AI agent working guide | [AGENTS.md](../AGENTS.md) | [CLAUDE.md](../CLAUDE.md); `.agents/skills/`; the parent-directory `AGENTS.md` and the governance skill remain authoritative |
 | Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) | Current typed module boundaries and architecture checks |
@@ -67,9 +68,15 @@ corresponding index/checker/test update; no bulk relocation is implied here.
 ## Preserved evidence boundaries
 
 Do not manually rename or regenerate the source specification, generated
-requirements/annex/dashboard, evidence catalog, or C40 weapon-roster index.
+requirements digest/dashboard, evidence catalog, or C40 weapon-roster index.
 Their exact paths are consumed by scripts and permanent tests. The G5 baseline
 inventory at
 `checkpoints/program-normalization/G5_BASELINE_INVENTORY.md` records the
 current hashes and the excluded dependency, secret, build, and ignored-output
 scope.
+
+The full requirements registry (about 27 MB) and its Markdown annex (about 3 MB) are no
+longer tracked: `pnpm requirements:generate` writes them to
+`artifacts/tearbench/requirements/` and refreshes the tracked
+`docs/tearbench-ghost3-requirements.digest.json`, which `pnpm requirements:check` compares.
+Their earlier versions remain in git history.

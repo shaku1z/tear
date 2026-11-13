@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildDocument, validateDocument } from "../../scripts/tearbench-requirements.mjs";
+import {
+  buildDocument,
+  renderDigest,
+  renderMarkdown,
+  validateDocument,
+} from "../../scripts/tearbench-requirements.mjs";
 
 const source = readFileSync(
   new URL("../../docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md", import.meta.url),
@@ -45,4 +50,24 @@ describe("C21.0 non-lossy requirements annex", () => {
     const errors = validateDocument(document, source);
     expect(errors).toContain(`${requirement.id} claims certified without evidence`);
   });
+});
+
+describe("tracked requirements digest", () => {
+  it(
+    "matches the generated registry and changes when a requirement changes",
+    { timeout: ANNEX_BUILD_TIMEOUT_MS },
+    () => {
+      const document = buildDocument(source, plan, evidenceCatalog);
+      const json = `${JSON.stringify(document, null, 2)}\n`;
+      const tracked = readFileSync(
+        new URL("../../docs/tearbench-ghost3-requirements.digest.json", import.meta.url),
+        "utf8",
+      ).replaceAll("\r\n", "\n");
+      expect(renderDigest(document, json, renderMarkdown(document))).toBe(tracked);
+      const changed = structuredClone(document);
+      changed.requirements[0].text = `${changed.requirements[0].text} (edited)`;
+      const changedJson = `${JSON.stringify(changed, null, 2)}\n`;
+      expect(renderDigest(changed, changedJson, renderMarkdown(changed))).not.toBe(tracked);
+    },
+  );
 });
