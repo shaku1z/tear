@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function scenario(id, seed) {
   return {
@@ -27,7 +28,7 @@ withJourney(
   },
   async ({ page, boot }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-      timeout: 15000,
+      timeout: STATE_WAIT_MS,
     });
     const beforeFailure = await page.evaluate(
       (next) => {
@@ -42,7 +43,9 @@ withJourney(
     assert.equal(beforeFailure.tick, 12);
     assert.equal(beforeFailure.metrics.fixedTicks, 12);
 
-    await page.waitForFunction(() => window.__TEAR_GHOST_V3__.failure() !== null, undefined, { timeout: 20000 });
+    await page.waitForFunction(() => window.__TEAR_GHOST_V3__.failure() !== null, undefined, {
+      timeout: STATE_WAIT_MS,
+    });
     const failure = await page.evaluate(() => window.__TEAR_GHOST_V3__.failure());
     assert.match(failure, /quota/i, "the test-only browser quota fault was not surfaced by the V3 sidecar");
     const stranded = await page.evaluate(async () =>
@@ -62,7 +65,7 @@ withJourney(
     // stranded actual IndexedDB journal before it begins its own recording.
     await boot({ test: "1", bossdebug: "1" });
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-      timeout: 15000,
+      timeout: STATE_WAIT_MS,
     });
     assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
     await page.evaluate(
@@ -79,7 +82,7 @@ withJourney(
       async (id) =>
         (await window.__TEAR_GHOST_V3__.manifests()).some((entry) => entry.id === id && entry.status === "recovered"),
       stranded.id,
-      { timeout: 20000 },
+      { timeout: STATE_WAIT_MS },
     );
     const recovered = await page.evaluate(
       async (id) => (await window.__TEAR_GHOST_V3__.manifests()).find((entry) => entry.id === id),

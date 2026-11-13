@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");
 
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
@@ -158,7 +159,7 @@ async function withJourney(options, run) {
     async function boot(query = initialQuery) {
       await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, {
         waitUntil: "domcontentloaded",
-        timeout: 30000,
+        timeout: STATE_WAIT_MS,
       });
       try {
         if (options.ordinaryWatch) {
@@ -175,7 +176,7 @@ async function withJourney(options, run) {
                   canvas.getContext("2d")?.getImageData(0, 0, 1, 1).data[3] > 0,
               ),
             undefined,
-            { timeout: 15000 },
+            { timeout: STATE_WAIT_MS },
           );
           await page.evaluate(
             () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -187,10 +188,10 @@ async function withJourney(options, run) {
               window.__TEAR_RUNTIME_ENVIRONMENT__ &&
               (!debugApi || window.__PANTHEON_TEST),
             options.debugApi !== false,
-            { timeout: 15000 },
+            { timeout: STATE_WAIT_MS },
           );
           await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, {
-            timeout: 15000,
+            timeout: STATE_WAIT_MS,
           });
         }
       } catch (error) {
@@ -202,16 +203,37 @@ async function withJourney(options, run) {
     }
     async function waitScreen(screen) {
       await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, {
-        timeout: 10000,
+        timeout: STATE_WAIT_MS,
       });
       // A cold screen's state can become active before its lazy renderer chunk has
       // registered the canvas buttons. Wait for that static import to settle so
       // the next pointer action exercises the rendered screen, not a timing race.
-      await page.waitForLoadState("networkidle", { timeout: 10000 });
+      await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
+    // A screen that has just opened ignores input for a moment (UI_CONFIRM_SETTLE_SECONDS), and a
+    // loaded runner can reach the click before the game has drawn enough frames to arm it. So click,
+    // look for the next screen, and click again while it has not come: the screen change is the
+    // pass condition, and the clock only bounds how long to keep trying.
     async function clickAndWait(x, y, screen) {
-      await page.mouse.click(x, y);
+      const deadline = Date.now() + STATE_WAIT_MS;
+      for (;;) {
+        await page.mouse.click(x, y);
+        try {
+          await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, {
+            timeout: pollEvery(1000),
+          });
+          break;
+        } catch (error) {
+          if (error?.name !== "TimeoutError") throw error;
+          if (Date.now() > deadline) {
+            const state = await page.evaluate(() => window.__PANTHEON_TEST.state().game);
+            throw new Error(`clicking (${String(x)}, ${String(y)}) never reached ${screen}; still on ${state}`, {
+              cause: error,
+            });
+          }
+        }
+      }
       await waitScreen(screen);
     }
     // Canvas screens have no DOM controls, so `recordFrames` journeys find them the way a
@@ -255,7 +277,7 @@ async function withJourney(options, run) {
             : null;
         },
         label,
-        { timeout: 5000 },
+        { timeout: STATE_WAIT_MS },
       );
       return handle.jsonValue();
     }
@@ -293,7 +315,7 @@ async function withJourney(options, run) {
             : null;
         },
         String(number),
-        { timeout: 5000 },
+        { timeout: STATE_WAIT_MS },
       );
       return handle.jsonValue();
     }

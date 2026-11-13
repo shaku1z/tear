@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const QUOTA_BYTES = 256 * 1024;
 
@@ -29,7 +30,7 @@ withJourney(
   },
   async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-      timeout: 15_000,
+      timeout: STATE_WAIT_MS,
     });
     const source = await page.evaluate(
       async (next) => {
@@ -83,7 +84,9 @@ withJourney(
       },
       scenario("c28-physical-quota-pressure", "c28-physical-quota-pressure-seed", 1_200),
     );
-    await page.waitForFunction(() => window.__TEAR_GHOST_V3__.failure() !== null, undefined, { timeout: 20_000 });
+    await page.waitForFunction(() => window.__TEAR_GHOST_V3__.failure() !== null, undefined, {
+      timeout: STATE_WAIT_MS,
+    });
     const failure = await page.evaluate(() => window.__TEAR_GHOST_V3__.failure());
     assert.match(failure, /QuotaExceededError|quota/i, "the normal recorder did not surface a browser quota rejection");
 

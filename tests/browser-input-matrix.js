@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -104,7 +105,7 @@ async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
       await phone.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "touch");
       await phone.evaluate(() => window.__PANTHEON_TEST.prepareNaturalWaveClearScenario());
       await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "draft", undefined, {
-        timeout: 15_000,
+        timeout: STATE_WAIT_MS,
       });
       // Cards deal in from below; read their hints once they rest, past the confirm settle window.
       await sleep(1_200);
@@ -114,7 +115,7 @@ async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
       await phone.waitForFunction(
         (x) => window.__DRAFT_HINTS__().some((hint) => hint.text.startsWith("TAP AGAIN") && Math.abs(hint.x - x) < 4),
         unread.x,
-        { timeout: 5_000 },
+        { timeout: STATE_WAIT_MS },
       );
       assert.equal(
         await phone.evaluate(() => window.__PANTHEON_TEST.state().game),
@@ -124,7 +125,7 @@ async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
       await sleep(300);
       await tap(unread);
       await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
-        timeout: 8_000,
+        timeout: STATE_WAIT_MS,
       });
     }
     assert.deepEqual(errors, [], `${label}: a phone without exitPointerLock raises no page errors`);
@@ -223,7 +224,7 @@ async function main() {
       return trace && Math.abs(trace.vx) < 1;
     },
     undefined,
-    { timeout: 5_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await touch.close();
 
@@ -297,7 +298,7 @@ async function main() {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 4;
   });
-  await controller.waitForTimeout(500);
+  await controller.waitForTimeout(holdFor(500));
   const squareState = await controller.evaluate(() => ({
     game: window.__PANTHEON_TEST.state().game,
     input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
@@ -369,7 +370,7 @@ async function main() {
       return after && Math.hypot(after.x, after.y) < before - 8 ? { x: after.x, y: after.y } : false;
     },
     reachBeforeMove,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const aimAfterShortMove = await aimAfterShortMoveHandle.jsonValue();
   await aimAfterShortMoveHandle.dispose();
@@ -384,7 +385,7 @@ async function main() {
       return after && after.x > before.x + 10;
     },
     aimBeforeMove,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await controller.keyboard.press("Escape");
   await controller.waitForFunction(() => !window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
